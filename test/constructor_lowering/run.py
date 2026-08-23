@@ -332,6 +332,8 @@ DEFAULT_REFERENCE_RUNTIME_SOURCES = (
 
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
+from scripts.test.bounded_process import run as run_bounded_process  # noqa: E402
+
 
 from scripts.test.c_fixture_harness import (  # noqa: E402
     C11_STRICT_FLAGS,
@@ -425,7 +427,7 @@ def custom_target(
     if runtime_diagnostics is not None:
         command.extend(["-D", f"hxc_runtime_diagnostics={runtime_diagnostics}"])
     command.extend(["-D", f"hxc_project_layout={layout}", "--custom-target", f"c={output}"])
-    return subprocess.run(
+    return run_bounded_process(
         command,
         cwd=ROOT,
         env=haxe_environment(server=connect is not None),
@@ -2296,7 +2298,7 @@ def check_snapshots(report: dict[str, object]) -> None:
 def require_silent_success(
     command: list[str], *, label: str, cwd: Path = ROOT
 ) -> None:
-    result = subprocess.run(
+    result = run_bounded_process(
         command,
         cwd=cwd,
         check=False,
@@ -2730,7 +2732,7 @@ def check_native(
 def check_direct_receiver_oracles() -> None:
     """Compare the successful and throwing receiver paths with Haxe Eval."""
 
-    success = subprocess.run(
+    success = run_bounded_process(
         [
             development_tool("haxe"),
             "-cp",
@@ -2751,7 +2753,7 @@ def check_direct_receiver_oracles() -> None:
             "pinned Haxe direct-receiver oracle failed\n"
             f"stdout:\n{success.stdout}\nstderr:\n{success.stderr}"
         )
-    failure = subprocess.run(
+    failure = run_bounded_process(
         [
             development_tool("haxe"),
             "-cp",
@@ -2781,7 +2783,7 @@ def check_direct_receiver_oracles() -> None:
 def check_managed_record_argument_oracles() -> None:
     """Compare successful and throwing managed-record paths with Haxe Eval."""
 
-    success = subprocess.run(
+    success = run_bounded_process(
         [
             development_tool("haxe"),
             "-cp",
@@ -2802,7 +2804,7 @@ def check_managed_record_argument_oracles() -> None:
             "pinned Haxe managed-record constructor oracle failed\n"
             f"stdout:\n{success.stdout}\nstderr:\n{success.stderr}"
         )
-    failure = subprocess.run(
+    failure = run_bounded_process(
         [
             development_tool("haxe"),
             "-cp",
@@ -2845,7 +2847,7 @@ def check_eval_oracle() -> None:
         ("managed-enum-argument oracle", MANAGED_ENUM_ARGUMENT),
         ("nullable-recursive-factory oracle", NULLABLE_RECURSIVE_FACTORY),
     ):
-        result = subprocess.run(
+        result = run_bounded_process(
             [
                 development_tool("haxe"),
                 "-cp",
@@ -2873,7 +2875,7 @@ def check_eval_oracle() -> None:
 def check_early_exit_oracle() -> None:
     """Prove the focused guard behavior first with Haxe's Eval interpreter."""
 
-    result = subprocess.run(
+    result = run_bounded_process(
         [
             development_tool("haxe"),
             "-cp",
@@ -3070,7 +3072,7 @@ def check_early_exit_only(
 def check_factory_return_only(*, requested_toolchain: str) -> None:
     """Run the guarded factory's complete lifetime slice without older fixtures."""
 
-    result = subprocess.run(
+    result = run_bounded_process(
         [
             development_tool("haxe"),
             "-cp",
@@ -3164,7 +3166,7 @@ def check_factory_return_only(*, requested_toolchain: str) -> None:
 def check_managed_enum_argument_only(*, requested_toolchain: str) -> None:
     """Run the fresh managed-enum constructor ownership slice by itself."""
 
-    result = subprocess.run(
+    result = run_bounded_process(
         [
             development_tool("haxe"),
             "-cp",
@@ -3270,7 +3272,7 @@ def check_managed_enum_argument_only(*, requested_toolchain: str) -> None:
 def check_nullable_recursive_factory_only(*, requested_toolchain: str) -> None:
     """Run the nullable recursive class-result ownership slice by itself."""
 
-    result = subprocess.run(
+    result = run_bounded_process(
         [
             development_tool("haxe"),
             "-cp",
@@ -3458,7 +3460,7 @@ def check_direct_receiver_only(*, requested_toolchain: str) -> None:
 def check_direct_argument_only(*, requested_toolchain: str) -> None:
     """Run the fresh synchronous call-argument contract without unrelated fixtures."""
 
-    result = subprocess.run(
+    result = run_bounded_process(
         [
             development_tool("haxe"),
             "-cp",
@@ -3703,7 +3705,7 @@ def check_owned_fallible_only(*, requested_toolchain: str) -> None:
 def check_retained_interface_only(*, requested_toolchain: str) -> None:
     """Run the retained-interface forwarding contract at its faithful layer."""
 
-    eval_result = subprocess.run(
+    eval_result = run_bounded_process(
         [
             development_tool("haxe"),
             "-cp",
@@ -3798,7 +3800,7 @@ def check_minimal_example() -> None:
 def check_final_primitive_only(*, requested_toolchain: str) -> None:
     """Run the immutable scalar-field contract without unrelated constructors."""
 
-    oracle = subprocess.run(
+    oracle = run_bounded_process(
         [
             development_tool("haxe"),
             "-cp",

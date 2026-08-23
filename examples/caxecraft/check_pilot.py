@@ -16,6 +16,11 @@ from pathlib import Path
 
 CASE = Path(__file__).resolve().parent
 ROOT = CASE.parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from scripts.test.bounded_process import run as run_bounded_process  # noqa: E402
+
 PILOT = CASE / "src/caxecraft/pilot"
 PILOT_CATALOG_SOURCE = PILOT / "PilotCatalog.hx"
 PILOT_CATALOG = CASE / "pilot-catalog.json"
@@ -71,7 +76,7 @@ def check_pilot_catalog_authority() -> None:
     installation = pinned_haxe_installation()
     verify_pinned_haxe(installation)
     arguments = resolve_haxe_arguments(("pilot-catalog.hxml",), locale="C")
-    result = subprocess.run(
+    result = run_bounded_process(
         [str(installation.compiler), *arguments],
         cwd=CASE,
         env=pinned_haxe_environment("C", installation),
@@ -605,7 +610,7 @@ def run_probe(locale: str) -> str:
     installation = pinned_haxe_installation()
     verify_pinned_haxe(installation)
     arguments = resolve_haxe_arguments(("pilot.hxml",), locale=locale)
-    result = subprocess.run(
+    result = run_bounded_process(
         [str(installation.compiler), *arguments],
         cwd=CASE,
         env=pinned_haxe_environment(locale, installation),

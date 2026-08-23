@@ -21,6 +21,11 @@ from dataclasses import dataclass
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from scripts.test.bounded_process import run as run_bounded_process  # noqa: E402
+
 CASE = Path(__file__).resolve().parent
 sys.path.insert(0, str(CASE))
 from check_assets import (  # noqa: E402
@@ -383,7 +388,7 @@ def compile_target(
         ]
         cwd = CASE
         environment = pinned_haxe_environment(locale, connect.installation)
-    return subprocess.run(
+    return run_bounded_process(
         command,
         cwd=cwd,
         env=environment,
@@ -1262,7 +1267,7 @@ def render_project(
 
 
 def run_oracle() -> bytes:
-    result = subprocess.run(
+    result = run_bounded_process(
         [
             development_tool("haxe"),
             "--cwd",
@@ -1319,7 +1324,7 @@ def assert_artifacts_equal(
 
 
 def alternate_locale() -> str:
-    result = subprocess.run(
+    result = run_bounded_process(
         ["locale", "-a"], check=False, capture_output=True, text=True, timeout=10
     )
     available = {line.strip() for line in result.stdout.splitlines()}
@@ -1788,7 +1793,7 @@ def inspect_generated_object_symbols(
             )
         imported: set[str] = set()
         for generated_object in objects:
-            result = subprocess.run(
+            result = run_bounded_process(
                 ["nm", "-u", str(generated_object)],
                 cwd=ROOT,
                 check=False,
@@ -1830,7 +1835,7 @@ def check_standalone_headers(
         requested_toolchain, repository_root=ROOT
     ):
         for header in headers:
-            result = subprocess.run(
+            result = run_bounded_process(
                 [
                     toolchain.compiler,
                     *STRICT_FLAGS,

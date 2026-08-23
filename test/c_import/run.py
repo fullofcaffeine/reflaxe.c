@@ -131,6 +131,8 @@ REQUIRED_COVERAGE = frozenset(
 
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
+from scripts.test.bounded_process import run as run_bounded_process  # noqa: E402
+
 
 from scripts.test.c_fixture_harness import (  # noqa: E402
     C11_STRICT_FLAGS,
@@ -187,7 +189,7 @@ def compile_fixture(
     if reverse:
         command.extend(["-D", "reflaxe_c_test_reverse_typed_modules"])
     command.extend(["-D", "hxc_project_layout=unity", "--custom-target", f"c={output}"])
-    return subprocess.run(
+    return run_bounded_process(
         command,
         cwd=ROOT,
         env=haxe_environment(locale),
@@ -275,7 +277,7 @@ def render(label: str, output: Path, *, reverse: bool = False, locale: str = "C"
 
 
 def alternate_locale() -> str:
-    result = subprocess.run(
+    result = run_bounded_process(
         ["locale", "-a"], check=False, capture_output=True, text=True, timeout=10
     )
     available = {line.strip() for line in result.stdout.splitlines()}

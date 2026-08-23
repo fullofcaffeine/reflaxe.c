@@ -8,12 +8,18 @@ import json
 import os
 import shutil
 import subprocess
+import sys
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[3]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from scripts.test.bounded_process import run as run_bounded_process  # noqa: E402
+
 INCLUDE = ROOT / "runtime/hxrt/include"
 SOURCES = (
     ROOT / "runtime/hxrt/src/allocator.c",
@@ -73,7 +79,7 @@ class Toolchain:
 
 
 def run(command: list[str], *, timeout: int = 30) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(
+    return run_bounded_process(
         command,
         cwd=ROOT,
         check=False,
@@ -132,7 +138,7 @@ def render_generated_root_frame(
     environment = os.environ.copy()
     # This is a cold determinism probe, not the interactive warm-server lane.
     environment["HAXE_NO_SERVER"] = "1"
-    result = subprocess.run(
+    result = run_bounded_process(
         [str(haxe), str(GENERATED_ROOT_HXML)],
         cwd=ROOT,
         env=environment,

@@ -19,6 +19,11 @@ from typing import Iterable
 
 
 ROOT = Path(__file__).resolve().parents[3]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from scripts.test.bounded_process import run as run_bounded_process  # noqa: E402
+
 CASE = Path(__file__).resolve().parent
 HXML = CASE / "runtime_feature_graph.hxml"
 CATALOG_EXPECTED = ROOT / "runtime/hxrt/features.json"
@@ -103,7 +108,7 @@ def extract_record(stdout: str, prefix: str, label: str) -> tuple[str, dict[str,
 def render(label: str) -> RuntimeRender:
     environment = os.environ.copy()
     environment["HAXE_NO_SERVER"] = "1"
-    result = subprocess.run(
+    result = run_bounded_process(
         [development_tool("haxe"), str(HXML)],
         cwd=ROOT,
         env=environment,
@@ -788,7 +793,7 @@ def semantic_snapshot(path: Path, actual: dict[str, object], label: str) -> None
 
 
 def compiler_identity(executable: str) -> tuple[str, str]:
-    result = subprocess.run(
+    result = run_bounded_process(
         [executable, "--version"], cwd=ROOT, check=False, capture_output=True, text=True, timeout=30
     )
     if result.returncode != 0:
@@ -1011,13 +1016,13 @@ def run_native_case(toolchain: Toolchain, name: str, package: list[object], cons
         "-o",
         str(executable),
     ]
-    compile_result = subprocess.run(command, cwd=ROOT, check=False, capture_output=True, text=True, timeout=60)
+    compile_result = run_bounded_process(command, cwd=ROOT, check=False, capture_output=True, text=True, timeout=60)
     if compile_result.returncode != 0 or compile_result.stdout or compile_result.stderr:
         raise RuntimeFeatureFailure(
             f"{toolchain.family} {name} package compile failed\ncommand={command!r}\n"
             f"stdout:\n{compile_result.stdout}\nstderr:\n{compile_result.stderr}"
         )
-    run_result = subprocess.run([str(executable)], cwd=ROOT, check=False, capture_output=True, text=True, timeout=30)
+    run_result = run_bounded_process([str(executable)], cwd=ROOT, check=False, capture_output=True, text=True, timeout=30)
     if run_result.returncode != 0 or run_result.stdout != expected or run_result.stderr:
         raise RuntimeFeatureFailure(
             f"{toolchain.family} {name} package execution drifted\n"
@@ -1026,7 +1031,7 @@ def run_native_case(toolchain: Toolchain, name: str, package: list[object], cons
     if name == "alloc":
         nm = shutil.which("nm")
         if nm is not None:
-            symbols = subprocess.run([nm, str(executable)], cwd=ROOT, check=False, capture_output=True, text=True, timeout=30)
+            symbols = run_bounded_process([nm, str(executable)], cwd=ROOT, check=False, capture_output=True, text=True, timeout=30)
             if (
                 symbols.returncode != 0
                 or "hxc_array_" in symbols.stdout
@@ -1040,7 +1045,7 @@ def run_native_case(toolchain: Toolchain, name: str, package: list[object], cons
     if name == "array":
         nm = shutil.which("nm")
         if nm is not None:
-            symbols = subprocess.run([nm, str(executable)], cwd=ROOT, check=False, capture_output=True, text=True, timeout=30)
+            symbols = run_bounded_process([nm, str(executable)], cwd=ROOT, check=False, capture_output=True, text=True, timeout=30)
             if (
                 symbols.returncode != 0
                 or "hxc_bytes_" in symbols.stdout

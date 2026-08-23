@@ -11,6 +11,7 @@ import re
 import shutil
 import socket
 import subprocess
+import sys
 import tempfile
 import time
 from dataclasses import dataclass
@@ -19,6 +20,11 @@ from typing import Iterable
 
 
 ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from scripts.test.bounded_process import run as run_bounded_process  # noqa: E402
+
 CASE = Path(__file__).resolve().parent
 FIXTURES = CASE / "fixtures"
 EXPECTED = CASE / "expected/hxc.specializations.json"
@@ -103,7 +109,7 @@ def compile_fixture(
         environment["HAXE_NO_SERVER"] = "1"
     else:
         environment.pop("HAXE_NO_SERVER", None)
-    return subprocess.run(
+    return run_bounded_process(
         command,
         cwd=ROOT,
         env=environment,
@@ -117,7 +123,7 @@ def compile_fixture(
 def check_structural_type_identity() -> None:
     """Run the real macro type canonicalizer without claiming value lowering."""
 
-    result = subprocess.run(
+    result = run_bounded_process(
         [
             development_tool("haxe"),
             "--cwd",
@@ -583,7 +589,7 @@ def assert_artifacts_equal(
 
 
 def alternate_locale() -> str:
-    result = subprocess.run(
+    result = run_bounded_process(
         ["locale", "-a"], check=False, capture_output=True, text=True, timeout=10
     )
     available = {line.strip() for line in result.stdout.splitlines()}
@@ -843,7 +849,7 @@ def check_profile_and_runtime_policy() -> None:
 def check_nominal_abstract_record(requested_toolchain: str) -> None:
     """Prove one nominal String field through Eval, HxcIR validation, C, and execution."""
 
-    eval_result = subprocess.run(
+    eval_result = run_bounded_process(
         [
             development_tool("haxe"),
             "--cwd",
@@ -978,7 +984,7 @@ def check_nominal_abstract_record(requested_toolchain: str) -> None:
             ]
             for family, compiler in compilers:
                 executable = root / f"abstract-record-{layout}-{family}"
-                compiled = subprocess.run(
+                compiled = run_bounded_process(
                     [
                         compiler,
                         *STRICT_FLAGS,
@@ -999,7 +1005,7 @@ def check_nominal_abstract_record(requested_toolchain: str) -> None:
                         f"{family} rejected {layout} nominal-abstract generated C\n"
                         f"stdout:\n{compiled.stdout}\nstderr:\n{compiled.stderr}"
                     )
-                executed = subprocess.run(
+                executed = run_bounded_process(
                     [str(executable)],
                     cwd=ROOT,
                     check=False,
@@ -1015,7 +1021,7 @@ def check_nominal_abstract_record(requested_toolchain: str) -> None:
 
 
 def compiler_family(command: str) -> str | None:
-    result = subprocess.run(
+    result = run_bounded_process(
         [command, "--version"], check=False, capture_output=True, text=True, timeout=10
     )
     identity = (result.stdout + result.stderr).lower()
@@ -1102,7 +1108,7 @@ def check_native(requested_toolchain: str) -> list[str]:
                         "-o",
                         str(executable),
                     ]
-                    compiled = subprocess.run(
+                    compiled = run_bounded_process(
                         command,
                         cwd=ROOT,
                         check=False,
@@ -1115,7 +1121,7 @@ def check_native(requested_toolchain: str) -> list[str]:
                             f"{family} {optimization} rejected {layout} generated generic C\n"
                             f"stdout:\n{compiled.stdout}\nstderr:\n{compiled.stderr}"
                         )
-                    executed = subprocess.run(
+                    executed = run_bounded_process(
                         [str(executable)],
                         cwd=ROOT,
                         check=False,

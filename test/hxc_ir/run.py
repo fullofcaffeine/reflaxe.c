@@ -14,6 +14,11 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from scripts.test.bounded_process import run as run_bounded_process  # noqa: E402
+
 HXML = Path(__file__).with_name("hxc_ir.hxml")
 ORACLE_HXML = Path(__file__).with_name("oracle.hxml")
 EXPECTED = Path(__file__).with_name("expected")
@@ -32,7 +37,7 @@ def development_tool(name: str) -> str:
 def render(label: str) -> tuple[str, dict[str, object]]:
     environment = os.environ.copy()
     environment["HAXE_NO_SERVER"] = "1"
-    result = subprocess.run(
+    result = run_bounded_process(
         [development_tool("haxe"), str(HXML)],
         cwd=ROOT,
         env=environment,
@@ -62,7 +67,7 @@ def render(label: str) -> tuple[str, dict[str, object]]:
 def check_oracle() -> None:
     environment = os.environ.copy()
     environment["HAXE_NO_SERVER"] = "1"
-    result = subprocess.run(
+    result = run_bounded_process(
         [development_tool("haxe"), str(ORACLE_HXML)],
         cwd=ROOT,
         env=environment,

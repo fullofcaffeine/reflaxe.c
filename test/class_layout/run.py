@@ -65,6 +65,8 @@ RUNTIME_SOURCES = (
 
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
+from scripts.test.bounded_process import run as run_bounded_process  # noqa: E402
+
 
 from scripts.test.c_fixture_harness import (  # noqa: E402
     C11_STRICT_FLAGS,
@@ -141,7 +143,7 @@ def render(
         command.extend(["-D", "class_layout_reverse_input"])
     if profile == "metal":
         command.extend(["-D", "class_layout_profile=metal"])
-    result = subprocess.run(
+    result = run_bounded_process(
         command,
         cwd=ROOT,
         env=haxe_environment(),
@@ -673,7 +675,7 @@ def sanitizer_supported(compiler: str, family: str, root: Path) -> bool:
     source = root / f"sanitizer-probe-{family}.c"
     executable = root / f"sanitizer-probe-{family}"
     source.write_text("int main(void) { return 0; }\n", encoding="utf-8", newline="\n")
-    result = subprocess.run(
+    result = run_bounded_process(
         [compiler, *SANITIZER_FLAGS, str(source), "-o", str(executable)],
         cwd=ROOT,
         check=False,
@@ -685,7 +687,7 @@ def sanitizer_supported(compiler: str, family: str, root: Path) -> bool:
 
 
 def compiler_identity(executable: str) -> str:
-    result = subprocess.run(
+    result = run_bounded_process(
         [executable, "--version"],
         cwd=ROOT,
         check=False,
@@ -704,7 +706,7 @@ def compiler_identity(executable: str) -> str:
 
 
 def require_silent_success(command: list[str], *, label: str, cwd: Path = ROOT) -> None:
-    result = subprocess.run(
+    result = run_bounded_process(
         command,
         cwd=cwd,
         check=False,
@@ -815,7 +817,7 @@ def custom_target(
     if runtime is not None:
         command.extend(["-D", f"hxc_runtime={runtime}"])
     command.extend(["-D", "hxc_project_layout=unity", "--custom-target", f"c={output}"])
-    return subprocess.run(
+    return run_bounded_process(
         command,
         cwd=ROOT,
         env=haxe_environment(),

@@ -17,6 +17,11 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from scripts.test.bounded_process import run as run_bounded_process  # noqa: E402
+
 CASE = Path(__file__).resolve().parent
 FIXTURES = CASE / "fixtures"
 POSITIVE = FIXTURES / "positive"
@@ -122,7 +127,7 @@ def compile_target(
     if report:
         command.extend(["-D", "reflaxe_c_static_initialization_report"])
     command.extend(["-D", "hxc_project_layout=unity", "--custom-target", f"c={output}"])
-    return subprocess.run(
+    return run_bounded_process(
         command,
         cwd=cwd,
         env=base_environment(),
@@ -557,7 +562,7 @@ def validate_fail_closed(root: Path) -> None:
 
 
 def run_eval_oracle() -> None:
-    result = subprocess.run(
+    result = run_bounded_process(
         [development_tool("haxe"), "-cp", ".", "-main", "Main", "--interp"],
         cwd=POSITIVE,
         env=base_environment(),
@@ -569,7 +574,7 @@ def run_eval_oracle() -> None:
         raise StringOutputFailure(
             f"pinned Haxe literal-output oracle drifted: exit={result.returncode} stdout={result.stdout!r} stderr={result.stderr!r}"
         )
-    runtime_string = subprocess.run(
+    runtime_string = run_bounded_process(
         [development_tool("haxe"), "-cp", ".", "-main", "Main", "--interp"],
         cwd=RUNTIME_STRING,
         env=base_environment(),
@@ -590,7 +595,7 @@ def run_eval_oracle() -> None:
 
 
 def compiler_identity(executable: str) -> tuple[str, str]:
-    result = subprocess.run([executable, "--version"], check=False, capture_output=True, text=True, timeout=30)
+    result = run_bounded_process([executable, "--version"], check=False, capture_output=True, text=True, timeout=30)
     if result.returncode != 0:
         raise StringOutputFailure(f"cannot identify native compiler {executable}")
     output = (result.stdout + result.stderr).strip()
@@ -668,7 +673,7 @@ def compile_native(toolchain: NativeToolchain, rendered: RenderedProject, optimi
         "-o",
         str(executable),
     ]
-    result = subprocess.run(command, cwd=ROOT, check=False, capture_output=True, text=True, timeout=90)
+    result = run_bounded_process(command, cwd=ROOT, check=False, capture_output=True, text=True, timeout=90)
     if result.returncode != 0 or result.stdout or result.stderr:
         raise StringOutputFailure(
             f"{toolchain.family} {optimization} generated project compile failed\ncommand={command!r}\nstdout:\n{result.stdout}\nstderr:\n{result.stderr}"
@@ -713,7 +718,7 @@ def reject_incompatible_runtime(toolchain: NativeToolchain, rendered: RenderedPr
         "-o",
         str(executable),
     ]
-    result = subprocess.run(command, cwd=ROOT, check=False, capture_output=True, text=True, timeout=90)
+    result = run_bounded_process(command, cwd=ROOT, check=False, capture_output=True, text=True, timeout=90)
     if result.returncode == 0 or result.stdout or "hxc_runtime_abi_major_must_match" not in result.stderr:
         raise StringOutputFailure(
             f"{toolchain.family} accepted an incompatible runtime ABI major\ncommand={command!r}\n"
@@ -729,7 +734,7 @@ def run_native(toolchains: list[NativeToolchain], projects: list[RenderedProject
         for rendered in projects:
             for optimization in ("O0", "O2"):
                 executable = compile_native(toolchain, rendered, optimization, build)
-                result = subprocess.run([str(executable)], cwd=build, check=False, capture_output=True, timeout=30)
+                result = run_bounded_process([str(executable)], cwd=build, check=False, capture_output=True, timeout=30)
                 if result.returncode != 0 or result.stdout != EXPECTED_STDOUT or result.stderr:
                     raise StringOutputFailure(
                         f"{toolchain.family} {optimization} generated output drifted: "
@@ -746,7 +751,7 @@ def run_native(toolchains: list[NativeToolchain], projects: list[RenderedProject
         compatible_build = compatibility_root / "compatible-build"
         compatible_build.mkdir()
         compatible_executable = compile_native(toolchain, compatible, "O0", compatible_build)
-        compatible_result = subprocess.run([str(compatible_executable)], cwd=build, check=False, capture_output=True, timeout=30)
+        compatible_result = run_bounded_process([str(compatible_executable)], cwd=build, check=False, capture_output=True, timeout=30)
         if compatible_result.returncode != 0 or compatible_result.stdout != EXPECTED_STDOUT or compatible_result.stderr:
             raise StringOutputFailure(f"{toolchain.family} rejected a same-major compatible runtime")
         incompatible = project_with_runtime_macro(projects[0], compatibility_root / "incompatible-major", "HXC_RUNTIME_ABI_MAJOR", "0u", "1u")
@@ -755,7 +760,7 @@ def run_native(toolchains: list[NativeToolchain], projects: list[RenderedProject
         def close_standard_output() -> None:
             os.close(1)
 
-        failed = subprocess.run(
+        failed = run_bounded_process(
             [str(failure_probe)],
             cwd=build,
             check=False,
@@ -778,7 +783,7 @@ def run_runtime_string_native(
             executable = compile_native(toolchain, rendered, optimization, build)
             if failure_executable is None:
                 failure_executable = executable
-            result = subprocess.run(
+            result = run_bounded_process(
                 [str(executable)],
                 cwd=build,
                 check=False,
@@ -800,7 +805,7 @@ def run_runtime_string_native(
 
         if failure_executable is None:
             raise StringOutputFailure(f"{toolchain.family} produced no runtime-String failure probe")
-        failed = subprocess.run(
+        failed = run_bounded_process(
             [str(failure_executable)],
             cwd=build,
             check=False,

@@ -19,6 +19,11 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from scripts.test.bounded_process import run as run_bounded_process  # noqa: E402
+
 FIXTURES = Path(__file__).resolve().parent / "fixtures"
 EXPECTED = Path(__file__).resolve().parent / "expected/typed-ast-inventory.json"
 REPORT_PREFIX = "HXC_TYPED_AST_INVENTORY="
@@ -118,7 +123,7 @@ def compile_fixture(
             environment["HAXE_NO_SERVER"] = "1"
         else:
             environment.pop("HAXE_NO_SERVER", None)
-        process = subprocess.run(
+        process = run_bounded_process(
             command,
             cwd=ROOT,
             env=environment,
@@ -532,7 +537,7 @@ def compile_successful_incremental_fixture(
         environment["HAXE_NO_SERVER"] = "1"
     else:
         environment.pop("HAXE_NO_SERVER", None)
-    process = subprocess.run(
+    process = run_bounded_process(
         command,
         cwd=ROOT,
         env=environment,
@@ -622,7 +627,7 @@ def compile_failed_incremental_fixture(
         environment["HAXE_NO_SERVER"] = "1"
     else:
         environment.pop("HAXE_NO_SERVER", None)
-    process = subprocess.run(
+    process = run_bounded_process(
         command,
         cwd=ROOT,
         env=environment,

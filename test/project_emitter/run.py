@@ -23,6 +23,11 @@ from types import ModuleType
 
 
 ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from scripts.test.bounded_process import run as run_bounded_process  # noqa: E402
+
 HXML = Path(__file__).with_name("project_emitter.hxml")
 EXPECTED = Path(__file__).with_name("expected")
 OWNERSHIP = "_GeneratedFiles.json"
@@ -181,7 +186,7 @@ def run_emitter(
             macro_call(mode, output),
         ]
     )
-    result = subprocess.run(
+    result = run_bounded_process(
         command,
         cwd=ROOT,
         env=environment,
@@ -667,7 +672,7 @@ def run_native_command(
     environment: Mapping[str, str] | None = None,
     timeout: int = 60,
 ) -> subprocess.CompletedProcess[str]:
-    result = subprocess.run(
+    result = run_bounded_process(
         command,
         cwd=cwd,
         env=None if environment is None else dict(environment),
@@ -694,7 +699,7 @@ def run_built_executable(executable: Path, sentinel: str, label: str) -> None:
 
 
 def compiler_identity(executable: str) -> str:
-    result = subprocess.run(
+    result = run_bounded_process(
         [executable, "--version"],
         check=False,
         capture_output=True,

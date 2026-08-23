@@ -29,6 +29,11 @@ from dev_haxe_server import (  # noqa: E402
 
 CASE_ROOT = Path(__file__).resolve().parent
 ROOT = CASE_ROOT.parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from scripts.test.bounded_process import run as run_bounded_process  # noqa: E402
+
 STRICT_FLAGS = (
     "-std=c11",
     "-Wall",
@@ -1257,7 +1262,7 @@ def run(
     """Run one bounded process and preserve stdout and stderr on failure."""
 
     try:
-        result = subprocess.run(
+        result = run_bounded_process(
             arguments,
             cwd=cwd,
             env={
@@ -1580,7 +1585,7 @@ def run_eval_probe(
         command.extend(("--connect", connection))
     command.extend(arguments)
     try:
-        result = subprocess.run(
+        result = run_bounded_process(
             command,
             cwd=CASE_ROOT,
             env=pinned_haxe_environment(locale, installation),
@@ -1613,7 +1618,7 @@ def run_shim_eval_probe(test_case: EvalTestCase, probe: EvalProbe) -> str:
     """Run a cold Eval case through the checkout's ordinary Haxe shim."""
 
     try:
-        result = subprocess.run(
+        result = run_bounded_process(
             [development_tool("haxe"), "--cwd", str(CASE_ROOT), probe.hxml],
             cwd=ROOT,
             env={**os.environ, "HAXE_NO_SERVER": "1", "LC_ALL": "C"},
@@ -1663,7 +1668,7 @@ def validate_negative_compile(
         command = [str(installation.compiler), *arguments]
         environment = pinned_haxe_environment("C", installation)
     try:
-        result = subprocess.run(
+        result = run_bounded_process(
             command,
             cwd=ROOT if installation is None else CASE_ROOT,
             env=environment,
@@ -1796,7 +1801,7 @@ def sanitizer_supported(compiler: str, root: Path) -> bool:
     executable = root / "sanitizer-probe"
     source.write_text("int main(void) { return 0; }\n", encoding="utf-8", newline="\n")
     try:
-        result = subprocess.run(
+        result = run_bounded_process(
             [compiler, *SANITIZER_FLAGS, str(source), "-o", str(executable)],
             cwd=ROOT,
             env={**os.environ, "LC_ALL": "C"},

@@ -19,6 +19,11 @@ from typing import Iterable
 
 
 ROOT = Path(__file__).resolve().parents[3]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from scripts.test.bounded_process import run as run_bounded_process  # noqa: E402
+
 CASE = Path(__file__).resolve().parent
 ORACLE_HXML = CASE / "oracle.hxml"
 FIXTURE = CASE / "string_runtime.c"
@@ -144,7 +149,7 @@ def haxe_environment(*, server: bool = False) -> dict[str, str]:
 
 
 def compiler_identity(executable: str) -> tuple[str, str]:
-    result = subprocess.run(
+    result = run_bounded_process(
         [executable, "--version"],
         cwd=ROOT,
         check=False,
@@ -210,7 +215,7 @@ def selected_toolchains(selected: str) -> list[Toolchain]:
 def run_oracle() -> str:
     outputs: list[str] = []
     for label in ("first", "second"):
-        result = subprocess.run(
+        result = run_bounded_process(
             [development_tool("haxe"), str(ORACLE_HXML)],
             cwd=ROOT,
             env=haxe_environment(),
@@ -238,7 +243,7 @@ def run_float_oracle() -> None:
     """Pin Float spelling to an independently executed Haxe Eval program."""
     observations: list[tuple[int, str, str]] = []
     for _ in range(2):
-        result = subprocess.run(
+        result = run_bounded_process(
             [development_tool("haxe"), "-cp", str(CASE), "--run", "FloatStringOracle"],
             cwd=ROOT,
             env=haxe_environment(),
@@ -273,7 +278,7 @@ def compile_native_fixture(
         "-o",
         str(executable),
     ]
-    compiled = subprocess.run(
+    compiled = run_bounded_process(
         command,
         cwd=ROOT,
         check=False,
@@ -287,7 +292,7 @@ def compile_native_fixture(
             f"command={command!r}\nstdout={compiled.stdout!r}\n"
             f"stderr={compiled.stderr!r}"
         )
-    executed = subprocess.run(
+    executed = run_bounded_process(
         [str(executable)],
         cwd=ROOT,
         check=False,
@@ -312,7 +317,7 @@ def inspect_symbols(executable: Path, family: str) -> None:
     nm = shutil.which("nm")
     if nm is None:
         raise StringRuntimeFailure(f"{family} string runtime requires nm evidence")
-    result = subprocess.run(
+    result = run_bounded_process(
         [nm, str(executable)],
         cwd=ROOT,
         check=False,
@@ -365,7 +370,7 @@ def run_generated_eval() -> None:
     """Run the ordinary-Haxe fixture twice before involving haxe.c."""
     observations: list[tuple[int, str, str]] = []
     for _ in range(2):
-        result = subprocess.run(
+        result = run_bounded_process(
             [development_tool("haxe"), "oracle.hxml"],
             cwd=GENERATED,
             env=haxe_environment(),
@@ -417,7 +422,7 @@ def compile_haxe(
     for define in defines:
         command.extend(["-D", define])
     command.extend(["--custom-target", f"c={output}"])
-    return subprocess.run(
+    return run_bounded_process(
         command,
         cwd=ROOT,
         env=haxe_environment(server=connect is not None),
@@ -1081,7 +1086,7 @@ def compile_generated_and_run(
         "-o",
         str(executable),
     ]
-    compiled = subprocess.run(
+    compiled = run_bounded_process(
         command,
         cwd=ROOT,
         check=False,
@@ -1099,7 +1104,7 @@ def compile_generated_and_run(
     if toolchain.family == "clang" and "-fsanitize=address,undefined" in flags:
         environment["ASAN_OPTIONS"] = "detect_leaks=0"
         environment["UBSAN_OPTIONS"] = "halt_on_error=1"
-    executed = subprocess.run(
+    executed = run_bounded_process(
         [str(executable)],
         cwd=ROOT,
         env=environment,
@@ -1124,7 +1129,7 @@ def inspect_generated_symbols(executable: Path, family: str) -> None:
     nm = shutil.which("nm")
     if nm is None:
         raise StringRuntimeFailure(f"{family} managed String evidence requires nm")
-    result = subprocess.run(
+    result = run_bounded_process(
         [nm, str(executable)],
         cwd=ROOT,
         check=False,
@@ -1191,7 +1196,7 @@ def compile_cpp_headers(toolchain: Toolchain, project: Path, build: Path) -> Non
         "-o",
         str(executable),
     ]
-    compiled = subprocess.run(
+    compiled = run_bounded_process(
         command,
         cwd=ROOT,
         check=False,
@@ -1205,7 +1210,7 @@ def compile_cpp_headers(toolchain: Toolchain, project: Path, build: Path) -> Non
             f"command={command!r}\nstdout={compiled.stdout!r}\n"
             f"stderr={compiled.stderr!r}"
         )
-    executed = subprocess.run(
+    executed = run_bounded_process(
         [str(executable)],
         cwd=ROOT,
         check=False,

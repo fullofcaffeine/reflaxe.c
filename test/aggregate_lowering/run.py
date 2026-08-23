@@ -71,6 +71,8 @@ TYPE_HEADER_BY_LAYOUT = {
 
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
+from scripts.test.bounded_process import run as run_bounded_process  # noqa: E402
+
 
 from scripts.test.c_fixture_harness import (  # noqa: E402
     C11_STRICT_FLAGS,
@@ -148,7 +150,7 @@ def render(
         command.extend(["-D", "aggregate_lowering_reverse_input"])
     if profile == "metal":
         command.extend(["-D", "aggregate_lowering_profile=metal"])
-    result = subprocess.run(
+    result = run_bounded_process(
         command,
         cwd=ROOT,
         env=haxe_environment(server=connect is not None),
@@ -767,7 +769,7 @@ def run_harness_matrix(
 
 
 def compiler_identity(executable: str) -> str:
-    result = subprocess.run(
+    result = run_bounded_process(
         [executable, "--version"],
         cwd=ROOT,
         check=False,
@@ -786,7 +788,7 @@ def compiler_identity(executable: str) -> str:
 
 
 def require_silent_success(command: list[str], *, label: str, cwd: Path = ROOT) -> None:
-    result = subprocess.run(
+    result = run_bounded_process(
         command,
         cwd=cwd,
         check=False,
@@ -954,7 +956,7 @@ def custom_target(
     if reverse:
         command.extend(["-D", "reflaxe_c_test_reverse_typed_modules"])
     command.extend(["-D", f"hxc_project_layout={layout}", "--custom-target", f"c={output}"])
-    return subprocess.run(
+    return run_bounded_process(
         command,
         cwd=ROOT,
         env=haxe_environment(server=connect is not None),
@@ -1214,7 +1216,7 @@ def check_production(*, requested_toolchain: str) -> None:
 def check_class_reference_records(*, requested_toolchain: str) -> None:
     """Prove direct records of collector-managed class references and exact roots."""
     fixture = FIXTURES / "class_reference"
-    oracle = subprocess.run(
+    oracle = run_bounded_process(
         [development_tool("haxe"), "-cp", str(fixture), "-main", "Main", "--interp"],
         cwd=ROOT,
         env=haxe_environment(),
@@ -1344,7 +1346,7 @@ def check_class_reference_records(*, requested_toolchain: str) -> None:
 def check_interface_reference_records(*, requested_toolchain: str) -> None:
     """Prove a call-bounded interface pair can cross one direct record."""
     fixture = FIXTURES / "interface_reference"
-    oracle = subprocess.run(
+    oracle = run_bounded_process(
         [development_tool("haxe"), "-cp", str(fixture), "-main", "Main", "--interp"],
         cwd=ROOT,
         env=haxe_environment(),
@@ -1540,7 +1542,7 @@ def check_negative_cases() -> None:
 def check_managed_optional(*, requested_toolchain: str) -> None:
     """Prove managed `Null<Record>` and `Null<Enum>` ownership in every mode."""
     fixture = FIXTURES / "managed_optional"
-    oracle = subprocess.run(
+    oracle = run_bounded_process(
         [development_tool("haxe"), "-cp", str(fixture), "-main", "Main", "--interp"],
         cwd=ROOT,
         env=haxe_environment(),

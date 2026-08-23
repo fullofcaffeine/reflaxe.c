@@ -103,6 +103,7 @@ from scripts.test.c_fixture_harness import (  # noqa: E402
     run_c_fixture_corpus,
     validate_report,
 )
+from scripts.test.bounded_process import run as run_bounded_process  # noqa: E402
 
 
 CXX_STRICT_FLAGS = (
@@ -189,8 +190,9 @@ def render(
         command.extend(["-D", "enum_lowering_reverse_input"])
     if profile == "metal":
         command.extend(["-D", "enum_lowering_profile=metal"])
-    result = subprocess.run(
+    result = run_bounded_process(
         command,
+        phase=label,
         cwd=ROOT,
         env=haxe_environment(),
         check=False,
@@ -798,7 +800,7 @@ def run_harness_matrix(
 
 
 def compiler_identity(executable: str) -> str:
-    result = subprocess.run(
+    result = run_bounded_process(
         [executable, "--version"],
         cwd=ROOT,
         check=False,
@@ -817,7 +819,7 @@ def compiler_identity(executable: str) -> str:
 
 
 def require_silent_success(command: list[str], *, label: str, cwd: Path = ROOT) -> None:
-    result = subprocess.run(
+    result = run_bounded_process(
         command,
         cwd=cwd,
         check=False,
@@ -940,7 +942,7 @@ def custom_target(
     if runtime is not None:
         command.extend(["-D", f"hxc_runtime={runtime}"])
     command.extend(["-D", f"hxc_project_layout={layout}", "--custom-target", f"c={output}"])
-    return subprocess.run(
+    return run_bounded_process(
         command,
         cwd=ROOT,
         env=haxe_environment(server=connect is not None),
@@ -1377,7 +1379,7 @@ def check_string_payload(*, requested_toolchain: str) -> None:
 def check_managed_string_callback(*, requested_toolchain: str) -> None:
     """Prove a synchronous enum-constructor callback retains its String payload."""
     fixture = FIXTURES / "managed_string_callback"
-    eval_result = subprocess.run(
+    eval_result = run_bounded_process(
         [development_tool("haxe"), "-cp", str(fixture), "-main", "Main", "--interp"],
         cwd=ROOT,
         env=haxe_environment(),
@@ -1499,7 +1501,7 @@ def check_managed_string_callback(*, requested_toolchain: str) -> None:
 def check_managed_class_payload(*, requested_toolchain: str) -> None:
     """Prove exact GC roots and traces for class references inside value enums."""
     fixture = FIXTURES / "managed_class_payload"
-    eval_result = subprocess.run(
+    eval_result = run_bounded_process(
         [development_tool("haxe"), "-cp", str(fixture), "-main", "Main", "--interp"],
         cwd=ROOT,
         env=haxe_environment(),
@@ -1709,7 +1711,7 @@ def check_managed_class_payload(*, requested_toolchain: str) -> None:
 def check_bytes_payload(*, requested_toolchain: str) -> None:
     """Prove shared Bytes identity and active-case cleanup inside a value enum."""
     fixture = FIXTURES / "bytes_payload"
-    eval_result = subprocess.run(
+    eval_result = run_bounded_process(
         [development_tool("haxe"), "-cp", str(fixture), "-main", "Main", "--interp"],
         cwd=ROOT,
         env=haxe_environment(),

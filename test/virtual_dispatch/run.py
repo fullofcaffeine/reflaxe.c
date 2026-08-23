@@ -110,6 +110,8 @@ REQUIRED_INTERFACE_NATIVE_COVERAGE = frozenset(
 
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
+from scripts.test.bounded_process import run as run_bounded_process  # noqa: E402
+
 
 from scripts.test.c_fixture_harness import (  # noqa: E402
     C11_STRICT_FLAGS,
@@ -216,7 +218,7 @@ def compile_fixture(
     elif layout != "split":
         raise VirtualDispatchFailure(f"unknown dispatch project layout {layout!r}")
     command.extend(["--custom-target", f"c={output}"])
-    return subprocess.run(
+    return run_bounded_process(
         command,
         cwd=ROOT,
         env=haxe_environment(locale, connect=connect),
@@ -823,7 +825,7 @@ def assert_artifacts_equal(
 
 
 def alternate_locale() -> str:
-    result = subprocess.run(
+    result = run_bounded_process(
         ["locale", "-a"], check=False, capture_output=True, text=True, timeout=10
     )
     available = {line.strip() for line in result.stdout.splitlines()}
@@ -912,7 +914,7 @@ def check_interface_determinism(*, connect: str) -> RenderedProject:
 def check_interface_eval(*, connect: str) -> None:
     """Run the same child-interface program on Haxe's Eval reference target."""
 
-    result = subprocess.run(
+    result = run_bounded_process(
         [
             development_tool("haxe"),
             "--connect",
@@ -1073,7 +1075,7 @@ def haxe_server() -> Iterator[str]:
 
 
 def require_silent_success(command: list[str], label: str) -> None:
-    result = subprocess.run(
+    result = run_bounded_process(
         command,
         cwd=ROOT,
         check=False,

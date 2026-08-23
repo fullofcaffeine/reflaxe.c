@@ -15,6 +15,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
+from scripts.test.bounded_process import run as run_bounded_process  # noqa: E402
+
 
 from scripts.raylib.core_binding import BindingFailure  # noqa: E402
 from scripts.raygui.core_binding import (  # noqa: E402
@@ -175,7 +177,7 @@ class RayguiBindingTests(unittest.TestCase):
             environment = os.environ.copy()
             environment["HAXE_NO_SERVER"] = "1"
             environment["LC_ALL"] = "C"
-            result = subprocess.run(
+            result = run_bounded_process(
                 [
                     str(haxe),
                     "--cwd",
@@ -213,7 +215,7 @@ class RayguiBindingTests(unittest.TestCase):
         environment = os.environ.copy()
         environment["HAXE_NO_SERVER"] = "1"
         environment["LC_ALL"] = "C"
-        result = subprocess.run(
+        result = run_bounded_process(
             [str(haxe), "--cwd", str(fixture), "build.hxml"],
             cwd=ROOT,
             env=environment,

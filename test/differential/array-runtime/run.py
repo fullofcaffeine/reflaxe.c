@@ -19,6 +19,11 @@ from typing import Iterable
 
 
 ROOT = Path(__file__).resolve().parents[3]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from scripts.test.bounded_process import run as run_bounded_process  # noqa: E402
+
 CASE = Path(__file__).resolve().parent
 ORACLE_HXML = CASE / "oracle.hxml"
 FIXTURE = CASE / "array_runtime.c"
@@ -90,7 +95,7 @@ def development_tool(name: str) -> str:
 
 
 def compiler_identity(executable: str) -> tuple[str, str]:
-    result = subprocess.run(
+    result = run_bounded_process(
         [executable, "--version"],
         cwd=ROOT,
         check=False,
@@ -152,7 +157,7 @@ def run_oracle() -> str:
     environment["HAXE_NO_SERVER"] = "1"
     outputs: list[str] = []
     for label in ("first", "second"):
-        result = subprocess.run(
+        result = run_bounded_process(
             [development_tool("haxe"), str(ORACLE_HXML)],
             cwd=ROOT,
             env=environment,
@@ -179,7 +184,7 @@ def run_oracle() -> str:
 def run_generated_eval_oracle() -> None:
     """Run the ordinary-Haxe ownership fixture before compiling it to C."""
 
-    result = subprocess.run(
+    result = run_bounded_process(
         [development_tool("haxe"), "oracle.hxml"],
         cwd=GENERATED,
         env=haxe_environment(),
@@ -235,7 +240,7 @@ def compile_generated_haxe(
     for define in defines:
         command.extend(["-D", define])
     command.extend(["--custom-target", f"c={output}"])
-    return subprocess.run(
+    return run_bounded_process(
         command,
         cwd=ROOT,
         env=haxe_environment(server=connect is not None),
@@ -964,7 +969,7 @@ def render_generated_pair(root: Path) -> Path:
     if generated_tree(server_first) != canonical or generated_tree(server_second) != canonical:
         raise ArrayRuntimeFailure("generated Array project changed under warm compiler-server reuse")
     validate_generated_project(normal)
-    oracle = subprocess.run(
+    oracle = run_bounded_process(
         [development_tool("haxe"), "oracle.hxml"],
         cwd=GENERATED,
         env=haxe_environment(),
@@ -1024,7 +1029,7 @@ def render_managed_class_pair(root: Path) -> Path:
             "generated Array<Class> project changed under warm compiler-server reuse"
         )
 
-    oracle = subprocess.run(
+    oracle = run_bounded_process(
         [development_tool("haxe"), "oracle.hxml"],
         cwd=GENERATED_CLASS,
         env=haxe_environment(),
@@ -1159,7 +1164,7 @@ def compile_and_run(
         "-o",
         str(executable),
     ]
-    compiled = subprocess.run(
+    compiled = run_bounded_process(
         command,
         cwd=ROOT,
         check=False,
@@ -1173,7 +1178,7 @@ def compile_and_run(
             f"command={command!r}\nstdout={compiled.stdout!r}\n"
             f"stderr={compiled.stderr!r}"
         )
-    executed = subprocess.run(
+    executed = run_bounded_process(
         [str(executable)],
         cwd=ROOT,
         check=False,
@@ -1205,7 +1210,7 @@ def compile_and_run_join_contract(
         "-o",
         str(executable),
     ]
-    compiled = subprocess.run(
+    compiled = run_bounded_process(
         command,
         cwd=ROOT,
         check=False,
@@ -1219,7 +1224,7 @@ def compile_and_run_join_contract(
             f"command={command!r}\nstdout={compiled.stdout!r}\n"
             f"stderr={compiled.stderr!r}"
         )
-    executed = subprocess.run(
+    executed = run_bounded_process(
         [str(executable)],
         cwd=ROOT,
         check=False,
@@ -1256,7 +1261,7 @@ def compile_and_run_generated(
         "-o",
         str(executable),
     ]
-    compiled = subprocess.run(
+    compiled = run_bounded_process(
         command,
         cwd=ROOT,
         check=False,
@@ -1269,7 +1274,7 @@ def compile_and_run_generated(
             f"{toolchain.family} {label} generated compile failed\n"
             f"command={command!r}\nstdout={compiled.stdout!r}\nstderr={compiled.stderr!r}"
         )
-    executed = subprocess.run(
+    executed = run_bounded_process(
         [str(executable)],
         cwd=ROOT,
         check=False,
@@ -1309,7 +1314,7 @@ def compile_and_run_generated_gc_reclamation(
         "-o",
         str(executable),
     ]
-    compiled = subprocess.run(
+    compiled = run_bounded_process(
         command,
         cwd=ROOT,
         check=False,
@@ -1322,7 +1327,7 @@ def compile_and_run_generated_gc_reclamation(
             f"{toolchain.family} {label} reclamation driver compile failed\n"
             f"command={command!r}\nstdout={compiled.stdout!r}\nstderr={compiled.stderr!r}"
         )
-    executed = subprocess.run(
+    executed = run_bounded_process(
         [str(executable)],
         cwd=ROOT,
         check=False,
@@ -1341,7 +1346,7 @@ def inspect_symbols(executable: Path, family: str) -> None:
     nm = shutil.which("nm")
     if nm is None:
         raise ArrayRuntimeFailure(f"{family} array runtime requires nm evidence")
-    result = subprocess.run(
+    result = run_bounded_process(
         [nm, str(executable)],
         cwd=ROOT,
         check=False,

@@ -17,6 +17,11 @@ from typing import Iterable
 
 
 ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from scripts.test.bounded_process import run as run_bounded_process  # noqa: E402
+
 HXML = Path(__file__).with_name("primitive_semantics.hxml")
 EXPECTED = ROOT / "docs/specs/primitive-semantics.json"
 SCHEMA = ROOT / "docs/specs/primitive-semantics.schema.json"
@@ -52,7 +57,7 @@ def development_tool(name: str) -> str:
 def render(label: str) -> PrimitiveRender:
     environment = os.environ.copy()
     environment["HAXE_NO_SERVER"] = "1"
-    result = subprocess.run(
+    result = run_bounded_process(
         [development_tool("haxe"), str(HXML)],
         cwd=ROOT,
         env=environment,
@@ -391,7 +396,7 @@ def check_snapshot(contract: dict[str, object]) -> None:
 
 
 def compiler_identity(executable: str) -> tuple[str, str]:
-    result = subprocess.run(
+    result = run_bounded_process(
         [executable, "--version"],
         cwd=ROOT,
         check=False,
@@ -475,7 +480,7 @@ def run_native(selected: str | None = None) -> None:
         for toolchain in native_toolchains(selected):
             for optimization in ("-O0", "-O2"):
                 executable = output_root / f"{toolchain.family}-{optimization[1:]}"
-                compile_result = subprocess.run(
+                compile_result = run_bounded_process(
                     [toolchain.compiler, *flags, optimization, str(NATIVE_SOURCE), "-o", str(executable)],
                     cwd=ROOT,
                     check=False,
@@ -488,7 +493,7 @@ def run_native(selected: str | None = None) -> None:
                         f"{toolchain.family} {optimization} primitive native compile failed\n"
                         f"stdout:\n{compile_result.stdout}\nstderr:\n{compile_result.stderr}"
                     )
-                run_result = subprocess.run(
+                run_result = run_bounded_process(
                     [str(executable)],
                     cwd=ROOT,
                     check=False,

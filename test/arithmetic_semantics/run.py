@@ -18,6 +18,11 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from scripts.test.bounded_process import run as run_bounded_process  # noqa: E402
+
 HXML = Path(__file__).with_name("arithmetic_semantics.hxml")
 ORACLE_HXML = Path(__file__).with_name("oracle.hxml")
 FIXTURE = Path(__file__).with_name("fixtures")
@@ -97,7 +102,7 @@ def render(
         raise ArithmeticSemanticsFailure(f"unknown arithmetic profile {profile!r}")
     environment = os.environ.copy()
     environment["HAXE_NO_SERVER"] = "1"
-    result = subprocess.run(
+    result = run_bounded_process(
         command,
         cwd=ROOT,
         env=environment,
@@ -422,7 +427,7 @@ def check_snapshots(report: dict[str, object]) -> None:
 def check_oracle() -> None:
     environment = os.environ.copy()
     environment["HAXE_NO_SERVER"] = "1"
-    result = subprocess.run(
+    result = run_bounded_process(
         [development_tool("haxe"), str(ORACLE_HXML)],
         cwd=ROOT,
         env=environment,
@@ -439,7 +444,7 @@ def check_oracle() -> None:
 
 
 def compiler_identity(executable: str) -> tuple[str, str]:
-    result = subprocess.run(
+    result = run_bounded_process(
         [executable, "--version"], capture_output=True, text=True, timeout=10
     )
     combined = (result.stdout + result.stderr).strip()
@@ -482,7 +487,7 @@ def sanitizer_supported(toolchain: NativeToolchain, root: Path) -> bool:
     source = root / f"sanitizer-probe-{toolchain.family}.c"
     executable = root / f"sanitizer-probe-{toolchain.family}"
     source.write_text("int main(void) { return 0; }\n", encoding="utf-8", newline="\n")
-    result = subprocess.run(
+    result = run_bounded_process(
         [toolchain.compiler, *SANITIZER_FLAGS, str(source), "-o", str(executable)],
         capture_output=True,
         text=True,
@@ -581,7 +586,7 @@ int main(void)
 
 
 def run_command(command: list[str], label: str, *, timeout: int = 30) -> None:
-    result = subprocess.run(command, capture_output=True, text=True, timeout=timeout)
+    result = run_bounded_process(command, capture_output=True, text=True, timeout=timeout)
     if result.returncode != 0 or result.stdout or result.stderr:
         raise ArithmeticSemanticsFailure(
             f"{label} failed\nexit={result.returncode}\n"
@@ -750,7 +755,7 @@ def custom_target(
     command.extend(["-D", "hxc_project_layout=unity", "--custom-target", f"c={output}"])
     environment = os.environ.copy()
     environment["HAXE_NO_SERVER"] = "1"
-    return subprocess.run(
+    return run_bounded_process(
         command,
         cwd=ROOT,
         env=environment,

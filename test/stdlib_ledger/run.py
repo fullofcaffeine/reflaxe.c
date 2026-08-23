@@ -19,6 +19,11 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from scripts.test.bounded_process import run as run_bounded_process  # noqa: E402
+
 CASE = Path(__file__).resolve().parent
 LEDGER = ROOT / "docs/specs/stdlib-ledger.json"
 CSV_LEDGER = ROOT / "docs/specs/stdlib-ledger.csv"
@@ -186,7 +191,7 @@ def run_probe(scope: str, label: str) -> ProbeRender:
             command.extend(["--custom-target", f"stdlibprobe={output}"])
         else:
             raise StdlibLedgerFailure(f"unknown probe scope: {scope}")
-        result = subprocess.run(
+        result = run_bounded_process(
             command,
             cwd=ROOT,
             env=environment,
@@ -1020,7 +1025,7 @@ def check_capability_authority_guard() -> None:
     environment["HAXE_NO_SERVER"] = "1"
     with tempfile.TemporaryDirectory(prefix="hxc-stdlib-ledger-negative-") as directory:
         output = Path(directory) / "out"
-        result = subprocess.run(
+        result = run_bounded_process(
             [
                 development_tool("haxe"),
                 "-cp",

@@ -818,7 +818,7 @@ class CaxecraftTimingTests(unittest.TestCase):
                 return_value=("-cp", "src", "--custom-target", "c=/test/out"),
             ) as resolve,
             mock.patch.object(
-                caxecraft.subprocess, "run", return_value=completed
+                caxecraft, "run_bounded_process", return_value=completed
             ) as run,
         ):
             observed = caxecraft.compile_target(

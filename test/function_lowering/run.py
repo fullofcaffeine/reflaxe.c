@@ -29,6 +29,7 @@ from scripts.test.c_fixture_harness import (  # noqa: E402
     run_c_fixture_corpus,
     validate_report,
 )
+from scripts.test.bounded_process import run as run_bounded_process  # noqa: E402
 
 
 HXML = Path(__file__).with_name("function_lowering.hxml")
@@ -104,8 +105,9 @@ def render(
         raise FunctionLoweringFailure(f"unknown function profile {profile!r}")
     environment = os.environ.copy()
     environment["HAXE_NO_SERVER"] = "1"
-    result = subprocess.run(
+    result = run_bounded_process(
         command,
+        phase=label,
         cwd=ROOT,
         env=environment,
         check=False,
@@ -598,7 +600,7 @@ def normalized_profile(report: dict[str, object]) -> dict[str, object]:
 
 
 def compiler_identity(executable: str) -> tuple[str, str]:
-    result = subprocess.run(
+    result = run_bounded_process(
         [executable, "--version"],
         cwd=ROOT,
         check=False,
@@ -676,7 +678,7 @@ def check_native(
         sources = write_native_project(report, root)
         header = root / "include/hxc/program.h"
         for toolchain in available_compilers(selected):
-            header_result = subprocess.run(
+            header_result = run_bounded_process(
                 [
                     toolchain.compiler,
                     *STRICT_FLAGS,
@@ -700,7 +702,7 @@ def check_native(
                 )
             for optimization in ("-O0", "-O2"):
                 executable = root / f"program-{toolchain.family}-{optimization[1:]}"
-                compiled = subprocess.run(
+                compiled = run_bounded_process(
                     [
                         toolchain.compiler,
                         *STRICT_FLAGS,
@@ -722,7 +724,7 @@ def check_native(
                         f"{toolchain.family} {optimization} rejected function C\n"
                         f"stdout:\n{compiled.stdout}\nstderr:\n{compiled.stderr}"
                     )
-                ran = subprocess.run(
+                ran = run_bounded_process(
                     [str(executable)],
                     cwd=ROOT,
                     check=False,
@@ -736,7 +738,7 @@ def check_native(
                         f"exit={ran.returncode} stdout={ran.stdout!r} stderr={ran.stderr!r}"
                     )
             sanitized = root / f"program-{toolchain.family}-sanitized"
-            sanitizer_compile = subprocess.run(
+            sanitizer_compile = run_bounded_process(
                 [
                     toolchain.compiler,
                     *STRICT_FLAGS,
@@ -765,7 +767,7 @@ def check_native(
                     f"stdout:\n{sanitizer_compile.stdout}"
                     f"stderr:\n{sanitizer_compile.stderr}"
                 )
-            sanitized_run = subprocess.run(
+            sanitized_run = run_bounded_process(
                 [str(sanitized)],
                 cwd=ROOT,
                 check=False,
@@ -787,7 +789,7 @@ def check_native(
 
 def check_eval_oracle() -> None:
     """Run the same closure assertions through Haxe Eval as an independent oracle."""
-    result = subprocess.run(
+    result = run_bounded_process(
         [
             development_tool("haxe"),
             "-cp",
@@ -851,7 +853,7 @@ def custom_target(
         environment["HAXE_NO_SERVER"] = "1"
     else:
         environment.pop("HAXE_NO_SERVER", None)
-    return subprocess.run(
+    return run_bounded_process(
         command,
         cwd=ROOT,
         env=environment,
@@ -986,7 +988,7 @@ def check_production() -> None:
         production_sources = sorted((first / "src").glob("*.c"))
         if not production_sources:
             raise FunctionLoweringFailure("production project emitted no C sources")
-        compiled = subprocess.run(
+        compiled = run_bounded_process(
             [
                 compiler.compiler,
                 *STRICT_FLAGS,
@@ -1006,7 +1008,7 @@ def check_production() -> None:
             raise FunctionLoweringFailure(
                 f"production generated C failed strict compile\n{compiled.stdout}{compiled.stderr}"
             )
-        ran = subprocess.run(
+        ran = run_bounded_process(
             [str(executable)],
             cwd=ROOT,
             check=False,
@@ -1155,7 +1157,7 @@ def check_module_fields() -> None:
                 "generated C leaked Haxe's hidden module-fields container"
             )
 
-        oracle = subprocess.run(
+        oracle = run_bounded_process(
             [development_tool("haxe"), "-cp", str(MODULE_FIELDS), "-main", "ModuleFunctions", "--interp"],
             cwd=ROOT,
             env={**os.environ, "HAXE_NO_SERVER": "1"},
@@ -1169,7 +1171,7 @@ def check_module_fields() -> None:
 
         toolchain = available_compilers()[0]
         executable = root / "module-fields"
-        native = subprocess.run(
+        native = run_bounded_process(
             [
                 toolchain.compiler,
                 *STRICT_FLAGS,
@@ -1190,7 +1192,7 @@ def check_module_fields() -> None:
             raise FunctionLoweringFailure(
                 f"module-field generated C failed strict native compilation\n{native.stdout}{native.stderr}"
             )
-        ran = subprocess.run(
+        ran = run_bounded_process(
             [str(executable)],
             cwd=ROOT,
             check=False,
@@ -1352,7 +1354,7 @@ def check_direct_argument_defaults(selected: str | None) -> None:
             ("default", DEFAULT_ARGUMENT),
             ("optional", OPTIONAL_ARGUMENT),
         ):
-            oracle = subprocess.run(
+            oracle = run_bounded_process(
                 [development_tool("haxe"), "-cp", str(fixture), "-main", "Main", "--interp"],
                 cwd=ROOT,
                 env={**os.environ, "HAXE_NO_SERVER": "1"},
@@ -1427,7 +1429,7 @@ def check_direct_argument_defaults(selected: str | None) -> None:
             runtime_sources = planned_runtime_sources(outputs["split"])
             for optimization in ("-O0", "-O2"):
                 executable = root / f"{name}-{toolchain.family}-{optimization[1:]}"
-                native = subprocess.run(
+                native = run_bounded_process(
                     [
                         toolchain.compiler,
                         *STRICT_FLAGS,
@@ -1452,7 +1454,7 @@ def check_direct_argument_defaults(selected: str | None) -> None:
                         f"{name} {optimization} generated C failed strict compilation\n"
                         f"stdout:\n{native.stdout}stderr:\n{native.stderr}"
                     )
-                ran = subprocess.run(
+                ran = run_bounded_process(
                     [str(executable)],
                     cwd=ROOT,
                     check=False,
@@ -1471,7 +1473,7 @@ def check_direct_argument_defaults(selected: str | None) -> None:
                 "-fno-omit-frame-pointer",
                 "-fsanitize=address,undefined",
             )
-            sanitizer_compile = subprocess.run(
+            sanitizer_compile = run_bounded_process(
                 [
                     toolchain.compiler,
                     *STRICT_FLAGS,
@@ -1496,7 +1498,7 @@ def check_direct_argument_defaults(selected: str | None) -> None:
                     f"{name} generated C failed the address/undefined-behavior sanitizer build\n"
                     f"stdout:\n{sanitizer_compile.stdout}stderr:\n{sanitizer_compile.stderr}"
                 )
-            sanitized_run = subprocess.run(
+            sanitized_run = run_bounded_process(
                 [str(sanitized)],
                 cwd=ROOT,
                 check=False,

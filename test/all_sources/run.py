@@ -12,6 +12,12 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from scripts.test.bounded_process import run as run_bounded_process  # noqa: E402
+
+
 HXML = Path(__file__).with_name("all_sources.hxml")
 SUCCESS_SENTINEL = "all-sources: OK"
 LOWERING_DIAGNOSTIC_ID = "HXC1001"
@@ -48,8 +54,9 @@ def run_haxe(
 ) -> subprocess.CompletedProcess[str]:
     environment = os.environ.copy()
     environment["HAXE_NO_SERVER"] = "1"
-    result = subprocess.run(
+    result = run_bounded_process(
         [development_tool("haxe"), str(HXML), *arguments],
+        phase=label,
         cwd=ROOT,
         env=environment,
         check=False,

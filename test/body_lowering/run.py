@@ -18,6 +18,11 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from scripts.test.bounded_process import run as run_bounded_process  # noqa: E402
+
 HXML = Path(__file__).with_name("body_lowering.hxml")
 POSITIVE = Path(__file__).with_name("fixtures") / "positive"
 UNSUPPORTED = Path(__file__).with_name("fixtures") / "unsupported"
@@ -87,7 +92,7 @@ def render(
         raise BodyLoweringFailure(f"unknown body-lowering profile {profile!r}")
     environment = os.environ.copy()
     environment["HAXE_NO_SERVER"] = "1"
-    result = subprocess.run(
+    result = run_bounded_process(
         command,
         cwd=ROOT,
         env=environment,
@@ -552,7 +557,7 @@ int main(void)
 
 
 def compiler_identity(executable: str) -> tuple[str, str]:
-    result = subprocess.run(
+    result = run_bounded_process(
         [executable, "--version"],
         cwd=ROOT,
         check=False,
@@ -636,7 +641,7 @@ def check_native(report: dict[str, object], selected: str | None = None) -> None
                             root
                             / f"{source_key}-{mode}-{toolchain.family}-{optimization[1:]}"
                         )
-                        compile_result = subprocess.run(
+                        compile_result = run_bounded_process(
                             [
                                 toolchain.compiler,
                                 "-std=c11",
@@ -668,7 +673,7 @@ def check_native(report: dict[str, object], selected: str | None = None) -> None
                                 f"stdout:\n{compile_result.stdout}"
                                 f"stderr:\n{compile_result.stderr}"
                             )
-                        run_result = subprocess.run(
+                        run_result = run_bounded_process(
                             [str(executable)],
                             cwd=ROOT,
                             check=False,
@@ -708,7 +713,7 @@ def custom_target(
     command.extend(["-D", "hxc_project_layout=unity", "--custom-target", f"c={output}"])
     environment = os.environ.copy()
     environment["HAXE_NO_SERVER"] = "1"
-    return subprocess.run(
+    return run_bounded_process(
         command,
         cwd=ROOT,
         env=environment,
@@ -763,7 +768,7 @@ def check_throw_cleanup(root: Path) -> None:
             ),
         ):
             executable = root / f"throw-cleanup-{toolchain.family}-{mode}"
-            compiled = subprocess.run(
+            compiled = run_bounded_process(
                 [
                     toolchain.compiler,
                     "-std=c11",
@@ -794,7 +799,7 @@ def check_throw_cleanup(root: Path) -> None:
                     f"{toolchain.family} {mode} rejected throw cleanup fixture\n"
                     f"stdout:\n{compiled.stdout}\nstderr:\n{compiled.stderr}"
                 )
-            ran = subprocess.run(
+            ran = run_bounded_process(
                 [str(executable)],
                 cwd=ROOT,
                 check=False,
@@ -911,7 +916,7 @@ def check_production_boundaries() -> None:
 
         compiler = available_compilers()[0]
         executable = root / "supported-program"
-        compiled = subprocess.run(
+        compiled = run_bounded_process(
             [
                 compiler.compiler,
                 "-std=c11",
@@ -938,7 +943,7 @@ def check_production_boundaries() -> None:
                 "strict compiler rejected supported production project\n"
                 f"stdout:\n{compiled.stdout}\nstderr:\n{compiled.stderr}"
             )
-        ran = subprocess.run(
+        ran = run_bounded_process(
             [str(executable)],
             cwd=ROOT,
             check=False,

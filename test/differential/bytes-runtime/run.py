@@ -16,6 +16,11 @@ from typing import Iterable
 
 
 ROOT = Path(__file__).resolve().parents[3]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from scripts.test.bounded_process import run as run_bounded_process  # noqa: E402
+
 CASE = Path(__file__).resolve().parent
 GENERATED = CASE / "generated"
 RETURN_STRING = CASE / "return_string"
@@ -107,7 +112,7 @@ def resolve_toolchains(selected: str) -> list[Toolchain]:
                 raise BytesRuntimeFailure(f"required C compiler is missing: {family}")
             print(f"bytes-runtime: SKIP optional {family}: missing command")
             continue
-        identity = subprocess.run(
+        identity = run_bounded_process(
             [compiler, "--version"],
             cwd=ROOT,
             check=False,
@@ -131,7 +136,7 @@ def resolve_toolchains(selected: str) -> list[Toolchain]:
 def run_eval_oracle() -> None:
     outputs: list[tuple[int, str, str]] = []
     for _ in range(2):
-        execution = subprocess.run(
+        execution = run_bounded_process(
             [development_tool("haxe"), "oracle.hxml"],
             cwd=GENERATED,
             env=haxe_environment(),
@@ -145,7 +150,7 @@ def run_eval_oracle() -> None:
         raise BytesRuntimeFailure(f"pinned Eval Bytes oracle drifted: {outputs!r}")
     return_outputs: list[tuple[int, str, str]] = []
     for _ in range(2):
-        execution = subprocess.run(
+        execution = run_bounded_process(
             [
                 development_tool("haxe"),
                 "-cp",
@@ -197,7 +202,7 @@ def compile_haxe(
     for define in defines:
         command.extend(["-D", define])
     command.extend(["--custom-target", f"c={output}"])
-    return subprocess.run(
+    return run_bounded_process(
         command,
         cwd=ROOT,
         env=haxe_environment(),
@@ -815,7 +820,7 @@ def compile_and_run(
         "-o",
         str(executable),
     ]
-    compilation = subprocess.run(
+    compilation = run_bounded_process(
         command,
         cwd=ROOT,
         check=False,
@@ -827,7 +832,7 @@ def compile_and_run(
         raise BytesRuntimeFailure(
             f"strict native compile failed\ncommand={command!r}\nstdout={compilation.stdout!r}\nstderr={compilation.stderr!r}"
         )
-    execution = subprocess.run(
+    execution = run_bounded_process(
         [str(executable)],
         cwd=ROOT,
         check=False,
@@ -876,7 +881,7 @@ def validate_cpp_header(
         "-o",
         str(executable),
     ]
-    compilation = subprocess.run(
+    compilation = run_bounded_process(
         command,
         cwd=ROOT,
         check=False,
@@ -889,7 +894,7 @@ def validate_cpp_header(
             "strict C++17 generated-header consumer failed\n"
             f"command={command!r}\nstdout={compilation.stdout!r}\nstderr={compilation.stderr!r}"
         )
-    execution = subprocess.run(
+    execution = run_bounded_process(
         [str(executable)],
         cwd=ROOT,
         check=False,
@@ -928,7 +933,7 @@ def validate_mutable_buffer_cpp_header(project: Path, build: Path, family: str) 
         "-o",
         str(executable),
     ]
-    result = subprocess.run(
+    result = run_bounded_process(
         command,
         cwd=ROOT,
         check=False,
@@ -947,7 +952,7 @@ def inspect_symbols(executable: Path, family: str) -> None:
     nm = shutil.which("nm")
     if nm is None:
         raise BytesRuntimeFailure(f"{family} Bytes evidence requires nm")
-    result = subprocess.run([nm, str(executable)], check=False, capture_output=True, text=True, timeout=20)
+    result = run_bounded_process([nm, str(executable)], check=False, capture_output=True, text=True, timeout=20)
     if result.returncode != 0:
         raise BytesRuntimeFailure(f"{family} could not inspect Bytes symbols")
     for required in ("hxc_bytes_ref_blit", "hxc_bytes_ref_release", "hxc_bytes_ref_sub"):
