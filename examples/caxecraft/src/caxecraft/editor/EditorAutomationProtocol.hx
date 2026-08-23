@@ -313,7 +313,7 @@ private function encodeColumn(editor:EditorPackageSession, requestId:Int, x:Int,
 
 private function encodeMutation(requestId:Int, result:EditorMutationResult):String {
 	return switch result {
-		case MutationApplied(_, changes, revision, undoDepth, redoDepth):
+		case MutationApplied(_, changes, _, revision, undoDepth, redoDepth):
 			successStart(requestId, "mutation") + ',"revision":$revision,"changed":${changes.length},"undoDepth":$undoDepth,"redoDepth":$redoDepth}';
 		case MutationUnchanged(_, revision): successStart(requestId, "unchanged") + ',"revision":$revision}';
 		case MutationRejected(error, revision): errorFor(requestId, '${Std.string(error)} at revision $revision');

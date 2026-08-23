@@ -36,6 +36,7 @@ import caxecraft.editor.EditorTypes.EditorSelectionRequest;
 import caxecraft.editor.EditorTypes.EditorSelectionResult;
 import caxecraft.editor.EditorTypes.EditorSettings;
 import caxecraft.editor.EditorTypes.EditorTestPlayResult;
+import caxecraft.editor.EditorTypes.EditorTerrainChange;
 import caxecraft.editor.EditorTypes.EditorValidationObservation;
 import caxecraft.editor.EditorTypes.EditorValidationResult;
 import caxecraft.scenario.Scenario;
@@ -46,6 +47,7 @@ import caxecraft.scenario.ScenarioContentRegistry;
 import caxecraft.scenario.ScenarioGeometry.VoxelBounds;
 import caxecraft.scenario.ScenarioValidator;
 import caxecraft.editor.EditorWorldGrid.containsBounds as containsWorldBounds;
+import caxecraft.editor.EditorWorldGrid.paletteCodeAt as worldPaletteCodeAt;
 import caxecraft.editor.EditorWorldGrid.volume as voxelVolume;
 import haxe.io.Bytes;
 
@@ -60,8 +62,14 @@ private enum EditorSessionPlayState {
 
 /** One isolated reducer pass before a preview or transaction publishes state. */
 private enum EditorStageResult {
-	StageReady(after:EditorScenarioImage, families:Array<EditorCommandFamily>, changes:Array<EditorChangeId>);
+	StageReady(after:EditorScenarioImage, families:Array<EditorCommandFamily>, changes:Array<EditorChangeId>, terrain:EditorTerrainChange);
 	StageRejected(error:EditorError);
+}
+
+/** Direction-correct terrain footprints stored with one history entry. */
+private typedef EditorTerrainHistoryPair = {
+	final undo:EditorTerrainChange;
+	final redo:EditorTerrainChange;
 }
 
 /** Validation result for a workspace target against the current draft. */
@@ -250,7 +258,7 @@ final class EditorSession {
 			return PreviewRejected(TransactionTooLarge(request.commands.length, settings.transactionCommands), currentRevision);
 		return switch stageCommands(draftImage, request.commands) {
 			case StageRejected(error): PreviewRejected(error, currentRevision);
-			case StageReady(after, families, changes): previewStaged(draftImage, after, families, changes);
+			case StageReady(after, families, changes, _): previewStaged(draftImage, after, families, changes);
 		};
 	}
 
@@ -367,10 +375,10 @@ final class EditorSession {
 			return MutationRejected(TransactionTooLarge(commands.length, settings.transactionCommands), currentRevision);
 		return switch stageCommands(draftImage, commands) {
 			case StageRejected(error): MutationRejected(error, currentRevision);
-			case StageReady(after, families, changes):
-				switch accept(draftImage, after, Transaction, changes) {
-					case EditApplied(_, committedChanges, undoDepth, redoDepth):
-						MutationApplied(families.copy(), committedChanges, currentRevision, undoDepth, redoDepth);
+			case StageReady(after, families, changes, terrain):
+				switch accept(draftImage, after, Transaction, changes, {undo: terrain, redo: terrain}) {
+					case EditApplied(_, committedChanges, committedTerrain, undoDepth, redoDepth):
+						MutationApplied(families.copy(), committedChanges, committedTerrain, currentRevision, undoDepth, redoDepth);
 					case EditUnchanged(_): MutationUnchanged(families.copy(), currentRevision);
 					case EditRejected(error): MutationRejected(error, currentRevision);
 				}
@@ -382,6 +390,7 @@ final class EditorSession {
 		var staged = before;
 		final families:Array<EditorCommandFamily> = [];
 		final changes:Array<EditorChangeId> = [];
+		var terrain = TerrainUnchanged;
 		for (command in commands) {
 			switch command {
 				case RestoreLastPlayable:
@@ -393,6 +402,7 @@ final class EditorSession {
 							staged = image;
 							families.push(Recovery);
 							mergeChanges(changes, [ChangedDocument]);
+							terrain = TerrainChanged;
 					}
 				case _:
 					switch reduceCommand(staged.scenario, command, settings) {
@@ -404,11 +414,16 @@ final class EditorSession {
 									staged = image;
 									families.push(reduction.family);
 									mergeChanges(changes, changesFor(command));
+									switch terrainChangeForCommand(command) {
+										case TerrainUnchanged:
+										case TerrainVoxelChanged(_, _) | TerrainChanged:
+											terrain = TerrainChanged;
+									}
 							}
 					}
 			}
 		}
-		return StageReady(staged, families.copy(), changes.copy());
+		return StageReady(staged, families.copy(), changes.copy(), terrain);
 	}
 
 	/** Match the commit gate without recording or publishing the candidate. */
@@ -426,8 +441,8 @@ final class EditorSession {
 
 	function mutationFromEdit(result:EditorEditResult):EditorMutationResult {
 		return switch result {
-			case EditApplied(family, changes, undoDepth, redoDepth):
-				MutationApplied([family], changes, currentRevision, undoDepth, redoDepth);
+			case EditApplied(family, changes, terrain, undoDepth, redoDepth):
+				MutationApplied([family], changes, terrain, currentRevision, undoDepth, redoDepth);
 			case EditUnchanged(family):
 				MutationUnchanged([family], currentRevision);
 			case EditRejected(error):
@@ -437,11 +452,48 @@ final class EditorSession {
 
 	function mutationFromHistory(result:EditorHistoryResult):EditorMutationResult {
 		return switch result {
-			case HistoryApplied(family, changes, undoDepth, redoDepth):
-				MutationApplied([family], changes, currentRevision, undoDepth, redoDepth);
+			case HistoryApplied(family, changes, terrain, undoDepth, redoDepth):
+				MutationApplied([family], changes, terrain, currentRevision, undoDepth, redoDepth);
 			case HistoryRejected(error):
 				MutationRejected(error, currentRevision);
 		}
+	}
+
+	/** Return a broad batch footprint when one command can affect terrain. */
+	function terrainChangeForCommand(command:EditorCommand):EditorTerrainChange {
+		return switch command {
+			case ResizeWorld(_) | SetPaletteEntry(_, _) | PaintVoxel(_, _) | EraseVoxel(_) | PaintVoxels(_, _) | EraseVoxels(_) | FillBounds(_, _) |
+				RestoreLastPlayable:
+				TerrainChanged;
+			case SetTitle(_) | SetEnvironment(_) | PutFluid(_) | RemoveFluid(_) | StampPrefab(_, _, _, _) | PutObject(_) | MoveObjectBy(_, _) |
+				RotateObjectBy(_, _) | ResizeTriggerTo(_, _) | RemoveObject(_) | PutDialogue(_) | RemoveDialogue(_) | PutObjective(_) | RemoveObjective(_) |
+				PutRule(_) | RemoveRule(_) | SetDefaultLocale(_) | PutLocale(_) | RemoveLocale(_) | PutMessage(_, _) | RemoveMessage(_, _):
+				TerrainUnchanged;
+		};
+	}
+
+	/** Capture the exact values that a single command writes and restores. */
+	function terrainHistoryForCommand(before:Scenario, command:EditorCommand):Null<EditorTerrainHistoryPair> {
+		return switch command {
+			case PaintVoxel(point, paletteCode):
+				final previous = worldPaletteCodeAt(before.world, point);
+				if (previous == null) null; else {
+					undo: TerrainVoxelChanged(point, previous),
+					redo: TerrainVoxelChanged(point, paletteCode)
+				};
+			case EraseVoxel(point):
+				final previous = worldPaletteCodeAt(before.world, point);
+				if (previous == null) null; else {
+					undo: TerrainVoxelChanged(point, previous),
+					redo: TerrainVoxelChanged(point, 0)
+				};
+			case ResizeWorld(_) | SetPaletteEntry(_, _) | PaintVoxels(_, _) | EraseVoxels(_) | FillBounds(_, _) | RestoreLastPlayable:
+				{undo: TerrainChanged, redo: TerrainChanged};
+			case SetTitle(_) | SetEnvironment(_) | PutFluid(_) | RemoveFluid(_) | StampPrefab(_, _, _, _) | PutObject(_) | MoveObjectBy(_, _) |
+				RotateObjectBy(_, _) | ResizeTriggerTo(_, _) | RemoveObject(_) | PutDialogue(_) | RemoveDialogue(_) | PutObjective(_) | RemoveObjective(_) |
+				PutRule(_) | RemoveRule(_) | SetDefaultLocale(_) | PutLocale(_) | RemoveLocale(_) | PutMessage(_, _) | RemoveMessage(_, _):
+				{undo: TerrainUnchanged, redo: TerrainUnchanged};
+		};
 	}
 
 	function applyToImage(before:EditorScenarioImage, command:EditorCommand):EditorEditResult {
@@ -453,10 +505,13 @@ final class EditorSession {
 		return switch reduceCommand(before.scenario, command, settings) {
 			case ReductionRejected(error): EditRejected(error);
 			case ReductionReady(reduction):
+				final terrainHistory = terrainHistoryForCommand(before.scenario, command);
+				if (terrainHistory == null)
+					return EditRejected(DraftWorldIsNotEditable);
 				switch captureReduction(command, reduction.scenario) {
 					case ImageRejected(error): EditRejected(error);
 					case ImageReady(after):
-						accept(before, after, reduction.family, changesFor(command));
+						accept(before, after, reduction.family, changesFor(command), terrainHistory);
 				}
 		}
 	}
@@ -502,7 +557,7 @@ final class EditorSession {
 				selection = selectionForScenario(selection, draftImage.scenario);
 				currentStateIdentity = entry.beforeStateIdentity;
 				advanceRevision();
-				HistoryApplied(entry.family, entry.changes.copy(), history.undoDepth(), history.redoDepth());
+				HistoryApplied(entry.family, entry.changes.copy(), entry.undoTerrain, history.undoDepth(), history.redoDepth());
 		}
 	}
 
@@ -529,7 +584,7 @@ final class EditorSession {
 				selection = selectionForScenario(selection, draftImage.scenario);
 				currentStateIdentity = entry.afterStateIdentity;
 				advanceRevision();
-				HistoryApplied(entry.family, entry.changes.copy(), history.undoDepth(), history.redoDepth());
+				HistoryApplied(entry.family, entry.changes.copy(), entry.redoTerrain, history.undoDepth(), history.redoDepth());
 		}
 	}
 
@@ -668,11 +723,12 @@ final class EditorSession {
 			return EditRejected(NoPlayableScenario);
 		return switch captureScenario(lastPlayable) {
 			case ImageRejected(error): EditRejected(error);
-			case ImageReady(after): accept(before, after, Recovery, [ChangedDocument]);
+			case ImageReady(after): accept(before, after, Recovery, [ChangedDocument], {undo: TerrainChanged, redo: TerrainChanged});
 		}
 	}
 
-	function accept(before:EditorScenarioImage, after:EditorScenarioImage, family:EditorCommandFamily, changes:Array<EditorChangeId>):EditorEditResult {
+	function accept(before:EditorScenarioImage, after:EditorScenarioImage, family:EditorCommandFamily, changes:Array<EditorChangeId>,
+			terrain:EditorTerrainHistoryPair):EditorEditResult {
 		if (before.bytes.compare(after.bytes) == 0)
 			return EditUnchanged(family);
 		if (currentRevision == 2147483647)
@@ -683,6 +739,8 @@ final class EditorSession {
 		final entry:EditorHistoryEntry = {
 			family: family,
 			changes: changes.copy(),
+			undoTerrain: terrain.undo,
+			redoTerrain: terrain.redo,
 			beforeStateIdentity: currentStateIdentity,
 			afterStateIdentity: nextStateIdentity + 1,
 			before: before.bytes.sub(0, before.bytes.length),
@@ -695,7 +753,7 @@ final class EditorSession {
 		nextStateIdentity++;
 		currentStateIdentity = nextStateIdentity;
 		advanceRevision();
-		return EditApplied(family, changes.copy(), history.undoDepth(), history.redoDepth());
+		return EditApplied(family, changes.copy(), terrain.redo, history.undoDepth(), history.redoDepth());
 	}
 
 	/**

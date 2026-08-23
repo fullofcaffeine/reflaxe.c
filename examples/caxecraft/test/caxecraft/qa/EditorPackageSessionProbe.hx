@@ -104,13 +104,13 @@ final class EditorPackageSessionProbe {
 		require(!editorPackage.hasUnsavedChanges(), "second successful save remained dirty");
 
 		switch active.mutate({baseRevision: active.revision(), mutation: Undo}) {
-			case MutationApplied(_, _, _, _, _):
+			case MutationApplied(_, _, _, _, _, _):
 			case MutationUnchanged(_, _) | MutationRejected(_, _):
 				throw new haxe.Exception("undo after save did not restore the prior title");
 		}
 		require(editorPackage.hasUnsavedChanges(), "undo away from the saved bytes appeared clean");
 		switch active.mutate({baseRevision: active.revision(), mutation: Redo}) {
-			case MutationApplied(_, _, _, _, _):
+			case MutationApplied(_, _, _, _, _, _):
 			case MutationUnchanged(_, _) | MutationRejected(_, _):
 				throw new haxe.Exception("redo after save did not restore the saved title");
 		}
@@ -127,7 +127,7 @@ final class EditorPackageSessionProbe {
 	/** Replace the literal title through the same revisioned editor mutation. */
 	static function applyTitle(editorPackage:EditorPackageSession, title:String):Void {
 		switch editorPackage.mutate({baseRevision: editorPackage.revision(), mutation: Apply(SetTitle(ScenarioText.Literal(title)))}) {
-			case MutationApplied(_, _, _, _, _):
+			case MutationApplied(_, _, _, _, _, _):
 			case MutationUnchanged(_, _) | MutationRejected(_, _):
 				throw new haxe.Exception('title edit rejected: $title');
 		}

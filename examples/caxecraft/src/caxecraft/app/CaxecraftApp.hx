@@ -334,6 +334,8 @@ final class CaxecraftApp {
 				placedBlockCount++;
 				terrainPatchDirtyChunks = editorScreen.pilotPatchDirtyChunks();
 				terrainPatchFallbackCount = editorScreen.pilotPatchFellBack() ? 1 : 0;
+				if (!editorScreen.applyPilotTerrainHistoryRoundTrip())
+					rejectedEditCount++;
 			} else
 				rejectedEditCount++;
 			final heldDown:NavigationSample = {
@@ -419,6 +421,7 @@ final class CaxecraftApp {
 				rejectedEditCount++;
 			Sys.println('caxecraft: editor retained-terrain refreshes=${editorScreen.pilotKeepTerrainCount()} microseconds=${editorScreen.pilotKeepTerrainMicroseconds()}');
 			Sys.println('caxecraft: editor one-voxel refreshes=${editorScreen.pilotVoxelCount()} microseconds=${editorScreen.pilotVoxelMicroseconds()}');
+			Sys.println('caxecraft: editor terrain undo-redo microseconds=${editorScreen.pilotTerrainHistoryMicroseconds()}');
 			Sys.println('caxecraft: editor object undo-redo microseconds=${editorScreen.pilotHistoryMicroseconds()}');
 		}
 		return {

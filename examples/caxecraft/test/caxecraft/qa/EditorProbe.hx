@@ -52,7 +52,7 @@ import caxecraft.editor.EditorRuntimeTerrain.runtimeCodeForPalette;
 import caxecraft.editor.EditorTerrainRefresh.EditorTerrainRefreshRequest;
 import caxecraft.editor.EditorTerrainRefresh.forBatch as terrainRefreshForBatch;
 import caxecraft.editor.EditorTerrainRefresh.forCommand as terrainRefreshForCommand;
-import caxecraft.editor.EditorTerrainRefresh.forChanges as terrainRefreshForChanges;
+import caxecraft.editor.EditorTerrainRefresh.forTerrainChange as terrainRefreshForTerrainChange;
 import caxecraft.editor.EditorSession;
 import caxecraft.editor.EditorTypes.EditorCommand;
 import caxecraft.editor.EditorTypes.EditorCommandFamily;
@@ -69,6 +69,7 @@ import caxecraft.editor.EditorTypes.EditorSelection;
 import caxecraft.editor.EditorTypes.EditorSelectionResult;
 import caxecraft.editor.EditorTypes.EditorSettings;
 import caxecraft.editor.EditorTypes.EditorTestPlayResult;
+import caxecraft.editor.EditorTypes.EditorTerrainChange;
 import caxecraft.editor.EditorTypes.EditorValidationObservation;
 import caxecraft.editor.EditorTypes.EditorValidationResult;
 import caxecraft.editor.EditorViewport.EditorTool;
@@ -106,6 +107,7 @@ import caxecraft.editor.EditorWorldViewport.projectObjects;
 import caxecraft.editor.EditorWorldViewport.projectWorld;
 import caxecraft.editor.EditorWorldViewport.retargetOrbitCamera;
 import caxecraft.editor.EditorWorldViewport.surfaceTopAt;
+import caxecraft.editor.EditorWorldGrid.paletteCodeAt as worldPaletteCodeAt;
 import caxecraft.editor.EditorWorldViewport.stepCamera;
 import caxecraft.input.NavigationInput.NavigationCommand;
 import caxecraft.input.NavigationInput.NavigationRepeater;
@@ -179,7 +181,7 @@ final class EditorProbe {
 		final buildControlChecks = checkBuildControls();
 		final viewportChecks = checkViewport();
 		final worldViewportChecks = checkWorldViewport();
-		final runtimeTerrainChecks = checkRuntimeTerrainProjection();
+		final runtimeTerrainChecks = checkRuntimeTerrainProjection() + checkTerrainHistoryFootprints();
 		checkZoneRuleProjection();
 		final activeLevelChecks = checkActiveLevelProjection();
 		checkEnvironmentTextRoundTrip();
@@ -414,29 +416,115 @@ final class EditorProbe {
 				throw "a terrain batch requested an incremental refresh";
 		}
 		checks++;
-		for (changes in [
-			[ChangedTitle],
-			[ChangedObject(id("editor.object"))],
-			[ChangedFluid(id("editor.fluid"))],
-			[ChangedRule(id("editor.rule"))]
-		]) {
-			switch terrainRefreshForChanges(changes) {
-				case KeepTerrain:
-				case RefreshTerrainVoxel(_, _) | RefreshAllTerrain:
-					throw "non-terrain history invalidated terrain";
-			}
-			checks++;
-		}
-		for (changes in [[ChangedDocument], [ChangedWorldShape], [ChangedTerrain], [ChangedPalette(1)]]) {
-			switch terrainRefreshForChanges(changes) {
-				case RefreshAllTerrain:
-				case KeepTerrain | RefreshTerrainVoxel(_, _):
-					throw "terrain-affecting history retained stale terrain";
-			}
-			checks++;
-		}
 		return checks;
 	}
+
+	/**
+	 * Prove that one voxel keeps an exact direction-aware history footprint.
+	 *
+	 * The screen can apply each footprint to its retained projection. Comparing
+	 * that projection with a fresh decode protects both the fast path and the
+	 * visible terrain after Apply, Undo, and Redo.
+	 */
+	static function checkTerrainHistoryFootprints():Int {
+		var checks = 0;
+		final session = open(defaultEditorSettings());
+		expectApplied(session.apply(ResizeWorld({width: 4, height: 2, depth: 3})), WorldShape, "terrain history world size");
+		expectApplied(session.apply(SetPaletteEntry(1, STONE)), Voxel, "terrain history palette");
+		final point:VoxelPoint = {x: 1, y: 1, z: 1};
+		final retained = projectWorld(session.draftSnapshot().world);
+		require(retained != null
+			&& worldPaletteCodeAt(session.draftSnapshot().world, point) == 0, "compact voxel lookup lost an authored air cell");
+		checks++;
+
+		applyTerrainFootprint(retained, session.mutate({
+			baseRevision: session.revision(),
+			mutation: Apply(PaintVoxel(point, 1))
+		}), point, 1, "paint");
+		checks++;
+		require(worldPaletteCodeAt(session.draftSnapshot().world, point) == 1, "compact voxel lookup lost an authored solid cell");
+		checks++;
+		requireProjectionMatches(retained, session, "paint");
+		checks++;
+
+		applyTerrainFootprint(retained, session.mutate({baseRevision: session.revision(), mutation: Undo}), point, 0, "undo");
+		checks++;
+		requireProjectionMatches(retained, session, "undo");
+		checks++;
+		applyTerrainFootprint(retained, session.mutate({baseRevision: session.revision(), mutation: Redo}), point, 1, "redo");
+		checks++;
+		requireProjectionMatches(retained, session, "redo");
+		checks++;
+
+		switch session.mutate({baseRevision: session.revision(), mutation: Apply(SetTitle(Literal("Footprint metadata")))}) {
+			case MutationApplied(_, _, TerrainUnchanged, _, _, _):
+			case _:
+				throw "metadata edit did not retain terrain";
+		}
+		checks++;
+		switch session.mutate({
+			baseRevision: session.revision(),
+			mutation: ApplyBatch([SetTitle(Literal("Footprint batch")), EraseVoxel(point)])
+		}) {
+			case MutationApplied(_, _, TerrainChanged, _, _, _):
+			case _:
+				throw "terrain batch exposed an unsafe narrow footprint";
+		}
+		checks++;
+		require(worldPaletteCodeAt(session.draftSnapshot().world, {x: 4, y: 0, z: 0}) == null, "compact voxel lookup admitted an excluded coordinate");
+		checks++;
+		return checks;
+	}
+
+	/** Apply one expected narrow mutation footprint to a retained projection. */
+	static function applyTerrainFootprint(projection:EditorWorldProjection, result:EditorMutationResult, expectedPoint:VoxelPoint, expectedPaletteCode:Int,
+			operation:String):Void {
+		switch result {
+			case MutationApplied(_, _, terrain, _, _, _):
+				switch terrainRefreshForTerrainChange(terrain) {
+					case RefreshTerrainVoxel(point, paletteCode):
+						require(point.x == expectedPoint.x && point.y == expectedPoint.y && point.z == expectedPoint.z && paletteCode == expectedPaletteCode,
+							'$operation returned the wrong terrain footprint');
+						require(patchProjectedVoxel(projection, point, paletteCode), '$operation footprint did not patch the retained projection');
+					case KeepTerrain | RefreshAllTerrain:
+						throw '$operation did not return one exact voxel footprint';
+				}
+			case MutationUnchanged(_, _) | MutationRejected(_, _):
+				throw '$operation did not commit';
+		}
+	}
+
+	/** Compare the mutable fast-path cells and derived surfaces with a full decode. */
+	static function requireProjectionMatches(retained:EditorWorldProjection, session:EditorSession, operation:String):Void {
+		final fresh = projectWorld(session.draftSnapshot().world);
+		require(fresh != null
+			&& intArraysEqual(retained.cells, fresh.cells)
+			&& intArraysEqual(retained.surfaceTops, fresh.surfaceTops)
+			&& projectionColumnsKey(retained) == projectionColumnsKey(fresh)
+			&& projectionPatchesKey(retained) == projectionPatchesKey(fresh),
+			'$operation retained projection disagreed with a full decode');
+	}
+
+	/** Compare two integer arrays without relying on target-specific array identity. */
+	static function intArraysEqual(left:Array<Int>, right:Array<Int>):Bool {
+		if (left.length != right.length)
+			return false;
+		for (index in 0...left.length)
+			if (left[index] != right[index])
+				return false;
+		return true;
+	}
+
+	/** Serialize the small derived column view for deterministic comparison. */
+	static function projectionColumnsKey(projection:EditorWorldProjection):String
+		return [for (column in projection.columns) '${column.x}:${column.z}:${column.topY}'].join("|");
+
+	/** Serialize the compact surface patches for deterministic comparison. */
+	static function projectionPatchesKey(projection:EditorWorldProjection):String
+		return [
+			for (patch in projection.surfacePatches)
+				'${patch.x}:${patch.z}:${patch.width}:${patch.depth}:${patch.topY}:${patch.paletteCode}'
+		].join("|");
 
 	/** Prove that a creator gesture becomes one collision-free reloadable object. */
 	static function checkCheckpointPlacement():Void {
@@ -499,7 +587,7 @@ final class EditorProbe {
 		require(session.canonicalDraft().compare(beforeBytes) == 0 && session.historyEntries() == beforeHistory,
 			"checkpoint template partial failure changed bytes or history");
 		switch session.mutate({baseRevision: session.revision(), mutation: ApplyBatch(template.commands)}) {
-			case MutationApplied(families, _, _, undoDepth, redoDepth):
+			case MutationApplied(families, _, _, _, undoDepth, redoDepth):
 				require(families.length == 2 && families[0] == Placement && families[1] == Rule && undoDepth == beforeHistory + 1 && redoDepth == 0,
 					"checkpoint template did not commit as one reversible transaction");
 			case other:
@@ -516,7 +604,7 @@ final class EditorProbe {
 		require(session.leaveTestPlay(), "checkpoint template Test Play did not return to editing");
 		require(session.canonicalDraft().compare(committed) == 0, "checkpoint template Test Play changed canonical bytes");
 		switch session.mutate({baseRevision: session.revision(), mutation: Undo}) {
-			case MutationApplied(_, _, _, _, _):
+			case MutationApplied(_, _, _, _, _, _):
 			case other:
 				throw 'checkpoint template undo failed: $other';
 		}
@@ -721,13 +809,13 @@ final class EditorProbe {
 		expectApplied(opened.apply(SetEnvironment(null)), DocumentMetadata, "remove environment");
 		require(opened.draftSnapshot().environment == null, "environment None choice did not restore fallback sky");
 		switch opened.mutate({baseRevision: opened.revision(), mutation: Undo}) {
-			case MutationApplied(_, _, _, _, _):
+			case MutationApplied(_, _, _, _, _, _):
 			case other:
 				throw 'undo environment removal failed: $other';
 		}
 		require(opened.canonicalDraft().compare(editedBytes) == 0, "undo did not restore exact environment bytes");
 		switch opened.mutate({baseRevision: opened.revision(), mutation: Redo}) {
-			case MutationApplied(_, _, _, _, _):
+			case MutationApplied(_, _, _, _, _, _):
 			case other:
 				throw 'redo environment removal failed: $other';
 		}
@@ -927,7 +1015,7 @@ final class EditorProbe {
 		final beforeResize = session.canonicalDraft();
 		final beforeSelection = selectionKey(session);
 		switch session.mutate({baseRevision: session.revision(), mutation: Apply(ResizeTriggerTo(triggerId, {width: 2, height: 2, depth: 2}))}) {
-			case MutationApplied(families, changes, _, _, _):
+			case MutationApplied(families, changes, _, _, _, _):
 				require(families.length == 1 && families[0] == Placement, "trigger resize reported the wrong command family");
 				require(changes.length == 1 && isObjectChange(changes[0], triggerId), "trigger resize lost its changed-object identity");
 			case other:
@@ -936,7 +1024,7 @@ final class EditorProbe {
 		final afterResize = session.canonicalDraft();
 		require(beforeResize.compare(afterResize) != 0, "trigger resize changed no authored bytes");
 		switch session.mutate({baseRevision: session.revision(), mutation: Undo}) {
-			case MutationApplied(_, changes, _, _, _):
+			case MutationApplied(_, changes, _, _, _, _):
 				require(changes.length == 1 && isObjectChange(changes[0], triggerId), "trigger resize undo lost its changed-object identity");
 			case other:
 				throw 'trigger resize undo failed: $other';
@@ -944,7 +1032,7 @@ final class EditorProbe {
 		require(session.canonicalDraft().compare(beforeResize) == 0 && selectionKey(session) == beforeSelection,
 			"trigger resize undo did not restore the exact prior state");
 		switch session.mutate({baseRevision: session.revision(), mutation: Redo}) {
-			case MutationApplied(_, changes, _, _, _):
+			case MutationApplied(_, changes, _, _, _, _):
 				require(changes.length == 1 && isObjectChange(changes[0], triggerId), "trigger resize redo lost its changed-object identity");
 			case other:
 				throw 'trigger resize redo failed: $other';
@@ -1738,7 +1826,7 @@ final class EditorProbe {
 			baseRevision: initialState.revision,
 			mutation: Apply(ResizeWorld({width: 2, height: 1, depth: 2}))
 		}) {
-			case MutationApplied(families, changes, 1, 1, 0):
+			case MutationApplied(families, changes, _, 1, 1, 0):
 				require(families.length == 1 && families[0] == WorldShape, "single mutation lost its command family");
 				require(changes.length == 1 && isWorldShapeChange(changes[0]), "single mutation lost its changed world identity");
 			case _:
@@ -1782,7 +1870,7 @@ final class EditorProbe {
 			baseRevision: 1,
 			mutation: ApplyBatch(batchCommands)
 		}) {
-			case MutationApplied(families, changes, 2, 2, 0):
+			case MutationApplied(families, changes, _, 2, 2, 0):
 				require(families.length == 2 && families[0] == Voxel && families[1] == Voxel, "atomic mutation lost its ordered command families");
 				require(changes.length == 2 && isPaletteChange(changes[0], 1) && isTerrainChange(changes[1]),
 					"atomic mutation did not deduplicate changed semantic identities in command order");
@@ -1844,7 +1932,7 @@ final class EditorProbe {
 		}
 
 		switch session.mutate({baseRevision: 2, mutation: Undo}) {
-			case MutationApplied(families, changes, 3, 1, 1):
+			case MutationApplied(families, changes, _, 3, 1, 1):
 				require(families.length == 1 && families[0] == Transaction, "transaction undo lost its history family");
 				require(changes.length == 2, "transaction undo lost the stored changed identities");
 			case _:
@@ -1853,7 +1941,7 @@ final class EditorProbe {
 		require(session.canonicalDraft().compare(afterResize) == 0, "transaction undo restored a partial batch");
 		require(selectionKey(session) == selectionBeforeHistory, "document undo rewound workspace selection");
 		switch session.mutate({baseRevision: 3, mutation: Redo}) {
-			case MutationApplied(families, changes, 4, 2, 0):
+			case MutationApplied(families, changes, _, 4, 2, 0):
 				require(families.length == 1 && families[0] == Transaction, "transaction redo lost its history family");
 				require(changes.length == 2, "transaction redo lost the stored changed identities");
 			case _:
@@ -1956,7 +2044,7 @@ final class EditorProbe {
 				PutObject({id: objectId, tags: [new ScenarioTag("updated")], placement: Checkpoint(transform(2000, 0, 1000))})
 			])
 		}) {
-			case MutationApplied(_, changes, 5, _, _):
+			case MutationApplied(_, changes, _, 5, _, _):
 				require(changes.length == 1 && isObjectChange(changes[0], objectId), "replacement batch did not deduplicate its stable object identity");
 			case _:
 				throw "replacement batch did not commit";
@@ -1986,14 +2074,14 @@ final class EditorProbe {
 			case _: false;
 		}, "select missing authored object");
 		switch session.mutate({baseRevision: 5, mutation: Apply(RemoveObject(objectId))}) {
-			case MutationApplied(_, changes, 6, _, _):
+			case MutationApplied(_, changes, _, 6, _, _):
 				require(changes.length == 1 && isObjectChange(changes[0], objectId), "object deletion lost its stable identity");
 			case _:
 				throw "object deletion did not commit";
 		}
 		require(selectionKey(session) == "none", "deleting a selected object left a stale workspace target");
 		switch session.mutate({baseRevision: 6, mutation: Undo}) {
-			case MutationApplied(_, changes, 7, _, _):
+			case MutationApplied(_, changes, _, 7, _, _):
 				require(changes.length == 1 && isObjectChange(changes[0], objectId), "deletion undo lost its stored object identity");
 			case _:
 				throw "object deletion undo did not commit";
@@ -2033,7 +2121,7 @@ final class EditorProbe {
 		final session = open(defaultEditorSettings());
 		final before = session.canonicalDraft();
 		switch session.mutate({baseRevision: 0, mutation: Apply(SetTitle(Literal("Bosque de Ivvy")))}) {
-			case MutationApplied(families, changes, 1, 1, 0):
+			case MutationApplied(families, changes, _, 1, 1, 0):
 				require(families.length == 1 && families[0] == DocumentMetadata, "title mutation lost its document-metadata family");
 				require(changes.length == 1 && isTitleChange(changes[0]), "title mutation lost its stable changed-title identity");
 			case _:
@@ -2055,7 +2143,7 @@ final class EditorProbe {
 		require(session.canonicalDraft().compare(renamed) == 0
 			&& session.undoDepth() == 1, "rejected title input changed canonical state or history");
 		switch session.mutate({baseRevision: 1, mutation: Undo}) {
-			case MutationApplied(families, changes, 2, 0, 1):
+			case MutationApplied(families, changes, _, 2, 0, 1):
 				require(families.length == 1 && families[0] == DocumentMetadata && changes.length == 1 && isTitleChange(changes[0]),
 					"title undo lost its family or changed identity");
 			case _:
@@ -2063,7 +2151,7 @@ final class EditorProbe {
 		}
 		require(session.canonicalDraft().compare(before) == 0, "title undo changed unrelated canonical bytes");
 		switch session.mutate({baseRevision: 2, mutation: Redo}) {
-			case MutationApplied(families, changes, 3, 1, 0):
+			case MutationApplied(families, changes, _, 3, 1, 0):
 				require(families.length == 1 && families[0] == DocumentMetadata && changes.length == 1 && isTitleChange(changes[0]),
 					"title redo lost its family or changed identity");
 			case _:
@@ -2995,7 +3083,7 @@ final class EditorProbe {
 
 	static function expectApplied(result:EditorEditResult, family:EditorCommandFamily, label:String):Void {
 		switch result {
-			case EditApplied(actual, _, _, _):
+			case EditApplied(actual, _, _, _, _):
 				require(actual == family, '$label reported the wrong command family');
 			case EditUnchanged(_):
 				throw '$label unexpectedly made no change';
@@ -3006,7 +3094,7 @@ final class EditorProbe {
 
 	static function expectHistory(result:EditorHistoryResult, family:EditorCommandFamily, label:String):Void {
 		switch result {
-			case HistoryApplied(actual, _, _, _):
+			case HistoryApplied(actual, _, _, _, _):
 				require(actual == family, '$label reported the wrong command family');
 			case HistoryRejected(error):
 				throw '$label was rejected: $error';

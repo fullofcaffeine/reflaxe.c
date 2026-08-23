@@ -1,7 +1,7 @@
 package caxecraft.editor;
 
 import caxecraft.editor.EditorTypes.EditorCommand;
-import caxecraft.editor.EditorTypes.EditorChangeId;
+import caxecraft.editor.EditorTypes.EditorTerrainChange;
 import caxecraft.scenario.ScenarioGeometry.VoxelPoint;
 
 /**
@@ -55,21 +55,11 @@ function forBatch(commands:Array<EditorCommand>):EditorTerrainRefreshRequest {
 	return KeepTerrain;
 }
 
-/**
-	Return the safe terrain refresh after Undo or Redo.
-
-	History reports stable change IDs from its original command. Metadata and
-	authored objects cannot change voxel bytes or palette meaning, so they retain
-	the current projection. Terrain, palette, world-shape, and full-document
-	restores use the complete path because history does not report exact cells.
-**/
-function forChanges(changes:Array<EditorChangeId>):EditorTerrainRefreshRequest {
-	for (change in changes)
-		switch change {
-			case ChangedDocument | ChangedWorldShape | ChangedTerrain | ChangedPalette(_):
-				return RefreshAllTerrain;
-			case ChangedTitle | ChangedFluid(_) | ChangedObject(_) | ChangedDialogue(_) | ChangedObjective(_) | ChangedRule(_) | ChangedLocalization |
-				ChangedLocale(_) | ChangedMessage(_, _):
-		}
-	return KeepTerrain;
+/** Map one typed mutation footprint to the matching presentation refresh. */
+function forTerrainChange(change:EditorTerrainChange):EditorTerrainRefreshRequest {
+	return switch change {
+		case TerrainUnchanged: KeepTerrain;
+		case TerrainVoxelChanged(point, paletteCode): RefreshTerrainVoxel(point, paletteCode);
+		case TerrainChanged: RefreshAllTerrain;
+	};
 }

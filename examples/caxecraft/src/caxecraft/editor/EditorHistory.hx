@@ -3,6 +3,7 @@ package caxecraft.editor;
 import caxecraft.editor.EditorTypes.EditorCommandFamily;
 import caxecraft.editor.EditorTypes.EditorChangeId;
 import caxecraft.editor.EditorTypes.EditorSettings;
+import caxecraft.editor.EditorTypes.EditorTerrainChange;
 import haxe.io.Bytes;
 
 /**
@@ -15,6 +16,12 @@ import haxe.io.Bytes;
 typedef EditorHistoryEntry = {
 	final family:EditorCommandFamily;
 	final changes:Array<EditorChangeId>;
+
+	/** Smallest safe terrain refresh after restoring `before`. */
+	final undoTerrain:EditorTerrainChange;
+
+	/** Smallest safe terrain refresh after restoring `after`. */
+	final redoTerrain:EditorTerrainChange;
 
 	/** Stable identity of the draft restored by Undo. */
 	final beforeStateIdentity:Int;

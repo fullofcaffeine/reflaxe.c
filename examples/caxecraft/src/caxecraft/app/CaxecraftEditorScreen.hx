@@ -30,7 +30,7 @@ import caxecraft.editor.EditorSession;
 import caxecraft.editor.EditorTerrainRefresh.EditorTerrainRefreshRequest;
 import caxecraft.editor.EditorTerrainRefresh.forBatch as terrainRefreshForBatch;
 import caxecraft.editor.EditorTerrainRefresh.forCommand as terrainRefreshForCommand;
-import caxecraft.editor.EditorTerrainRefresh.forChanges as terrainRefreshForChanges;
+import caxecraft.editor.EditorTerrainRefresh.forTerrainChange as terrainRefreshForTerrainChange;
 import caxecraft.editor.EditorEnvironment.EditorEnvironmentControl;
 import caxecraft.editor.EditorEnvironment.EditorEnvironmentDirection;
 import caxecraft.editor.EditorEnvironment.editEnvironment;
@@ -229,6 +229,9 @@ final class CaxecraftEditorScreen {
 
 	/** Total synchronous time for one object undo and matching redo. */
 	var pilotHistoryRoundTripMicroseconds:Int = 0;
+
+	/** Total synchronous time for one terrain undo and matching redo. */
+	var pilotTerrainHistoryRoundTripMicroseconds:Int = 0;
 	#end
 
 	/**
@@ -1247,7 +1250,7 @@ final class CaxecraftEditorScreen {
 			return;
 		final replacement = editEnvironment(environment, control, direction);
 		switch current.mutate({baseRevision: current.revision(), mutation: Apply(SetEnvironment(replacement))}) {
-			case MutationApplied(_, _, _, _, _):
+			case MutationApplied(_, _, _, _, _, _):
 				notice = Ready;
 				refreshProjection(false, KeepTerrain);
 			case MutationUnchanged(_, _):
@@ -1390,7 +1393,7 @@ final class CaxecraftEditorScreen {
 		if (current == null)
 			return false;
 		return switch current.mutate({baseRevision: current.revision(), mutation: Apply(MoveObjectBy(id, delta))}) {
-			case MutationApplied(_, _, _, _, _):
+			case MutationApplied(_, _, _, _, _, _):
 				notice = Ready;
 				refreshProjection(false, KeepTerrain);
 				true;
@@ -1413,7 +1416,7 @@ final class CaxecraftEditorScreen {
 			case NoEditorSelection | VoxelSelection(_) | NodeSelection(_): return;
 		};
 		switch current.mutate({baseRevision: current.revision(), mutation: Apply(RotateObjectBy(id, degrees))}) {
-			case MutationApplied(_, _, _, _, _):
+			case MutationApplied(_, _, _, _, _, _):
 				notice = Ready;
 				refreshProjection(false, KeepTerrain);
 			case MutationUnchanged(_, _):
@@ -1433,7 +1436,7 @@ final class CaxecraftEditorScreen {
 			case NoEditorSelection | VoxelSelection(_) | NodeSelection(_): return;
 		};
 		switch current.mutate({baseRevision: current.revision(), mutation: Apply(ResizeTriggerTo(id, size))}) {
-			case MutationApplied(_, _, _, _, _):
+			case MutationApplied(_, _, _, _, _, _):
 				notice = Ready;
 				refreshProjection(false, KeepTerrain);
 			case MutationUnchanged(_, _):
@@ -1453,7 +1456,7 @@ final class CaxecraftEditorScreen {
 			case NoEditorSelection | VoxelSelection(_) | NodeSelection(_): return;
 		};
 		switch current.mutate({baseRevision: current.revision(), mutation: Apply(RemoveObject(id))}) {
-			case MutationApplied(_, _, _, _, _):
+			case MutationApplied(_, _, _, _, _, _):
 				selection = current.selectedBounds();
 				objectList = new GuiListViewState(-1);
 				detailsOpen = false;
@@ -1482,7 +1485,7 @@ final class CaxecraftEditorScreen {
 			return;
 		}
 		switch current.mutate({baseRevision: current.revision(), mutation: Apply(duplicate.command)}) {
-			case MutationApplied(_, _, _, _, _):
+			case MutationApplied(_, _, _, _, _, _):
 				notice = Ready;
 				refreshProjection(false, KeepTerrain);
 				selectObject(duplicate.id);
@@ -1536,9 +1539,9 @@ final class CaxecraftEditorScreen {
 		if (current == null)
 			return;
 		switch current.mutate({baseRevision: current.revision(), mutation: Undo}) {
-			case MutationApplied(_, changes, _, _, _):
+			case MutationApplied(_, _, terrain, _, _, _):
 				notice = Ready;
-				refreshProjection(false, terrainRefreshForChanges(changes));
+				refreshProjection(false, terrainRefreshForTerrainChange(terrain));
 			case MutationUnchanged(_, _):
 				notice = Ready;
 			case MutationRejected(_, _):
@@ -1551,9 +1554,9 @@ final class CaxecraftEditorScreen {
 		if (current == null)
 			return;
 		switch current.mutate({baseRevision: current.revision(), mutation: Redo}) {
-			case MutationApplied(_, changes, _, _, _):
+			case MutationApplied(_, _, terrain, _, _, _):
 				notice = Ready;
-				refreshProjection(false, terrainRefreshForChanges(changes));
+				refreshProjection(false, terrainRefreshForTerrainChange(terrain));
 			case MutationUnchanged(_, _):
 				notice = Ready;
 			case MutationRejected(_, _):
@@ -1622,7 +1625,7 @@ final class CaxecraftEditorScreen {
 			baseRevision: current.revision(),
 			mutation: Apply(SetTitle(ScenarioText.Literal(value)))
 		}) {
-			case MutationApplied(_, _, _, _, _) | MutationUnchanged(_, _):
+			case MutationApplied(_, _, _, _, _, _) | MutationUnchanged(_, _):
 				notice = Ready;
 				true;
 			case MutationRejected(_, _):
@@ -2188,7 +2191,7 @@ final class CaxecraftEditorScreen {
 				}
 			case ToolCommandReady(value):
 				switch current.mutate({baseRevision: current.revision(), mutation: Apply(value)}) {
-					case MutationApplied(_, _, _, _, _):
+					case MutationApplied(_, _, _, _, _, _):
 						notice = Ready;
 						refreshProjection(false, terrainRefreshForCommand(value));
 						switch value {
@@ -2206,7 +2209,7 @@ final class CaxecraftEditorScreen {
 				}
 			case ToolBatchReady(commands, selectedObject):
 				switch current.mutate({baseRevision: current.revision(), mutation: ApplyBatch(commands)}) {
-					case MutationApplied(_, _, _, _, _):
+					case MutationApplied(_, _, _, _, _, _):
 						notice = Ready;
 						refreshProjection(false, terrainRefreshForBatch(commands));
 						selectObject(selectedObject);
@@ -2498,6 +2501,27 @@ final class CaxecraftEditorScreen {
 	/** Return total object undo and redo time for this pilot run. */
 	public inline function pilotHistoryMicroseconds():Int
 		return pilotHistoryRoundTripMicroseconds;
+
+	/** Return total one-voxel terrain undo and redo time for this pilot run. */
+	public inline function pilotTerrainHistoryMicroseconds():Int
+		return pilotTerrainHistoryRoundTripMicroseconds;
+
+	/** Undo and redo the newest voxel edit, then prove its canonical state returned. */
+	public function applyPilotTerrainHistoryRoundTrip():Bool {
+		final current = session;
+		if (current == null || current.undoDepth() <= 0)
+			return false;
+		final beforeCanonical = current.canonicalDraft();
+		final beforeUndoDepth = current.undoDepth();
+		final beforeRedoDepth = current.redoDepth();
+		final started = Raylib.GetTime();
+		undo();
+		redo();
+		pilotTerrainHistoryRoundTripMicroseconds += Std.int((Raylib.GetTime() - started) * 1000000.0);
+		return current.canonicalDraft().compare(beforeCanonical) == 0
+			&& current.undoDepth() == beforeUndoDepth
+			&& current.redoDepth() == beforeRedoDepth;
+	}
 
 	/** Undo and redo the newest edit, then prove that its canonical state returned. */
 	public function applyPilotHistoryRoundTrip():Bool {

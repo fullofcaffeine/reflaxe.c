@@ -189,6 +189,50 @@ function decode(world:ScenarioWorld):Null<Array<Int>> {
 	return cells;
 }
 
+/**
+	Read one voxel from compact chunk runs without expanding the complete world.
+
+	The session uses this after a validated single-voxel command to record the
+	value that Undo must restore. The function rejects missing, overlapping, or
+	malformed owning chunks, so history never records a plausible partial value.
+**/
+@:noCompletion
+function paletteCodeAt(world:ScenarioWorld, point:VoxelPoint):Null<Int> {
+	if (!validSize(world.size) || !containsPoint(world.size, point))
+		return null;
+	var result:Null<Int> = null;
+	for (chunk in world.chunks) {
+		if (!containsBounds(world.size, {origin: chunk.origin, size: chunk.size}))
+			return null;
+		final inside = point.x >= chunk.origin.x
+			&& point.y >= chunk.origin.y
+			&& point.z >= chunk.origin.z
+			&& point.x < chunk.origin.x + chunk.size.width
+			&& point.y < chunk.origin.y + chunk.size.height
+			&& point.z < chunk.origin.z + chunk.size.depth;
+		if (!inside)
+			continue;
+		if (result != null)
+			return null;
+		final localX = point.x - chunk.origin.x;
+		final localY = point.y - chunk.origin.y;
+		final localZ = point.z - chunk.origin.z;
+		final wanted = (localZ * chunk.size.height + localY) * chunk.size.width + localX;
+		final expected = volume(chunk.size);
+		var offset = 0;
+		for (run in chunk.runs) {
+			if (run.count <= 0 || offset > expected - run.count)
+				return null;
+			if (wanted >= offset && wanted < offset + run.count)
+				result = run.paletteCode;
+			offset += run.count;
+		}
+		if (offset != expected || result == null)
+			return null;
+	}
+	return result;
+}
+
 private function rewriteChunks(chunks:Array<VoxelChunk>, worldSize:VoxelSize, cells:Array<Int>):Array<VoxelChunk> {
 	final result:Array<VoxelChunk> = [];
 	for (chunk in chunks) {

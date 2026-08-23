@@ -126,6 +126,18 @@ enum EditorChangeId {
 	ChangedMessage(locale:LocaleId, message:MessageId);
 }
 
+/** Exact terrain footprint published with one accepted mutation or history step. */
+enum EditorTerrainChange {
+	/** The mutation cannot change voxel bytes or palette interpretation. */
+	TerrainUnchanged;
+
+	/** The mutation changed one voxel to this palette code. */
+	TerrainVoxelChanged(point:VoxelPoint, paletteCode:Int);
+
+	/** The mutation can change several voxels, world shape, or palette meaning. */
+	TerrainChanged;
+}
+
 /** Fixed editor-tree groups whose children retain their own semantic IDs. */
 enum EditorSection {
 	World;
@@ -343,10 +355,12 @@ enum EditorPreviewResult {
 	An applied result advances the revision exactly once. `families` lists the
 	individual command groups for a batch. `changes` is a deterministic,
 	deduplicated list of semantic identities stored with history and therefore
-	available again on undo and redo.
+	available again on undo and redo. `terrain` is the smallest safe presentation
+	refresh for the state now visible to the caller.
 **/
 enum EditorMutationResult {
-	MutationApplied(families:Array<EditorCommandFamily>, changes:Array<EditorChangeId>, revision:Int, undoDepth:Int, redoDepth:Int);
+	MutationApplied(families:Array<EditorCommandFamily>, changes:Array<EditorChangeId>, terrain:EditorTerrainChange, revision:Int, undoDepth:Int,
+		redoDepth:Int);
 	MutationUnchanged(families:Array<EditorCommandFamily>, revision:Int);
 	MutationRejected(error:EditorError, revision:Int);
 }
@@ -425,13 +439,13 @@ enum EditorOpenResult {
 }
 
 enum EditorEditResult {
-	EditApplied(family:EditorCommandFamily, changes:Array<EditorChangeId>, undoDepth:Int, redoDepth:Int);
+	EditApplied(family:EditorCommandFamily, changes:Array<EditorChangeId>, terrain:EditorTerrainChange, undoDepth:Int, redoDepth:Int);
 	EditUnchanged(family:EditorCommandFamily);
 	EditRejected(error:EditorError);
 }
 
 enum EditorHistoryResult {
-	HistoryApplied(family:EditorCommandFamily, changes:Array<EditorChangeId>, undoDepth:Int, redoDepth:Int);
+	HistoryApplied(family:EditorCommandFamily, changes:Array<EditorChangeId>, terrain:EditorTerrainChange, undoDepth:Int, redoDepth:Int);
 	HistoryRejected(error:EditorError);
 }
 
