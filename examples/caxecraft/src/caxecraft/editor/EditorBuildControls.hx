@@ -9,6 +9,7 @@ import caxecraft.editor.EditorFocus.EditorFocusTarget;
 import caxecraft.editor.EditorFocus.moveFocus;
 import caxecraft.scenario.ScenarioGeometry.VoxelPoint;
 import caxecraft.scenario.ScenarioId;
+import caxecraft.scenario.ScenarioWorld.BlockPaletteEntry;
 
 /**
  * Owns the small device-neutral interaction policy for direct 3D editing.
@@ -312,6 +313,73 @@ function cycleBuildHotbarTool(tool:EditorTool, direction:Int):EditorTool {
 		slot = 1;
 	final next = toolForBuildHotbarSlot(slot);
 	return next == null ? normalizeBuildTool(tool) : next;
+}
+
+/**
+ * Keep one terrain brush inside the current map's non-air palette.
+ *
+ * A map owns its compact palette codes. The requested code wins when that map
+ * admits it. Otherwise the default code wins, followed by the first non-air
+ * entry. `-1` reports that the map has no material that Build can place.
+ */
+function normalizeBuildPaletteCode(palette:Array<BlockPaletteEntry>, requested:Int, defaultCode:Int):Int {
+	if (containsBuildPaletteCode(palette, requested))
+		return requested;
+	if (containsBuildPaletteCode(palette, defaultCode))
+		return defaultCode;
+	for (entry in palette)
+		if (entry.code != 0)
+			return entry.code;
+	return -1;
+}
+
+/** Move through the map's non-air terrain materials and wrap at each end. */
+function cycleBuildPaletteCode(palette:Array<BlockPaletteEntry>, current:Int, defaultCode:Int, direction:Int):Int {
+	final normalized = normalizeBuildPaletteCode(palette, current, defaultCode);
+	if (normalized < 0 || direction == 0)
+		return normalized;
+	var currentIndex = -1;
+	var materialCount = 0;
+	for (entry in palette) {
+		if (entry.code != 0) {
+			if (entry.code == normalized)
+				currentIndex = materialCount;
+			materialCount++;
+		}
+	}
+	if (materialCount < 2)
+		return normalized;
+	var nextIndex = currentIndex + (direction > 0 ? 1 : -1);
+	if (nextIndex < 0)
+		nextIndex = materialCount - 1;
+	else if (nextIndex >= materialCount)
+		nextIndex = 0;
+	var candidateIndex = 0;
+	for (entry in palette) {
+		if (entry.code != 0) {
+			if (candidateIndex == nextIndex)
+				return entry.code;
+			candidateIndex++;
+		}
+	}
+	return normalized;
+}
+
+/** Pick one aimed solid material, or retain the valid current brush. */
+function pickBuildPaletteCode(palette:Array<BlockPaletteEntry>, current:Int, defaultCode:Int, targetSolid:Bool, targetCode:Int):Int {
+	if (targetSolid && containsBuildPaletteCode(palette, targetCode))
+		return targetCode;
+	return normalizeBuildPaletteCode(palette, current, defaultCode);
+}
+
+/** True when one non-air compact code belongs to the current map. */
+private function containsBuildPaletteCode(palette:Array<BlockPaletteEntry>, code:Int):Bool {
+	if (code == 0)
+		return false;
+	for (entry in palette)
+		if (entry.code == code)
+			return true;
+	return false;
 }
 
 /** Replace Plan's hidden Erase mode with Build's direct terrain mode. */

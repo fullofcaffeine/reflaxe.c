@@ -10,6 +10,7 @@ import caxecraft.editor.EditorBuildControls.EditorBuildObjectGrab;
 import caxecraft.editor.EditorBuildControls.EditorBuildTerrainAction;
 import caxecraft.editor.EditorBuildControls.EditorObjectShortcutAction;
 import caxecraft.editor.EditorBuildControls.cycleBuildHotbarTool;
+import caxecraft.editor.EditorBuildControls.cycleBuildPaletteCode;
 import caxecraft.editor.EditorBuildControls.buildPrompt;
 import caxecraft.editor.EditorBuildControls.moveBuildFocus;
 import caxecraft.editor.EditorBuildControls.nextPointerState;
@@ -17,11 +18,13 @@ import caxecraft.editor.EditorBuildControls.nextObjectGrab;
 import caxecraft.editor.EditorBuildControls.immersiveWorkspaceActive;
 import caxecraft.editor.EditorBuildControls.normalizeBuildFocus;
 import caxecraft.editor.EditorBuildControls.normalizeBuildTool;
+import caxecraft.editor.EditorBuildControls.normalizeBuildPaletteCode;
 import caxecraft.editor.EditorBuildControls.objectAction;
 import caxecraft.editor.EditorBuildControls.objectGrabActive;
 import caxecraft.editor.EditorBuildControls.objectGrabCandidate;
 import caxecraft.editor.EditorBuildControls.objectPlacementDelta;
 import caxecraft.editor.EditorBuildControls.objectShortcutAction;
+import caxecraft.editor.EditorBuildControls.pickBuildPaletteCode;
 import caxecraft.editor.EditorBuildControls.terrainAction;
 import caxecraft.editor.EditorBuildControls.toolForBuildHotbarSlot;
 import caxecraft.editor.EditorBuildControls.usesDirectTerrainControls;
@@ -1756,6 +1759,32 @@ final class EditorProbe {
 			&& !usesDirectTerrainControls(CatalogObjectTool)
 			&& !usesDirectTerrainControls(TriggerZoneTool),
 			"Build direct terrain controls leaked into Select, object, or volume placement");
+		checks++;
+		final terrainPalette = [
+			{code: 0, blockType: new ContentId("caxecraft:air")},
+			{code: 7, blockType: new ContentId("caxecraft:grass")},
+			{code: 2, blockType: new ContentId("caxecraft:stone")}
+		];
+		require(normalizeBuildPaletteCode(terrainPalette, 2, 7) == 2
+			&& normalizeBuildPaletteCode(terrainPalette, 99, 7) == 7
+			&& normalizeBuildPaletteCode(terrainPalette, 99, 98) == 7,
+			"Build did not repair its terrain brush from the current map palette");
+		checks++;
+		require(cycleBuildPaletteCode(terrainPalette, 7, 7, 1) == 2
+			&& cycleBuildPaletteCode(terrainPalette, 2, 7, 1) == 7
+			&& cycleBuildPaletteCode(terrainPalette, 7, 7, -1) == 2
+			&& cycleBuildPaletteCode(terrainPalette, 7, 7, 0) == 7,
+			"Build terrain material cycling did not wrap through non-air entries");
+		checks++;
+		require(pickBuildPaletteCode(terrainPalette, 7, 7, true, 2) == 2
+			&& pickBuildPaletteCode(terrainPalette, 7, 7, false, 2) == 7
+			&& pickBuildPaletteCode(terrainPalette, 7, 7, true, 0) == 7
+			&& pickBuildPaletteCode(terrainPalette, 7, 7, true, 99) == 7,
+			"Build picked air or a terrain material outside the current map");
+		checks++;
+		final airOnlyPalette = [{code: 0, blockType: new ContentId("caxecraft:air")}];
+		require(normalizeBuildPaletteCode(airOnlyPalette, 7, 7) == -1 && cycleBuildPaletteCode(airOnlyPalette, 7, 7, 1) == -1,
+			"Build invented a placeable terrain material for an air-only map");
 		checks++;
 		require(toolForBuildHotbarSlot(1) == SelectTool
 			&& toolForBuildHotbarSlot(2) == PaintTool

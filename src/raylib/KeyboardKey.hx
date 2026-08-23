@@ -40,6 +40,8 @@ enum abstract KeyboardKey(Int) {
 	var X = 88;
 	var Y = 89;
 	var Z = 90;
+	var LeftBracket = 91;
+	var RightBracket = 93;
 	var Escape = 256;
 	var Enter = 257;
 	var Tab = 258;

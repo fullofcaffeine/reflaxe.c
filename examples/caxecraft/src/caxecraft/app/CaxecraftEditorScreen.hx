@@ -17,12 +17,15 @@ import caxecraft.editor.EditorBuildControls.immersiveWorkspaceActive;
 import caxecraft.editor.EditorBuildControls.moveBuildFocus;
 import caxecraft.editor.EditorBuildControls.normalizeBuildFocus;
 import caxecraft.editor.EditorBuildControls.normalizeBuildTool;
+import caxecraft.editor.EditorBuildControls.normalizeBuildPaletteCode;
 import caxecraft.editor.EditorBuildControls.objectAction;
 import caxecraft.editor.EditorBuildControls.objectGrabActive;
 import caxecraft.editor.EditorBuildControls.objectGrabCandidate;
 import caxecraft.editor.EditorBuildControls.objectPlacementDelta;
 import caxecraft.editor.EditorBuildControls.objectShortcutAction;
 import caxecraft.editor.EditorBuildControls.terrainAction;
+import caxecraft.editor.EditorBuildControls.cycleBuildPaletteCode;
+import caxecraft.editor.EditorBuildControls.pickBuildPaletteCode;
 import caxecraft.editor.EditorBuildControls.toolForBuildHotbarSlot;
 import caxecraft.editor.EditorBuildControls.usesDirectTerrainControls;
 import caxecraft.editor.EditorPackageSession;
@@ -198,6 +201,7 @@ final class CaxecraftEditorScreen {
 	var objectGrab:EditorBuildObjectGrab;
 	var editLayerY:Int;
 	var activeTool:EditorTool;
+	var groundPaletteCode:Int;
 	var detailsOpen:Bool;
 	var worldListOpen:Bool;
 	var environmentPanelOpen:Bool;
@@ -207,6 +211,7 @@ final class CaxecraftEditorScreen {
 	var previewPoint:Null<VoxelPoint>;
 	var previewRevision:Int;
 	var previewTool:EditorTool;
+	var previewPaletteCode:Int;
 	var previewAllowed:Bool;
 
 	/** Remaining view-only time for the in-world edit confirmation. */
@@ -274,6 +279,7 @@ final class CaxecraftEditorScreen {
 		objectGrab = NoObjectGrab;
 		editLayerY = 0;
 		activeTool = SelectTool;
+		groundPaletteCode = -1;
 		detailsOpen = false;
 		worldListOpen = false;
 		environmentPanelOpen = false;
@@ -283,6 +289,7 @@ final class CaxecraftEditorScreen {
 		previewPoint = null;
 		previewRevision = -1;
 		previewTool = SelectTool;
+		previewPaletteCode = -1;
 		previewAllowed = false;
 		buildConfirmationSeconds = 0.0;
 		objectList = new GuiListViewState(-1);
@@ -477,13 +484,38 @@ final class CaxecraftEditorScreen {
 	function immersiveToolLabel(locale:LocaleCursor, tool:EditorTool):String {
 		return switch tool {
 			case SelectTool: uiCatalog.text(locale, UiMessage.EditorSelect);
-			case PaintTool | EraseTool | FillTool: uiCatalog.text(locale, UiMessage.EditorGround);
+			case PaintTool | EraseTool | FillTool: groundMaterialLabel(locale);
 			case CheckpointTool: uiCatalog.text(locale, UiMessage.EditorCheckpoint);
 			case CatalogObjectTool:
 				final recipe = contentRegistry.editorObjectAt(0);
 				recipe == null ? "-" : locale == Locale0 ? recipe.labelEn : recipe.labelEsMx;
 			case TriggerZoneTool: uiCatalog.text(locale, UiMessage.EditorTrigger);
 		};
+	}
+
+	/** Name the active map material in the Ground hotbar slot. */
+	function groundMaterialLabel(locale:LocaleCursor):String {
+		final draft = presentationDraft;
+		if (draft == null)
+			return uiCatalog.text(locale, UiMessage.EditorGround);
+		for (entry in draft.world.palette)
+			if (entry.code == groundPaletteCode)
+				return '${uiCatalog.text(locale, UiMessage.EditorGround)} · ${entry.blockType.text()}';
+		return uiCatalog.text(locale, UiMessage.EditorGround);
+	}
+
+	/** Return the current map's compact code for the pack's default brush. */
+	function defaultGroundPaletteCode():Int {
+		final draft = presentationDraft;
+		return draft == null ? -1 : paletteCodeForBlock(draft.world.palette, contentRegistry.defaultEditorBlockId());
+	}
+
+	/** Select one admitted Ground material without changing document history. */
+	function selectGroundPalette(next:Int):Void {
+		if (next < 0 || next == groundPaletteCode)
+			return;
+		groundPaletteCode = next;
+		invalidatePreview();
 	}
 
 	/** Match each compact slot to its released-pointer creation card. */
@@ -1768,19 +1800,19 @@ final class CaxecraftEditorScreen {
 			invalidatePreview();
 			return;
 		}
+		final paletteCode = tool == PaintTool || tool == FillTool ? groundPaletteCode : 0;
 		if (previewPoint != null
 			&& previewPoint.x == point.x
 			&& previewPoint.y == point.y
 			&& previewPoint.z == point.z
 			&& previewRevision == current.revision()
-			&& previewTool == tool)
+			&& previewTool == tool
+			&& previewPaletteCode == paletteCode)
 			return;
 		previewPoint = {x: point.x, y: point.y, z: point.z};
 		previewRevision = current.revision();
 		previewTool = tool;
-		var paletteCode = 0;
-		if (tool == PaintTool || tool == FillTool)
-			paletteCode = paletteCodeForBlock(draft.world.palette, contentRegistry.defaultEditorBlockId());
+		previewPaletteCode = paletteCode;
 		if (paletteCode < 0) {
 			previewAllowed = false;
 			return;
@@ -1801,6 +1833,7 @@ final class CaxecraftEditorScreen {
 		previewPoint = null;
 		previewRevision = -1;
 		previewAllowed = false;
+		previewPaletteCode = -1;
 	}
 
 	/**
@@ -1812,6 +1845,7 @@ final class CaxecraftEditorScreen {
 	 * draft fits the gameplay world. A click gives Build the pointer. Mouse
 	 * movement then looks without a held button. In terrain mode, the primary
 	 * button removes a solid and the secondary button places adjacent ground.
+	 * Bracket keys cycle map materials. The middle button picks aimed terrain.
 	 * WASD moves the active camera, and Fly also uses Q/E. The mouse wheel moves
 	 * through the visible hotbar. C changes camera mode, and F refocuses it.
 	 * With Select and one object active, G holds it for one crosshair placement.
@@ -1826,7 +1860,8 @@ final class CaxecraftEditorScreen {
 		}
 		var current = projection;
 		var currentCamera = camera;
-		if (current == null || currentCamera == null || width <= 0 || height <= 0)
+		final draft = presentationDraft;
+		if (current == null || currentCamera == null || draft == null || width <= 0 || height <= 0)
 			return;
 		final mouse = Raylib.GetMousePosition();
 		final mouseX = Std.int(mouse.x.toFloat());
@@ -1846,6 +1881,11 @@ final class CaxecraftEditorScreen {
 		final wheelDirection = wheel > 0.0 ? -1 : wheel < 0.0 ? 1 : 0;
 		if (cameraInputEnabled)
 			selectBuildHotbarTool(wheelDirection);
+		if (cameraInputEnabled && activeTool == PaintTool) {
+			final materialDirection = Raylib.IsKeyPressed(KeyboardKey.LeftBracket) ? -1 : Raylib.IsKeyPressed(KeyboardKey.RightBracket) ? 1 : 0;
+			if (materialDirection != 0)
+				selectGroundPalette(cycleBuildPaletteCode(draft.world.palette, groundPaletteCode, defaultGroundPaletteCode(), materialDirection));
+		}
 		if (cameraInputEnabled && Raylib.IsKeyPressed(KeyboardKey.C)) {
 			cycleEditorCamera();
 			final cycled = camera;
@@ -1920,6 +1960,9 @@ final class CaxecraftEditorScreen {
 					hoveredObject = objectIndex(objectHit.id);
 			}
 		}
+		if (cameraInputEnabled && activeTool == PaintTool && Raylib.IsMouseButtonPressed(MouseButton.Middle) && hover != null)
+			selectGroundPalette(pickBuildPaletteCode(draft.world.palette, groundPaletteCode, defaultGroundPaletteCode(), hover.solid,
+				paletteCodeAtWorld(current, hover.point.x, hover.point.y, hover.point.z)));
 		final selectedGrabIndex = selectedObjectIndex();
 		final selectedGrabId:Null<ScenarioId> = if (cameraInputEnabled && activeTool == SelectTool && selectedGrabIndex >= 0)
 			objectGizmos[selectedGrabIndex].id else null;
@@ -2085,9 +2128,11 @@ final class CaxecraftEditorScreen {
 			case NoBuildTarget:
 				uiCatalog.text(locale, UiMessage.NoBlockInReach);
 			case TerrainBuildPrompt(canRemove, canPlace):
+				final materialControls = '[MMB] PICK  ·  [ / ] MATERIAL';
 				if (canRemove && canPlace)
-					'[LMB] ${uiCatalog.text(locale, UiMessage.EditorErase)}  ·  [RMB] ${uiCatalog.text(locale, UiMessage.EditorGround)}'; else if (canRemove)
-					'[LMB] ${uiCatalog.text(locale, UiMessage.EditorErase)}'; else '[RMB] ${uiCatalog.text(locale, UiMessage.EditorGround)}';
+					'[LMB] ${uiCatalog.text(locale, UiMessage.EditorErase)}  ·  [RMB] ${uiCatalog.text(locale, UiMessage.EditorGround)}  ·  $materialControls'; else
+					if (canRemove) '[LMB] ${uiCatalog.text(locale, UiMessage.EditorErase)}  ·  $materialControls'; else
+						'[RMB] ${uiCatalog.text(locale, UiMessage.EditorGround)}  ·  $materialControls';
 			case SelectBuildPrompt(objectTarget):
 				if (objectTarget) '[LMB] ${uiCatalog.text(locale, UiMessage.EditorSelect)}  ·  [G] <->'; else
 					'[LMB] ${uiCatalog.text(locale, UiMessage.EditorSelect)}';
@@ -2097,7 +2142,7 @@ final class CaxecraftEditorScreen {
 				if (allowed) '[LMB] ✓  ·  [G / ESC] ×'; else '${uiCatalog.text(locale, UiMessage.PlaceBlocked)}  ·  [G / ESC] ×';
 		};
 		final availableWidth = viewportWidth - 32;
-		final width = availableWidth < 560 ? availableWidth : 560;
+		final width = availableWidth < 820 ? availableWidth : 820;
 		final left = viewportLeft + Std.int((viewportWidth - width) / 2);
 		Raylib.DrawRectangle(left, centerY + 20, width, 30, Color.rgba(8, 20, 24));
 		Raylib.DrawRectangleLines(left, centerY + 20, width, 30, CaxecraftPalette.selection());
@@ -2226,7 +2271,7 @@ final class CaxecraftEditorScreen {
 			case CheckpointTool | CatalogObjectTool | TriggerZoneTool:
 		}
 		if (needsPalette) {
-			paletteCode = paletteCodeForBlock(draft.world.palette, contentRegistry.defaultEditorBlockId());
+			paletteCode = groundPaletteCode;
 			if (paletteCode < 0) {
 				notice = Invalid;
 				return false;
@@ -2343,6 +2388,8 @@ final class CaxecraftEditorScreen {
 				}
 		};
 		presentationDraft = draft;
+		groundPaletteCode = normalizeBuildPaletteCode(draft.world.palette, groundPaletteCode,
+			paletteCodeForBlock(draft.world.palette, contentRegistry.defaultEditorBlockId()));
 		syncWorldName(draft.title);
 		environment = draft.environment;
 		projection = draft.projection;
