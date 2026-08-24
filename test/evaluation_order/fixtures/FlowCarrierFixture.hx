@@ -188,6 +188,34 @@ class FlowCarrierFixture {
 		};
 	}
 
+	/** Keep a loop break local while several enum arms share later work. */
+	static function sharedEnumSwitchExit():Int {
+		var total = 0;
+		var index = 0;
+		var repeat:FlowCarrierRepeat = Repeat;
+		while (index < 4) {
+			switch repeat {
+				case Repeat:
+				case Once:
+					total += 10;
+					break;
+				case OncePerActor:
+					total += 1;
+				case CooldownPerActor(_):
+					total += 2;
+			}
+			total += 4;
+			index++;
+			if (index == 1)
+				repeat = OncePerActor;
+			else if (index == 2)
+				repeat = CooldownPerActor(2);
+			else
+				repeat = Once;
+		}
+		return total;
+	}
+
 	/** Returns two only when both lazy chains preserve skip and evaluation order. */
 	static function run():UInt {
 		observedCalls = 0;
@@ -225,6 +253,8 @@ class FlowCarrierFixture {
 			return 105;
 		if (enumPayloadAcrossConditional(true) != 21 || enumPayloadAcrossConditional(false) != 26)
 			return 106;
+		if (sharedEnumSwitchExit() != 25)
+			return 107;
 		return observedCalls;
 	}
 
@@ -245,6 +275,14 @@ private typedef FlowCarrierSelection = {
 /** One direct enum payload before one branch-producing scalar payload. */
 private enum FlowCarrierEnvelope {
 	Selected(selection:FlowCarrierSelection, suffix:Int);
+}
+
+/** Closed repeat-policy shapes for the shared enum-switch exit regression. */
+private enum FlowCarrierRepeat {
+	Repeat;
+	Once;
+	OncePerActor;
+	CooldownPerActor(ticks:Int);
 }
 
 private enum abstract FlowCarrierMode(Int) to Int {

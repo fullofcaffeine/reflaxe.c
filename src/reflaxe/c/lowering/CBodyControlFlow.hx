@@ -1822,16 +1822,20 @@ private class CBodyControlFlowAnalysis {
 			return false;
 		if (isLinearEscapePrefix(candidate, allowed, escapeTargets)) {
 			final abrupt = abruptCompletion == null ? abruptCompletionSet(allowed) : abruptCompletion();
+			var candidateReachCount = 0;
+			for (distance in distances)
+				if (distance.exists(candidate))
+					candidateReachCount++;
 			for (index => distance in distances)
-				// A switch may have value-producing arms that share work before
-				// `continue` and a default arm that continues directly. Moving the
-				// shared work after the switch is safe only for that next-iteration
-				// edge. A loop `break` or return remains inside its own switch arm;
-				// treating either as a missing normal arm can turn a readable
-				// `continue` into switch fallthrough.
+				// Several normal switch arms may share work before the next iteration
+				// while another arm breaks the loop. Keep the break inside that arm and
+				// emit the genuinely shared tail once. Requiring two reaching arms avoids
+				// moving a one-arm continue prefix after the switch merely because a
+				// sibling breaks. Return-only arms use the independent abrupt proof.
 				if (!distance.exists(candidate)
 					&& !abrupt.exists(starts[index])
-					&& !isLinearEscapePrefix(starts[index], allowed, iterationBypassTargets))
+					&& !isLinearEscapePrefix(starts[index], allowed, iterationBypassTargets)
+					&& !(candidateReachCount > 1 && isLinearEscapePrefix(starts[index], allowed, escapeTargets)))
 					return false;
 		}
 		final continuation = forwardReachable(candidate, allowed, escapeTargets);

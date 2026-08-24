@@ -669,6 +669,34 @@ class EvaluationOrderProbe {
 			case CCFLegacyIrreducible(_):
 				throw new haxe.Exception("reducible loop switch break selected the irreducible fallback");
 		}
+		final loopSwitchBreakWithSharedContinue = syntheticFunction("synthetic.loop-switch-break-with-shared-continue", [condition, selector], "loop-header", [
+			syntheticBlock("loop-header", IRTBranch("condition", plainEdge("dispatch"), plainEdge("exit")), source),
+			syntheticBlock("dispatch", IRTSwitch("selector", [
+				{
+					value: IRCInt("1"),
+					edge: plainEdge("break-arm")
+				},
+				{value: IRCInt("2"), edge: plainEdge("first-continuing-arm")},
+				{value: IRCInt("3"), edge: plainEdge("second-continuing-arm")}
+			],
+				plainEdge("shared-continue")),
+				source),
+			syntheticBlock("break-arm", IRTJump(plainEdge("exit")), source),
+			syntheticBlock("first-continuing-arm", IRTJump(plainEdge("shared-continue")), source),
+			syntheticBlock("second-continuing-arm", IRTJump(plainEdge("shared-continue")), source),
+			syntheticBlock("shared-continue", IRTJump(plainEdge("loop-header")), source),
+			syntheticBlock("exit", IRTJump(plainEdge("function-return")), source),
+			syntheticBlock("function-return", IRTReturn(null, []), source)
+		], source);
+		final loopSwitchSharedContinuePlan = planner.plan(loopSwitchBreakWithSharedContinue);
+		switch loopSwitchSharedContinuePlan {
+			case CCFStructured(root, deferredBreakTargets):
+				verifier.requireValid(loopSwitchBreakWithSharedContinue, loopSwitchSharedContinuePlan);
+				if (deferredBreakTargets.join(",") != "exit" || countDeferredSwitchBreaks(root) != 1)
+					throw new haxe.Exception("loop switch with a shared continuing tail lost its one bounded break");
+			case CCFLegacyIrreducible(_):
+				throw new haxe.Exception("reducible loop switch with a shared continuing tail selected the irreducible fallback");
+		}
 		final loopSwitchWithAbruptDefault = syntheticFunction("synthetic.loop-switch-with-abrupt-default", [condition, selector], "loop-header", [
 			syntheticBlock("loop-header", IRTBranch("condition", plainEdge("dispatch"), plainEdge("exit")), source),
 			syntheticBlock("dispatch", IRTSwitch("selector", [
