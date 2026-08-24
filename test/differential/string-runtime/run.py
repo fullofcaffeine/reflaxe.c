@@ -68,15 +68,17 @@ EXPECTED_GENERATED_FEATURES = [
     "alloc",
     "array",
     "string-literal",
-    "io",
     "string-scalar",
     "string",
+    "array-join",
+    "io",
     "string-float",
     "string-split",
 ]
 EXPECTED_GENERATED_ARTIFACTS = [
     "runtime/include/hxrt/allocator.h",
     "runtime/include/hxrt/array.h",
+    "runtime/include/hxrt/array_join.h",
     "runtime/include/hxrt/base.h",
     "runtime/include/hxrt/io.h",
     "runtime/include/hxrt/status.h",
@@ -88,6 +90,7 @@ EXPECTED_GENERATED_ARTIFACTS = [
     "runtime/include/hxrt/string_split.h",
     "runtime/src/allocator.c",
     "runtime/src/array.c",
+    "runtime/src/array_join.c",
     "runtime/src/io.c",
     "runtime/src/string.c",
     "runtime/src/string_float.c",
@@ -674,6 +677,7 @@ def validate_generated_project(output: Path, hxcir: str) -> None:
         'runtime(feature="string-scalar",operation="index-of")',
         'runtime(feature="string-scalar",operation="last-index-of")',
         'runtime(feature="string-scalar",operation="length")',
+        'runtime(feature="string-scalar",operation="substr")',
         'runtime(feature="string-scalar",operation="substring")',
         'runtime(feature="string-split",operation="split")',
         'unary operation="haxe.std.string.bool"',
@@ -747,6 +751,7 @@ def validate_generated_project(output: Path, hxcir: str) -> None:
         "index-of",
         "last-index-of",
         "length",
+        "substr",
         "substring",
     }:
         raise StringRuntimeFailure(
@@ -763,11 +768,29 @@ def validate_generated_project(output: Path, hxcir: str) -> None:
         raise StringRuntimeFailure(
             f"String split roots drifted: {sorted(split_operations)!r}"
         )
+    join_operations = {
+        reason.get("operationId")
+        for reason in plan.get("rootReasons", [])
+        if isinstance(reason, dict)
+        and reason.get("featureId") == "array-join"
+        and reason.get("kind") == "runtime-operation"
+    }
+    if join_operations != {"join"}:
+        raise StringRuntimeFailure(
+            f"Array<String>.join roots drifted: {sorted(join_operations)!r}"
+        )
 
     stdlib = json.loads(
         (output / "hxc.stdlib-report.json").read_text(encoding="utf-8")
     )
-    expected_modules = ["Array", "String", "Sys", "string", "string-float"]
+    expected_modules = [
+        "Array",
+        "String",
+        "Sys",
+        "array-join",
+        "string",
+        "string-float",
+    ]
     expected_capabilities = [
         "char-at",
         "char-code-at",
@@ -780,6 +803,7 @@ def validate_generated_project(output: Path, hxcir: str) -> None:
         "from-scalar",
         "get-checked",
         "index-of",
+        "join",
         "last-index-of",
         "length",
         "managed-type-representation",
@@ -787,6 +811,7 @@ def validate_generated_project(output: Path, hxcir: str) -> None:
         "retain",
         "split",
         "static-value",
+        "substr",
         "substring",
         "sys-println-literal",
         "type-carrier",
@@ -806,6 +831,7 @@ def validate_generated_project(output: Path, hxcir: str) -> None:
     )
     for required in (
         "hxc_string_from_scalar(",
+        "hxc_array_string_join(",
         "hxc_string_from_int32(",
         "hxc_string_from_float64(",
         "hxc_string_concat_ref(",
@@ -814,6 +840,7 @@ def validate_generated_project(output: Path, hxcir: str) -> None:
         "hxc_string_index_of(",
         "hxc_string_last_index_of(",
         "hxc_string_split(",
+        "hxc_string_substr(",
         "hxc_string_substring(",
     ):
         if required not in source_text:
@@ -1143,6 +1170,7 @@ def inspect_generated_symbols(executable: Path, family: str) -> None:
         )
     for required in (
         "hxc_string_from_scalar",
+        "hxc_array_string_join",
         "hxc_string_from_int32",
         "hxc_string_concat_ref",
         "hxc_string_retain",
@@ -1150,6 +1178,7 @@ def inspect_generated_symbols(executable: Path, family: str) -> None:
         "hxc_string_index_of",
         "hxc_string_last_index_of",
         "hxc_string_split",
+        "hxc_string_substr",
         "hxc_string_substring",
     ):
         if required not in result.stdout:

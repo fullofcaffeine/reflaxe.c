@@ -1957,6 +1957,40 @@
       "notes": "Ordinary Haxe String.split returns an owned Array of borrowed UTF-8 String views. The Array element callbacks retain the source owner, so results remain valid after the source variable changes. Matching occurs only at Unicode-scalar boundaries; an empty delimiter yields one element per scalar, while leading, trailing, and adjacent nonempty delimiters preserve empty pieces. The hosted fixture covers those rules, embedded NUL, temporary Array consumers, allocation-failure rollback, generated layouts, strict C11, optimization, and sanitizers."
     },
     {
+      "id": "string-substr-partial",
+      "selector": {
+        "module": "String",
+        "type": "String",
+        "member": "substr",
+        "kind": "method",
+        "isStatic": false,
+        "signature": "(pos : Int, ?len : Null<Int>) -> String"
+      },
+      "owner": "direct-compiler-lowering",
+      "runtimeFeatures": [
+        "string-scalar"
+      ],
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "environments": [
+        "hosted"
+      ],
+      "status": "partial",
+      "ownerBeads": "E5.T02",
+      "testOwnerBeads": "E5.T02",
+      "diagnosticPolicies": [
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
+      ],
+      "tests": [
+        "test/differential/string-runtime/generated/Main.hx",
+        "test/differential/string-runtime/run.py"
+      ],
+      "notes": "Ordinary Haxe String.substr returns a borrowed scalar-indexed view whose backing owner remains alive with the result. The hosted fixture covers omitted and supplied lengths, negative and oversized positions, clamping, non-BMP text, generated layouts, and sanitizers. Negative lengths remain unspecified by Haxe and clamp to zero in this bounded implementation."
+    },
+    {
       "id": "string-substring-partial",
       "selector": {
         "module": "String",
@@ -1989,6 +2023,552 @@
         "test/differential/string-runtime/run.py"
       ],
       "notes": "Ordinary Haxe String.substring returns a borrowed scalar-indexed view whose backing owner remains alive with the result. The hosted fixture covers omitted, reversed, negative, and out-of-range bounds together with aggregate ownership and sanitizers."
+    },
+    {
+      "id": "string-to-string-partial",
+      "selector": {
+        "module": "String",
+        "type": "String",
+        "member": "toString",
+        "kind": "method",
+        "isStatic": false,
+        "signature": "() -> String"
+      },
+      "owner": "direct-compiler-lowering",
+      "runtimeFeatures": [
+        "string"
+      ],
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "environments": [
+        "hosted"
+      ],
+      "status": "partial",
+      "ownerBeads": "E5.T02",
+      "testOwnerBeads": "E5.T02",
+      "diagnosticPolicies": [
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
+      ],
+      "tests": [
+        "test/differential/string-runtime/generated/Main.hx",
+        "test/differential/string-runtime/run.py"
+      ],
+      "notes": "Ordinary Haxe String.toString returns the same immutable String value without allocation or ownership churn. The hosted fixture checks the observable identity result through generated Haxe, strict C11, optimization, and sanitizers."
+    },
+    {
+      "id": "string-tools-contains-partial",
+      "selector": {
+        "module": "StringTools",
+        "type": "StringTools",
+        "member": "contains",
+        "kind": "inline-method",
+        "isStatic": true,
+        "signature": "(s : String, value : String) -> Bool"
+      },
+      "owner": "direct-compiler-lowering",
+      "runtimeFeatures": [
+        "string-scalar"
+      ],
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "environments": [
+        "hosted"
+      ],
+      "status": "partial",
+      "ownerBeads": "E5.T02",
+      "testOwnerBeads": "E5.T02",
+      "diagnosticPolicies": [
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
+      ],
+      "tests": [
+        "test/differential/string-runtime/generated/Main.hx",
+        "test/differential/string-runtime/run.py"
+      ],
+      "notes": "The pinned upstream StringTools.contains implementation composes scalar-safe String.indexOf. The hosted fixture covers managed Unicode text and native sanitizer execution."
+    },
+    {
+      "id": "string-tools-ends-with-partial",
+      "selector": {
+        "module": "StringTools",
+        "type": "StringTools",
+        "member": "endsWith",
+        "kind": "method",
+        "isStatic": true,
+        "signature": "(s : String, end : String) -> Bool"
+      },
+      "owner": "direct-compiler-lowering",
+      "runtimeFeatures": [
+        "string-scalar"
+      ],
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "environments": [
+        "hosted"
+      ],
+      "status": "partial",
+      "ownerBeads": "E5.T02",
+      "testOwnerBeads": "E5.T02",
+      "diagnosticPolicies": [
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
+      ],
+      "tests": [
+        "test/differential/string-runtime/generated/Main.hx",
+        "test/differential/string-runtime/run.py"
+      ],
+      "notes": "The pinned upstream StringTools.endsWith implementation composes scalar length and String.indexOf. The hosted fixture covers a non-BMP suffix on managed text."
+    },
+    {
+      "id": "string-tools-is-space-partial",
+      "selector": {
+        "module": "StringTools",
+        "type": "StringTools",
+        "member": "isSpace",
+        "kind": "method",
+        "isStatic": true,
+        "signature": "(s : String, pos : Int) -> Bool"
+      },
+      "owner": "direct-compiler-lowering",
+      "runtimeFeatures": [
+        "string-scalar"
+      ],
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "environments": [
+        "hosted"
+      ],
+      "status": "partial",
+      "ownerBeads": "E5.T02",
+      "testOwnerBeads": "E5.T02",
+      "diagnosticPolicies": [
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
+      ],
+      "tests": [
+        "test/differential/string-runtime/generated/Main.hx",
+        "test/differential/string-runtime/run.py"
+      ],
+      "notes": "The pinned upstream StringTools.isSpace implementation composes scalar-safe String.charCodeAt and preserves Haxe's six ASCII whitespace codes."
+    },
+    {
+      "id": "string-tools-ltrim-partial",
+      "selector": {
+        "module": "StringTools",
+        "type": "StringTools",
+        "member": "ltrim",
+        "kind": "inline-method",
+        "isStatic": true,
+        "signature": "(s : String) -> String"
+      },
+      "owner": "direct-compiler-lowering",
+      "runtimeFeatures": [
+        "string-scalar"
+      ],
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "environments": [
+        "hosted"
+      ],
+      "status": "partial",
+      "ownerBeads": "E5.T02",
+      "testOwnerBeads": "E5.T02",
+      "diagnosticPolicies": [
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
+      ],
+      "tests": [
+        "test/differential/string-runtime/generated/Main.hx",
+        "test/differential/string-runtime/run.py"
+      ],
+      "notes": "The pinned upstream StringTools.ltrim implementation composes isSpace and String.substr. The hosted fixture proves a trimmed view keeps runtime-created Unicode text alive."
+    },
+    {
+      "id": "string-tools-rtrim-partial",
+      "selector": {
+        "module": "StringTools",
+        "type": "StringTools",
+        "member": "rtrim",
+        "kind": "inline-method",
+        "isStatic": true,
+        "signature": "(s : String) -> String"
+      },
+      "owner": "direct-compiler-lowering",
+      "runtimeFeatures": [
+        "string-scalar"
+      ],
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "environments": [
+        "hosted"
+      ],
+      "status": "partial",
+      "ownerBeads": "E5.T02",
+      "testOwnerBeads": "E5.T02",
+      "diagnosticPolicies": [
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
+      ],
+      "tests": [
+        "test/differential/string-runtime/generated/Main.hx",
+        "test/differential/string-runtime/run.py"
+      ],
+      "notes": "The pinned upstream StringTools.rtrim implementation composes isSpace and String.substr. The hosted fixture proves a trimmed view keeps runtime-created Unicode text alive."
+    },
+    {
+      "id": "string-tools-starts-with-partial",
+      "selector": {
+        "module": "StringTools",
+        "type": "StringTools",
+        "member": "startsWith",
+        "kind": "method",
+        "isStatic": true,
+        "signature": "(s : String, start : String) -> Bool"
+      },
+      "owner": "direct-compiler-lowering",
+      "runtimeFeatures": [
+        "string-scalar"
+      ],
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "environments": [
+        "hosted"
+      ],
+      "status": "partial",
+      "ownerBeads": "E5.T02",
+      "testOwnerBeads": "E5.T02",
+      "diagnosticPolicies": [
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
+      ],
+      "tests": [
+        "test/differential/string-runtime/generated/Main.hx",
+        "test/differential/string-runtime/run.py"
+      ],
+      "notes": "The pinned upstream StringTools.startsWith implementation composes scalar length and String.lastIndexOf. The hosted fixture covers a Unicode prefix on managed text."
+    },
+    {
+      "id": "string-tools-trim-partial",
+      "selector": {
+        "module": "StringTools",
+        "type": "StringTools",
+        "member": "trim",
+        "kind": "method",
+        "isStatic": true,
+        "signature": "(s : String) -> String"
+      },
+      "owner": "direct-compiler-lowering",
+      "runtimeFeatures": [
+        "string-scalar"
+      ],
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "environments": [
+        "hosted"
+      ],
+      "status": "partial",
+      "ownerBeads": "E5.T02",
+      "testOwnerBeads": "E5.T02",
+      "diagnosticPolicies": [
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
+      ],
+      "tests": [
+        "test/differential/string-runtime/generated/Main.hx",
+        "test/differential/string-runtime/run.py"
+      ],
+      "notes": "The pinned upstream StringTools.trim implementation composes isSpace and String.substr. The hosted fixture covers both ends of runtime-created Unicode text."
+    },
+    {
+      "id": "string-tools-hex-partial",
+      "selector": {
+        "module": "StringTools",
+        "type": "StringTools",
+        "member": "hex",
+        "kind": "method",
+        "isStatic": true,
+        "signature": "(n : Int, ?digits : Null<Int>) -> String"
+      },
+      "owner": "direct-compiler-lowering",
+      "runtimeFeatures": [
+        "string"
+      ],
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "environments": [
+        "hosted"
+      ],
+      "status": "partial",
+      "ownerBeads": "E5.T02",
+      "testOwnerBeads": "E5.T02",
+      "diagnosticPolicies": [
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
+      ],
+      "tests": [
+        "test/differential/string-runtime/generated/Main.hx",
+        "test/differential/string-runtime/run.py"
+      ],
+      "notes": "The pinned upstream StringTools.hex implementation composes integer operations, String.charAt, and concatenation. The hosted fixture covers uppercase digits and requested zero padding."
+    },
+    {
+      "id": "string-tools-lpad-partial",
+      "selector": {
+        "module": "StringTools",
+        "type": "StringTools",
+        "member": "lpad",
+        "kind": "method",
+        "isStatic": true,
+        "signature": "(s : String, c : String, l : Int) -> String"
+      },
+      "owner": "direct-compiler-lowering",
+      "runtimeFeatures": [
+        "string"
+      ],
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "environments": [
+        "hosted"
+      ],
+      "status": "partial",
+      "ownerBeads": "E5.T02",
+      "testOwnerBeads": "E5.T02",
+      "diagnosticPolicies": [
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
+      ],
+      "tests": [
+        "test/differential/string-runtime/generated/Main.hx",
+        "test/differential/string-runtime/run.py"
+      ],
+      "notes": "The pinned upstream StringTools.lpad implementation composes scalar length and the ordinary StringBuf API. The hosted fixture covers non-BMP padding."
+    },
+    {
+      "id": "string-tools-replace-partial",
+      "selector": {
+        "module": "StringTools",
+        "type": "StringTools",
+        "member": "replace",
+        "kind": "method",
+        "isStatic": true,
+        "signature": "(s : String, sub : String, by : String) -> String"
+      },
+      "owner": "direct-compiler-lowering",
+      "runtimeFeatures": [
+        "array-join",
+        "string-split"
+      ],
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "environments": [
+        "hosted"
+      ],
+      "status": "partial",
+      "ownerBeads": "E5.T02",
+      "testOwnerBeads": "E5.T02",
+      "diagnosticPolicies": [
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
+      ],
+      "tests": [
+        "test/differential/string-runtime/generated/Main.hx",
+        "test/differential/string-runtime/run.py"
+      ],
+      "notes": "The pinned upstream StringTools.replace implementation composes String.split and Array<String>.join. The hosted fixture covers repeated Unicode replacement and managed ownership."
+    },
+    {
+      "id": "string-tools-rpad-partial",
+      "selector": {
+        "module": "StringTools",
+        "type": "StringTools",
+        "member": "rpad",
+        "kind": "method",
+        "isStatic": true,
+        "signature": "(s : String, c : String, l : Int) -> String"
+      },
+      "owner": "direct-compiler-lowering",
+      "runtimeFeatures": [
+        "string"
+      ],
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "environments": [
+        "hosted"
+      ],
+      "status": "partial",
+      "ownerBeads": "E5.T02",
+      "testOwnerBeads": "E5.T02",
+      "diagnosticPolicies": [
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
+      ],
+      "tests": [
+        "test/differential/string-runtime/generated/Main.hx",
+        "test/differential/string-runtime/run.py"
+      ],
+      "notes": "The pinned upstream StringTools.rpad implementation composes scalar length and the ordinary StringBuf API. The hosted fixture covers non-BMP padding."
+    },
+    {
+      "id": "string-buf-add-partial",
+      "selector": {
+        "module": "StringBuf",
+        "type": "StringBuf",
+        "member": "add",
+        "kind": "inline-method",
+        "isStatic": false,
+        "signature": "(x : add.T) -> Void"
+      },
+      "owner": "direct-compiler-lowering",
+      "runtimeFeatures": [
+        "string"
+      ],
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "environments": [
+        "hosted"
+      ],
+      "status": "partial",
+      "ownerBeads": "E5.T02",
+      "testOwnerBeads": "E5.T02",
+      "diagnosticPolicies": [
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
+      ],
+      "tests": [
+        "test/differential/string-runtime/generated/Main.hx",
+        "test/differential/string-runtime/run.py"
+      ],
+      "notes": "The ordinary upstream StringBuf.add method is proven for the String specialization. It appends through typed String concatenation; other generic representations remain unsupported."
+    },
+    {
+      "id": "string-buf-add-sub-partial",
+      "selector": {
+        "module": "StringBuf",
+        "type": "StringBuf",
+        "member": "addSub",
+        "kind": "inline-method",
+        "isStatic": false,
+        "signature": "(s : String, pos : Int, ?len : Null<Int>) -> Void"
+      },
+      "owner": "direct-compiler-lowering",
+      "runtimeFeatures": [
+        "string",
+        "string-scalar"
+      ],
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "environments": [
+        "hosted"
+      ],
+      "status": "partial",
+      "ownerBeads": "E5.T02",
+      "testOwnerBeads": "E5.T02",
+      "diagnosticPolicies": [
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
+      ],
+      "tests": [
+        "test/differential/string-runtime/generated/Main.hx",
+        "test/differential/string-runtime/run.py"
+      ],
+      "notes": "The ordinary upstream StringBuf.addSub method composes String.substr and concatenation. The hosted fixture covers a managed Unicode source and a supplied scalar length."
+    },
+    {
+      "id": "string-buf-clear-partial",
+      "selector": {
+        "module": "StringBuf",
+        "type": "StringBuf",
+        "member": "clear",
+        "kind": "inline-method",
+        "isStatic": false,
+        "signature": "() -> Void"
+      },
+      "owner": "direct-compiler-lowering",
+      "runtimeFeatures": [
+        "string"
+      ],
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "environments": [
+        "hosted"
+      ],
+      "status": "partial",
+      "ownerBeads": "E5.T02",
+      "testOwnerBeads": "E5.T02",
+      "diagnosticPolicies": [
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
+      ],
+      "tests": [
+        "test/differential/string-runtime/generated/Main.hx",
+        "test/differential/string-runtime/run.py"
+      ],
+      "notes": "The ordinary upstream StringBuf.clear method releases the current managed value and restores the empty String. The hosted fixture proves prior results remain unchanged."
+    },
+    {
+      "id": "string-buf-length-partial",
+      "selector": {
+        "module": "StringBuf",
+        "type": "StringBuf",
+        "member": "length",
+        "kind": "field",
+        "isStatic": false,
+        "signature": "Int"
+      },
+      "owner": "direct-compiler-lowering",
+      "runtimeFeatures": [
+        "string-scalar"
+      ],
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "environments": [
+        "hosted"
+      ],
+      "status": "partial",
+      "ownerBeads": "E5.T02",
+      "testOwnerBeads": "E5.T02",
+      "diagnosticPolicies": [
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
+      ],
+      "tests": [
+        "test/differential/string-runtime/generated/Main.hx",
+        "test/differential/string-runtime/run.py"
+      ],
+      "notes": "The ordinary upstream StringBuf.length getter reports Unicode scalar length through its managed String field. The hosted fixture checks built and cleared states."
     },
     {
       "id": "string-buf-type-partial",
@@ -8788,32 +9368,30 @@
       "kind": "method",
       "signature": "(pos : Int, ?len : Null<Int>) -> String",
       "isStatic": false,
-      "owner": "target-source-override",
+      "owner": "direct-compiler-lowering",
       "runtimeFeatures": [
-        "alloc",
-        "string",
-        "unicode"
+        "string-scalar"
       ],
       "profiles": [
         "portable",
         "metal"
       ],
       "environments": [
-        "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "hosted"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T02",
-      "testOwnerBeads": "E5.T12",
+      "testOwnerBeads": "E5.T02",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "ADR 0004 scalar-indexed UTF-8 applies. ASCII/direct paths and compiler-built constants precede local helpers and narrow string or Unicode slices.",
-      "ruleId": "strings-and-unicode"
+      "tests": [
+        "test/differential/string-runtime/generated/Main.hx",
+        "test/differential/string-runtime/run.py"
+      ],
+      "notes": "Ordinary Haxe String.substr returns a borrowed scalar-indexed view whose backing owner remains alive with the result. The hosted fixture covers omitted and supplied lengths, negative and oversized positions, clamping, non-BMP text, generated layouts, and sanitizers. Negative lengths remain unspecified by Haxe and clamp to zero in this bounded implementation.",
+      "ruleId": "string-substr-partial"
     },
     {
       "id": "hxc-stdlib-api-v1:934dc0b61c799f807aca648293b0e6ddecf5462817c7ada51e428187f0425032",
@@ -8900,32 +9478,30 @@
       "kind": "method",
       "signature": "() -> String",
       "isStatic": false,
-      "owner": "target-source-override",
+      "owner": "direct-compiler-lowering",
       "runtimeFeatures": [
-        "alloc",
-        "string",
-        "unicode"
+        "string"
       ],
       "profiles": [
         "portable",
         "metal"
       ],
       "environments": [
-        "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "hosted"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T02",
-      "testOwnerBeads": "E5.T12",
+      "testOwnerBeads": "E5.T02",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "ADR 0004 scalar-indexed UTF-8 applies. ASCII/direct paths and compiler-built constants precede local helpers and narrow string or Unicode slices.",
-      "ruleId": "strings-and-unicode"
+      "tests": [
+        "test/differential/string-runtime/generated/Main.hx",
+        "test/differential/string-runtime/run.py"
+      ],
+      "notes": "Ordinary Haxe String.toString returns the same immutable String value without allocation or ownership churn. The hosted fixture checks the observable identity result through generated Haxe, strict C11, optimization, and sanitizers.",
+      "ruleId": "string-to-string-partial"
     },
     {
       "id": "hxc-stdlib-api-v1:7f3d8671e4de94533b55dd22939b3a96958cc918396567ff8cb597e92575b11c",
@@ -9012,32 +9588,30 @@
       "kind": "inline-method",
       "signature": "(x : add.T) -> Void",
       "isStatic": false,
-      "owner": "target-source-override",
+      "owner": "direct-compiler-lowering",
       "runtimeFeatures": [
-        "alloc",
-        "string",
-        "unicode"
+        "string"
       ],
       "profiles": [
         "portable",
         "metal"
       ],
       "environments": [
-        "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "hosted"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T02",
-      "testOwnerBeads": "E5.T12",
+      "testOwnerBeads": "E5.T02",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "ADR 0004 scalar-indexed UTF-8 applies. ASCII/direct paths and compiler-built constants precede local helpers and narrow string or Unicode slices.",
-      "ruleId": "strings-and-unicode"
+      "tests": [
+        "test/differential/string-runtime/generated/Main.hx",
+        "test/differential/string-runtime/run.py"
+      ],
+      "notes": "The ordinary upstream StringBuf.add method is proven for the String specialization. It appends through typed String concatenation; other generic representations remain unsupported.",
+      "ruleId": "string-buf-add-partial"
     },
     {
       "id": "hxc-stdlib-api-v1:41511aafdca60b5d2c29c765d2a8ffbd2f26f1dfa1e31aa7c6250e72c8ff27a7",
@@ -9086,32 +9660,31 @@
       "kind": "inline-method",
       "signature": "(s : String, pos : Int, ?len : Null<Int>) -> Void",
       "isStatic": false,
-      "owner": "target-source-override",
+      "owner": "direct-compiler-lowering",
       "runtimeFeatures": [
-        "alloc",
         "string",
-        "unicode"
+        "string-scalar"
       ],
       "profiles": [
         "portable",
         "metal"
       ],
       "environments": [
-        "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "hosted"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T02",
-      "testOwnerBeads": "E5.T12",
+      "testOwnerBeads": "E5.T02",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "ADR 0004 scalar-indexed UTF-8 applies. ASCII/direct paths and compiler-built constants precede local helpers and narrow string or Unicode slices.",
-      "ruleId": "strings-and-unicode"
+      "tests": [
+        "test/differential/string-runtime/generated/Main.hx",
+        "test/differential/string-runtime/run.py"
+      ],
+      "notes": "The ordinary upstream StringBuf.addSub method composes String.substr and concatenation. The hosted fixture covers a managed Unicode source and a supplied scalar length.",
+      "ruleId": "string-buf-add-sub-partial"
     },
     {
       "id": "hxc-stdlib-api-v1:ecc9a9ef83cca1554f753057c4c37cd7d4b88d4ffbbd010b2fa04086f20fa3fb",
@@ -9124,32 +9697,30 @@
       "kind": "inline-method",
       "signature": "() -> Void",
       "isStatic": false,
-      "owner": "target-source-override",
+      "owner": "direct-compiler-lowering",
       "runtimeFeatures": [
-        "alloc",
-        "string",
-        "unicode"
+        "string"
       ],
       "profiles": [
         "portable",
         "metal"
       ],
       "environments": [
-        "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "hosted"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T02",
-      "testOwnerBeads": "E5.T12",
+      "testOwnerBeads": "E5.T02",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "ADR 0004 scalar-indexed UTF-8 applies. ASCII/direct paths and compiler-built constants precede local helpers and narrow string or Unicode slices.",
-      "ruleId": "strings-and-unicode"
+      "tests": [
+        "test/differential/string-runtime/generated/Main.hx",
+        "test/differential/string-runtime/run.py"
+      ],
+      "notes": "The ordinary upstream StringBuf.clear method releases the current managed value and restores the empty String. The hosted fixture proves prior results remain unchanged.",
+      "ruleId": "string-buf-clear-partial"
     },
     {
       "id": "hxc-stdlib-api-v1:21b8342fae386d62cb9fb295e3e35e6ec9edd0b64ed5f865bb366e19eec9edb3",
@@ -9162,32 +9733,30 @@
       "kind": "field",
       "signature": "Int",
       "isStatic": false,
-      "owner": "target-source-override",
+      "owner": "direct-compiler-lowering",
       "runtimeFeatures": [
-        "alloc",
-        "string",
-        "unicode"
+        "string-scalar"
       ],
       "profiles": [
         "portable",
         "metal"
       ],
       "environments": [
-        "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "hosted"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T02",
-      "testOwnerBeads": "E5.T12",
+      "testOwnerBeads": "E5.T02",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "ADR 0004 scalar-indexed UTF-8 applies. ASCII/direct paths and compiler-built constants precede local helpers and narrow string or Unicode slices.",
-      "ruleId": "strings-and-unicode"
+      "tests": [
+        "test/differential/string-runtime/generated/Main.hx",
+        "test/differential/string-runtime/run.py"
+      ],
+      "notes": "The ordinary upstream StringBuf.length getter reports Unicode scalar length through its managed String field. The hosted fixture checks built and cleared states.",
+      "ruleId": "string-buf-length-partial"
     },
     {
       "id": "hxc-stdlib-api-v1:0bc750efedc04bad538a5d664e1a06acf18c9f5e3101938e1449df30dcb023ba",
@@ -9310,32 +9879,30 @@
       "kind": "inline-method",
       "signature": "(s : String, value : String) -> Bool",
       "isStatic": true,
-      "owner": "target-source-override",
+      "owner": "direct-compiler-lowering",
       "runtimeFeatures": [
-        "alloc",
-        "string",
-        "unicode"
+        "string-scalar"
       ],
       "profiles": [
         "portable",
         "metal"
       ],
       "environments": [
-        "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "hosted"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T02",
-      "testOwnerBeads": "E5.T12",
+      "testOwnerBeads": "E5.T02",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "ADR 0004 scalar-indexed UTF-8 applies. ASCII/direct paths and compiler-built constants precede local helpers and narrow string or Unicode slices.",
-      "ruleId": "strings-and-unicode"
+      "tests": [
+        "test/differential/string-runtime/generated/Main.hx",
+        "test/differential/string-runtime/run.py"
+      ],
+      "notes": "The pinned upstream StringTools.contains implementation composes scalar-safe String.indexOf. The hosted fixture covers managed Unicode text and native sanitizer execution.",
+      "ruleId": "string-tools-contains-partial"
     },
     {
       "id": "hxc-stdlib-api-v1:aeb32fee92b119fffb28507740be673652d7f3331ac3ee4811aada3e76b5d5d8",
@@ -9348,32 +9915,30 @@
       "kind": "method",
       "signature": "(s : String, end : String) -> Bool",
       "isStatic": true,
-      "owner": "target-source-override",
+      "owner": "direct-compiler-lowering",
       "runtimeFeatures": [
-        "alloc",
-        "string",
-        "unicode"
+        "string-scalar"
       ],
       "profiles": [
         "portable",
         "metal"
       ],
       "environments": [
-        "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "hosted"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T02",
-      "testOwnerBeads": "E5.T12",
+      "testOwnerBeads": "E5.T02",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "ADR 0004 scalar-indexed UTF-8 applies. ASCII/direct paths and compiler-built constants precede local helpers and narrow string or Unicode slices.",
-      "ruleId": "strings-and-unicode"
+      "tests": [
+        "test/differential/string-runtime/generated/Main.hx",
+        "test/differential/string-runtime/run.py"
+      ],
+      "notes": "The pinned upstream StringTools.endsWith implementation composes scalar length and String.indexOf. The hosted fixture covers a non-BMP suffix on managed text.",
+      "ruleId": "string-tools-ends-with-partial"
     },
     {
       "id": "hxc-stdlib-api-v1:0b454ffaaa7a5ee6b1957836b3d0199b371f4fd733c42433dc786e049d287ed5",
@@ -9424,32 +9989,30 @@
       "kind": "method",
       "signature": "(n : Int, ?digits : Null<Int>) -> String",
       "isStatic": true,
-      "owner": "target-source-override",
+      "owner": "direct-compiler-lowering",
       "runtimeFeatures": [
-        "alloc",
-        "string",
-        "unicode"
+        "string"
       ],
       "profiles": [
         "portable",
         "metal"
       ],
       "environments": [
-        "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "hosted"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T02",
-      "testOwnerBeads": "E5.T12",
+      "testOwnerBeads": "E5.T02",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "ADR 0004 scalar-indexed UTF-8 applies. ASCII/direct paths and compiler-built constants precede local helpers and narrow string or Unicode slices.",
-      "ruleId": "strings-and-unicode"
+      "tests": [
+        "test/differential/string-runtime/generated/Main.hx",
+        "test/differential/string-runtime/run.py"
+      ],
+      "notes": "The pinned upstream StringTools.hex implementation composes integer operations, String.charAt, and concatenation. The hosted fixture covers uppercase digits and requested zero padding.",
+      "ruleId": "string-tools-hex-partial"
     },
     {
       "id": "hxc-stdlib-api-v1:19cc77cf6bc3ded0ca70c63b3e4d14753534f2b61d42dfb7760680c8722cd602",
@@ -9576,32 +10139,30 @@
       "kind": "method",
       "signature": "(s : String, pos : Int) -> Bool",
       "isStatic": true,
-      "owner": "target-source-override",
+      "owner": "direct-compiler-lowering",
       "runtimeFeatures": [
-        "alloc",
-        "string",
-        "unicode"
+        "string-scalar"
       ],
       "profiles": [
         "portable",
         "metal"
       ],
       "environments": [
-        "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "hosted"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T02",
-      "testOwnerBeads": "E5.T12",
+      "testOwnerBeads": "E5.T02",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "ADR 0004 scalar-indexed UTF-8 applies. ASCII/direct paths and compiler-built constants precede local helpers and narrow string or Unicode slices.",
-      "ruleId": "strings-and-unicode"
+      "tests": [
+        "test/differential/string-runtime/generated/Main.hx",
+        "test/differential/string-runtime/run.py"
+      ],
+      "notes": "The pinned upstream StringTools.isSpace implementation composes scalar-safe String.charCodeAt and preserves Haxe's six ASCII whitespace codes.",
+      "ruleId": "string-tools-is-space-partial"
     },
     {
       "id": "hxc-stdlib-api-v1:a79cce15ebcf2949a2eaaa422c49c49ee57570e5f77be3b56acb770e4e24569f",
@@ -9690,32 +10251,30 @@
       "kind": "method",
       "signature": "(s : String, c : String, l : Int) -> String",
       "isStatic": true,
-      "owner": "target-source-override",
+      "owner": "direct-compiler-lowering",
       "runtimeFeatures": [
-        "alloc",
-        "string",
-        "unicode"
+        "string"
       ],
       "profiles": [
         "portable",
         "metal"
       ],
       "environments": [
-        "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "hosted"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T02",
-      "testOwnerBeads": "E5.T12",
+      "testOwnerBeads": "E5.T02",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "ADR 0004 scalar-indexed UTF-8 applies. ASCII/direct paths and compiler-built constants precede local helpers and narrow string or Unicode slices.",
-      "ruleId": "strings-and-unicode"
+      "tests": [
+        "test/differential/string-runtime/generated/Main.hx",
+        "test/differential/string-runtime/run.py"
+      ],
+      "notes": "The pinned upstream StringTools.lpad implementation composes scalar length and the ordinary StringBuf API. The hosted fixture covers non-BMP padding.",
+      "ruleId": "string-tools-lpad-partial"
     },
     {
       "id": "hxc-stdlib-api-v1:521e51232257e30a81e5d07d524c58946ddc6dea95448b646f2ec04d46660d26",
@@ -9728,32 +10287,30 @@
       "kind": "inline-method",
       "signature": "(s : String) -> String",
       "isStatic": true,
-      "owner": "target-source-override",
+      "owner": "direct-compiler-lowering",
       "runtimeFeatures": [
-        "alloc",
-        "string",
-        "unicode"
+        "string-scalar"
       ],
       "profiles": [
         "portable",
         "metal"
       ],
       "environments": [
-        "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "hosted"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T02",
-      "testOwnerBeads": "E5.T12",
+      "testOwnerBeads": "E5.T02",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "ADR 0004 scalar-indexed UTF-8 applies. ASCII/direct paths and compiler-built constants precede local helpers and narrow string or Unicode slices.",
-      "ruleId": "strings-and-unicode"
+      "tests": [
+        "test/differential/string-runtime/generated/Main.hx",
+        "test/differential/string-runtime/run.py"
+      ],
+      "notes": "The pinned upstream StringTools.ltrim implementation composes isSpace and String.substr. The hosted fixture proves a trimmed view keeps runtime-created Unicode text alive.",
+      "ruleId": "string-tools-ltrim-partial"
     },
     {
       "id": "hxc-stdlib-api-v1:314198e1d1da1142a8ec6e9e5467ad630fbe608fa708197c42345da05c459cd1",
@@ -9766,32 +10323,31 @@
       "kind": "method",
       "signature": "(s : String, sub : String, by : String) -> String",
       "isStatic": true,
-      "owner": "target-source-override",
+      "owner": "direct-compiler-lowering",
       "runtimeFeatures": [
-        "alloc",
-        "string",
-        "unicode"
+        "array-join",
+        "string-split"
       ],
       "profiles": [
         "portable",
         "metal"
       ],
       "environments": [
-        "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "hosted"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T02",
-      "testOwnerBeads": "E5.T12",
+      "testOwnerBeads": "E5.T02",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "ADR 0004 scalar-indexed UTF-8 applies. ASCII/direct paths and compiler-built constants precede local helpers and narrow string or Unicode slices.",
-      "ruleId": "strings-and-unicode"
+      "tests": [
+        "test/differential/string-runtime/generated/Main.hx",
+        "test/differential/string-runtime/run.py"
+      ],
+      "notes": "The pinned upstream StringTools.replace implementation composes String.split and Array<String>.join. The hosted fixture covers repeated Unicode replacement and managed ownership.",
+      "ruleId": "string-tools-replace-partial"
     },
     {
       "id": "hxc-stdlib-api-v1:65e8cc4fd35ccbbba4d4e0db84bf1d4195e988ac255d42cee308568f45105f46",
@@ -9804,32 +10360,30 @@
       "kind": "method",
       "signature": "(s : String, c : String, l : Int) -> String",
       "isStatic": true,
-      "owner": "target-source-override",
+      "owner": "direct-compiler-lowering",
       "runtimeFeatures": [
-        "alloc",
-        "string",
-        "unicode"
+        "string"
       ],
       "profiles": [
         "portable",
         "metal"
       ],
       "environments": [
-        "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "hosted"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T02",
-      "testOwnerBeads": "E5.T12",
+      "testOwnerBeads": "E5.T02",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "ADR 0004 scalar-indexed UTF-8 applies. ASCII/direct paths and compiler-built constants precede local helpers and narrow string or Unicode slices.",
-      "ruleId": "strings-and-unicode"
+      "tests": [
+        "test/differential/string-runtime/generated/Main.hx",
+        "test/differential/string-runtime/run.py"
+      ],
+      "notes": "The pinned upstream StringTools.rpad implementation composes scalar length and the ordinary StringBuf API. The hosted fixture covers non-BMP padding.",
+      "ruleId": "string-tools-rpad-partial"
     },
     {
       "id": "hxc-stdlib-api-v1:928e1ac05f45a47e4673d725fa7121f98b3e39a0a1adab34a7e6cd80f87883cc",
@@ -9842,32 +10396,30 @@
       "kind": "inline-method",
       "signature": "(s : String) -> String",
       "isStatic": true,
-      "owner": "target-source-override",
+      "owner": "direct-compiler-lowering",
       "runtimeFeatures": [
-        "alloc",
-        "string",
-        "unicode"
+        "string-scalar"
       ],
       "profiles": [
         "portable",
         "metal"
       ],
       "environments": [
-        "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "hosted"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T02",
-      "testOwnerBeads": "E5.T12",
+      "testOwnerBeads": "E5.T02",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "ADR 0004 scalar-indexed UTF-8 applies. ASCII/direct paths and compiler-built constants precede local helpers and narrow string or Unicode slices.",
-      "ruleId": "strings-and-unicode"
+      "tests": [
+        "test/differential/string-runtime/generated/Main.hx",
+        "test/differential/string-runtime/run.py"
+      ],
+      "notes": "The pinned upstream StringTools.rtrim implementation composes isSpace and String.substr. The hosted fixture proves a trimmed view keeps runtime-created Unicode text alive.",
+      "ruleId": "string-tools-rtrim-partial"
     },
     {
       "id": "hxc-stdlib-api-v1:30d83b274a0f733460328087c537a2e6a0942458008fe2356907ad2d070e6dde",
@@ -9880,32 +10432,30 @@
       "kind": "method",
       "signature": "(s : String, start : String) -> Bool",
       "isStatic": true,
-      "owner": "target-source-override",
+      "owner": "direct-compiler-lowering",
       "runtimeFeatures": [
-        "alloc",
-        "string",
-        "unicode"
+        "string-scalar"
       ],
       "profiles": [
         "portable",
         "metal"
       ],
       "environments": [
-        "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "hosted"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T02",
-      "testOwnerBeads": "E5.T12",
+      "testOwnerBeads": "E5.T02",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "ADR 0004 scalar-indexed UTF-8 applies. ASCII/direct paths and compiler-built constants precede local helpers and narrow string or Unicode slices.",
-      "ruleId": "strings-and-unicode"
+      "tests": [
+        "test/differential/string-runtime/generated/Main.hx",
+        "test/differential/string-runtime/run.py"
+      ],
+      "notes": "The pinned upstream StringTools.startsWith implementation composes scalar length and String.lastIndexOf. The hosted fixture covers a Unicode prefix on managed text.",
+      "ruleId": "string-tools-starts-with-partial"
     },
     {
       "id": "hxc-stdlib-api-v1:46443491d593ec0efcd107adbf28eaf8b4181c7c9e14ac68a06220e5c55d0211",
@@ -9918,32 +10468,30 @@
       "kind": "method",
       "signature": "(s : String) -> String",
       "isStatic": true,
-      "owner": "target-source-override",
+      "owner": "direct-compiler-lowering",
       "runtimeFeatures": [
-        "alloc",
-        "string",
-        "unicode"
+        "string-scalar"
       ],
       "profiles": [
         "portable",
         "metal"
       ],
       "environments": [
-        "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "hosted"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T02",
-      "testOwnerBeads": "E5.T12",
+      "testOwnerBeads": "E5.T02",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "ADR 0004 scalar-indexed UTF-8 applies. ASCII/direct paths and compiler-built constants precede local helpers and narrow string or Unicode slices.",
-      "ruleId": "strings-and-unicode"
+      "tests": [
+        "test/differential/string-runtime/generated/Main.hx",
+        "test/differential/string-runtime/run.py"
+      ],
+      "notes": "The pinned upstream StringTools.trim implementation composes isSpace and String.substr. The hosted fixture covers both ends of runtime-created Unicode text.",
+      "ruleId": "string-tools-trim-partial"
     },
     {
       "id": "hxc-stdlib-api-v1:224b5ea774dbc2a7b513f2ad74b39319906b8a86d834bb37f77553737b6223da",

@@ -1145,6 +1145,11 @@
             "kind": "hxc-ir-operation"
           },
           {
+            "description": "A reachable ordinary Haxe String.substr whose bounds are known only at run time.",
+            "id": "substr",
+            "kind": "hxc-ir-operation"
+          },
+          {
             "description": "A reachable ordinary Haxe String.substring whose bounds are known only at run time.",
             "id": "substring",
             "kind": "hxc-ir-operation"
@@ -1178,6 +1183,7 @@
         "hxc_string_scalar_at",
         "hxc_string_scalar_length",
         "hxc_string_slice",
+        "hxc_string_substr",
         "hxc_string_substring",
         "hxc_utf8_validate"
       ],
@@ -1189,13 +1195,13 @@
           "sourcePath": "runtime/hxrt/include/hxrt/string_decode.h"
         },
         {
-          "sourceSha256": "7dfac11f06f3a544dbe3177ac0e60cdb7bac4bcd0c3fbc6d20f2f6bea7a41352",
+          "sourceSha256": "b400d7ef9af853410334b30627ea98a5af87d5c3a863f6aa4c770d7cc4b3d90b",
           "kind": "runtime-header",
           "outputPath": "runtime/include/hxrt/string_scalar.h",
           "sourcePath": "runtime/hxrt/include/hxrt/string_scalar.h"
         },
         {
-          "sourceSha256": "1df11e7045ccdd0c64503478477425ca3a55b71e9ac7f18e1cd623d9f17581b3",
+          "sourceSha256": "2c44eebc655dd34ed374b58402de9dfe731425fb4e0b54997a7c16c12e1309fb",
           "kind": "runtime-source",
           "outputPath": "runtime/src/string_scalar.c",
           "sourcePath": "runtime/hxrt/src/string_scalar.c"
@@ -1327,7 +1333,7 @@
     "releaseProvenance": {
       "runtimeCStandard": "c11",
       "sourceHashAlgorithm": "sha256",
-      "sourceSetSha256": "a472b49b3f952a8227b686a3d7f07bf0ca052ccdbb2aa63d1bac65f4e7f6b669",
+      "sourceSetSha256": "f8a20510f2af99f1b8a8fe7f2bcc48f6535cfdedbd998bf3bed733a7289a8b80",
       "publicHeaderCppStandard": "c++17"
     },
     "generatedCodeCompatibility": "same-major",

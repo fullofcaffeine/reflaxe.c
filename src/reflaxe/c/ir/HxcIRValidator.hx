@@ -3235,7 +3235,7 @@ private class HxcIRValidationState {
 				} else if (featureId == "string-scalar") {
 					validateStringScalarCall(call, argumentTypes, path, source);
 					final requiresReceiverProof = switch operationId {
-						case "char-at" | "char-code-at" | "index-of" | "last-index-of" | "length" | "substring": true;
+						case "char-at" | "char-code-at" | "index-of" | "last-index-of" | "length" | "substr" | "substring": true;
 						case _: false;
 					};
 					if (requiresReceiverProof && call.arguments.length > 0 && !nullProofs.exists(call.arguments[0]))
@@ -3818,7 +3818,7 @@ private class HxcIRValidationState {
 					|| typeKey(call.returnType) != typeKey(IRTInt(32, true)))
 					add(path, "String.lastIndexOf requires source String, needle String, start-presence Bool, and start Int, then returns Haxe Int", source);
 				validateCleanupFreeStatusAbort(call.failure, path, source, "String.lastIndexOf");
-			case "substring":
+			case "substr" | "substring":
 				final matchingStringCarrier = argumentTypes.length == 0 ? false : switch argumentTypes[0] {
 					case IRTString: call.returnType == IRTString;
 					case IRTManagedString: call.returnType == IRTManagedString;
@@ -3833,8 +3833,10 @@ private class HxcIRValidationState {
 					case _: false;
 				};
 				if (argumentTypes.length != 4 || !matchingStringCarrier || !hasIntStart || argumentTypes[2] != IRTBool || !hasIntEnd)
-					add(path, "String.substring requires String, start Int, end-presence Bool, and end Int, then returns the same String carrier", source);
-				validateCleanupFreeStatusAbort(call.failure, path, source, "String.substring");
+					add(path,
+						'String.$operationId requires String, start Int, second-argument-presence Bool, and second Int, then returns the same String carrier',
+						source);
+				validateCleanupFreeStatusAbort(call.failure, path, source, 'String.$operationId');
 			case _:
 				add(path, 'string-scalar runtime call names unsupported operation `$operationId`', source);
 		}

@@ -12495,12 +12495,12 @@ private class FunctionBuilder {
 	/**
 		Lower the admitted allocation-free ordinary Haxe String operations.
 
-		`charAt` and `substring` return views into the receiver's immutable UTF-8
-		bytes instead of copying them. A view is a borrowed value: it is valid only
-		while the receiver's storage stays alive. In programs with runtime-created
-		Strings, `ownBorrowedStringResult` therefore retains that shared storage
-		before the result can escape this call. Literal-only programs need no
-		retain because compiler-owned literal bytes live for the whole process.
+		`charAt`, `substr`, and `substring` return views into the receiver's
+		immutable UTF-8 bytes instead of copying them. A view is a borrowed value:
+		it is valid only while the receiver's storage stays alive. In programs with
+		runtime-created Strings, `ownBorrowedStringResult` therefore retains that
+		shared storage before the result can escape this call. Literal-only programs
+		need no retain because compiler-owned literal bytes live for the whole process.
 
 		The receiver and arguments are lowered from left to right, preserving Haxe
 		evaluation order. Bounds remain signed Haxe `Int` values until the checked
@@ -12508,15 +12508,19 @@ private class FunctionBuilder {
 		creates a fresh managed String, a compiler local owns that value across the
 		read-only runtime call and releases it on every later exit. Existing static
 		or caller-owned receivers remain simple borrows and add no retain.
+		`toString` is the checked identity of the same immutable receiver, so it
+		adds no conversion, allocation, or ownership operation.
 	**/
 	function lowerStringCall(expression:TypedExpr, access:reflaxe.c.lowering.CBodyDispatch.CBodyInstanceCallAccess, arguments:Array<TypedExpr>):LoweredValue {
 		final method = access.field.get().name;
-		if (method != "charAt" && method != "charCodeAt" && method != "indexOf" && method != "lastIndexOf" && method != "split" && method != "substring")
+		if (method != "charAt" && method != "charCodeAt" && method != "indexOf" && method != "lastIndexOf" && method != "split" && method != "substr"
+			&& method != "substring" && method != "toString")
 			return unsupported(expression, 'TCall(String.$method:not-yet-admitted)');
-		final takesOptionalSecondArgument = method == "indexOf" || method == "lastIndexOf" || method == "substring";
-		final expectedArgumentCount = takesOptionalSecondArgument ? "1-or-2" : "1";
-		if ((takesOptionalSecondArgument && (arguments.length < 1 || arguments.length > 2))
-			|| (!takesOptionalSecondArgument && arguments.length != 1))
+		final takesOptionalSecondArgument = method == "indexOf" || method == "lastIndexOf" || method == "substr" || method == "substring";
+		final expectedArgumentCount = method == "toString" ? "0" : takesOptionalSecondArgument ? "1-or-2" : "1";
+		final validArgumentCount = if (method == "toString") arguments.length == 0 else if (takesOptionalSecondArgument) arguments.length >= 1
+			&& arguments.length <= 2 else arguments.length == 1;
+		if (!validArgumentCount)
 			return unsupported(expression, 'TCall(String.$method:argument-count=${arguments.length},expected=$expectedArgumentCount)');
 		final receiverMapping = bodyValueType(access.receiver.t, access.receiver.pos, 'TCall(String.$method:receiver-type)');
 		if (!isStringCarrier(receiverMapping.irType))
@@ -12525,6 +12529,8 @@ private class FunctionBuilder {
 		receiver = stabilizeFreshManagedString(receiver, access.receiver.pos, 'string-$method-receiver');
 		appendInstruction(null, IRIONullCheck(receiver.id, IRNCPCheckedAbort(Std.string(context.profile), Std.string(context.buildMode))),
 			sourceSpan(access.receiver.pos), 'string-$method-receiver-null-check');
+		if (method == "toString")
+			return receiver;
 		if (method == "indexOf" || method == "lastIndexOf")
 			return lowerStringSearch(expression, receiver, arguments, method);
 		if (method == "split")
@@ -12538,25 +12544,27 @@ private class FunctionBuilder {
 				'TCall(String.$method:argument-$index)').id);
 		}
 		final resultMapping = bodyValueType(expression.t, expression.pos, 'TCall(String.$method:result-type)');
-		if ((method == "charAt" || method == "substring") && typeKey(resultMapping.irType) != typeKey(receiverMapping.irType))
+		if ((method == "charAt" || method == "substr" || method == "substring")
+			&& typeKey(resultMapping.irType) != typeKey(receiverMapping.irType))
 			return unsupported(expression, 'TCall(String.$method:result-not-immutable-String-view)');
 		final charCodeOptional = resultMapping.optionalValue();
 		if (method == "charCodeAt" && (charCodeOptional == null || typeKey(charCodeOptional.payload.irType) != typeKey(IRTInt(32, true))))
 			return unsupported(expression, "TCall(String.charCodeAt:result-not-Null-Int)");
 		final source = sourceSpan(expression.pos);
-		if (method == "substring") {
+		if (method == "substr" || method == "substring") {
 			final hasEnd:HxcIRResult = {id: nextValueId(), type: IRTBool};
-			appendInstruction(hasEnd, IRIOConstant(IRCBool(arguments.length == 2)), source, "string-substring-has-end");
+			appendInstruction(hasEnd, IRIOConstant(IRCBool(arguments.length == 2)), source, 'string-$method-has-second');
 			loweredArguments.insert(2, hasEnd.id);
 			if (arguments.length == 1) {
 				final unusedEnd:HxcIRResult = {id: nextValueId(), type: IRTInt(32, true)};
-				appendInstruction(unusedEnd, IRIOConstant(IRCInt("0")), source, "string-substring-unused-end");
+				appendInstruction(unusedEnd, IRIOConstant(IRCInt("0")), source, 'string-$method-unused-second');
 				loweredArguments.push(unusedEnd.id);
 			}
 		}
 		final operation = switch method {
 			case "charAt": "char-at";
 			case "charCodeAt": "char-code-at";
+			case "substr": "substr";
 			case "substring": "substring";
 			case _: throw new CBodyEmissionError('validated String method `$method` lost its runtime operation');
 		};
@@ -12565,13 +12573,13 @@ private class FunctionBuilder {
 			dispatch: IRCDRuntime("string-scalar", operation),
 			arguments: loweredArguments,
 			returnType: resultMapping.irType,
-			failure: method == "substring" ? managedArrayFailure() : null
-		}), source, 'string-$operation');
+			failure: method == "substr" || method == "substring" ? managedArrayFailure() : null}), source, 'string-$operation');
 		registerValueTemporary(result.id, 'string-$operation-result');
 		runtimeRequirements.push(new CBodyRuntimeRequirement("string-scalar", operation, 'ordinary Haxe String.$method with Unicode-scalar indexing', source,
 			expression.pos));
 		final lowered:LoweredValue = {id: result.id, type: result.type, mapping: resultMapping};
 		return method == "charAt"
+			|| method == "substr"
 			|| method == "substring" ? ownBorrowedStringResult(lowered, expression.pos, 'string-$operation') : lowered;
 	}
 

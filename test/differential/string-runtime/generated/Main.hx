@@ -220,6 +220,28 @@ final class Main {
 		return output.toString();
 	}
 
+	/**
+		Compose the upstream mutable buffer and advanced String helpers.
+
+		The managed input makes retained substring ownership observable. Clearing the
+		buffer also proves that later mutation does not alter its earlier result.
+	**/
+	static function extendedStringToolsContractHolds(value:String):Bool {
+		final output = new StringBuf();
+		output.add("A");
+		output.addSub(value, 1, 1);
+		final built = output.toString();
+		final builtLength = output.length;
+		output.clear();
+		return builtLength == 2
+			&& built == "Aé"
+			&& output.length == 0
+			&& StringTools.lpad("x", "🙂", 3) == "🙂🙂x"
+			&& StringTools.rpad("x", "🙂", 3) == "x🙂🙂"
+			&& StringTools.replace("AéA", "A", "🙂") == "🙂é🙂"
+			&& StringTools.hex(0x1AF, 5) == "001AF";
+	}
+
 	/** Search without a start argument so omission remains visible to lowering. */
 	static function find(value:String, needle:String):Int
 		return value.indexOf(needle);
@@ -441,6 +463,7 @@ final class Main {
 			&& conditionalViewContractHolds()
 			&& conditionalCompoundContractHolds()
 			&& splitContractHolds()
+			&& extendedStringToolsContractHolds(selected)
 			&& copiedAggregateAliasesHold()
 			&& switchJoinContractHolds(alias)
 			&& alias.length == 3
@@ -449,6 +472,21 @@ final class Main {
 			&& selected.substring(2, 1) == "é"
 			&& selected.substring(-3, 1) == "A"
 			&& selected.substring(99) == ""
+			&& selected.substr(1) == "é😀"
+			&& selected.substr(-1) == "😀"
+			&& selected.substr(-99, 1) == "A"
+			&& selected.substr(1, 1) == "é"
+			&& selected.substr(1, 99) == "é😀"
+			&& selected.substr(99) == ""
+			&& selected.toString() == selected
+			&& StringTools.contains(selected, "é")
+			&& StringTools.startsWith(selected, "Aé")
+			&& StringTools.endsWith(selected, "😀")
+			&& StringTools.isSpace("\t", 0)
+			&& !StringTools.isSpace(selected, 0)
+			&& StringTools.ltrim(" \t" + selected) == selected
+			&& StringTools.rtrim(selected + "\n ") == selected
+			&& StringTools.trim(" \t" + selected + "\n ") == selected
 			&& selected.charCodeAt(2) == 0x1F600
 			&& values[2] == "😀"
 			&& reassigned == built

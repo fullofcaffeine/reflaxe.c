@@ -11,9 +11,22 @@ Literal-backed Strings remain allocation-free. Runtime-created values from
 `StringBuf.addChar` path use a small reference-counted owner. Those values may
 cross calls and returns, aliases, branches, closed records and enums, fixed
 Array literals, `Null<String>`, and class fields without dangling bytes.
-`length`, `charAt`, `charCodeAt`, `indexOf`, `lastIndexOf`, `substring`, and
-`split` use the shared Unicode-scalar rules. Other String methods still fail
-closed.
+`length`, `charAt`, `charCodeAt`, `indexOf`, `lastIndexOf`, `substr`,
+`substring`, and `split` use the shared Unicode-scalar rules. `toString()`
+returns the same immutable value without allocating. Other String methods
+still fail closed.
+The upstream `StringTools` implementations for containment, prefix/suffix
+checks, ASCII whitespace detection, trimming, padding, replacement, and
+hexadecimal formatting compose these admitted operations; they do not require
+target-specific replacements. The ordinary `StringBuf` String specialization
+supports append, scalar substring append, length, and clear through the same
+managed String field.
+
+This is still a bounded parity slice. Unicode case conversion remains planned
+because Haxe changes non-ASCII letters as well as ASCII, so an ASCII-only
+implementation would be incorrect. `UnicodeString`, URL/HTML codecs, generic
+non-String `StringBuf.add` values, and the remaining `StringTools` APIs also
+remain explicit planned rows in the generated standard-library ledger.
 E4.T11 established the internal same-major runtime contract, and E7 owns any
 future public ABI.
 
@@ -86,8 +99,8 @@ identity, then compares non-null values by byte length and canonical UTF-8
 content with `memcmp`. It never treats different non-null storage pointers as
 unequal.
 
-This is deliberately smaller than general String support. `String.charAt` and
-`substring` return borrowed views into the receiver's bytes. When such a view
+This is deliberately smaller than general String support. `String.charAt`,
+`substr`, and `substring` return borrowed views into the receiver's bytes. When such a view
 escapes its immediate expression, generated code retains the same optional
 owner; it does not copy the slice. `String.fromCharCode` and concatenation
 produce fresh owners, while aliases and aggregate/container copies retain them.
@@ -204,8 +217,8 @@ typed surfaces.
 
 The allocation-free `string-scalar` feature is compiler-selectable and depends
 only on `status` plus the `string-literal` carrier. Ordinary Haxe `length`,
-`charAt`, `charCodeAt`, `indexOf`, `lastIndexOf`, and `substring` select this
-slice when their inputs remain dynamic. Scalar views borrow the source bytes;
+`charAt`, `charCodeAt`, `indexOf`, `lastIndexOf`, `substr`, and `substring`
+select this slice when their inputs remain dynamic. Scalar views borrow the source bytes;
 both searches only observe their receiver and needle. Literal-only search
 programs therefore still avoid `alloc` and the broader `string` source.
 
@@ -318,22 +331,22 @@ has two complementary halves. Its independent strict-C fixture covers checked
 and maximal-subpart lossy decoding, slicing, scalar-indexed search, comparison,
 stable hashing, builder failure atomicity, allocator identity, borrowed/owned
 CString lifetime, reference counts, and exact allocations. Its ordinary-Haxe
-fixture compares Eval with generated C for `String.fromCharCode`, `split`,
-upstream `StringBuf.addChar`, `Std.string(Bool)`, `Std.string(Int)`,
-`Std.string(Float)`, and `Std.string(String)` across static, borrowed, viewed, fresh, stored, returned,
-and directly consumed values, integer interpolation, signed boundaries, single
-evaluation, concatenation, aliases, branches, records, enums, arrays,
-reassignment, nullable values, calls, returns, borrowed scalar slices, and
-forward and reverse search over literal and owned Strings, split ownership and
-empty/adjacent/Unicode delimiters, repeated and
-overlapping matches, non-Basic Multilingual Plane and combining text, embedded
-NUL, empty needles, omitted/supplied starts, and the pinned negative-start
-behavior. It also covers value-producing switches over Int, String, enum, and
-String-backed enum-abstract subjects. Each switch mixes a literal borrow, a
-caller-owned borrow, a fresh runtime-created String, and a terminating `throw`
-arm. The HxcIR report proves that normal arms retain or move exactly one owner,
-the throwing arm does not invent one, and the join moves the selected owner
-once.
+fixture compares Eval with generated C for `String.fromCharCode`, `substr`,
+`split`, the bounded upstream `StringBuf` API, eleven composed `StringTools`
+operations, `Std.string(Bool)`, `Std.string(Int)`, `Std.string(Float)`, and
+`Std.string(String)`. It covers static, borrowed, viewed, fresh, stored,
+returned, and directly consumed values; integer interpolation; signed bounds;
+single evaluation; concatenation; aliases; branches; records; enums; arrays;
+reassignment; nullable values; calls; returns; borrowed scalar slices; forward
+and reverse search; split ownership; empty, adjacent, and Unicode delimiters;
+repeated and overlapping matches; non-Basic Multilingual Plane and combining
+text; embedded NUL; empty needles; omitted or supplied starts; and the pinned
+negative-start behavior. It also covers value-producing switches over Int,
+String, enum, and String-backed enum-abstract subjects. Each switch mixes a
+literal borrow, a caller-owned borrow, a fresh runtime-created String, and a
+terminating `throw` arm. The HxcIR report proves that normal arms retain or
+move exactly one owner, the throwing arm does not invent one, and the join
+moves the selected owner once.
 
 Generated projects are checked in split, package, and unity layouts under cold,
 reversed, and warm compiler-server discovery. Strict C11

@@ -273,6 +273,8 @@ static int hxc_test_split(
 static int hxc_test_literals_and_scalars(hxc_test_arena *arena) {
   const hxc_string missing = HXC_STRING_INITIALIZER;
   const hxc_string empty = HXC_STRING_EMPTY_INITIALIZER;
+  const hxc_string ascii = HXC_STRING_LITERAL("plain");
+  const hxc_string ascii_middle = HXC_STRING_LITERAL("lai");
   const hxc_string nul = HXC_STRING_LITERAL("\0");
   const hxc_string emoji = HXC_STRING_LITERAL("\xF0\x9F\x98\x80");
   const hxc_string embedded = HXC_STRING_LITERAL("a\0b");
@@ -334,6 +336,56 @@ static int hxc_test_literals_and_scalars(hxc_test_arena *arena) {
   HXC_TEST_CHECK(hxc_bytes_equal(slice.data, emoji.data, emoji.byte_length));
   HXC_TEST_CHECK(hxc_string_slice(sequence, 2u, 1u, &slice) == HXC_STATUS_OK);
   HXC_TEST_CHECK(slice.byte_length == 2u && slice.has_trailing_nul);
+  HXC_TEST_CHECK(
+    hxc_string_substr(ascii, 1, true, 3, &slice) == HXC_STATUS_OK
+  );
+  HXC_TEST_CHECK(
+    hxc_bytes_equal(slice.data, ascii_middle.data, ascii_middle.byte_length)
+  );
+  HXC_TEST_CHECK(
+    hxc_string_substr(sequence, 1, false, 0, &slice) == HXC_STATUS_OK
+  );
+  HXC_TEST_CHECK(
+    slice.byte_length == emoji_accent.byte_length && slice.has_trailing_nul
+  );
+  HXC_TEST_CHECK(
+    hxc_bytes_equal(slice.data, emoji_accent.data, emoji_accent.byte_length)
+  );
+  HXC_TEST_CHECK(
+    hxc_string_substr(sequence, -1, true, 1, &slice) == HXC_STATUS_OK
+  );
+  HXC_TEST_CHECK(slice.byte_length == composed.byte_length);
+  HXC_TEST_CHECK(
+    hxc_bytes_equal(slice.data, composed.data, composed.byte_length)
+  );
+  HXC_TEST_CHECK(
+    hxc_string_substr(sequence, -99, true, 1, &slice) == HXC_STATUS_OK
+  );
+  HXC_TEST_CHECK(slice.byte_length == 1u && slice.data[0] == (uint8_t)'x');
+  HXC_TEST_CHECK(
+    hxc_string_substr(sequence, 1, true, 99, &slice) == HXC_STATUS_OK
+  );
+  HXC_TEST_CHECK(slice.byte_length == emoji_accent.byte_length);
+  HXC_TEST_CHECK(
+    hxc_string_substr(sequence, 1, true, -1, &slice) == HXC_STATUS_OK
+  );
+  HXC_TEST_CHECK(slice.byte_length == 0u && !slice.has_trailing_nul);
+  HXC_TEST_CHECK(
+    hxc_string_substr(sequence, 99, false, 0, &slice) == HXC_STATUS_OK
+  );
+  HXC_TEST_CHECK(slice.byte_length == 0u && slice.has_trailing_nul);
+  HXC_TEST_CHECK(
+    hxc_string_substr(sequence, 0, false, 0, NULL)
+      == HXC_STATUS_INVALID_ARGUMENT
+  );
+  slice = emoji;
+  HXC_TEST_CHECK(
+    hxc_string_substr(missing, 0, false, 0, &slice)
+      == HXC_STATUS_INVALID_UTF8
+  );
+  HXC_TEST_CHECK(
+    slice.data == emoji.data && slice.byte_length == emoji.byte_length
+  );
   HXC_TEST_CHECK(
     hxc_string_index_of(sequence, emoji, 0, &found) == HXC_STATUS_OK
   );

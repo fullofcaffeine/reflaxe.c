@@ -194,6 +194,7 @@
           "hxc_string_scalar_at",
           "hxc_string_scalar_length",
           "hxc_string_slice",
+          "hxc_string_substr",
           "hxc_string_substring",
           "hxc_utf8_validate"
         ],
@@ -515,6 +516,7 @@
       "hxc_string_scalar_at",
       "hxc_string_scalar_length",
       "hxc_string_slice",
+      "hxc_string_substr",
       "hxc_string_substring",
       "hxc_string_to_cstring_owned",
       "hxc_utf8_validate"
@@ -638,6 +640,7 @@
           "hxc_string_scalar_at",
           "hxc_string_scalar_length",
           "hxc_string_slice",
+          "hxc_string_substr",
           "hxc_string_substring",
           "hxc_utf8_validate"
         ],
@@ -748,6 +751,7 @@
       "hxc_string_scalar_at",
       "hxc_string_scalar_length",
       "hxc_string_slice",
+      "hxc_string_substr",
       "hxc_string_substring",
       "hxc_utf8_validate"
     ],
@@ -2349,6 +2353,7 @@
           "hxc_string_scalar_at",
           "hxc_string_scalar_length",
           "hxc_string_slice",
+          "hxc_string_substr",
           "hxc_string_substring",
           "hxc_utf8_validate"
         ],
@@ -2621,6 +2626,7 @@
       "hxc_string_scalar_at",
       "hxc_string_scalar_length",
       "hxc_string_slice",
+      "hxc_string_substr",
       "hxc_string_substring",
       "hxc_string_to_cstring_owned",
       "hxc_utf8_validate"
@@ -2774,6 +2780,7 @@
           "hxc_string_scalar_at",
           "hxc_string_scalar_length",
           "hxc_string_slice",
+          "hxc_string_substr",
           "hxc_string_substring",
           "hxc_utf8_validate"
         ],
@@ -3011,6 +3018,7 @@
       "hxc_string_scalar_at",
       "hxc_string_scalar_length",
       "hxc_string_slice",
+      "hxc_string_substr",
       "hxc_string_substring",
       "hxc_string_to_cstring_owned",
       "hxc_utf8_validate"
@@ -3213,6 +3221,7 @@
           "hxc_string_scalar_at",
           "hxc_string_scalar_length",
           "hxc_string_slice",
+          "hxc_string_substr",
           "hxc_string_substring",
           "hxc_utf8_validate"
         ],
@@ -3545,6 +3554,7 @@
       "hxc_string_scalar_length",
       "hxc_string_slice",
       "hxc_string_split",
+      "hxc_string_substr",
       "hxc_string_substring",
       "hxc_string_to_cstring_owned",
       "hxc_utf8_validate"
@@ -3879,6 +3889,7 @@
           "hxc_string_scalar_at",
           "hxc_string_scalar_length",
           "hxc_string_slice",
+          "hxc_string_substr",
           "hxc_string_substring",
           "hxc_utf8_validate"
         ],
@@ -4112,6 +4123,7 @@
       "hxc_string_scalar_at",
       "hxc_string_scalar_length",
       "hxc_string_slice",
+      "hxc_string_substr",
       "hxc_string_substring",
       "hxc_string_to_cstring_owned",
       "hxc_utf8_validate"

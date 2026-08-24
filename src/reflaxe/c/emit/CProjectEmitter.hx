@@ -819,7 +819,7 @@ class CProjectEmitter {
 					if (reason.kind == "direct-string-value"
 						|| (reason.kind == "runtime-representation" && reason.operationId == "type-carrier")):
 				case "string-scalar" if (reason.kind == "runtime-operation" && switch reason.operationId {
-						case "char-at" | "char-code-at" | "index-of" | "last-index-of" | "length" | "substring": true;
+						case "char-at" | "char-code-at" | "index-of" | "last-index-of" | "length" | "substr" | "substring": true;
 						case _: false;
 					}):
 				case "string" if ((reason.kind == "runtime-operation" && switch reason.operationId {

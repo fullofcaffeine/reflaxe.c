@@ -5342,7 +5342,12 @@ class CBodyEmitter {
 				emitStringCharCodeAtCall(statements, values, referencedValues, instruction, call, temporaryNames, lineDirectives, fn);
 				return false;
 			case IRCDRuntime("string-scalar", "substring"):
-				emitStringSubstringCall(statements, values, referencedValues, instruction, call, temporaryNames, lineDirectives, boundsAbortName, fn);
+				emitStringSliceCall(statements, values, referencedValues, instruction, call, temporaryNames, lineDirectives, boundsAbortName, fn, "substring",
+					CBRNStringSubstring);
+				return false;
+			case IRCDRuntime("string-scalar", "substr"):
+				emitStringSliceCall(statements, values, referencedValues, instruction, call, temporaryNames, lineDirectives, boundsAbortName, fn, "substr",
+					CBRNStringSubstr);
 				return false;
 			case _: return fail('call `${instruction.id}` in `$functionId` has no admitted static or runtime dispatch');
 		};
@@ -6130,21 +6135,22 @@ class CBodyEmitter {
 	}
 
 	/**
-		Emit Haxe substring bounds into the allocation-free runtime slicer.
+		Emit Haxe `substr` or `substring` bounds into its runtime slicer.
 
 		The result is a small `hxc_string` value that points into the receiver's
 		bytes. Ownership is deliberately not changed here: the lowering layer adds
 		a retain only when a runtime-created view can escape the expression.
 	**/
-	function emitStringSubstringCall(statements:Array<CStmt>, values:Map<String, CExpr>, referencedValues:Map<String, Bool>, instruction:HxcIRInstruction,
-			call:HxcIRCall, temporaryNames:Map<String, CIdentifier>, lineDirectives:Bool, boundsAbortName:Null<CIdentifier>, fn:HxcIRFunction):Void {
+	function emitStringSliceCall(statements:Array<CStmt>, values:Map<String, CExpr>, referencedValues:Map<String, Bool>, instruction:HxcIRInstruction,
+			call:HxcIRCall, temporaryNames:Map<String, CIdentifier>, lineDirectives:Bool, boundsAbortName:Null<CIdentifier>, fn:HxcIRFunction, method:String,
+			runtimeName:CBodyRuntimeName):Void {
 		final result = requireResult(instruction, fn.id);
 		final temporary = temporaryNames.get(result.id);
 		if (temporary == null
 			|| call.arguments.length != 4
 			|| (result.type != IRTString && result.type != IRTManagedString)
 			|| call.returnType != result.type)
-			return fail('String.substring call `${instruction.id}` in `${fn.id}` lost its checked String/Int signature');
+			return fail('String.$method call `${instruction.id}` in `${fn.id}` lost its checked String/Int signature');
 		final declaration = typedDeclarator(result.type, DName(temporary));
 		statements.push(SDecl({
 			storage: [],
@@ -6155,7 +6161,7 @@ class CBodyEmitter {
 			attributes: []
 		}));
 		addLineDirective(statements, instruction.source, lineDirectives);
-		emitStatusAbort(statements, ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNStringSubstring)), [
+		emitStatusAbort(statements, ECall(EIdentifier(CBodyRuntimeNames.identifier(runtimeName)), [
 			requireValue(values, call.arguments[0], fn.id),
 			requireValue(values, call.arguments[1], fn.id),
 			requireValue(values, call.arguments[2], fn.id),
