@@ -109,6 +109,7 @@ SHARDS: dict[str, tuple[str, ...]] = {
         "test:caxecraft-session",
         "test:caxecraft-app-screen",
         "test:caxecraft-presentation",
+        "test:caxecraft-player-camera",
         "test:caxecraft-terrain-chunks",
         "test:caxecraft-inventory",
         "test:caxecraft-gameplay",

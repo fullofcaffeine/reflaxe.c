@@ -1246,6 +1246,8 @@ def validate() -> list[str]:
         errors.append("package.json must retain the Caxecraft app-screen gate")
     if scripts.get("test:caxecraft-presentation") != "python3 examples/caxecraft/run_haxe_c_test.py presentation":
         errors.append("package.json must retain the Caxecraft presentation gate")
+    if scripts.get("test:caxecraft-player-camera") != "python3 examples/caxecraft/run_haxe_c_test.py player-camera":
+        errors.append("package.json must retain the Caxecraft player-camera gate")
     if scripts.get("test:caxecraft-terrain-chunks") != "python3 examples/caxecraft/run_haxe_c_test.py terrain-chunks":
         errors.append("package.json must retain the Caxecraft terrain-chunk gate")
     if scripts.get("test:caxecraft-domain:full") != "python3 examples/caxecraft/run.py --full":
@@ -1463,6 +1465,8 @@ def validate() -> list[str]:
         errors.append("package.json test:toolchain must execute test:caxecraft-app-screen")
     if "npm run test:caxecraft-presentation" not in str(scripts.get("test:toolchain", "")):
         errors.append("package.json test:toolchain must execute test:caxecraft-presentation")
+    if "npm run test:caxecraft-player-camera" not in str(scripts.get("test:toolchain", "")):
+        errors.append("package.json test:toolchain must execute test:caxecraft-player-camera")
     if "npm run test:caxecraft-terrain-chunks" not in str(scripts.get("test:toolchain", "")):
         errors.append("package.json test:toolchain must execute test:caxecraft-terrain-chunks")
     if "npm run test:caxecraft-domain:full" not in str(scripts.get("test:toolchain", "")):
