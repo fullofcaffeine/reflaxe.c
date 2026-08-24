@@ -28,6 +28,10 @@ int32_t hxc_FunctionFixture_chain(int32_t hxc_l_value);
 
 int32_t (*hxc_FunctionFixture_choose(void))(int32_t);
 
+int32_t (*hxc_FunctionFixture_chooseConditional(bool hxc_l_enabled))(int32_t);
+
+int32_t (*hxc_FunctionFixture_chooseSwitch(int32_t hxc_l_mode))(int32_t);
+
 double hxc_FunctionFixture_convert(int32_t hxc_l_value);
 
 void hxc_FunctionFixture_discarded(int32_t hxc_l_value);
@@ -53,6 +57,12 @@ int32_t hxc_FunctionFixture_passthrough(int32_t hxc_l_value);
 int32_t hxc_FunctionFixture_readOnlyParameters(int32_t hxc_l_left, int32_t hxc_l_right, bool hxc_l_enabled);
 
 _Noreturn void hxc_FunctionFixture_recursive(int32_t hxc_l_left, int32_t hxc_l_right);
+
+int32_t hxc_FunctionFixture_recursiveThroughValue(bool hxc_l_reenter);
+
+int32_t hxc_FunctionFixture_selectedFive(int32_t hxc_l_value);
+
+int32_t hxc_FunctionFixture_selectedTen(int32_t hxc_l_value);
 
 int32_t hxc_captureRoundTrip_lambda_stack_2105_n2105(void *hxc_l_context, int32_t hxc_l_value);
 

@@ -56,6 +56,14 @@ pointer such as `int32_t (*operation)(int32_t)`. Calling that value uses the
 pointer directly; it does not box arguments, erase them to `void *`, or select a
 runtime feature.
 
+The same bare function pointer can cross ordinary typed control flow. An `if`
+or `switch` expression stores the selected function in one exact local, and
+HxcIR proves that every path assigns that local before its first read. A
+function can also place its own non-capturing reference in a local and call it
+recursively. These paths keep the declared signature throughout; incompatible
+branch signatures fail in Haxe type checking before haxe.c creates output.
+They do not admit a capture environment or weaken a callable to `void *`.
+
 An inline function literal uses the same direct representation when it is
 non-capturing. For example, an `Array<Int>` comparator that uses only its
 `left` and `right` parameters becomes a private typed HxcIR function and an
@@ -369,7 +377,8 @@ npm run snapshots:check
 The focused function and enum suites render twice, reverse discovery order,
 compare portable and metal, check exact HxcIR/header/C-source-set/symbol
 snapshots, and prove explicit
-argument conversion order, exact non-capturing function pointers, nonescaping
+argument conversion order, exact non-capturing function pointers selected by
+`if` and `switch`, recursion through a typed function local, nonescaping
 stack closures, shared captured mutation, directly reassigned primitive
 parameters, read-only parameter fast paths, captured parameters, repeated
 callback calls, context-discarding static/enum adapters, and indirect calls.
@@ -382,8 +391,9 @@ a literal string default, and direct instance methods. They compile in unity,
 split, and package layouts, repeat byte-identically, match Eval, and run as
 strict native C at `-O0`, `-O2`, and under address/undefined-behavior
 sanitizers. Repeated requests through one warm Haxe compiler server remain
-byte-identical. The suite also exercises scoped rest and non-hosted-entry
-diagnostics, then runs portable,
+byte-identical. The suite also exercises incompatible function signatures,
+scoped rest, and non-hosted-entry diagnostics with no generated output. It then
+runs portable,
 metal, and explicit `hxc_runtime=none` production builds, compares isolated
 output roots byte for byte, validates the analyzed sidecars, and compiles/runs
 both fixture and production C under strict GCC and Clang lanes at `-O0` and

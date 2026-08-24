@@ -8471,7 +8471,7 @@ private class FunctionBuilder {
 		final subjectValue = lowerSwitchSubject(subject);
 		final resultMapping = expectedMapping == null ? bodyValueType(expression.t, expression.pos, "TSwitch(result-type)") : expectedMapping;
 		switch resultMapping.kind {
-			case CBVKPrimitive(_) | CBVKStaticString(_) | CBVKManagedString(_) | CBVKCString | CBVKAggregate(_):
+			case CBVKPrimitive(_) | CBVKStaticString(_) | CBVKManagedString(_) | CBVKCString | CBVKAggregate(_) | CBVKFunction(_, _):
 			case _:
 				return unsupported(expression, 'TSwitch(result-type:${resultMapping.cSpelling})');
 		}
@@ -8480,10 +8480,11 @@ private class FunctionBuilder {
 		}
 		final source = sourceSpan(expression.pos);
 		final managedStringResult = resultMapping.irType == IRTManagedString;
+		final functionResult = resultMapping.kind.match(CBVKFunction(_, _));
 		final initialResultId:Null<String> = if (managedStringResult) {
 			null;
 		} else switch resultMapping.kind {
-			case CBVKAggregate(_): null;
+			case CBVKAggregate(_) | CBVKFunction(_, _): null;
 			case _:
 				final initialResult:HxcIRResult = {id: nextValueId(), type: resultMapping.irType};
 				appendInstruction(initialResult, IRIOConstant(defaultConstant(resultMapping.irType, expression, "TSwitch")), source, "switch-default-result");
@@ -8493,6 +8494,10 @@ private class FunctionBuilder {
 		final resultLocalId = if (managedStringResult) {
 			final localId = declareFlowLocal(resultMapping, source, "switch-managed-result");
 			appendInstruction(null, IRIODeclareManagedCarrier(IRPLocal(localId), IRIRuntime("string")), source, "switch-managed-result-declare");
+			localId;
+		} else if (functionResult) {
+			final localId = declareFlowLocal(resultMapping, source, "switch-function-result");
+			appendInstruction(null, IRIODeclareUninitialized(IRPLocal(localId)), source, "switch-function-result-declare");
 			localId;
 		} else {
 			createFlowLocal(resultMapping, initialResultId, source, "switch-result");
@@ -11000,10 +11005,13 @@ private class FunctionBuilder {
 	 * only when its authoritative C header proves by-value storage. A header-owned
 	 * enum is already one nominal scalar value, so both branches can initialize the
 	 * same exact imported carrier without erasing it to `Int`.
+	 * A bare non-capturing function also has one complete function-pointer value.
+	 * Stack closures use a separate aggregate kind and remain excluded here.
 	 */
 	static function conditionalDirectValue(mapping:CBodyValueType):Bool {
 		return switch mapping.kind {
 			case CBVKStaticString(_): true;
+			case CBVKFunction(_, _): true;
 			case CBVKAggregate(aggregate): !aggregate.managedLifetime;
 			case CBVKEnum(value): !value.managedLifetime;
 			case CBVKImport(value): value.kind == CITEnum || value.directStructTarget() != null;

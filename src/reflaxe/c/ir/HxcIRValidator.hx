@@ -4416,14 +4416,16 @@ private class HxcIRValidationState {
 	 *
 	 * This recursive check is deliberately conservative. A managed, opaque,
 	 * reference, class, or recursive representation cannot use an uninitialized
-	 * branch carrier because choosing a branch may require ownership work.
+	 * branch carrier because choosing a branch may require ownership work. An
+	 * exact bare function type is one unmanaged C function pointer; closure
+	 * carriers remain nominal instances and do not enter through that case.
 	 */
 	function isUnmanagedDirectCarrier(type:HxcIRTypeRef):Bool
 		return isUnmanagedDirectCarrierInner(type, []);
 
 	function isUnmanagedDirectCarrierInner(type:HxcIRTypeRef, visiting:Map<String, Bool>):Bool {
 		return switch type {
-			case IRTBool | IRTInt(_, _) | IRTAbiInteger(_) | IRTFloat(_) | IRTString | IRTCString: true;
+			case IRTBool | IRTInt(_, _) | IRTAbiInteger(_) | IRTFloat(_) | IRTString | IRTCString | IRTFunction(_, _): true;
 			case IRTCallScopedCString: false;
 			case IRTInstance(instanceId):
 				if (visiting.exists(instanceId)) {
@@ -4460,8 +4462,8 @@ private class HxcIRValidationState {
 						}
 					}
 				}
-			case IRTManagedString | IRTMutableCStringBuffer | IRTVoid | IRTPointer(_, _) | IRTNullable(_, _) | IRTFunction(_, _) | IRTFixedArray(_, _, _) |
-				IRTSpan(_, _) | IRTDynamic:
+			case IRTManagedString | IRTMutableCStringBuffer | IRTVoid | IRTPointer(_, _) | IRTNullable(_, _) | IRTFixedArray(_, _, _) | IRTSpan(_, _) |
+				IRTDynamic:
 				false;
 		};
 	}

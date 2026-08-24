@@ -113,7 +113,9 @@ printer repair. Capturing closures and managed or recursive constructor
 payload adapters remain explicit unsupported boundaries.
 Schema version 18 adds an explicitly uninitialized local carrier for
 conditional results that are complete unmanaged values, such as a closed Haxe
-record, an unmanaged tagged enum, or a header-owned C struct. This is not a
+record, an unmanaged tagged enum, a header-owned C struct, or one exact bare
+function pointer. A closure carrier is a separate nominal representation and
+is not admitted by the function-pointer case. This is not a
 general permission to read uninitialized storage. The validator requires an
 automatic direct-value local, rejects managed or recursive representations, and
 walks every `if` branch or `switch` arm plus nested joins to prove that every

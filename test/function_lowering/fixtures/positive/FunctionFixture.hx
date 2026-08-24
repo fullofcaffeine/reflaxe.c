@@ -97,6 +97,36 @@ class FunctionFixture {
 		return apply(operation(value), passthrough);
 	}
 
+	static function selectedFive(value:Int):Int {
+		return 5;
+	}
+
+	static function selectedTen(value:Int):Int {
+		return 10;
+	}
+
+	/** Select an exact non-capturing function through an `if` expression. **/
+	static function chooseConditional(enabled:Bool):Int->Int {
+		return enabled ? selectedFive : selectedTen;
+	}
+
+	/** Select an exact non-capturing function through a `switch` expression. **/
+	static function chooseSwitch(mode:Int):Int->Int {
+		return switch mode {
+			case 0: selectedFive;
+			case 1: selectedTen;
+			case _: passthrough;
+		};
+	}
+
+	/** Re-enter this function through a typed local function value. **/
+	static function recursiveThroughValue(reenter:Bool):Int {
+		if (!reenter)
+			return 4;
+		final next:Bool->Int = recursiveThroughValue;
+		return next(false);
+	}
+
 	/**
 		Exercise direct `Int` and `Bool` parameter reassignment.
 
@@ -168,6 +198,12 @@ class FunctionFixture {
 		// Native execution must prove the function pointer was called with the
 		// right argument and result, not merely that the generated C compiled.
 		while (indirectValue != 17) {}
+		while (chooseConditional(true)(4) != 5) {}
+		while (chooseConditional(false)(4) != 10) {}
+		while (chooseSwitch(0)(5) != 5) {}
+		while (chooseSwitch(1)(5) != 10) {}
+		while (chooseSwitch(2)(5) != 5) {}
+		while (recursiveThroughValue(true) != 4) {}
 		final captured = captureRoundTrip(5);
 		// The first result (5) becomes the second call's argument; its result is 15.
 		while (captured != 15) {}

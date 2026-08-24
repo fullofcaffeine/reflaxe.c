@@ -41,6 +41,7 @@ MODULE_FIELDS_UNSUPPORTED = FIXTURES / "module_fields_unsupported"
 DEFAULT_ARGUMENT = FIXTURES / "default"
 OPTIONAL_ARGUMENT = FIXTURES / "optional"
 CLOSURE_ESCAPE = FIXTURES / "closure_escape"
+INCOMPATIBLE_FUNCTION_FLOW = FIXTURES / "incompatible_function_flow"
 NATIVE = Path(__file__).with_name("native")
 EXPECTED = Path(__file__).with_name("expected")
 REPORT_PREFIX = "HXC_FUNCTION_LOWERING="
@@ -242,6 +243,34 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
         if marker not in hxcir:
             raise FunctionLoweringFailure(f"recursive call graph omitted {marker}")
     for marker in (
+        'function "function.FunctionFixture.chooseConditional"',
+        'type=function(i32)->i32 ownership=owned-or-value storage=automatic state=uninitialized',
+        'conditional-result-declare" result=- declare-uninitialized',
+        'function "function.FunctionFixture.chooseSwitch"',
+        'switch-function-result-declare" result=- declare-uninitialized',
+        'function "function.FunctionFixture.recursiveThroughValue"',
+    ):
+        if marker not in hxcir:
+            raise FunctionLoweringFailure(
+                f"non-capturing function flow omitted HxcIR marker {marker!r}"
+            )
+    recursive_value_start = hxcir.find(
+        'function "function.FunctionFixture.recursiveThroughValue"'
+    )
+    recursive_value_end = hxcir.find(
+        'end function "function.FunctionFixture.recursiveThroughValue"',
+        recursive_value_start,
+    )
+    recursive_value_ir = hxcir[recursive_value_start:recursive_value_end]
+    if (
+        recursive_value_start == -1
+        or recursive_value_end == -1
+        or 'call dispatch=closure(' not in recursive_value_ir
+    ):
+        raise FunctionLoweringFailure(
+            "recursion through a non-capturing function value lost its indirect call"
+        )
+    for marker in (
         "representation=stack-closure(i32)->i32",
         'name="FunctionFixture.captureRoundTrip.LambdaEnvironment"',
         "stack-closure-capture:calls",
@@ -434,6 +463,17 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
             raise FunctionLoweringFailure(
                 f"generated C omitted stack-closure evidence {marker!r}"
             )
+    for marker in (
+        "(*hxc_FunctionFixture_chooseConditional(bool hxc_l_enabled))(int32_t)",
+        "(*hxc_FunctionFixture_chooseSwitch(int32_t hxc_l_mode))(int32_t)",
+        "hxc_l_tmp_conditional_result",
+        "hxc_l_tmp_switch_function_result",
+        "hxc_l_next(false)",
+    ):
+        if marker not in program_source:
+            raise FunctionLoweringFailure(
+                f"generated C omitted non-capturing function-flow evidence {marker!r}"
+            )
     mutable_source_start = program_source.find(
         "int32_t hxc_FunctionFixture_mutateParameters("
     )
@@ -501,7 +541,7 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
         )
 
     functions = report.get("functions")
-    if not isinstance(functions, list) or len(functions) != 21:
+    if not isinstance(functions, list) or len(functions) != 26:
         raise FunctionLoweringFailure("function report omitted admitted functions")
     by_field = {
         entry.get("field"): entry
@@ -509,7 +549,7 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
         if isinstance(entry, dict) and isinstance(entry.get("field"), str)
     }
     if (
-        len(by_field) != 21
+        len(by_field) != 26
         or by_field.get("main", {}).get("parameters") != []
         or len(by_field.get("first", {}).get("parameters", [])) != 2
         or len(by_field.get("apply", {}).get("parameters", [])) != 2
@@ -1602,6 +1642,26 @@ def check_argument_diagnostics() -> None:
                     f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
                 )
 
+    with tempfile.TemporaryDirectory(prefix="hxc-function-signature-negative-") as temporary:
+        output = Path(temporary) / "generated"
+        result = custom_target(INCOMPATIBLE_FUNCTION_FLOW, output)
+        combined = (result.stdout + result.stderr).replace("\\", "/")
+        required = (
+            "fixtures/incompatible_function_flow/Main.hx:19:",
+            "error: Float should be Int",
+            "have: (...) -> Float",
+            "want: (...) -> Int",
+        )
+        if (
+            result.returncode != 1
+            or any(marker not in combined for marker in required)
+            or list(output.rglob("*"))
+        ):
+            raise FunctionLoweringFailure(
+                "incompatible function-flow diagnostic was not exact and output-free\n"
+                f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
+            )
+
 
 def snapshot_native_report() -> dict[str, object]:
     return {
@@ -1666,7 +1726,7 @@ def main(arguments: Iterable[str] = ()) -> int:
         return 1
     print(
         "function-lowering: OK: typed read-only/mutable parameters, calls/conversions, recursive private "
-        "prototypes/unity+split+package source partitions, readable module-level functions, direct optional/default completion, exact rest diagnostics, strict int main(void), "
+        "prototypes/unity+split+package source partitions, non-capturing function selection and recursion, readable module-level functions, direct optional/default completion, exact function/rest diagnostics, strict int main(void), "
         "and zero-runtime production artifacts passed"
     )
     return 0
