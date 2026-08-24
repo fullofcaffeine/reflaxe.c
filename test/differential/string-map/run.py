@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
-"""Prove exact scalar, fieldless-enum, and managed-record StringMap contracts."""
+"""Prove exact scalar, nominal-String, enum, and managed-record StringMaps."""
 
 from __future__ import annotations
 
 import argparse
 import json
 import os
+import re
 import shutil
 import socket
 import subprocess
@@ -204,6 +205,10 @@ def validate_generated_project(output: Path, hxcir: str) -> None:
         'representation=managed("string-map")',
         'arguments=[string-utf8,bool]',
         'arguments=[string-utf8,i32]',
+        'arguments=[string-utf8,managed-string-utf8]',
+        'name="Map<String, managed-haxe-string-view:String>"',
+        'name="Map<String, managed-haxe-string-view:_Main.StoredName>"',
+        'name="Map<String, managed-haxe-string-view:_Main.StoredTag>"',
         'arguments=[string-utf8,instance("instance.enum.',
         'arguments=[string-utf8,instance("instance.closed-record.',
         'runtime(feature="string-map",operation="create")',
@@ -227,6 +232,8 @@ def validate_generated_project(output: Path, hxcir: str) -> None:
         "alloc",
         "array",
         "string-literal",
+        "string-scalar",
+        "string",
         "string-map",
     ]:
         raise StringMapFailure("generated StringMap program selected the wrong runtime closure")
@@ -249,6 +256,15 @@ def validate_generated_project(output: Path, hxcir: str) -> None:
     if operations != expected:
         raise StringMapFailure(
             f"generated StringMap operations drifted: {sorted(operations)!r}"
+        )
+    string_operations = {
+        reason.get("operationId")
+        for reason in plan.get("rootReasons", [])
+        if isinstance(reason, dict) and reason.get("featureId") == "string"
+    }
+    if string_operations != {"cleanup-release", "concat", "from-int", "retain", "type-carrier"}:
+        raise StringMapFailure(
+            f"generated nominal-String operations drifted: {sorted(string_operations)!r}"
         )
     if "managed-haxe-string-maps" not in plan.get("directDecisions", []):
         raise StringMapFailure("runtime plan omitted the exact StringMap representation decision")
@@ -275,6 +291,12 @@ def validate_generated_project(output: Path, hxcir: str) -> None:
         "value_destroy",
         "hxc_array_ref_retain",
         "hxc_array_ref_release",
+        "hxc_string_retain",
+        "hxc_string_release",
+        "sizeof(hxc_string)",
+        "hxc_l_tmp_discarded_string_owner",
+        "hxc_l_tmp_string_map_set_key_owner",
+        "hxc_l_tmp_string_map_set_value_owner",
         "sizeof(int32_t)",
     ):
         if marker not in sources:
@@ -287,6 +309,13 @@ def validate_generated_project(output: Path, hxcir: str) -> None:
     for forbidden in ("hxc_dynamic", "goto "):
         if forbidden in sources:
             raise StringMapFailure(f"generated C retained forbidden shape {forbidden!r}")
+    for owner in (
+        "discarded_string_owner",
+        "string_map_set_key_owner",
+        "string_map_set_value_owner",
+    ):
+        if re.search(rf"hxc_string_release\(&hxc_l_tmp_{owner}_n[0-9]+\)", sources) is None:
+            raise StringMapFailure(f"generated C did not release its {owner.replace('_', ' ')}")
 
 
 def available_port() -> int:
@@ -370,6 +399,7 @@ def run_negative_cases(root: Path) -> None:
     expected = {
         "value_type": "StringMap-value-not-yet-admitted:double",
         "class_value": "StringMap-value-not-yet-admitted:haxe-class-reference:",
+        "abstract_class_value": "StringMap-value-not-yet-admitted:haxe-class-reference:",
         "payload_enum_value": "StringMap-value-not-yet-admitted:haxe-enum:",
         "key_type": "virtual-slot-generic-requires-specialization:slot.haxe.ds.ObjectMap.set",
         "iteration": "TVar(value:type).field:hasNext:method",
@@ -570,11 +600,16 @@ def main(argv: Iterable[str] = ()) -> int:
         print(f"string-map: ERROR: {error}", file=sys.stderr)
         return 1
     families = ", ".join(toolchain.family for toolchain in toolchains)
-    mode = "native contract" if args.native_only else "Eval plus generated Bool/Int/fieldless-enum/managed-record StringMaps"
+    mode = (
+        "native contract"
+        if args.native_only
+        else "Eval plus generated Bool/Int/nominal-String/fieldless-enum/managed-record StringMaps"
+    )
     print(
         "string-map: OK: "
         f"{families}; {mode}; missing-vs-false, replacement, removal, clear, aliases, "
-        "nullable identity, empty keys, growth, allocation rollback, value-callback rollback, unsupported-class/payload-enum rejection, "
+        "nullable identity, empty keys, growth, allocation rollback, value-callback rollback, "
+        "unsupported-class/abstract-class/payload-enum rejection, "
         "malformed-call rejection, layouts, determinism, sanitizers, C++ headers, runtime-none, and selective symbols passed"
     )
     return 0

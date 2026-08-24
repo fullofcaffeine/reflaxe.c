@@ -38,6 +38,9 @@ enum CBodyStringMapValueLifecycle {
 	/** The value and every nested field can be copied and relocated as bytes. */
 	CBSMVLTrivial;
 
+	/** One direct managed carrier needs its shared retain/release operations. */
+	CBSMVLManagedValue;
+
 	/** A closed record owns one or more reference-counted nested values. */
 	CBSMVLAggregate(value:CPreparedBodyAggregate);
 }
@@ -270,10 +273,12 @@ class CBodyStringMapRegistry {
 		Admit only value families whose complete slot semantics are owned here.
 
 		Bool and Haxe `Int` use their already-validated direct C scalar
-		representations. A closed record is admitted only when every nested value
-		already has a finite, byte-relocatable direct representation and no
-		collector tracing is required. Managed records use the record's proven
-		retain/destroy plan.
+		representations. A nominal abstract over String keeps its nominal identity
+		while reusing the selected immutable String carrier: static bytes copy
+		trivially, while a runtime-backed view uses the shared String retain/release
+		contract. A closed record is admitted only when every nested value already
+		has a finite, byte-relocatable direct representation and no collector tracing
+		is required. Managed records use the record's proven retain/destroy plan.
 
 		A payload-free Haxe enum is also a direct value: its prepared enum plan
 		selects one native C `enum`, so copying or moving a slot copies only that
@@ -289,6 +294,8 @@ class CBodyStringMapRegistry {
 					case IRTBool | IRTInt(32, true): CBSMVLTrivial;
 					case _: null;
 				}
+			case CBVKStaticString(_): CBSMVLTrivial;
+			case CBVKManagedString(_): CBSMVLManagedValue;
 			case CBVKEnum(enumeration) if (enumeration.representation == CBERNativeEnum): CBSMVLTrivial;
 			case CBVKAggregate(aggregate) if (aggregateIsStorable(aggregate)):
 				aggregate.managedLifetime ? CBSMVLAggregate(aggregate) : CBSMVLTrivial;

@@ -5545,25 +5545,51 @@ class CBodyEmitter {
 			case "get":
 				final result = requireResult(instruction, fn.id);
 				final temporary = requireStringMapTemporary(temporaryNames, result.id, instruction.id, fn.id);
-				final optional = requireOptional(result.type);
 				final declaration = typedDeclarator(result.type, DName(temporary));
 				statements.push(SDecl({
 					storage: [],
 					alignments: [],
 					type: declaration.type,
 					declarator: declaration.declarator,
-					initializer: IExpr(directOptionalNullExpression(result.type)),
+					initializer: IExpr(constantExpressionForType(IRCNull, result.type)),
 					attributes: []
 				}));
+				final outputs:{value:CExpr, found:CExpr} = switch result.type {
+					case IRTString | IRTManagedString:
+						final foundName = derivedLifecycleName(temporary, "found");
+						statements.push(SDecl({
+							storage: [],
+							alignments: [],
+							type: new CType(TBool),
+							declarator: DName(foundName),
+							initializer: IExpr(EBool(false)),
+							attributes: []
+						}));
+						{value: EUnary(AddressOf, EIdentifier(temporary)), found: EUnary(AddressOf, EIdentifier(foundName))};
+					case IRTNullable(_, IRNTagged):
+						final optional = requireOptional(result.type);
+						{
+							value: EUnary(AddressOf, EMember(EIdentifier(temporary), optional.payloadName, false)),
+							found: EUnary(AddressOf, EMember(EIdentifier(temporary), optional.presenceName, false))
+						};
+					case _:
+						return fail('StringMap get `${instruction.id}` in `${fn.id}` has no nullable result carrier');
+				};
 				emitStatusAbort(statements, ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNStringMapGetCopy)), [
 					requireValue(values, call.arguments[0], fn.id),
 					requireValue(values, call.arguments[1], fn.id),
-					EUnary(AddressOf, EMember(EIdentifier(temporary), optional.payloadName, false)),
-					EUnary(AddressOf, EMember(EIdentifier(temporary), optional.presenceName, false))
+					outputs.value,
+					outputs.found
 				]), boundsAbortName, instruction.id, fn.id);
 				values.set(result.id, EIdentifier(temporary));
-				if (!referencedValues.exists(result.id))
-					statements.push(SExpr(ECast(new CType(TVoid), DName(null), EIdentifier(temporary))));
+				if (!referencedValues.exists(result.id)) {
+					switch result.type {
+						case IRTManagedString:
+							return fail('StringMap get `${instruction.id}` in `${fn.id}` left an owned managed String result unconsumed');
+						case _:
+							statements.push(SExpr(ECast(new CType(TVoid), DName(null), EIdentifier(temporary))));
+					}
+				}
 			case _:
 				fail('StringMap call `${instruction.id}` in `${fn.id}` names unsupported operation `$operation`');
 		}

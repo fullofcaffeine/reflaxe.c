@@ -113,6 +113,11 @@ class RuntimeRequirementAnalyzer {
 				switch instance.representation {
 					case IRRManaged(featureId):
 						observations.push(new RuntimeIntentObservation(featureId, "managed-type-representation", instance.source));
+						if (featureId == "string-map") {
+							if (instance.arguments.length != 2 || instance.arguments[0] != IRTString)
+								internal('validated managed StringMap `${instance.id}` lost its exact [String, value] arguments');
+							collectDeclarationType(instance.arguments[1], instance.source, observations);
+						}
 					case _:
 				}
 			}

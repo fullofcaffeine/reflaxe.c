@@ -44,6 +44,55 @@ private enum LookupKey {
 }
 
 /**
+	A domain identity that keeps its String carrier nominal in Haxe.
+
+	The map must not erase this type merely because its runtime representation is
+	the same immutable UTF-8 view used by `String`.
+**/
+private abstract StoredName(String) {
+	public inline function new(value:String)
+		this = value;
+
+	/** Return the visible text without giving up nominal storage at the map edge. */
+	public inline function text():String
+		return this;
+}
+
+/** A distinct String identity proves specializations do not collapse by carrier. */
+private abstract StoredTag(String) {
+	public inline function new(value:String)
+		this = value;
+
+	/** Return the text while preserving `StoredTag` at storage boundaries. */
+	public inline function text():String
+		return this;
+}
+
+/** Own one nominal managed-String map through an ordinary final class field. */
+private final class NameTable {
+	final values:Map<String, StoredName> = [];
+
+	/** Construct one empty shared table. */
+	public function new() {}
+
+	/** Insert or failure-atomically replace one typed identity. */
+	public function set(key:String, value:StoredName):Void
+		values.set(key, value);
+
+	/** Return an independently owned view when the key exists. */
+	public function get(key:String):Null<StoredName>
+		return values.get(key);
+
+	/** Remove one owned slot without changing the caller's source value. */
+	public function remove(key:String):Bool
+		return values.remove(key);
+
+	/** Release every owned slot while preserving the shared table object. */
+	public function clear():Void
+		values.clear();
+}
+
+/**
 	Owns a fieldless-enum map through an ordinary Haxe class field.
 
 	This mirrors the Caxecraft validation table that exposed the compiler gap.
@@ -210,6 +259,102 @@ final class Main {
 		return first.flags[0] && replacement.flags[1];
 	}
 
+	/** Build a runtime-owned nominal value so the fixture is not literal-only. */
+	static function runtimeName():StoredName
+		return new StoredName("run" + String.fromCharCode(116) + "ime");
+
+	/** Build a runtime-owned key to exercise the borrowed key call boundary. */
+	static function runtimeKey():String
+		return "run-" + String.fromCharCode(107) + "ey";
+
+	/** Leave the map as the sole owner after this helper's source local ends. */
+	static function insertRuntimeName(table:NameTable, key:String):Void {
+		final source = runtimeName();
+		table.set(key, source);
+	}
+
+	/** Leave one live runtime-owned slot for final map destruction. */
+	static function finalRuntimeSlot():Bool {
+		final table = new NameTable();
+		table.set("final", runtimeName());
+		return table.get("final") != null;
+	}
+
+	/** Pin raw String and a second nominal String as intentional carrier families. */
+	static function neighboringStringFamilies():Bool {
+		final raw:Map<String, String> = [];
+		raw.set("raw", "raw-" + String.fromCharCode(118) + "alue");
+		raw.set(runtimeKey(), "key-" + String.fromCharCode(118) + "alue");
+		final rawValue = raw.get("raw");
+		final runtimeKeyValue = raw.get(runtimeKey());
+		final tags:Map<String, StoredTag> = [];
+		tags.set("tag", new StoredTag("tag-" + String.fromCharCode(118) + "alue"));
+		final tag = tags.get("tag");
+		return rawValue == "raw-value" && runtimeKeyValue == "key-value" && tag != null && tag.text() == "tag-value";
+	}
+
+	/** Exercise nominal String storage, copy, replacement, and cleanup. */
+	static function nominalStringTrace():Bool {
+		final table = new NameTable();
+		table.set("literal", new StoredName("static"));
+		final literal = table.get("literal");
+		if (literal == null || literal.text() != "static" || table.get("missing") != null)
+			return false;
+
+		table.set("direct", runtimeName());
+		final direct = table.get("direct");
+		if (direct == null || direct.text() != "runtime")
+			return false;
+
+		final source = runtimeName();
+		table.set("active", source);
+		final loaded = table.get("active");
+		if (loaded == null || loaded.text() != "runtime")
+			return false;
+		table.get("active");
+		table.get("missing-ignored");
+
+		table.set("same-owner", source);
+		table.set("same-owner", source);
+		final sameOwner = table.get("same-owner");
+		if (sameOwner == null || sameOwner.text() != "runtime")
+			return false;
+
+		insertRuntimeName(table, "survivor");
+		final survivor = table.get("survivor");
+		if (survivor == null || !table.remove("survivor") || survivor.text() != "runtime")
+			return false;
+
+		table.set(runtimeKey(), runtimeName());
+		final runtimeKeyValue = table.get(runtimeKey());
+		if (runtimeKeyValue == null || runtimeKeyValue.text() != "runtime")
+			return false;
+
+		table.set("copy-source", runtimeName());
+		table.set("copy-target", table.get("copy-source"));
+		final copied = table.get("copy-target");
+		if (copied == null || copied.text() != "runtime")
+			return false;
+
+		table.set("active", new StoredName("replacement"));
+		final replacement = table.get("active");
+		if (loaded.text() != "runtime" || replacement == null || replacement.text() != "replacement")
+			return false;
+		if (!table.remove("active") || table.remove("active") || table.get("active") != null || replacement.text() != "replacement")
+			return false;
+		for (index in 0...64)
+			table.set("growth-" + index, runtimeName());
+		table.set("clear", runtimeName());
+		table.clear();
+		if (table.get("literal") != null
+			|| table.get("clear") != null
+			|| table.get("growth-63") != null
+			|| source.text() != "runtime")
+			return false;
+		table.set("scope-cleanup", runtimeName());
+		return finalRuntimeSlot() && neighboringStringFamilies();
+	}
+
 	/**
 		Create and return one mutable map.
 
@@ -268,8 +413,8 @@ final class Main {
 		final emptyBeforeClear = alias.exists("");
 		alias.clear();
 
-		while (!integerTrace() || !fieldlessEnumTrace() || !managedRecordTrace() || alias != values || absent != null || null != absent || values == null
-			|| alphaBefore == null || alphaBefore || missingBefore != null || !removedBeta || removedBetaAgain || !gammaBeforeClear || !emptyBeforeClear
-			|| values.exists("alpha") || values.exists("gamma") || values.exists("") || values.get("alpha") != null) {}
+		while (!integerTrace() || !fieldlessEnumTrace() || !managedRecordTrace() || !nominalStringTrace() || alias != values || absent != null
+			|| null != absent || values == null || alphaBefore == null || alphaBefore || missingBefore != null || !removedBeta || removedBetaAgain
+			|| !gammaBeforeClear || !emptyBeforeClear || values.exists("alpha") || values.exists("gamma") || values.exists("") || values.get("alpha") != null) {}
 	}
 }

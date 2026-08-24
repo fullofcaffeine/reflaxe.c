@@ -673,9 +673,11 @@ class CBodyLowering {
 			runtimeRequirements.push(new CBodyRuntimeRequirement(feature, "managed-type-representation",
 				"ordinary Haxe Array<T> shared container representation", array.source, array.position));
 		}
-		for (map in preparedStringMaps)
+		for (map in preparedStringMaps) {
 			runtimeRequirements.push(new CBodyRuntimeRequirement("string-map", "managed-type-representation",
 				"ordinary Haxe Map<String, V> shared hash-table representation", map.source, map.position));
+			collectDeclarationTypeRuntimeRequirements(runtimeRequirements, map.value.irType, map.source, map.position, "ordinary Haxe StringMap value carrier");
+		}
 		for (map in preparedIntMaps)
 			runtimeRequirements.push(new CBodyRuntimeRequirement("int-map", "managed-type-representation",
 				"ordinary Haxe Map<Int, Bool> shared membership-table representation", map.source, map.position));
@@ -4855,8 +4857,10 @@ private class FunctionBuilder {
 				lowerSuperCall(expression, arguments);
 			case TCall(_, _):
 				final result = lowerCall(expression, false);
-				if (result != null)
+				if (result != null) {
 					destroyDiscardedFreshManagedOptional(result, expression.pos);
+					destroyDiscardedFreshManagedString(result, expression.pos);
+				}
 				if (result != null && freshManagedStringMapValueIds.exists(result.id))
 					unsupported(expression, "TCall(discarded-fresh-managed-StringMap-needs-owner)");
 				if (result != null && freshManagedBytesValueIds.exists(result.id))
@@ -4919,6 +4923,29 @@ private class FunctionBuilder {
 		registerValueTemporary(value.id, "discarded-optional-call-result");
 		final ownerLocalId = createFlowLocal(value.mapping, value.id, source, "discarded-optional-owner");
 		appendInstruction(null, IRIORelease(IRPLocal(ownerLocalId), IRIProgramLocal(destroyId)), source, "destroy-discarded-optional");
+	}
+
+	/**
+		Release one ignored runtime-created String at its statement boundary.
+
+		A String-returning call still runs when Haxe ignores its result. The result
+		owns its optional UTF-8 allocation, so dropping the C carrier would leak that
+		owner. Materializing the result in one typed automatic local and immediately
+		releasing it consumes the fresh owner once. Literal-backed Strings follow the
+		same runtime operation, whose null owner makes release a successful no-op.
+	**/
+	function destroyDiscardedFreshManagedString(value:LoweredValue, position:Position):Void {
+		if (!freshManagedStringValueIds.remove(value.id))
+			return;
+		freshManagedStringValueRoles.remove(value.id);
+		if (value.mapping.irType != IRTManagedString)
+			throw new CBodyEmissionError('fresh managed String `${value.id}` lost its managed String representation');
+		final source = sourceSpan(position);
+		registerValueTemporary(value.id, "discarded-string-call-result");
+		final ownerLocalId = createFlowLocal(value.mapping, value.id, source, "discarded-string-owner");
+		appendInstruction(null, IRIORelease(IRPLocal(ownerLocalId), IRIRuntime("string")), source, "destroy-discarded-string");
+		runtimeRequirements.push(new CBodyRuntimeRequirement("string", "cleanup-release", "ignored ordinary Haxe managed String call result", source,
+			position));
 	}
 
 	function lowerStatementBlock(expressions:Array<TypedExpr>):Void {
@@ -12340,10 +12367,15 @@ private class FunctionBuilder {
 			final keyMapping = bodyValueType(arguments[0].t, arguments[0].pos, 'TCall(StringMap.$method:key-type)');
 			if (keyMapping.staticStringIdentity() == null)
 				return unsupported(arguments[0], 'TCall(StringMap.$method:key-not-admitted-String)');
-			loweredArguments.push(coerce(lowerValue(arguments[0], keyMapping), keyMapping, arguments[0].pos, 'TCall(StringMap.$method:key)').id);
+			var key = coerce(lowerValue(arguments[0], keyMapping), keyMapping, arguments[0].pos, 'TCall(StringMap.$method:key)');
+			key = stabilizeFreshManagedString(key, arguments[0].pos, 'string-map-$method-key');
+			loweredArguments.push(key.id);
 		}
-		if (method == "set")
-			loweredArguments.push(coerce(lowerValue(arguments[1], map.value), map.value, arguments[1].pos, "TCall(StringMap.set:value)").id);
+		if (method == "set") {
+			var value = coerce(lowerValue(arguments[1], map.value), map.value, arguments[1].pos, "TCall(StringMap.set:value)");
+			value = stabilizeFreshManagedString(value, arguments[1].pos, "string-map-set-value");
+			loweredArguments.push(value.id);
+		}
 		final source = sourceSpan(expression.pos);
 		if (method == "set" || method == "clear") {
 			appendInstruction(null, IRIOCall({
@@ -12370,6 +12402,10 @@ private class FunctionBuilder {
 			final optional = resultMapping.optionalValue();
 			if (optional != null && optional.managedLifetime)
 				freshManagedOptionalValueIds.set(result.id, true);
+			if (resultMapping.irType == IRTManagedString) {
+				freshManagedStringValueIds.set(result.id, true);
+				freshManagedStringValueRoles.set(result.id, "StringMap.get result");
+			}
 		}
 		runtimeRequirements.push(new CBodyRuntimeRequirement("string-map", method, 'ordinary Haxe StringMap.$method', source, expression.pos));
 		return {id: result.id, type: result.type, mapping: resultMapping};

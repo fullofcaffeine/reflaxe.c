@@ -69,7 +69,41 @@ class RuntimeRequirementReconciliationGolden {
 		}
 		verifySameSpanReasons(analyzer);
 		verifyDeclarationCarriers(analyzer);
+		verifyStringMapValueCarrier(analyzer);
 		next();
+	}
+
+	/** Prove a managed StringMap declaration selects its nested String carrier. */
+	static function verifyStringMapValueCarrier(analyzer:RuntimeRequirementAnalyzer):Void {
+		final source = new HxcSourceSpan("test/runtime/runtime-feature-graph/StringMapValueCarrier.hx", 3, 2, 3, 29);
+		final program = programWith([], source);
+		program.modules[0].types.push({
+			id: "type.fixture.string-map",
+			displayName: "Map<String, fixture.Name>",
+			kind: IRTKReference,
+			source: source
+		});
+		program.modules[0].typeInstances.push({
+			id: "instance.fixture.string-map",
+			declarationId: "type.fixture.string-map",
+			arguments: [IRTString, IRTManagedString],
+			representation: IRRManaged("string-map"),
+			source: source
+		});
+		final analysis = analyzer.analyze(program, [
+			new RuntimeRequirementCandidate(RuntimeFeatureId.parse("string-map"), "managed-type-representation", "runtime-representation",
+				"ordinary Haxe StringMap", source),
+			new RuntimeRequirementCandidate(RuntimeFeatureId.parse("string"), "type-carrier", "runtime-representation",
+				"ordinary Haxe StringMap value carrier", source)
+		]);
+		if (analysis.reasons.length != 2
+			|| analysis.reachability.runtimeIntentCount != 2
+			|| analysis.reasons[0].featureId.text() != "string"
+			|| analysis.reasons[0].operationId != "type-carrier"
+			|| analysis.reasons[1].featureId.text() != "string-map"
+			|| analysis.reasons[1].operationId != "managed-type-representation") {
+			throw "managed StringMap declaration lost its nested String carrier";
+		}
 	}
 
 	/**

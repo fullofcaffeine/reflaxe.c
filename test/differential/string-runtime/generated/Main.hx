@@ -181,6 +181,10 @@ final class Main {
 	static function fromCode(code:Int):String
 		return String.fromCharCode(code);
 
+	/** Evaluate and immediately release one ignored runtime-created String. */
+	static function discardFromCode(code:Int):Void
+		String.fromCharCode(code);
+
 	/**
 		Prove that `Std.string(String)` is an ownership-preserving identity.
 
@@ -410,6 +414,7 @@ final class Main {
 		shared UTF-8 allocation alive until its own cleanup.
 	**/
 	static function contractHolds(enabled:Bool):Bool {
+		discardFromCode(0x1F600);
 		final built = build(0xE9, 0x1F600);
 		final direct = fromCode(0xE9) + fromCode(0x1F600);
 		final repeated = built + built;

@@ -764,12 +764,24 @@ private class HxcIRValidationState {
 		switch instance.representation {
 			case IRRManaged(runtimeFeature):
 				validateStableId(runtimeFeature, '$path.runtimeFeature', instance.source);
+				if (runtimeFeature == "string-map")
+					validateStringMapTypeInstance(instance, declaration, path);
 			case IRRStackClosure(parameters, result):
 				for (index => parameter in parameters)
 					validateTypeRef(parameter, '$path.closureParameter:$index', instance.source, false);
 				validateTypeRef(result, '$path.closureResult', instance.source, true);
 			case IRRDirect | IRRTagged | IRROpaqueHandle:
 		}
+	}
+
+	/** Reject a malformed managed StringMap declaration before any operation uses it. */
+	function validateStringMapTypeInstance(instance:HxcIRTypeInstance, declaration:Null<HxcIRTypeDeclaration>, path:String):Void {
+		final isReference = declaration != null && switch declaration.kind {
+			case IRTKReference: true;
+			case _: false;
+		};
+		if (!isReference || instance.arguments.length != 2 || instance.arguments[0] != IRTString)
+			add(path, 'managed StringMap instance `${instance.id}` requires a reference declaration and exact [String, value] arguments', instance.source);
 	}
 
 	/** Prove the structural `{ invoke, context }` carrier matches its semantic call signature. */
@@ -3521,13 +3533,16 @@ private class HxcIRValidationState {
 				if (argumentTypes.length != 2 || receiverValue == null || !hasStringKey || !returnsBool)
 					add(path, 'StringMap.$operationId requires map + String and returns Bool', source);
 			case "get":
-				final expectedReturnKey = receiverValue == null ? null : typeKey(IRTNullable(receiverValue, IRNTagged));
+				final expectedReturnKey = receiverValue == null ? null : typeKey(switch receiverValue {
+					case IRTString | IRTManagedString: receiverValue;
+					case _: IRTNullable(receiverValue, IRNTagged);
+				});
 				if (argumentTypes.length != 2
 					|| receiverValue == null
 					|| !hasStringKey
 					|| expectedReturnKey == null
 					|| typeKey(call.returnType) != expectedReturnKey)
-					add(path, "StringMap.get requires map + String and returns a tagged nullable value", source);
+					add(path, "StringMap.get requires map + String and returns the value family's nullable carrier", source);
 			case _:
 				add(path, 'string-map runtime call names unsupported operation `$operationId`', source);
 		}
