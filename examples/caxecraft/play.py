@@ -3210,6 +3210,28 @@ def compile_native(
     )
 
 
+def pilot_timeout_seconds(pilot: str) -> int:
+    """Return the bounded process budget for one graphical pilot run.
+
+    Most focused pilots finish within 15 seconds. The secondary-locale pilot
+    took 26.34 and 26.37 seconds in consecutive direct runs on the reference
+    Mac, with no useful warm-run reduction, so it shares the 35-second budget
+    used by the similarly sized runtime-content journey.
+    """
+
+    if pilot == "editor-shell":
+        # This pilot draws both the editor and the real game, including full-map
+        # frames that need more time in the reference memory/software renderer.
+        return 90
+    if pilot == "secondary-locale":
+        return 35
+    if pilot_metadata(pilot).execution == "runtime-content":
+        # The representative Adventure journey measures about 27 seconds after
+        # adding blocking dialogue.
+        return 35
+    return 15
+
+
 def run_pilot_sample(
     *,
     executable: Path,
@@ -3250,16 +3272,7 @@ def run_pilot_sample(
     for stale in (screenshot, state_screenshot, *supporting_screenshots):
         if stale.exists():
             stale.unlink()
-    # The editor pilot draws both the editor and the real game. The reference
-    # Mac can need more time for these full-map frames than for a short probe.
-    if pilot == "editor-shell":
-        timeout_seconds = 90
-    elif pilot_metadata(pilot).execution == "runtime-content":
-        # The representative Adventure journey measures about 27 seconds in
-        # the pinned memory/software renderer after adding blocking dialogue.
-        timeout_seconds = 35
-    else:
-        timeout_seconds = 15
+    timeout_seconds = pilot_timeout_seconds(pilot)
     process = run([str(executable)], cwd=executable.parent, timeout=timeout_seconds, label=label)
     observations: list[dict[str, object]] = []
     observation_prefix = "CAXECRAFT_AGENT_OBSERVATION="

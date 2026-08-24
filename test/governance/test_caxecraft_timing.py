@@ -28,6 +28,20 @@ def load_module(name: str, path: Path):
 
 
 class CaxecraftTimingTests(unittest.TestCase):
+    def test_secondary_locale_pilot_has_a_measured_bounded_budget(self) -> None:
+        with mock.patch.object(
+            sys, "path", [str(ROOT / "examples/caxecraft"), *sys.path]
+        ):
+            play = load_module(
+                "caxecraft_pilot_timeout_subject",
+                ROOT / "examples/caxecraft/play.py",
+            )
+
+        self.assertEqual(play.pilot_timeout_seconds("secondary-locale"), 35)
+        self.assertEqual(play.pilot_timeout_seconds("editor-shell"), 90)
+        self.assertEqual(play.pilot_timeout_seconds("adventure-journey"), 35)
+        self.assertEqual(play.pilot_timeout_seconds("launch-smoke"), 15)
+
     def test_compiler_profile_parses_closed_phase_and_haxe_timer_records(self) -> None:
         profiler = load_module(
             "caxecraft_compiler_profile_subject",
