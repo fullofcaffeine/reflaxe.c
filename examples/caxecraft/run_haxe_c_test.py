@@ -471,6 +471,27 @@ CASES = {
         output_line_count=1,
         success_line="0",
     ),
+    "player-camera": HaxeCTestCase(
+        case_id="player-camera",
+        eval_hxml="player-camera.hxml",
+        c_hxml="player-camera-c.hxml",
+        native_harness="test/native/player_camera_harness.c",
+        generated_source="src/modules/caxecraft/domain/PlayerCamera.c",
+        required_source_markers=(
+            "PlayerCamera_resolvePlayerCamera",
+            "PlayerCamera_clearBoomDistance",
+            "hxc_f64_sqrt",
+        ),
+        forbidden_source_markers=("goto ",),
+        output_line_count=1,
+        success_line="0",
+        expected_runtime_features=(
+            "runtime-base",
+            "status",
+            "alloc",
+            "array",
+        ),
+    ),
     "package-store": HaxeCTestCase(
         case_id="package-store",
         eval_hxml="package-store.hxml",

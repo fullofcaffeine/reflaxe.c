@@ -450,7 +450,11 @@ Use `WASD` to move, the mouse to look, Space to jump, and left click to use the
 selected item's primary action: remove a block normally or strike while the
 Copper Sword is selected. Right click uses the selected item's secondary
 action: it places a selected block or eats selected berries when health is not
-full. Number keys `1` through `9` or the
+full. Press `F5` during ordinary play to switch between first-person and a
+behind-player view. A wall, ceiling, or solid authored object moves the camera
+closer instead of letting it pass through the obstruction. The center-screen
+aim remains at the player's eyes in both views, so mining, placing, talking,
+and combat keep the same reach and target. Number keys `1` through `9` or the
 mouse wheel to select the hotbar, Escape to pause and read the latest unlocked
 journal clue, and `Q` to quit. Creative mode does not consume placed blocks; the current
 Adventure feasibility path has finite stacks and returns eligible mined blocks
@@ -482,6 +486,16 @@ npm run test:caxecraft-presentation
 
 It proves endpoints, midpoint, clamping, adjacent fixed ticks, and teleport
 reset on Eval and generated native C with sanitizers and no `hxrt` or heap.
+The separate focused camera contract is:
+
+```sh
+npm run test:caxecraft-player-camera
+```
+
+It proves both camera modes, obstruction shortening, the safe zero-look
+fallback, and the unchanged gameplay aim ray. It selects only the small array
+runtime needed by its authored-collision input; it does not select reflection
+or the general object runtime.
 The `smooth-motion` native pilot additionally walks and jumps through the real
 outer loop at deterministic 8, 17, and 25 ms display intervals. It requires a
 camera sample strictly between committed positions and an airborne final

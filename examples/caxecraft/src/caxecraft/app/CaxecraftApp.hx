@@ -96,6 +96,8 @@ import caxecraft.domain.ActorControllerTick.ActorControllerTickStatus;
 import caxecraft.domain.AquaticMedium;
 import caxecraft.domain.EntityId;
 import caxecraft.domain.GameSession;
+import caxecraft.domain.PlayerCamera.PlayerCameraMode;
+import caxecraft.domain.PlayerCamera.togglePlayerCamera;
 import caxecraft.domain.Aquatics.canMine as playerCanMine;
 import caxecraft.domain.Aquatics.input as aquaticInput;
 import caxecraft.domain.CharacterPhysics.canPlaceAt as playerCanPlaceAt;
@@ -190,6 +192,7 @@ private typedef EditorTestPlayShellSnapshot = {
 	final swordCombat:SwordCombatState;
 	final berryDrop:BerryDropState;
 	final cameraWaterBlend:Float;
+	final cameraMode:PlayerCameraMode;
 	final lookX:Float;
 	final lookY:Float;
 	final lookZ:Float;
@@ -668,6 +671,7 @@ final class CaxecraftApp {
 		final runtimeModels = new RuntimeVoxelModelCatalog();
 		final modelAnimations = new VoxelFrameAnimationPlayer();
 		var cameraWaterBlend = 0.0;
+		var cameraMode = PlayerCameraMode.FirstPerson;
 		var debugHudVisible = false;
 		var inventory:InventoryState = Inventory.starter();
 		#if caxecraft_pilot
@@ -923,6 +927,7 @@ final class CaxecraftApp {
 			final menuNextPressed = PilotScript.menuNextPressed(pilotAction);
 			final menuConfirmPressed = PilotScript.menuConfirmPressed(pilotAction);
 			final descendHeld = PilotScript.descendHeld(pilotAction);
+			final cameraTogglePressed = false;
 			#else
 			final focused = Raylib.IsWindowFocused();
 			final frameInput:GameInputFrame = RaylibGameInput.sample(screenCapturesPointer(screen), screenPausesSimulation(screen));
@@ -950,6 +955,7 @@ final class CaxecraftApp {
 			final menuNextPressed = frameInput.menuNextPressed;
 			final menuConfirmPressed = frameInput.menuConfirmPressed;
 			final descendHeld = frameInput.descendHeld;
+			final cameraTogglePressed = RaylibGameInput.cameraTogglePressed(screenCapturesPointer(screen));
 			#end
 			// Escape and focus loss are a stop barrier. Dispose the test owner and
 			// restore the exact ordinary shell before any campaign, tick, or input
@@ -982,6 +988,7 @@ final class CaxecraftApp {
 					swordCombat = saved.swordCombat;
 					berryDrop = saved.berryDrop;
 					cameraWaterBlend = saved.cameraWaterBlend;
+					cameraMode = saved.cameraMode;
 					lookX = saved.lookX;
 					lookY = saved.lookY;
 					lookZ = saved.lookZ;
@@ -1434,6 +1441,8 @@ final class CaxecraftApp {
 			editorTerrainPatchFallbacks += editorPilotFrame.terrainPatchFallbackCount;
 			#end
 			if (captured && !conversationOwnedInput) {
+				if (cameraTogglePressed)
+					cameraMode = togglePlayerCamera(cameraMode);
 				var yawDelta = lookYaw;
 				if (yawDelta > 0.25)
 					yawDelta = 0.25;
@@ -1655,12 +1664,13 @@ final class CaxecraftApp {
 				measuredUpdateMicroseconds += Std.int((Raylib.GetTime() - updateStarted) * 1000000.0);
 			#end
 
-			// Selection is authoritative gameplay: it originates at the latest committed
-			// body, never at the presentation-only camera position below.
-			final selectionEyeX = character.body.x;
-			final selectionEyeY = character.body.y + 1.62;
-			final selectionEyeZ = character.body.z;
-			final hit = VoxelRaycast.trace(session.worldView(), selectionEyeX, selectionEyeY, selectionEyeZ, lookX, lookY, lookZ, PICK_DISTANCE);
+			// Gameplay always aims from the committed eye. Behind-player mode moves
+			// only the later interpolated render camera, so view preference cannot
+			// change mining, placing, talking, or combat reach.
+			final interactionView = session.playerCamera(PlayerCameraMode.FirstPerson, character.body, lookX, lookY, lookZ);
+			final hit = VoxelRaycast.trace(session.worldView(), interactionView.interactionOriginX, interactionView.interactionOriginY,
+				interactionView.interactionOriginZ, interactionView.interactionDirectionX, interactionView.interactionDirectionY,
+				interactionView.interactionDirectionZ, PICK_DISTANCE);
 			if (screenCapturesPointer(screen) && conversation == null && !conversationOwnedInput && !recapturedThisFrame && primaryPressed) {
 				if (!characterIsDefeated(character.vitals)) {
 					if (selectedMode == GameMode.Adventure) {
@@ -1806,10 +1816,13 @@ final class CaxecraftApp {
 					interpolationObserved = true;
 			}
 			#end
-			final eyeX = renderPosition.x;
-			final eyeY = renderPosition.y + 1.62;
-			final eyeZ = renderPosition.z;
-			final camera = Camera3D.make(Vector3.fromFloat(eyeX, eyeY, eyeZ), Vector3.fromFloat(eyeX + lookX, eyeY + lookY, eyeZ + lookZ),
+			final presentationBody = createPlayer(renderPosition.x, renderPosition.y, renderPosition.z);
+			final cameraView = session.playerCamera(cameraMode, presentationBody, lookX, lookY, lookZ);
+			final eyeX = cameraView.positionX;
+			final eyeY = cameraView.positionY;
+			final eyeZ = cameraView.positionZ;
+			final camera = Camera3D.make(Vector3.fromFloat(eyeX, eyeY, eyeZ),
+				Vector3.fromFloat(cameraView.targetX, cameraView.targetY, cameraView.targetZ),
 				Vector3.fromFloat(0.0, 1.0, 0.0), c.Float32.fromFloat(70.0), CameraProjection.Perspective);
 			#if caxecraft_pilot
 			var visibleBlocks = 0;
@@ -1905,6 +1918,8 @@ final class CaxecraftApp {
 				drawStatefulObjects(contentRegistry, session, levelView, entityTexture, entityTextureReady, itemTexture, itemTextureReady,
 					adventureItemTexture, adventureItemTextureReady, terrainTexture, terrainTextureReady, runtimeTextures, runtimeModels, modelAnimations,
 					frameLevelOwner.generationId().value(), completedTicks);
+				if (cameraView.avatarVisible)
+					drawPlayerAvatar(camera, runtimeTextures, renderPosition.x, renderPosition.y, renderPosition.z);
 				drawActors(camera, entityTexture, entityTextureReady, runtimeTextures, dialogueActors, levelView, enemyActor,
 					levelView.enemyActorPresentationAsset(), levelView.enemyActorPresentationCell(), enemyPhase.phase, berryDrop);
 				AuthoredItemRenderer.drawWorldItems(contentRegistry, camera, session.authoredItemsView(), levelView, itemTexture, itemTextureReady,
@@ -2190,6 +2205,7 @@ final class CaxecraftApp {
 										swordCombat: swordCombat,
 										berryDrop: berryDrop,
 										cameraWaterBlend: cameraWaterBlend,
+										cameraMode: cameraMode,
 										lookX: lookX,
 										lookY: lookY,
 										lookZ: lookZ,
@@ -2240,6 +2256,7 @@ final class CaxecraftApp {
 									swordCombat = startSwordCombat();
 									berryDrop = emptyBerryDrop();
 									cameraWaterBlend = 0.0;
+									cameraMode = PlayerCameraMode.FirstPerson;
 									final testHeading = headingForSpawn(testLevel.spawnTransform());
 									lookX = testHeading.x;
 									lookY = testHeading.y;
@@ -2534,6 +2551,22 @@ final class CaxecraftApp {
 		Raylib.DrawRectangleLines(panelX, panelY, panelWidth, panelHeight, CaxecraftPalette.selection());
 		drawUiText(catalog, locale, UiMessage.MenuAdventure, panelX + 28, panelY + 24, 22, CaxecraftPalette.selection());
 		Raylib.DrawTextString(destinationLabel, panelX + 28, panelY + 76, 30, CaxecraftPalette.hudText());
+	}
+
+	/**
+		Draw Haxirio between the player body and a behind-player camera.
+
+		The reviewed back-facing atlas cell is 1.42 metres tall, below the ordinary
+		1.52-metre adult dialogue-actor sprite. A compact voxel silhouette remains
+		visible if the runtime atlas is unavailable.
+	**/
+	static function drawPlayerAvatar(camera:Camera3D, runtimeTextures:RuntimeTextureAtlasCatalog, x:Float, y:Float, z:Float):Void {
+		if (runtimeTextures.drawSprite(camera, "adventure-characters", 3, Vector3.fromFloat(x, y + 0.71, z), 0.78, 1.42))
+			return;
+		Raylib.DrawCube(Vector3.fromFloat(x, y + 0.48, z), c.Float32.fromFloat(0.52), c.Float32.fromFloat(0.96), c.Float32.fromFloat(0.34),
+			CaxecraftPalette.selection());
+		Raylib.DrawCube(Vector3.fromFloat(x, y + 1.16, z), c.Float32.fromFloat(0.38), c.Float32.fromFloat(0.36), c.Float32.fromFloat(0.36),
+			CaxecraftPalette.hudText());
 	}
 
 	/**

@@ -101,6 +101,10 @@ SANITIZER_FLAGS = (
 )
 PLATFORM_NAMES = {"Darwin": "macos", "Linux": "linux", "Windows": "windows"}
 RAYLIB_CONFIGURATIONS = ("desktop", "memory-software")
+# Compiler-owned typed math helpers may request the platform math library.
+# Keep this allow-list narrow so authored or generated metadata cannot silently
+# expand the native link surface beyond reviewed system dependencies.
+ADMITTED_GENERATED_SYSTEM_LIBRARIES = frozenset({"m"})
 EXPECTED = CASE / "expected"
 # Snapshots review generated structure, not whichever desktop runs the updater.
 # Native build/play still selects the real host below, and the Raylib CI matrix
@@ -3173,11 +3177,24 @@ def compile_native(
     libraries, frameworks = provision.link_facts(lock, platform_name, raylib_configuration)
     manifest_libraries = owned_fact_names(build.get("libraries"), "generated Caxecraft libraries")
     manifest_frameworks = owned_fact_names(build.get("frameworks"), "generated Caxecraft frameworks")
-    expected_libraries = list(libraries)
-    if "raygui" not in expected_libraries:
-        expected_libraries.append("raygui")
-    if len(manifest_libraries) != len(expected_libraries) or set(manifest_libraries) != set(expected_libraries):
-        raise PlayFailure("generated Caxecraft libraries differ from the pinned Raylib + Raygui link plan")
+    pinned_libraries = list(libraries)
+    if "raygui" not in pinned_libraries:
+        pinned_libraries.append("raygui")
+    generated_system_libraries = [
+        name for name in manifest_libraries if name not in pinned_libraries
+    ]
+    if (
+        len(manifest_libraries) != len(set(manifest_libraries))
+        or not set(pinned_libraries).issubset(manifest_libraries)
+        or not set(generated_system_libraries).issubset(
+            ADMITTED_GENERATED_SYSTEM_LIBRARIES
+        )
+    ):
+        raise PlayFailure(
+            "generated Caxecraft libraries differ from the pinned Raylib + "
+            "Raygui and admitted compiler-owned system link plan"
+        )
+    expected_libraries = [*pinned_libraries, *generated_system_libraries]
     if len(manifest_frameworks) != len(frameworks) or set(manifest_frameworks) != set(frameworks):
         raise PlayFailure("generated Caxecraft frameworks differ from the pinned Raylib link plan")
     # Static-link order is significant: generated code needs raygui, and the

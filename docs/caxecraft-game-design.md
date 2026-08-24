@@ -412,7 +412,7 @@ and covered by C-versus-Eval traces.
 
 | System | First complete scope | Explicit first-version limit |
 | --- | --- | --- |
-| Movement | first-person walk, step, jump, swim, collision, safe respawn | no vehicles, mounts, climbing system, or physics sandbox |
+| Movement | first-person and collision-safe behind-player cameras; walk, step, jump, swim, collision, safe respawn | no front-facing camera, vehicles, mounts, climbing system, or physics sandbox |
 | Building | pick, remove, place, selection preview, finite world bounds | no infinite terrain, automation machines, or multiplayer edits |
 | Inventory | nine-slot hotbar, bounded backpack, stackable blocks/items, clear full state | no large crafting tree or arbitrary item scripting |
 | Tools | Haxeforge mining, combat, and interaction forms | no durability grind or dozens of weapon tiers |

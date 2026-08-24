@@ -17,6 +17,10 @@ final class RaylibGameInput {
 		return Raylib.IsKeyPressed(KeyboardKey.F3);
 	#end
 
+	/** Toggle the player presentation camera while ordinary play owns the pointer. */
+	public static inline function cameraTogglePressed(captured:Bool):Bool
+		return captured && Raylib.IsKeyPressed(KeyboardKey.F5);
+
 	public static inline function sample(captured:Bool, paused:Bool):GameInputFrame {
 		var forward = 0.0;
 		var right = 0.0;

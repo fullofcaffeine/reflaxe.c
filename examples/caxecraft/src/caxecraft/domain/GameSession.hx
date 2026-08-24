@@ -16,6 +16,9 @@ import caxecraft.domain.Character.reviveAt as reviveCharacterAt;
 import caxecraft.domain.Character.stepWithCollisions as advanceCharacterState;
 import caxecraft.domain.Character.withVitals as withCharacterVitals;
 import caxecraft.domain.CharacterPhysics.collisionBox as characterCollisionBox;
+import caxecraft.domain.PlayerCamera.PlayerCameraMode;
+import caxecraft.domain.PlayerCamera.PlayerCameraView;
+import caxecraft.domain.PlayerCamera.resolvePlayerCamera;
 import caxecraft.domain.PlayerAgent.bind as bindPlayerAgent;
 import caxecraft.domain.WaterCellCodec.isSolidCode as isSolidStorageCode;
 import caxecraft.gameplay.AuthoredItemSlots;
@@ -453,6 +456,15 @@ final class GameSession {
 	/** Number of solid authored boxes active for the current committed flow state. */
 	public inline function activeStatefulCollisionCount():Int
 		return activeStatefulCollision.length;
+
+	/**
+		Resolve a presentation camera against the current committed collision set.
+
+		This read cannot mutate simulation or replace the gameplay interaction ray.
+		Stateful doors and mechanisms use the same active boxes as movement.
+	**/
+	public function playerCamera(mode:PlayerCameraMode, body:CharacterBody, lookX:Float, lookY:Float, lookZ:Float):PlayerCameraView
+		return resolvePlayerCamera(worldView(), activeStatefulCollision, mode, body, lookX, lookY, lookZ);
 
 	/**
 		Install the one locally controlled character and bind human input to its ID.
