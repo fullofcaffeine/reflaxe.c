@@ -793,6 +793,42 @@ class CPreparedBodyDispatch {
 		return tablesByInstanceAndLayout.get(tableLookupKey(classInstanceId, interfaceInstanceId));
 
 	/**
+		Give every direct interface value a concrete object/table pair layout.
+
+		A class can remain reachable only as another field's declared type. Its own
+		interface-valued field still needs a complete C value type even when no
+		constructor, implementation, method call, or dispatch table is reachable.
+		Such a value-only layout has no slots and emits only the pair definition plus
+		an incomplete table declaration; a real interface dispatch layout continues
+		to own all callable slots and concrete tables.
+	**/
+	public function completeInterfaceValueLayouts(interfaces:Array<CPreparedBodyInterface>, context:CompilationContext):Void {
+		final represented:Map<String, Bool> = [];
+		for (layout in layouts)
+			if (layout.rootInterface != null)
+				represented.set(layout.rootInterface.instanceId, true);
+		for (value in interfaces) {
+			if (represented.exists(value.instanceId))
+				continue;
+			final id = 'interface.value-layout.${value.digest}';
+			final tagRequest = new CSymbolRequest(CSKType, ["compiler", "interface-dispatch", value.haxePath, "table-layout"], CNSTag("translation-unit"),
+				CSVInternal);
+			final valueTagRequest = new CSymbolRequest(CSKType, ["compiler", "interface-dispatch", value.haxePath, "value"], CNSTag("translation-unit"),
+				CSVInternal);
+			final objectMemberRequest = new CSymbolRequest(CSKField, ["compiler", "interface-dispatch", value.haxePath, "value", "object"],
+				CNSMember('interface-value:$id'), CSVInternal, "object", [], [], 0);
+			final tableMemberRequest = new CSymbolRequest(CSKField, ["compiler", "interface-dispatch", value.haxePath, "value", "table"],
+				CNSMember('interface-value:$id'), CSVInternal, "table", [], [], 1);
+			context.symbols.register(tagRequest);
+			context.symbols.register(valueTagRequest);
+			context.symbols.register(objectMemberRequest);
+			context.symbols.register(tableMemberRequest);
+			layouts.push(new CPreparedVirtualLayout(id, null, value, value.source, tagRequest, valueTagRequest, objectMemberRequest, tableMemberRequest, []));
+		}
+		layouts.sort((left, right) -> CBodyDispatchCatalog.compareUtf8(left.id, right.id));
+	}
+
+	/**
 		Pair every reachable child-interface table with the same class's parent table.
 
 		An interface value stores only `{ object, table }`; it does not erase the

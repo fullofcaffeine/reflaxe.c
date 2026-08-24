@@ -532,20 +532,24 @@ class CBodyClassRegistry {
 						continue;
 
 					// An interface C value contains a pointer to its concrete object
-					// plus the exact dispatch table. Once a class retains that value,
-					// both the owner and every reachable concrete implementation need
-					// stable collector storage. The owner's trace callback follows the
-					// object pointer; the object header then selects its exact layout.
-					if (!value.managedByCollector) {
+					// plus the exact dispatch table. A field declaration alone does not
+					// prove that this graph can exist: whole-program discovery can retain
+					// a class only as another field's type without reaching its constructor
+					// or any concrete interface implementation. Mark the owner only when a
+					// reachable table proves that an object can inhabit this field.
+					var matched = false;
+					for (implementation in interfaceImplementations)
+						if (implementation.interfaceValue.instanceId == interfaceValue.instanceId) {
+							matched = true;
+							if (!implementation.classValue.managedByCollector) {
+								implementation.classValue.managedByCollector = true;
+								changed = true;
+							}
+						}
+					if (matched && !value.managedByCollector) {
 						value.managedByCollector = true;
 						changed = true;
 					}
-					for (implementation in interfaceImplementations)
-						if (implementation.interfaceValue.instanceId == interfaceValue.instanceId
-							&& !implementation.classValue.managedByCollector) {
-							implementation.classValue.managedByCollector = true;
-							changed = true;
-						}
 				}
 			for (value in canonicalClasses()) {
 				if (!value.managedByCollector)
@@ -588,8 +592,8 @@ class CBodyClassRegistry {
 						if (!implementation.classValue.managedByCollector)
 							throw new CBodyEmissionError('retained interface `${interfaceValue.haxePath}` left `${implementation.classValue.haxePath}` outside collector ownership');
 					}
-				if (!matched)
-					throw new CBodyEmissionError('retained interface field `${value.haxePath}.${field.name}` has no reachable concrete dispatch table');
+				// No match means no reachable constructor can populate this field.
+				// Such a declaration needs neither collector ownership nor a table.
 			}
 		for (value in canonicalClasses())
 			if (value.managedByCollector)

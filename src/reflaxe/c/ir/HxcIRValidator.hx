@@ -310,11 +310,13 @@ private class HxcIRValidationState {
 	/**
 		Validate the collector graph implied by an interface-valued class field.
 
-		An interface field contains an object pointer that survives its constructor
-		call. HxcIR therefore requires both the field owner and every concrete class
-		named by that interface's reachable tables to use the exact `managed(gc)`
-		representation. CAST lowering may then emit one trace edge from the field's
-		object member without guessing lifetime from C syntax.
+		An interface field that can be populated contains an object pointer that
+		survives its constructor call. HxcIR therefore requires both the field owner
+		and every concrete class named by that interface's reachable tables to use
+		the exact `managed(gc)` representation. An interface with no reachable table
+		is only a declared field type; no runtime object can inhabit it, so it needs
+		no collector graph. CAST lowering may emit trace edges only from the proven
+		populated case without guessing lifetime from C syntax.
 	**/
 	function validateRetainedInterfaceGraphs():Void {
 		final dispatchRoots:Map<String, Bool> = [];
@@ -347,23 +349,24 @@ private class HxcIRValidationState {
 					case IRTInstance(instanceId) if (interfaceInstances.exists(instanceId)): instanceId;
 					case _: continue;
 				};
-				if (!isGcManaged(owner.representation))
-					add('retained-interface:${owner.id}.${field.name}',
-						'class `${owner.id}` retains interface `$interfaceInstanceId` without managed(gc) ownership', field.source);
-				var matched = false;
+				final matchingTables:Array<HxcIRVirtualTable> = [];
 				for (table in program.dispatch.tables) {
 					final layout = virtualLayouts.get(table.layoutId);
 					if (layout == null || layout.rootInstanceId != interfaceInstanceId)
 						continue;
-					matched = true;
+					matchingTables.push(table);
+				}
+				if (matchingTables.length == 0)
+					continue;
+				if (!isGcManaged(owner.representation))
+					add('retained-interface:${owner.id}.${field.name}',
+						'class `${owner.id}` retains interface `$interfaceInstanceId` without managed(gc) ownership', field.source);
+				for (table in matchingTables) {
 					final implementation = typeInstances.get(table.classInstanceId);
 					if (implementation == null || !isGcManaged(implementation.representation))
 						add('retained-interface:${owner.id}.${field.name}',
 							'interface `$interfaceInstanceId` table `${table.id}` has non-managed concrete object `${table.classInstanceId}`', table.source);
 				}
-				if (!matched)
-					add('retained-interface:${owner.id}.${field.name}',
-						'interface `$interfaceInstanceId` has no reachable concrete table for retained field `${field.name}`', field.source);
 			}
 		}
 	}

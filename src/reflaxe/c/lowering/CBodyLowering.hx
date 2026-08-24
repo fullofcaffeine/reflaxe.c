@@ -472,6 +472,10 @@ class CBodyLowering {
 		aggregateRegistry.completeManagedRepresentations(interfaceImplementations);
 		for (builder in builders)
 			builder.completeManagedRepresentations();
+		// A type-only class can embed an interface value without making any
+		// implementation or call reachable. Complete that pair layout after all
+		// aggregate discovery and before the shared HxcIR snapshot is built.
+		preparedDispatch.completeInterfaceValueLayouts(aggregateRegistry.canonicalInterfaces(), context);
 		// Function replay needs the shared representation and C-import plan to be
 		// settled before any individual body can be skipped. Discover the narrow
 		// body-only families here, in the same canonical function/source order as

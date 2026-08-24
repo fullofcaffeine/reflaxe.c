@@ -35,6 +35,7 @@ MANAGED_ENUM_ARGUMENT = FIXTURES / "managed_enum_argument"
 NULLABLE_RECURSIVE_FACTORY = FIXTURES / "nullable_recursive_factory"
 INTERFACE_PARAMETER = FIXTURES / "interface_parameter"
 RETAINED_INTERFACE_PARAMETER = FIXTURES / "interface_parameter_retained"
+UNCONSTRUCTED_INTERFACE_FIELD = FIXTURES / "interface_field_unconstructed"
 DEFAULT_ARGUMENTS = FIXTURES / "default_arguments"
 ARRAY_PARAMETER = FIXTURES / "array_parameter"
 STRING_PARAMETER = FIXTURES / "string_parameter"
@@ -191,6 +192,12 @@ RETAINED_INTERFACE_NATIVE_COVERAGE = frozenset(
         "constructor-managed-record-field-initialization",
         "constructor-managed-record-field-replacement",
         "constructor-managed-record-alias-safe-replacement",
+    }
+)
+UNCONSTRUCTED_INTERFACE_NATIVE_COVERAGE = frozenset(
+    {
+        "constructor-unconstructed-interface-field",
+        "constructor-unconstructed-interface-no-table",
     }
 )
 DEFAULT_ARGUMENT_NATIVE_COVERAGE = frozenset(
@@ -792,6 +799,24 @@ def validate_retained_interface_project(output: Path) -> None:
     ):
         raise ConstructorLoweringFailure(
             "retained interface fixture lost direct-record initialization or alias-safe managed-record replacement"
+        )
+
+
+def validate_unconstructed_interface_project(output: Path) -> None:
+    """Prove a type-only interface field does not invent a dispatch table."""
+
+    dispatch = json.loads((output / "hxc.dispatch.json").read_text(encoding="utf-8"))
+    tables = dispatch.get("tables")
+    if not isinstance(tables, list) or tables:
+        raise ConstructorLoweringFailure(
+            "unconstructed interface field unexpectedly retained a dispatch table"
+        )
+    sources = "\n".join(
+        path.read_text(encoding="utf-8") for path in sorted((output / "src").rglob("*.c"))
+    )
+    if "DormantSource_score" in sources:
+        raise ConstructorLoweringFailure(
+            "unconstructed interface field unexpectedly emitted runtime dispatch"
         )
 
 
@@ -2407,6 +2432,18 @@ def check_cpp_header(
                 NATIVE / "direct_receiver_header_cpp.cpp",
             )
         )
+    unconstructed = fixture_root / "unconstructed-interface-field-split"
+    if unconstructed.is_dir():
+        consumers.append(
+            (
+                "unconstructed-interface",
+                (
+                    unconstructed / "include",
+                    unconstructed / "runtime/include",
+                ),
+                NATIVE / "unconstructed_interface_header_cpp.cpp",
+            )
+        )
     check_cpp_consumers(
         build_root,
         requested_toolchain=requested_toolchain,
@@ -2568,6 +2605,13 @@ def check_native(
                 validate_project=validate_retained_interface_project,
                 validate_inspection=validate_retained_interface_report,
             )
+            unconstructed_interface_projects = render_parameter_projects(
+                fixture_root,
+                fixture=UNCONSTRUCTED_INTERFACE_FIELD,
+                slug="unconstructed-interface-field",
+                coverage=UNCONSTRUCTED_INTERFACE_NATIVE_COVERAGE,
+                validate_project=validate_unconstructed_interface_project,
+            )
             default_argument_projects = render_parameter_projects(
                 fixture_root,
                 fixture=DEFAULT_ARGUMENTS,
@@ -2642,6 +2686,7 @@ def check_native(
                 + (managed_record_argument_failure_project,)
                 + interface_projects
                 + retained_interface_projects
+                + unconstructed_interface_projects
                 + default_argument_projects
                 + array_parameter_projects
                 + string_parameter_projects
@@ -2678,6 +2723,7 @@ def check_native(
                     | MANAGED_RECORD_ARGUMENT_FAILURE_NATIVE_COVERAGE
                     | INTERFACE_NATIVE_COVERAGE
                     | RETAINED_INTERFACE_NATIVE_COVERAGE
+                    | UNCONSTRUCTED_INTERFACE_NATIVE_COVERAGE
                     | DEFAULT_ARGUMENT_NATIVE_COVERAGE
                     | ARRAY_PARAMETER_NATIVE_COVERAGE
                     | STRING_PARAMETER_NATIVE_COVERAGE
@@ -2732,6 +2778,7 @@ def check_native(
                     | MANAGED_RECORD_ARGUMENT_FAILURE_NATIVE_COVERAGE
                     | INTERFACE_NATIVE_COVERAGE
                     | RETAINED_INTERFACE_NATIVE_COVERAGE
+                    | UNCONSTRUCTED_INTERFACE_NATIVE_COVERAGE
                     | DEFAULT_ARGUMENT_NATIVE_COVERAGE
                     | ARRAY_PARAMETER_NATIVE_COVERAGE
                     | STRING_PARAMETER_NATIVE_COVERAGE
@@ -3762,10 +3809,21 @@ def check_retained_interface_only(*, requested_toolchain: str) -> None:
             validate_project=validate_retained_interface_project,
             validate_inspection=validate_retained_interface_report,
         )
+        projects += render_parameter_projects(
+            fixture_root,
+            fixture=UNCONSTRUCTED_INTERFACE_FIELD,
+            slug="unconstructed-interface-field",
+            coverage=UNCONSTRUCTED_INTERFACE_NATIVE_COVERAGE,
+            validate_project=validate_unconstructed_interface_project,
+        )
         ordered_projects = tuple(
             sorted(projects, key=lambda project: project.identifier.encode("utf-8"))
         )
-        required_coverage = RETAINED_INTERFACE_NATIVE_COVERAGE | {"strict-c11"}
+        required_coverage = (
+            RETAINED_INTERFACE_NATIVE_COVERAGE
+            | UNCONSTRUCTED_INTERFACE_NATIVE_COVERAGE
+            | {"strict-c11"}
+        )
         for optimization in ("-O0", "-O2"):
             report = run_c_fixture_corpus(
                 suite=f"constructor-retained-interface-{optimization[1:].lower()}",
@@ -3798,6 +3856,20 @@ def check_retained_interface_only(*, requested_toolchain: str) -> None:
                 strict_flags=(*C11_STRICT_FLAGS, *SANITIZER_FLAGS),
             )
             validate_report(report, required_coverage=required_coverage)
+        check_cpp_consumers(
+            root / "cpp-build",
+            requested_toolchain=requested_toolchain,
+            consumers=(
+                (
+                    "unconstructed-interface",
+                    (
+                        fixture_root / "unconstructed-interface-field-split/include",
+                        fixture_root / "unconstructed-interface-field-split/runtime/include",
+                    ),
+                    NATIVE / "unconstructed_interface_header_cpp.cpp",
+                ),
+            ),
+        )
 
 
 def check_minimal_example() -> None:

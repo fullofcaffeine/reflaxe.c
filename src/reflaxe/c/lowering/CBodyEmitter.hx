@@ -3129,8 +3129,14 @@ class CBodyEmitter {
 					attributes: []
 				});
 			}
-			if (fields.length == 0)
+			if (fields.length == 0) {
+				// A direct interface field needs its object/table pair type even when
+				// whole-program reachability finds no implementation or call. Its table
+				// pointer may name an incomplete struct because no table value exists.
+				if (layout.cValueTag != null)
+					continue;
 				fail('virtual layout `${layout.id}` has no reachable slots');
+			}
 			result.push(DStruct(layout.cTag, fields, []));
 		}
 		return result;
