@@ -217,6 +217,9 @@ def validate_generated_project(output: Path, hxcir: str) -> None:
         'runtime(feature="string-map",operation="remove")',
         'binary operation="haxe.string-map-reference.equal"',
         'binary operation="haxe.string-map-reference.not-equal"',
+        "static-call-argument-0-owner-initialize",
+        "instance-call-argument-0-owner-initialize",
+        "string-map-temporary.local.",
         'retain place=local(',
         'release place=local(',
     ):
@@ -316,6 +319,9 @@ def validate_generated_project(output: Path, hxcir: str) -> None:
     ):
         if re.search(rf"hxc_string_release\(&hxc_l_tmp_{owner}_n[0-9]+\)", sources) is None:
             raise StringMapFailure(f"generated C did not release its {owner.replace('_', ' ')}")
+    for role in ("static", "instance"):
+        if re.search(rf"hxc_string_map_ref_release\(hxc_l_tmp_{role}_call_argument_0_owner_n[0-9]+\)", sources) is None:
+            raise StringMapFailure(f"generated C did not release its fresh {role}-call StringMap owner")
 
 
 def available_port() -> int:

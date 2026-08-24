@@ -155,6 +155,18 @@ private final class RecordTable {
 		return values.remove(key);
 }
 
+/** Supplies one real instance-call boundary for fresh StringMap arguments. */
+private final class MapBorrower {
+	/** Construct a stateless borrower; class identity exists only for call coverage. */
+	public function new() {}
+
+	/** Read one expected entry without retaining the caller-owned map. */
+	public function contains(values:Map<String, Bool>, key:String, expected:Bool):Bool {
+		final value = values.get(key);
+		return value != null && value == expected;
+	}
+}
+
 /**
 	Exercises the first ordinary-Haxe `Map<String, Bool>` compiler slice.
 
@@ -380,6 +392,12 @@ final class Main {
 	static function lookup(values:Map<String, Bool>, key:String):Null<Bool>
 		return values.get(key);
 
+	/** Pass fresh empty and populated maps through static and instance borrows. */
+	static function freshArgumentTrace():Bool {
+		final borrower = new MapBorrower();
+		return lookup([], runtimeKey()) == null && borrower.contains(makeMap(), "beta", true);
+	}
+
 	/**
 		Return the absent value of the same nullable pointer carrier.
 
@@ -413,8 +431,9 @@ final class Main {
 		final emptyBeforeClear = alias.exists("");
 		alias.clear();
 
-		while (!integerTrace() || !fieldlessEnumTrace() || !managedRecordTrace() || !nominalStringTrace() || alias != values || absent != null
-			|| null != absent || values == null || alphaBefore == null || alphaBefore || missingBefore != null || !removedBeta || removedBetaAgain
-			|| !gammaBeforeClear || !emptyBeforeClear || values.exists("alpha") || values.exists("gamma") || values.exists("") || values.get("alpha") != null) {}
+		while (!integerTrace() || !fieldlessEnumTrace() || !managedRecordTrace() || !nominalStringTrace() || !freshArgumentTrace() || alias != values
+			|| absent != null || null != absent || values == null || alphaBefore == null || alphaBefore || missingBefore != null || !removedBeta
+			|| removedBetaAgain || !gammaBeforeClear || !emptyBeforeClear || values.exists("alpha") || values.exists("gamma") || values.exists("")
+			|| values.get("alpha") != null) {}
 	}
 }

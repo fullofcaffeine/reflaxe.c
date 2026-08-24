@@ -11264,6 +11264,7 @@ private class FunctionBuilder {
 			converted = stabilizeFreshManagedAggregate(converted, argumentExpression.pos, 'static-call-argument-$index');
 			converted = stabilizeFreshManagedOptional(converted, argumentExpression.pos, 'static-call-argument-$index');
 			converted = stabilizeFreshManagedArray(converted, argumentExpression.pos, 'static-call-argument-$index');
+			converted = stabilizeFreshManagedStringMap(converted, argumentExpression.pos, 'static-call-argument-$index');
 			if (freshManagedArrayValueIds.exists(converted.id))
 				return unsupported(argumentExpression, 'TCall(fresh-managed-Array-argument-needs-owner:$index,target=$targetId)');
 			if (freshManagedStringMapValueIds.exists(converted.id))
@@ -13033,6 +13034,7 @@ private class FunctionBuilder {
 			value = stabilizeFreshManagedAggregate(value, argument.pos, 'instance-call-argument-$index');
 			value = stabilizeFreshManagedOptional(value, argument.pos, 'instance-call-argument-$index');
 			value = stabilizeFreshManagedArray(value, argument.pos, 'instance-call-argument-$index');
+			value = stabilizeFreshManagedStringMap(value, argument.pos, 'instance-call-argument-$index');
 			if (freshManagedArrayValueIds.exists(value.id))
 				return unsupported(argument, 'TCall(fresh-managed-Array-argument-needs-owner:$index,target=$targetId)');
 			if (freshManagedStringMapValueIds.exists(value.id))
@@ -13538,6 +13540,25 @@ private class FunctionBuilder {
 		});
 		normalCleanupActionIds.push(cleanupId);
 		runtimeRequirements.push(new CBodyRuntimeRequirement("array", "cleanup-release", "fresh ordinary Haxe Array call argument lifetime", source, position));
+		return loadPlace({place: IRPLocal(ownerLocalId), mapping: value.mapping, mutable: false}, position, role + "-borrow");
+	}
+
+	/** Keep a fresh StringMap owned by the caller while one call borrows it. */
+	function stabilizeFreshManagedStringMap(value:LoweredValue, position:Position, role:String):LoweredValue {
+		if (value.mapping.stringMapValue() == null || !freshManagedStringMapValueIds.remove(value.id))
+			return value;
+		final source = sourceSpan(position);
+		final ownerLocalId = createFlowLocal(value.mapping, value.id, source, role + "-owner");
+		final cleanupId = 'string-map-temporary.$ownerLocalId.release';
+		constructionCleanupActions.push({
+			id: cleanupId,
+			idempotence: IRCExactlyOnce,
+			kind: IRCARelease(IRPLocal(ownerLocalId), IRIRuntime("string-map")),
+			source: source
+		});
+		normalCleanupActionIds.push(cleanupId);
+		runtimeRequirements.push(new CBodyRuntimeRequirement("string-map", "cleanup-release", "fresh ordinary Haxe StringMap call argument lifetime", source,
+			position));
 		return loadPlace({place: IRPLocal(ownerLocalId), mapping: value.mapping, mutable: false}, position, role + "-borrow");
 	}
 
