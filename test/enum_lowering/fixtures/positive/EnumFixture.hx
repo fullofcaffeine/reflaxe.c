@@ -113,6 +113,26 @@ class EnumFixture {
 		};
 	}
 
+	/** Return one payload-capable enum while making operand evaluation observable. */
+	static function observedOption(value:Option<Int>, evaluations:Array<Int>):Option<Int> {
+		evaluations[0]++;
+		return value;
+	}
+
+	/** Compare a fieldless constructor by tag without comparing inactive payload bytes. */
+	static function optionTagEquality():Bool {
+		final empty:Option<Int> = None;
+		final present:Option<Int> = Some(4);
+		final evaluations = [0];
+		return empty == None
+			&& None == empty
+			&& present != None
+			&& None != present
+			&& observedOption(Some(5), evaluations) != None
+			&& None != observedOption(Some(6), evaluations)
+			&& evaluations[0] == 2;
+	}
+
 	/**
 		Keep payload projection behind an optimized generic-enum tag test.
 
@@ -307,6 +327,7 @@ class EnumFixture {
 			&& modeIsOn(mode)
 			&& modeEquality()
 			&& optionValue(present) == 7
+			&& optionTagEquality()
 			&& optionHasPositiveValue(present)
 			&& optionValue(absent) == 0
 			&& constructorValue() == 9

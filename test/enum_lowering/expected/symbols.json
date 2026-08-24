@@ -2590,14 +2590,14 @@
       "overloadSignature": [],
       "collisionResolved": false,
       "naming": "generated",
-      "sourceOrdinal": 108,
+      "sourceOrdinal": 110,
       "readableName": [
         "tmp",
         "array-length-result"
       ],
       "requestedName": null,
-      "cName": "hxc_l_tmp_array_length_result_n108",
-      "semanticKey": "9:temporary|84:ordinary:72:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture4:main|0:|0:|0:|3:11:EnumFixture4:main19:array-length-result|0:|0:|3:108",
+      "cName": "hxc_l_tmp_array_length_result_n110",
+      "semanticKey": "9:temporary|84:ordinary:72:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture4:main|0:|0:|0:|3:11:EnumFixture4:main19:array-length-result|0:|0:|3:110",
       "escapeReasons": [
         "non-c-identifier-byte",
         "separator-normalized"
@@ -2609,21 +2609,21 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_l_tmp_array_length_result_n108",
-      "sourceSymbol": "EnumFixture.main.array-length-result#108"
+      "baseName": "hxc_l_tmp_array_length_result_n110",
+      "sourceSymbol": "EnumFixture.main.array-length-result#110"
     },
     {
       "overloadSignature": [],
       "collisionResolved": false,
       "naming": "generated",
-      "sourceOrdinal": 111,
+      "sourceOrdinal": 113,
       "readableName": [
         "tmp",
         "array-length-result"
       ],
       "requestedName": null,
-      "cName": "hxc_l_tmp_array_length_result_n111",
-      "semanticKey": "9:temporary|84:ordinary:72:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture4:main|0:|0:|0:|3:11:EnumFixture4:main19:array-length-result|0:|0:|3:111",
+      "cName": "hxc_l_tmp_array_length_result_n113",
+      "semanticKey": "9:temporary|84:ordinary:72:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture4:main|0:|0:|0:|3:11:EnumFixture4:main19:array-length-result|0:|0:|3:113",
       "escapeReasons": [
         "non-c-identifier-byte",
         "separator-normalized"
@@ -2635,21 +2635,21 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_l_tmp_array_length_result_n111",
-      "sourceSymbol": "EnumFixture.main.array-length-result#111"
+      "baseName": "hxc_l_tmp_array_length_result_n113",
+      "sourceSymbol": "EnumFixture.main.array-length-result#113"
     },
     {
       "overloadSignature": [],
       "collisionResolved": false,
       "naming": "generated",
-      "sourceOrdinal": 114,
+      "sourceOrdinal": 116,
       "readableName": [
         "tmp",
         "array-length-result"
       ],
       "requestedName": null,
-      "cName": "hxc_l_tmp_array_length_result_n114",
-      "semanticKey": "9:temporary|84:ordinary:72:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture4:main|0:|0:|0:|3:11:EnumFixture4:main19:array-length-result|0:|0:|3:114",
+      "cName": "hxc_l_tmp_array_length_result_n116",
+      "semanticKey": "9:temporary|84:ordinary:72:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture4:main|0:|0:|0:|3:11:EnumFixture4:main19:array-length-result|0:|0:|3:116",
       "escapeReasons": [
         "non-c-identifier-byte",
         "separator-normalized"
@@ -2661,8 +2661,8 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_l_tmp_array_length_result_n114",
-      "sourceSymbol": "EnumFixture.main.array-length-result#114"
+      "baseName": "hxc_l_tmp_array_length_result_n116",
+      "sourceSymbol": "EnumFixture.main.array-length-result#116"
     },
     {
       "overloadSignature": [],
@@ -3240,6 +3240,32 @@
       "overloadSignature": [],
       "collisionResolved": false,
       "naming": "generated",
+      "sourceOrdinal": 48,
+      "readableName": [
+        "tmp",
+        "short-circuit-join"
+      ],
+      "requestedName": null,
+      "cName": "hxc_tmp_short_circuit_join_n48",
+      "semanticKey": "9:temporary|81:label:72:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture4:main|0:|0:|0:|4:11:EnumFixture4:main11:block-label18:short-circuit-join|0:|0:|2:48",
+      "escapeReasons": [
+        "non-c-identifier-byte",
+        "separator-normalized"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:EnumFixture4:main|0:|0:|0:",
+        "kind": "label"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_tmp_short_circuit_join_n48",
+      "sourceSymbol": "EnumFixture.main.block-label.short-circuit-join#48"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
       "sourceOrdinal": 6,
       "readableName": [
         "tmp",
@@ -3786,6 +3812,32 @@
       "overloadSignature": [],
       "collisionResolved": false,
       "naming": "generated",
+      "sourceOrdinal": 47,
+      "readableName": [
+        "tmp",
+        "short-circuit-rhs"
+      ],
+      "requestedName": null,
+      "cName": "hxc_tmp_short_circuit_rhs_n47",
+      "semanticKey": "9:temporary|81:label:72:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture4:main|0:|0:|0:|4:11:EnumFixture4:main11:block-label17:short-circuit-rhs|0:|0:|2:47",
+      "escapeReasons": [
+        "non-c-identifier-byte",
+        "separator-normalized"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:EnumFixture4:main|0:|0:|0:",
+        "kind": "label"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_tmp_short_circuit_rhs_n47",
+      "sourceSymbol": "EnumFixture.main.block-label.short-circuit-rhs#47"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
       "sourceOrdinal": 5,
       "readableName": [
         "tmp",
@@ -3968,14 +4020,14 @@
       "overloadSignature": [],
       "collisionResolved": false,
       "naming": "generated",
-      "sourceOrdinal": 105,
+      "sourceOrdinal": 107,
       "readableName": [
         "tmp",
         "call-result"
       ],
       "requestedName": null,
-      "cName": "hxc_l_tmp_call_result_n105",
-      "semanticKey": "9:temporary|84:ordinary:72:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture4:main|0:|0:|0:|3:11:EnumFixture4:main11:call-result|0:|0:|3:105",
+      "cName": "hxc_l_tmp_call_result_n107",
+      "semanticKey": "9:temporary|84:ordinary:72:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture4:main|0:|0:|0:|3:11:EnumFixture4:main11:call-result|0:|0:|3:107",
       "escapeReasons": [
         "non-c-identifier-byte",
         "separator-normalized"
@@ -3987,8 +4039,8 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_l_tmp_call_result_n105",
-      "sourceSymbol": "EnumFixture.main.call-result#105"
+      "baseName": "hxc_l_tmp_call_result_n107",
+      "sourceSymbol": "EnumFixture.main.call-result#107"
     },
     {
       "overloadSignature": [],
@@ -4228,14 +4280,14 @@
       "overloadSignature": [],
       "collisionResolved": false,
       "naming": "generated",
-      "sourceOrdinal": 48,
+      "sourceOrdinal": 47,
       "readableName": [
         "tmp",
         "call-result"
       ],
       "requestedName": null,
-      "cName": "hxc_l_tmp_call_result_n48",
-      "semanticKey": "9:temporary|84:ordinary:72:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture4:main|0:|0:|0:|3:11:EnumFixture4:main11:call-result|0:|0:|2:48",
+      "cName": "hxc_l_tmp_call_result_n47",
+      "semanticKey": "9:temporary|84:ordinary:72:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture4:main|0:|0:|0:|3:11:EnumFixture4:main11:call-result|0:|0:|2:47",
       "escapeReasons": [
         "non-c-identifier-byte",
         "separator-normalized"
@@ -4247,21 +4299,21 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_l_tmp_call_result_n48",
-      "sourceSymbol": "EnumFixture.main.call-result#48"
+      "baseName": "hxc_l_tmp_call_result_n47",
+      "sourceSymbol": "EnumFixture.main.call-result#47"
     },
     {
       "overloadSignature": [],
       "collisionResolved": false,
       "naming": "generated",
-      "sourceOrdinal": 51,
+      "sourceOrdinal": 50,
       "readableName": [
         "tmp",
         "call-result"
       ],
       "requestedName": null,
-      "cName": "hxc_l_tmp_call_result_n51",
-      "semanticKey": "9:temporary|84:ordinary:72:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture4:main|0:|0:|0:|3:11:EnumFixture4:main11:call-result|0:|0:|2:51",
+      "cName": "hxc_l_tmp_call_result_n50",
+      "semanticKey": "9:temporary|84:ordinary:72:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture4:main|0:|0:|0:|3:11:EnumFixture4:main11:call-result|0:|0:|2:50",
       "escapeReasons": [
         "non-c-identifier-byte",
         "separator-normalized"
@@ -4273,8 +4325,8 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_l_tmp_call_result_n51",
-      "sourceSymbol": "EnumFixture.main.call-result#51"
+      "baseName": "hxc_l_tmp_call_result_n50",
+      "sourceSymbol": "EnumFixture.main.call-result#50"
     },
     {
       "overloadSignature": [],
@@ -4306,14 +4358,14 @@
       "overloadSignature": [],
       "collisionResolved": false,
       "naming": "generated",
-      "sourceOrdinal": 56,
+      "sourceOrdinal": 55,
       "readableName": [
         "tmp",
         "call-result"
       ],
       "requestedName": null,
-      "cName": "hxc_l_tmp_call_result_n56",
-      "semanticKey": "9:temporary|84:ordinary:72:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture4:main|0:|0:|0:|3:11:EnumFixture4:main11:call-result|0:|0:|2:56",
+      "cName": "hxc_l_tmp_call_result_n55",
+      "semanticKey": "9:temporary|84:ordinary:72:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture4:main|0:|0:|0:|3:11:EnumFixture4:main11:call-result|0:|0:|2:55",
       "escapeReasons": [
         "non-c-identifier-byte",
         "separator-normalized"
@@ -4325,21 +4377,21 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_l_tmp_call_result_n56",
-      "sourceSymbol": "EnumFixture.main.call-result#56"
+      "baseName": "hxc_l_tmp_call_result_n55",
+      "sourceSymbol": "EnumFixture.main.call-result#55"
     },
     {
       "overloadSignature": [],
       "collisionResolved": false,
       "naming": "generated",
-      "sourceOrdinal": 59,
+      "sourceOrdinal": 58,
       "readableName": [
         "tmp",
         "call-result"
       ],
       "requestedName": null,
-      "cName": "hxc_l_tmp_call_result_n59",
-      "semanticKey": "9:temporary|84:ordinary:72:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture4:main|0:|0:|0:|3:11:EnumFixture4:main11:call-result|0:|0:|2:59",
+      "cName": "hxc_l_tmp_call_result_n58",
+      "semanticKey": "9:temporary|84:ordinary:72:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture4:main|0:|0:|0:|3:11:EnumFixture4:main11:call-result|0:|0:|2:58",
       "escapeReasons": [
         "non-c-identifier-byte",
         "separator-normalized"
@@ -4351,21 +4403,21 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_l_tmp_call_result_n59",
-      "sourceSymbol": "EnumFixture.main.call-result#59"
+      "baseName": "hxc_l_tmp_call_result_n58",
+      "sourceSymbol": "EnumFixture.main.call-result#58"
     },
     {
       "overloadSignature": [],
       "collisionResolved": false,
       "naming": "generated",
-      "sourceOrdinal": 63,
+      "sourceOrdinal": 61,
       "readableName": [
         "tmp",
         "call-result"
       ],
       "requestedName": null,
-      "cName": "hxc_l_tmp_call_result_n63",
-      "semanticKey": "9:temporary|84:ordinary:72:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture4:main|0:|0:|0:|3:11:EnumFixture4:main11:call-result|0:|0:|2:63",
+      "cName": "hxc_l_tmp_call_result_n61",
+      "semanticKey": "9:temporary|84:ordinary:72:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture4:main|0:|0:|0:|3:11:EnumFixture4:main11:call-result|0:|0:|2:61",
       "escapeReasons": [
         "non-c-identifier-byte",
         "separator-normalized"
@@ -4377,21 +4429,21 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_l_tmp_call_result_n63",
-      "sourceSymbol": "EnumFixture.main.call-result#63"
+      "baseName": "hxc_l_tmp_call_result_n61",
+      "sourceSymbol": "EnumFixture.main.call-result#61"
     },
     {
       "overloadSignature": [],
       "collisionResolved": false,
       "naming": "generated",
-      "sourceOrdinal": 67,
+      "sourceOrdinal": 65,
       "readableName": [
         "tmp",
         "call-result"
       ],
       "requestedName": null,
-      "cName": "hxc_l_tmp_call_result_n67",
-      "semanticKey": "9:temporary|84:ordinary:72:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture4:main|0:|0:|0:|3:11:EnumFixture4:main11:call-result|0:|0:|2:67",
+      "cName": "hxc_l_tmp_call_result_n65",
+      "semanticKey": "9:temporary|84:ordinary:72:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture4:main|0:|0:|0:|3:11:EnumFixture4:main11:call-result|0:|0:|2:65",
       "escapeReasons": [
         "non-c-identifier-byte",
         "separator-normalized"
@@ -4403,21 +4455,21 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_l_tmp_call_result_n67",
-      "sourceSymbol": "EnumFixture.main.call-result#67"
+      "baseName": "hxc_l_tmp_call_result_n65",
+      "sourceSymbol": "EnumFixture.main.call-result#65"
     },
     {
       "overloadSignature": [],
       "collisionResolved": false,
       "naming": "generated",
-      "sourceOrdinal": 71,
+      "sourceOrdinal": 69,
       "readableName": [
         "tmp",
         "call-result"
       ],
       "requestedName": null,
-      "cName": "hxc_l_tmp_call_result_n71",
-      "semanticKey": "9:temporary|84:ordinary:72:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture4:main|0:|0:|0:|3:11:EnumFixture4:main11:call-result|0:|0:|2:71",
+      "cName": "hxc_l_tmp_call_result_n69",
+      "semanticKey": "9:temporary|84:ordinary:72:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture4:main|0:|0:|0:|3:11:EnumFixture4:main11:call-result|0:|0:|2:69",
       "escapeReasons": [
         "non-c-identifier-byte",
         "separator-normalized"
@@ -4429,21 +4481,21 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_l_tmp_call_result_n71",
-      "sourceSymbol": "EnumFixture.main.call-result#71"
+      "baseName": "hxc_l_tmp_call_result_n69",
+      "sourceSymbol": "EnumFixture.main.call-result#69"
     },
     {
       "overloadSignature": [],
       "collisionResolved": false,
       "naming": "generated",
-      "sourceOrdinal": 74,
+      "sourceOrdinal": 73,
       "readableName": [
         "tmp",
         "call-result"
       ],
       "requestedName": null,
-      "cName": "hxc_l_tmp_call_result_n74",
-      "semanticKey": "9:temporary|84:ordinary:72:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture4:main|0:|0:|0:|3:11:EnumFixture4:main11:call-result|0:|0:|2:74",
+      "cName": "hxc_l_tmp_call_result_n73",
+      "semanticKey": "9:temporary|84:ordinary:72:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture4:main|0:|0:|0:|3:11:EnumFixture4:main11:call-result|0:|0:|2:73",
       "escapeReasons": [
         "non-c-identifier-byte",
         "separator-normalized"
@@ -4455,21 +4507,21 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_l_tmp_call_result_n74",
-      "sourceSymbol": "EnumFixture.main.call-result#74"
+      "baseName": "hxc_l_tmp_call_result_n73",
+      "sourceSymbol": "EnumFixture.main.call-result#73"
     },
     {
       "overloadSignature": [],
       "collisionResolved": false,
       "naming": "generated",
-      "sourceOrdinal": 75,
+      "sourceOrdinal": 76,
       "readableName": [
         "tmp",
         "call-result"
       ],
       "requestedName": null,
-      "cName": "hxc_l_tmp_call_result_n75",
-      "semanticKey": "9:temporary|84:ordinary:72:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture4:main|0:|0:|0:|3:11:EnumFixture4:main11:call-result|0:|0:|2:75",
+      "cName": "hxc_l_tmp_call_result_n76",
+      "semanticKey": "9:temporary|84:ordinary:72:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture4:main|0:|0:|0:|3:11:EnumFixture4:main11:call-result|0:|0:|2:76",
       "escapeReasons": [
         "non-c-identifier-byte",
         "separator-normalized"
@@ -4481,21 +4533,21 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_l_tmp_call_result_n75",
-      "sourceSymbol": "EnumFixture.main.call-result#75"
+      "baseName": "hxc_l_tmp_call_result_n76",
+      "sourceSymbol": "EnumFixture.main.call-result#76"
     },
     {
       "overloadSignature": [],
       "collisionResolved": false,
       "naming": "generated",
-      "sourceOrdinal": 78,
+      "sourceOrdinal": 77,
       "readableName": [
         "tmp",
         "call-result"
       ],
       "requestedName": null,
-      "cName": "hxc_l_tmp_call_result_n78",
-      "semanticKey": "9:temporary|84:ordinary:72:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture4:main|0:|0:|0:|3:11:EnumFixture4:main11:call-result|0:|0:|2:78",
+      "cName": "hxc_l_tmp_call_result_n77",
+      "semanticKey": "9:temporary|84:ordinary:72:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture4:main|0:|0:|0:|3:11:EnumFixture4:main11:call-result|0:|0:|2:77",
       "escapeReasons": [
         "non-c-identifier-byte",
         "separator-normalized"
@@ -4507,21 +4559,21 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_l_tmp_call_result_n78",
-      "sourceSymbol": "EnumFixture.main.call-result#78"
+      "baseName": "hxc_l_tmp_call_result_n77",
+      "sourceSymbol": "EnumFixture.main.call-result#77"
     },
     {
       "overloadSignature": [],
       "collisionResolved": false,
       "naming": "generated",
-      "sourceOrdinal": 79,
+      "sourceOrdinal": 80,
       "readableName": [
         "tmp",
         "call-result"
       ],
       "requestedName": null,
-      "cName": "hxc_l_tmp_call_result_n79",
-      "semanticKey": "9:temporary|84:ordinary:72:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture4:main|0:|0:|0:|3:11:EnumFixture4:main11:call-result|0:|0:|2:79",
+      "cName": "hxc_l_tmp_call_result_n80",
+      "semanticKey": "9:temporary|84:ordinary:72:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture4:main|0:|0:|0:|3:11:EnumFixture4:main11:call-result|0:|0:|2:80",
       "escapeReasons": [
         "non-c-identifier-byte",
         "separator-normalized"
@@ -4533,8 +4585,8 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_l_tmp_call_result_n79",
-      "sourceSymbol": "EnumFixture.main.call-result#79"
+      "baseName": "hxc_l_tmp_call_result_n80",
+      "sourceSymbol": "EnumFixture.main.call-result#80"
     },
     {
       "overloadSignature": [],
@@ -4566,14 +4618,14 @@
       "overloadSignature": [],
       "collisionResolved": false,
       "naming": "generated",
-      "sourceOrdinal": 84,
+      "sourceOrdinal": 83,
       "readableName": [
         "tmp",
         "call-result"
       ],
       "requestedName": null,
-      "cName": "hxc_l_tmp_call_result_n84",
-      "semanticKey": "9:temporary|84:ordinary:72:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture4:main|0:|0:|0:|3:11:EnumFixture4:main11:call-result|0:|0:|2:84",
+      "cName": "hxc_l_tmp_call_result_n83",
+      "semanticKey": "9:temporary|84:ordinary:72:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture4:main|0:|0:|0:|3:11:EnumFixture4:main11:call-result|0:|0:|2:83",
       "escapeReasons": [
         "non-c-identifier-byte",
         "separator-normalized"
@@ -4585,21 +4637,21 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_l_tmp_call_result_n84",
-      "sourceSymbol": "EnumFixture.main.call-result#84"
+      "baseName": "hxc_l_tmp_call_result_n83",
+      "sourceSymbol": "EnumFixture.main.call-result#83"
     },
     {
       "overloadSignature": [],
       "collisionResolved": false,
       "naming": "generated",
-      "sourceOrdinal": 87,
+      "sourceOrdinal": 86,
       "readableName": [
         "tmp",
         "call-result"
       ],
       "requestedName": null,
-      "cName": "hxc_l_tmp_call_result_n87",
-      "semanticKey": "9:temporary|84:ordinary:72:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture4:main|0:|0:|0:|3:11:EnumFixture4:main11:call-result|0:|0:|2:87",
+      "cName": "hxc_l_tmp_call_result_n86",
+      "semanticKey": "9:temporary|84:ordinary:72:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture4:main|0:|0:|0:|3:11:EnumFixture4:main11:call-result|0:|0:|2:86",
       "escapeReasons": [
         "non-c-identifier-byte",
         "separator-normalized"
@@ -4611,21 +4663,21 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_l_tmp_call_result_n87",
-      "sourceSymbol": "EnumFixture.main.call-result#87"
+      "baseName": "hxc_l_tmp_call_result_n86",
+      "sourceSymbol": "EnumFixture.main.call-result#86"
     },
     {
       "overloadSignature": [],
       "collisionResolved": false,
       "naming": "generated",
-      "sourceOrdinal": 90,
+      "sourceOrdinal": 89,
       "readableName": [
         "tmp",
         "call-result"
       ],
       "requestedName": null,
-      "cName": "hxc_l_tmp_call_result_n90",
-      "semanticKey": "9:temporary|84:ordinary:72:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture4:main|0:|0:|0:|3:11:EnumFixture4:main11:call-result|0:|0:|2:90",
+      "cName": "hxc_l_tmp_call_result_n89",
+      "semanticKey": "9:temporary|84:ordinary:72:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture4:main|0:|0:|0:|3:11:EnumFixture4:main11:call-result|0:|0:|2:89",
       "escapeReasons": [
         "non-c-identifier-byte",
         "separator-normalized"
@@ -4637,21 +4689,21 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_l_tmp_call_result_n90",
-      "sourceSymbol": "EnumFixture.main.call-result#90"
+      "baseName": "hxc_l_tmp_call_result_n89",
+      "sourceSymbol": "EnumFixture.main.call-result#89"
     },
     {
       "overloadSignature": [],
       "collisionResolved": false,
       "naming": "generated",
-      "sourceOrdinal": 93,
+      "sourceOrdinal": 92,
       "readableName": [
         "tmp",
         "call-result"
       ],
       "requestedName": null,
-      "cName": "hxc_l_tmp_call_result_n93",
-      "semanticKey": "9:temporary|84:ordinary:72:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture4:main|0:|0:|0:|3:11:EnumFixture4:main11:call-result|0:|0:|2:93",
+      "cName": "hxc_l_tmp_call_result_n92",
+      "semanticKey": "9:temporary|84:ordinary:72:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture4:main|0:|0:|0:|3:11:EnumFixture4:main11:call-result|0:|0:|2:92",
       "escapeReasons": [
         "non-c-identifier-byte",
         "separator-normalized"
@@ -4663,8 +4715,34 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_l_tmp_call_result_n93",
-      "sourceSymbol": "EnumFixture.main.call-result#93"
+      "baseName": "hxc_l_tmp_call_result_n92",
+      "sourceSymbol": "EnumFixture.main.call-result#92"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 95,
+      "readableName": [
+        "tmp",
+        "call-result"
+      ],
+      "requestedName": null,
+      "cName": "hxc_l_tmp_call_result_n95",
+      "semanticKey": "9:temporary|84:ordinary:72:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture4:main|0:|0:|0:|3:11:EnumFixture4:main11:call-result|0:|0:|2:95",
+      "escapeReasons": [
+        "non-c-identifier-byte",
+        "separator-normalized"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:EnumFixture4:main|0:|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_l_tmp_call_result_n95",
+      "sourceSymbol": "EnumFixture.main.call-result#95"
     },
     {
       "overloadSignature": [],
@@ -4762,14 +4840,14 @@
       "overloadSignature": [],
       "collisionResolved": false,
       "naming": "generated",
-      "sourceOrdinal": 38,
+      "sourceOrdinal": 39,
       "readableName": [
         "tmp",
         "enum-payload-0-owner"
       ],
       "requestedName": null,
-      "cName": "hxc_l_tmp_enum_payload_0_owner_n38",
-      "semanticKey": "9:temporary|84:ordinary:72:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture4:main|0:|0:|0:|3:11:EnumFixture4:main20:enum-payload-0-owner|0:|0:|2:38",
+      "cName": "hxc_l_tmp_enum_payload_0_owner_n39",
+      "semanticKey": "9:temporary|84:ordinary:72:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture4:main|0:|0:|0:|3:11:EnumFixture4:main20:enum-payload-0-owner|0:|0:|2:39",
       "escapeReasons": [
         "non-c-identifier-byte",
         "separator-normalized"
@@ -4781,8 +4859,8 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_l_tmp_enum_payload_0_owner_n38",
-      "sourceSymbol": "EnumFixture.main.enum-payload-0-owner#38"
+      "baseName": "hxc_l_tmp_enum_payload_0_owner_n39",
+      "sourceSymbol": "EnumFixture.main.enum-payload-0-owner#39"
     },
     {
       "overloadSignature": [],
@@ -4840,14 +4918,14 @@
       "overloadSignature": [],
       "collisionResolved": false,
       "naming": "generated",
-      "sourceOrdinal": 96,
+      "sourceOrdinal": 98,
       "readableName": [
         "tmp",
         "enum-recursive-payload-owner"
       ],
       "requestedName": null,
-      "cName": "hxc_l_tmp_enum_recursive_payload_owner_n96",
-      "semanticKey": "9:temporary|84:ordinary:72:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture4:main|0:|0:|0:|3:11:EnumFixture4:main28:enum-recursive-payload-owner|0:|0:|2:96",
+      "cName": "hxc_l_tmp_enum_recursive_payload_owner_n98",
+      "semanticKey": "9:temporary|84:ordinary:72:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture4:main|0:|0:|0:|3:11:EnumFixture4:main28:enum-recursive-payload-owner|0:|0:|2:98",
       "escapeReasons": [
         "non-c-identifier-byte",
         "separator-normalized"
@@ -4859,8 +4937,8 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_l_tmp_enum_recursive_payload_owner_n96",
-      "sourceSymbol": "EnumFixture.main.enum-recursive-payload-owner#96"
+      "baseName": "hxc_l_tmp_enum_recursive_payload_owner_n98",
+      "sourceSymbol": "EnumFixture.main.enum-recursive-payload-owner#98"
     },
     {
       "overloadSignature": [],
@@ -4932,14 +5010,14 @@
       "overloadSignature": [],
       "collisionResolved": false,
       "naming": "generated",
-      "sourceOrdinal": 103,
+      "sourceOrdinal": 105,
       "readableName": [
         "tmp",
         "load-result"
       ],
       "requestedName": null,
-      "cName": "hxc_l_tmp_load_result_n103",
-      "semanticKey": "9:temporary|84:ordinary:72:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture4:main|0:|0:|0:|3:11:EnumFixture4:main11:load-result|0:|0:|3:103",
+      "cName": "hxc_l_tmp_load_result_n105",
+      "semanticKey": "9:temporary|84:ordinary:72:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture4:main|0:|0:|0:|3:11:EnumFixture4:main11:load-result|0:|0:|3:105",
       "escapeReasons": [
         "non-c-identifier-byte",
         "separator-normalized"
@@ -4951,8 +5029,8 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_l_tmp_load_result_n103",
-      "sourceSymbol": "EnumFixture.main.load-result#103"
+      "baseName": "hxc_l_tmp_load_result_n105",
+      "sourceSymbol": "EnumFixture.main.load-result#105"
     },
     {
       "overloadSignature": [],
@@ -5146,14 +5224,14 @@
       "overloadSignature": [],
       "collisionResolved": false,
       "naming": "generated",
-      "sourceOrdinal": 106,
+      "sourceOrdinal": 108,
       "readableName": [
         "tmp",
         "short-circuit-load-result"
       ],
       "requestedName": null,
-      "cName": "hxc_l_tmp_short_circuit_load_result_n106",
-      "semanticKey": "9:temporary|84:ordinary:72:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture4:main|0:|0:|0:|3:11:EnumFixture4:main25:short-circuit-load-result|0:|0:|3:106",
+      "cName": "hxc_l_tmp_short_circuit_load_result_n108",
+      "semanticKey": "9:temporary|84:ordinary:72:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture4:main|0:|0:|0:|3:11:EnumFixture4:main25:short-circuit-load-result|0:|0:|3:108",
       "escapeReasons": [
         "non-c-identifier-byte",
         "separator-normalized"
@@ -5165,21 +5243,21 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_l_tmp_short_circuit_load_result_n106",
-      "sourceSymbol": "EnumFixture.main.short-circuit-load-result#106"
+      "baseName": "hxc_l_tmp_short_circuit_load_result_n108",
+      "sourceSymbol": "EnumFixture.main.short-circuit-load-result#108"
     },
     {
       "overloadSignature": [],
       "collisionResolved": false,
       "naming": "generated",
-      "sourceOrdinal": 109,
+      "sourceOrdinal": 111,
       "readableName": [
         "tmp",
         "short-circuit-load-result"
       ],
       "requestedName": null,
-      "cName": "hxc_l_tmp_short_circuit_load_result_n109",
-      "semanticKey": "9:temporary|84:ordinary:72:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture4:main|0:|0:|0:|3:11:EnumFixture4:main25:short-circuit-load-result|0:|0:|3:109",
+      "cName": "hxc_l_tmp_short_circuit_load_result_n111",
+      "semanticKey": "9:temporary|84:ordinary:72:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture4:main|0:|0:|0:|3:11:EnumFixture4:main25:short-circuit-load-result|0:|0:|3:111",
       "escapeReasons": [
         "non-c-identifier-byte",
         "separator-normalized"
@@ -5191,21 +5269,21 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_l_tmp_short_circuit_load_result_n109",
-      "sourceSymbol": "EnumFixture.main.short-circuit-load-result#109"
+      "baseName": "hxc_l_tmp_short_circuit_load_result_n111",
+      "sourceSymbol": "EnumFixture.main.short-circuit-load-result#111"
     },
     {
       "overloadSignature": [],
       "collisionResolved": false,
       "naming": "generated",
-      "sourceOrdinal": 112,
+      "sourceOrdinal": 114,
       "readableName": [
         "tmp",
         "short-circuit-load-result"
       ],
       "requestedName": null,
-      "cName": "hxc_l_tmp_short_circuit_load_result_n112",
-      "semanticKey": "9:temporary|84:ordinary:72:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture4:main|0:|0:|0:|3:11:EnumFixture4:main25:short-circuit-load-result|0:|0:|3:112",
+      "cName": "hxc_l_tmp_short_circuit_load_result_n114",
+      "semanticKey": "9:temporary|84:ordinary:72:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture4:main|0:|0:|0:|3:11:EnumFixture4:main25:short-circuit-load-result|0:|0:|3:114",
       "escapeReasons": [
         "non-c-identifier-byte",
         "separator-normalized"
@@ -5217,8 +5295,8 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_l_tmp_short_circuit_load_result_n112",
-      "sourceSymbol": "EnumFixture.main.short-circuit-load-result#112"
+      "baseName": "hxc_l_tmp_short_circuit_load_result_n114",
+      "sourceSymbol": "EnumFixture.main.short-circuit-load-result#114"
     },
     {
       "overloadSignature": [],
@@ -5302,14 +5380,14 @@
       "overloadSignature": [],
       "collisionResolved": false,
       "naming": "generated",
-      "sourceOrdinal": 49,
+      "sourceOrdinal": 48,
       "readableName": [
         "tmp",
         "short-circuit-load-result"
       ],
       "requestedName": null,
-      "cName": "hxc_l_tmp_short_circuit_load_result_n49",
-      "semanticKey": "9:temporary|84:ordinary:72:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture4:main|0:|0:|0:|3:11:EnumFixture4:main25:short-circuit-load-result|0:|0:|2:49",
+      "cName": "hxc_l_tmp_short_circuit_load_result_n48",
+      "semanticKey": "9:temporary|84:ordinary:72:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture4:main|0:|0:|0:|3:11:EnumFixture4:main25:short-circuit-load-result|0:|0:|2:48",
       "escapeReasons": [
         "non-c-identifier-byte",
         "separator-normalized"
@@ -5321,21 +5399,21 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_l_tmp_short_circuit_load_result_n49",
-      "sourceSymbol": "EnumFixture.main.short-circuit-load-result#49"
+      "baseName": "hxc_l_tmp_short_circuit_load_result_n48",
+      "sourceSymbol": "EnumFixture.main.short-circuit-load-result#48"
     },
     {
       "overloadSignature": [],
       "collisionResolved": false,
       "naming": "generated",
-      "sourceOrdinal": 52,
+      "sourceOrdinal": 51,
       "readableName": [
         "tmp",
         "short-circuit-load-result"
       ],
       "requestedName": null,
-      "cName": "hxc_l_tmp_short_circuit_load_result_n52",
-      "semanticKey": "9:temporary|84:ordinary:72:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture4:main|0:|0:|0:|3:11:EnumFixture4:main25:short-circuit-load-result|0:|0:|2:52",
+      "cName": "hxc_l_tmp_short_circuit_load_result_n51",
+      "semanticKey": "9:temporary|84:ordinary:72:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture4:main|0:|0:|0:|3:11:EnumFixture4:main25:short-circuit-load-result|0:|0:|2:51",
       "escapeReasons": [
         "non-c-identifier-byte",
         "separator-normalized"
@@ -5347,8 +5425,8 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_l_tmp_short_circuit_load_result_n52",
-      "sourceSymbol": "EnumFixture.main.short-circuit-load-result#52"
+      "baseName": "hxc_l_tmp_short_circuit_load_result_n51",
+      "sourceSymbol": "EnumFixture.main.short-circuit-load-result#51"
     },
     {
       "overloadSignature": [],
@@ -5380,14 +5458,14 @@
       "overloadSignature": [],
       "collisionResolved": false,
       "naming": "generated",
-      "sourceOrdinal": 57,
+      "sourceOrdinal": 56,
       "readableName": [
         "tmp",
         "short-circuit-load-result"
       ],
       "requestedName": null,
-      "cName": "hxc_l_tmp_short_circuit_load_result_n57",
-      "semanticKey": "9:temporary|84:ordinary:72:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture4:main|0:|0:|0:|3:11:EnumFixture4:main25:short-circuit-load-result|0:|0:|2:57",
+      "cName": "hxc_l_tmp_short_circuit_load_result_n56",
+      "semanticKey": "9:temporary|84:ordinary:72:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture4:main|0:|0:|0:|3:11:EnumFixture4:main25:short-circuit-load-result|0:|0:|2:56",
       "escapeReasons": [
         "non-c-identifier-byte",
         "separator-normalized"
@@ -5399,21 +5477,21 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_l_tmp_short_circuit_load_result_n57",
-      "sourceSymbol": "EnumFixture.main.short-circuit-load-result#57"
+      "baseName": "hxc_l_tmp_short_circuit_load_result_n56",
+      "sourceSymbol": "EnumFixture.main.short-circuit-load-result#56"
     },
     {
       "overloadSignature": [],
       "collisionResolved": false,
       "naming": "generated",
-      "sourceOrdinal": 60,
+      "sourceOrdinal": 59,
       "readableName": [
         "tmp",
         "short-circuit-load-result"
       ],
       "requestedName": null,
-      "cName": "hxc_l_tmp_short_circuit_load_result_n60",
-      "semanticKey": "9:temporary|84:ordinary:72:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture4:main|0:|0:|0:|3:11:EnumFixture4:main25:short-circuit-load-result|0:|0:|2:60",
+      "cName": "hxc_l_tmp_short_circuit_load_result_n59",
+      "semanticKey": "9:temporary|84:ordinary:72:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture4:main|0:|0:|0:|3:11:EnumFixture4:main25:short-circuit-load-result|0:|0:|2:59",
       "escapeReasons": [
         "non-c-identifier-byte",
         "separator-normalized"
@@ -5425,21 +5503,21 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_l_tmp_short_circuit_load_result_n60",
-      "sourceSymbol": "EnumFixture.main.short-circuit-load-result#60"
+      "baseName": "hxc_l_tmp_short_circuit_load_result_n59",
+      "sourceSymbol": "EnumFixture.main.short-circuit-load-result#59"
     },
     {
       "overloadSignature": [],
       "collisionResolved": false,
       "naming": "generated",
-      "sourceOrdinal": 64,
+      "sourceOrdinal": 62,
       "readableName": [
         "tmp",
         "short-circuit-load-result"
       ],
       "requestedName": null,
-      "cName": "hxc_l_tmp_short_circuit_load_result_n64",
-      "semanticKey": "9:temporary|84:ordinary:72:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture4:main|0:|0:|0:|3:11:EnumFixture4:main25:short-circuit-load-result|0:|0:|2:64",
+      "cName": "hxc_l_tmp_short_circuit_load_result_n62",
+      "semanticKey": "9:temporary|84:ordinary:72:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture4:main|0:|0:|0:|3:11:EnumFixture4:main25:short-circuit-load-result|0:|0:|2:62",
       "escapeReasons": [
         "non-c-identifier-byte",
         "separator-normalized"
@@ -5451,21 +5529,21 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_l_tmp_short_circuit_load_result_n64",
-      "sourceSymbol": "EnumFixture.main.short-circuit-load-result#64"
+      "baseName": "hxc_l_tmp_short_circuit_load_result_n62",
+      "sourceSymbol": "EnumFixture.main.short-circuit-load-result#62"
     },
     {
       "overloadSignature": [],
       "collisionResolved": false,
       "naming": "generated",
-      "sourceOrdinal": 68,
+      "sourceOrdinal": 66,
       "readableName": [
         "tmp",
         "short-circuit-load-result"
       ],
       "requestedName": null,
-      "cName": "hxc_l_tmp_short_circuit_load_result_n68",
-      "semanticKey": "9:temporary|84:ordinary:72:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture4:main|0:|0:|0:|3:11:EnumFixture4:main25:short-circuit-load-result|0:|0:|2:68",
+      "cName": "hxc_l_tmp_short_circuit_load_result_n66",
+      "semanticKey": "9:temporary|84:ordinary:72:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture4:main|0:|0:|0:|3:11:EnumFixture4:main25:short-circuit-load-result|0:|0:|2:66",
       "escapeReasons": [
         "non-c-identifier-byte",
         "separator-normalized"
@@ -5477,21 +5555,21 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_l_tmp_short_circuit_load_result_n68",
-      "sourceSymbol": "EnumFixture.main.short-circuit-load-result#68"
+      "baseName": "hxc_l_tmp_short_circuit_load_result_n66",
+      "sourceSymbol": "EnumFixture.main.short-circuit-load-result#66"
     },
     {
       "overloadSignature": [],
       "collisionResolved": false,
       "naming": "generated",
-      "sourceOrdinal": 72,
+      "sourceOrdinal": 70,
       "readableName": [
         "tmp",
         "short-circuit-load-result"
       ],
       "requestedName": null,
-      "cName": "hxc_l_tmp_short_circuit_load_result_n72",
-      "semanticKey": "9:temporary|84:ordinary:72:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture4:main|0:|0:|0:|3:11:EnumFixture4:main25:short-circuit-load-result|0:|0:|2:72",
+      "cName": "hxc_l_tmp_short_circuit_load_result_n70",
+      "semanticKey": "9:temporary|84:ordinary:72:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture4:main|0:|0:|0:|3:11:EnumFixture4:main25:short-circuit-load-result|0:|0:|2:70",
       "escapeReasons": [
         "non-c-identifier-byte",
         "separator-normalized"
@@ -5503,21 +5581,21 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_l_tmp_short_circuit_load_result_n72",
-      "sourceSymbol": "EnumFixture.main.short-circuit-load-result#72"
+      "baseName": "hxc_l_tmp_short_circuit_load_result_n70",
+      "sourceSymbol": "EnumFixture.main.short-circuit-load-result#70"
     },
     {
       "overloadSignature": [],
       "collisionResolved": false,
       "naming": "generated",
-      "sourceOrdinal": 76,
+      "sourceOrdinal": 74,
       "readableName": [
         "tmp",
         "short-circuit-load-result"
       ],
       "requestedName": null,
-      "cName": "hxc_l_tmp_short_circuit_load_result_n76",
-      "semanticKey": "9:temporary|84:ordinary:72:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture4:main|0:|0:|0:|3:11:EnumFixture4:main25:short-circuit-load-result|0:|0:|2:76",
+      "cName": "hxc_l_tmp_short_circuit_load_result_n74",
+      "semanticKey": "9:temporary|84:ordinary:72:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture4:main|0:|0:|0:|3:11:EnumFixture4:main25:short-circuit-load-result|0:|0:|2:74",
       "escapeReasons": [
         "non-c-identifier-byte",
         "separator-normalized"
@@ -5529,21 +5607,21 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_l_tmp_short_circuit_load_result_n76",
-      "sourceSymbol": "EnumFixture.main.short-circuit-load-result#76"
+      "baseName": "hxc_l_tmp_short_circuit_load_result_n74",
+      "sourceSymbol": "EnumFixture.main.short-circuit-load-result#74"
     },
     {
       "overloadSignature": [],
       "collisionResolved": false,
       "naming": "generated",
-      "sourceOrdinal": 80,
+      "sourceOrdinal": 78,
       "readableName": [
         "tmp",
         "short-circuit-load-result"
       ],
       "requestedName": null,
-      "cName": "hxc_l_tmp_short_circuit_load_result_n80",
-      "semanticKey": "9:temporary|84:ordinary:72:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture4:main|0:|0:|0:|3:11:EnumFixture4:main25:short-circuit-load-result|0:|0:|2:80",
+      "cName": "hxc_l_tmp_short_circuit_load_result_n78",
+      "semanticKey": "9:temporary|84:ordinary:72:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture4:main|0:|0:|0:|3:11:EnumFixture4:main25:short-circuit-load-result|0:|0:|2:78",
       "escapeReasons": [
         "non-c-identifier-byte",
         "separator-normalized"
@@ -5555,8 +5633,8 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_l_tmp_short_circuit_load_result_n80",
-      "sourceSymbol": "EnumFixture.main.short-circuit-load-result#80"
+      "baseName": "hxc_l_tmp_short_circuit_load_result_n78",
+      "sourceSymbol": "EnumFixture.main.short-circuit-load-result#78"
     },
     {
       "overloadSignature": [],
@@ -5588,14 +5666,14 @@
       "overloadSignature": [],
       "collisionResolved": false,
       "naming": "generated",
-      "sourceOrdinal": 85,
+      "sourceOrdinal": 84,
       "readableName": [
         "tmp",
         "short-circuit-load-result"
       ],
       "requestedName": null,
-      "cName": "hxc_l_tmp_short_circuit_load_result_n85",
-      "semanticKey": "9:temporary|84:ordinary:72:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture4:main|0:|0:|0:|3:11:EnumFixture4:main25:short-circuit-load-result|0:|0:|2:85",
+      "cName": "hxc_l_tmp_short_circuit_load_result_n84",
+      "semanticKey": "9:temporary|84:ordinary:72:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture4:main|0:|0:|0:|3:11:EnumFixture4:main25:short-circuit-load-result|0:|0:|2:84",
       "escapeReasons": [
         "non-c-identifier-byte",
         "separator-normalized"
@@ -5607,21 +5685,21 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_l_tmp_short_circuit_load_result_n85",
-      "sourceSymbol": "EnumFixture.main.short-circuit-load-result#85"
+      "baseName": "hxc_l_tmp_short_circuit_load_result_n84",
+      "sourceSymbol": "EnumFixture.main.short-circuit-load-result#84"
     },
     {
       "overloadSignature": [],
       "collisionResolved": false,
       "naming": "generated",
-      "sourceOrdinal": 88,
+      "sourceOrdinal": 87,
       "readableName": [
         "tmp",
         "short-circuit-load-result"
       ],
       "requestedName": null,
-      "cName": "hxc_l_tmp_short_circuit_load_result_n88",
-      "semanticKey": "9:temporary|84:ordinary:72:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture4:main|0:|0:|0:|3:11:EnumFixture4:main25:short-circuit-load-result|0:|0:|2:88",
+      "cName": "hxc_l_tmp_short_circuit_load_result_n87",
+      "semanticKey": "9:temporary|84:ordinary:72:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture4:main|0:|0:|0:|3:11:EnumFixture4:main25:short-circuit-load-result|0:|0:|2:87",
       "escapeReasons": [
         "non-c-identifier-byte",
         "separator-normalized"
@@ -5633,21 +5711,21 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_l_tmp_short_circuit_load_result_n88",
-      "sourceSymbol": "EnumFixture.main.short-circuit-load-result#88"
+      "baseName": "hxc_l_tmp_short_circuit_load_result_n87",
+      "sourceSymbol": "EnumFixture.main.short-circuit-load-result#87"
     },
     {
       "overloadSignature": [],
       "collisionResolved": false,
       "naming": "generated",
-      "sourceOrdinal": 91,
+      "sourceOrdinal": 90,
       "readableName": [
         "tmp",
         "short-circuit-load-result"
       ],
       "requestedName": null,
-      "cName": "hxc_l_tmp_short_circuit_load_result_n91",
-      "semanticKey": "9:temporary|84:ordinary:72:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture4:main|0:|0:|0:|3:11:EnumFixture4:main25:short-circuit-load-result|0:|0:|2:91",
+      "cName": "hxc_l_tmp_short_circuit_load_result_n90",
+      "semanticKey": "9:temporary|84:ordinary:72:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture4:main|0:|0:|0:|3:11:EnumFixture4:main25:short-circuit-load-result|0:|0:|2:90",
       "escapeReasons": [
         "non-c-identifier-byte",
         "separator-normalized"
@@ -5659,21 +5737,21 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_l_tmp_short_circuit_load_result_n91",
-      "sourceSymbol": "EnumFixture.main.short-circuit-load-result#91"
+      "baseName": "hxc_l_tmp_short_circuit_load_result_n90",
+      "sourceSymbol": "EnumFixture.main.short-circuit-load-result#90"
     },
     {
       "overloadSignature": [],
       "collisionResolved": false,
       "naming": "generated",
-      "sourceOrdinal": 94,
+      "sourceOrdinal": 93,
       "readableName": [
         "tmp",
         "short-circuit-load-result"
       ],
       "requestedName": null,
-      "cName": "hxc_l_tmp_short_circuit_load_result_n94",
-      "semanticKey": "9:temporary|84:ordinary:72:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture4:main|0:|0:|0:|3:11:EnumFixture4:main25:short-circuit-load-result|0:|0:|2:94",
+      "cName": "hxc_l_tmp_short_circuit_load_result_n93",
+      "semanticKey": "9:temporary|84:ordinary:72:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture4:main|0:|0:|0:|3:11:EnumFixture4:main25:short-circuit-load-result|0:|0:|2:93",
       "escapeReasons": [
         "non-c-identifier-byte",
         "separator-normalized"
@@ -5685,8 +5763,34 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_l_tmp_short_circuit_load_result_n94",
-      "sourceSymbol": "EnumFixture.main.short-circuit-load-result#94"
+      "baseName": "hxc_l_tmp_short_circuit_load_result_n93",
+      "sourceSymbol": "EnumFixture.main.short-circuit-load-result#93"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 96,
+      "readableName": [
+        "tmp",
+        "short-circuit-load-result"
+      ],
+      "requestedName": null,
+      "cName": "hxc_l_tmp_short_circuit_load_result_n96",
+      "semanticKey": "9:temporary|84:ordinary:72:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture4:main|0:|0:|0:|3:11:EnumFixture4:main25:short-circuit-load-result|0:|0:|2:96",
+      "escapeReasons": [
+        "non-c-identifier-byte",
+        "separator-normalized"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:EnumFixture4:main|0:|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_l_tmp_short_circuit_load_result_n96",
+      "sourceSymbol": "EnumFixture.main.short-circuit-load-result#96"
     },
     {
       "overloadSignature": [],
@@ -6186,14 +6290,14 @@
       "overloadSignature": [],
       "collisionResolved": false,
       "naming": "generated",
-      "sourceOrdinal": 40,
+      "sourceOrdinal": 37,
       "readableName": [
         "tmp",
         "short-circuit-result"
       ],
       "requestedName": null,
-      "cName": "hxc_l_tmp_short_circuit_result_n40",
-      "semanticKey": "9:temporary|84:ordinary:72:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture4:main|0:|0:|0:|3:11:EnumFixture4:main20:short-circuit-result|0:|0:|2:40",
+      "cName": "hxc_l_tmp_short_circuit_result_n37",
+      "semanticKey": "9:temporary|84:ordinary:72:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture4:main|0:|0:|0:|3:11:EnumFixture4:main20:short-circuit-result|0:|0:|2:37",
       "escapeReasons": [
         "non-c-identifier-byte",
         "separator-normalized"
@@ -6205,8 +6309,8 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_l_tmp_short_circuit_result_n40",
-      "sourceSymbol": "EnumFixture.main.short-circuit-result#40"
+      "baseName": "hxc_l_tmp_short_circuit_result_n37",
+      "sourceSymbol": "EnumFixture.main.short-circuit-result#37"
     },
     {
       "overloadSignature": [],
@@ -6264,6 +6368,32 @@
       "overloadSignature": [],
       "collisionResolved": false,
       "naming": "generated",
+      "sourceOrdinal": 43,
+      "readableName": [
+        "tmp",
+        "short-circuit-result"
+      ],
+      "requestedName": null,
+      "cName": "hxc_l_tmp_short_circuit_result_n43",
+      "semanticKey": "9:temporary|84:ordinary:72:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture4:main|0:|0:|0:|3:11:EnumFixture4:main20:short-circuit-result|0:|0:|2:43",
+      "escapeReasons": [
+        "non-c-identifier-byte",
+        "separator-normalized"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:EnumFixture4:main|0:|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_l_tmp_short_circuit_result_n43",
+      "sourceSymbol": "EnumFixture.main.short-circuit-result#43"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
       "sourceOrdinal": 10,
       "readableName": [
         "tmp",
@@ -6290,14 +6420,14 @@
       "overloadSignature": [],
       "collisionResolved": false,
       "naming": "generated",
-      "sourceOrdinal": 98,
+      "sourceOrdinal": 100,
       "readableName": [
         "tmp",
         "static-call-argument-0-borrow-result"
       ],
       "requestedName": null,
-      "cName": "hxc_l_tmp_static_call_argument_0_borrow_result_n98",
-      "semanticKey": "9:temporary|84:ordinary:72:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture4:main|0:|0:|0:|3:11:EnumFixture4:main36:static-call-argument-0-borrow-result|0:|0:|2:98",
+      "cName": "hxc_l_tmp_static_call_argument_0_borrow_result_n100",
+      "semanticKey": "9:temporary|84:ordinary:72:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture4:main|0:|0:|0:|3:11:EnumFixture4:main36:static-call-argument-0-borrow-result|0:|0:|3:100",
       "escapeReasons": [
         "non-c-identifier-byte",
         "separator-normalized"
@@ -6309,21 +6439,21 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_l_tmp_static_call_argument_0_borrow_result_n98",
-      "sourceSymbol": "EnumFixture.main.static-call-argument-0-borrow-result#98"
+      "baseName": "hxc_l_tmp_static_call_argument_0_borrow_result_n100",
+      "sourceSymbol": "EnumFixture.main.static-call-argument-0-borrow-result#100"
     },
     {
       "overloadSignature": [],
       "collisionResolved": false,
       "naming": "generated",
-      "sourceOrdinal": 37,
+      "sourceOrdinal": 38,
       "readableName": [
         "tmp",
         "static-call-argument-0-owner"
       ],
       "requestedName": null,
-      "cName": "hxc_l_tmp_static_call_argument_0_owner_n37",
-      "semanticKey": "9:temporary|84:ordinary:72:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture4:main|0:|0:|0:|3:11:EnumFixture4:main28:static-call-argument-0-owner|0:|0:|2:37",
+      "cName": "hxc_l_tmp_static_call_argument_0_owner_n38",
+      "semanticKey": "9:temporary|84:ordinary:72:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture4:main|0:|0:|0:|3:11:EnumFixture4:main28:static-call-argument-0-owner|0:|0:|2:38",
       "escapeReasons": [
         "non-c-identifier-byte",
         "separator-normalized"
@@ -6335,8 +6465,8 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_l_tmp_static_call_argument_0_owner_n37",
-      "sourceSymbol": "EnumFixture.main.static-call-argument-0-owner#37"
+      "baseName": "hxc_l_tmp_static_call_argument_0_owner_n38",
+      "sourceSymbol": "EnumFixture.main.static-call-argument-0-owner#38"
     },
     {
       "overloadSignature": [],
@@ -6368,14 +6498,14 @@
       "overloadSignature": [],
       "collisionResolved": false,
       "naming": "generated",
-      "sourceOrdinal": 102,
+      "sourceOrdinal": 104,
       "readableName": [
         "tmp",
         "static-call-argument-1-borrow-result"
       ],
       "requestedName": null,
-      "cName": "hxc_l_tmp_static_call_argument_1_borrow_result_n102",
-      "semanticKey": "9:temporary|84:ordinary:72:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture4:main|0:|0:|0:|3:11:EnumFixture4:main36:static-call-argument-1-borrow-result|0:|0:|3:102",
+      "cName": "hxc_l_tmp_static_call_argument_1_borrow_result_n104",
+      "semanticKey": "9:temporary|84:ordinary:72:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture4:main|0:|0:|0:|3:11:EnumFixture4:main36:static-call-argument-1-borrow-result|0:|0:|3:104",
       "escapeReasons": [
         "non-c-identifier-byte",
         "separator-normalized"
@@ -6387,8 +6517,8 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_l_tmp_static_call_argument_1_borrow_result_n102",
-      "sourceSymbol": "EnumFixture.main.static-call-argument-1-borrow-result#102"
+      "baseName": "hxc_l_tmp_static_call_argument_1_borrow_result_n104",
+      "sourceSymbol": "EnumFixture.main.static-call-argument-1-borrow-result#104"
     },
     {
       "overloadSignature": [],
@@ -6420,14 +6550,14 @@
       "overloadSignature": [],
       "collisionResolved": false,
       "naming": "generated",
-      "sourceOrdinal": 39,
+      "sourceOrdinal": 40,
       "readableName": [
         "tmp",
         "static-call-argument-1-owner"
       ],
       "requestedName": null,
-      "cName": "hxc_l_tmp_static_call_argument_1_owner_n39",
-      "semanticKey": "9:temporary|84:ordinary:72:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture4:main|0:|0:|0:|3:11:EnumFixture4:main28:static-call-argument-1-owner|0:|0:|2:39",
+      "cName": "hxc_l_tmp_static_call_argument_1_owner_n40",
+      "semanticKey": "9:temporary|84:ordinary:72:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture4:main|0:|0:|0:|3:11:EnumFixture4:main28:static-call-argument-1-owner|0:|0:|2:40",
       "escapeReasons": [
         "non-c-identifier-byte",
         "separator-normalized"
@@ -6439,8 +6569,8 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_l_tmp_static_call_argument_1_owner_n39",
-      "sourceSymbol": "EnumFixture.main.static-call-argument-1-owner#39"
+      "baseName": "hxc_l_tmp_static_call_argument_1_owner_n40",
+      "sourceSymbol": "EnumFixture.main.static-call-argument-1-owner#40"
     },
     {
       "overloadSignature": [],
@@ -7266,6 +7396,128 @@
     },
     {
       "overloadSignature": [
+        "instance:instance.enum.34ffd1921c0fce7397ea45a7840571b743a9a203544116c89cd6bca9342d91fb",
+        "instance:instance.haxe-array.bde26f8c96af438c91ff3601cba864613553c1869186c1c74b7385a44a093c3c"
+      ],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": null,
+      "readableName": [
+        "EnumFixture",
+        "observedOption"
+      ],
+      "requestedName": null,
+      "cName": "hxc_EnumFixture_observedOption",
+      "semanticKey": "6:method|28:ordinary:16:translation-unit|2:11:EnumFixture14:observedOption|2:87:instance:instance.enum.34ffd1921c0fce7397ea45a7840571b743a9a203544116c89cd6bca9342d91fb93:instance:instance.haxe-array.bde26f8c96af438c91ff3601cba864613553c1869186c1c74b7385a44a093c3c|0:|0:",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "method",
+      "specializationArguments": [],
+      "baseName": "hxc_EnumFixture_observedOption",
+      "sourceSymbol": "EnumFixture.observedOption(instance:instance.enum.34ffd1921c0fce7397ea45a7840571b743a9a203544116c89cd6bca9342d91fb, instance:instance.haxe-array.bde26f8c96af438c91ff3601cba864613553c1869186c1c74b7385a44a093c3c)"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "readableName": [
+        "tmp",
+        "array-update-old-result"
+      ],
+      "requestedName": null,
+      "cName": "hxc_l_tmp_array_update_old_result_n0",
+      "semanticKey": "9:temporary|282:ordinary:269:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture14:observedOption|2:87:instance:instance.enum.34ffd1921c0fce7397ea45a7840571b743a9a203544116c89cd6bca9342d91fb93:instance:instance.haxe-array.bde26f8c96af438c91ff3601cba864613553c1869186c1c74b7385a44a093c3c|0:|0:|3:11:EnumFixture14:observedOption23:array-update-old-result|0:|0:|1:0",
+      "escapeReasons": [
+        "non-c-identifier-byte",
+        "separator-normalized"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:EnumFixture14:observedOption|2:87:instance:instance.enum.34ffd1921c0fce7397ea45a7840571b743a9a203544116c89cd6bca9342d91fb93:instance:instance.haxe-array.bde26f8c96af438c91ff3601cba864613553c1869186c1c74b7385a44a093c3c|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_l_tmp_array_update_old_result_n0",
+      "sourceSymbol": "EnumFixture.observedOption.array-update-old-result#0"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 1,
+      "readableName": [
+        "tmp",
+        "array-update-set-result"
+      ],
+      "requestedName": null,
+      "cName": "hxc_l_tmp_array_update_set_result_n1",
+      "semanticKey": "9:temporary|282:ordinary:269:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture14:observedOption|2:87:instance:instance.enum.34ffd1921c0fce7397ea45a7840571b743a9a203544116c89cd6bca9342d91fb93:instance:instance.haxe-array.bde26f8c96af438c91ff3601cba864613553c1869186c1c74b7385a44a093c3c|0:|0:|3:11:EnumFixture14:observedOption23:array-update-set-result|0:|0:|1:1",
+      "escapeReasons": [
+        "non-c-identifier-byte",
+        "separator-normalized"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:EnumFixture14:observedOption|2:87:instance:instance.enum.34ffd1921c0fce7397ea45a7840571b743a9a203544116c89cd6bca9342d91fb93:instance:instance.haxe-array.bde26f8c96af438c91ff3601cba864613553c1869186c1c74b7385a44a093c3c|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_l_tmp_array_update_set_result_n1",
+      "sourceSymbol": "EnumFixture.observedOption.array-update-set-result#1"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 1,
+      "readableName": [
+        "evaluations"
+      ],
+      "requestedName": null,
+      "cName": "hxc_l_evaluations",
+      "semanticKey": "5:local|282:ordinary:269:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture14:observedOption|2:87:instance:instance.enum.34ffd1921c0fce7397ea45a7840571b743a9a203544116c89cd6bca9342d91fb93:instance:instance.haxe-array.bde26f8c96af438c91ff3601cba864613553c1869186c1c74b7385a44a093c3c|0:|0:|3:11:EnumFixture14:observedOption11:evaluations|0:|0:|1:1",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:EnumFixture14:observedOption|2:87:instance:instance.enum.34ffd1921c0fce7397ea45a7840571b743a9a203544116c89cd6bca9342d91fb93:instance:instance.haxe-array.bde26f8c96af438c91ff3601cba864613553c1869186c1c74b7385a44a093c3c|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_l_evaluations",
+      "sourceSymbol": "EnumFixture.observedOption.evaluations#1"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "readableName": [
+        "value"
+      ],
+      "requestedName": null,
+      "cName": "hxc_l_value",
+      "semanticKey": "5:local|282:ordinary:269:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture14:observedOption|2:87:instance:instance.enum.34ffd1921c0fce7397ea45a7840571b743a9a203544116c89cd6bca9342d91fb93:instance:instance.haxe-array.bde26f8c96af438c91ff3601cba864613553c1869186c1c74b7385a44a093c3c|0:|0:|3:11:EnumFixture14:observedOption5:value|0:|0:|1:0",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:EnumFixture14:observedOption|2:87:instance:instance.enum.34ffd1921c0fce7397ea45a7840571b743a9a203544116c89cd6bca9342d91fb93:instance:instance.haxe-array.bde26f8c96af438c91ff3601cba864613553c1869186c1c74b7385a44a093c3c|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_l_value",
+      "sourceSymbol": "EnumFixture.observedOption.value#0"
+    },
+    {
+      "overloadSignature": [
         "instance:instance.enum.34ffd1921c0fce7397ea45a7840571b743a9a203544116c89cd6bca9342d91fb"
       ],
       "collisionResolved": false,
@@ -7461,6 +7713,849 @@
       "specializationArguments": [],
       "baseName": "hxc_l_value",
       "sourceSymbol": "EnumFixture.optionHasPositiveValue.value#0"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": null,
+      "readableName": [
+        "EnumFixture",
+        "optionTagEquality"
+      ],
+      "requestedName": null,
+      "cName": "hxc_EnumFixture_optionTagEquality",
+      "semanticKey": "6:method|28:ordinary:16:translation-unit|2:11:EnumFixture17:optionTagEquality|0:|0:|0:",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "method",
+      "specializationArguments": [],
+      "baseName": "hxc_EnumFixture_optionTagEquality",
+      "sourceSymbol": "EnumFixture.optionTagEquality"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 2,
+      "readableName": [
+        "tmp",
+        "array-create-result"
+      ],
+      "requestedName": null,
+      "cName": "hxc_l_tmp_array_create_result_n2",
+      "semanticKey": "9:temporary|98:ordinary:86:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture17:optionTagEquality|0:|0:|0:|3:11:EnumFixture17:optionTagEquality19:array-create-result|0:|0:|1:2",
+      "escapeReasons": [
+        "non-c-identifier-byte",
+        "separator-normalized"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:EnumFixture17:optionTagEquality|0:|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_l_tmp_array_create_result_n2",
+      "sourceSymbol": "EnumFixture.optionTagEquality.array-create-result#2"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 19,
+      "readableName": [
+        "tmp",
+        "array-get-result"
+      ],
+      "requestedName": null,
+      "cName": "hxc_l_tmp_array_get_result_n19",
+      "semanticKey": "9:temporary|98:ordinary:86:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture17:optionTagEquality|0:|0:|0:|3:11:EnumFixture17:optionTagEquality16:array-get-result|0:|0:|2:19",
+      "escapeReasons": [
+        "non-c-identifier-byte",
+        "separator-normalized"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:EnumFixture17:optionTagEquality|0:|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_l_tmp_array_get_result_n19",
+      "sourceSymbol": "EnumFixture.optionTagEquality.array-get-result#19"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 1,
+      "readableName": [
+        "tmp",
+        "short-circuit-join"
+      ],
+      "requestedName": null,
+      "cName": "hxc_tmp_short_circuit_join_n1",
+      "semanticKey": "9:temporary|95:label:86:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture17:optionTagEquality|0:|0:|0:|4:11:EnumFixture17:optionTagEquality11:block-label18:short-circuit-join|0:|0:|1:1",
+      "escapeReasons": [
+        "non-c-identifier-byte",
+        "separator-normalized"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:EnumFixture17:optionTagEquality|0:|0:|0:",
+        "kind": "label"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_tmp_short_circuit_join_n1",
+      "sourceSymbol": "EnumFixture.optionTagEquality.block-label.short-circuit-join#1"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 11,
+      "readableName": [
+        "tmp",
+        "short-circuit-join"
+      ],
+      "requestedName": null,
+      "cName": "hxc_tmp_short_circuit_join_n11",
+      "semanticKey": "9:temporary|95:label:86:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture17:optionTagEquality|0:|0:|0:|4:11:EnumFixture17:optionTagEquality11:block-label18:short-circuit-join|0:|0:|2:11",
+      "escapeReasons": [
+        "non-c-identifier-byte",
+        "separator-normalized"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:EnumFixture17:optionTagEquality|0:|0:|0:",
+        "kind": "label"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_tmp_short_circuit_join_n11",
+      "sourceSymbol": "EnumFixture.optionTagEquality.block-label.short-circuit-join#11"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 3,
+      "readableName": [
+        "tmp",
+        "short-circuit-join"
+      ],
+      "requestedName": null,
+      "cName": "hxc_tmp_short_circuit_join_n3",
+      "semanticKey": "9:temporary|95:label:86:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture17:optionTagEquality|0:|0:|0:|4:11:EnumFixture17:optionTagEquality11:block-label18:short-circuit-join|0:|0:|1:3",
+      "escapeReasons": [
+        "non-c-identifier-byte",
+        "separator-normalized"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:EnumFixture17:optionTagEquality|0:|0:|0:",
+        "kind": "label"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_tmp_short_circuit_join_n3",
+      "sourceSymbol": "EnumFixture.optionTagEquality.block-label.short-circuit-join#3"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 5,
+      "readableName": [
+        "tmp",
+        "short-circuit-join"
+      ],
+      "requestedName": null,
+      "cName": "hxc_tmp_short_circuit_join_n5",
+      "semanticKey": "9:temporary|95:label:86:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture17:optionTagEquality|0:|0:|0:|4:11:EnumFixture17:optionTagEquality11:block-label18:short-circuit-join|0:|0:|1:5",
+      "escapeReasons": [
+        "non-c-identifier-byte",
+        "separator-normalized"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:EnumFixture17:optionTagEquality|0:|0:|0:",
+        "kind": "label"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_tmp_short_circuit_join_n5",
+      "sourceSymbol": "EnumFixture.optionTagEquality.block-label.short-circuit-join#5"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 7,
+      "readableName": [
+        "tmp",
+        "short-circuit-join"
+      ],
+      "requestedName": null,
+      "cName": "hxc_tmp_short_circuit_join_n7",
+      "semanticKey": "9:temporary|95:label:86:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture17:optionTagEquality|0:|0:|0:|4:11:EnumFixture17:optionTagEquality11:block-label18:short-circuit-join|0:|0:|1:7",
+      "escapeReasons": [
+        "non-c-identifier-byte",
+        "separator-normalized"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:EnumFixture17:optionTagEquality|0:|0:|0:",
+        "kind": "label"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_tmp_short_circuit_join_n7",
+      "sourceSymbol": "EnumFixture.optionTagEquality.block-label.short-circuit-join#7"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 9,
+      "readableName": [
+        "tmp",
+        "short-circuit-join"
+      ],
+      "requestedName": null,
+      "cName": "hxc_tmp_short_circuit_join_n9",
+      "semanticKey": "9:temporary|95:label:86:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture17:optionTagEquality|0:|0:|0:|4:11:EnumFixture17:optionTagEquality11:block-label18:short-circuit-join|0:|0:|1:9",
+      "escapeReasons": [
+        "non-c-identifier-byte",
+        "separator-normalized"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:EnumFixture17:optionTagEquality|0:|0:|0:",
+        "kind": "label"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_tmp_short_circuit_join_n9",
+      "sourceSymbol": "EnumFixture.optionTagEquality.block-label.short-circuit-join#9"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "readableName": [
+        "tmp",
+        "short-circuit-rhs"
+      ],
+      "requestedName": null,
+      "cName": "hxc_tmp_short_circuit_rhs_n0",
+      "semanticKey": "9:temporary|95:label:86:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture17:optionTagEquality|0:|0:|0:|4:11:EnumFixture17:optionTagEquality11:block-label17:short-circuit-rhs|0:|0:|1:0",
+      "escapeReasons": [
+        "non-c-identifier-byte",
+        "separator-normalized"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:EnumFixture17:optionTagEquality|0:|0:|0:",
+        "kind": "label"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_tmp_short_circuit_rhs_n0",
+      "sourceSymbol": "EnumFixture.optionTagEquality.block-label.short-circuit-rhs#0"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 10,
+      "readableName": [
+        "tmp",
+        "short-circuit-rhs"
+      ],
+      "requestedName": null,
+      "cName": "hxc_tmp_short_circuit_rhs_n10",
+      "semanticKey": "9:temporary|95:label:86:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture17:optionTagEquality|0:|0:|0:|4:11:EnumFixture17:optionTagEquality11:block-label17:short-circuit-rhs|0:|0:|2:10",
+      "escapeReasons": [
+        "non-c-identifier-byte",
+        "separator-normalized"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:EnumFixture17:optionTagEquality|0:|0:|0:",
+        "kind": "label"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_tmp_short_circuit_rhs_n10",
+      "sourceSymbol": "EnumFixture.optionTagEquality.block-label.short-circuit-rhs#10"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 2,
+      "readableName": [
+        "tmp",
+        "short-circuit-rhs"
+      ],
+      "requestedName": null,
+      "cName": "hxc_tmp_short_circuit_rhs_n2",
+      "semanticKey": "9:temporary|95:label:86:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture17:optionTagEquality|0:|0:|0:|4:11:EnumFixture17:optionTagEquality11:block-label17:short-circuit-rhs|0:|0:|1:2",
+      "escapeReasons": [
+        "non-c-identifier-byte",
+        "separator-normalized"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:EnumFixture17:optionTagEquality|0:|0:|0:",
+        "kind": "label"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_tmp_short_circuit_rhs_n2",
+      "sourceSymbol": "EnumFixture.optionTagEquality.block-label.short-circuit-rhs#2"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 4,
+      "readableName": [
+        "tmp",
+        "short-circuit-rhs"
+      ],
+      "requestedName": null,
+      "cName": "hxc_tmp_short_circuit_rhs_n4",
+      "semanticKey": "9:temporary|95:label:86:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture17:optionTagEquality|0:|0:|0:|4:11:EnumFixture17:optionTagEquality11:block-label17:short-circuit-rhs|0:|0:|1:4",
+      "escapeReasons": [
+        "non-c-identifier-byte",
+        "separator-normalized"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:EnumFixture17:optionTagEquality|0:|0:|0:",
+        "kind": "label"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_tmp_short_circuit_rhs_n4",
+      "sourceSymbol": "EnumFixture.optionTagEquality.block-label.short-circuit-rhs#4"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 6,
+      "readableName": [
+        "tmp",
+        "short-circuit-rhs"
+      ],
+      "requestedName": null,
+      "cName": "hxc_tmp_short_circuit_rhs_n6",
+      "semanticKey": "9:temporary|95:label:86:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture17:optionTagEquality|0:|0:|0:|4:11:EnumFixture17:optionTagEquality11:block-label17:short-circuit-rhs|0:|0:|1:6",
+      "escapeReasons": [
+        "non-c-identifier-byte",
+        "separator-normalized"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:EnumFixture17:optionTagEquality|0:|0:|0:",
+        "kind": "label"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_tmp_short_circuit_rhs_n6",
+      "sourceSymbol": "EnumFixture.optionTagEquality.block-label.short-circuit-rhs#6"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 8,
+      "readableName": [
+        "tmp",
+        "short-circuit-rhs"
+      ],
+      "requestedName": null,
+      "cName": "hxc_tmp_short_circuit_rhs_n8",
+      "semanticKey": "9:temporary|95:label:86:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture17:optionTagEquality|0:|0:|0:|4:11:EnumFixture17:optionTagEquality11:block-label17:short-circuit-rhs|0:|0:|1:8",
+      "escapeReasons": [
+        "non-c-identifier-byte",
+        "separator-normalized"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:EnumFixture17:optionTagEquality|0:|0:|0:",
+        "kind": "label"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_tmp_short_circuit_rhs_n8",
+      "sourceSymbol": "EnumFixture.optionTagEquality.block-label.short-circuit-rhs#8"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 12,
+      "readableName": [
+        "tmp",
+        "call-result"
+      ],
+      "requestedName": null,
+      "cName": "hxc_l_tmp_call_result_n12",
+      "semanticKey": "9:temporary|98:ordinary:86:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture17:optionTagEquality|0:|0:|0:|3:11:EnumFixture17:optionTagEquality11:call-result|0:|0:|2:12",
+      "escapeReasons": [
+        "non-c-identifier-byte",
+        "separator-normalized"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:EnumFixture17:optionTagEquality|0:|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_l_tmp_call_result_n12",
+      "sourceSymbol": "EnumFixture.optionTagEquality.call-result#12"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 16,
+      "readableName": [
+        "tmp",
+        "call-result"
+      ],
+      "requestedName": null,
+      "cName": "hxc_l_tmp_call_result_n16",
+      "semanticKey": "9:temporary|98:ordinary:86:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture17:optionTagEquality|0:|0:|0:|3:11:EnumFixture17:optionTagEquality11:call-result|0:|0:|2:16",
+      "escapeReasons": [
+        "non-c-identifier-byte",
+        "separator-normalized"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:EnumFixture17:optionTagEquality|0:|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_l_tmp_call_result_n16",
+      "sourceSymbol": "EnumFixture.optionTagEquality.call-result#16"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "readableName": [
+        "empty"
+      ],
+      "requestedName": null,
+      "cName": "hxc_l_empty",
+      "semanticKey": "5:local|98:ordinary:86:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture17:optionTagEquality|0:|0:|0:|3:11:EnumFixture17:optionTagEquality5:empty|0:|0:|1:0",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:EnumFixture17:optionTagEquality|0:|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_l_empty",
+      "sourceSymbol": "EnumFixture.optionTagEquality.empty#0"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 2,
+      "readableName": [
+        "evaluations"
+      ],
+      "requestedName": null,
+      "cName": "hxc_l_evaluations",
+      "semanticKey": "5:local|98:ordinary:86:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture17:optionTagEquality|0:|0:|0:|3:11:EnumFixture17:optionTagEquality11:evaluations|0:|0:|1:2",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:EnumFixture17:optionTagEquality|0:|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_l_evaluations",
+      "sourceSymbol": "EnumFixture.optionTagEquality.evaluations#2"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 21,
+      "readableName": [
+        "tmp",
+        "materialized-value"
+      ],
+      "requestedName": null,
+      "cName": "hxc_l_tmp_materialized_value_n21",
+      "semanticKey": "9:temporary|98:ordinary:86:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture17:optionTagEquality|0:|0:|0:|3:11:EnumFixture17:optionTagEquality18:materialized-value|0:|0:|2:21",
+      "escapeReasons": [
+        "non-c-identifier-byte",
+        "separator-normalized"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:EnumFixture17:optionTagEquality|0:|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_l_tmp_materialized_value_n21",
+      "sourceSymbol": "EnumFixture.optionTagEquality.materialized-value#21"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 1,
+      "readableName": [
+        "present"
+      ],
+      "requestedName": null,
+      "cName": "hxc_l_present",
+      "semanticKey": "5:local|98:ordinary:86:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture17:optionTagEquality|0:|0:|0:|3:11:EnumFixture17:optionTagEquality7:present|0:|0:|1:1",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:EnumFixture17:optionTagEquality|0:|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_l_present",
+      "sourceSymbol": "EnumFixture.optionTagEquality.present#1"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 13,
+      "readableName": [
+        "tmp",
+        "short-circuit-load-result"
+      ],
+      "requestedName": null,
+      "cName": "hxc_l_tmp_short_circuit_load_result_n13",
+      "semanticKey": "9:temporary|98:ordinary:86:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture17:optionTagEquality|0:|0:|0:|3:11:EnumFixture17:optionTagEquality25:short-circuit-load-result|0:|0:|2:13",
+      "escapeReasons": [
+        "non-c-identifier-byte",
+        "separator-normalized"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:EnumFixture17:optionTagEquality|0:|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_l_tmp_short_circuit_load_result_n13",
+      "sourceSymbol": "EnumFixture.optionTagEquality.short-circuit-load-result#13"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 17,
+      "readableName": [
+        "tmp",
+        "short-circuit-load-result"
+      ],
+      "requestedName": null,
+      "cName": "hxc_l_tmp_short_circuit_load_result_n17",
+      "semanticKey": "9:temporary|98:ordinary:86:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture17:optionTagEquality|0:|0:|0:|3:11:EnumFixture17:optionTagEquality25:short-circuit-load-result|0:|0:|2:17",
+      "escapeReasons": [
+        "non-c-identifier-byte",
+        "separator-normalized"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:EnumFixture17:optionTagEquality|0:|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_l_tmp_short_circuit_load_result_n17",
+      "sourceSymbol": "EnumFixture.optionTagEquality.short-circuit-load-result#17"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 20,
+      "readableName": [
+        "tmp",
+        "short-circuit-load-result"
+      ],
+      "requestedName": null,
+      "cName": "hxc_l_tmp_short_circuit_load_result_n20",
+      "semanticKey": "9:temporary|98:ordinary:86:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture17:optionTagEquality|0:|0:|0:|3:11:EnumFixture17:optionTagEquality25:short-circuit-load-result|0:|0:|2:20",
+      "escapeReasons": [
+        "non-c-identifier-byte",
+        "separator-normalized"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:EnumFixture17:optionTagEquality|0:|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_l_tmp_short_circuit_load_result_n20",
+      "sourceSymbol": "EnumFixture.optionTagEquality.short-circuit-load-result#20"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 5,
+      "readableName": [
+        "tmp",
+        "short-circuit-load-result"
+      ],
+      "requestedName": null,
+      "cName": "hxc_l_tmp_short_circuit_load_result_n5",
+      "semanticKey": "9:temporary|98:ordinary:86:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture17:optionTagEquality|0:|0:|0:|3:11:EnumFixture17:optionTagEquality25:short-circuit-load-result|0:|0:|1:5",
+      "escapeReasons": [
+        "non-c-identifier-byte",
+        "separator-normalized"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:EnumFixture17:optionTagEquality|0:|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_l_tmp_short_circuit_load_result_n5",
+      "sourceSymbol": "EnumFixture.optionTagEquality.short-circuit-load-result#5"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 7,
+      "readableName": [
+        "tmp",
+        "short-circuit-load-result"
+      ],
+      "requestedName": null,
+      "cName": "hxc_l_tmp_short_circuit_load_result_n7",
+      "semanticKey": "9:temporary|98:ordinary:86:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture17:optionTagEquality|0:|0:|0:|3:11:EnumFixture17:optionTagEquality25:short-circuit-load-result|0:|0:|1:7",
+      "escapeReasons": [
+        "non-c-identifier-byte",
+        "separator-normalized"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:EnumFixture17:optionTagEquality|0:|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_l_tmp_short_circuit_load_result_n7",
+      "sourceSymbol": "EnumFixture.optionTagEquality.short-circuit-load-result#7"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 9,
+      "readableName": [
+        "tmp",
+        "short-circuit-load-result"
+      ],
+      "requestedName": null,
+      "cName": "hxc_l_tmp_short_circuit_load_result_n9",
+      "semanticKey": "9:temporary|98:ordinary:86:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture17:optionTagEquality|0:|0:|0:|3:11:EnumFixture17:optionTagEquality25:short-circuit-load-result|0:|0:|1:9",
+      "escapeReasons": [
+        "non-c-identifier-byte",
+        "separator-normalized"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:EnumFixture17:optionTagEquality|0:|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_l_tmp_short_circuit_load_result_n9",
+      "sourceSymbol": "EnumFixture.optionTagEquality.short-circuit-load-result#9"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 3,
+      "readableName": [
+        "tmp",
+        "short-circuit-result"
+      ],
+      "requestedName": null,
+      "cName": "hxc_l_tmp_short_circuit_result_n3",
+      "semanticKey": "9:temporary|98:ordinary:86:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture17:optionTagEquality|0:|0:|0:|3:11:EnumFixture17:optionTagEquality20:short-circuit-result|0:|0:|1:3",
+      "escapeReasons": [
+        "non-c-identifier-byte",
+        "separator-normalized"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:EnumFixture17:optionTagEquality|0:|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_l_tmp_short_circuit_result_n3",
+      "sourceSymbol": "EnumFixture.optionTagEquality.short-circuit-result#3"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 4,
+      "readableName": [
+        "tmp",
+        "short-circuit-result"
+      ],
+      "requestedName": null,
+      "cName": "hxc_l_tmp_short_circuit_result_n4",
+      "semanticKey": "9:temporary|98:ordinary:86:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture17:optionTagEquality|0:|0:|0:|3:11:EnumFixture17:optionTagEquality20:short-circuit-result|0:|0:|1:4",
+      "escapeReasons": [
+        "non-c-identifier-byte",
+        "separator-normalized"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:EnumFixture17:optionTagEquality|0:|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_l_tmp_short_circuit_result_n4",
+      "sourceSymbol": "EnumFixture.optionTagEquality.short-circuit-result#4"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 5,
+      "readableName": [
+        "tmp",
+        "short-circuit-result"
+      ],
+      "requestedName": null,
+      "cName": "hxc_l_tmp_short_circuit_result_n5",
+      "semanticKey": "9:temporary|98:ordinary:86:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture17:optionTagEquality|0:|0:|0:|3:11:EnumFixture17:optionTagEquality20:short-circuit-result|0:|0:|1:5",
+      "escapeReasons": [
+        "non-c-identifier-byte",
+        "separator-normalized"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:EnumFixture17:optionTagEquality|0:|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_l_tmp_short_circuit_result_n5",
+      "sourceSymbol": "EnumFixture.optionTagEquality.short-circuit-result#5"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 6,
+      "readableName": [
+        "tmp",
+        "short-circuit-result"
+      ],
+      "requestedName": null,
+      "cName": "hxc_l_tmp_short_circuit_result_n6",
+      "semanticKey": "9:temporary|98:ordinary:86:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture17:optionTagEquality|0:|0:|0:|3:11:EnumFixture17:optionTagEquality20:short-circuit-result|0:|0:|1:6",
+      "escapeReasons": [
+        "non-c-identifier-byte",
+        "separator-normalized"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:EnumFixture17:optionTagEquality|0:|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_l_tmp_short_circuit_result_n6",
+      "sourceSymbol": "EnumFixture.optionTagEquality.short-circuit-result#6"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 7,
+      "readableName": [
+        "tmp",
+        "short-circuit-result"
+      ],
+      "requestedName": null,
+      "cName": "hxc_l_tmp_short_circuit_result_n7",
+      "semanticKey": "9:temporary|98:ordinary:86:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture17:optionTagEquality|0:|0:|0:|3:11:EnumFixture17:optionTagEquality20:short-circuit-result|0:|0:|1:7",
+      "escapeReasons": [
+        "non-c-identifier-byte",
+        "separator-normalized"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:EnumFixture17:optionTagEquality|0:|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_l_tmp_short_circuit_result_n7",
+      "sourceSymbol": "EnumFixture.optionTagEquality.short-circuit-result#7"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 8,
+      "readableName": [
+        "tmp",
+        "short-circuit-result"
+      ],
+      "requestedName": null,
+      "cName": "hxc_l_tmp_short_circuit_result_n8",
+      "semanticKey": "9:temporary|98:ordinary:86:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture17:optionTagEquality|0:|0:|0:|3:11:EnumFixture17:optionTagEquality20:short-circuit-result|0:|0:|1:8",
+      "escapeReasons": [
+        "non-c-identifier-byte",
+        "separator-normalized"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:EnumFixture17:optionTagEquality|0:|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_l_tmp_short_circuit_result_n8",
+      "sourceSymbol": "EnumFixture.optionTagEquality.short-circuit-result#8"
     },
     {
       "overloadSignature": [

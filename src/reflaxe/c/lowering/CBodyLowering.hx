@@ -10293,8 +10293,13 @@ private class FunctionBuilder {
 			return unsupported(expression, "TBinop(fieldless-enum-equality-mixed-value-category)");
 		if (leftEnum.instanceId != rightEnum.instanceId)
 			return unsupported(expression, 'TBinop(unrelated-enum-equality:${leftEnum.haxePath}->${rightEnum.haxePath})');
-		if (leftEnum.representation != CBERNativeEnum || rightEnum.representation != CBERNativeEnum)
+		if (leftEnum.representation != CBERNativeEnum || rightEnum.representation != CBERNativeEnum) {
+			final leftCase = fieldlessEnumConstantCase(left, leftEnum);
+			final rightCase = fieldlessEnumConstantCase(right, rightEnum);
+			if (leftCase != null || rightCase != null)
+				return lowerPayloadEnumTagEquality(expression, operation, left, right, leftEnum, leftCase, rightCase);
 			return unsupported(expression, 'TBinop(payload-enum-equality-requires-structural-semantics:${leftEnum.haxePath})');
+		}
 
 		final leftValue = coerce(lowerValue(left, leftMapping), leftMapping, left.pos, "TBinop(fieldless-enum-equality:left)");
 		final leftValueLocal = expressionCreatesFlow(right) ? createFlowLocal(leftMapping, leftValue.id, sourceSpan(left.pos),
@@ -10309,6 +10314,44 @@ private class FunctionBuilder {
 		appendInstruction(result, IRIOBinary(operation == OpEq ? "haxe.enum-tag.equal" : "haxe.enum-tag.not-equal", stableLeft.id, rightValue.id, IRIStatic),
 			sourceSpan(expression.pos), "fieldless-enum-equality");
 		return {id: result.id, type: result.type, mapping: boolMapping};
+	}
+
+	/** Resolve a same-enum constructor constant only when it carries no payload. */
+	function fieldlessEnumConstantCase(expression:TypedExpr, value:CPreparedBodyEnumInstance):Null<CPreparedBodyEnumCase> {
+		final constructor = enumConstructor(expression);
+		if (constructor == null)
+			return null;
+		final owner = constructor.reference.get();
+		if (owner.pack.concat([owner.name]).join(".") != value.haxePath)
+			return null;
+		final tagCase = value.tagCase(constructor.field.name);
+		return tagCase != null && tagCase.payload.length == 0 ? tagCase : null;
+	}
+
+	/** Compare one payload enum value with a fieldless constructor by discriminant. */
+	function lowerPayloadEnumTagEquality(expression:TypedExpr, operation:Binop, left:TypedExpr, right:TypedExpr, value:CPreparedBodyEnumInstance,
+			leftCase:Null<CPreparedBodyEnumCase>, rightCase:Null<CPreparedBodyEnumCase>):LoweredValue {
+		final tagCase = rightCase != null ? rightCase : leftCase;
+		if (tagCase == null)
+			return unsupported(expression, 'TBinop(payload-enum-tag-equality-lost-constant:${value.haxePath})');
+		final subject = rightCase != null ? left : right;
+		final scopedSubject = lowerScopedEnumSwitchSubject(subject, "payload-enum-tag-equality-subject");
+		final subjectEnum = scopedSubject.value.mapping.enumValue();
+		if (subjectEnum == null || subjectEnum.instanceId != value.instanceId)
+			return unsupported(subject, 'TBinop(payload-enum-tag-equality-subject-mismatch:${value.haxePath})');
+		final boolMapping = bodyValueType(expression.t, expression.pos, "TBinop(payload-enum-tag-equality:result-type)");
+		if (boolMapping.irType != IRTBool)
+			return unsupported(expression, "TBinop(payload-enum-tag-equality:result-not-Bool)");
+		final source = sourceSpan(expression.pos);
+		final matched:HxcIRResult = {id: nextValueId(), type: IRTBool};
+		appendInstruction(matched, IRIOMatchTag(scopedSubject.value.id, tagCase.name), source, "payload-enum-tag-match");
+		appendScopedCleanupInstructions(scopedSubject.cleanupDepth);
+		restoreCleanupDepth(scopedSubject.cleanupDepth);
+		if (operation == OpEq)
+			return {id: matched.id, type: matched.type, mapping: boolMapping};
+		final negated:HxcIRResult = {id: nextValueId(), type: IRTBool};
+		appendInstruction(negated, IRIOUnary("haxe.bool.not", matched.id, IRIStatic), source, "payload-enum-tag-not-match");
+		return {id: negated.id, type: negated.type, mapping: boolMapping};
 	}
 
 	function lowerClassEquality(expression:TypedExpr, operation:Binop, left:TypedExpr, right:TypedExpr, leftMapping:Null<CBodyValueType>,

@@ -824,8 +824,8 @@ enum hxc_Mode hxc_EnumFixture_identityMode(enum hxc_Mode hxc_l_value)
 
 void hxc_EnumFixture_main(void)
 {
-  struct hxc_Chain hxc_l_tmp_static_call_argument_0_owner_n37 = { 0 };
-  struct hxc_Choices hxc_l_tmp_static_call_argument_1_owner_n39 = { 0 };
+  struct hxc_Chain hxc_l_tmp_static_call_argument_0_owner_n38 = { 0 };
+  struct hxc_Choices hxc_l_tmp_static_call_argument_1_owner_n40 = { 0 };
   enum hxc_Mode hxc_l_mode = hxc_Mode_On;
   int32_t hxc_l_tmp_call_result_n1 = hxc_EnumFixture_identity(7);
   struct hxc_Option_h95f1c4a28dac hxc_l_present = (struct hxc_Option_h95f1c4a28dac){ .hxc_tag = hxc_Option_Some_ha9454146ff01, .hxc_payload.hxc_Some.hxc_value = hxc_l_tmp_call_result_n1 };
@@ -937,169 +937,176 @@ void hxc_EnumFixture_main(void)
     bool hxc_l_tmp_short_circuit_result_n21 = hxc_l_tmp_short_circuit_load_result_n46;
     if (hxc_l_tmp_short_circuit_load_result_n46)
     {
-      bool hxc_l_tmp_call_result_n48 = hxc_EnumFixture_optionHasPositiveValue(hxc_l_present);
-      hxc_l_tmp_short_circuit_result_n21 = hxc_l_tmp_call_result_n48;
+      bool hxc_l_tmp_call_result_n47 = hxc_EnumFixture_optionTagEquality();
+      hxc_l_tmp_short_circuit_result_n21 = hxc_l_tmp_call_result_n47;
     }
-    bool hxc_l_tmp_short_circuit_load_result_n49 = hxc_l_tmp_short_circuit_result_n21;
-    bool hxc_l_tmp_short_circuit_result_n22 = hxc_l_tmp_short_circuit_load_result_n49;
-    if (hxc_l_tmp_short_circuit_load_result_n49)
+    bool hxc_l_tmp_short_circuit_load_result_n48 = hxc_l_tmp_short_circuit_result_n21;
+    bool hxc_l_tmp_short_circuit_result_n22 = hxc_l_tmp_short_circuit_load_result_n48;
+    if (hxc_l_tmp_short_circuit_load_result_n48)
     {
-      int32_t hxc_l_tmp_call_result_n51 = hxc_EnumFixture_optionValue(hxc_l_absent);
-      hxc_l_tmp_short_circuit_result_n22 = hxc_l_tmp_call_result_n51 == 0;
+      bool hxc_l_tmp_call_result_n50 = hxc_EnumFixture_optionHasPositiveValue(hxc_l_present);
+      hxc_l_tmp_short_circuit_result_n22 = hxc_l_tmp_call_result_n50;
     }
-    bool hxc_l_tmp_short_circuit_load_result_n52 = hxc_l_tmp_short_circuit_result_n22;
-    bool hxc_l_tmp_short_circuit_result_n23 = hxc_l_tmp_short_circuit_load_result_n52;
-    if (hxc_l_tmp_short_circuit_load_result_n52)
+    bool hxc_l_tmp_short_circuit_load_result_n51 = hxc_l_tmp_short_circuit_result_n22;
+    bool hxc_l_tmp_short_circuit_result_n23 = hxc_l_tmp_short_circuit_load_result_n51;
+    if (hxc_l_tmp_short_circuit_load_result_n51)
     {
-      int32_t hxc_l_tmp_call_result_n53 = hxc_EnumFixture_constructorValue();
-      hxc_l_tmp_short_circuit_result_n23 = hxc_l_tmp_call_result_n53 == 9;
+      int32_t hxc_l_tmp_call_result_n53 = hxc_EnumFixture_optionValue(hxc_l_absent);
+      hxc_l_tmp_short_circuit_result_n23 = hxc_l_tmp_call_result_n53 == 0;
     }
     bool hxc_l_tmp_short_circuit_load_result_n54 = hxc_l_tmp_short_circuit_result_n23;
     bool hxc_l_tmp_short_circuit_result_n24 = hxc_l_tmp_short_circuit_load_result_n54;
     if (hxc_l_tmp_short_circuit_load_result_n54)
     {
-      int32_t hxc_l_tmp_call_result_n56 = hxc_EnumFixture_guardedValue(hxc_l_present);
-      hxc_l_tmp_short_circuit_result_n24 = hxc_l_tmp_call_result_n56 == 7;
+      int32_t hxc_l_tmp_call_result_n55 = hxc_EnumFixture_constructorValue();
+      hxc_l_tmp_short_circuit_result_n24 = hxc_l_tmp_call_result_n55 == 9;
     }
-    bool hxc_l_tmp_short_circuit_load_result_n57 = hxc_l_tmp_short_circuit_result_n24;
-    bool hxc_l_tmp_short_circuit_result_n25 = hxc_l_tmp_short_circuit_load_result_n57;
-    if (hxc_l_tmp_short_circuit_load_result_n57)
+    bool hxc_l_tmp_short_circuit_load_result_n56 = hxc_l_tmp_short_circuit_result_n24;
+    bool hxc_l_tmp_short_circuit_result_n25 = hxc_l_tmp_short_circuit_load_result_n56;
+    if (hxc_l_tmp_short_circuit_load_result_n56)
     {
-      int32_t hxc_l_tmp_call_result_n59 = hxc_EnumFixture_boolOptionValue(hxc_l_truth);
-      hxc_l_tmp_short_circuit_result_n25 = hxc_l_tmp_call_result_n59 == 1;
+      int32_t hxc_l_tmp_call_result_n58 = hxc_EnumFixture_guardedValue(hxc_l_present);
+      hxc_l_tmp_short_circuit_result_n25 = hxc_l_tmp_call_result_n58 == 7;
     }
-    bool hxc_l_tmp_short_circuit_load_result_n60 = hxc_l_tmp_short_circuit_result_n25;
-    bool hxc_l_tmp_short_circuit_result_n26 = hxc_l_tmp_short_circuit_load_result_n60;
-    if (hxc_l_tmp_short_circuit_load_result_n60)
+    bool hxc_l_tmp_short_circuit_load_result_n59 = hxc_l_tmp_short_circuit_result_n25;
+    bool hxc_l_tmp_short_circuit_result_n26 = hxc_l_tmp_short_circuit_load_result_n59;
+    if (hxc_l_tmp_short_circuit_load_result_n59)
     {
-      int32_t hxc_l_tmp_call_result_n63 = hxc_EnumFixture_pairedIdentityValue(hxc_IdentityKind_FirstIdentity, (struct hxc_IdentityValue){ .hxc_tag = hxc_IdentityValue_FirstValue, .hxc_payload.hxc_FirstValue.hxc_value = 12 });
-      hxc_l_tmp_short_circuit_result_n26 = hxc_l_tmp_call_result_n63 == 12;
+      int32_t hxc_l_tmp_call_result_n61 = hxc_EnumFixture_boolOptionValue(hxc_l_truth);
+      hxc_l_tmp_short_circuit_result_n26 = hxc_l_tmp_call_result_n61 == 1;
     }
-    bool hxc_l_tmp_short_circuit_load_result_n64 = hxc_l_tmp_short_circuit_result_n26;
-    bool hxc_l_tmp_short_circuit_result_n27 = hxc_l_tmp_short_circuit_load_result_n64;
-    if (hxc_l_tmp_short_circuit_load_result_n64)
+    bool hxc_l_tmp_short_circuit_load_result_n62 = hxc_l_tmp_short_circuit_result_n26;
+    bool hxc_l_tmp_short_circuit_result_n27 = hxc_l_tmp_short_circuit_load_result_n62;
+    if (hxc_l_tmp_short_circuit_load_result_n62)
     {
-      int32_t hxc_l_tmp_call_result_n67 = hxc_EnumFixture_pairedIdentityValue(hxc_IdentityKind_FirstIdentity, (struct hxc_IdentityValue){ .hxc_tag = hxc_IdentityValue_SecondValue, .hxc_payload.hxc_SecondValue.hxc_value = 12 });
-      hxc_l_tmp_short_circuit_result_n27 = hxc_l_tmp_call_result_n67 == -1;
+      int32_t hxc_l_tmp_call_result_n65 = hxc_EnumFixture_pairedIdentityValue(hxc_IdentityKind_FirstIdentity, (struct hxc_IdentityValue){ .hxc_tag = hxc_IdentityValue_FirstValue, .hxc_payload.hxc_FirstValue.hxc_value = 12 });
+      hxc_l_tmp_short_circuit_result_n27 = hxc_l_tmp_call_result_n65 == 12;
     }
-    bool hxc_l_tmp_short_circuit_load_result_n68 = hxc_l_tmp_short_circuit_result_n27;
-    bool hxc_l_tmp_short_circuit_result_n28 = hxc_l_tmp_short_circuit_load_result_n68;
-    if (hxc_l_tmp_short_circuit_load_result_n68)
+    bool hxc_l_tmp_short_circuit_load_result_n66 = hxc_l_tmp_short_circuit_result_n27;
+    bool hxc_l_tmp_short_circuit_result_n28 = hxc_l_tmp_short_circuit_load_result_n66;
+    if (hxc_l_tmp_short_circuit_load_result_n66)
     {
-      int32_t hxc_l_tmp_call_result_n71 = hxc_EnumFixture_pairedIdentityValue(hxc_IdentityKind_SecondIdentity, (struct hxc_IdentityValue){ .hxc_tag = hxc_IdentityValue_SecondValue, .hxc_payload.hxc_SecondValue.hxc_value = 14 });
-      hxc_l_tmp_short_circuit_result_n28 = hxc_l_tmp_call_result_n71 == 14;
+      int32_t hxc_l_tmp_call_result_n69 = hxc_EnumFixture_pairedIdentityValue(hxc_IdentityKind_FirstIdentity, (struct hxc_IdentityValue){ .hxc_tag = hxc_IdentityValue_SecondValue, .hxc_payload.hxc_SecondValue.hxc_value = 12 });
+      hxc_l_tmp_short_circuit_result_n28 = hxc_l_tmp_call_result_n69 == -1;
     }
-    bool hxc_l_tmp_short_circuit_load_result_n72 = hxc_l_tmp_short_circuit_result_n28;
-    bool hxc_l_tmp_short_circuit_result_n29 = hxc_l_tmp_short_circuit_load_result_n72;
-    if (hxc_l_tmp_short_circuit_load_result_n72)
+    bool hxc_l_tmp_short_circuit_load_result_n70 = hxc_l_tmp_short_circuit_result_n28;
+    bool hxc_l_tmp_short_circuit_result_n29 = hxc_l_tmp_short_circuit_load_result_n70;
+    if (hxc_l_tmp_short_circuit_load_result_n70)
     {
-      struct hxc_StrictCarrierHolder hxc_l_tmp_call_result_n74 = hxc_EnumFixture_strictCarrierHolder(hxc_IdentityKind_FirstIdentity);
-      int32_t hxc_l_tmp_call_result_n75 = hxc_EnumFixture_strictCarrierValue(hxc_l_tmp_call_result_n74);
-      hxc_l_tmp_short_circuit_result_n29 = hxc_l_tmp_call_result_n75 == 0;
+      int32_t hxc_l_tmp_call_result_n73 = hxc_EnumFixture_pairedIdentityValue(hxc_IdentityKind_SecondIdentity, (struct hxc_IdentityValue){ .hxc_tag = hxc_IdentityValue_SecondValue, .hxc_payload.hxc_SecondValue.hxc_value = 14 });
+      hxc_l_tmp_short_circuit_result_n29 = hxc_l_tmp_call_result_n73 == 14;
     }
-    bool hxc_l_tmp_short_circuit_load_result_n76 = hxc_l_tmp_short_circuit_result_n29;
-    bool hxc_l_tmp_short_circuit_result_n30 = hxc_l_tmp_short_circuit_load_result_n76;
-    if (hxc_l_tmp_short_circuit_load_result_n76)
+    bool hxc_l_tmp_short_circuit_load_result_n74 = hxc_l_tmp_short_circuit_result_n29;
+    bool hxc_l_tmp_short_circuit_result_n30 = hxc_l_tmp_short_circuit_load_result_n74;
+    if (hxc_l_tmp_short_circuit_load_result_n74)
     {
-      struct hxc_StrictCarrierHolder hxc_l_tmp_call_result_n78 = hxc_EnumFixture_strictCarrierHolder(hxc_IdentityKind_SecondIdentity);
-      int32_t hxc_l_tmp_call_result_n79 = hxc_EnumFixture_strictCarrierValue(hxc_l_tmp_call_result_n78);
-      hxc_l_tmp_short_circuit_result_n30 = hxc_l_tmp_call_result_n79 == 23;
+      struct hxc_StrictCarrierHolder hxc_l_tmp_call_result_n76 = hxc_EnumFixture_strictCarrierHolder(hxc_IdentityKind_FirstIdentity);
+      int32_t hxc_l_tmp_call_result_n77 = hxc_EnumFixture_strictCarrierValue(hxc_l_tmp_call_result_n76);
+      hxc_l_tmp_short_circuit_result_n30 = hxc_l_tmp_call_result_n77 == 0;
     }
-    bool hxc_l_tmp_short_circuit_load_result_n80 = hxc_l_tmp_short_circuit_result_n30;
-    bool hxc_l_tmp_short_circuit_result_n31 = hxc_l_tmp_short_circuit_load_result_n80;
-    if (hxc_l_tmp_short_circuit_load_result_n80)
+    bool hxc_l_tmp_short_circuit_load_result_n78 = hxc_l_tmp_short_circuit_result_n30;
+    bool hxc_l_tmp_short_circuit_result_n31 = hxc_l_tmp_short_circuit_load_result_n78;
+    if (hxc_l_tmp_short_circuit_load_result_n78)
     {
-      int32_t hxc_l_tmp_call_result_n81 = hxc_EnumFixture_recursiveLocal();
-      hxc_l_tmp_short_circuit_result_n31 = hxc_l_tmp_call_result_n81 == 3;
+      struct hxc_StrictCarrierHolder hxc_l_tmp_call_result_n80 = hxc_EnumFixture_strictCarrierHolder(hxc_IdentityKind_SecondIdentity);
+      int32_t hxc_l_tmp_call_result_n81 = hxc_EnumFixture_strictCarrierValue(hxc_l_tmp_call_result_n80);
+      hxc_l_tmp_short_circuit_result_n31 = hxc_l_tmp_call_result_n81 == 23;
     }
     bool hxc_l_tmp_short_circuit_load_result_n82 = hxc_l_tmp_short_circuit_result_n31;
     bool hxc_l_tmp_short_circuit_result_n32 = hxc_l_tmp_short_circuit_load_result_n82;
     if (hxc_l_tmp_short_circuit_load_result_n82)
     {
-      int32_t hxc_l_tmp_call_result_n84 = hxc_EnumFixture_ruleValue(hxc_l_copiedRule);
-      hxc_l_tmp_short_circuit_result_n32 = hxc_l_tmp_call_result_n84 == 10;
+      int32_t hxc_l_tmp_call_result_n83 = hxc_EnumFixture_recursiveLocal();
+      hxc_l_tmp_short_circuit_result_n32 = hxc_l_tmp_call_result_n83 == 3;
     }
-    bool hxc_l_tmp_short_circuit_load_result_n85 = hxc_l_tmp_short_circuit_result_n32;
-    bool hxc_l_tmp_short_circuit_result_n33 = hxc_l_tmp_short_circuit_load_result_n85;
-    if (hxc_l_tmp_short_circuit_load_result_n85)
+    bool hxc_l_tmp_short_circuit_load_result_n84 = hxc_l_tmp_short_circuit_result_n32;
+    bool hxc_l_tmp_short_circuit_result_n33 = hxc_l_tmp_short_circuit_load_result_n84;
+    if (hxc_l_tmp_short_circuit_load_result_n84)
     {
-      int32_t hxc_l_tmp_call_result_n87 = hxc_EnumFixture_envelopeValue(hxc_l_copiedEnvelope);
-      hxc_l_tmp_short_circuit_result_n33 = hxc_l_tmp_call_result_n87 == 10;
+      int32_t hxc_l_tmp_call_result_n86 = hxc_EnumFixture_ruleValue(hxc_l_copiedRule);
+      hxc_l_tmp_short_circuit_result_n33 = hxc_l_tmp_call_result_n86 == 10;
     }
-    bool hxc_l_tmp_short_circuit_load_result_n88 = hxc_l_tmp_short_circuit_result_n33;
-    bool hxc_l_tmp_short_circuit_result_n34 = hxc_l_tmp_short_circuit_load_result_n88;
-    if (hxc_l_tmp_short_circuit_load_result_n88)
+    bool hxc_l_tmp_short_circuit_load_result_n87 = hxc_l_tmp_short_circuit_result_n33;
+    bool hxc_l_tmp_short_circuit_result_n34 = hxc_l_tmp_short_circuit_load_result_n87;
+    if (hxc_l_tmp_short_circuit_load_result_n87)
     {
-      bool hxc_l_tmp_call_result_n90 = hxc_EnumFixture_envelopeIsWrapped(hxc_l_copiedEnvelope);
-      hxc_l_tmp_short_circuit_result_n34 = hxc_l_tmp_call_result_n90;
+      int32_t hxc_l_tmp_call_result_n89 = hxc_EnumFixture_envelopeValue(hxc_l_copiedEnvelope);
+      hxc_l_tmp_short_circuit_result_n34 = hxc_l_tmp_call_result_n89 == 10;
     }
-    bool hxc_l_tmp_short_circuit_load_result_n91 = hxc_l_tmp_short_circuit_result_n34;
-    bool hxc_l_tmp_short_circuit_result_n35 = hxc_l_tmp_short_circuit_load_result_n91;
-    if (hxc_l_tmp_short_circuit_load_result_n91)
+    bool hxc_l_tmp_short_circuit_load_result_n90 = hxc_l_tmp_short_circuit_result_n34;
+    bool hxc_l_tmp_short_circuit_result_n35 = hxc_l_tmp_short_circuit_load_result_n90;
+    if (hxc_l_tmp_short_circuit_load_result_n90)
     {
-      int32_t hxc_l_tmp_call_result_n93 = hxc_EnumFixture_optionalRuleValue(hxc_l_optionalRule);
-      hxc_l_tmp_short_circuit_result_n35 = hxc_l_tmp_call_result_n93 == 10;
+      bool hxc_l_tmp_call_result_n92 = hxc_EnumFixture_envelopeIsWrapped(hxc_l_copiedEnvelope);
+      hxc_l_tmp_short_circuit_result_n35 = hxc_l_tmp_call_result_n92;
     }
-    bool hxc_l_tmp_short_circuit_load_result_n94 = hxc_l_tmp_short_circuit_result_n35;
-    bool hxc_l_tmp_short_circuit_result_n36 = hxc_l_tmp_short_circuit_load_result_n94;
-    if (hxc_l_tmp_short_circuit_load_result_n94)
+    bool hxc_l_tmp_short_circuit_load_result_n93 = hxc_l_tmp_short_circuit_result_n35;
+    bool hxc_l_tmp_short_circuit_result_n36 = hxc_l_tmp_short_circuit_load_result_n93;
+    if (hxc_l_tmp_short_circuit_load_result_n93)
     {
-      struct hxc_Chain *hxc_l_tmp_enum_recursive_payload_owner_n96 = NULL;
-      hxc_allocator hxc_l_tmp_enum_recursive_payload_owner_n96_allocator = hxc_default_allocator();
-      if (hxc_alloc(&hxc_l_tmp_enum_recursive_payload_owner_n96_allocator, sizeof(struct hxc_Chain), _Alignof(struct hxc_Chain), (void **)&hxc_l_tmp_enum_recursive_payload_owner_n96) != HXC_STATUS_OK)
+      int32_t hxc_l_tmp_call_result_n95 = hxc_EnumFixture_optionalRuleValue(hxc_l_optionalRule);
+      hxc_l_tmp_short_circuit_result_n36 = hxc_l_tmp_call_result_n95 == 10;
+    }
+    bool hxc_l_tmp_short_circuit_load_result_n96 = hxc_l_tmp_short_circuit_result_n36;
+    bool hxc_l_tmp_short_circuit_result_n37 = hxc_l_tmp_short_circuit_load_result_n96;
+    if (hxc_l_tmp_short_circuit_load_result_n96)
+    {
+      struct hxc_Chain *hxc_l_tmp_enum_recursive_payload_owner_n98 = NULL;
+      hxc_allocator hxc_l_tmp_enum_recursive_payload_owner_n98_allocator = hxc_default_allocator();
+      if (hxc_alloc(&hxc_l_tmp_enum_recursive_payload_owner_n98_allocator, sizeof(struct hxc_Chain), _Alignof(struct hxc_Chain), (void **)&hxc_l_tmp_enum_recursive_payload_owner_n98) != HXC_STATUS_OK)
       {
         abort();
       }
-      *hxc_l_tmp_enum_recursive_payload_owner_n96 = (struct hxc_Chain){ .hxc_tag = hxc_Chain_End, .hxc_payload.hxc_End.hxc_value = 2 };
-      hxc_l_tmp_static_call_argument_0_owner_n37 = (struct hxc_Chain){ .hxc_tag = hxc_Chain_Link, .hxc_payload.hxc_Link.hxc_value = 1, .hxc_payload.hxc_Link.hxc_next = hxc_l_tmp_enum_recursive_payload_owner_n96 };
-      struct hxc_Chain hxc_l_tmp_static_call_argument_0_borrow_result_n98 = hxc_l_tmp_static_call_argument_0_owner_n37;
-      struct hxc_array_ref *hxc_l_tmp_enum_payload_0_owner_n38 = hxc_l_choices;
-      if (hxc_array_ref_retain(hxc_l_tmp_enum_payload_0_owner_n38) != HXC_STATUS_OK)
+      *hxc_l_tmp_enum_recursive_payload_owner_n98 = (struct hxc_Chain){ .hxc_tag = hxc_Chain_End, .hxc_payload.hxc_End.hxc_value = 2 };
+      hxc_l_tmp_static_call_argument_0_owner_n38 = (struct hxc_Chain){ .hxc_tag = hxc_Chain_Link, .hxc_payload.hxc_Link.hxc_value = 1, .hxc_payload.hxc_Link.hxc_next = hxc_l_tmp_enum_recursive_payload_owner_n98 };
+      struct hxc_Chain hxc_l_tmp_static_call_argument_0_borrow_result_n100 = hxc_l_tmp_static_call_argument_0_owner_n38;
+      struct hxc_array_ref *hxc_l_tmp_enum_payload_0_owner_n39 = hxc_l_choices;
+      if (hxc_array_ref_retain(hxc_l_tmp_enum_payload_0_owner_n39) != HXC_STATUS_OK)
       {
         abort();
       }
-      hxc_l_tmp_static_call_argument_1_owner_n39 = (struct hxc_Choices){ .hxc_tag = hxc_Choices_ChoiceValues, .hxc_payload.hxc_ChoiceValues.hxc_values = hxc_l_tmp_enum_payload_0_owner_n38 };
-      struct hxc_Choices hxc_l_tmp_static_call_argument_1_borrow_result_n102 = hxc_l_tmp_static_call_argument_1_owner_n39;
-      struct hxc_array_ref *hxc_l_tmp_load_result_n103 = hxc_l_actions;
-      int32_t hxc_l_tmp_call_result_n105 = hxc_EnumFixture_ruleLiteralValue(hxc_l_tmp_static_call_argument_0_borrow_result_n98, hxc_l_tmp_static_call_argument_1_borrow_result_n102, hxc_l_tmp_load_result_n103, hxc_l_copiedRule);
-      hxc_l_tmp_short_circuit_result_n36 = hxc_l_tmp_call_result_n105 == 12;
-      hxc_enum_d215f611_destroy(&hxc_l_tmp_static_call_argument_1_owner_n39);
-      hxc_enum_39285fe9_destroy(&hxc_l_tmp_static_call_argument_0_owner_n37);
+      hxc_l_tmp_static_call_argument_1_owner_n40 = (struct hxc_Choices){ .hxc_tag = hxc_Choices_ChoiceValues, .hxc_payload.hxc_ChoiceValues.hxc_values = hxc_l_tmp_enum_payload_0_owner_n39 };
+      struct hxc_Choices hxc_l_tmp_static_call_argument_1_borrow_result_n104 = hxc_l_tmp_static_call_argument_1_owner_n40;
+      struct hxc_array_ref *hxc_l_tmp_load_result_n105 = hxc_l_actions;
+      int32_t hxc_l_tmp_call_result_n107 = hxc_EnumFixture_ruleLiteralValue(hxc_l_tmp_static_call_argument_0_borrow_result_n100, hxc_l_tmp_static_call_argument_1_borrow_result_n104, hxc_l_tmp_load_result_n105, hxc_l_copiedRule);
+      hxc_l_tmp_short_circuit_result_n37 = hxc_l_tmp_call_result_n107 == 12;
+      hxc_enum_d215f611_destroy(&hxc_l_tmp_static_call_argument_1_owner_n40);
+      hxc_enum_39285fe9_destroy(&hxc_l_tmp_static_call_argument_0_owner_n38);
     }
-    bool hxc_l_tmp_short_circuit_load_result_n106 = hxc_l_tmp_short_circuit_result_n36;
-    bool hxc_l_tmp_short_circuit_result_n40 = hxc_l_tmp_short_circuit_load_result_n106;
-    if (hxc_l_tmp_short_circuit_load_result_n106)
+    bool hxc_l_tmp_short_circuit_load_result_n108 = hxc_l_tmp_short_circuit_result_n37;
+    bool hxc_l_tmp_short_circuit_result_n41 = hxc_l_tmp_short_circuit_load_result_n108;
+    if (hxc_l_tmp_short_circuit_load_result_n108)
     {
-      int32_t hxc_l_tmp_array_length_result_n108;
-      if (hxc_array_ref_length(hxc_l_envelopes, &hxc_l_tmp_array_length_result_n108) != HXC_STATUS_OK)
+      int32_t hxc_l_tmp_array_length_result_n110;
+      if (hxc_array_ref_length(hxc_l_envelopes, &hxc_l_tmp_array_length_result_n110) != HXC_STATUS_OK)
       {
         abort();
       }
-      hxc_l_tmp_short_circuit_result_n40 = hxc_l_tmp_array_length_result_n108 == 1;
+      hxc_l_tmp_short_circuit_result_n41 = hxc_l_tmp_array_length_result_n110 == 1;
     }
-    bool hxc_l_tmp_short_circuit_load_result_n109 = hxc_l_tmp_short_circuit_result_n40;
-    bool hxc_l_tmp_short_circuit_result_n41 = hxc_l_tmp_short_circuit_load_result_n109;
-    if (hxc_l_tmp_short_circuit_load_result_n109)
+    bool hxc_l_tmp_short_circuit_load_result_n111 = hxc_l_tmp_short_circuit_result_n41;
+    bool hxc_l_tmp_short_circuit_result_n42 = hxc_l_tmp_short_circuit_load_result_n111;
+    if (hxc_l_tmp_short_circuit_load_result_n111)
     {
-      int32_t hxc_l_tmp_array_length_result_n111;
-      if (hxc_array_ref_length(hxc_l_literalEnvelopes, &hxc_l_tmp_array_length_result_n111) != HXC_STATUS_OK)
+      int32_t hxc_l_tmp_array_length_result_n113;
+      if (hxc_array_ref_length(hxc_l_literalEnvelopes, &hxc_l_tmp_array_length_result_n113) != HXC_STATUS_OK)
       {
         abort();
       }
-      hxc_l_tmp_short_circuit_result_n41 = hxc_l_tmp_array_length_result_n111 == 3;
+      hxc_l_tmp_short_circuit_result_n42 = hxc_l_tmp_array_length_result_n113 == 3;
     }
-    bool hxc_l_tmp_short_circuit_load_result_n112 = hxc_l_tmp_short_circuit_result_n41;
-    bool hxc_l_tmp_short_circuit_result_n42 = hxc_l_tmp_short_circuit_load_result_n112;
-    if (hxc_l_tmp_short_circuit_load_result_n112)
+    bool hxc_l_tmp_short_circuit_load_result_n114 = hxc_l_tmp_short_circuit_result_n42;
+    bool hxc_l_tmp_short_circuit_result_n43 = hxc_l_tmp_short_circuit_load_result_n114;
+    if (hxc_l_tmp_short_circuit_load_result_n114)
     {
-      int32_t hxc_l_tmp_array_length_result_n114;
-      if (hxc_array_ref_length(hxc_l_rules, &hxc_l_tmp_array_length_result_n114) != HXC_STATUS_OK)
+      int32_t hxc_l_tmp_array_length_result_n116;
+      if (hxc_array_ref_length(hxc_l_rules, &hxc_l_tmp_array_length_result_n116) != HXC_STATUS_OK)
       {
         abort();
       }
-      hxc_l_tmp_short_circuit_result_n42 = hxc_l_tmp_array_length_result_n114 == 1;
+      hxc_l_tmp_short_circuit_result_n43 = hxc_l_tmp_array_length_result_n116 == 1;
     }
-    if (!!hxc_l_tmp_short_circuit_result_n42)
+    if (!!hxc_l_tmp_short_circuit_result_n43)
     {
       break;
     }
@@ -1204,6 +1211,21 @@ int32_t hxc_EnumFixture_modeValue(enum hxc_Mode hxc_l_value)
   return hxc_l_tmp_enum_switch_result_n1;
 }
 
+struct hxc_Option_h95f1c4a28dac hxc_EnumFixture_observedOption(struct hxc_Option_h95f1c4a28dac hxc_l_value, struct hxc_array_ref *hxc_l_evaluations)
+{
+  int32_t hxc_l_tmp_array_update_old_result_n0;
+  if (hxc_array_ref_get_copy(hxc_l_evaluations, (size_t)0, &hxc_l_tmp_array_update_old_result_n0) != HXC_STATUS_OK)
+  {
+    abort();
+  }
+  if (hxc_array_ref_set_copy(hxc_l_evaluations, (size_t)0, &(int32_t){ hxc_i32_add_wrapping(hxc_l_tmp_array_update_old_result_n0, 1) }) != HXC_STATUS_OK)
+  {
+    abort();
+  }
+  (void)hxc_i32_add_wrapping(hxc_l_tmp_array_update_old_result_n0, 1);
+  return hxc_l_value;
+}
+
 bool hxc_EnumFixture_optionHasPositiveValue(struct hxc_Option_h95f1c4a28dac hxc_l_value_he8fa941d9290)
 {
   int32_t hxc_l_value_hd7907d0ee1b8 = { 0 };
@@ -1220,6 +1242,71 @@ bool hxc_EnumFixture_optionHasPositiveValue(struct hxc_Option_h95f1c4a28dac hxc_
     return hxc_l_payload > 0;
   }
   return false;
+}
+
+bool hxc_EnumFixture_optionTagEquality(void)
+{
+  struct hxc_Option_h95f1c4a28dac hxc_l_empty = (struct hxc_Option_h95f1c4a28dac){ .hxc_tag = hxc_Option_None_h506b5e6013bd };
+  struct hxc_Option_h95f1c4a28dac hxc_l_present = (struct hxc_Option_h95f1c4a28dac){ .hxc_tag = hxc_Option_Some_ha9454146ff01, .hxc_payload.hxc_Some.hxc_value = 4 };
+  struct hxc_array_ref *hxc_l_tmp_array_create_result_n2 = NULL;
+  if (hxc_array_ref_create_trivial(hxc_default_allocator(), sizeof(int32_t), _Alignof(int32_t), &hxc_l_tmp_array_create_result_n2) != HXC_STATUS_OK)
+  {
+    abort();
+  }
+  if (hxc_array_push_copy(&hxc_l_tmp_array_create_result_n2->value, &(int32_t){ 0 }) != HXC_STATUS_OK)
+  {
+    abort();
+  }
+  struct hxc_array_ref *hxc_l_evaluations = hxc_l_tmp_array_create_result_n2;
+  bool hxc_l_tmp_materialized_value_n21 = hxc_l_empty.hxc_tag == hxc_Option_None_h506b5e6013bd;
+  bool hxc_l_tmp_short_circuit_result_n3 = hxc_l_tmp_materialized_value_n21;
+  if (hxc_l_tmp_materialized_value_n21)
+  {
+    hxc_l_tmp_short_circuit_result_n3 = hxc_l_empty.hxc_tag == hxc_Option_None_h506b5e6013bd;
+  }
+  bool hxc_l_tmp_short_circuit_load_result_n5 = hxc_l_tmp_short_circuit_result_n3;
+  bool hxc_l_tmp_short_circuit_result_n4 = hxc_l_tmp_short_circuit_load_result_n5;
+  if (hxc_l_tmp_short_circuit_load_result_n5)
+  {
+    hxc_l_tmp_short_circuit_result_n4 = !(hxc_l_present.hxc_tag == hxc_Option_None_h506b5e6013bd);
+  }
+  bool hxc_l_tmp_short_circuit_load_result_n7 = hxc_l_tmp_short_circuit_result_n4;
+  bool hxc_l_tmp_short_circuit_result_n5 = hxc_l_tmp_short_circuit_load_result_n7;
+  if (hxc_l_tmp_short_circuit_load_result_n7)
+  {
+    hxc_l_tmp_short_circuit_result_n5 = !(hxc_l_present.hxc_tag == hxc_Option_None_h506b5e6013bd);
+  }
+  bool hxc_l_tmp_short_circuit_load_result_n9 = hxc_l_tmp_short_circuit_result_n5;
+  bool hxc_l_tmp_short_circuit_result_n6 = hxc_l_tmp_short_circuit_load_result_n9;
+  if (hxc_l_tmp_short_circuit_load_result_n9)
+  {
+    struct hxc_Option_h95f1c4a28dac hxc_l_tmp_call_result_n12 = hxc_EnumFixture_observedOption((struct hxc_Option_h95f1c4a28dac){ .hxc_tag = hxc_Option_Some_ha9454146ff01, .hxc_payload.hxc_Some.hxc_value = 5 }, hxc_l_evaluations);
+    hxc_l_tmp_short_circuit_result_n6 = !(hxc_l_tmp_call_result_n12.hxc_tag == hxc_Option_None_h506b5e6013bd);
+  }
+  bool hxc_l_tmp_short_circuit_load_result_n13 = hxc_l_tmp_short_circuit_result_n6;
+  bool hxc_l_tmp_short_circuit_result_n7 = hxc_l_tmp_short_circuit_load_result_n13;
+  if (hxc_l_tmp_short_circuit_load_result_n13)
+  {
+    struct hxc_Option_h95f1c4a28dac hxc_l_tmp_call_result_n16 = hxc_EnumFixture_observedOption((struct hxc_Option_h95f1c4a28dac){ .hxc_tag = hxc_Option_Some_ha9454146ff01, .hxc_payload.hxc_Some.hxc_value = 6 }, hxc_l_evaluations);
+    hxc_l_tmp_short_circuit_result_n7 = !(hxc_l_tmp_call_result_n16.hxc_tag == hxc_Option_None_h506b5e6013bd);
+  }
+  bool hxc_l_tmp_short_circuit_load_result_n17 = hxc_l_tmp_short_circuit_result_n7;
+  bool hxc_l_tmp_short_circuit_result_n8 = hxc_l_tmp_short_circuit_load_result_n17;
+  if (hxc_l_tmp_short_circuit_load_result_n17)
+  {
+    int32_t hxc_l_tmp_array_get_result_n19;
+    if (hxc_array_ref_get_copy(hxc_l_evaluations, (size_t)0, &hxc_l_tmp_array_get_result_n19) != HXC_STATUS_OK)
+    {
+      abort();
+    }
+    hxc_l_tmp_short_circuit_result_n8 = hxc_l_tmp_array_get_result_n19 == 2;
+  }
+  bool hxc_l_tmp_short_circuit_load_result_n20 = hxc_l_tmp_short_circuit_result_n8;
+  if (hxc_array_ref_release(hxc_l_evaluations) != HXC_STATUS_OK)
+  {
+    abort();
+  }
+  return hxc_l_tmp_short_circuit_load_result_n20;
 }
 
 int32_t hxc_EnumFixture_optionValue(struct hxc_Option_h95f1c4a28dac hxc_l_value_h2c5c76013588)

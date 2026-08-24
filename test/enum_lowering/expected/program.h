@@ -107,6 +107,24 @@ struct hxc_StrictCarrierHolder {
   struct hxc_StrictCarrier hxc_value;
 };
 
+enum hxc_Option_tag_h51b3904815c1 {
+  hxc_Option_None_h506b5e6013bd = 0,
+  hxc_Option_Some_ha9454146ff01 = 1
+};
+
+struct hxc_Option_Some_payload_h6fa8fca385dc {
+  int32_t hxc_value;
+};
+
+union hxc_Option_payload_h331368fdb4fc {
+  struct hxc_Option_Some_payload_h6fa8fca385dc hxc_Some;
+};
+
+struct hxc_Option_h95f1c4a28dac {
+  enum hxc_Option_tag_h51b3904815c1 hxc_tag;
+  union hxc_Option_payload_h331368fdb4fc hxc_payload;
+};
+
 struct hxc_EnumFixture_StackClosure {
   struct hxc_Option_h95f1c4a28dac (*hxc_invoke)(void *, int32_t);
   void *hxc_context;
@@ -196,24 +214,6 @@ struct hxc_Option_h2a07afaff02e {
   union hxc_Option_payload_hbc7d11cfb27e hxc_payload;
 };
 
-enum hxc_Option_tag_h51b3904815c1 {
-  hxc_Option_None_h506b5e6013bd = 0,
-  hxc_Option_Some_ha9454146ff01 = 1
-};
-
-struct hxc_Option_Some_payload_h6fa8fca385dc {
-  int32_t hxc_value;
-};
-
-union hxc_Option_payload_h331368fdb4fc {
-  struct hxc_Option_Some_payload_h6fa8fca385dc hxc_Some;
-};
-
-struct hxc_Option_h95f1c4a28dac {
-  enum hxc_Option_tag_h51b3904815c1 hxc_tag;
-  union hxc_Option_payload_h331368fdb4fc hxc_payload;
-};
-
 enum hxc_Mode {
   hxc_Mode_Off = 0,
   hxc_Mode_On = 1
@@ -301,7 +301,11 @@ bool hxc_EnumFixture_modeIsOn(enum hxc_Mode hxc_l_value);
 
 int32_t hxc_EnumFixture_modeValue(enum hxc_Mode hxc_l_value);
 
+struct hxc_Option_h95f1c4a28dac hxc_EnumFixture_observedOption(struct hxc_Option_h95f1c4a28dac hxc_l_value, struct hxc_array_ref *hxc_l_evaluations);
+
 bool hxc_EnumFixture_optionHasPositiveValue(struct hxc_Option_h95f1c4a28dac hxc_l_value_he8fa941d9290);
+
+bool hxc_EnumFixture_optionTagEquality(void);
 
 int32_t hxc_EnumFixture_optionValue(struct hxc_Option_h95f1c4a28dac hxc_l_value_h2c5c76013588);
 
