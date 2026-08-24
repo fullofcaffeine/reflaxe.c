@@ -3819,6 +3819,7 @@ private class HxcIRValidationState {
 					add(path, "String.lastIndexOf requires source String, needle String, start-presence Bool, and start Int, then returns Haxe Int", source);
 				validateCleanupFreeStatusAbort(call.failure, path, source, "String.lastIndexOf");
 			case "substr" | "substring":
+				final secondArgument = operationId == "substr" ? "length-presence Bool, and length Int" : "end-presence Bool, and end Int";
 				final matchingStringCarrier = argumentTypes.length == 0 ? false : switch argumentTypes[0] {
 					case IRTString: call.returnType == IRTString;
 					case IRTManagedString: call.returnType == IRTManagedString;
@@ -3833,9 +3834,7 @@ private class HxcIRValidationState {
 					case _: false;
 				};
 				if (argumentTypes.length != 4 || !matchingStringCarrier || !hasIntStart || argumentTypes[2] != IRTBool || !hasIntEnd)
-					add(path,
-						'String.$operationId requires String, start Int, second-argument-presence Bool, and second Int, then returns the same String carrier',
-						source);
+					add(path, 'String.$operationId requires String, start Int, $secondArgument, then returns the same String carrier', source);
 				validateCleanupFreeStatusAbort(call.failure, path, source, 'String.$operationId');
 			case _:
 				add(path, 'string-scalar runtime call names unsupported operation `$operationId`', source);
