@@ -35,6 +35,11 @@ double hxc_ArithmeticFixture_fneg(double hxc_l_value)
   return -hxc_l_value;
 }
 
+double hxc_ArithmeticFixture_fsqrt(double hxc_l_value)
+{
+  return hxc_f64_sqrt(hxc_l_value);
+}
+
 double hxc_ArithmeticFixture_fsub(double hxc_l_left, double hxc_l_right)
 {
   return hxc_l_left - hxc_l_right;
@@ -152,6 +157,7 @@ void hxc_ArithmeticFixture_main(void)
   hxc_ArithmeticFixture_fneg(1.0);
   hxc_ArithmeticFixture_fdiv(1.0, 0.0);
   hxc_ArithmeticFixture_fmod(1.0, 0.0);
+  hxc_ArithmeticFixture_fsqrt(25.0);
   hxc_ArithmeticFixture_fint(3.75);
   hxc_ArithmeticFixture_fequal(1.0, 2.0);
   hxc_ArithmeticFixture_uadd(1, 2);

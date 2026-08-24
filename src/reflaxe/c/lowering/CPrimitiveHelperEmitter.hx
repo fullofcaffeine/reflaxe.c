@@ -113,14 +113,24 @@ class CPrimitiveHelperSelection {
 	}
 
 	public function buildFacts():Array<TypedCBuildFact> {
-		final moduloId = CPrimitiveSemantics.helperId(CPHF64Modulo);
-		if (!selectedById.exists(moduloId)) {
+		final mathIds = [
+			CPrimitiveSemantics.helperId(CPHF64Modulo),
+			CPrimitiveSemantics.helperId(CPHF64SquareRoot)
+		];
+		final owners:Array<String> = [];
+		for (helperId in mathIds) {
+			if (!selectedById.exists(helperId))
+				continue;
+			final helperOwners = ownersById.get(helperId);
+			if (helperOwners == null || helperOwners.length == 0) {
+				throw new CBodyEmissionError('selected math helper `$helperId` has no source-module provenance');
+			}
+			for (owner in helperOwners)
+				addUnique(owners, owner);
+		}
+		if (owners.length == 0)
 			return [];
-		}
-		final owners = ownersById.get(moduloId);
-		if (owners == null || owners.length == 0) {
-			throw new CBodyEmissionError("selected floating modulo helper has no source-module provenance");
-		}
+		owners.sort(compareStrings);
 		return [
 			{
 				kind: "link",
@@ -179,7 +189,7 @@ class CPrimitiveHelperSelection {
 
 	static function parameterCount(kind:CPrimitiveHelperKind):Int {
 		return switch kind {
-			case CPHU32ToI32Bits | CPHI32Negate | CPHI32BitwiseNot | CPHF64ToI32Saturating: 1;
+			case CPHU32ToI32Bits | CPHI32Negate | CPHI32BitwiseNot | CPHF64SquareRoot | CPHF64ToI32Saturating: 1;
 			case CPHI32Add | CPHI32Subtract | CPHI32Multiply | CPHI32Modulo | CPHU32Modulo | CPHI32ShiftLeft | CPHI32ShiftRight | CPHI32UnsignedShiftRight |
 				CPHI32BitAnd | CPHI32BitOr | CPHI32BitXor | CPHF64Divide | CPHF64Modulo:
 				2;
@@ -205,6 +215,8 @@ class CPrimitiveHelperSelection {
 				[preprocessor("INFINITY"), preprocessor("NAN"), preprocessor("signbit")];
 			case CPHF64Modulo:
 				[preprocessor("NAN"), ordinary("fmod")];
+			case CPHF64SquareRoot:
+				[ordinary("sqrt")];
 			case CPHF64ToI32Saturating:
 				[preprocessor("INT32_MAX"), preprocessor("INT32_MIN")];
 			case CPHI32Add | CPHI32Subtract | CPHI32Multiply | CPHI32Negate | CPHU32Modulo | CPHI32ShiftLeft | CPHI32UnsignedShiftRight | CPHI32BitAnd |
@@ -244,7 +256,7 @@ class CPrimitiveHelperEmitter {
 		final headers:Array<String> = [];
 		for (plan in plans) {
 			switch plan.kind {
-				case CPHF64Divide | CPHF64Modulo:
+				case CPHF64Divide | CPHF64Modulo | CPHF64SquareRoot:
 					addUnique(headers, "math.h");
 				case _:
 					addUnique(headers, "stdint.h");
@@ -350,6 +362,8 @@ class CPrimitiveHelperEmitter {
 					SIf(EBinary(Equal, divisor, floatZero()), SReturn(standard(plan, "NAN")), null),
 					SReturn(ECall(standard(plan, "fmod"), [left, divisor]))
 				]);
+			case CPHF64SquareRoot:
+				SBlock([SReturn(ECall(standard(plan, "sqrt"), [left]))]);
 			case CPHF64ToI32Saturating:
 				SBlock([
 					SIf(EBinary(NotEqual, left, left), SReturn(intConstant("0")), null),
@@ -373,7 +387,7 @@ class CPrimitiveHelperEmitter {
 			case CPHU32ToI32Bits: [uint32Type()];
 			case CPHU32Modulo: [uint32Type(), uint32Type()];
 			case CPHF64Divide | CPHF64Modulo: [doubleType(), doubleType()];
-			case CPHF64ToI32Saturating: [doubleType()];
+			case CPHF64SquareRoot | CPHF64ToI32Saturating: [doubleType()];
 			case CPHI32Negate | CPHI32BitwiseNot: [int32Type()];
 			case CPHI32Add | CPHI32Subtract | CPHI32Multiply | CPHI32Modulo | CPHI32ShiftLeft | CPHI32ShiftRight | CPHI32UnsignedShiftRight | CPHI32BitAnd |
 				CPHI32BitOr | CPHI32BitXor:
@@ -384,7 +398,7 @@ class CPrimitiveHelperEmitter {
 	static function resultType(kind:CPrimitiveHelperKind):CType {
 		return switch kind {
 			case CPHU32Modulo: uint32Type();
-			case CPHF64Divide | CPHF64Modulo: doubleType();
+			case CPHF64Divide | CPHF64Modulo | CPHF64SquareRoot: doubleType();
 			case CPHF64ToI32Saturating: int32Type();
 			case _: int32Type();
 		};

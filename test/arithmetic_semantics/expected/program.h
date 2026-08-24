@@ -36,6 +36,11 @@ static inline double hxc_f64_modulo(double hxc_l_left, double hxc_l_right)
   return fmod(hxc_l_left, hxc_l_right);
 }
 
+static inline double hxc_f64_sqrt(double hxc_l_value)
+{
+  return sqrt(hxc_l_value);
+}
+
 static inline int32_t hxc_f64_to_i32_saturating(double hxc_l_value)
 {
   if (hxc_l_value != hxc_l_value)
@@ -139,6 +144,8 @@ double hxc_ArithmeticFixture_fmod(double hxc_l_left, double hxc_l_right);
 double hxc_ArithmeticFixture_fmul(double hxc_l_left, double hxc_l_right);
 
 double hxc_ArithmeticFixture_fneg(double hxc_l_value);
+
+double hxc_ArithmeticFixture_fsqrt(double hxc_l_value);
 
 double hxc_ArithmeticFixture_fsub(double hxc_l_left, double hxc_l_right);
 

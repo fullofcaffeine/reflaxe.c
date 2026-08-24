@@ -30,7 +30,7 @@ EXPECTED = Path(__file__).with_name("expected")
 REPORT_PREFIX = "HXC_ARITHMETIC_SEMANTICS="
 EXPECTED_ORACLE = (
     "-2147483648,2147483647,-2,-2147483648,2147483648,0,-2147483648,-1,1,"
-    "85,95,90,-1,-1,3,0,2147483647,-2147483648,1,18,6\n"
+    "85,95,90,-1,-1,3,0,1,1,1,1,5,3,0,2147483647,-2147483648,1,18,6\n"
 )
 STRICT_FLAGS = (
     "-std=c11",
@@ -56,6 +56,7 @@ SANITIZER_FLAGS = (
 EXPECTED_HELPERS = [
     "hxc.f64.divide.zero-safe",
     "hxc.f64.modulo",
+    "hxc.f64.sqrt",
     "hxc.f64.to.i32.saturating",
     "hxc.i32.add.wrapping",
     "hxc.i32.bit-and",
@@ -255,6 +256,7 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
         ("haxe.i32.unsigned-shift-right.masked", 'program-local("hxc.i32.unsigned-shift-right.masked")'),
         ("haxe.f64.divide", 'program-local("hxc.f64.divide.zero-safe")'),
         ("haxe.f64.modulo", 'program-local("hxc.f64.modulo")'),
+        ("haxe.f64.sqrt", 'program-local("hxc.f64.sqrt")'),
         ("haxe.u32.add", "static"),
         ("haxe.u32.shift-left.masked", "static"),
         ("haxe.u32.unsigned-shift-right.masked", "static"),
@@ -327,6 +329,7 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
         "INT32_MIN",
         "return NAN;",
         "return fmod(",
+        "return sqrt(",
     ):
         if marker not in header:
             raise ArithmeticSemanticsFailure(f"helper header lost {marker!r}")
@@ -508,7 +511,7 @@ def harness_source(symbols: dict[str, object]) -> str:
         for field in (
             "iadd", "isub", "imul", "ineg", "idiv", "imod", "ishl", "ishr",
             "iushr", "iand", "ior", "ixor", "inot", "iless", "fadd", "fsub",
-            "fmul", "fneg", "fdiv", "fmod", "fint", "fequal", "uadd", "umod", "ushl",
+            "fmul", "fneg", "fdiv", "fmod", "fsqrt", "fint", "fequal", "uadd", "umod", "ushl",
             "ushr", "literalToU8", "i32ToU8", "u8ToI32", "i64ToU16",
             "u32ToU64", "u32ToU8", "u8ToI16", "update", "updateParameter",
         )
@@ -555,6 +558,13 @@ int main(void)
   if (!isnan({names["fmod"]}(1.0, 0.0))) return 27;
   if ({names["fmod"]}(-7.0, 3.0) != -1.0) return 28;
   if (!signbit({names["fmod"]}(-0.0, 3.0))) return 29;
+  if ({names["fsqrt"]}(9.0) != 3.0) return 56;
+  if ({names["fsqrt"]}(0.0) != 0.0) return 57;
+  if (!signbit({names["fsqrt"]}(-0.0))) return 62;
+  if (!isnan({names["fsqrt"]}(-1.0))) return 58;
+  if (!isinf({names["fsqrt"]}(INFINITY))) return 59;
+  if (!isnan({names["fsqrt"]}(NAN))) return 60;
+  if ({names["fsqrt"]}(3.0 * 3.0 + 4.0 * 4.0) != 5.0) return 61;
   if ({names["fint"]}(NAN) != INT32_C(0)) return 30;
   if ({names["fint"]}(INFINITY) != INT32_MAX) return 31;
   if ({names["fint"]}(-INFINITY) != INT32_MIN) return 32;
@@ -738,6 +748,7 @@ def custom_target(
     main_class: str = "ArithmeticFixture",
     profile: str = "portable",
     runtime: str | None = None,
+    layout: str = "unity",
 ) -> subprocess.CompletedProcess[str]:
     command = [
         development_tool("haxe"),
@@ -752,7 +763,7 @@ def custom_target(
         command.extend(["-D", "reflaxe_c_profile=metal"])
     if runtime is not None:
         command.extend(["-D", f"hxc_runtime={runtime}"])
-    command.extend(["-D", "hxc_project_layout=unity", "--custom-target", f"c={output}"])
+    command.extend(["-D", f"hxc_project_layout={layout}", "--custom-target", f"c={output}"])
     environment = os.environ.copy()
     environment["HAXE_NO_SERVER"] = "1"
     return run_bounded_process(
@@ -838,6 +849,8 @@ def check_production(selected: str | None = None) -> None:
         repeated = root / "repeated"
         metal = root / "metal"
         no_runtime = root / "none"
+        split = root / "split"
+        split_repeated = root / "split-repeated"
         for label, output, profile, runtime in (
             ("portable", portable, "portable", None),
             ("repeat", repeated, "portable", None),
@@ -850,8 +863,17 @@ def check_production(selected: str | None = None) -> None:
                     f"{label} production compile failed\n"
                     f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
                 )
+        for label, output in (("split", split), ("split repeat", split_repeated)):
+            result = custom_target(output, layout="split")
+            if result.returncode != 0 or result.stdout or result.stderr:
+                raise ArithmeticSemanticsFailure(
+                    f"{label} production compile failed\n"
+                    f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
+                )
         if generated_tree(portable) != generated_tree(repeated):
             raise ArithmeticSemanticsFailure("repeated arithmetic outputs are not byte-identical")
+        if generated_tree(split) != generated_tree(split_repeated):
+            raise ArithmeticSemanticsFailure("repeated split arithmetic outputs are not byte-identical")
         for relative in ("include/hxc/program.h", "src/program.c"):
             if (portable / relative).read_bytes() != (metal / relative).read_bytes():
                 raise ArithmeticSemanticsFailure(
@@ -881,6 +903,8 @@ def check_production(selected: str | None = None) -> None:
             raise ArithmeticSemanticsFailure("primitive arithmetic selected hxrt")
         symbols = json.loads((portable / "hxc.symbols.json").read_text())
         sources = sorted((portable / "src").glob("*.c"))
+        split_symbols = json.loads((split / "hxc.symbols.json").read_text())
+        split_sources = sorted((split / "src").rglob("*.c"))
         for toolchain in available_compilers(selected):
             compile_and_run_project(portable, sources, symbols, toolchain, "-O0")
             compile_and_run_project(portable, sources, symbols, toolchain, "-O2")
@@ -888,6 +912,8 @@ def check_production(selected: str | None = None) -> None:
                 compile_and_run_project(
                     portable, sources, symbols, toolchain, "-O1", sanitizer=True
                 )
+            compile_and_run_project(split, split_sources, split_symbols, toolchain, "-O0")
+            compile_and_run_project(split, split_sources, split_symbols, toolchain, "-O2")
 
 
 def snapshot_native_report() -> dict[str, object]:

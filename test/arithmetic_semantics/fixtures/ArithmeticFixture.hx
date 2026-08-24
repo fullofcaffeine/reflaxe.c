@@ -68,6 +68,10 @@ class ArithmeticFixture {
 	static function fmod(left:Float, right:Float):Float
 		return left % right;
 
+	/** Use the ordinary Haxe standard-library surface for binary64 square roots. */
+	static function fsqrt(value:Float):Float
+		return Math.sqrt(value);
+
 	static function fint(value:Float):Int
 		return Std.int(value);
 
@@ -153,6 +157,13 @@ class ArithmeticFixture {
 			ixor(85, 15),
 			inot(0),
 			fmod(-7.0, 3.0),
+			fsqrt(9.0),
+			fsqrt(0.0),
+			1.0 / fsqrt(-0.0) == Math.NEGATIVE_INFINITY ? 1 : 0,
+			Math.isNaN(fsqrt(-1.0)) ? 1 : 0,
+			fsqrt(Math.POSITIVE_INFINITY) == Math.POSITIVE_INFINITY ? 1 : 0,
+			Math.isNaN(fsqrt(Math.NaN)) ? 1 : 0,
+			fsqrt(3.0 * 3.0 + 4.0 * 4.0),
 			fint(3.75),
 			uadd(unsignedMaximum, 1),
 			umod(unsignedMaximum, unsignedHalf),
@@ -182,6 +193,7 @@ class ArithmeticFixture {
 		fneg(1.0);
 		fdiv(1.0, 0.0);
 		fmod(1.0, 0.0);
+		fsqrt(25.0);
 		fint(3.75);
 		fequal(1.0, 2.0);
 		uadd(1, 2);

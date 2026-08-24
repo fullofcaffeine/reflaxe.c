@@ -2127,6 +2127,37 @@
       "notes": "The upstream inline StringBuf.toString method returns the built managed String through the compiler's normal owned-return rules. The source API stays ordinary Haxe and does not expose the runtime carrier."
     },
     {
+      "id": "math-sqrt-partial",
+      "selector": {
+        "module": "Math",
+        "type": "Math",
+        "member": "sqrt",
+        "kind": "method",
+        "isStatic": true,
+        "signature": "(v : Float) -> Float"
+      },
+      "owner": "thin-c-os-wrapper",
+      "runtimeFeatures": [],
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "environments": [
+        "hosted"
+      ],
+      "status": "partial",
+      "ownerBeads": "E5.T05",
+      "testOwnerBeads": "E5.T12",
+      "diagnosticPolicies": [
+        "planned-unsupported"
+      ],
+      "tests": [
+        "test/arithmetic_semantics/fixtures/ArithmeticFixture.hx",
+        "test/arithmetic_semantics/run.py"
+      ],
+      "notes": "Ordinary typed Math.sqrt lowers to a runtime-free binary64 helper around C sqrt. Eval differential checks and strict C11 O0, O2, and sanitizer execution cover finite values, signed zero, negative input, infinity, NaN, and vector normalization; the generated build plan records the math-library link explicitly. Other Math operations and non-hosted environments remain planned."
+    },
+    {
       "id": "std-int-conformant",
       "selector": {
         "module": "Std",
@@ -6727,20 +6758,20 @@
         "metal"
       ],
       "environments": [
-        "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "hosted"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T05",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
         "planned-unsupported"
       ],
-      "tests": [],
-      "notes": "Prefer constant folding, C operators, and proven C math functions; native libraries are manifested build facts, not hxrt features.",
-      "ruleId": "math-core"
+      "tests": [
+        "test/arithmetic_semantics/fixtures/ArithmeticFixture.hx",
+        "test/arithmetic_semantics/run.py"
+      ],
+      "notes": "Ordinary typed Math.sqrt lowers to a runtime-free binary64 helper around C sqrt. Eval differential checks and strict C11 O0, O2, and sanitizer execution cover finite values, signed zero, negative input, infinity, NaN, and vector normalization; the generated build plan records the math-library link explicitly. Other Math operations and non-hosted environments remain planned.",
+      "ruleId": "math-sqrt-partial"
     },
     {
       "id": "hxc-stdlib-api-v1:981ae8cfa87009659de06f45084df0ef4c643bb8616f175a94eb63f5ae56919a",

@@ -11221,6 +11221,8 @@ private class FunctionBuilder {
 		}
 		if (isStdString(call.callee))
 			return lowerStdString(expression, call.arguments);
+		if (isStaticMethod(call.callee, "", "Math", "sqrt"))
+			return lowerMathSquareRoot(expression, call.arguments);
 		final imported = aggregateRegistry.importFunction(call.callee, expression.pos, input.sourcePath);
 		if (imported != null)
 			return lowerImportCall(expression, call.arguments, imported, materializeResult);
@@ -11557,6 +11559,28 @@ private class FunctionBuilder {
 			case CPConversionRejected(reason):
 				unsupported(expression, 'TCall($surface:unsupported:$reason)');
 		};
+	}
+
+	/** Lower ordinary `Math.sqrt` to the compiler-owned binary64 math boundary. */
+	function lowerMathSquareRoot(expression:TypedExpr, arguments:Array<TypedExpr>):LoweredValue {
+		if (arguments.length != 1)
+			return unsupported(expression, 'TCall(Math.sqrt:argument-count=${arguments.length})');
+		final floatType = bodyValueType(Context.getType("Float"), arguments[0].pos, "TCall(Math.sqrt:declared-input-type)");
+		final source = coerce(lowerValue(arguments[0], floatType), floatType, arguments[0].pos, "TCall(Math.sqrt:declared-input)");
+		final target = bodyValueType(expression.t, expression.pos, "TCall(Math.sqrt:result-type)");
+		final sourcePrimitive = source.mapping.primitiveMapping();
+		final targetPrimitive = target.primitiveMapping();
+		if (sourcePrimitive == null
+			|| targetPrimitive == null
+			|| sourcePrimitive.sourceType != CPHaxeFloat
+			|| targetPrimitive.sourceType != CPHaxeFloat
+			|| sourcePrimitive.nullability != CPNonNullable
+			|| targetPrimitive.nullability != CPNonNullable)
+			return unsupported(expression, "TCall(Math.sqrt:requires-direct-Float-carriers)");
+		final result:HxcIRResult = {id: nextValueId(), type: target.irType};
+		appendInstruction(result, IRIOUnary("haxe.f64.sqrt", source.id, IRIProgramLocal(CPrimitiveSemantics.helperId(CPHF64SquareRoot))),
+			sourceSpan(expression.pos), "math-sqrt");
+		return {id: result.id, type: result.type, mapping: target};
 	}
 
 	function lowerImportCall(expression:TypedExpr, argumentExpressions:Array<TypedExpr>, target:CPreparedImportFunction,

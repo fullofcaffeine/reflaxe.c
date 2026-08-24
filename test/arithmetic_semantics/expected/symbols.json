@@ -447,6 +447,53 @@
     },
     {
       "overloadSignature": [
+        "f64"
+      ],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": null,
+      "readableName": [
+        "ArithmeticFixture",
+        "fsqrt"
+      ],
+      "requestedName": null,
+      "cName": "hxc_ArithmeticFixture_fsqrt",
+      "semanticKey": "6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture5:fsqrt|1:3:f64|0:|0:",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "method",
+      "specializationArguments": [],
+      "baseName": "hxc_ArithmeticFixture_fsqrt",
+      "sourceSymbol": "ArithmeticFixture.fsqrt(f64)"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "readableName": [
+        "value"
+      ],
+      "requestedName": null,
+      "cName": "hxc_l_value",
+      "semanticKey": "5:local|96:ordinary:84:6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture5:fsqrt|1:3:f64|0:|0:|3:17:ArithmeticFixture5:fsqrt5:value|0:|0:|1:0",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture5:fsqrt|1:3:f64|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_l_value",
+      "sourceSymbol": "ArithmeticFixture.fsqrt.value#0"
+    },
+    {
+      "overloadSignature": [
         "f64",
         "f64"
       ],
@@ -2566,6 +2613,29 @@
       "naming": "explicit",
       "sourceOrdinal": null,
       "readableName": [
+        "c-standard-library",
+        "sqrt"
+      ],
+      "requestedName": "sqrt",
+      "cName": "sqrt",
+      "semanticKey": "6:method|28:ordinary:16:translation-unit|2:18:c-standard-library4:sqrt|0:|0:|0:",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "external",
+      "kind": "method",
+      "specializationArguments": [],
+      "baseName": "sqrt",
+      "sourceSymbol": "c-standard-library.sqrt"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "explicit",
+      "sourceOrdinal": null,
+      "readableName": [
         "init",
         "compiler",
         "executable-entry-point",
@@ -2672,6 +2742,28 @@
       "specializationArguments": [],
       "baseName": "hxc_l_right",
       "sourceSymbol": "compiler.primitive-helper.hxc.f64.modulo.right#1"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "readableName": [
+        "value"
+      ],
+      "requestedName": null,
+      "cName": "hxc_l_value",
+      "semanticKey": "5:local|118:ordinary:105:14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:12:hxc.f64.sqrt|0:|4:8:compiler16:primitive-helper12:hxc.f64.sqrt5:value|0:|0:|1:0",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:12:hxc.f64.sqrt|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_l_value",
+      "sourceSymbol": "compiler.primitive-helper.hxc.f64.sqrt.value#0"
     },
     {
       "overloadSignature": [],
@@ -3298,6 +3390,31 @@
       ],
       "baseName": "hxc_f64_modulo",
       "sourceSymbol": "compiler.primitive-helper<hxc.f64.modulo>"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": null,
+      "readableName": [
+        "f64",
+        "sqrt"
+      ],
+      "requestedName": null,
+      "cName": "hxc_f64_sqrt",
+      "semanticKey": "14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:12:hxc.f64.sqrt|0:",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "specialization",
+      "specializationArguments": [
+        "hxc.f64.sqrt"
+      ],
+      "baseName": "hxc_f64_sqrt",
+      "sourceSymbol": "compiler.primitive-helper<hxc.f64.sqrt>"
     },
     {
       "overloadSignature": [],
