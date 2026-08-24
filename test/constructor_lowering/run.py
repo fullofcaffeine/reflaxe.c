@@ -803,20 +803,24 @@ def validate_retained_interface_project(output: Path) -> None:
 
 
 def validate_unconstructed_interface_project(output: Path) -> None:
-    """Prove a type-only interface field does not invent a dispatch table."""
+    """Prove a typed interface call does not invent a concrete dispatch table."""
 
     dispatch = json.loads((output / "hxc.dispatch.json").read_text(encoding="utf-8"))
+    layouts = dispatch.get("layouts")
+    slots = dispatch.get("slots")
     tables = dispatch.get("tables")
-    if not isinstance(tables, list) or tables:
+    if (
+        not isinstance(layouts, list)
+        or len(layouts) != 1
+        or not isinstance(layouts[0], dict)
+        or len(layouts[0].get("slotIds", [])) != 1
+        or not isinstance(slots, list)
+        or len(slots) != 1
+        or not isinstance(tables, list)
+        or tables
+    ):
         raise ConstructorLoweringFailure(
-            "unconstructed interface field unexpectedly retained a dispatch table"
-        )
-    sources = "\n".join(
-        path.read_text(encoding="utf-8") for path in sorted((output / "src").rglob("*.c"))
-    )
-    if "DormantSource_score" in sources:
-        raise ConstructorLoweringFailure(
-            "unconstructed interface field unexpectedly emitted runtime dispatch"
+            "unconstructed interface field lost its one typed slot or invented a concrete table"
         )
 
 

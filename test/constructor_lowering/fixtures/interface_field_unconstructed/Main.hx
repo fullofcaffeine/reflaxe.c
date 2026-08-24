@@ -34,6 +34,16 @@ final class SessionShell {
 	/** Prove the live shell does not invent a dormant owner. */
 	public function ready():Bool
 		return dormant == null;
+
+	/**
+		Keep the dormant owner's interface-call body typed but unreachable at runtime.
+
+		The null guard makes the result observable without constructing either the
+		owner or an implementation. Lowering still needs the interface slot layout,
+		but whole-program dispatch has no concrete table to publish.
+	**/
+	public function dormantScore():Int
+		return dormant == null ? 0 : dormant.read();
 }
 
 /** Exercises the live shell without constructing any interface implementation. */
@@ -41,6 +51,6 @@ final class Main {
 	/** Keep the native process alive only when the optional owner stays absent. */
 	static function main():Void {
 		final shell = new SessionShell();
-		while (!shell.ready()) {}
+		while (!shell.ready() || shell.dormantScore() != 0) {}
 	}
 }

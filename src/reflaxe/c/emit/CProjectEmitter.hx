@@ -1128,8 +1128,13 @@ class CProjectEmitter {
 		}
 		if (observedDirect != directCount || observedIndirect != indirectCount)
 			fail("dispatch call records differ from their direct and indirect summary counts");
-		if (indirectCount > 0 && (report.layouts.length == 0 || report.slots.length == 0 || report.tables.length == 0))
-			fail("indirect dispatch requires a non-empty reachable layout, slot, and table plan");
+		// A typed method body can remain reachable behind a null class field even
+		// when no constructor can create its interface receiver. The call still owns
+		// an exact layout and slot, but whole-program evidence correctly emits zero
+		// concrete tables. Interface construction validation remains responsible for
+		// requiring an exact table whenever a runtime value can actually exist.
+		if (indirectCount > 0 && (report.layouts.length == 0 || report.slots.length == 0))
+			fail("indirect dispatch requires a non-empty reachable layout and slot plan");
 	}
 
 	static function requireDispatchLayoutSlots(values:Map<String, Array<String>>, layoutId:String, tableId:String):Array<String> {
