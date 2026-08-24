@@ -1944,6 +1944,8 @@ def validate() -> list[str]:
         "run_eval_oracle",
         "-fsanitize=address,undefined",
         "hxc_string_map_ref_get_copy",
+        "hxc_string_map_ref_copy",
+        'runtime(feature="string-map",operation="copy")',
         "allocation rollback",
         "hxc_gc",
         "nm",
@@ -1972,8 +1974,10 @@ def validate() -> list[str]:
         "hxc_int_bool_map_ref_get",
         "hxc_int_bool_map_ref_remove",
         "hxc_int_bool_map_ref_clear",
+        "hxc_int_bool_map_ref_copy",
         "runtime-none",
         'runtime(feature="int-map",operation="get")',
+        'runtime(feature="int-map",operation="copy")',
         "nm",
     ):
         if required_int_map_contract not in int_map_runner:

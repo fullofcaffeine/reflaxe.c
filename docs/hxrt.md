@@ -368,9 +368,10 @@ missing key. `get(Int)` returns a tagged `Null<Bool>` for the same reason.
 
 Assigning the map to a new local retains the same mutable table. Changes
 through either alias are visible through the other. The current method set is
-construction, `set`, `exists`, `get`, `remove`, and `clear`. Iteration, copying,
-text conversion, and other value types still produce a source-positioned
-IntMap diagnostic.
+construction, `set`, `exists`, `get`, `remove`, `clear`, and `copy`. A copy has
+its own table: later insertions, replacements, removals, and clears do not
+change the source. Iteration, text conversion, and other value types still
+produce a source-positioned IntMap diagnostic.
 
 The table uses open addressing. It hashes a key to a slot and checks later
 slots after a collision. A removed slot keeps a tombstone marker, so later keys
@@ -448,6 +449,13 @@ old value. Rehashing relocates the table's existing bytes without logically
 copying or destroying their owners; it is the same ownership move a
 handwritten C table performs when replacing its slot block.
 
+`copy` creates a new table with the same allocator and value policy. Keys and
+direct scalar values are copied into that table. Managed values use their exact
+copy callback, so a shallow Haxe copy retains nested owners such as Strings or
+Arrays without sharing the outer map. The result is published only after every
+entry succeeds. If allocation or a value callback fails, the runtime destroys
+the partial copy and leaves the source unchanged.
+
 Tagged payload enums remain unsupported as top-level map values because their
 active union member needs a typed ownership policy. Float, class values,
 abstracts with unsupported underlying storage, and unrelated reference families
@@ -456,9 +464,9 @@ remain outside this intentionally bounded specialization.
 The Haxe fixture proves language semantics through generated C. The separate
 handwritten-C native fixture injects allocator and callback failures directly,
 so code generation and hxrt cannot accidentally validate the same bug
-together. Other key/value specializations, iteration, collector-traced values,
-and owner-replacing map assignment remain explicitly unsupported until they
-receive complete typed lifetime contracts.
+together. Other key/value specializations, iteration, text conversion,
+collector-traced values, and owner-replacing map assignment remain explicitly
+unsupported until they receive complete typed lifetime contracts.
 
 <!-- hxrt-feature:bytes -->
 ### `bytes`

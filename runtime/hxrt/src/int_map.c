@@ -212,6 +212,39 @@ hxc_status hxc_int_bool_map_ref_release(hxc_int_bool_map_ref *map) {
   );
 }
 
+hxc_status hxc_int_bool_map_ref_copy(
+  const hxc_int_bool_map_ref *source,
+  hxc_int_bool_map_ref **out_map
+) {
+  hxc_int_bool_map_ref *copy = NULL;
+  size_t index;
+  hxc_status cleanup_status;
+  hxc_status status;
+  if (out_map == NULL || *out_map != NULL
+    || !hxc_int_bool_map_is_valid(source)) {
+    return HXC_STATUS_INVALID_ARGUMENT;
+  }
+  status = hxc_int_bool_map_ref_create(source->allocator, &copy);
+  if (status != HXC_STATUS_OK) {
+    return status;
+  }
+  if (source->capacity != 0u) {
+    status = hxc_int_bool_map_reserve(copy, source->capacity);
+  }
+  for (index = 0u; status == HXC_STATUS_OK && index < source->capacity; index++) {
+    const hxc_int_bool_map_slot *slot = &hxc_int_bool_map_slots(source)[index];
+    if (slot->state == HXC_INT_BOOL_MAP_OCCUPIED) {
+      status = hxc_int_bool_map_ref_set(copy, slot->key, slot->value);
+    }
+  }
+  if (status != HXC_STATUS_OK) {
+    cleanup_status = hxc_int_bool_map_ref_release(copy);
+    return cleanup_status == HXC_STATUS_OK ? status : cleanup_status;
+  }
+  *out_map = copy;
+  return HXC_STATUS_OK;
+}
+
 hxc_status hxc_int_bool_map_ref_set(
   hxc_int_bool_map_ref *map,
   int32_t key,

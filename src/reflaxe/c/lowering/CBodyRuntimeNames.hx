@@ -77,6 +77,7 @@ enum CBodyRuntimeName {
 	CBRNStringMapValueOpsType;
 	CBRNStringMapRetain;
 	CBRNStringMapRelease;
+	CBRNStringMapCopy;
 	CBRNStringMapSetCopy;
 	CBRNStringMapExists;
 	CBRNStringMapGetCopy;
@@ -85,6 +86,7 @@ enum CBodyRuntimeName {
 	CBRNIntMapCreate;
 	CBRNIntMapRetain;
 	CBRNIntMapRelease;
+	CBRNIntMapCopy;
 	CBRNIntMapSet;
 	CBRNIntMapExists;
 	CBRNIntMapGet;
@@ -175,6 +177,7 @@ class CBodyRuntimeNames {
 			case CBRNStringMapValueOpsType: "hxc_string_map_value_ops";
 			case CBRNStringMapRetain: "hxc_string_map_ref_retain";
 			case CBRNStringMapRelease: "hxc_string_map_ref_release";
+			case CBRNStringMapCopy: "hxc_string_map_ref_copy";
 			case CBRNStringMapSetCopy: "hxc_string_map_ref_set_copy";
 			case CBRNStringMapExists: "hxc_string_map_ref_exists";
 			case CBRNStringMapGetCopy: "hxc_string_map_ref_get_copy";
@@ -183,6 +186,7 @@ class CBodyRuntimeNames {
 			case CBRNIntMapCreate: "hxc_int_bool_map_ref_create";
 			case CBRNIntMapRetain: "hxc_int_bool_map_ref_retain";
 			case CBRNIntMapRelease: "hxc_int_bool_map_ref_release";
+			case CBRNIntMapCopy: "hxc_int_bool_map_ref_copy";
 			case CBRNIntMapSet: "hxc_int_bool_map_ref_set";
 			case CBRNIntMapExists: "hxc_int_bool_map_ref_exists";
 			case CBRNIntMapGet: "hxc_int_bool_map_ref_get";

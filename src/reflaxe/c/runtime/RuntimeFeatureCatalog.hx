@@ -178,6 +178,7 @@ class RuntimeFeatureCatalog {
 					"hxc_string_map_ref_create_with_ops",
 					"hxc_string_map_ref_retain",
 					"hxc_string_map_ref_release",
+					"hxc_string_map_ref_copy",
 					"hxc_string_map_ref_set_copy",
 					"hxc_string_map_ref_exists",
 					"hxc_string_map_ref_get_copy",
@@ -191,7 +192,7 @@ class RuntimeFeatureCatalog {
 						new RuntimeFeatureSelectionRoot("managed-type-representation", RuntimeFeatureSelectionRootKind.HxcIrOperation,
 							"A reachable ordinary Haxe Map<String, V> whose keys, contents, and shared identity change at run time."),
 						new RuntimeFeatureSelectionRoot("string-map-operation", RuntimeFeatureSelectionRootKind.HxcIrOperation,
-							"A reachable admitted construction, lookup, membership, insertion, removal, or clear operation.")
+							"A reachable admitted construction, copy, lookup, membership, insertion, removal, or clear operation.")
 					],
 					"A compiler-known immutable lookup table can remain direct const C data when Haxe mutation and alias identity are unobservable.",
 					"A closed, bounded map can use a program-local specialization when it preserves String equality, mutation, missing values, and alias identity.",
@@ -206,6 +207,7 @@ class RuntimeFeatureCatalog {
 					"hxc_int_bool_map_ref_create",
 					"hxc_int_bool_map_ref_retain",
 					"hxc_int_bool_map_ref_release",
+					"hxc_int_bool_map_ref_copy",
 					"hxc_int_bool_map_ref_set",
 					"hxc_int_bool_map_ref_exists",
 					"hxc_int_bool_map_ref_get",
@@ -218,7 +220,7 @@ class RuntimeFeatureCatalog {
 					new RuntimeFeatureSelectionRoot("managed-type-representation", RuntimeFeatureSelectionRootKind.HxcIrOperation,
 						"A reachable ordinary Haxe Map<Int, Bool> whose contents and shared identity change at run time."),
 					new RuntimeFeatureSelectionRoot("int-map-operation", RuntimeFeatureSelectionRootKind.HxcIrOperation,
-						"A reachable admitted construction, insertion, lookup, membership, removal, or clear operation.")
+						"A reachable admitted construction, copy, insertion, lookup, membership, removal, or clear operation.")
 				],
 					"A compiler-known immutable integer lookup table can remain direct const C data when mutation and alias identity are unobservable.",
 					"A closed bounded key range can use a program-local bitset or table when the compiler can prove that range and preserve Map identity.",
@@ -538,7 +540,7 @@ class RuntimeFeatureCatalog {
 			case "bytes_string.h": "9d944e38a748696628076b0c5fd56339668e48953a220d51c8da1630fbdf9c40";
 			case "gc.h": "2ca9523f1c74c62877c3f006bab9bd8a3a2a1eced93d67ad59d015a7c6ecb9de";
 			case "io.h": "4b92f03451dc4d04ea74c857ca3ce54d52fbe80d31f155b93781ee2fab946589";
-			case "int_map.h": "9763be7fb142aa9dad6f084ca21eab7b49b79cf44560e59e348a0f13461e878f";
+			case "int_map.h": "79e8cce319aee8d4f0167db6b6f1e719161b8b948f309b07babbc8cd1bbaa5fd";
 			case "object.h": "779b452097e4c58c7971b90743ace19a2dc6c91e381557abc84fbd5f9b30f1e5";
 			case "status.h": "6bf20f5d82594014ad0f2b79a25cb81417791bd9c07375d2fb89835e415be1c4";
 			case "status_name.h": "64bf3917787ffcf924369c8e1c0a525cf10902d004d5bb4b898f2af46a7456cc";
@@ -546,7 +548,7 @@ class RuntimeFeatureCatalog {
 			case "string_decode.h": "aa93ea7f132aff625adfdcc7498532b139f621196deab4c0e9ecb5de2934fd48";
 			case "string_float.h": "8747a86c3cabae9bf54a4125305f043d6c70d7c97bc9f6f90174ba6185e3ecc1";
 			case "string_literal.h": "ac6b5ad9fa13004c62e3b33b9b28a935bfb8a22287cd4595ce6e6eb81490e283";
-			case "string_map.h": "26d94aa3cdfca1ae6edb678c575ed466bf32b7d6ccc635e55a706ec393c5db54";
+			case "string_map.h": "ae8ab5d3c74984210d84b28edce8662bdd1e573e123d7364a662c53f4ca8ea2a";
 			case "string_scalar.h": "b400d7ef9af853410334b30627ea98a5af87d5c3a863f6aa4c770d7cc4b3d90b";
 			case "string_split.h": "a17c9cd6c31cfdb8da2cf4955b980090c144e68ee1ae4f1d0f0b543f4b6eb3eb";
 			case _: throw 'runtime feature header `$name` has no reviewed SHA-256 provenance';
@@ -563,12 +565,12 @@ class RuntimeFeatureCatalog {
 			case "bytes_string.c": "0ee9604f1b4ae78baeeaf7cac8b2a35b5634f115c958a7575230c790e8aa6ca6";
 			case "gc.c": "96cf942d6752070aaa5005eae3bc45c7d00aca37c360dfecaeb76d8db767b4cc";
 			case "io.c": "898b3f351b60a91f25fd1ffdfe8d832e95a5a6a738ffe226ac33581f1fcb5b0f";
-			case "int_map.c": "41483a14ef9cdeb0526d24a9089af630bdfb10752c5ac0a6e75136f17322ca14";
+			case "int_map.c": "ba6868489be50e0d19973d253bf3a0a316d8d6fc0160cc2e502f65b7c7a055f9";
 			case "object.c": "0e7fc6a55b562eaaf03fe63eca743dd73248f0bee1c09e21b79464917e8c89c0";
 			case "status.c": "0695ab2528db6e29d5cf29d905ad736b7c1a3a79333082347ec18faea2d4e6d8";
 			case "string.c": "8313e359e18df7d5995faab32dd2e29cccd75ccd2338e475218549870d882736";
 			case "string_float.c": "60e5189e7f7304ccbc1f69136b7393e4eea35760cde590853ebced414bf39267";
-			case "string_map.c": "6db2d30dd800c52131e18d74449995f15c170cc2c99be2596fd22b40506a0b04";
+			case "string_map.c": "143c6ab6e8e649a82c636816e0001f6a865030a1cb3460953ec4590c26d27ad7";
 			case "string_scalar.c": "2c44eebc655dd34ed374b58402de9dfe731425fb4e0b54997a7c16c12e1309fb";
 			case "string_split.c": "799fc917a450169e4babd86748e879fe7222b4abfef293880c47891e671f9d1b";
 			case _: throw 'runtime feature source `$name` has no reviewed SHA-256 provenance';

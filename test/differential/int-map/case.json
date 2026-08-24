@@ -33,7 +33,7 @@
     "exitCode": 0,
     "stdout": {
       "mode": "regex",
-      "value": "int-map: OK: .*Eval and generated Map<Int, Bool> construction, set, exists, aliases, growth rollback, lookup, removal, clear, layouts, determinism, sanitizers, runtime-none, negative diagnostics, and selective symbols passed$"
+      "value": "int-map: OK: .*Eval and generated Map<Int, Bool> construction, set, exists, aliases, growth rollback, lookup, removal, clear, copy independence and rollback, layouts, determinism, sanitizers, runtime-none, negative diagnostics, and selective symbols passed$"
     },
     "oracle": "test/differential/int-map/generated/oracle.hxml",
     "artifacts": [

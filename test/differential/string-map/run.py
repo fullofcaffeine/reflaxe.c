@@ -215,6 +215,7 @@ def validate_generated_project(output: Path, hxcir: str) -> None:
         'runtime(feature="string-map",operation="set")',
         'runtime(feature="string-map",operation="get")',
         'runtime(feature="string-map",operation="remove")',
+        'runtime(feature="string-map",operation="copy")',
         'binary operation="haxe.string-map-reference.equal"',
         'binary operation="haxe.string-map-reference.not-equal"',
         "static-call-argument-0-owner-initialize",
@@ -248,6 +249,7 @@ def validate_generated_project(output: Path, hxcir: str) -> None:
     expected = {
         "cleanup-release",
         "clear",
+        "copy",
         "create",
         "exists",
         "get",
@@ -285,6 +287,7 @@ def validate_generated_project(output: Path, hxcir: str) -> None:
         "hxc_string_map_value_ops",
         "hxc_string_map_ref_set_copy",
         "hxc_string_map_ref_get_copy",
+        "hxc_string_map_ref_copy",
         "hxc_string_map_ref_retain",
         "hxc_string_map_ref_release",
         "sizeof(bool)",
@@ -507,6 +510,7 @@ def inspect_symbols(executable: Path, family: str, *, allow_array: bool = False)
         "hxc_string_map_ref_create",
         "hxc_string_map_ref_create_with_ops",
         "hxc_string_map_ref_get_copy",
+        "hxc_string_map_ref_copy",
         "hxc_string_map_ref_release",
         "hxc_string_map_value_ops_is_valid",
     ):
@@ -613,7 +617,7 @@ def main(argv: Iterable[str] = ()) -> int:
     )
     print(
         "string-map: OK: "
-        f"{families}; {mode}; missing-vs-false, replacement, removal, clear, aliases, "
+        f"{families}; {mode}; missing-vs-false, replacement, removal, clear, copy independence, aliases, "
         "nullable identity, empty keys, growth, allocation rollback, value-callback rollback, "
         "unsupported-class/abstract-class/payload-enum rejection, "
         "malformed-call rejection, layouts, determinism, sanitizers, C++ headers, runtime-none, and selective symbols passed"

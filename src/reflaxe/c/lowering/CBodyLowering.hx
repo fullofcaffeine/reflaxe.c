@@ -12366,13 +12366,13 @@ private class FunctionBuilder {
 		if (map == null)
 			return unsupported(access.receiver, "TCall(IntMap:receiver-identity-lost)");
 		final method = access.field.get().name;
-		final expectedArguments = method == "clear" ? 0 : method == "set" ? 2 : 1;
-		if (method != "set" && method != "exists" && method != "get" && method != "remove" && method != "clear")
+		final expectedArguments = method == "clear" || method == "copy" ? 0 : method == "set" ? 2 : 1;
+		if (method != "set" && method != "exists" && method != "get" && method != "remove" && method != "clear" && method != "copy")
 			return unsupported(expression, 'TCall(IntMap.$method:not-yet-admitted)');
 		if (arguments.length != expectedArguments)
 			return unsupported(expression, 'TCall(IntMap.$method:argument-count=${arguments.length},expected=$expectedArguments)');
 		final loweredArguments:Array<String> = [receiver.id];
-		if (method != "clear") {
+		if (method != "clear" && method != "copy") {
 			final intMapping = bodyValueType(arguments[0].t, arguments[0].pos, 'TCall(IntMap.$method:key-type)');
 			switch intMapping.irType {
 				case IRTInt(32, true):
@@ -12385,6 +12385,19 @@ private class FunctionBuilder {
 		if (method == "set")
 			loweredArguments.push(coerce(lowerValue(arguments[1], map.value), map.value, arguments[1].pos, "TCall(IntMap.set:value)").id);
 		final source = sourceSpan(expression.pos);
+		if (method == "copy") {
+			final result:HxcIRResult = {id: nextValueId(), type: receiver.type};
+			appendInstruction(result, IRIOCall({
+				dispatch: IRCDRuntime("int-map", "copy"),
+				arguments: loweredArguments,
+				returnType: result.type,
+				failure: managedArrayFailure()
+			}), source, "int-map-copy");
+			registerValueTemporary(result.id, "int-map-copy-result");
+			freshManagedIntMapValueIds.set(result.id, true);
+			runtimeRequirements.push(new CBodyRuntimeRequirement("int-map", "copy", "ordinary Haxe IntMap.copy", source, expression.pos));
+			return {id: result.id, type: result.type, mapping: receiver.mapping};
+		}
 		if (method == "set" || method == "clear") {
 			appendInstruction(null, IRIOCall({
 				dispatch: IRCDRuntime("int-map", method),
@@ -12446,7 +12459,7 @@ private class FunctionBuilder {
 		if (map == null)
 			return unsupported(access.receiver, "TCall(StringMap:receiver-identity-lost)");
 		final method = access.field.get().name;
-		final expectedArguments = method == "clear" ? 0 : method == "set" ? 2 : 1;
+		final expectedArguments = method == "clear" || method == "copy" ? 0 : method == "set" ? 2 : 1;
 		if (arguments.length != expectedArguments)
 			return unsupported(expression, 'TCall(StringMap.$method:argument-count=${arguments.length},expected=$expectedArguments)');
 		final loweredArguments:Array<String> = [receiver.id];
@@ -12464,6 +12477,19 @@ private class FunctionBuilder {
 			loweredArguments.push(value.id);
 		}
 		final source = sourceSpan(expression.pos);
+		if (method == "copy") {
+			final result:HxcIRResult = {id: nextValueId(), type: receiver.type};
+			appendInstruction(result, IRIOCall({
+				dispatch: IRCDRuntime("string-map", "copy"),
+				arguments: loweredArguments,
+				returnType: result.type,
+				failure: managedArrayFailure()
+			}), source, "string-map-copy");
+			registerValueTemporary(result.id, "string-map-copy-result");
+			freshManagedStringMapValueIds.set(result.id, true);
+			runtimeRequirements.push(new CBodyRuntimeRequirement("string-map", "copy", "ordinary Haxe StringMap.copy", source, expression.pos));
+			return {id: result.id, type: result.type, mapping: receiver.mapping};
+		}
 		if (method == "set" || method == "clear") {
 			appendInstruction(null, IRIOCall({
 				dispatch: IRCDRuntime("string-map", method),

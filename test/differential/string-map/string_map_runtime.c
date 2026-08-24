@@ -158,6 +158,7 @@ static hxc_string_map_value_ops tracked_ops(tracked_value_state *state) {
 
 static int prove_basic_contract(void) {
   hxc_string_map_ref *map = NULL;
+  hxc_string_map_ref *copy = NULL;
   hxc_string_map_ref *alias;
   bool value = false;
   bool found = true;
@@ -207,6 +208,21 @@ static int prove_basic_contract(void) {
   CHECK(hxc_string_map_ref_remove(map, literal("beta"), &removed) == HXC_STATUS_OK);
   CHECK(!removed);
 
+  CHECK(hxc_string_map_ref_copy(map, &copy) == HXC_STATUS_OK);
+  CHECK(copy != NULL && copy != map);
+  value = false;
+  CHECK(hxc_string_map_ref_get_copy(copy, literal("alpha"), &value, &found) == HXC_STATUS_OK);
+  CHECK(found && value);
+  value = false;
+  CHECK(hxc_string_map_ref_set_copy(copy, literal("alpha"), &value) == HXC_STATUS_OK);
+  CHECK(hxc_string_map_ref_remove(copy, literal(""), &removed) == HXC_STATUS_OK);
+  CHECK(removed);
+  value = false;
+  CHECK(hxc_string_map_ref_get_copy(map, literal("alpha"), &value, &found) == HXC_STATUS_OK);
+  CHECK(found && value);
+  CHECK(hxc_string_map_ref_exists(map, literal(""), &found) == HXC_STATUS_OK);
+  CHECK(found);
+
   for (index = 0u; index < 256u; index++) {
     const int written = snprintf(key_buffer, sizeof(key_buffer), "key-%zu", index);
     CHECK(written > 0 && (size_t)written < sizeof(key_buffer));
@@ -225,6 +241,7 @@ static int prove_basic_contract(void) {
   CHECK(hxc_string_map_ref_exists(map, literal("alpha"), &found) == HXC_STATUS_OK);
   CHECK(!found);
   CHECK(hxc_string_map_ref_release(alias) == HXC_STATUS_OK);
+  CHECK(hxc_string_map_ref_release(copy) == HXC_STATUS_OK);
   CHECK(hxc_string_map_ref_release(map) == HXC_STATUS_OK);
   return 0;
 }
@@ -238,6 +255,7 @@ static int prove_failure_atomic_insertion(void) {
     test_release
   };
   hxc_string_map_ref *map = NULL;
+  hxc_string_map_ref *copy = NULL;
   bool value = true;
   bool found = false;
 
@@ -264,6 +282,12 @@ static int prove_failure_atomic_insertion(void) {
   ) == HXC_STATUS_OK);
   CHECK(!found);
 
+  state.fail_after = state.successful_allocations + 1u;
+  CHECK(hxc_string_map_ref_copy(map, &copy) == HXC_STATUS_OUT_OF_MEMORY);
+  CHECK(copy == NULL);
+  CHECK(hxc_string_map_ref_exists(map, literal("stable"), &found) == HXC_STATUS_OK);
+  CHECK(found);
+
   state.fail_after = SIZE_MAX;
   CHECK(hxc_string_map_ref_release(map) == HXC_STATUS_OK);
   CHECK(state.successful_allocations == state.releases);
@@ -274,6 +298,7 @@ static int prove_managed_value_callbacks(void) {
   tracked_value_state state = {0u, 0u, 0u, 0u, false, false};
   hxc_string_map_value_ops operations = tracked_ops(&state);
   hxc_string_map_ref *map = NULL;
+  hxc_string_map_ref *copy = NULL;
   tracked_value source = {7};
   tracked_value output = {-1};
   bool found = false;
@@ -321,6 +346,25 @@ static int prove_managed_value_callbacks(void) {
   operations.destroy(operations.context, &output);
 
   state.fail_copy = true;
+  CHECK(hxc_string_map_ref_copy(map, &copy) == HXC_STATUS_OUT_OF_MEMORY);
+  CHECK(copy == NULL && state.live_owners == 1u);
+  state.fail_copy = false;
+  CHECK(hxc_string_map_ref_copy(map, &copy) == HXC_STATUS_OK);
+  CHECK(copy != NULL && copy != map && state.live_owners == 2u);
+  source.payload = 23;
+  CHECK(hxc_string_map_ref_set_copy(copy, literal("managed"), &source) == HXC_STATUS_OK);
+  CHECK(hxc_string_map_ref_get_copy(
+    map,
+    literal("managed"),
+    &output,
+    &found
+  ) == HXC_STATUS_OK);
+  CHECK(found && output.payload == 11);
+  operations.destroy(operations.context, &output);
+  CHECK(hxc_string_map_ref_release(copy) == HXC_STATUS_OK);
+  CHECK(state.live_owners == 1u);
+
+  state.fail_copy = true;
   CHECK(hxc_string_map_ref_set_copy(
     map,
     literal("must-not-appear"),
@@ -341,9 +385,9 @@ static int prove_managed_value_callbacks(void) {
   ) == HXC_STATUS_OK);
   CHECK(removed && state.live_owners == 0u);
   CHECK(hxc_string_map_ref_release(map) == HXC_STATUS_OK);
-  CHECK(state.copies == 3u);
-  CHECK(state.assignments == 1u);
-  CHECK(state.destructions == 3u);
+  CHECK(state.copies == 5u);
+  CHECK(state.assignments == 2u);
+  CHECK(state.destructions == 5u);
   return 0;
 }
 
@@ -378,6 +422,14 @@ static int prove_invalid_inputs_fail_closed(void) {
     ) == HXC_STATUS_INVALID_ARGUMENT);
   }
   CHECK(occupied_output == NULL);
+
+  occupied_output = map;
+  CHECK(hxc_string_map_ref_copy(map, &occupied_output) == HXC_STATUS_INVALID_ARGUMENT);
+  CHECK(occupied_output == map);
+  occupied_output = NULL;
+  CHECK(hxc_string_map_ref_copy(NULL, &occupied_output) == HXC_STATUS_INVALID_ARGUMENT);
+  CHECK(occupied_output == NULL);
+  CHECK(hxc_string_map_ref_copy(map, NULL) == HXC_STATUS_INVALID_ARGUMENT);
   {
     hxc_string_map_value_ops invalid = bool_ops();
     invalid.copy = tracked_copy;

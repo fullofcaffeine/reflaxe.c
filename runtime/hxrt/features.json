@@ -487,7 +487,7 @@
         "referencePath": "docs/hxrt.md",
         "selectionRoots": [
           {
-            "description": "A reachable admitted construction, insertion, lookup, membership, removal, or clear operation.",
+            "description": "A reachable admitted construction, copy, insertion, lookup, membership, removal, or clear operation.",
             "id": "int-map-operation",
             "kind": "hxc-ir-operation"
           },
@@ -513,6 +513,7 @@
       "availability": "compiler-selectable",
       "symbols": [
         "hxc_int_bool_map_ref_clear",
+        "hxc_int_bool_map_ref_copy",
         "hxc_int_bool_map_ref_create",
         "hxc_int_bool_map_ref_exists",
         "hxc_int_bool_map_ref_get",
@@ -523,13 +524,13 @@
       ],
       "artifacts": [
         {
-          "sourceSha256": "9763be7fb142aa9dad6f084ca21eab7b49b79cf44560e59e348a0f13461e878f",
+          "sourceSha256": "79e8cce319aee8d4f0167db6b6f1e719161b8b948f309b07babbc8cd1bbaa5fd",
           "kind": "runtime-header",
           "outputPath": "runtime/include/hxrt/int_map.h",
           "sourcePath": "runtime/hxrt/include/hxrt/int_map.h"
         },
         {
-          "sourceSha256": "41483a14ef9cdeb0526d24a9089af630bdfb10752c5ac0a6e75136f17322ca14",
+          "sourceSha256": "ba6868489be50e0d19973d253bf3a0a316d8d6fc0160cc2e502f65b7c7a055f9",
           "kind": "runtime-source",
           "outputPath": "runtime/src/int_map.c",
           "sourcePath": "runtime/hxrt/src/int_map.c"
@@ -1058,7 +1059,7 @@
             "kind": "hxc-ir-operation"
           },
           {
-            "description": "A reachable admitted construction, lookup, membership, insertion, removal, or clear operation.",
+            "description": "A reachable admitted construction, copy, lookup, membership, insertion, removal, or clear operation.",
             "id": "string-map-operation",
             "kind": "hxc-ir-operation"
           }
@@ -1080,6 +1081,7 @@
       "availability": "compiler-selectable",
       "symbols": [
         "hxc_string_map_ref_clear",
+        "hxc_string_map_ref_copy",
         "hxc_string_map_ref_create",
         "hxc_string_map_ref_create_with_ops",
         "hxc_string_map_ref_exists",
@@ -1092,13 +1094,13 @@
       ],
       "artifacts": [
         {
-          "sourceSha256": "26d94aa3cdfca1ae6edb678c575ed466bf32b7d6ccc635e55a706ec393c5db54",
+          "sourceSha256": "ae8ab5d3c74984210d84b28edce8662bdd1e573e123d7364a662c53f4ca8ea2a",
           "kind": "runtime-header",
           "outputPath": "runtime/include/hxrt/string_map.h",
           "sourcePath": "runtime/hxrt/include/hxrt/string_map.h"
         },
         {
-          "sourceSha256": "6db2d30dd800c52131e18d74449995f15c170cc2c99be2596fd22b40506a0b04",
+          "sourceSha256": "143c6ab6e8e649a82c636816e0001f6a865030a1cb3460953ec4590c26d27ad7",
           "kind": "runtime-source",
           "outputPath": "runtime/src/string_map.c",
           "sourcePath": "runtime/hxrt/src/string_map.c"
@@ -1336,7 +1338,7 @@
     "releaseProvenance": {
       "runtimeCStandard": "c11",
       "sourceHashAlgorithm": "sha256",
-      "sourceSetSha256": "2bda4a4c0c7eee0ac28a5ab090e1b6f20a9c256b3345890baa44f4324df9fafd",
+      "sourceSetSha256": "88b3fff9f249cd6e073b79df19b64c647cfe93e75887ec4da9f88edb4183c810",
       "publicHeaderCppStandard": "c++17"
     },
     "generatedCodeCompatibility": "same-major",

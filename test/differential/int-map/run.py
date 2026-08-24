@@ -209,6 +209,7 @@ def validate_generated_project(output: Path, hxcir: str) -> None:
         'runtime(feature="int-map",operation="get")',
         'runtime(feature="int-map",operation="remove")',
         'runtime(feature="int-map",operation="clear")',
+        'runtime(feature="int-map",operation="copy")',
         "retain place=local(",
         "release place=local(",
     ):
@@ -232,6 +233,7 @@ def validate_generated_project(output: Path, hxcir: str) -> None:
         "get",
         "remove",
         "clear",
+        "copy",
         "managed-type-representation",
         "retain",
         "set",
@@ -252,6 +254,7 @@ def validate_generated_project(output: Path, hxcir: str) -> None:
         != [
             "cleanup-release",
             "clear",
+            "copy",
             "create",
             "exists",
             "get",
@@ -275,6 +278,7 @@ def validate_generated_project(output: Path, hxcir: str) -> None:
         "hxc_int_bool_map_ref_get",
         "hxc_int_bool_map_ref_remove",
         "hxc_int_bool_map_ref_clear",
+        "hxc_int_bool_map_ref_copy",
         "hxc_int_bool_map_ref_retain",
         "hxc_int_bool_map_ref_release",
         "hxc_default_allocator()",
@@ -443,6 +447,7 @@ def inspect_symbols(executable: Path, family: str) -> None:
         "hxc_int_bool_map_ref_get",
         "hxc_int_bool_map_ref_remove",
         "hxc_int_bool_map_ref_clear",
+        "hxc_int_bool_map_ref_copy",
         "hxc_int_bool_map_ref_release",
     ):
         if required not in result.stdout:
@@ -541,7 +546,8 @@ def main(argv: Iterable[str] = ()) -> int:
     print(
         "int-map: OK: "
         f"{families}; {mode} construction, set, exists, aliases, growth rollback, "
-        "lookup, removal, clear, layouts, determinism, sanitizers, runtime-none, negative diagnostics, and selective symbols passed"
+        "lookup, removal, clear, copy independence and rollback, layouts, determinism, "
+        "sanitizers, runtime-none, negative diagnostics, and selective symbols passed"
     )
     return 0
 

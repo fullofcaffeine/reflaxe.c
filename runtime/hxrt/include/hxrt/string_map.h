@@ -96,6 +96,12 @@ HXC_API hxc_status hxc_string_map_ref_create_with_ops(
 HXC_API hxc_status hxc_string_map_ref_retain(hxc_string_map_ref *map);
 HXC_API hxc_status hxc_string_map_ref_release(hxc_string_map_ref *map);
 
+/** Copy every key and value into one independent shared Map object. */
+HXC_API hxc_status hxc_string_map_ref_copy(
+  const hxc_string_map_ref *source,
+  hxc_string_map_ref **out_map
+);
+
 /**
  * Insert or replace one key after copying its UTF-8 bytes and value.
  *

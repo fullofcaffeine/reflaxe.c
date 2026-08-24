@@ -39,7 +39,7 @@
     "exitCode": 0,
     "stdout": {
       "mode": "regex",
-      "value": "string-map: OK: .*Eval plus generated Bool/Int/nominal-String/fieldless-enum/managed-record StringMaps; missing-vs-false, replacement, removal, clear, aliases, nullable identity, empty keys, growth, allocation rollback, value-callback rollback, unsupported-class/abstract-class/payload-enum rejection, malformed-call rejection, layouts, determinism, sanitizers, C\\+\\+ headers, runtime-none, and selective symbols passed$"
+      "value": "string-map: OK: .*Eval plus generated Bool/Int/nominal-String/fieldless-enum/managed-record StringMaps; missing-vs-false, replacement, removal, clear, copy independence, aliases, nullable identity, empty keys, growth, allocation rollback, value-callback rollback, unsupported-class/abstract-class/payload-enum rejection, malformed-call rejection, layouts, determinism, sanitizers, C\\+\\+ headers, runtime-none, and selective symbols passed$"
     },
     "oracle": "test/differential/string-map/generated/oracle.hxml",
     "artifacts": [

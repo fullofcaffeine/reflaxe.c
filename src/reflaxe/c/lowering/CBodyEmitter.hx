@@ -5445,6 +5445,22 @@ class CBodyEmitter {
 				emitStatusAbort(statements,
 					ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNIntMapClear)), [requireValue(values, call.arguments[0], fn.id)]), boundsAbortName,
 					instruction.id, fn.id);
+			case "copy":
+				final result = requireResult(instruction, fn.id);
+				final temporary = requireIntMapTemporary(temporaryNames, result.id, instruction.id, fn.id);
+				statements.push(SDecl({
+					storage: [],
+					alignments: [],
+					type: new CType(TStruct(new CIdentifier("hxc_int_bool_map_ref"))),
+					declarator: DPointer(DName(temporary), []),
+					initializer: IExpr(ENull),
+					attributes: []
+				}));
+				emitStatusAbort(statements, ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNIntMapCopy)), [
+					requireValue(values, call.arguments[0], fn.id),
+					EUnary(AddressOf, EIdentifier(temporary))
+				]), boundsAbortName, instruction.id, fn.id);
+				values.set(result.id, EIdentifier(temporary));
 			case "exists" | "remove":
 				final result = requireResult(instruction, fn.id);
 				final temporary = requireIntMapTemporary(temporaryNames, result.id, instruction.id, fn.id);
@@ -5563,6 +5579,23 @@ class CBodyEmitter {
 				emitStatusAbort(statements,
 					ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNStringMapClear)), [requireValue(values, call.arguments[0], fn.id)]), boundsAbortName,
 					instruction.id, fn.id);
+			case "copy":
+				final result = requireResult(instruction, fn.id);
+				final temporary = requireStringMapTemporary(temporaryNames, result.id, instruction.id, fn.id);
+				final declaration = typedDeclarator(result.type, DName(temporary));
+				statements.push(SDecl({
+					storage: [],
+					alignments: [],
+					type: declaration.type,
+					declarator: declaration.declarator,
+					initializer: IExpr(ENull),
+					attributes: []
+				}));
+				emitStatusAbort(statements, ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNStringMapCopy)), [
+					requireValue(values, call.arguments[0], fn.id),
+					EUnary(AddressOf, EIdentifier(temporary))
+				]), boundsAbortName, instruction.id, fn.id);
+				values.set(result.id, EIdentifier(temporary));
 			case "exists" | "remove":
 				final result = requireResult(instruction, fn.id);
 				final temporary = requireStringMapTemporary(temporaryNames, result.id, instruction.id, fn.id);

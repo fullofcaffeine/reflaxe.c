@@ -1091,6 +1091,7 @@
         "availability": "compiler-selectable",
         "symbols": [
           "hxc_string_map_ref_clear",
+          "hxc_string_map_ref_copy",
           "hxc_string_map_ref_create",
           "hxc_string_map_ref_create_with_ops",
           "hxc_string_map_ref_exists",
@@ -1224,6 +1225,7 @@
       "hxc_size_add",
       "hxc_size_mul",
       "hxc_string_map_ref_clear",
+      "hxc_string_map_ref_copy",
       "hxc_string_map_ref_create",
       "hxc_string_map_ref_create_with_ops",
       "hxc_string_map_ref_exists",
@@ -4551,6 +4553,7 @@
         "availability": "compiler-selectable",
         "symbols": [
           "hxc_int_bool_map_ref_clear",
+          "hxc_int_bool_map_ref_copy",
           "hxc_int_bool_map_ref_create",
           "hxc_int_bool_map_ref_exists",
           "hxc_int_bool_map_ref_get",
@@ -4658,6 +4661,7 @@
       "hxc_default_allocator",
       "hxc_free",
       "hxc_int_bool_map_ref_clear",
+      "hxc_int_bool_map_ref_copy",
       "hxc_int_bool_map_ref_create",
       "hxc_int_bool_map_ref_exists",
       "hxc_int_bool_map_ref_get",

@@ -39,6 +39,20 @@ final class Main {
 		return !values.exists(seed + 2) && cleared == null;
 	}
 
+	/** Copy entries into an independent table while preserving exact values. */
+	static function independentCopy(seed:Int):Bool {
+		final original:Map<Int, Bool> = [];
+		original.set(seed, false);
+		original.set(seed + 1, true);
+		final copied = original.copy();
+		copied.set(seed, true);
+		copied.remove(seed + 1);
+		return original.get(seed) == false
+			&& original.get(seed + 1) == true
+			&& copied.get(seed) == true
+			&& copied.get(seed + 1) == null;
+	}
+
 	/**
 		Run the bounded semantic trace without requiring console or file support.
 
@@ -46,7 +60,7 @@ final class Main {
 		the test runner observes it as a bounded timeout on both Eval and native C.
 	**/
 	static function main():Void {
-		if (!sharedMembership(40) || !lookupAndDeletion(40))
+		if (!sharedMembership(40) || !lookupAndDeletion(40) || !independentCopy(60))
 			while (true) {}
 	}
 }

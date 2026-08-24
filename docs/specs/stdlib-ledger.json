@@ -1074,6 +1074,40 @@
       "notes": "The admitted Map<Int, Bool> specialization clears the shared table in place. Every alias observes the empty map, while other value types remain unsupported."
     },
     {
+      "id": "int-map-copy-bool-partial",
+      "selector": {
+        "module": "haxe.ds.IntMap",
+        "type": "haxe.ds.IntMap",
+        "member": "copy",
+        "kind": "method",
+        "isStatic": false,
+        "signature": "() -> haxe.ds.IntMap<haxe.ds.IntMap.T>"
+      },
+      "owner": "runtime-slice",
+      "runtimeFeatures": [
+        "int-map"
+      ],
+      "profiles": [
+        "portable"
+      ],
+      "environments": [
+        "hosted"
+      ],
+      "status": "partial",
+      "ownerBeads": "E5.T03",
+      "testOwnerBeads": "E5.T12",
+      "diagnosticPolicies": [
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
+      ],
+      "tests": [
+        "test/differential/int-map/generated/Main.hx",
+        "test/differential/int-map/int_map_runtime.c",
+        "test/differential/int-map/run.py"
+      ],
+      "notes": "The admitted Map<Int, Bool> specialization creates an independent table with the same entries. Later mutations do not cross between source and copy, and allocation failure leaves the source unchanged."
+    },
+    {
       "id": "int-map-exists-bool-partial",
       "selector": {
         "module": "haxe.ds.IntMap",
@@ -1242,6 +1276,40 @@
         "test/differential/int-map/run.py"
       ],
       "notes": "The admitted Map<Int, Bool> specialization inserts or replaces exact Int and Bool values. Growth preserves all entries or leaves the old table unchanged."
+    },
+    {
+      "id": "string-map-copy-admitted-values-partial",
+      "selector": {
+        "module": "haxe.ds.StringMap",
+        "type": "haxe.ds.StringMap",
+        "member": "copy",
+        "kind": "method",
+        "isStatic": false,
+        "signature": "() -> haxe.ds.StringMap<haxe.ds.StringMap.T>"
+      },
+      "owner": "runtime-slice",
+      "runtimeFeatures": [
+        "string-map"
+      ],
+      "profiles": [
+        "portable"
+      ],
+      "environments": [
+        "hosted"
+      ],
+      "status": "partial",
+      "ownerBeads": "E5.T03",
+      "testOwnerBeads": "E5.T12",
+      "diagnosticPolicies": [
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
+      ],
+      "tests": [
+        "test/differential/string-map/generated/Main.hx",
+        "test/differential/string-map/run.py",
+        "test/differential/string-map/string_map_runtime.c"
+      ],
+      "notes": "Admitted direct and managed value families create an independent outer table. Managed values use exact copy callbacks for shallow Haxe ownership, while allocation or callback failure destroys the partial result and leaves the source unchanged."
     },
     {
       "id": "array-copy-partial",
@@ -30980,33 +31048,30 @@
       "kind": "method",
       "signature": "() -> haxe.ds.IntMap<haxe.ds.IntMap.T>",
       "isStatic": false,
-      "owner": "target-source-override",
+      "owner": "runtime-slice",
       "runtimeFeatures": [
-        "alloc",
-        "array",
-        "gc",
-        "object"
+        "int-map"
       ],
       "profiles": [
-        "portable",
-        "metal"
+        "portable"
       ],
       "environments": [
-        "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "hosted"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T03",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Known element/key/value types should specialize to direct typed storage; allocation and tracing remain explicit reachability decisions.",
-      "ruleId": "collection-storage"
+      "tests": [
+        "test/differential/int-map/generated/Main.hx",
+        "test/differential/int-map/int_map_runtime.c",
+        "test/differential/int-map/run.py"
+      ],
+      "notes": "The admitted Map<Int, Bool> specialization creates an independent table with the same entries. Later mutations do not cross between source and copy, and allocation failure leaves the source unchanged.",
+      "ruleId": "int-map-copy-bool-partial"
     },
     {
       "id": "hxc-stdlib-api-v1:dc096a6c62c43aaf9d35e67f26e702ced09f440483c98c0d7e0ada7c233441d8",
@@ -33914,33 +33979,30 @@
       "kind": "method",
       "signature": "() -> haxe.ds.StringMap<haxe.ds.StringMap.T>",
       "isStatic": false,
-      "owner": "target-source-override",
+      "owner": "runtime-slice",
       "runtimeFeatures": [
-        "alloc",
-        "array",
-        "gc",
-        "object"
+        "string-map"
       ],
       "profiles": [
-        "portable",
-        "metal"
+        "portable"
       ],
       "environments": [
-        "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "hosted"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T03",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Known element/key/value types should specialize to direct typed storage; allocation and tracing remain explicit reachability decisions.",
-      "ruleId": "collection-storage"
+      "tests": [
+        "test/differential/string-map/generated/Main.hx",
+        "test/differential/string-map/run.py",
+        "test/differential/string-map/string_map_runtime.c"
+      ],
+      "notes": "Admitted direct and managed value families create an independent outer table. Managed values use exact copy callbacks for shallow Haxe ownership, while allocation or callback failure destroys the partial result and leaves the source unchanged.",
+      "ruleId": "string-map-copy-admitted-values-partial"
     },
     {
       "id": "hxc-stdlib-api-v1:73b63e7829047be53e19ee346be356104dd690466ab16cc2d162c7349cbef827",

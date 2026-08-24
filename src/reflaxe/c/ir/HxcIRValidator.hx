@@ -3509,7 +3509,8 @@ private class HxcIRValidationState {
 			case IRCDRuntime("string-map", value): value;
 			case _: return;
 		};
-		final receiverValue = argumentTypes.length == 0 ? null : managedStringMapValue(argumentTypes[0]);
+		final receiverType = argumentTypes.length == 0 ? null : argumentTypes[0];
+		final receiverValue = managedStringMapValue(receiverType);
 		// A map key may be a compile-time-backed String view (`IRTString`) or
 		// a runtime-owned String (`IRTManagedString`). Both carry the same
 		// immutable Haxe String value; ownership changes how long its bytes
@@ -3532,6 +3533,13 @@ private class HxcIRValidationState {
 			case "clear":
 				if (argumentTypes.length != 1 || receiverValue == null || call.returnType != IRTVoid)
 					add(path, "StringMap.clear requires one map and returns Void", source);
+			case "copy":
+				final expectedReturnKey = receiverType == null ? null : typeKey(receiverType);
+				if (argumentTypes.length != 1
+					|| receiverValue == null
+					|| expectedReturnKey == null
+					|| typeKey(call.returnType) != expectedReturnKey)
+					add(path, "StringMap.copy requires one map and returns the same exact Map<String, V> specialization", source);
 			case "exists" | "remove":
 				if (argumentTypes.length != 2 || receiverValue == null || !hasStringKey || !returnsBool)
 					add(path, 'StringMap.$operationId requires map + String and returns Bool', source);
@@ -3591,6 +3599,7 @@ private class HxcIRValidationState {
 		};
 		final receiver = argumentTypes.length == 0 ? null : argumentTypes[0];
 		final hasReceiver = isManagedIntBoolMap(receiver);
+		final receiverTypeKey = receiver == null ? null : typeKey(receiver);
 		final keyType = argumentTypes.length > 1 ? argumentTypes[1] : null;
 		final hasIntKey = keyType != null && typeKey(keyType) == typeKey(IRTInt(32, true));
 		switch operationId {
@@ -3615,6 +3624,9 @@ private class HxcIRValidationState {
 			case "clear":
 				if (argumentTypes.length != 1 || !hasReceiver || call.returnType != IRTVoid)
 					add(path, "IntMap.clear requires Map<Int, Bool> and returns Void", source);
+			case "copy":
+				if (argumentTypes.length != 1 || !hasReceiver || receiverTypeKey == null || typeKey(call.returnType) != receiverTypeKey)
+					add(path, "IntMap.copy requires Map<Int, Bool> and returns the same specialization", source);
 			case _:
 				add(path, 'int-map runtime call names unsupported operation `$operationId`', source);
 		}

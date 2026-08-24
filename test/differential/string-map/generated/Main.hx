@@ -153,6 +153,25 @@ private final class RecordTable {
 	/** Remove one live slot and report whether it existed. */
 	public function remove(key:String):Bool
 		return values.remove(key);
+
+	/**
+		Copy the table, then prove outer independence and shallow child sharing.
+
+		The copied slot owns a separate record value, but its nested Array keeps
+		ordinary Haxe reference identity. Removing the copied slot must not remove
+		the original slot or release the shared Array too early.
+	**/
+	public function copyKeepsOriginal(key:String):Bool {
+		final copied = values.copy();
+		final copiedValue = copied.get(key);
+		if (copiedValue == null)
+			return false;
+		copiedValue.flags[0] = true;
+		if (!copied.remove(key) || copied.get(key) != null)
+			return false;
+		final originalValue = values.get(key);
+		return originalValue != null && originalValue.flags[0];
+	}
 }
 
 /** Supplies one real instance-call boundary for fresh StringMap arguments. */
@@ -261,8 +280,10 @@ final class Main {
 
 		final replacement:StoredRecord = {score: 11, flags: [false, true]};
 		table.set("hero", replacement);
+		if (!table.copyKeepsOriginal("hero") || !replacement.flags[0])
+			return false;
 		final replaced = table.get("hero");
-		if (replaced == null || replaced.score != 11 || replaced.flags[0] || !replaced.flags[1])
+		if (replaced == null || replaced.score != 11 || !replaced.flags[0] || !replaced.flags[1])
 			return false;
 		if (!table.remove("hero") || table.remove("hero") || table.get("hero") != null)
 			return false;
@@ -398,6 +419,20 @@ final class Main {
 		return lookup([], runtimeKey()) == null && borrower.contains(makeMap(), "beta", true);
 	}
 
+	/** Copy entries into an independent table without sharing later mutations. */
+	static function independentCopy():Bool {
+		final original:Map<String, Bool> = [];
+		original.set("alpha", false);
+		original.set("beta", true);
+		final copied = original.copy();
+		copied.set("alpha", true);
+		copied.remove("beta");
+		return original.get("alpha") == false
+			&& original.get("beta") == true
+			&& copied.get("alpha") == true
+			&& copied.get("beta") == null;
+	}
+
 	/**
 		Return the absent value of the same nullable pointer carrier.
 
@@ -431,9 +466,9 @@ final class Main {
 		final emptyBeforeClear = alias.exists("");
 		alias.clear();
 
-		while (!integerTrace() || !fieldlessEnumTrace() || !managedRecordTrace() || !nominalStringTrace() || !freshArgumentTrace() || alias != values
-			|| absent != null || null != absent || values == null || alphaBefore == null || alphaBefore || missingBefore != null || !removedBeta
-			|| removedBetaAgain || !gammaBeforeClear || !emptyBeforeClear || values.exists("alpha") || values.exists("gamma") || values.exists("")
-			|| values.get("alpha") != null) {}
+		while (!integerTrace() || !fieldlessEnumTrace() || !managedRecordTrace() || !nominalStringTrace() || !freshArgumentTrace() || !independentCopy()
+			|| alias != values || absent != null || null != absent || values == null || alphaBefore == null || alphaBefore || missingBefore != null
+			|| !removedBeta || removedBetaAgain || !gammaBeforeClear || !emptyBeforeClear || values.exists("alpha") || values.exists("gamma")
+			|| values.exists("") || values.get("alpha") != null) {}
 	}
 }

@@ -69,7 +69,9 @@ static int prove_contract(void) {
   test_allocator_state state = {0u, 0u, false};
   hxc_allocator allocator = {&state, test_allocate, NULL, test_release};
   hxc_int_bool_map_ref *map = NULL;
+  hxc_int_bool_map_ref *copy = NULL;
   hxc_int_bool_map_ref *alias;
+  hxc_int_bool_map_ref *occupied_output;
   bool found = true;
   bool value = true;
   bool removed = false;
@@ -102,6 +104,18 @@ static int prove_contract(void) {
   CHECK(hxc_int_bool_map_ref_get(map, INT32_C(1), &value, &found) == HXC_STATUS_OK);
   CHECK(found && value);
 
+  CHECK(hxc_int_bool_map_ref_copy(map, &copy) == HXC_STATUS_OK);
+  CHECK(copy != NULL && copy != map);
+  CHECK(hxc_int_bool_map_ref_get(copy, INT32_C(1), &value, &found) == HXC_STATUS_OK);
+  CHECK(found && value);
+  CHECK(hxc_int_bool_map_ref_set(copy, INT32_C(1), false) == HXC_STATUS_OK);
+  CHECK(hxc_int_bool_map_ref_remove(copy, INT32_MAX, &removed) == HXC_STATUS_OK);
+  CHECK(removed);
+  CHECK(hxc_int_bool_map_ref_get(map, INT32_C(1), &value, &found) == HXC_STATUS_OK);
+  CHECK(found && value);
+  CHECK(hxc_int_bool_map_ref_exists(map, INT32_MAX, &found) == HXC_STATUS_OK);
+  CHECK(found);
+
   for (key = 0; key < 4; key++) {
     CHECK(hxc_int_bool_map_ref_set(map, key, (key & 1) != 0) == HXC_STATUS_OK);
   }
@@ -111,6 +125,17 @@ static int prove_contract(void) {
   CHECK(found);
   CHECK(hxc_int_bool_map_ref_exists(alias, INT32_C(99), &found) == HXC_STATUS_OK);
   CHECK(!found);
+  occupied_output = map;
+  CHECK(hxc_int_bool_map_ref_copy(map, &occupied_output) == HXC_STATUS_INVALID_ARGUMENT);
+  CHECK(occupied_output == map);
+  occupied_output = NULL;
+  CHECK(hxc_int_bool_map_ref_copy(NULL, &occupied_output) == HXC_STATUS_INVALID_ARGUMENT);
+  CHECK(occupied_output == NULL);
+  CHECK(hxc_int_bool_map_ref_copy(map, NULL) == HXC_STATUS_INVALID_ARGUMENT);
+  CHECK(hxc_int_bool_map_ref_copy(map, &occupied_output) == HXC_STATUS_OUT_OF_MEMORY);
+  CHECK(occupied_output == NULL);
+  CHECK(hxc_int_bool_map_ref_exists(map, INT32_MAX, &found) == HXC_STATUS_OK);
+  CHECK(found);
   state.fail = false;
   CHECK(hxc_int_bool_map_ref_clear(alias) == HXC_STATUS_OK);
   CHECK(hxc_int_bool_map_ref_exists(map, INT32_MAX, &found) == HXC_STATUS_OK);
@@ -127,6 +152,7 @@ static int prove_contract(void) {
   CHECK(hxc_int_bool_map_ref_retain(NULL) == HXC_STATUS_OK);
   CHECK(hxc_int_bool_map_ref_release(NULL) == HXC_STATUS_OK);
   CHECK(hxc_int_bool_map_ref_release(alias) == HXC_STATUS_OK);
+  CHECK(hxc_int_bool_map_ref_release(copy) == HXC_STATUS_OK);
   CHECK(hxc_int_bool_map_ref_release(map) == HXC_STATUS_OK);
   CHECK(state.allocations == state.releases);
   return 0;
