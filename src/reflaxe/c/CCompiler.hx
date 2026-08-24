@@ -431,6 +431,8 @@ class CCompiler {
 			|| hasRuntimeFeature(runtimeRequirements, "string-split")
 			|| hasRuntimeFeature(runtimeRequirements, "array-join"))
 			directDecisions.push("managed-haxe-arrays");
+		if (hasRuntimeFeature(runtimeRequirements, "iterator"))
+			directDecisions.push("managed-haxe-iterators");
 		if (hasRuntimeFeature(runtimeRequirements, "string-map"))
 			directDecisions.push("managed-haxe-string-maps");
 		if (hasRuntimeFeature(runtimeRequirements, "int-map"))

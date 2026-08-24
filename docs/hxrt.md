@@ -44,8 +44,8 @@ The checked-in runtime is deliberately incomplete. Generated Haxe can select
 the hosted literal-output closure plus bounded ordinary-Haxe Array,
 `Map<Int, Bool>`, `Map<String, V>`, `haxe.io.Bytes`, scalar String inspection,
 and owned String construction/lifetime closures. Collections select
-allocator-backed storage transitively; StringMap and Bytes also select the
-literal carrier used by their admitted String inputs. `String.length`,
+allocator-backed storage transitively. StringMap also selects Iterator.
+StringMap and Bytes select the literal carrier for admitted String inputs. `String.length`,
 `charAt`, `charCodeAt`, and `substring` use the allocation-free scalar slice.
 `String.fromCharCode`, concatenation, and copies that outlive their source
 select the reference-counted String owner. The compiler may
@@ -388,6 +388,33 @@ failure at the private ABI; the ordinary-Haxe fixture separately compares Eval
 with generated strict C, so the runtime and compiler are not merely checking
 matching assumptions.
 
+<!-- hxrt-feature:iterator -->
+### `iterator`
+
+Compiler-selectable storage for an exact standard Haxe `Iterator<T>` value.
+Each iterator owns a typed snapshot and one cursor that all aliases share.
+Thus, a call through one alias advances the position that every alias sees.
+
+The snapshot keeps each `T` value unboxed. The compiler supplies its exact
+size, alignment, copy operation, and destroy operation. `next()` moves one
+element owner to the caller. Final release destroys only the elements that the
+program did not consume.
+
+The producer fills the complete snapshot before the runtime publishes the
+iterator. If a fill operation fails, the runtime destroys the completed prefix.
+It also frees the unpublished storage. The caller still owns the producer
+anchor after this error.
+
+An iterator can keep an optional producer anchor alive. StringMap iterators use
+this anchor for the map's value callback policy. Therefore, the iterator stays
+valid after the source map local ends. The final iterator release drops the
+anchor after all element callbacks finish.
+
+The current compiler recognizes the exact standard `Iterator<T>` typedef. It
+supports `hasNext()` and `next()` across locals, aliases, calls, and returns.
+Unrelated records with methods of the same names do not receive this runtime
+representation.
+
 <!-- hxrt-feature:string-map -->
 ### `string-map`
 
@@ -456,6 +483,12 @@ Arrays without sharing the outer map. The result is published only after every
 entry succeeds. If allocation or a value callback fails, the runtime destroys
 the partial copy and leaves the source unchanged.
 
+`iterator()` creates a typed snapshot of the values at call time. Iterator
+aliases share one cursor, but later map changes do not change the snapshot.
+The iterator retains the source map as a callback-policy anchor. This rule
+keeps nested Strings, Arrays, and other admitted owned values valid after the
+source map local ends.
+
 Tagged payload enums remain unsupported as top-level map values because their
 active union member needs a typed ownership policy. Float, class values,
 abstracts with unsupported underlying storage, and unrelated reference families
@@ -464,7 +497,7 @@ remain outside this intentionally bounded specialization.
 The Haxe fixture proves language semantics through generated C. The separate
 handwritten-C native fixture injects allocator and callback failures directly,
 so code generation and hxrt cannot accidentally validate the same bug
-together. Other key/value specializations, iteration, text conversion,
+together. Other key/value specializations, key and pair iteration, text conversion,
 collector-traced values, and owner-replacing map assignment remain explicitly
 unsupported until they receive complete typed lifetime contracts.
 
@@ -628,6 +661,7 @@ them.
 | `include/hxrt/allocator.h`, `src/allocator.c` | Dependency-only allocator callbacks, owner lifecycle, checked arithmetic, and aligned hosted implementation; selected transitively by managed collections. |
 | `include/hxrt/array.h`, `src/array.c` | Compiler-selectable resizable typed storage, shared Array identity, and element lifecycle. |
 | `include/hxrt/int_map.h`, `src/int_map.c` | Compiler-selectable Int-keyed shared `Map<Int, Bool>` storage with exact unboxed keys, values, and membership. |
+| `include/hxrt/iterator.h`, `src/iterator.c` | Compiler-selectable typed snapshots with one cursor shared by all standard Haxe Iterator aliases. |
 | `include/hxrt/string_map.h`, `src/string_map.c` | Compiler-selectable String-keyed shared map storage with copied keys and exact unboxed values. |
 | `include/hxrt/bytes.h`, `src/bytes.c` | Compiler-selectable fixed-length mutable byte storage, shared identity, checked ranges, and overlap-safe copying. |
 | `include/hxrt/bytes_string.h`, `src/bytes_string.c` | Compiler-selectable checked UTF-8 decoding from mutable Bytes into a separately owned String. |

@@ -36,6 +36,7 @@ typedef struct tracked_value_state {
   size_t assignments;
   size_t destructions;
   size_t live_owners;
+  size_t fail_copy_after;
   bool fail_copy;
   bool fail_assign;
 } tracked_value_state;
@@ -109,7 +110,7 @@ static hxc_status tracked_copy(
   if (state == NULL || destination == NULL || source == NULL) {
     return HXC_STATUS_INVALID_ARGUMENT;
   }
-  if (state->fail_copy) {
+  if (state->fail_copy || state->copies >= state->fail_copy_after) {
     return HXC_STATUS_OUT_OF_MEMORY;
   }
   *(tracked_value *)destination = *(const tracked_value *)source;
@@ -295,7 +296,7 @@ static int prove_failure_atomic_insertion(void) {
 }
 
 static int prove_managed_value_callbacks(void) {
-  tracked_value_state state = {0u, 0u, 0u, 0u, false, false};
+  tracked_value_state state = {0u, 0u, 0u, 0u, SIZE_MAX, false, false};
   hxc_string_map_value_ops operations = tracked_ops(&state);
   hxc_string_map_ref *map = NULL;
   hxc_string_map_ref *copy = NULL;
@@ -391,9 +392,126 @@ static int prove_managed_value_callbacks(void) {
   return 0;
 }
 
+static int prove_shared_iterator_cursor_and_lifetime(void) {
+  tracked_value_state state = {0u, 0u, 0u, 0u, SIZE_MAX, false, false};
+  hxc_string_map_value_ops operations = tracked_ops(&state);
+  hxc_string_map_ref *map = NULL;
+  hxc_iterator_ref *iterator = NULL;
+  hxc_iterator_ref *alias;
+  tracked_value source = {7};
+  tracked_value first = {-1};
+  tracked_value second = {-1};
+  bool has_next = false;
+
+  CHECK(hxc_string_map_ref_create_with_ops(
+    hxc_default_allocator(),
+    operations,
+    &map
+  ) == HXC_STATUS_OK);
+  CHECK(hxc_string_map_ref_set_copy(map, literal("first"), &source) == HXC_STATUS_OK);
+  source.payload = 11;
+  CHECK(hxc_string_map_ref_set_copy(map, literal("second"), &source) == HXC_STATUS_OK);
+  CHECK(state.live_owners == 2u);
+
+  CHECK(hxc_string_map_ref_value_iterator(map, &iterator) == HXC_STATUS_OK);
+  CHECK(iterator != NULL && state.live_owners == 4u);
+  alias = iterator;
+  CHECK(hxc_iterator_ref_retain(alias) == HXC_STATUS_OK);
+
+  /* The snapshot and its callback policy outlive the caller's map owner. */
+  CHECK(hxc_string_map_ref_release(map) == HXC_STATUS_OK);
+  map = NULL;
+  CHECK(state.live_owners == 4u);
+  CHECK(hxc_iterator_ref_has_next(iterator, &has_next) == HXC_STATUS_OK);
+  CHECK(has_next);
+  has_next = false;
+  CHECK(hxc_iterator_ref_has_next(alias, &has_next) == HXC_STATUS_OK);
+  CHECK(has_next);
+
+  CHECK(hxc_iterator_ref_next_move(iterator, &first) == HXC_STATUS_OK);
+  CHECK(hxc_iterator_ref_next_move(alias, &second) == HXC_STATUS_OK);
+  CHECK((first.payload == 7 && second.payload == 11)
+    || (first.payload == 11 && second.payload == 7));
+  CHECK(state.live_owners == 4u);
+  operations.destroy(operations.context, &first);
+  operations.destroy(operations.context, &second);
+  CHECK(state.live_owners == 2u);
+
+  has_next = true;
+  CHECK(hxc_iterator_ref_has_next(iterator, &has_next) == HXC_STATUS_OK);
+  CHECK(!has_next);
+  first.payload = -1;
+  CHECK(hxc_iterator_ref_next_move(alias, &first) == HXC_STATUS_INVALID_ARGUMENT);
+  CHECK(first.payload == -1);
+  CHECK(hxc_iterator_ref_release(alias) == HXC_STATUS_OK);
+  CHECK(state.live_owners == 2u);
+  CHECK(hxc_iterator_ref_release(iterator) == HXC_STATUS_OK);
+  CHECK(state.live_owners == 0u);
+  return 0;
+}
+
+static int prove_iterator_failure_and_early_exit_cleanup(void) {
+  failing_allocator_state allocator_state = {0u, 0u, SIZE_MAX};
+  hxc_allocator allocator = {
+    &allocator_state,
+    test_allocate,
+    NULL,
+    test_release
+  };
+  tracked_value_state value_state = {0u, 0u, 0u, 0u, SIZE_MAX, false, false};
+  hxc_string_map_value_ops operations = tracked_ops(&value_state);
+  hxc_string_map_ref *map = NULL;
+  hxc_iterator_ref *iterator = NULL;
+  tracked_value source = {3};
+  tracked_value yielded = {-1};
+  size_t owners_before;
+  size_t destructions_before;
+
+  CHECK(hxc_string_map_ref_create_with_ops(
+    allocator,
+    operations,
+    &map
+  ) == HXC_STATUS_OK);
+  CHECK(hxc_string_map_ref_set_copy(map, literal("one"), &source) == HXC_STATUS_OK);
+  source.payload = 5;
+  CHECK(hxc_string_map_ref_set_copy(map, literal("two"), &source) == HXC_STATUS_OK);
+  CHECK(value_state.live_owners == 2u);
+
+  owners_before = value_state.live_owners;
+  destructions_before = value_state.destructions;
+  value_state.fail_copy_after = value_state.copies + 1u;
+  CHECK(hxc_string_map_ref_value_iterator(map, &iterator) == HXC_STATUS_OUT_OF_MEMORY);
+  CHECK(iterator == NULL);
+  CHECK(value_state.live_owners == owners_before);
+  CHECK(value_state.destructions == destructions_before + 1u);
+  value_state.fail_copy_after = SIZE_MAX;
+
+  allocator_state.fail_after = allocator_state.successful_allocations;
+  CHECK(hxc_string_map_ref_value_iterator(map, &iterator) == HXC_STATUS_OUT_OF_MEMORY);
+  CHECK(iterator == NULL && value_state.live_owners == owners_before);
+  allocator_state.fail_after = allocator_state.successful_allocations + 1u;
+  CHECK(hxc_string_map_ref_value_iterator(map, &iterator) == HXC_STATUS_OUT_OF_MEMORY);
+  CHECK(iterator == NULL && value_state.live_owners == owners_before);
+  allocator_state.fail_after = SIZE_MAX;
+
+  CHECK(hxc_string_map_ref_value_iterator(map, &iterator) == HXC_STATUS_OK);
+  CHECK(value_state.live_owners == owners_before + 2u);
+  CHECK(hxc_iterator_ref_next_move(iterator, &yielded) == HXC_STATUS_OK);
+  operations.destroy(operations.context, &yielded);
+  CHECK(value_state.live_owners == owners_before + 1u);
+  CHECK(hxc_iterator_ref_release(iterator) == HXC_STATUS_OK);
+  CHECK(value_state.live_owners == owners_before);
+  CHECK(hxc_string_map_ref_release(map) == HXC_STATUS_OK);
+  CHECK(value_state.live_owners == 0u);
+  CHECK(allocator_state.successful_allocations == allocator_state.releases);
+  return 0;
+}
+
 static int prove_invalid_inputs_fail_closed(void) {
   hxc_string_map_ref *map = NULL;
   hxc_string_map_ref *occupied_output;
+  hxc_iterator_ref *iterator = NULL;
+  hxc_iterator_ref *occupied_iterator;
   hxc_string malformed_key = HXC_STRING_INITIALIZER;
   bool value = true;
   bool result = true;
@@ -458,6 +576,18 @@ static int prove_invalid_inputs_fail_closed(void) {
    */
   CHECK(hxc_string_map_ref_retain(NULL) == HXC_STATUS_OK);
   CHECK(hxc_string_map_ref_release(NULL) == HXC_STATUS_OK);
+  CHECK(hxc_iterator_ref_retain(NULL) == HXC_STATUS_OK);
+  CHECK(hxc_iterator_ref_release(NULL) == HXC_STATUS_OK);
+  CHECK(hxc_iterator_ref_has_next(NULL, &result) == HXC_STATUS_INVALID_ARGUMENT);
+  CHECK(hxc_iterator_ref_next_move(NULL, &value) == HXC_STATUS_INVALID_ARGUMENT);
+  CHECK(hxc_string_map_ref_value_iterator(map, NULL) == HXC_STATUS_INVALID_ARGUMENT);
+  CHECK(hxc_string_map_ref_value_iterator(map, &iterator) == HXC_STATUS_OK);
+  occupied_iterator = iterator;
+  CHECK(hxc_string_map_ref_value_iterator(
+    map,
+    &occupied_iterator
+  ) == HXC_STATUS_INVALID_ARGUMENT);
+  CHECK(occupied_iterator == iterator);
   CHECK(hxc_string_map_ref_clear(NULL) == HXC_STATUS_INVALID_ARGUMENT);
   CHECK(hxc_string_map_ref_set_copy(
     map,
@@ -494,6 +624,7 @@ static int prove_invalid_inputs_fail_closed(void) {
     &result
   ) == HXC_STATUS_INVALID_ARGUMENT);
   CHECK(result);
+  CHECK(hxc_iterator_ref_release(iterator) == HXC_STATUS_OK);
   CHECK(hxc_string_map_ref_release(map) == HXC_STATUS_OK);
   return 0;
 }
@@ -502,6 +633,8 @@ int main(void) {
   CHECK(prove_basic_contract() == 0);
   CHECK(prove_failure_atomic_insertion() == 0);
   CHECK(prove_managed_value_callbacks() == 0);
+  CHECK(prove_shared_iterator_cursor_and_lifetime() == 0);
+  CHECK(prove_iterator_failure_and_early_exit_cleanup() == 0);
   CHECK(prove_invalid_inputs_fail_closed() == 0);
   return 0;
 }

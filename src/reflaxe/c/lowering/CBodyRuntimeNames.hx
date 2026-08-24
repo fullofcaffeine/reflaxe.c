@@ -83,6 +83,11 @@ enum CBodyRuntimeName {
 	CBRNStringMapGetCopy;
 	CBRNStringMapRemove;
 	CBRNStringMapClear;
+	CBRNStringMapValueIterator;
+	CBRNIteratorRetain;
+	CBRNIteratorRelease;
+	CBRNIteratorHasNext;
+	CBRNIteratorNextMove;
 	CBRNIntMapCreate;
 	CBRNIntMapRetain;
 	CBRNIntMapRelease;
@@ -183,6 +188,11 @@ class CBodyRuntimeNames {
 			case CBRNStringMapGetCopy: "hxc_string_map_ref_get_copy";
 			case CBRNStringMapRemove: "hxc_string_map_ref_remove";
 			case CBRNStringMapClear: "hxc_string_map_ref_clear";
+			case CBRNStringMapValueIterator: "hxc_string_map_ref_value_iterator";
+			case CBRNIteratorRetain: "hxc_iterator_ref_retain";
+			case CBRNIteratorRelease: "hxc_iterator_ref_release";
+			case CBRNIteratorHasNext: "hxc_iterator_ref_has_next";
+			case CBRNIteratorNextMove: "hxc_iterator_ref_next_move";
 			case CBRNIntMapCreate: "hxc_int_bool_map_ref_create";
 			case CBRNIntMapRetain: "hxc_int_bool_map_ref_retain";
 			case CBRNIntMapRelease: "hxc_int_bool_map_ref_release";

@@ -118,6 +118,11 @@ class RuntimeRequirementAnalyzer {
 								internal('validated managed StringMap `${instance.id}` lost its exact [String, value] arguments');
 							collectDeclarationType(instance.arguments[1], instance.source, observations);
 						}
+						if (featureId == "iterator") {
+							if (instance.arguments.length != 1)
+								internal('validated managed Iterator `${instance.id}` lost its exact element argument');
+							collectDeclarationType(instance.arguments[0], instance.source, observations);
+						}
 					case _:
 				}
 			}

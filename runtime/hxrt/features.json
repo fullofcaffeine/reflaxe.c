@@ -608,6 +608,76 @@
     },
     {
       "documentation": {
+        "referencePath": "docs/hxrt.md",
+        "selectionRoots": [
+          {
+            "description": "A reachable Iterator owner must release unconsumed snapshot elements when its Haxe lifetime ends.",
+            "id": "cleanup-release",
+            "kind": "hxc-ir-operation"
+          },
+          {
+            "description": "A reachable standard Iterator.hasNext or Iterator.next operation.",
+            "id": "iterator-operation",
+            "kind": "hxc-ir-operation"
+          },
+          {
+            "description": "A reachable standard Haxe Iterator<T> whose shared cursor crosses ordinary expressions or calls.",
+            "id": "managed-type-representation",
+            "kind": "hxc-ir-operation"
+          },
+          {
+            "description": "A reachable Iterator alias must retain the same shared cursor.",
+            "id": "retain",
+            "kind": "hxc-ir-operation"
+          }
+        ],
+        "runtimeRationale": "General Iterator values need run-time shared cursor identity, but their exact element layout and lifecycle remain compiler-selected.",
+        "evidence": [
+          "test/differential/string-map/run.py",
+          "test/runtime/runtime-feature-graph/run.py"
+        ],
+        "directAlternative": "Compile-time-known iteration can remain direct control flow when no Iterator value or shared cursor is observable.",
+        "contract": "Preserves one shared cursor across Iterator aliases while keeping each element exact and unboxed; creation snapshots the producer, next moves ownership, and release destroys only unconsumed elements.",
+        "programLocalAlternative": "A closed producer may use a program-local cursor only when aliases, element lifetime, and exhaustion behavior remain identical."
+      },
+      "dependencies": [
+        "alloc"
+      ],
+      "id": "iterator",
+      "availability": "compiler-selectable",
+      "symbols": [
+        "hxc_iterator_element_ops_is_valid",
+        "hxc_iterator_ref_create_snapshot",
+        "hxc_iterator_ref_has_next",
+        "hxc_iterator_ref_next_move",
+        "hxc_iterator_ref_release",
+        "hxc_iterator_ref_retain"
+      ],
+      "artifacts": [
+        {
+          "sourceSha256": "e8589914b0fe4da833864061de5fe8259d7066edff689d0c98442a6f8872f0f1",
+          "kind": "runtime-header",
+          "outputPath": "runtime/include/hxrt/iterator.h",
+          "sourcePath": "runtime/hxrt/include/hxrt/iterator.h"
+        },
+        {
+          "sourceSha256": "0d03adbe76bfb3a2e6911589395452eb3b52f8ae6cd2e77947aca9177cfdc2f6",
+          "kind": "runtime-source",
+          "outputPath": "runtime/src/iterator.c",
+          "sourcePath": "runtime/hxrt/src/iterator.c"
+        }
+      ],
+      "libraries": [],
+      "minimalAllowed": true,
+      "summary": "Shared-cursor typed snapshots for standard Haxe Iterator values.",
+      "defines": [],
+      "environments": [
+        "freestanding",
+        "hosted"
+      ]
+    },
+    {
+      "documentation": {
         "referencePath": "docs/object-descriptors.md",
         "selectionRoots": [
           {
@@ -1075,6 +1145,7 @@
       },
       "dependencies": [
         "alloc",
+        "iterator",
         "string-literal"
       ],
       "id": "string-map",
@@ -1090,17 +1161,18 @@
         "hxc_string_map_ref_remove",
         "hxc_string_map_ref_retain",
         "hxc_string_map_ref_set_copy",
+        "hxc_string_map_ref_value_iterator",
         "hxc_string_map_value_ops_is_valid"
       ],
       "artifacts": [
         {
-          "sourceSha256": "ae8ab5d3c74984210d84b28edce8662bdd1e573e123d7364a662c53f4ca8ea2a",
+          "sourceSha256": "4b67370c51dcf6e96c5e667ec6535b76ae47c38fa53718ffa3032ad93d04d6fc",
           "kind": "runtime-header",
           "outputPath": "runtime/include/hxrt/string_map.h",
           "sourcePath": "runtime/hxrt/include/hxrt/string_map.h"
         },
         {
-          "sourceSha256": "143c6ab6e8e649a82c636816e0001f6a865030a1cb3460953ec4590c26d27ad7",
+          "sourceSha256": "7dde064613173e737c16b3890b5d0b14ad8dd484ed90a67abeb87ec4b4f1b3f5",
           "kind": "runtime-source",
           "outputPath": "runtime/src/string_map.c",
           "sourcePath": "runtime/hxrt/src/string_map.c"
@@ -1284,6 +1356,7 @@
     "gc",
     "int-map",
     "io",
+    "iterator",
     "object",
     "runtime-base",
     "status",
@@ -1323,6 +1396,8 @@
         "hxc_gc_stats",
         "hxc_gc_thread",
         "hxc_int_bool_map_ref",
+        "hxc_iterator_element_ops",
+        "hxc_iterator_ref",
         "hxc_object_header",
         "hxc_owned_cstring",
         "hxc_owned_string",
@@ -1338,7 +1413,7 @@
     "releaseProvenance": {
       "runtimeCStandard": "c11",
       "sourceHashAlgorithm": "sha256",
-      "sourceSetSha256": "88b3fff9f249cd6e073b79df19b64c647cfe93e75887ec4da9f88edb4183c810",
+      "sourceSetSha256": "c1742aa236a886d69a1a1be80d2dcfc6cb1af478055321aa3832806a4a40dcb1",
       "publicHeaderCppStandard": "c++17"
     },
     "generatedCodeCompatibility": "same-major",

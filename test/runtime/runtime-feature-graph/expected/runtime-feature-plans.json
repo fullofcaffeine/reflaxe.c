@@ -1064,6 +1064,31 @@
       },
       {
         "dependencies": [
+          "alloc"
+        ],
+        "id": "iterator",
+        "reasonIds": [
+          "fixture.string-map"
+        ],
+        "availability": "compiler-selectable",
+        "symbols": [
+          "hxc_iterator_element_ops_is_valid",
+          "hxc_iterator_ref_create_snapshot",
+          "hxc_iterator_ref_has_next",
+          "hxc_iterator_ref_next_move",
+          "hxc_iterator_ref_release",
+          "hxc_iterator_ref_retain"
+        ],
+        "artifacts": [
+          "runtime/include/hxrt/iterator.h",
+          "runtime/src/iterator.c"
+        ],
+        "libraries": [],
+        "defines": [],
+        "root": false
+      },
+      {
+        "dependencies": [
           "runtime-base"
         ],
         "id": "string-literal",
@@ -1082,6 +1107,7 @@
       {
         "dependencies": [
           "alloc",
+          "iterator",
           "string-literal"
         ],
         "id": "string-map",
@@ -1100,6 +1126,7 @@
           "hxc_string_map_ref_remove",
           "hxc_string_map_ref_retain",
           "hxc_string_map_ref_set_copy",
+          "hxc_string_map_ref_value_iterator",
           "hxc_string_map_value_ops_is_valid"
         ],
         "artifacts": [
@@ -1124,6 +1151,13 @@
           "fixture.string-map"
         ],
         "dependencyId": "status"
+      },
+      {
+        "featureId": "iterator",
+        "reasonIds": [
+          "fixture.string-map"
+        ],
+        "dependencyId": "alloc"
       },
       {
         "featureId": "status",
@@ -1151,6 +1185,13 @@
         "reasonIds": [
           "fixture.string-map"
         ],
+        "dependencyId": "iterator"
+      },
+      {
+        "featureId": "string-map",
+        "reasonIds": [
+          "fixture.string-map"
+        ],
         "dependencyId": "string-literal"
       }
     ],
@@ -1160,6 +1201,7 @@
       "runtime-base",
       "status",
       "alloc",
+      "iterator",
       "string-literal",
       "string-map"
     ],
@@ -1175,6 +1217,12 @@
         "kind": "runtime-header",
         "outputPath": "runtime/include/hxrt/base.h",
         "sourcePath": "runtime/hxrt/include/hxrt/base.h"
+      },
+      {
+        "featureId": "iterator",
+        "kind": "runtime-header",
+        "outputPath": "runtime/include/hxrt/iterator.h",
+        "sourcePath": "runtime/hxrt/include/hxrt/iterator.h"
       },
       {
         "featureId": "status",
@@ -1201,6 +1249,12 @@
         "sourcePath": "runtime/hxrt/src/allocator.c"
       },
       {
+        "featureId": "iterator",
+        "kind": "runtime-source",
+        "outputPath": "runtime/src/iterator.c",
+        "sourcePath": "runtime/hxrt/src/iterator.c"
+      },
+      {
         "featureId": "string-map",
         "kind": "runtime-source",
         "outputPath": "runtime/src/string_map.c",
@@ -1221,6 +1275,12 @@
       "hxc_allocator_same_identity",
       "hxc_default_allocator",
       "hxc_free",
+      "hxc_iterator_element_ops_is_valid",
+      "hxc_iterator_ref_create_snapshot",
+      "hxc_iterator_ref_has_next",
+      "hxc_iterator_ref_next_move",
+      "hxc_iterator_ref_release",
+      "hxc_iterator_ref_retain",
       "hxc_realloc",
       "hxc_size_add",
       "hxc_size_mul",
@@ -1234,6 +1294,7 @@
       "hxc_string_map_ref_remove",
       "hxc_string_map_ref_retain",
       "hxc_string_map_ref_set_copy",
+      "hxc_string_map_ref_value_iterator",
       "hxc_string_map_value_ops_is_valid"
     ],
     "diagnosticMode": "off",
@@ -1241,10 +1302,12 @@
     "artifacts": [
       "runtime/include/hxrt/allocator.h",
       "runtime/include/hxrt/base.h",
+      "runtime/include/hxrt/iterator.h",
       "runtime/include/hxrt/status.h",
       "runtime/include/hxrt/string_literal.h",
       "runtime/include/hxrt/string_map.h",
       "runtime/src/allocator.c",
+      "runtime/src/iterator.c",
       "runtime/src/string_map.c"
     ],
     "libraries": [],

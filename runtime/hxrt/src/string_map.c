@@ -35,6 +35,12 @@ struct hxc_string_map_ref {
   hxc_allocation slots;
 };
 
+/** Stack-owned cursor used only while the generic iterator copies a snapshot. */
+typedef struct hxc_string_map_value_iterator_fill {
+  const hxc_string_map_ref *map;
+  size_t slot_index;
+} hxc_string_map_value_iterator_fill;
+
 static bool hxc_string_map_power_of_two(size_t value) {
   return value != 0u && (value & (value - 1u)) == 0u;
 }
@@ -152,6 +158,31 @@ static void hxc_string_map_value_destroy(
   if (hxc_string_map_has_lifecycle(&map->values)) {
     map->values.destroy(map->values.context, value);
   }
+}
+
+static hxc_status hxc_string_map_value_iterator_fill_next(
+  void *context,
+  void *destination
+) {
+  hxc_string_map_value_iterator_fill *fill = context;
+  while (fill->slot_index < fill->map->capacity) {
+    size_t index = fill->slot_index;
+    const hxc_string_map_slot *slot;
+    fill->slot_index++;
+    slot = hxc_string_map_slot_at(fill->map, index);
+    if (slot->state == HXC_STRING_MAP_OCCUPIED) {
+      return hxc_string_map_value_construct(
+        fill->map,
+        destination,
+        hxc_string_map_value_at(fill->map, index)
+      );
+    }
+  }
+  return HXC_STATUS_INTERNAL_ERROR;
+}
+
+static hxc_status hxc_string_map_iterator_release_anchor(void *anchor) {
+  return hxc_string_map_ref_release(anchor);
 }
 
 static size_t hxc_string_map_find_slot(
@@ -616,5 +647,46 @@ hxc_status hxc_string_map_ref_clear(hxc_string_map_ref *map) {
   }
   map->length = 0u;
   map->tombstones = 0u;
+  return HXC_STATUS_OK;
+}
+
+hxc_status hxc_string_map_ref_value_iterator(
+  hxc_string_map_ref *map,
+  hxc_iterator_ref **out_iterator
+) {
+  hxc_iterator_element_ops elements;
+  hxc_string_map_value_iterator_fill fill;
+  hxc_status status;
+  if (!hxc_string_map_is_valid(map)
+    || out_iterator == NULL
+    || *out_iterator != NULL) {
+    return HXC_STATUS_INVALID_ARGUMENT;
+  }
+  status = hxc_string_map_ref_retain(map);
+  if (status != HXC_STATUS_OK) {
+    return status;
+  }
+  elements = (hxc_iterator_element_ops){
+    map->values.size,
+    map->values.alignment,
+    map->values.context,
+    map->values.copy,
+    map->values.destroy
+  };
+  fill = (hxc_string_map_value_iterator_fill){map, 0u};
+  status = hxc_iterator_ref_create_snapshot(
+    map->allocator,
+    elements,
+    map->length,
+    hxc_string_map_value_iterator_fill_next,
+    &fill,
+    map,
+    hxc_string_map_iterator_release_anchor,
+    out_iterator
+  );
+  if (status != HXC_STATUS_OK) {
+    hxc_status cleanup_status = hxc_string_map_ref_release(map);
+    return cleanup_status == HXC_STATUS_OK ? status : cleanup_status;
+  }
   return HXC_STATUS_OK;
 }

@@ -769,12 +769,24 @@ private class HxcIRValidationState {
 				validateStableId(runtimeFeature, '$path.runtimeFeature', instance.source);
 				if (runtimeFeature == "string-map")
 					validateStringMapTypeInstance(instance, declaration, path);
+				if (runtimeFeature == "iterator")
+					validateIteratorTypeInstance(instance, declaration, path);
 			case IRRStackClosure(parameters, result):
 				for (index => parameter in parameters)
 					validateTypeRef(parameter, '$path.closureParameter:$index', instance.source, false);
 				validateTypeRef(result, '$path.closureResult', instance.source, true);
 			case IRRDirect | IRRTagged | IRROpaqueHandle:
 		}
+	}
+
+	/** Require one exact element argument on a reference-shaped Iterator. */
+	function validateIteratorTypeInstance(instance:HxcIRTypeInstance, declaration:Null<HxcIRTypeDeclaration>, path:String):Void {
+		final isReference = declaration != null && switch declaration.kind {
+			case IRTKReference: true;
+			case _: false;
+		};
+		if (!isReference || instance.arguments.length != 1)
+			add(path, 'managed Iterator instance `${instance.id}` requires a reference declaration and one exact element argument', instance.source);
 	}
 
 	/** Reject a malformed managed StringMap declaration before any operation uses it. */
@@ -1545,6 +1557,9 @@ private class HxcIRValidationState {
 						if (isStringMapRuntimeImplementation(implementation)
 							&& managedStringMapValue(knownPlaceType(place, noValues, locals)) == null)
 							add(actionPath, "StringMap release cleanup requires a managed Map<String, V> place", action.source);
+						if (isIteratorRuntimeImplementation(implementation)
+							&& managedIteratorElement(knownPlaceType(place, noValues, locals)) == null)
+							add(actionPath, "Iterator release cleanup requires a managed Iterator<E> place", action.source);
 						if (isIntMapRuntimeImplementation(implementation) && !isManagedIntBoolMap(knownPlaceType(place, noValues, locals)))
 							add(actionPath, "IntMap release cleanup requires a managed Map<Int, Bool> place", action.source);
 						if (isBytesRuntimeImplementation(implementation) && !isManagedBytes(knownPlaceType(place, noValues, locals)))
@@ -1755,6 +1770,13 @@ private class HxcIRValidationState {
 			}
 			return true;
 		}
+		if (managedIteratorElement(type) != null) {
+			if (!isIteratorRuntimeImplementation(selected)) {
+				add(path, 'managed Iterator carrier $operation requires the iterator runtime lifecycle', source);
+				return false;
+			}
+			return true;
+		}
 		final aggregateId = switch selected {
 			case IRIProgramLocal(helperId): aggregateLifecycleInstanceId(helperId, operation);
 			case _: null;
@@ -1775,6 +1797,8 @@ private class HxcIRValidationState {
 			return false;
 		}
 		if (isManagedBytes(type))
+			return true;
+		if (managedIteratorElement(type) != null)
 			return true;
 		final instanceId = switch type {
 			case IRTInstance(value): value;
@@ -2718,6 +2742,9 @@ private class HxcIRValidationState {
 				if (isStringMapRuntimeImplementation(implementation)
 					&& managedStringMapValue(knownPlaceType(place, available, locals)) == null)
 					add(path, "StringMap retain requires a managed Map<String, V> place", instruction.source);
+				if (isIteratorRuntimeImplementation(implementation)
+					&& managedIteratorElement(knownPlaceType(place, available, locals)) == null)
+					add(path, "Iterator retain requires a managed Iterator<E> place", instruction.source);
 				if (isIntMapRuntimeImplementation(implementation) && !isManagedIntBoolMap(knownPlaceType(place, available, locals)))
 					add(path, "IntMap retain requires a managed Map<Int, Bool> place", instruction.source);
 				if (isBytesRuntimeImplementation(implementation) && !isManagedBytes(knownPlaceType(place, available, locals)))
@@ -2764,6 +2791,9 @@ private class HxcIRValidationState {
 				if (isStringMapRuntimeImplementation(implementation)
 					&& managedStringMapValue(knownPlaceType(place, available, locals)) == null)
 					add(path, "StringMap release requires a managed Map<String, V> place", instruction.source);
+				if (isIteratorRuntimeImplementation(implementation)
+					&& managedIteratorElement(knownPlaceType(place, available, locals)) == null)
+					add(path, "Iterator release requires a managed Iterator<E> place", instruction.source);
 				if (isIntMapRuntimeImplementation(implementation) && !isManagedIntBoolMap(knownPlaceType(place, available, locals)))
 					add(path, "IntMap release requires a managed Map<Int, Bool> place", instruction.source);
 				if (isBytesRuntimeImplementation(implementation) && !isManagedBytes(knownPlaceType(place, available, locals)))
@@ -3220,6 +3250,8 @@ private class HxcIRValidationState {
 					validateManagedArrayCall(call, argumentTypes, path, source, nullProofs);
 				} else if (featureId == "string-map") {
 					validateStringMapCall(call, argumentTypes, path, source);
+				} else if (featureId == "iterator") {
+					validateIteratorCall(call, argumentTypes, path, source);
 				} else if (featureId == "int-map") {
 					validateIntMapCall(call, argumentTypes, path, source);
 				} else if (featureId == "bytes") {
@@ -3540,6 +3572,15 @@ private class HxcIRValidationState {
 					|| expectedReturnKey == null
 					|| typeKey(call.returnType) != expectedReturnKey)
 					add(path, "StringMap.copy requires one map and returns the same exact Map<String, V> specialization", source);
+			case "iterator":
+				final resultElement = managedIteratorElement(call.returnType);
+				final resultElementKey = resultElement == null ? null : typeKey(resultElement);
+				final receiverValueKey = receiverValue == null ? null : typeKey(receiverValue);
+				if (argumentTypes.length != 1
+					|| receiverValueKey == null
+					|| resultElementKey == null
+					|| resultElementKey != receiverValueKey)
+					add(path, "StringMap.iterator requires one map and returns Iterator<V> for the exact stored V", source);
 			case "exists" | "remove":
 				if (argumentTypes.length != 2 || receiverValue == null || !hasStringKey || !returnsBool)
 					add(path, 'StringMap.$operationId requires map + String and returns Bool', source);
@@ -3580,6 +3621,48 @@ private class HxcIRValidationState {
 			case _: null;
 		};
 	}
+
+	/** Return E only for the exact managed standard Iterator<E> shape. */
+	function managedIteratorElement(type:Null<HxcIRTypeRef>):Null<HxcIRTypeRef> {
+		final instanceId = switch type {
+			case IRTInstance(value): value;
+			case _: return null;
+		};
+		final instance = typeInstances.get(instanceId);
+		if (instance == null || instance.arguments.length != 1)
+			return null;
+		return switch instance.representation {
+			case IRRManaged("iterator"): instance.arguments[0];
+			case _: null;
+		};
+	}
+
+	/** Validate shared-cursor hasNext and typed ownership-moving next calls. */
+	function validateIteratorCall(call:HxcIRCall, argumentTypes:Array<Null<HxcIRTypeRef>>, path:String, source:HxcSourceSpan):Void {
+		final operationId = switch call.dispatch {
+			case IRCDRuntime("iterator", value): value;
+			case _: return;
+		};
+		final element = argumentTypes.length == 0 ? null : managedIteratorElement(argumentTypes[0]);
+		final elementKey = element == null ? null : typeKey(element);
+		switch operationId {
+			case "has-next":
+				if (argumentTypes.length != 1 || element == null || call.returnType != IRTBool)
+					add(path, "Iterator.hasNext requires one Iterator<E> and returns Bool", source);
+			case "next":
+				if (argumentTypes.length != 1 || elementKey == null || typeKey(call.returnType) != elementKey)
+					add(path, "Iterator.next requires one Iterator<E> and returns the exact E", source);
+			case _:
+				add(path, 'iterator runtime call names unsupported operation `$operationId`', source);
+		}
+		validateCleanupFreeStatusAbort(call.failure, path, source, "managed Iterator operation");
+	}
+
+	static function isIteratorRuntimeImplementation(implementation:HxcIRImplementation):Bool
+		return switch implementation {
+			case IRIRuntime("iterator"): true;
+			case _: false;
+		};
 
 	/** True only for an exact validated managed `Map<String, V>` carrier. */
 	function isManagedStringMapReference(type:HxcIRTypeRef):Bool

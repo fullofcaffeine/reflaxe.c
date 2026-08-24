@@ -39,6 +39,8 @@ class RuntimeAbiContract {
 		"hxc_gc_stats",
 		"hxc_gc_thread",
 		"hxc_int_bool_map_ref",
+		"hxc_iterator_element_ops",
+		"hxc_iterator_ref",
 		"hxc_object_header",
 		"hxc_owned_cstring",
 		"hxc_owned_string",

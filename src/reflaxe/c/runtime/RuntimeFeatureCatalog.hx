@@ -24,6 +24,7 @@ class RuntimeFeatureCatalog {
 		final statusName = RuntimeFeatureId.parse("status-name");
 		final alloc = RuntimeFeatureId.parse("alloc");
 		final array = RuntimeFeatureId.parse("array");
+		final iterator = RuntimeFeatureId.parse("iterator");
 		final intMap = RuntimeFeatureId.parse("int-map");
 		final stringMap = RuntimeFeatureId.parse("string-map");
 		final bytes = RuntimeFeatureId.parse("bytes");
@@ -172,8 +173,32 @@ class RuntimeFeatureCatalog {
 						"test/differential/array-runtime/run.py",
 						"test/runtime/runtime-feature-graph/run.py"
 					])),
+			new RuntimeFeatureDefinition(iterator, "Shared-cursor typed snapshots for standard Haxe Iterator values.", CompilerSelectable, true, environments,
+				[alloc], [header("iterator.h"), source("iterator.c")], [
+					"hxc_iterator_element_ops_is_valid",
+					"hxc_iterator_ref_create_snapshot",
+					"hxc_iterator_ref_retain",
+					"hxc_iterator_ref_release",
+					"hxc_iterator_ref_has_next",
+					"hxc_iterator_ref_next_move"
+				], [], [],
+				documentation("Preserves one shared cursor across Iterator aliases while keeping each element exact and unboxed; creation snapshots the producer, next moves ownership, and release destroys only unconsumed elements.",
+					[
+						new RuntimeFeatureSelectionRoot("managed-type-representation", RuntimeFeatureSelectionRootKind.HxcIrOperation,
+							"A reachable standard Haxe Iterator<T> whose shared cursor crosses ordinary expressions or calls."),
+						new RuntimeFeatureSelectionRoot("iterator-operation", RuntimeFeatureSelectionRootKind.HxcIrOperation,
+							"A reachable standard Iterator.hasNext or Iterator.next operation."),
+						new RuntimeFeatureSelectionRoot("retain", RuntimeFeatureSelectionRootKind.HxcIrOperation,
+							"A reachable Iterator alias must retain the same shared cursor."),
+						new RuntimeFeatureSelectionRoot("cleanup-release", RuntimeFeatureSelectionRootKind.HxcIrOperation,
+							"A reachable Iterator owner must release unconsumed snapshot elements when its Haxe lifetime ends.")
+					],
+					"Compile-time-known iteration can remain direct control flow when no Iterator value or shared cursor is observable.",
+					"A closed producer may use a program-local cursor only when aliases, element lifetime, and exhaustion behavior remain identical.",
+					"General Iterator values need run-time shared cursor identity, but their exact element layout and lifecycle remain compiler-selected.",
+					"docs/hxrt.md", ["test/differential/string-map/run.py", "test/runtime/runtime-feature-graph/run.py"])),
 			new RuntimeFeatureDefinition(stringMap, "String-keyed shared Haxe Map identity with copied UTF-8 keys and exact unboxed value storage.",
-				CompilerSelectable, true, environments, [alloc, stringLiteral], [header("string_map.h"), source("string_map.c")], [
+				CompilerSelectable, true, environments, [alloc, iterator, stringLiteral], [header("string_map.h"), source("string_map.c")], [
 					"hxc_string_map_ref_create",
 					"hxc_string_map_ref_create_with_ops",
 					"hxc_string_map_ref_retain",
@@ -184,6 +209,7 @@ class RuntimeFeatureCatalog {
 					"hxc_string_map_ref_get_copy",
 					"hxc_string_map_ref_remove",
 					"hxc_string_map_ref_clear",
+					"hxc_string_map_ref_value_iterator",
 					"hxc_string_map_value_ops_is_valid"
 				],
 				[], [],
@@ -541,6 +567,7 @@ class RuntimeFeatureCatalog {
 			case "gc.h": "2ca9523f1c74c62877c3f006bab9bd8a3a2a1eced93d67ad59d015a7c6ecb9de";
 			case "io.h": "4b92f03451dc4d04ea74c857ca3ce54d52fbe80d31f155b93781ee2fab946589";
 			case "int_map.h": "79e8cce319aee8d4f0167db6b6f1e719161b8b948f309b07babbc8cd1bbaa5fd";
+			case "iterator.h": "e8589914b0fe4da833864061de5fe8259d7066edff689d0c98442a6f8872f0f1";
 			case "object.h": "779b452097e4c58c7971b90743ace19a2dc6c91e381557abc84fbd5f9b30f1e5";
 			case "status.h": "6bf20f5d82594014ad0f2b79a25cb81417791bd9c07375d2fb89835e415be1c4";
 			case "status_name.h": "64bf3917787ffcf924369c8e1c0a525cf10902d004d5bb4b898f2af46a7456cc";
@@ -548,7 +575,7 @@ class RuntimeFeatureCatalog {
 			case "string_decode.h": "aa93ea7f132aff625adfdcc7498532b139f621196deab4c0e9ecb5de2934fd48";
 			case "string_float.h": "8747a86c3cabae9bf54a4125305f043d6c70d7c97bc9f6f90174ba6185e3ecc1";
 			case "string_literal.h": "ac6b5ad9fa13004c62e3b33b9b28a935bfb8a22287cd4595ce6e6eb81490e283";
-			case "string_map.h": "ae8ab5d3c74984210d84b28edce8662bdd1e573e123d7364a662c53f4ca8ea2a";
+			case "string_map.h": "4b67370c51dcf6e96c5e667ec6535b76ae47c38fa53718ffa3032ad93d04d6fc";
 			case "string_scalar.h": "b400d7ef9af853410334b30627ea98a5af87d5c3a863f6aa4c770d7cc4b3d90b";
 			case "string_split.h": "a17c9cd6c31cfdb8da2cf4955b980090c144e68ee1ae4f1d0f0b543f4b6eb3eb";
 			case _: throw 'runtime feature header `$name` has no reviewed SHA-256 provenance';
@@ -566,11 +593,12 @@ class RuntimeFeatureCatalog {
 			case "gc.c": "96cf942d6752070aaa5005eae3bc45c7d00aca37c360dfecaeb76d8db767b4cc";
 			case "io.c": "898b3f351b60a91f25fd1ffdfe8d832e95a5a6a738ffe226ac33581f1fcb5b0f";
 			case "int_map.c": "ba6868489be50e0d19973d253bf3a0a316d8d6fc0160cc2e502f65b7c7a055f9";
+			case "iterator.c": "0d03adbe76bfb3a2e6911589395452eb3b52f8ae6cd2e77947aca9177cfdc2f6";
 			case "object.c": "0e7fc6a55b562eaaf03fe63eca743dd73248f0bee1c09e21b79464917e8c89c0";
 			case "status.c": "0695ab2528db6e29d5cf29d905ad736b7c1a3a79333082347ec18faea2d4e6d8";
 			case "string.c": "8313e359e18df7d5995faab32dd2e29cccd75ccd2338e475218549870d882736";
 			case "string_float.c": "60e5189e7f7304ccbc1f69136b7393e4eea35760cde590853ebced414bf39267";
-			case "string_map.c": "143c6ab6e8e649a82c636816e0001f6a865030a1cb3460953ec4590c26d27ad7";
+			case "string_map.c": "7dde064613173e737c16b3890b5d0b14ad8dd484ed90a67abeb87ec4b4f1b3f5";
 			case "string_scalar.c": "2c44eebc655dd34ed374b58402de9dfe731425fb4e0b54997a7c16c12e1309fb";
 			case "string_split.c": "799fc917a450169e4babd86748e879fe7222b4abfef293880c47891e671f9d1b";
 			case _: throw 'runtime feature source `$name` has no reviewed SHA-256 provenance';

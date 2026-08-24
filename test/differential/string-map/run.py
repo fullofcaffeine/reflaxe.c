@@ -31,6 +31,7 @@ FIXTURE = CASE / "string_map_runtime.c"
 INCLUDE = ROOT / "runtime/hxrt/include"
 RUNTIME_SOURCES = (
     ROOT / "runtime/hxrt/src/allocator.c",
+    ROOT / "runtime/hxrt/src/iterator.c",
     ROOT / "runtime/hxrt/src/string_map.c",
 )
 TOOLCHAINS = ("gcc", "clang")
@@ -235,6 +236,7 @@ def validate_generated_project(output: Path, hxcir: str) -> None:
         "status",
         "alloc",
         "array",
+        "iterator",
         "string-literal",
         "string-scalar",
         "string",
@@ -257,6 +259,7 @@ def validate_generated_project(output: Path, hxcir: str) -> None:
         "remove",
         "retain",
         "set",
+        "iterator",
     }
     if operations != expected:
         raise StringMapFailure(
@@ -275,6 +278,24 @@ def validate_generated_project(output: Path, hxcir: str) -> None:
         raise StringMapFailure("runtime plan omitted the exact StringMap representation decision")
     if "managed-haxe-arrays" not in plan.get("directDecisions", []):
         raise StringMapFailure("managed record fixture omitted its nested Array representation")
+    if "managed-haxe-iterators" not in plan.get("directDecisions", []):
+        raise StringMapFailure("managed record fixture omitted its shared Iterator representation")
+
+    iterator_operations = {
+        reason.get("operationId")
+        for reason in plan.get("rootReasons", [])
+        if isinstance(reason, dict) and reason.get("featureId") == "iterator"
+    }
+    if iterator_operations != {
+        "cleanup-release",
+        "has-next",
+        "managed-type-representation",
+        "next",
+        "retain",
+    }:
+        raise StringMapFailure(
+            f"generated Iterator operations drifted: {sorted(iterator_operations)!r}"
+        )
 
     sources = "\n".join(
         path.read_text(encoding="utf-8")
@@ -290,6 +311,11 @@ def validate_generated_project(output: Path, hxcir: str) -> None:
         "hxc_string_map_ref_copy",
         "hxc_string_map_ref_retain",
         "hxc_string_map_ref_release",
+        "hxc_string_map_ref_value_iterator",
+        "hxc_iterator_ref_has_next",
+        "hxc_iterator_ref_next_move",
+        "hxc_iterator_ref_retain",
+        "hxc_iterator_ref_release",
         "sizeof(bool)",
         "_Alignof(bool)",
         "value_copy",
@@ -411,7 +437,6 @@ def run_negative_cases(root: Path) -> None:
         "abstract_class_value": "StringMap-value-not-yet-admitted:haxe-class-reference:",
         "payload_enum_value": "StringMap-value-not-yet-admitted:haxe-enum:",
         "key_type": "virtual-slot-generic-requires-specialization:slot.haxe.ds.ObjectMap.set",
-        "iteration": "TVar(value:type).field:hasNext:method",
         "reassignment": "TBinop(OpAssign:managed-StringMap-reassignment-not-admitted)",
     }
     for name, marker in expected.items():
@@ -512,6 +537,9 @@ def inspect_symbols(executable: Path, family: str, *, allow_array: bool = False)
         "hxc_string_map_ref_get_copy",
         "hxc_string_map_ref_copy",
         "hxc_string_map_ref_release",
+        "hxc_string_map_ref_value_iterator",
+        "hxc_iterator_ref_has_next",
+        "hxc_iterator_ref_next_move",
         "hxc_string_map_value_ops_is_valid",
     ):
         if required not in result.stdout:

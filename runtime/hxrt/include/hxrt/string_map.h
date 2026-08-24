@@ -12,6 +12,7 @@
 #define HXRT_STRING_MAP_H_INCLUDED
 
 #include "hxrt/allocator.h"
+#include "hxrt/iterator.h"
 #include "hxrt/string_literal.h"
 
 #if defined(__cplusplus)
@@ -141,6 +142,12 @@ HXC_API hxc_status hxc_string_map_ref_remove(
   bool *out_removed
 );
 HXC_API hxc_status hxc_string_map_ref_clear(hxc_string_map_ref *map);
+
+/** Create a typed creation-time snapshot of the map's current values. */
+HXC_API hxc_status hxc_string_map_ref_value_iterator(
+  hxc_string_map_ref *map,
+  hxc_iterator_ref **out_iterator
+);
 
 #if defined(__cplusplus)
 } /* extern "C" */

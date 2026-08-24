@@ -71,6 +71,7 @@ import reflaxe.c.lowering.CBodyInterface.CPreparedBodyInterface;
 import reflaxe.c.lowering.CBodyIntrinsicReceiver.CBodyIntrinsicReceiverFamily;
 import reflaxe.c.lowering.CBodyIntMap.CBodyIntMapRecognition;
 import reflaxe.c.lowering.CBodyIntMap.CPreparedBodyIntMap;
+import reflaxe.c.lowering.CBodyIterator.CPreparedBodyIterator;
 import reflaxe.c.lowering.CBodyOptional.CLoweredBodyOptional;
 import reflaxe.c.lowering.CBodyOptional.CPreparedBodyOptional;
 import reflaxe.c.lowering.CBodyStringMap.CBodyStringMapRecognition;
@@ -295,6 +296,7 @@ class CBodyLoweringResult {
 	public final enums:Array<CLoweredBodyEnum>;
 	public final classes:Array<CLoweredBodyClass>;
 	public final arrays:Array<CLoweredBodyArray>;
+	public final iterators:Array<CPreparedBodyIterator>;
 	public final intMaps:Array<CPreparedBodyIntMap>;
 	public final stringMaps:Array<CLoweredBodyStringMap>;
 	public final bytes:Array<CPreparedBodyBytes>;
@@ -312,7 +314,7 @@ class CBodyLoweringResult {
 
 	public function new(program:HxcIRProgram, functions:Array<CLoweredBodyFunction>, globals:Array<CLoweredBodyGlobal>,
 			aggregates:Array<CLoweredBodyAggregate>, enums:Array<CLoweredBodyEnum>, classes:Array<CLoweredBodyClass>, arrays:Array<CLoweredBodyArray>,
-			intMaps:Array<CPreparedBodyIntMap>, stringMaps:Array<CLoweredBodyStringMap>, bytes:Array<CPreparedBodyBytes>,
+			iterators:Array<CPreparedBodyIterator>, intMaps:Array<CPreparedBodyIntMap>, stringMaps:Array<CLoweredBodyStringMap>, bytes:Array<CPreparedBodyBytes>,
 			optionals:Array<CLoweredBodyOptional>, constructors:Array<CLoweredBodyConstructor>, dispatch:CLoweredBodyDispatch, imports:CLoweredImports,
 			helpers:Array<CPrimitiveHelperPlan>, buildFacts:Array<TypedCBuildFact>, symbolTable:CSymbolTableSnapshot, boundsAbortName:Null<CIdentifier>,
 			runtimeRequirements:Array<CBodyRuntimeRequirement>, managedProgram:Null<CManagedProgramNames>, ?hxcirDump:String) {
@@ -323,6 +325,7 @@ class CBodyLoweringResult {
 		this.enums = enums.copy();
 		this.classes = classes.copy();
 		this.arrays = arrays.copy();
+		this.iterators = iterators.copy();
 		this.intMaps = intMaps.copy();
 		this.stringMaps = stringMaps.copy();
 		this.bytes = bytes.copy();
@@ -495,12 +498,13 @@ class CBodyLowering {
 		final preparedClasses = aggregateRegistry.canonicalClasses();
 		final preparedInterfaces = aggregateRegistry.canonicalInterfaces();
 		final preparedArrays = aggregateRegistry.canonicalArrays();
+		final preparedIterators = aggregateRegistry.canonicalIterators();
 		final preparedIntMaps = aggregateRegistry.canonicalIntMaps();
 		final preparedStringMaps = aggregateRegistry.canonicalStringMaps();
 		final preparedBytes = aggregateRegistry.canonicalBytes();
 		final preparedImports = aggregateRegistry.canonicalImports();
 		final sharedProgram = buildProgram([], preparedGlobals, preparedAggregates, preparedEnums, preparedClasses, preparedInterfaces, preparedArrays,
-			preparedIntMaps, preparedStringMaps, preparedBytes, preparedImports, preparedDispatch);
+			preparedIterators, preparedIntMaps, preparedStringMaps, preparedBytes, preparedImports, preparedDispatch);
 		CBodyFunctionReplayCache.settleProgramRevision(functionReplayProgramRevision(sharedProgram, preparedById, constructorSignaturesById));
 		CPhaseTiming.stopDetail(representationTimer);
 		final settledFunctionBuildContributions = functionContributionSnapshot(aggregateRegistry, enumConstructorAdapters, functionLiterals);
@@ -541,7 +545,7 @@ class CBodyLowering {
 		CPhaseTiming.stopDetail(functionConstructionTimer);
 		final programAssemblyTimer = CPhaseTiming.startDetail(CDTHxcIRProgramAssembly);
 		final program = buildProgram(built, preparedGlobals, preparedAggregates, preparedEnums, preparedClasses, preparedInterfaces, preparedArrays,
-			preparedIntMaps, preparedStringMaps, preparedBytes, preparedImports, preparedDispatch);
+			preparedIterators, preparedIntMaps, preparedStringMaps, preparedBytes, preparedImports, preparedDispatch);
 		CPhaseTiming.stopDetail(programAssemblyTimer);
 		final managedRootTimer = CPhaseTiming.startDetail(CDTHxcIRManagedRootPlanning);
 		new HxcIRManagedRootPlanner().run(program);
@@ -625,7 +629,7 @@ class CBodyLowering {
 		CPhaseTiming.stopDetail(nameProjectionTimer);
 		CPhaseTiming.stop(analysisTimer);
 		final castBodyTimer = CPhaseTiming.start(CPCASTBodyConstruction);
-		final emitter = new CBodyEmitter(loweredAggregates, loweredEnums, loweredClasses, loweredArrays, preparedIntMaps, loweredStringMaps, preparedBytes,
+		final emitter = new CBodyEmitter(loweredAggregates, loweredEnums, loweredClasses, loweredArrays, preparedIterators, preparedIntMaps, loweredStringMaps, preparedBytes,
 			loweredOptionals, loweredDispatch, loweredImports, managedProgram);
 		final lowered:Array<CLoweredBodyFunction> = [];
 		for (item in built) {
@@ -677,6 +681,12 @@ class CBodyLowering {
 			runtimeRequirements.push(new CBodyRuntimeRequirement(feature, "managed-type-representation",
 				"ordinary Haxe Array<T> shared container representation", array.source, array.position));
 		}
+		for (iterator in preparedIterators) {
+			runtimeRequirements.push(new CBodyRuntimeRequirement("iterator", "managed-type-representation",
+				"standard Haxe Iterator<T> shared cursor representation", iterator.source, iterator.position));
+			collectDeclarationTypeRuntimeRequirements(runtimeRequirements, iterator.element.irType, iterator.source, iterator.position,
+				"standard Haxe Iterator element carrier");
+		}
 		for (map in preparedStringMaps) {
 			runtimeRequirements.push(new CBodyRuntimeRequirement("string-map", "managed-type-representation",
 				"ordinary Haxe Map<String, V> shared hash-table representation", map.source, map.position));
@@ -705,7 +715,7 @@ class CBodyLowering {
 			}
 		runtimeRequirements.sort(compareRuntimeRequirements);
 		CPhaseTiming.setCounter(CPCounterRuntimeRequirements, runtimeRequirements.length);
-		return new CBodyLoweringResult(program, lowered, loweredGlobals, loweredAggregates, loweredEnums, loweredClasses, loweredArrays, preparedIntMaps,
+		return new CBodyLoweringResult(program, lowered, loweredGlobals, loweredAggregates, loweredEnums, loweredClasses, loweredArrays, preparedIterators, preparedIntMaps,
 			loweredStringMaps, preparedBytes, loweredOptionals, loweredConstructors, loweredDispatch, loweredImports, helpers,
 			helperSelection.buildFacts().concat(loweredImports.buildFacts), symbolTable, boundsAbortName, runtimeRequirements, managedProgram,
 			completeHxcIRDump);
@@ -996,6 +1006,7 @@ class CBodyLowering {
 		changed("classes", before.program.classes, after.program.classes);
 		changed("interfaces", before.program.interfaces, after.program.interfaces);
 		changed("arrays", before.program.arrays, after.program.arrays);
+		changed("Iterator representations", before.program.iterators, after.program.iterators);
 		changed("IntMap representations", before.program.intMaps, after.program.intMaps);
 		changed("StringMap representations", before.program.stringMaps, after.program.stringMaps);
 		changed("Bytes representations", before.program.bytes, after.program.bytes);
@@ -1144,7 +1155,7 @@ class CBodyLowering {
 
 	static function buildProgram(functions:Array<BuiltBodyFunction>, globals:Array<PreparedBodyGlobal>, aggregates:Array<CPreparedBodyAggregate>,
 			enums:Array<CPreparedBodyEnumInstance>, classes:Array<CPreparedBodyClass>, interfaces:Array<CPreparedBodyInterface>,
-			arrays:Array<CPreparedBodyArray>, intMaps:Array<CPreparedBodyIntMap>, stringMaps:Array<CPreparedBodyStringMap>, bytes:Array<CPreparedBodyBytes>,
+			arrays:Array<CPreparedBodyArray>, iterators:Array<CPreparedBodyIterator>, intMaps:Array<CPreparedBodyIntMap>, stringMaps:Array<CPreparedBodyStringMap>, bytes:Array<CPreparedBodyBytes>,
 			imports:Array<CPreparedImportType>, dispatch:CPreparedBodyDispatch):HxcIRProgram {
 		final byModule:Map<String, Array<BuiltBodyFunction>> = [];
 		for (fn in functions) {
@@ -1209,6 +1220,15 @@ class CBodyLowering {
 			}
 			moduleArrays.push(value);
 		}
+		final iteratorsByModule:Map<String, Array<CPreparedBodyIterator>> = [];
+		for (value in iterators) {
+			var moduleIterators = iteratorsByModule.get(value.ownerModule);
+			if (moduleIterators == null) {
+				moduleIterators = [];
+				iteratorsByModule.set(value.ownerModule, moduleIterators);
+			}
+			moduleIterators.push(value);
+		}
 		final stringMapsByModule:Map<String, Array<CPreparedBodyStringMap>> = [];
 		for (value in stringMaps) {
 			var moduleMaps = stringMapsByModule.get(value.ownerModule);
@@ -1267,6 +1287,8 @@ class CBodyLowering {
 		for (moduleId in arraysByModule.keys()) {
 			moduleIdSet.set(moduleId, true);
 		}
+		for (moduleId in iteratorsByModule.keys())
+			moduleIdSet.set(moduleId, true);
 		for (moduleId in stringMapsByModule.keys())
 			moduleIdSet.set(moduleId, true);
 		for (moduleId in intMapsByModule.keys())
@@ -1301,6 +1323,9 @@ class CBodyLowering {
 			final arrayEntries = arraysByModule.get(moduleId);
 			final moduleArrays = arrayEntries == null ? [] : arrayEntries;
 			moduleArrays.sort((left, right) -> compareUtf8(left.declarationId, right.declarationId));
+			final iteratorEntries = iteratorsByModule.get(moduleId);
+			final moduleIterators = iteratorEntries == null ? [] : iteratorEntries;
+			moduleIterators.sort((left, right) -> compareUtf8(left.declarationId, right.declarationId));
 			final stringMapEntries = stringMapsByModule.get(moduleId);
 			final moduleStringMaps = stringMapEntries == null ? [] : stringMapEntries;
 			moduleStringMaps.sort((left, right) -> compareUtf8(left.declarationId, right.declarationId));
@@ -1319,6 +1344,7 @@ class CBodyLowering {
 				.concat(moduleClasses.map(value -> value.source))
 				.concat(moduleInterfaces.map(value -> value.source))
 				.concat(moduleArrays.map(value -> value.source))
+				.concat(moduleIterators.map(value -> value.source))
 				.concat(moduleIntMaps.map(value -> value.source))
 				.concat(moduleStringMaps.map(value -> value.source))
 				.concat(moduleBytes.map(value -> value.source))
@@ -1333,6 +1359,7 @@ class CBodyLowering {
 					.concat(moduleClasses.map(value -> value.declaration()))
 					.concat(moduleInterfaces.map(value -> value.declaration()))
 					.concat(moduleArrays.map(value -> value.declaration()))
+					.concat(moduleIterators.map(value -> value.declaration()))
 					.concat(moduleIntMaps.map(value -> value.declaration()))
 					.concat(moduleStringMaps.map(value -> value.declaration()))
 					.concat(moduleBytes.map(value -> value.declaration()))
@@ -1342,6 +1369,7 @@ class CBodyLowering {
 					.concat(moduleClasses.map(value -> value.instance()))
 					.concat(moduleInterfaces.map(value -> value.instance()))
 					.concat(moduleArrays.map(value -> value.instance()))
+					.concat(moduleIterators.map(value -> value.instance()))
 					.concat(moduleIntMaps.map(value -> value.instance()))
 					.concat(moduleStringMaps.map(value -> value.instance()))
 					.concat(moduleBytes.map(value -> value.instance()))
@@ -3778,6 +3806,7 @@ private class FunctionBuilder {
 	final constructedObjects:Array<BodyConstructedObject> = [];
 	final normalCleanupActionIds:Array<String> = [];
 	final freshManagedArrayValueIds:Map<String, Bool> = [];
+	final freshManagedIteratorValueIds:Map<String, Bool> = [];
 	final freshManagedIntMapValueIds:Map<String, Bool> = [];
 	final freshManagedStringMapValueIds:Map<String, Bool> = [];
 	final freshManagedBytesValueIds:Map<String, Bool> = [];
@@ -3789,6 +3818,7 @@ private class FunctionBuilder {
 	final borrowedManagedArrayElementOwners:Map<String, CBodyManagedArrayElementOwner> = [];
 	final arrayCleanupActionIdsByCompilerId:Map<Int, String> = [];
 	final intMapCleanupActionIdsByCompilerId:Map<Int, String> = [];
+	final iteratorCleanupActionIdsByCompilerId:Map<Int, String> = [];
 	final stringMapCleanupActionIdsByCompilerId:Map<Int, String> = [];
 	final bytesCleanupActionIdsByCompilerId:Map<Int, String> = [];
 	final stringCleanupActionIdsByCompilerId:Map<Int, String> = [];
@@ -4640,6 +4670,8 @@ private class FunctionBuilder {
 		}
 		if (freshManagedStringMapValueIds.keys().hasNext())
 			unsupportedAt(bodyExpression.pos, "function-exit:unowned-fresh-managed-StringMap-value");
+		if (freshManagedIteratorValueIds.keys().hasNext())
+			unsupportedAt(bodyExpression.pos, "function-exit:unowned-fresh-managed-Iterator-value");
 		if (freshManagedIntMapValueIds.keys().hasNext())
 			unsupportedAt(bodyExpression.pos, "function-exit:unowned-fresh-managed-IntMap-value");
 		if (freshManagedBytesValueIds.keys().hasNext())
@@ -6066,6 +6098,23 @@ private class FunctionBuilder {
 			stringMapCleanupActionIdsByCompilerId.set(variable.id, cleanupId);
 			runtimeRequirements.push(new CBodyRuntimeRequirement("string-map", "cleanup-release", "ordinary Haxe StringMap local lifetime", source, position));
 		}
+		if (localMapping.iteratorValue() != null) {
+			final transferredFreshOwner = value != null && freshManagedIteratorValueIds.remove(value.id);
+			if (!transferredFreshOwner) {
+				appendInstruction(null, IRIORetain(IRPLocal(localId), IRIRuntime("iterator")), source, "retain-iterator-alias");
+				runtimeRequirements.push(new CBodyRuntimeRequirement("iterator", "retain", "standard Haxe Iterator local alias", source, position));
+			}
+			final cleanupId = 'iterator-local.$ordinal.release';
+			constructionCleanupActions.push({
+				id: cleanupId,
+				idempotence: IRCExactlyOnce,
+				kind: IRCARelease(IRPLocal(localId), IRIRuntime("iterator")),
+				source: source
+			});
+			normalCleanupActionIds.push(cleanupId);
+			iteratorCleanupActionIdsByCompilerId.set(variable.id, cleanupId);
+			runtimeRequirements.push(new CBodyRuntimeRequirement("iterator", "cleanup-release", "standard Haxe Iterator local lifetime", source, position));
+		}
 		if (localMapping.intMapValue() != null) {
 			final transferredFreshOwner = value != null && freshManagedIntMapValueIds.remove(value.id);
 			if (!transferredFreshOwner) {
@@ -7350,6 +7399,24 @@ private class FunctionBuilder {
 			currentBlock.terminator = {kind: IRTReturn(returnedValueId, normalCleanupSteps(transferredCleanupId)), source: source};
 			return;
 		}
+		if (prepared.returnMapping.iteratorValue() != null) {
+			var transferredCleanupId:Null<String> = null;
+			var returnedValueId = lowered.id;
+			if (!freshManagedIteratorValueIds.remove(lowered.id)) {
+				final returnedLocal = directLocalCompilerId(value);
+				if (returnedLocal != null)
+					transferredCleanupId = iteratorCleanupActionIdsByCompilerId.get(returnedLocal);
+				if (transferredCleanupId == null) {
+					final ownerLocalId = createFlowLocal(prepared.returnMapping, lowered.id, source, "returned-iterator-owner");
+					appendInstruction(null, IRIORetain(IRPLocal(ownerLocalId), IRIRuntime("iterator")), source, "retain-iterator-return");
+					runtimeRequirements.push(new CBodyRuntimeRequirement("iterator", "retain", "standard Haxe Iterator borrowed return", source, value.pos));
+					returnedValueId = loadPlace({place: IRPLocal(ownerLocalId), mapping: prepared.returnMapping, mutable: false}, value.pos,
+						"returned-iterator-owned-load").id;
+				}
+			}
+			currentBlock.terminator = {kind: IRTReturn(returnedValueId, normalCleanupSteps(transferredCleanupId)), source: source};
+			return;
+		}
 		if (prepared.returnMapping.bytesValue() != null) {
 			var transferredCleanupId:Null<String> = null;
 			if (!freshManagedBytesValueIds.remove(lowered.id)) {
@@ -7535,7 +7602,7 @@ private class FunctionBuilder {
 						// still reach `coerce`'s fail-closed runtime-proof diagnostic.
 						coerce(lowerValue(inner), target, expression.pos, "TCast(interface)");
 					case CBVKStaticString(_) | CBVKManagedString(_) | CBVKSpan(_, _) | CBVKCString | CBVKCStringRef | CBVKImport(_) | CBVKAggregate(_) |
-						CBVKEnum(_) | CBVKClass(_, _) | CBVKArray(_) | CBVKIntMap(_) | CBVKStringMap(_) | CBVKBytes(_) | CBVKOptional(_) |
+						CBVKEnum(_) | CBVKClass(_, _) | CBVKArray(_) | CBVKIterator(_) | CBVKIntMap(_) | CBVKStringMap(_) | CBVKBytes(_) | CBVKOptional(_) |
 						CBVKFunction(_, _) | CBVKClosureCapturePointer(_) | CBVKNativeRef(_) | CBVKCStringBufferRef | CBVKClosureContext |
 						CBVKStackClosure(_, _, _):
 						coerce(lowerValue(inner, target), target, expression.pos, "TCast(record-alias)");
@@ -11231,6 +11298,17 @@ private class FunctionBuilder {
 			return lowerStdString(expression, call.arguments);
 		if (isStaticMethod(call.callee, "", "Math", "sqrt"))
 			return lowerMathSquareRoot(expression, call.arguments);
+		final iteratorAccess = switch call.callee.expr {
+			case TField(receiver, FAnon(fieldReference)):
+				{receiver: receiver, method: fieldReference.get().name};
+			case _: null;
+		};
+		if (iteratorAccess != null) {
+			final receiverMapping = bodyValueType(iteratorAccess.receiver.t, iteratorAccess.receiver.pos,
+				'TCall(Iterator.${iteratorAccess.method}:receiver-type)');
+			if (receiverMapping.iteratorValue() != null)
+				return lowerIteratorCall(expression, iteratorAccess.receiver, iteratorAccess.method, call.arguments, receiverMapping);
+		}
 		final imported = aggregateRegistry.importFunction(call.callee, expression.pos, input.sourcePath);
 		if (imported != null)
 			return lowerImportCall(expression, call.arguments, imported, materializeResult);
@@ -11279,6 +11357,7 @@ private class FunctionBuilder {
 			converted = stabilizeFreshManagedOptional(converted, argumentExpression.pos, 'static-call-argument-$index');
 			converted = stabilizeFreshManagedArray(converted, argumentExpression.pos, 'static-call-argument-$index');
 			converted = stabilizeFreshManagedStringMap(converted, argumentExpression.pos, 'static-call-argument-$index');
+			converted = stabilizeFreshManagedIterator(converted, argumentExpression.pos, 'static-call-argument-$index');
 			if (freshManagedArrayValueIds.exists(converted.id))
 				return unsupported(argumentExpression, 'TCall(fresh-managed-Array-argument-needs-owner:$index,target=$targetId)');
 			if (freshManagedStringMapValueIds.exists(converted.id))
@@ -11332,6 +11411,8 @@ private class FunctionBuilder {
 			freshManagedArrayValueIds.set(result.id, true);
 		if (target.returnMapping.stringMapValue() != null)
 			freshManagedStringMapValueIds.set(result.id, true);
+		if (target.returnMapping.iteratorValue() != null)
+			freshManagedIteratorValueIds.set(result.id, true);
 		final returnedEnum = target.returnMapping.enumValue();
 		if (returnedEnum != null && returnedEnum.managedLifetime)
 			freshManagedEnumValueIds.set(result.id, true);
@@ -11372,7 +11453,8 @@ private class FunctionBuilder {
 			argument = stabilizeFreshManagedEnum(argument, argumentExpression.pos, 'indirect-call-argument-$index');
 			argument = stabilizeFreshManagedAggregate(argument, argumentExpression.pos, 'indirect-call-argument-$index');
 			argument = stabilizeFreshManagedOptional(argument, argumentExpression.pos, 'indirect-call-argument-$index');
-			if (freshManagedArrayValueIds.exists(argument.id) || freshManagedStringMapValueIds.exists(argument.id))
+			if (freshManagedArrayValueIds.exists(argument.id) || freshManagedStringMapValueIds.exists(argument.id)
+				|| freshManagedIteratorValueIds.exists(argument.id))
 				return unsupported(argumentExpression, 'TCall(indirect-managed-argument-needs-explicit-ownership:$index)');
 			rejectOwnedClassBorrow(argument, argumentExpression.pos, 'TCall(indirect-owned-class-borrow-escape:$index)');
 			stagedArguments.push(stageFlowValue(argument, argumentExpression, laterExpressionCreatesFlow(argumentExpressions, index),
@@ -12459,7 +12541,7 @@ private class FunctionBuilder {
 		if (map == null)
 			return unsupported(access.receiver, "TCall(StringMap:receiver-identity-lost)");
 		final method = access.field.get().name;
-		final expectedArguments = method == "clear" || method == "copy" ? 0 : method == "set" ? 2 : 1;
+		final expectedArguments = method == "clear" || method == "copy" || method == "iterator" ? 0 : method == "set" ? 2 : 1;
 		if (arguments.length != expectedArguments)
 			return unsupported(expression, 'TCall(StringMap.$method:argument-count=${arguments.length},expected=$expectedArguments)');
 		final loweredArguments:Array<String> = [receiver.id];
@@ -12474,9 +12556,32 @@ private class FunctionBuilder {
 		if (method == "set") {
 			var value = coerce(lowerValue(arguments[1], map.value), map.value, arguments[1].pos, "TCall(StringMap.set:value)");
 			value = stabilizeFreshManagedString(value, arguments[1].pos, "string-map-set-value");
+			value = stabilizeFreshManagedBytes(value, arguments[1].pos, "string-map-set-value");
+			value = stabilizeFreshManagedEnum(value, arguments[1].pos, "string-map-set-value");
+			value = stabilizeFreshManagedAggregate(value, arguments[1].pos, "string-map-set-value");
+			value = stabilizeFreshManagedOptional(value, arguments[1].pos, "string-map-set-value");
+			value = stabilizeFreshManagedArray(value, arguments[1].pos, "string-map-set-value");
 			loweredArguments.push(value.id);
 		}
 		final source = sourceSpan(expression.pos);
+		if (method == "iterator") {
+			final resultMapping = bodyValueType(expression.t, expression.pos, "TCall(StringMap.iterator:result-type)");
+			final iterator = resultMapping.iteratorValue();
+			if (iterator == null || typeKey(iterator.element.irType) != typeKey(map.value.irType))
+				return unsupported(expression, "TCall(StringMap.iterator:element-type-mismatch)");
+			final result:HxcIRResult = {id: nextValueId(), type: resultMapping.irType};
+			appendInstruction(result, IRIOCall({
+				dispatch: IRCDRuntime("string-map", "iterator"),
+				arguments: loweredArguments,
+				returnType: result.type,
+				failure: managedArrayFailure()
+			}), source, "string-map-iterator");
+			registerValueTemporary(result.id, "string-map-iterator-result");
+			freshManagedIteratorValueIds.set(result.id, true);
+			runtimeRequirements.push(new CBodyRuntimeRequirement("string-map", "iterator", "ordinary Haxe StringMap.iterator snapshot", source,
+				expression.pos));
+			return {id: result.id, type: result.type, mapping: resultMapping};
+		}
 		if (method == "copy") {
 			final result:HxcIRResult = {id: nextValueId(), type: receiver.type};
 			appendInstruction(result, IRIOCall({
@@ -12521,6 +12626,38 @@ private class FunctionBuilder {
 			}
 		}
 		runtimeRequirements.push(new CBodyRuntimeRequirement("string-map", method, 'ordinary Haxe StringMap.$method', source, expression.pos));
+		return {id: result.id, type: result.type, mapping: resultMapping};
+	}
+
+	/** Lower the two exact methods of a standard typed Iterator carrier. */
+	function lowerIteratorCall(expression:TypedExpr, receiverExpression:TypedExpr, method:String, arguments:Array<TypedExpr>,
+			receiverMapping:CBodyValueType):LoweredValue {
+		if (method != "hasNext" && method != "next")
+			return unsupported(expression, 'TCall(Iterator.$method:not-yet-admitted)');
+		if (arguments.length != 0)
+			return unsupported(expression, 'TCall(Iterator.$method:argument-count=${arguments.length},expected=0)');
+		final iterator = receiverMapping.iteratorValue();
+		if (iterator == null)
+			return unsupported(receiverExpression, 'TCall(Iterator.$method:receiver-identity-lost)');
+		var receiver = coerce(lowerValue(receiverExpression, receiverMapping), receiverMapping, receiverExpression.pos,
+			'TCall(Iterator.$method:receiver)');
+		receiver = stabilizeFreshManagedIterator(receiver, receiverExpression.pos, 'iterator-$method-receiver');
+		final resultMapping = method == "hasNext" ? bodyValueType(expression.t, expression.pos, "TCall(Iterator.hasNext:result-type)") : iterator.element;
+		if (method == "hasNext" && resultMapping.irType != IRTBool)
+			return unsupported(expression, "TCall(Iterator.hasNext:result-not-Bool)");
+		final result:HxcIRResult = {id: nextValueId(), type: resultMapping.irType};
+		final source = sourceSpan(expression.pos);
+		appendInstruction(result, IRIOCall({
+			dispatch: IRCDRuntime("iterator", method == "hasNext" ? "has-next" : "next"),
+			arguments: [receiver.id],
+			returnType: result.type,
+			failure: managedArrayFailure()
+		}), source, 'iterator-${method == "hasNext" ? "has-next" : "next"}');
+		registerValueTemporary(result.id, 'iterator-${method == "hasNext" ? "has-next" : "next"}-result');
+		if (method == "next")
+			markFreshArrayRemovalResult(result.id, resultMapping, "Iterator.next result");
+		runtimeRequirements.push(new CBodyRuntimeRequirement("iterator", method == "hasNext" ? "has-next" : "next",
+			'standard Haxe Iterator.$method', source, expression.pos));
 		return {id: result.id, type: result.type, mapping: resultMapping};
 	}
 
@@ -13204,6 +13341,8 @@ private class FunctionBuilder {
 			freshManagedArrayValueIds.set(result.id, true);
 		if (returnMapping.stringMapValue() != null)
 			freshManagedStringMapValueIds.set(result.id, true);
+		if (returnMapping.iteratorValue() != null)
+			freshManagedIteratorValueIds.set(result.id, true);
 		final returnedEnum = returnMapping.enumValue();
 		if (returnedEnum != null && returnedEnum.managedLifetime)
 			freshManagedEnumValueIds.set(result.id, true);
@@ -13634,6 +13773,25 @@ private class FunctionBuilder {
 		});
 		normalCleanupActionIds.push(cleanupId);
 		runtimeRequirements.push(new CBodyRuntimeRequirement("string-map", "cleanup-release", "fresh ordinary Haxe StringMap call argument lifetime", source,
+			position));
+		return loadPlace({place: IRPLocal(ownerLocalId), mapping: value.mapping, mutable: false}, position, role + "-borrow");
+	}
+
+	/** Keep a fresh standard Iterator owned while one operation borrows it. */
+	function stabilizeFreshManagedIterator(value:LoweredValue, position:Position, role:String):LoweredValue {
+		if (value.mapping.iteratorValue() == null || !freshManagedIteratorValueIds.remove(value.id))
+			return value;
+		final source = sourceSpan(position);
+		final ownerLocalId = createFlowLocal(value.mapping, value.id, source, role + "-owner");
+		final cleanupId = 'iterator-temporary.$ownerLocalId.release';
+		constructionCleanupActions.push({
+			id: cleanupId,
+			idempotence: IRCExactlyOnce,
+			kind: IRCARelease(IRPLocal(ownerLocalId), IRIRuntime("iterator")),
+			source: source
+		});
+		normalCleanupActionIds.push(cleanupId);
+		runtimeRequirements.push(new CBodyRuntimeRequirement("iterator", "cleanup-release", "fresh standard Haxe Iterator call lifetime", source,
 			position));
 		return loadPlace({place: IRPLocal(ownerLocalId), mapping: value.mapping, mutable: false}, position, role + "-borrow");
 	}
@@ -14488,7 +14646,7 @@ private class FunctionBuilder {
 			case CBVKAggregate(_):
 				profileRecordTypeClassifications++;
 				profileRecordTypeCpuSeconds += cpuSeconds;
-			case CBVKArray(_) | CBVKIntMap(_) | CBVKStringMap(_) | CBVKBytes(_):
+			case CBVKArray(_) | CBVKIterator(_) | CBVKIntMap(_) | CBVKStringMap(_) | CBVKBytes(_):
 				profileCollectionTypeClassifications++;
 				profileCollectionTypeCpuSeconds += cpuSeconds;
 			case CBVKImport(_) | CBVKEnum(_) | CBVKOwnedClass(_) | CBVKClass(_, _) | CBVKInterface(_):

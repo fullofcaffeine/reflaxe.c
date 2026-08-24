@@ -34,6 +34,8 @@ import reflaxe.c.lowering.CBodyInterface.CBodyInterfaceRegistry;
 import reflaxe.c.lowering.CBodyInterface.CPreparedBodyInterface;
 import reflaxe.c.lowering.CBodyIntMap.CBodyIntMapRegistry;
 import reflaxe.c.lowering.CBodyIntMap.CPreparedBodyIntMap;
+import reflaxe.c.lowering.CBodyIterator.CBodyIteratorRegistry;
+import reflaxe.c.lowering.CBodyIterator.CPreparedBodyIterator;
 import reflaxe.c.lowering.CBodyOptional.CBodyOptionalRegistry;
 import reflaxe.c.lowering.CBodyOptional.CLoweredBodyOptional;
 import reflaxe.c.lowering.CBodyOptional.CPreparedBodyOptional;
@@ -67,6 +69,7 @@ typedef CBodyProgramContributionInventory = {
 	final classes:Int;
 	final interfaces:Int;
 	final arrays:Int;
+	final iterators:Int;
 	final intMaps:Int;
 	final stringMaps:Int;
 	final bytes:Int;
@@ -109,6 +112,7 @@ enum CBodyValueKind {
 	CBVKClass(value:CPreparedBodyClass, nullable:Bool);
 	CBVKInterface(value:CPreparedBodyInterface);
 	CBVKArray(value:CPreparedBodyArray);
+	CBVKIterator(value:CPreparedBodyIterator);
 	CBVKIntMap(value:CPreparedBodyIntMap);
 	CBVKStringMap(value:CPreparedBodyStringMap);
 	CBVKBytes(value:CPreparedBodyBytes);
@@ -202,6 +206,9 @@ class CBodyValueType {
 			case CBVKArray(value):
 				this.irType = IRTInstance(value.instanceId);
 				this.cSpelling = 'haxe-array-reference:${value.digest}<${value.element.cSpelling}>';
+			case CBVKIterator(value):
+				this.irType = IRTInstance(value.instanceId);
+				this.cSpelling = 'haxe-iterator-reference:${value.digest}<${value.element.cSpelling}>';
 			case CBVKIntMap(value):
 				this.irType = IRTInstance(value.instanceId);
 				this.cSpelling = 'haxe-int-map-reference:${value.digest}<Int,${value.value.cSpelling}>';
@@ -276,6 +283,9 @@ class CBodyValueType {
 	public static function arrayReference(value:CPreparedBodyArray):CBodyValueType
 		return new CBodyValueType(CBVKArray(value));
 
+	public static function iteratorReference(value:CPreparedBodyIterator):CBodyValueType
+		return new CBodyValueType(CBVKIterator(value));
+
 	public static function intMapReference(value:CPreparedBodyIntMap):CBodyValueType
 		return new CBodyValueType(CBVKIntMap(value));
 
@@ -313,7 +323,7 @@ class CBodyValueType {
 		return switch kind {
 			case CBVKPrimitive(mapping): mapping;
 			case CBVKStaticString(_) | CBVKManagedString(_) | CBVKFixedArray(_, _, _) | CBVKSpan(_, _) | CBVKCString | CBVKImport(_) | CBVKAggregate(_) |
-				CBVKEnum(_) | CBVKOwnedClass(_) | CBVKClass(_, _) | CBVKInterface(_) | CBVKArray(_) | CBVKIntMap(_) | CBVKStringMap(_) | CBVKBytes(_) |
+				CBVKEnum(_) | CBVKOwnedClass(_) | CBVKClass(_, _) | CBVKInterface(_) | CBVKArray(_) | CBVKIterator(_) | CBVKIntMap(_) | CBVKStringMap(_) | CBVKBytes(_) |
 				CBVKOptional(_) | CBVKFunction(_, _) | CBVKClosureCapturePointer(_) | CBVKNativeRef(_) | CBVKCStringRef | CBVKCStringBufferRef |
 				CBVKClosureContext | CBVKStackClosure(_, _, _): null;
 		};
@@ -374,7 +384,7 @@ class CBodyValueType {
 	public function aggregateValue():Null<CPreparedBodyAggregate> {
 		return switch kind {
 			case CBVKPrimitive(_) | CBVKStaticString(_) | CBVKManagedString(_) | CBVKFixedArray(_, _, _) | CBVKSpan(_, _) | CBVKCString | CBVKImport(_) |
-				CBVKOwnedClass(_) | CBVKInterface(_) | CBVKArray(_) | CBVKIntMap(_) | CBVKStringMap(_) | CBVKBytes(_) | CBVKOptional(_) | CBVKFunction(_, _) |
+				CBVKOwnedClass(_) | CBVKInterface(_) | CBVKArray(_) | CBVKIterator(_) | CBVKIntMap(_) | CBVKStringMap(_) | CBVKBytes(_) | CBVKOptional(_) | CBVKFunction(_, _) |
 				CBVKClosureCapturePointer(_) | CBVKNativeRef(_) | CBVKCStringRef | CBVKCStringBufferRef | CBVKClosureContext | CBVKStackClosure(_, _, _): null;
 			case CBVKAggregate(aggregate): aggregate;
 			case CBVKEnum(_) | CBVKClass(_, _): null;
@@ -384,7 +394,7 @@ class CBodyValueType {
 	public function enumValue():Null<CPreparedBodyEnumInstance> {
 		return switch kind {
 			case CBVKPrimitive(_) | CBVKStaticString(_) | CBVKManagedString(_) | CBVKFixedArray(_, _, _) | CBVKSpan(_, _) | CBVKCString | CBVKImport(_) |
-				CBVKAggregate(_) | CBVKOwnedClass(_) | CBVKClass(_, _) | CBVKInterface(_) | CBVKArray(_) | CBVKIntMap(_) | CBVKStringMap(_) | CBVKBytes(_) |
+				CBVKAggregate(_) | CBVKOwnedClass(_) | CBVKClass(_, _) | CBVKInterface(_) | CBVKArray(_) | CBVKIterator(_) | CBVKIntMap(_) | CBVKStringMap(_) | CBVKBytes(_) |
 				CBVKOptional(_) | CBVKFunction(_, _) | CBVKClosureCapturePointer(_) | CBVKNativeRef(_) | CBVKCStringRef | CBVKCStringBufferRef |
 				CBVKClosureContext | CBVKStackClosure(_, _, _): null;
 			case CBVKEnum(value): value;
@@ -394,7 +404,7 @@ class CBodyValueType {
 	public function classValue():Null<CPreparedBodyClass> {
 		return switch kind {
 			case CBVKPrimitive(_) | CBVKStaticString(_) | CBVKManagedString(_) | CBVKFixedArray(_, _, _) | CBVKSpan(_, _) | CBVKCString | CBVKImport(_) |
-				CBVKAggregate(_) | CBVKEnum(_) | CBVKInterface(_) | CBVKArray(_) | CBVKIntMap(_) | CBVKStringMap(_) | CBVKBytes(_) | CBVKOptional(_) |
+				CBVKAggregate(_) | CBVKEnum(_) | CBVKInterface(_) | CBVKArray(_) | CBVKIterator(_) | CBVKIntMap(_) | CBVKStringMap(_) | CBVKBytes(_) | CBVKOptional(_) |
 				CBVKFunction(_, _) | CBVKClosureCapturePointer(_) | CBVKNativeRef(_) | CBVKCStringRef | CBVKCStringBufferRef | CBVKClosureContext |
 				CBVKStackClosure(_, _, _): null;
 			case CBVKOwnedClass(value) | CBVKClass(value, _): value;
@@ -418,6 +428,13 @@ class CBodyValueType {
 	public function arrayValue():Null<CPreparedBodyArray> {
 		return switch kind {
 			case CBVKArray(value): value;
+			case _: null;
+		};
+	}
+
+	public function iteratorValue():Null<CPreparedBodyIterator> {
+		return switch kind {
+			case CBVKIterator(value): value;
 			case _: null;
 		};
 	}
@@ -470,7 +487,7 @@ class CBodyValueType {
 			case CBVKOwnedClass(_): false;
 			case CBVKClass(_, nullable): nullable;
 			case CBVKPrimitive(_) | CBVKStaticString(_) | CBVKManagedString(_) | CBVKFixedArray(_, _, _) | CBVKSpan(_, _) | CBVKCString | CBVKImport(_) |
-				CBVKAggregate(_) | CBVKEnum(_) | CBVKInterface(_) | CBVKArray(_) | CBVKIntMap(_) | CBVKStringMap(_) | CBVKBytes(_) | CBVKOptional(_) |
+				CBVKAggregate(_) | CBVKEnum(_) | CBVKInterface(_) | CBVKArray(_) | CBVKIterator(_) | CBVKIntMap(_) | CBVKStringMap(_) | CBVKBytes(_) | CBVKOptional(_) |
 				CBVKFunction(_, _) | CBVKClosureCapturePointer(_) | CBVKNativeRef(_) | CBVKCStringRef | CBVKCStringBufferRef | CBVKClosureContext |
 				CBVKStackClosure(_, _, _): null;
 		};
@@ -500,7 +517,7 @@ class CBodyValueType {
 			case CBVKOptional(value): value.payload.containsCollectorManagedReference();
 			case CBVKArray(value): value.managedByCollector;
 			case CBVKPrimitive(_) | CBVKStaticString(_) | CBVKManagedString(_) | CBVKFixedArray(_, _, _) | CBVKSpan(_, _) | CBVKCString | CBVKImport(_) |
-				CBVKInterface(_) | CBVKIntMap(_) | CBVKStringMap(_) | CBVKBytes(_) | CBVKFunction(_, _) | CBVKClosureCapturePointer(_) | CBVKNativeRef(_) |
+				CBVKInterface(_) | CBVKIterator(_) | CBVKIntMap(_) | CBVKStringMap(_) | CBVKBytes(_) | CBVKFunction(_, _) | CBVKClosureCapturePointer(_) | CBVKNativeRef(_) |
 				CBVKCStringRef | CBVKCStringBufferRef | CBVKClosureContext | CBVKStackClosure(_, _, _) | CBVKOwnedClass(_):
 				false;
 		};
@@ -527,7 +544,7 @@ class CBodyValueType {
 				found;
 			case CBVKOptional(value): value.payload.containsInterfaceReference();
 			case CBVKPrimitive(_) | CBVKStaticString(_) | CBVKManagedString(_) | CBVKFixedArray(_, _, _) | CBVKSpan(_, _) | CBVKCString | CBVKImport(_) |
-				CBVKEnum(_) | CBVKOwnedClass(_) | CBVKClass(_, _) | CBVKArray(_) | CBVKIntMap(_) | CBVKStringMap(_) | CBVKBytes(_) | CBVKFunction(_, _) |
+				CBVKEnum(_) | CBVKOwnedClass(_) | CBVKClass(_, _) | CBVKArray(_) | CBVKIterator(_) | CBVKIntMap(_) | CBVKStringMap(_) | CBVKBytes(_) | CBVKFunction(_, _) |
 				CBVKClosureCapturePointer(_) | CBVKNativeRef(_) | CBVKCStringRef | CBVKCStringBufferRef | CBVKClosureContext | CBVKStackClosure(_, _, _):
 				false;
 		};
@@ -544,7 +561,7 @@ class CBodyValueType {
 	**/
 	public function hasExactNullCarrier():Bool
 		return switch kind {
-			case CBVKStaticString(_) | CBVKManagedString(_) | CBVKClass(_, true) | CBVKArray(_) | CBVKIntMap(_) | CBVKStringMap(_): true;
+			case CBVKStaticString(_) | CBVKManagedString(_) | CBVKClass(_, true) | CBVKArray(_) | CBVKIterator(_) | CBVKIntMap(_) | CBVKStringMap(_): true;
 			case _: false;
 		};
 }
@@ -717,6 +734,7 @@ class CBodyAggregateRegistry {
 	final classRegistry:CBodyClassRegistry;
 	final interfaceRegistry:CBodyInterfaceRegistry;
 	final arrayRegistry:CBodyArrayRegistry;
+	final iteratorRegistry:CBodyIteratorRegistry;
 	final intMapRegistry:CBodyIntMapRegistry;
 	final stringMapRegistry:CBodyStringMapRegistry;
 	final bytesRegistry:CBodyBytesRegistry;
@@ -743,6 +761,7 @@ class CBodyAggregateRegistry {
 		this.classRegistry = new CBodyClassRegistry(context, valueType);
 		this.interfaceRegistry = new CBodyInterfaceRegistry(program);
 		this.arrayRegistry = new CBodyArrayRegistry(context, valueType);
+		this.iteratorRegistry = new CBodyIteratorRegistry(valueType);
 		this.intMapRegistry = new CBodyIntMapRegistry(context, valueType);
 		this.stringMapRegistry = new CBodyStringMapRegistry(context, valueType);
 		this.bytesRegistry = new CBodyBytesRegistry();
@@ -772,6 +791,7 @@ class CBodyAggregateRegistry {
 			classes: classRegistry.preparedCount(),
 			interfaces: interfaceRegistry.preparedCount(),
 			arrays: arrayRegistry.preparedCount(),
+			iterators: iteratorRegistry.preparedCount(),
 			intMaps: intMapRegistry.preparedCount(),
 			stringMaps: stringMapRegistry.preparedCount(),
 			bytes: bytesRegistry.preparedCount(),
@@ -816,6 +836,9 @@ class CBodyAggregateRegistry {
 		final directIntMap = intMapRegistry.valueType(type, position, ownerModule, sourcePath, fail, node);
 		if (directIntMap != null)
 			return CBodyValueType.intMapReference(directIntMap);
+		final directIterator = iteratorRegistry.valueType(type, position, ownerModule, sourcePath, fail, node);
+		if (directIterator != null)
+			return CBodyValueType.iteratorReference(directIterator);
 		final exactNominal = exactNominalValueType(type, position, ownerModule, sourcePath, fail, node);
 		if (exactNominal != null)
 			return exactNominal;
@@ -1136,6 +1159,9 @@ class CBodyAggregateRegistry {
 
 	public function canonicalArrays():Array<CPreparedBodyArray>
 		return arrayRegistry.canonicalArrays();
+
+	public function canonicalIterators():Array<CPreparedBodyIterator>
+		return iteratorRegistry.canonicalIterators();
 
 	/** Register the typed callback adapter required by reachable `Array.sort`. */
 	public function requireArraySort(value:CPreparedBodyArray):Void

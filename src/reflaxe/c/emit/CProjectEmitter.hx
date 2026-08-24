@@ -788,6 +788,8 @@ class CProjectEmitter {
 			expectedDirectDecisions.push("allocation-free-unicode-scalar-strings");
 		if (runtimePlan.features.indexOf("array") != -1)
 			expectedDirectDecisions.push("managed-haxe-arrays");
+		if (runtimePlan.features.indexOf("iterator") != -1)
+			expectedDirectDecisions.push("managed-haxe-iterators");
 		if (runtimePlan.features.indexOf("string-map") != -1)
 			expectedDirectDecisions.push("managed-haxe-string-maps");
 		if (runtimePlan.features.indexOf("int-map") != -1)
@@ -832,6 +834,7 @@ class CProjectEmitter {
 				case "bytes-string" if (reason.kind == "runtime-operation" && reason.operationId == "get-string-utf8"):
 				case "io" if (reason.kind == "hosted-output"):
 				case "array" if (reason.kind == "runtime-operation"):
+				case "iterator" if (reason.kind == "runtime-operation"):
 				case "int-map" if (reason.kind == "runtime-operation"):
 				case "string-map" if (reason.kind == "runtime-operation"):
 				case "bytes" if (reason.kind == "runtime-operation"):
