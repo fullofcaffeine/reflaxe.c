@@ -42,6 +42,9 @@ FIELDS = {
     "unsignedValue",
 }
 IDENTIFIER = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+BODY_METHOD_SOURCE = re.compile(
+    r"^BodyFixture\.(?P<field>[A-Za-z_][A-Za-z0-9_]*)(?:\([A-Za-z0-9_,.* ]*\))?$"
+)
 HXCIR_FUNCTION_SOURCE = re.compile(
     r'^  function "(?P<function_id>[^"]+)" name="[^"]+"[^\n]* '
     r'@"(?P<path>[^"]+)":(?P<start_line>[0-9]+):(?P<start_column>[0-9]+)-'
@@ -957,28 +960,84 @@ def check_production_boundaries() -> None:
             )
 
 
-def snapshot_native_report() -> dict[str, object]:
-    symbols = json.loads(expected_text("symbols.json"))
+def fixture_functions_from_symbols(symbols: object) -> list[dict[str, str]]:
+    """Select exact BodyFixture methods from a complete symbol snapshot."""
     if not isinstance(symbols, dict) or not isinstance(symbols.get("symbols"), list):
         raise BodyLoweringFailure("body symbol snapshot cannot drive the native matrix")
-    functions = []
+    by_field: dict[str, str] = {}
     for entry in symbols["symbols"]:
-        if (
-            isinstance(entry, dict)
-            and entry.get("kind") == "method"
-            and isinstance(entry.get("sourceSymbol"), str)
-            and isinstance(entry.get("cName"), str)
-        ):
-            functions.append(
-                {
-                    "field": entry["sourceSymbol"].rsplit(".", 1)[-1],
-                    "cName": entry["cName"],
-                }
+        if not isinstance(entry, dict):
+            raise BodyLoweringFailure(f"body symbol snapshot has a malformed record: {entry!r}")
+        kind = entry.get("kind")
+        source_symbol = entry.get("sourceSymbol")
+        c_name = entry.get("cName")
+        if not isinstance(kind, str) or not isinstance(source_symbol, str) or not isinstance(c_name, str):
+            raise BodyLoweringFailure(f"body symbol snapshot has a malformed record: {entry!r}")
+        if kind != "method" or not source_symbol.startswith("BodyFixture."):
+            continue
+        matched = BODY_METHOD_SOURCE.fullmatch(source_symbol)
+        if matched is None:
+            raise BodyLoweringFailure(f"body symbol snapshot has a malformed owned method: {source_symbol!r}")
+        field = matched.group("field")
+        if field not in FIELDS:
+            raise BodyLoweringFailure(f"body symbol snapshot has an unexpected owned method: {source_symbol!r}")
+        if field in by_field:
+            raise BodyLoweringFailure(f"body symbol snapshot has a duplicate owned method: {field}")
+        expected_c_name = f"hxc_BodyFixture_{field}"
+        if c_name != expected_c_name:
+            raise BodyLoweringFailure(
+                f"body symbol snapshot has an invalid C name for {field}: {c_name!r}"
             )
+        by_field[field] = c_name
+    missing = FIELDS - set(by_field)
+    if missing:
+        raise BodyLoweringFailure(f"body symbol snapshot is missing owned methods: {sorted(missing)!r}")
+    return [{"field": field, "cName": by_field[field]} for field in sorted(by_field)]
+
+
+def check_snapshot_symbol_parser() -> None:
+    """Exercise the native-only selector without invoking a C toolchain."""
+    records = [
+        {
+            "kind": "method",
+            "sourceSymbol": (
+                "BodyFixture.chooseOrThrow(i32)" if field == "chooseOrThrow" else f"BodyFixture.{field}"
+            ),
+            "cName": f"hxc_BodyFixture_{field}",
+        }
+        for field in sorted(FIELDS)
+    ]
+    records.append({"kind": "method", "sourceSymbol": "c-standard-library.abort", "cName": "abort"})
+    parsed = fixture_functions_from_symbols({"symbols": records})
+    if {entry["field"] for entry in parsed} != FIELDS:
+        raise BodyLoweringFailure("body symbol parser lost an owned fixture method")
+
+    def expect_failure(mutated: list[dict[str, str]], fragment: str) -> None:
+        try:
+            fixture_functions_from_symbols({"symbols": mutated})
+        except BodyLoweringFailure as error:
+            if fragment not in str(error):
+                raise BodyLoweringFailure(f"body symbol parser failed unclearly: {error}") from error
+        else:
+            raise BodyLoweringFailure(f"body symbol parser admitted {fragment}")
+
+    expect_failure(records + [dict(records[0])], "duplicate owned method")
+    expect_failure(records[1:], "missing owned methods")
+    expect_failure(
+        records + [{"kind": "method", "sourceSymbol": "BodyFixture.surprise", "cName": "hxc_BodyFixture_surprise"}],
+        "unexpected owned method",
+    )
+    malformed = [dict(entry) for entry in records]
+    malformed[0]["sourceSymbol"] = "BodyFixture.booleanValue(i32"
+    expect_failure(malformed, "malformed owned method")
+
+
+def snapshot_native_report() -> dict[str, object]:
+    symbols = json.loads(expected_text("symbols.json"))
     return {
         "cSource": expected_text("body.c"),
         "lineMappedCSource": expected_text("body-lines.c"),
-        "functions": functions,
+        "functions": fixture_functions_from_symbols(symbols),
     }
 
 
@@ -991,6 +1050,7 @@ def parse_args(arguments: Iterable[str]) -> argparse.Namespace:
 
 def main(arguments: Iterable[str] = ()) -> int:
     args = parse_args(arguments)
+    check_snapshot_symbol_parser()
     if not args.native_only and shutil.which(development_tool("haxe")) is None:
         print("body-lowering: ERROR: pinned Haxe executable is unavailable", file=sys.stderr)
         return 1
