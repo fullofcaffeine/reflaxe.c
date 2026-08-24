@@ -1909,6 +1909,24 @@ def check_bytes_payload(*, requested_toolchain: str) -> None:
             raise EnumLoweringFailure(
                 "Main.freshSwitchSubjectPassed lost its bounded optimized tag-test owner"
             )
+        for field in ("freshShortCircuitAnd", "freshShortCircuitOr"):
+            section = main_function_section(hxcir, field)
+            rhs = section.find("short-circuit-rhs")
+            call = section.find("function.Main.score", rhs)
+            release = section.find("release-branch-local-owner", call)
+            rhs_end = section.find("end block", release)
+            if (
+                rhs == -1
+                or call == -1
+                or release == -1
+                or rhs_end == -1
+                or not rhs < call < release < rhs_end
+                or section.count("release-branch-local-owner") != 1
+                or 'action "enum-temporary.' not in section
+            ):
+                raise EnumLoweringFailure(
+                    f"Main.{field} lost its right-side managed-enum cleanup scope"
+                )
         family_section = main_function_section(hxcir, "familyForChoice")
         if (
             family_section.count("declare-uninitialized") != 1
