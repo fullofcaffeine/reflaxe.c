@@ -413,6 +413,13 @@ Escape or focus loss removes the disposable runtime before another game tick.
 The application then restores the exact normal play state and returns to the
 same editor object. A second start creates a new runtime generation.
 
+One process-owned sequence issues generation IDs for normal loads, campaign
+preloads, transitions, and Test Play. A rejected load still consumes its ID.
+Therefore, renderer caches cannot confuse a later level with rejected or
+retired content. This is a process-lifetime guarantee, not a persistent or
+cross-process identity. If the positive integer range is exhausted, allocation
+returns an invalid ID and level construction fails before publication.
+
 There is intentionally no “keep whatever happened while playing” operation in
 this version. Importing selected play changes later would need its own closed
 command and clear ownership rules. Silent import would make a test run mutate

@@ -21,7 +21,7 @@ import caxecraft.content.CampaignRuntime.loadCampaignLevel;
 import caxecraft.content.CampaignRuntime.loadCampaignManifest;
 import caxecraft.content.ContentPackageModel.ContentPackageOpenResult;
 import caxecraft.content.ContentPackageStore;
-import caxecraft.content.LoadedContentGeneration.ContentGenerationId;
+import caxecraft.content.ContentGenerationSequence;
 import caxecraft.content.ResolvedLevelPlan.LevelPlayerOptions;
 import caxecraft.content.RuntimeContentGeneration.RuntimeContentLoadResult;
 import caxecraft.content.RuntimeContentGeneration.loadRuntimeContent;
@@ -513,7 +513,8 @@ final class CaxecraftApp {
 		#elseif caxecraft_pilot
 		final pilotInputHash = PilotScript.inputHash(pilotName);
 		#end
-		final completeCandidate = switch loadRuntimeContent(contentStore, ContentGenerationId.fromSequence(1), {
+		final generationSequence = new ContentGenerationSequence();
+		final completeCandidate = switch loadRuntimeContent(contentStore, generationSequence.allocate(), {
 			entityId: EntityId.fromValidatedStorageCode(1),
 			initialHealth: initialHealth
 		}) {
@@ -555,7 +556,6 @@ final class CaxecraftApp {
 				Sys.println("caxecraft: initial level lacks required playable bindings");
 				return;
 		};
-		var nextEditorTestPlayGeneration = activeLevel.generationId().value() + 1000000;
 		var activeEditorTestPlay:Null<ActiveEditorTestPlayRun> = null;
 		var campaign:Null<CampaignManifest> = null;
 		var campaignLevel:Null<CampaignLevel> = null;
@@ -714,7 +714,7 @@ final class CaxecraftApp {
 				campaign: initialCampaign,
 				sourceLevel: initialCampaignLevel,
 				sourceView: initialLevel,
-				nextGeneration: ContentGenerationId.fromSequence(activeLevel.generationId().value() + 1),
+				nextGeneration: generationSequence.allocate(),
 				playerOptions: portalPlayer
 			}, contentRegistry, contentRegistry) {
 				case CampaignPortalNotDeclared:
@@ -1136,7 +1136,7 @@ final class CaxecraftApp {
 					initialHealth: character.vitals.health,
 					aquaticProfile: character.aquaticProfile
 				};
-				final nextGeneration = ContentGenerationId.fromSequence(activeLevel.generationId().value() + 1);
+				final nextGeneration = generationSequence.allocate();
 				var stagedDestination:Null<StagedPlayableLevel> = null;
 				if (requestedCampaignPortal != null)
 					stagedDestination = requestedCampaignPortal.staged();
@@ -1220,7 +1220,7 @@ final class CaxecraftApp {
 										campaign: nextCampaign,
 										sourceLevel: nextCampaignLevel,
 										sourceView: levelView,
-										nextGeneration: ContentGenerationId.fromSequence(activeLevel.generationId().value() + 1),
+										nextGeneration: generationSequence.allocate(),
 										playerOptions: nextPortalPlayer
 									}, contentRegistry, contentRegistry) {
 										case CampaignPortalNotDeclared:
@@ -2145,7 +2145,7 @@ final class CaxecraftApp {
 					screen = closeEditor(screen);
 				case StartTestPlay(canonical):
 					final ordinaryPlayer = activeLevel.session().view().localPlayer;
-					final proposedRuntime = new EditorTestPlayRuntime(contentRegistry, contentRegistry, nextEditorTestPlayGeneration);
+					final proposedRuntime = new EditorTestPlayRuntime(contentRegistry, contentRegistry, generationSequence);
 					switch proposedRuntime.start({
 						canonical: canonical,
 						playerOptions: {
@@ -2223,7 +2223,6 @@ final class CaxecraftApp {
 										snapshot: snapshot,
 										generationId: testOwner.generationId().value()
 									};
-									nextEditorTestPlayGeneration++;
 									#if caxecraft_pilot
 									editorTestPlayStarts++;
 									lastEditorTestPlayGeneration = testOwner.generationId().value();

@@ -8,6 +8,7 @@ import caxecraft.content.ActiveContent.ContentPublicationResult;
 import caxecraft.content.ContentPackageModel.ContentPackageOpenResult;
 import caxecraft.content.ContentPackageModel.ContentPackageReadResult;
 import caxecraft.content.ContentPackageStore;
+import caxecraft.content.ContentGenerationSequence;
 import caxecraft.content.LoadedContentGeneration.ContentGenerationBuildError;
 import caxecraft.content.LoadedContentGeneration.ContentGenerationBuildFault;
 import caxecraft.content.LoadedContentGeneration.ContentGenerationId;
@@ -357,7 +358,10 @@ function selfCheck():Int {
 	final embeddedFacts = embedded.authoredTrace();
 	if (!expectedResolvedLevel(embedded))
 		return 6;
-	final editorTestPlay = new EditorTestPlayRuntime(registry, registry, 101);
+	final generationSequence = new ContentGenerationSequence();
+	if (generationSequence.allocate().value() != 1)
+		return 141;
+	final editorTestPlay = new EditorTestPlayRuntime(registry, registry, generationSequence);
 	switch editorTestPlay.start({
 		canonical: Bytes.ofString("CAXEMAP 1\nend-map\n"),
 		playerOptions: options
@@ -392,7 +396,7 @@ function selfCheck():Int {
 			return 130;
 	};
 	final firstEditorRun = editorTestPlay.level();
-	if (firstEditorRun == null || firstEditorRun.generationId().value() != 101)
+	if (firstEditorRun == null || firstEditorRun.generationId().value() != 4)
 		return 131;
 	final editorRunItemsBefore = firstEditorRun.semanticTrace().activeItems;
 	final editorRunPickup = firstEditorRun.session().collectAuthoredInventoryItem(0, Inventory.make(0, 0, 0, 0, 0, 0, 0, 0, 0), ItemKind.Bread, 2);
@@ -409,11 +413,30 @@ function selfCheck():Int {
 	};
 	final secondEditorRun = editorTestPlay.level();
 	if (secondEditorRun == null
-		|| secondEditorRun.generationId().value() != 102
+		|| secondEditorRun.generationId().value() != 5
 		|| secondEditorRun.semanticTrace().activeItems != editorRunItemsBefore)
 		return 135;
 	if (!editorTestPlay.stop())
 		return 136;
+	// Exercise enough complete disposable graphs for the native harness to
+	// distinguish a reclaimable lifecycle from a two-run coincidence. The
+	// external collector observes zero live objects after this Haxe frame exits.
+	for (cycle in 0...8) {
+		switch editorTestPlay.start({canonical: editorTestPlayBytes, playerOptions: options}) {
+			case EditorTestPlayStarted:
+			case EditorTestPlayRejected(_):
+				return 142;
+		};
+		final cycleOwner = editorTestPlay.level();
+		if (cycleOwner == null
+			|| cycleOwner.generationId().value() != 6 + cycle
+			|| cycleOwner.semanticTrace().activeItems != editorRunItemsBefore)
+			return 143;
+		if (!editorTestPlay.stop() || editorTestPlay.level() != null)
+			return 144;
+	}
+	if (generationSequence.allocate().value() != 14)
+		return 145;
 
 	final active = new ActiveContent(embedded.generation());
 	final embeddedTrace = active.semanticTrace();

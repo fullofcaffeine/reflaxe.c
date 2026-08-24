@@ -1068,8 +1068,20 @@ CASES = {
                 required_markers=("ActiveContent_publish",),
                 forbidden_markers=("FirstPlayable", "goto "),
             ),
+            GeneratedSourceCheck(
+                path="src/modules/caxecraft/content/ContentGenerationSequence.c",
+                required_markers=("ContentGenerationSequence_allocate",),
+                forbidden_markers=("1000000", "goto "),
+            ),
+            GeneratedSourceCheck(
+                path="src/modules/caxecraft/app/EditorTestPlayRuntime.c",
+                required_markers=("ContentGenerationSequence_allocate",),
+                forbidden_markers=("1000000", "goto "),
+            ),
         ),
-        runs_generated_main=True,
+        # The independent harness owns collector setup so it can force one
+        # collection after the Haxe Test Play lifecycle has dropped every root.
+        runs_generated_main=False,
         haxe_defines=("caxecraft_posix_hosted",),
         native_defines=("_POSIX_C_SOURCE=200809L", "_DARWIN_C_SOURCE=1"),
         native_runs_from_case_root=True,

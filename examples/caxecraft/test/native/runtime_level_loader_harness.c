@@ -1,4 +1,5 @@
 #include "hxc/program.h"
+#include "hxrt/gc.h"
 
 #include <inttypes.h>
 #include <stdint.h>
@@ -15,11 +16,26 @@
  * loader's public test envelope remains ordinary strict C ABI data. Remove it
  * if an equally independent consumer takes over both evidence jobs.
  */
-int hxc_generated_main(void);
+void hxc_caxecraft_qa_RuntimeLevelLoaderProbe_main(void);
 
 int main(void)
 {
-	const int generated_status = hxc_generated_main();
+	struct hxc_gc_stats stats = HXC_GC_STATS_INITIALIZER;
+	const struct hxc_gc_config config = {
+		hxc_default_allocator(),
+		65536U,
+		NULL,
+		NULL
+	};
+	if (hxc_gc_init(&config, &hxc_program_gc) != HXC_STATUS_OK ||
+	    hxc_gc_thread_register(&hxc_program_gc, &hxc_program_gc_thread) != HXC_STATUS_OK) {
+		return 1;
+	}
+	hxc_caxecraft_qa_RuntimeLevelLoaderProbe_main();
+	if (hxc_gc_collect(&hxc_program_gc) != HXC_STATUS_OK ||
+	    hxc_gc_get_stats(&hxc_program_gc, &stats) != HXC_STATUS_OK) {
+		return 1;
+	}
 	const int32_t check = hxc_caxecraft_qa_RuntimeLevelLoaderProbe_observed;
 	(void)printf("%" PRId32 "\n", check);
 	(void)printf("%" PRId32 "\n",
@@ -36,5 +52,13 @@ int main(void)
 	             hxc_caxecraft_qa_RuntimeLevelLoaderProbe_traceActorMechanics);
 	(void)printf("%" PRId32 "\n",
 	             hxc_caxecraft_qa_RuntimeLevelLoaderProbe_traceAuthority);
-	return generated_status == 0 && check == INT32_C(0) ? 0 : 1;
+	const int lifecycle_reclaimed = stats.collection_count > UINT64_C(0) &&
+	                               stats.reclaimed_object_count > UINT64_C(0) &&
+	                               stats.peak_object_count < stats.allocation_count &&
+	                               stats.current_object_count == 0U;
+	if (hxc_gc_thread_unregister(&hxc_program_gc_thread) != HXC_STATUS_OK ||
+	    hxc_gc_dispose(&hxc_program_gc) != HXC_STATUS_OK) {
+		return 1;
+	}
+	return lifecycle_reclaimed && check == INT32_C(0) ? 0 : 1;
 }
