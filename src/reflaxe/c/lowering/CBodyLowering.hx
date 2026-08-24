@@ -3220,7 +3220,9 @@ private class FunctionPreparer {
 		boundary: the constructed object traces the interface's object pointer.
 		Aliases, returns, throws, closures, and storage through another object do not
 		have that proof and remain rejected. Ordinary reads, receiver calls, and
-		forwarding to a separately checked direct call stay permitted.
+		forwarding to a separately checked direct call stay permitted. A direct
+		constructor argument is also forwarding: its exact prepared signature later
+		proves whether the child borrows or retains the same managed interface value.
 	**/
 	public static function parameterRetainedOnlyBySelfField(body:TypedExpr, compilerId:Int):Bool {
 		var safe = true;
@@ -3245,10 +3247,9 @@ private class FunctionPreparer {
 					safe = false;
 				case TNew(_, _, arguments):
 					for (argument in arguments)
-						if (isDirectParameterValue(argument, compilerId)) {
-							safe = false;
-							break;
-						}
+						if (!isDirectParameterValue(argument, compilerId))
+							visit(argument);
+					return;
 				case TFunction(_) if (referencesParameter(expression, compilerId)):
 					safe = false;
 				case _:

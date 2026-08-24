@@ -64,6 +64,20 @@ final class DirectScore {
 		return base + seed;
 }
 
+/** Keeps the same interface object through a second managed owner. */
+final class RetainedScoreMirror {
+	final source:ScoreSource;
+
+	/** Retains the interface for dispatch after both constructors return. */
+	public function new(source:ScoreSource) {
+		this.source = source;
+	}
+
+	/** Dispatches through the child owner's independently traced field. */
+	public function read(seed:Int):Int
+		return source.score(seed);
+}
+
 /**
  * Owns one interface value beyond the constructor call that supplied it.
  *
@@ -73,6 +87,7 @@ final class DirectScore {
  */
 final class RetainedScore {
 	final source:ScoreSource;
+	var mirror:RetainedScoreMirror;
 	final settings:ScoreSettings;
 	var draft:ScoreDraft;
 	var direct:Null<DirectScore> = null;
@@ -94,6 +109,7 @@ final class RetainedScore {
 	 */
 	public function new(source:ScoreSource) {
 		this.source = source;
+		mirror = new RetainedScoreMirror(source);
 		settings = {offset: 2, enabled: true};
 		draft = {values: [40]};
 	}
@@ -101,6 +117,10 @@ final class RetainedScore {
 	/** Dispatches through the retained interface after construction has ended. */
 	public function read(seed:Int):Int
 		return source.score(seed);
+
+	/** Read the same concrete object through the child owner's retained edge. */
+	public function readMirror(seed:Int):Int
+		return mirror.read(seed);
 
 	/** Read both direct-record and managed-record constructor fields. */
 	public function readDraft():Int
@@ -183,7 +203,8 @@ final class Main {
 		value.advance();
 		value.installDirect(40);
 		forceCollectionPressure();
-		while (observed != 42 || value.advances != 2 || value.read(2) != 42 || value.readDirect(2) != 42 || value.readDraft() != 42) {}
+		while (observed != 42 || value.advances != 2 || value.read(2) != 42 || value.readMirror(2) != 42 || value.readDirect(2) != 42
+			|| value.readDraft() != 42) {}
 		value.keepDraft();
 		value.replaceDraft(39);
 		forceCollectionPressure();

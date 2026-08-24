@@ -772,6 +772,17 @@ def validate_retained_interface_project(output: Path) -> None:
             "retained interface fixture lost exact object tracing or later dispatch"
         )
     if (
+        "struct hxc_RetainedScoreMirror {" not in headers
+        or "struct hxc_RetainedScoreMirror *hxc_mirror;" not in headers
+        or "hxc_compiler_constructor_RetainedScoreMirror(" not in sources
+        or "(*hxc_RetainedScore_trace_typed).hxc_mirror" not in sources
+        or "(*hxc_RetainedScoreMirror_trace_typed).hxc_source.object" not in sources
+        or sources.count("hxc_source.object") < 4
+    ):
+        raise ConstructorLoweringFailure(
+            "retained interface fixture lost its parent-to-child or child-to-interface trace edge"
+        )
+    if (
         ".hxc_settings = (struct hxc_Main_ScoreSettings)" not in sources
         or ".hxc_draft = (struct hxc_Main_ScoreDraft)" not in sources
         or "record_assignment_replacement_owned" not in sources
@@ -791,6 +802,8 @@ def validate_retained_interface_report(report: dict[str, object]) -> None:
     inspect = function_section(hxcir, "function.Main.inspect")
     retain = function_section(hxcir, "function.Main.retain")
     forward = function_section(hxcir, "function.Main.forwardRetained")
+    owner_constructor = function_section(hxcir, "constructor.RetainedScore")
+    child_constructor = function_section(hxcir, "constructor.RetainedScoreMirror")
     if "ownership=borrowed-interface" not in inspect:
         raise ConstructorLoweringFailure(
             "read-only interface helper lost its call-bounded borrow"
@@ -806,6 +819,16 @@ def validate_retained_interface_report(report: dict[str, object]) -> None:
     if 'dispatch=direct("function.Main.retain")' not in forward:
         raise ConstructorLoweringFailure(
             "retained-interface HxcIR lost the direct forwarding edge"
+        )
+    if (
+        'dispatch=direct("constructor.RetainedScoreMirror")' not in owner_constructor
+        or "ownership=borrowed-interface" in owner_constructor
+        or "ownership=borrowed-interface" in child_constructor
+        or "ownership=owned-or-value" not in owner_constructor
+        or "ownership=owned-or-value" not in child_constructor
+    ):
+        raise ConstructorLoweringFailure(
+            "retained-interface HxcIR lost the exact two-owner constructor contract"
         )
 
 
