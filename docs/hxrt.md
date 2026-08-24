@@ -362,20 +362,22 @@ as one closed family before the generic `haxe.IMap` interface can erase the
 exact key and value types.
 
 The generated representation is a private `struct hxc_int_bool_map_ref *`.
-Keys remain signed 32-bit Haxe `Int` values, Bool values remain native C
-`bool`, and a separate occupied flag distinguishes “stored false” from
-“missing key.” Assigning the map to a new local retains the same mutable table,
-so changes through either alias are visible through the other. Construction,
-`set(Int, Bool)`, and `exists(Int)` are the complete current method set.
-`get`, removal, iteration, and other value types still stop with a
-source-positioned IntMap diagnostic; the compiler does not guess nullable,
-iterator, or ownership semantics for them.
+Keys remain signed 32-bit Haxe `Int` values, and Bool values remain native C
+`bool`. A separate occupied flag distinguishes a stored false value from a
+missing key. `get(Int)` returns a tagged `Null<Bool>` for the same reason.
 
-The table uses open addressing: it hashes a key to a slot and checks later
-slots after a collision. Capacity is always a power of two and the table keeps
-an empty slot, which guarantees that lookup terminates. Growth allocates and
-rehashes replacement storage before publishing it. If allocation fails, every
-existing key and every alias still observes the old valid table.
+Assigning the map to a new local retains the same mutable table. Changes
+through either alias are visible through the other. The current method set is
+construction, `set`, `exists`, `get`, `remove`, and `clear`. Iteration, copying,
+text conversion, and other value types still produce a source-positioned
+IntMap diagnostic.
+
+The table uses open addressing. It hashes a key to a slot and checks later
+slots after a collision. A removed slot keeps a tombstone marker, so later keys
+in the same collision chain remain reachable. Capacity is always a power of
+two, and the table keeps an empty slot. Thus, each lookup terminates. Growth
+builds replacement storage before it publishes that storage. If allocation
+fails, each alias still observes the old valid table.
 
 This runtime slice is selected only for a mutable, run-time-sized map whose
 shared identity is observable. A compiler-known immutable lookup can remain

@@ -487,7 +487,7 @@
         "referencePath": "docs/hxrt.md",
         "selectionRoots": [
           {
-            "description": "A reachable admitted construction, insertion, or membership operation.",
+            "description": "A reachable admitted construction, insertion, lookup, membership, removal, or clear operation.",
             "id": "int-map-operation",
             "kind": "hxc-ir-operation"
           },
@@ -497,7 +497,7 @@
             "kind": "hxc-ir-operation"
           }
         ],
-        "runtimeRationale": "General run-time keys need mutable shared storage. This first Bool specialization avoids Dynamic values and boxing while leaving unproved IntMap methods unsupported.",
+        "runtimeRationale": "General run-time keys need mutable shared storage. This Bool specialization keeps values unboxed and represents missing lookup results with the compiler's typed optional carrier.",
         "evidence": [
           "test/differential/int-map/run.py",
           "test/runtime/runtime-feature-graph/run.py"
@@ -512,21 +512,24 @@
       "id": "int-map",
       "availability": "compiler-selectable",
       "symbols": [
+        "hxc_int_bool_map_ref_clear",
         "hxc_int_bool_map_ref_create",
         "hxc_int_bool_map_ref_exists",
+        "hxc_int_bool_map_ref_get",
         "hxc_int_bool_map_ref_release",
+        "hxc_int_bool_map_ref_remove",
         "hxc_int_bool_map_ref_retain",
         "hxc_int_bool_map_ref_set"
       ],
       "artifacts": [
         {
-          "sourceSha256": "dd54b016db1d391dc7778b13e6cff856c886543ca87119b37141c5ad150f8080",
+          "sourceSha256": "9763be7fb142aa9dad6f084ca21eab7b49b79cf44560e59e348a0f13461e878f",
           "kind": "runtime-header",
           "outputPath": "runtime/include/hxrt/int_map.h",
           "sourcePath": "runtime/hxrt/include/hxrt/int_map.h"
         },
         {
-          "sourceSha256": "68a649d20d244f6fa73709da7d6a1d412a4ecb6e350048f0ed09fec6b044933e",
+          "sourceSha256": "41483a14ef9cdeb0526d24a9089af630bdfb10752c5ac0a6e75136f17322ca14",
           "kind": "runtime-source",
           "outputPath": "runtime/src/int_map.c",
           "sourcePath": "runtime/hxrt/src/int_map.c"
@@ -1333,7 +1336,7 @@
     "releaseProvenance": {
       "runtimeCStandard": "c11",
       "sourceHashAlgorithm": "sha256",
-      "sourceSetSha256": "f8a20510f2af99f1b8a8fe7f2bcc48f6535cfdedbd998bf3bed733a7289a8b80",
+      "sourceSetSha256": "2bda4a4c0c7eee0ac28a5ab090e1b6f20a9c256b3345890baa44f4324df9fafd",
       "publicHeaderCppStandard": "c++17"
     },
     "generatedCodeCompatibility": "same-major",

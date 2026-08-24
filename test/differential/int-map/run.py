@@ -206,6 +206,9 @@ def validate_generated_project(output: Path, hxcir: str) -> None:
         'runtime(feature="int-map",operation="create")',
         'runtime(feature="int-map",operation="set")',
         'runtime(feature="int-map",operation="exists")',
+        'runtime(feature="int-map",operation="get")',
+        'runtime(feature="int-map",operation="remove")',
+        'runtime(feature="int-map",operation="clear")',
         "retain place=local(",
         "release place=local(",
     ):
@@ -226,6 +229,9 @@ def validate_generated_project(output: Path, hxcir: str) -> None:
         "cleanup-release",
         "create",
         "exists",
+        "get",
+        "remove",
+        "clear",
         "managed-type-representation",
         "retain",
         "set",
@@ -245,9 +251,12 @@ def validate_generated_project(output: Path, hxcir: str) -> None:
         or stdlib.get("capabilities")
         != [
             "cleanup-release",
+            "clear",
             "create",
             "exists",
+            "get",
             "managed-type-representation",
+            "remove",
             "retain",
             "set",
         ]
@@ -263,6 +272,9 @@ def validate_generated_project(output: Path, hxcir: str) -> None:
         "hxc_int_bool_map_ref_create",
         "hxc_int_bool_map_ref_set",
         "hxc_int_bool_map_ref_exists",
+        "hxc_int_bool_map_ref_get",
+        "hxc_int_bool_map_ref_remove",
+        "hxc_int_bool_map_ref_clear",
         "hxc_int_bool_map_ref_retain",
         "hxc_int_bool_map_ref_release",
         "hxc_default_allocator()",
@@ -350,10 +362,7 @@ def render_projects(root: Path) -> dict[str, Path]:
 
 
 def run_negative_cases(root: Path) -> None:
-    expected = {
-        "value_type": "IntMap-value-not-yet-admitted:int32_t",
-        "get": "TCall(IntMap.get:not-yet-admitted)",
-    }
+    expected = {"value_type": "IntMap-value-not-yet-admitted:int32_t"}
     for name, marker in expected.items():
         output = root / f"negative-{name}"
         result = compile_haxe(NEGATIVE / name, output)
@@ -431,6 +440,9 @@ def inspect_symbols(executable: Path, family: str) -> None:
         "hxc_int_bool_map_ref_create",
         "hxc_int_bool_map_ref_set",
         "hxc_int_bool_map_ref_exists",
+        "hxc_int_bool_map_ref_get",
+        "hxc_int_bool_map_ref_remove",
+        "hxc_int_bool_map_ref_clear",
         "hxc_int_bool_map_ref_release",
     ):
         if required not in result.stdout:
@@ -529,7 +541,7 @@ def main(argv: Iterable[str] = ()) -> int:
     print(
         "int-map: OK: "
         f"{families}; {mode} construction, set, exists, aliases, growth rollback, "
-        "layouts, determinism, sanitizers, runtime-none, negative diagnostics, and selective symbols passed"
+        "lookup, removal, clear, layouts, determinism, sanitizers, runtime-none, negative diagnostics, and selective symbols passed"
     )
     return 0
 

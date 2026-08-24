@@ -1,10 +1,9 @@
 /*
  * hxrt feature: int-map (compiler-selectable).
  *
- * This first internal ABI preserves ordinary Haxe Map<Int, Bool> identity.
- * Integer keys and Bool values stay exact and unboxed. The compiler currently
- * selects only construction, set, and membership; other IntMap methods remain
- * source-positioned unsupported operations rather than guessed runtime calls.
+ * This internal ABI preserves ordinary Haxe Map<Int, Bool> identity. Integer
+ * keys and Bool values stay exact and unboxed, while lookup reports presence
+ * separately so a stored false value is not confused with a missing key.
  */
 #ifndef HXRT_INT_MAP_H_INCLUDED
 #define HXRT_INT_MAP_H_INCLUDED
@@ -50,6 +49,24 @@ HXC_API hxc_status hxc_int_bool_map_ref_exists(
   int32_t key,
   bool *out_exists
 );
+
+/** Copy one unboxed value when present and report presence separately. */
+HXC_API hxc_status hxc_int_bool_map_ref_get(
+  const hxc_int_bool_map_ref *map,
+  int32_t key,
+  bool *out_value,
+  bool *out_found
+);
+
+/** Remove one key and report whether it was present. */
+HXC_API hxc_status hxc_int_bool_map_ref_remove(
+  hxc_int_bool_map_ref *map,
+  int32_t key,
+  bool *out_removed
+);
+
+/** Remove every entry while preserving the shared Map object and its aliases. */
+HXC_API hxc_status hxc_int_bool_map_ref_clear(hxc_int_bool_map_ref *map);
 
 #if defined(__cplusplus)
 } /* extern "C" */

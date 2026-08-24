@@ -5439,7 +5439,13 @@ class CBodyEmitter {
 					requireValue(values, call.arguments[1], fn.id),
 					requireValue(values, call.arguments[2], fn.id)
 				]), boundsAbortName, instruction.id, fn.id);
-			case "exists":
+			case "clear":
+				if (call.arguments.length != 1 || call.returnType != IRTVoid || instruction.result != null)
+					return fail('IntMap clear `${instruction.id}` in `${fn.id}` lost its receiver signature');
+				emitStatusAbort(statements,
+					ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNIntMapClear)), [requireValue(values, call.arguments[0], fn.id)]), boundsAbortName,
+					instruction.id, fn.id);
+			case "exists" | "remove":
 				final result = requireResult(instruction, fn.id);
 				final temporary = requireIntMapTemporary(temporaryNames, result.id, instruction.id, fn.id);
 				statements.push(SDecl({
@@ -5450,12 +5456,37 @@ class CBodyEmitter {
 					initializer: null,
 					attributes: []
 				}));
-				emitStatusAbort(statements, ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNIntMapExists)), [
+				final runtimeName = operation == "exists" ? CBRNIntMapExists : CBRNIntMapRemove;
+				emitStatusAbort(statements, ECall(EIdentifier(CBodyRuntimeNames.identifier(runtimeName)), [
 					requireValue(values, call.arguments[0], fn.id),
 					requireValue(values, call.arguments[1], fn.id),
 					EUnary(AddressOf, EIdentifier(temporary))
 				]), boundsAbortName, instruction.id, fn.id);
 				values.set(result.id, EIdentifier(temporary));
+				if (!referencedValues.exists(result.id))
+					statements.push(SExpr(ECast(new CType(TVoid), DName(null), EIdentifier(temporary))));
+			case "get":
+				final result = requireResult(instruction, fn.id);
+				final temporary = requireIntMapTemporary(temporaryNames, result.id, instruction.id, fn.id);
+				final optional = requireOptional(result.type);
+				final declaration = typedDeclarator(result.type, DName(temporary));
+				statements.push(SDecl({
+					storage: [],
+					alignments: [],
+					type: declaration.type,
+					declarator: declaration.declarator,
+					initializer: IExpr(directOptionalNullExpression(result.type)),
+					attributes: []
+				}));
+				emitStatusAbort(statements, ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNIntMapGet)), [
+					requireValue(values, call.arguments[0], fn.id),
+					requireValue(values, call.arguments[1], fn.id),
+					EUnary(AddressOf, EMember(EIdentifier(temporary), optional.payloadName, false)),
+					EUnary(AddressOf, EMember(EIdentifier(temporary), optional.presenceName, false))
+				]), boundsAbortName, instruction.id, fn.id);
+				values.set(result.id, EIdentifier(temporary));
+				if (!referencedValues.exists(result.id))
+					statements.push(SExpr(ECast(new CType(TVoid), DName(null), EIdentifier(temporary))));
 			case _:
 				fail('IntMap call `${instruction.id}` in `${fn.id}` names unsupported operation `$operation`');
 		}

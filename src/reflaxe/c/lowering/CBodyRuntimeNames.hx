@@ -87,6 +87,9 @@ enum CBodyRuntimeName {
 	CBRNIntMapRelease;
 	CBRNIntMapSet;
 	CBRNIntMapExists;
+	CBRNIntMapGet;
+	CBRNIntMapRemove;
+	CBRNIntMapClear;
 	CBRNBytesCreateZeroed;
 	CBRNBytesCreateUtf8Copy;
 	CBRNBytesLength;
@@ -182,6 +185,9 @@ class CBodyRuntimeNames {
 			case CBRNIntMapRelease: "hxc_int_bool_map_ref_release";
 			case CBRNIntMapSet: "hxc_int_bool_map_ref_set";
 			case CBRNIntMapExists: "hxc_int_bool_map_ref_exists";
+			case CBRNIntMapGet: "hxc_int_bool_map_ref_get";
+			case CBRNIntMapRemove: "hxc_int_bool_map_ref_remove";
+			case CBRNIntMapClear: "hxc_int_bool_map_ref_clear";
 			case CBRNBytesCreateZeroed: "hxc_bytes_ref_create_zeroed";
 			case CBRNBytesCreateUtf8Copy: "hxc_bytes_ref_create_utf8_copy";
 			case CBRNBytesLength: "hxc_bytes_ref_length";

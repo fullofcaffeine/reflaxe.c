@@ -12,7 +12,8 @@
 
 enum {
   HXC_INT_BOOL_MAP_EMPTY = 0,
-  HXC_INT_BOOL_MAP_OCCUPIED = 1
+  HXC_INT_BOOL_MAP_OCCUPIED = 1,
+  HXC_INT_BOOL_MAP_TOMBSTONE = 2
 };
 
 typedef struct hxc_int_bool_map_slot {
@@ -69,14 +70,19 @@ static size_t hxc_int_bool_map_find_slot(
   bool *out_found
 ) {
   size_t index = (size_t)hxc_int_bool_map_hash(key) & (map->capacity - 1u);
+  size_t first_tombstone = SIZE_MAX;
   hxc_int_bool_map_slot *slots = hxc_int_bool_map_slots(map);
   for (;;) {
     const hxc_int_bool_map_slot *slot = &slots[index];
     if (slot->state == HXC_INT_BOOL_MAP_EMPTY) {
       *out_found = false;
-      return index;
+      return first_tombstone == SIZE_MAX ? index : first_tombstone;
     }
-    if (slot->key == key) {
+    if (slot->state == HXC_INT_BOOL_MAP_TOMBSTONE) {
+      if (first_tombstone == SIZE_MAX) {
+        first_tombstone = index;
+      }
+    } else if (slot->key == key) {
       *out_found = true;
       return index;
     }
@@ -255,5 +261,59 @@ hxc_status hxc_int_bool_map_ref_exists(
     (void)hxc_int_bool_map_find_slot(map, key, &found);
   }
   *out_exists = found;
+  return HXC_STATUS_OK;
+}
+
+hxc_status hxc_int_bool_map_ref_get(
+  const hxc_int_bool_map_ref *map,
+  int32_t key,
+  bool *out_value,
+  bool *out_found
+) {
+  size_t index = 0u;
+  bool found = false;
+  if (out_value == NULL || out_found == NULL || !hxc_int_bool_map_is_valid(map)) {
+    return HXC_STATUS_INVALID_ARGUMENT;
+  }
+  if (map->capacity != 0u) {
+    index = hxc_int_bool_map_find_slot(map, key, &found);
+  }
+  if (found) {
+    *out_value = hxc_int_bool_map_slots(map)[index].value;
+  }
+  *out_found = found;
+  return HXC_STATUS_OK;
+}
+
+hxc_status hxc_int_bool_map_ref_remove(
+  hxc_int_bool_map_ref *map,
+  int32_t key,
+  bool *out_removed
+) {
+  size_t index = 0u;
+  bool found = false;
+  if (out_removed == NULL || !hxc_int_bool_map_is_valid(map)) {
+    return HXC_STATUS_INVALID_ARGUMENT;
+  }
+  if (map->capacity != 0u) {
+    index = hxc_int_bool_map_find_slot(map, key, &found);
+  }
+  if (found) {
+    hxc_int_bool_map_slot *slot = &hxc_int_bool_map_slots(map)[index];
+    slot->state = HXC_INT_BOOL_MAP_TOMBSTONE;
+    map->length--;
+  }
+  *out_removed = found;
+  return HXC_STATUS_OK;
+}
+
+hxc_status hxc_int_bool_map_ref_clear(hxc_int_bool_map_ref *map) {
+  if (!hxc_int_bool_map_is_valid(map)) {
+    return HXC_STATUS_INVALID_ARGUMENT;
+  }
+  if (map->slots.memory != NULL) {
+    memset(map->slots.memory, 0, map->slots.size);
+  }
+  map->length = 0u;
   return HXC_STATUS_OK;
 }

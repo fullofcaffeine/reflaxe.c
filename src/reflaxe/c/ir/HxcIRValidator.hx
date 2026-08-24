@@ -3603,6 +3603,18 @@ private class HxcIRValidationState {
 			case "exists":
 				if (argumentTypes.length != 2 || !hasReceiver || !hasIntKey || call.returnType != IRTBool)
 					add(path, "IntMap.exists requires Map<Int, Bool> + Int and returns Bool", source);
+			case "get":
+				if (argumentTypes.length != 2
+					|| !hasReceiver
+					|| !hasIntKey
+					|| typeKey(call.returnType) != typeKey(IRTNullable(IRTBool, IRNTagged)))
+					add(path, "IntMap.get requires Map<Int, Bool> + Int and returns Null<Bool>", source);
+			case "remove":
+				if (argumentTypes.length != 2 || !hasReceiver || !hasIntKey || call.returnType != IRTBool)
+					add(path, "IntMap.remove requires Map<Int, Bool> + Int and returns Bool", source);
+			case "clear":
+				if (argumentTypes.length != 1 || !hasReceiver || call.returnType != IRTVoid)
+					add(path, "IntMap.clear requires Map<Int, Bool> and returns Void", source);
 			case _:
 				add(path, 'int-map runtime call names unsupported operation `$operationId`', source);
 		}

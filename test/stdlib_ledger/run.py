@@ -864,9 +864,9 @@ def validate_generated(ledger: dict[str, object]) -> None:
     statuses = {status: 0 for status in STATUSES}
     for entry in entries:
         statuses[str(entry["status"])] += 1
-    if statuses["conformant"] != 1 or statuses["partial"] != 51:
+    if statuses["conformant"] != 1 or statuses["partial"] != 57:
         raise StdlibLedgerFailure(
-            "evidence should mark exactly Std.int conformant plus the bounded Math.sqrt, Array.copy, literal Array.resize(0), discarded one-element Array.splice, Array.shift, Array.sort, Array<String>.join, Std.string(Bool/Int/hosted Float/String identity), twelve Bytes, ten String, eleven StringTools, eight StringBuf, statically typed String Sys.println, and literal trace slices partial; broader stdlib parity is not yet proven"
+            "evidence should mark exactly Std.int conformant plus the bounded Math.sqrt, Array, Map<Int, Bool>, Std.string, Bytes, String, StringTools, StringBuf, Sys.println, and literal trace slices partial; broader stdlib parity is not yet proven"
         )
 
 

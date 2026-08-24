@@ -71,6 +71,8 @@ static int prove_contract(void) {
   hxc_int_bool_map_ref *map = NULL;
   hxc_int_bool_map_ref *alias;
   bool found = true;
+  bool value = true;
+  bool removed = false;
   int32_t key;
 
   CHECK(hxc_int_bool_map_ref_create(allocator, &map) == HXC_STATUS_OK);
@@ -80,26 +82,48 @@ static int prove_contract(void) {
   CHECK(hxc_int_bool_map_ref_set(map, INT32_C(-7), false) == HXC_STATUS_OK);
   CHECK(hxc_int_bool_map_ref_exists(map, INT32_C(-7), &found) == HXC_STATUS_OK);
   CHECK(found);
+  CHECK(hxc_int_bool_map_ref_get(map, INT32_C(-7), &value, &found) == HXC_STATUS_OK);
+  CHECK(found && !value);
+  CHECK(hxc_int_bool_map_ref_get(map, INT32_C(-6), &value, &found) == HXC_STATUS_OK);
+  CHECK(!found);
 
   alias = map;
   CHECK(hxc_int_bool_map_ref_retain(alias) == HXC_STATUS_OK);
   CHECK(hxc_int_bool_map_ref_set(alias, INT32_MAX, true) == HXC_STATUS_OK);
   CHECK(hxc_int_bool_map_ref_exists(map, INT32_MAX, &found) == HXC_STATUS_OK);
   CHECK(found);
+  /* Keys 0 and 1 share the first slot under the runtime's exact hash. */
+  CHECK(hxc_int_bool_map_ref_set(map, INT32_C(0), false) == HXC_STATUS_OK);
+  CHECK(hxc_int_bool_map_ref_set(map, INT32_C(1), true) == HXC_STATUS_OK);
+  CHECK(hxc_int_bool_map_ref_remove(map, INT32_C(0), &removed) == HXC_STATUS_OK);
+  CHECK(removed);
+  CHECK(hxc_int_bool_map_ref_remove(map, INT32_C(0), &removed) == HXC_STATUS_OK);
+  CHECK(!removed);
+  CHECK(hxc_int_bool_map_ref_get(map, INT32_C(1), &value, &found) == HXC_STATUS_OK);
+  CHECK(found && value);
 
   for (key = 0; key < 4; key++) {
     CHECK(hxc_int_bool_map_ref_set(map, key, (key & 1) != 0) == HXC_STATUS_OK);
   }
   state.fail = true;
   CHECK(hxc_int_bool_map_ref_set(map, INT32_C(99), true) == HXC_STATUS_OUT_OF_MEMORY);
-  CHECK(hxc_int_bool_map_ref_exists(alias, INT32_C(-7), &found) == HXC_STATUS_OK);
+  CHECK(hxc_int_bool_map_ref_exists(alias, INT32_MAX, &found) == HXC_STATUS_OK);
   CHECK(found);
   CHECK(hxc_int_bool_map_ref_exists(alias, INT32_C(99), &found) == HXC_STATUS_OK);
   CHECK(!found);
   state.fail = false;
+  CHECK(hxc_int_bool_map_ref_clear(alias) == HXC_STATUS_OK);
+  CHECK(hxc_int_bool_map_ref_exists(map, INT32_MAX, &found) == HXC_STATUS_OK);
+  CHECK(!found);
 
   CHECK(hxc_int_bool_map_ref_exists(NULL, 0, &found) == HXC_STATUS_INVALID_ARGUMENT);
   CHECK(hxc_int_bool_map_ref_exists(map, 0, NULL) == HXC_STATUS_INVALID_ARGUMENT);
+  CHECK(hxc_int_bool_map_ref_get(NULL, 0, &value, &found) == HXC_STATUS_INVALID_ARGUMENT);
+  CHECK(hxc_int_bool_map_ref_get(map, 0, NULL, &found) == HXC_STATUS_INVALID_ARGUMENT);
+  CHECK(hxc_int_bool_map_ref_get(map, 0, &value, NULL) == HXC_STATUS_INVALID_ARGUMENT);
+  CHECK(hxc_int_bool_map_ref_remove(NULL, 0, &removed) == HXC_STATUS_INVALID_ARGUMENT);
+  CHECK(hxc_int_bool_map_ref_remove(map, 0, NULL) == HXC_STATUS_INVALID_ARGUMENT);
+  CHECK(hxc_int_bool_map_ref_clear(NULL) == HXC_STATUS_INVALID_ARGUMENT);
   CHECK(hxc_int_bool_map_ref_retain(NULL) == HXC_STATUS_OK);
   CHECK(hxc_int_bool_map_ref_release(NULL) == HXC_STATUS_OK);
   CHECK(hxc_int_bool_map_ref_release(alias) == HXC_STATUS_OK);

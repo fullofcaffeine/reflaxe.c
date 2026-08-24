@@ -207,7 +207,10 @@ class RuntimeFeatureCatalog {
 					"hxc_int_bool_map_ref_retain",
 					"hxc_int_bool_map_ref_release",
 					"hxc_int_bool_map_ref_set",
-					"hxc_int_bool_map_ref_exists"
+					"hxc_int_bool_map_ref_exists",
+					"hxc_int_bool_map_ref_get",
+					"hxc_int_bool_map_ref_remove",
+					"hxc_int_bool_map_ref_clear"
 				],
 				[], [],
 				documentation("Preserves ordinary Map<Int, Bool> alias identity and key presence while storing both key and value in their exact C scalar forms.",
@@ -215,11 +218,11 @@ class RuntimeFeatureCatalog {
 					new RuntimeFeatureSelectionRoot("managed-type-representation", RuntimeFeatureSelectionRootKind.HxcIrOperation,
 						"A reachable ordinary Haxe Map<Int, Bool> whose contents and shared identity change at run time."),
 					new RuntimeFeatureSelectionRoot("int-map-operation", RuntimeFeatureSelectionRootKind.HxcIrOperation,
-						"A reachable admitted construction, insertion, or membership operation.")
+						"A reachable admitted construction, insertion, lookup, membership, removal, or clear operation.")
 				],
 					"A compiler-known immutable integer lookup table can remain direct const C data when mutation and alias identity are unobservable.",
 					"A closed bounded key range can use a program-local bitset or table when the compiler can prove that range and preserve Map identity.",
-					"General run-time keys need mutable shared storage. This first Bool specialization avoids Dynamic values and boxing while leaving unproved IntMap methods unsupported.",
+					"General run-time keys need mutable shared storage. This Bool specialization keeps values unboxed and represents missing lookup results with the compiler's typed optional carrier.",
 					"docs/hxrt.md", ["test/differential/int-map/run.py", "test/runtime/runtime-feature-graph/run.py"])),
 			new RuntimeFeatureDefinition(bytes, "Fixed-length mutable binary storage with checked ranges and shared Haxe identity.", CompilerSelectable, true,
 				environments, [alloc, stringLiteral], [header("bytes.h"), source("bytes.c")], [
@@ -535,7 +538,7 @@ class RuntimeFeatureCatalog {
 			case "bytes_string.h": "9d944e38a748696628076b0c5fd56339668e48953a220d51c8da1630fbdf9c40";
 			case "gc.h": "2ca9523f1c74c62877c3f006bab9bd8a3a2a1eced93d67ad59d015a7c6ecb9de";
 			case "io.h": "4b92f03451dc4d04ea74c857ca3ce54d52fbe80d31f155b93781ee2fab946589";
-			case "int_map.h": "dd54b016db1d391dc7778b13e6cff856c886543ca87119b37141c5ad150f8080";
+			case "int_map.h": "9763be7fb142aa9dad6f084ca21eab7b49b79cf44560e59e348a0f13461e878f";
 			case "object.h": "779b452097e4c58c7971b90743ace19a2dc6c91e381557abc84fbd5f9b30f1e5";
 			case "status.h": "6bf20f5d82594014ad0f2b79a25cb81417791bd9c07375d2fb89835e415be1c4";
 			case "status_name.h": "64bf3917787ffcf924369c8e1c0a525cf10902d004d5bb4b898f2af46a7456cc";
@@ -560,7 +563,7 @@ class RuntimeFeatureCatalog {
 			case "bytes_string.c": "0ee9604f1b4ae78baeeaf7cac8b2a35b5634f115c958a7575230c790e8aa6ca6";
 			case "gc.c": "96cf942d6752070aaa5005eae3bc45c7d00aca37c360dfecaeb76d8db767b4cc";
 			case "io.c": "898b3f351b60a91f25fd1ffdfe8d832e95a5a6a738ffe226ac33581f1fcb5b0f";
-			case "int_map.c": "68a649d20d244f6fa73709da7d6a1d412a4ecb6e350048f0ed09fec6b044933e";
+			case "int_map.c": "41483a14ef9cdeb0526d24a9089af630bdfb10752c5ac0a6e75136f17322ca14";
 			case "object.c": "0e7fc6a55b562eaaf03fe63eca743dd73248f0bee1c09e21b79464917e8c89c0";
 			case "status.c": "0695ab2528db6e29d5cf29d905ad736b7c1a3a79333082347ec18faea2d4e6d8";
 			case "string.c": "8313e359e18df7d5995faab32dd2e29cccd75ccd2338e475218549870d882736";

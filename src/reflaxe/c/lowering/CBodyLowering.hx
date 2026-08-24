@@ -12355,10 +12355,9 @@ private class FunctionBuilder {
 	/**
 		Lower the first bounded IntMap family without virtual dispatch.
 
-		Only `set(Int, Bool)` and `exists(Int)` are admitted. The table preserves
-		key presence separately from the stored Bool, so setting `false` still
-		makes `exists` return true exactly as Haxe requires. Reading that stored
-		value is intentionally unsupported until `get` owns its nullable contract.
+		The table preserves key presence separately from the stored Bool, so both
+		`exists` and nullable `get` distinguish a stored false value from absence.
+		Removal uses the same shared identity, so every alias observes the mutation.
 	**/
 	function lowerIntMapCall(expression:TypedExpr, access:reflaxe.c.lowering.CBodyDispatch.CBodyInstanceCallAccess, arguments:Array<TypedExpr>,
 			materializeResult:Bool):Null<LoweredValue> {
@@ -12367,42 +12366,49 @@ private class FunctionBuilder {
 		if (map == null)
 			return unsupported(access.receiver, "TCall(IntMap:receiver-identity-lost)");
 		final method = access.field.get().name;
-		final expectedArguments = method == "set" ? 2 : 1;
-		if (method != "set" && method != "exists")
+		final expectedArguments = method == "clear" ? 0 : method == "set" ? 2 : 1;
+		if (method != "set" && method != "exists" && method != "get" && method != "remove" && method != "clear")
 			return unsupported(expression, 'TCall(IntMap.$method:not-yet-admitted)');
 		if (arguments.length != expectedArguments)
 			return unsupported(expression, 'TCall(IntMap.$method:argument-count=${arguments.length},expected=$expectedArguments)');
-		final intMapping = bodyValueType(arguments[0].t, arguments[0].pos, 'TCall(IntMap.$method:key-type)');
-		switch intMapping.irType {
-			case IRTInt(32, true):
-			case _:
-				return unsupported(arguments[0], 'TCall(IntMap.$method:key-not-Haxe-Int)');
+		final loweredArguments:Array<String> = [receiver.id];
+		if (method != "clear") {
+			final intMapping = bodyValueType(arguments[0].t, arguments[0].pos, 'TCall(IntMap.$method:key-type)');
+			switch intMapping.irType {
+				case IRTInt(32, true):
+				case _:
+					return unsupported(arguments[0], 'TCall(IntMap.$method:key-not-Haxe-Int)');
+			}
+			final key = coerce(lowerValue(arguments[0], intMapping), intMapping, arguments[0].pos, 'TCall(IntMap.$method:key)');
+			loweredArguments.push(key.id);
 		}
-		final key = coerce(lowerValue(arguments[0], intMapping), intMapping, arguments[0].pos, 'TCall(IntMap.$method:key)');
-		final loweredArguments:Array<String> = [receiver.id, key.id];
 		if (method == "set")
 			loweredArguments.push(coerce(lowerValue(arguments[1], map.value), map.value, arguments[1].pos, "TCall(IntMap.set:value)").id);
 		final source = sourceSpan(expression.pos);
-		if (method == "set") {
+		if (method == "set" || method == "clear") {
 			appendInstruction(null, IRIOCall({
-				dispatch: IRCDRuntime("int-map", "set"),
+				dispatch: IRCDRuntime("int-map", method),
 				arguments: loweredArguments,
 				returnType: IRTVoid,
 				failure: managedArrayFailure()
-			}), source, "int-map-set");
-			runtimeRequirements.push(new CBodyRuntimeRequirement("int-map", "set", "ordinary Haxe IntMap.set", source, expression.pos));
+			}), source, 'int-map-$method');
+			runtimeRequirements.push(new CBodyRuntimeRequirement("int-map", method, 'ordinary Haxe IntMap.$method', source, expression.pos));
 			return null;
 		}
-		final resultMapping = bodyValueType(expression.t, expression.pos, "TCall(IntMap.exists:result-type)");
+		// Haxe erases `Null<Bool>` from this extern method in parts of the typed
+		// tree. Recover it at the standard-library boundary: the runtime reports
+		// presence separately, and no Bool sentinel can represent a missing key.
+		final resultMapping = method == "get" ? aggregateRegistry.optionalValueType(map.value, expression.pos, input.modulePath, input.sourcePath,
+			rejectAggregateType, "TCall(IntMap.get:nullable-result)") : bodyValueType(expression.t, expression.pos, 'TCall(IntMap.$method:result-type)');
 		final result:HxcIRResult = {id: nextValueId(), type: resultMapping.irType};
 		appendInstruction(result, IRIOCall({
-			dispatch: IRCDRuntime("int-map", "exists"),
+			dispatch: IRCDRuntime("int-map", method),
 			arguments: loweredArguments,
 			returnType: result.type,
 			failure: managedArrayFailure()
-		}), source, "int-map-exists");
-		registerValueTemporary(result.id, "int-map-exists-result");
-		runtimeRequirements.push(new CBodyRuntimeRequirement("int-map", "exists", "ordinary Haxe IntMap.exists", source, expression.pos));
+		}), source, 'int-map-$method');
+		registerValueTemporary(result.id, 'int-map-$method-result');
+		runtimeRequirements.push(new CBodyRuntimeRequirement("int-map", method, 'ordinary Haxe IntMap.$method', source, expression.pos));
 		return {id: result.id, type: result.type, mapping: resultMapping};
 	}
 

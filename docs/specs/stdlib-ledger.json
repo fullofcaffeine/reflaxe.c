@@ -1040,6 +1040,210 @@
   ],
   "apiOverrides": [
     {
+      "id": "int-map-clear-bool-partial",
+      "selector": {
+        "module": "haxe.ds.IntMap",
+        "type": "haxe.ds.IntMap",
+        "member": "clear",
+        "kind": "method",
+        "isStatic": false,
+        "signature": "() -> Void"
+      },
+      "owner": "runtime-slice",
+      "runtimeFeatures": [
+        "int-map"
+      ],
+      "profiles": [
+        "portable"
+      ],
+      "environments": [
+        "hosted"
+      ],
+      "status": "partial",
+      "ownerBeads": "E5.T03",
+      "testOwnerBeads": "E5.T12",
+      "diagnosticPolicies": [
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
+      ],
+      "tests": [
+        "test/differential/int-map/generated/Main.hx",
+        "test/differential/int-map/int_map_runtime.c",
+        "test/differential/int-map/run.py"
+      ],
+      "notes": "The admitted Map<Int, Bool> specialization clears the shared table in place. Every alias observes the empty map, while other value types remain unsupported."
+    },
+    {
+      "id": "int-map-exists-bool-partial",
+      "selector": {
+        "module": "haxe.ds.IntMap",
+        "type": "haxe.ds.IntMap",
+        "member": "exists",
+        "kind": "method",
+        "isStatic": false,
+        "signature": "(key : Int) -> Bool"
+      },
+      "owner": "runtime-slice",
+      "runtimeFeatures": [
+        "int-map"
+      ],
+      "profiles": [
+        "portable"
+      ],
+      "environments": [
+        "hosted"
+      ],
+      "status": "partial",
+      "ownerBeads": "E5.T03",
+      "testOwnerBeads": "E5.T12",
+      "diagnosticPolicies": [
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
+      ],
+      "tests": [
+        "test/differential/int-map/generated/Main.hx",
+        "test/differential/int-map/int_map_runtime.c",
+        "test/differential/int-map/run.py"
+      ],
+      "notes": "The admitted Map<Int, Bool> specialization reports key presence separately from the stored value. A stored false value therefore remains present."
+    },
+    {
+      "id": "int-map-get-bool-partial",
+      "selector": {
+        "module": "haxe.ds.IntMap",
+        "type": "haxe.ds.IntMap",
+        "member": "get",
+        "kind": "method",
+        "isStatic": false,
+        "signature": "(key : Int) -> Null<haxe.ds.IntMap.T>"
+      },
+      "owner": "runtime-slice",
+      "runtimeFeatures": [
+        "int-map"
+      ],
+      "profiles": [
+        "portable"
+      ],
+      "environments": [
+        "hosted"
+      ],
+      "status": "partial",
+      "ownerBeads": "E5.T03",
+      "testOwnerBeads": "E5.T12",
+      "diagnosticPolicies": [
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
+      ],
+      "tests": [
+        "test/differential/int-map/generated/Main.hx",
+        "test/differential/int-map/int_map_runtime.c",
+        "test/differential/int-map/run.py"
+      ],
+      "notes": "The admitted Map<Int, Bool> specialization returns a tagged Null<Bool>. This exact carrier distinguishes missing keys from stored false values without boxing."
+    },
+    {
+      "id": "int-map-new-bool-partial",
+      "selector": {
+        "module": "haxe.ds.IntMap",
+        "type": "haxe.ds.IntMap",
+        "member": "new",
+        "kind": "constructor",
+        "isStatic": false,
+        "signature": "() -> Void"
+      },
+      "owner": "runtime-slice",
+      "runtimeFeatures": [
+        "int-map"
+      ],
+      "profiles": [
+        "portable"
+      ],
+      "environments": [
+        "hosted"
+      ],
+      "status": "partial",
+      "ownerBeads": "E5.T03",
+      "testOwnerBeads": "E5.T12",
+      "diagnosticPolicies": [
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
+      ],
+      "tests": [
+        "test/differential/int-map/generated/Main.hx",
+        "test/differential/int-map/int_map_runtime.c",
+        "test/differential/int-map/run.py"
+      ],
+      "notes": "The admitted Map<Int, Bool> specialization creates one empty reference-counted table. Local assignments retain the same mutable identity."
+    },
+    {
+      "id": "int-map-remove-bool-partial",
+      "selector": {
+        "module": "haxe.ds.IntMap",
+        "type": "haxe.ds.IntMap",
+        "member": "remove",
+        "kind": "method",
+        "isStatic": false,
+        "signature": "(key : Int) -> Bool"
+      },
+      "owner": "runtime-slice",
+      "runtimeFeatures": [
+        "int-map"
+      ],
+      "profiles": [
+        "portable"
+      ],
+      "environments": [
+        "hosted"
+      ],
+      "status": "partial",
+      "ownerBeads": "E5.T03",
+      "testOwnerBeads": "E5.T12",
+      "diagnosticPolicies": [
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
+      ],
+      "tests": [
+        "test/differential/int-map/generated/Main.hx",
+        "test/differential/int-map/int_map_runtime.c",
+        "test/differential/int-map/run.py"
+      ],
+      "notes": "The admitted Map<Int, Bool> specialization removes one key without breaking later keys in the same collision chain. Every alias observes the removal."
+    },
+    {
+      "id": "int-map-set-bool-partial",
+      "selector": {
+        "module": "haxe.ds.IntMap",
+        "type": "haxe.ds.IntMap",
+        "member": "set",
+        "kind": "method",
+        "isStatic": false,
+        "signature": "(key : Int, value : haxe.ds.IntMap.T) -> Void"
+      },
+      "owner": "runtime-slice",
+      "runtimeFeatures": [
+        "int-map"
+      ],
+      "profiles": [
+        "portable"
+      ],
+      "environments": [
+        "hosted"
+      ],
+      "status": "partial",
+      "ownerBeads": "E5.T03",
+      "testOwnerBeads": "E5.T12",
+      "diagnosticPolicies": [
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
+      ],
+      "tests": [
+        "test/differential/int-map/generated/Main.hx",
+        "test/differential/int-map/int_map_runtime.c",
+        "test/differential/int-map/run.py"
+      ],
+      "notes": "The admitted Map<Int, Bool> specialization inserts or replaces exact Int and Bool values. Growth preserves all entries or leaves the old table unchanged."
+    },
+    {
       "id": "array-copy-partial",
       "selector": {
         "module": "Array",
@@ -30740,33 +30944,30 @@
       "kind": "method",
       "signature": "() -> Void",
       "isStatic": false,
-      "owner": "target-source-override",
+      "owner": "runtime-slice",
       "runtimeFeatures": [
-        "alloc",
-        "array",
-        "gc",
-        "object"
+        "int-map"
       ],
       "profiles": [
-        "portable",
-        "metal"
+        "portable"
       ],
       "environments": [
-        "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "hosted"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T03",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Known element/key/value types should specialize to direct typed storage; allocation and tracing remain explicit reachability decisions.",
-      "ruleId": "collection-storage"
+      "tests": [
+        "test/differential/int-map/generated/Main.hx",
+        "test/differential/int-map/int_map_runtime.c",
+        "test/differential/int-map/run.py"
+      ],
+      "notes": "The admitted Map<Int, Bool> specialization clears the shared table in place. Every alias observes the empty map, while other value types remain unsupported.",
+      "ruleId": "int-map-clear-bool-partial"
     },
     {
       "id": "hxc-stdlib-api-v1:cf467a8364801034fa33caf69b9113cc7abad4f2a643068e7734e6a1df629ec8",
@@ -30818,33 +31019,30 @@
       "kind": "method",
       "signature": "(key : Int) -> Bool",
       "isStatic": false,
-      "owner": "target-source-override",
+      "owner": "runtime-slice",
       "runtimeFeatures": [
-        "alloc",
-        "array",
-        "gc",
-        "object"
+        "int-map"
       ],
       "profiles": [
-        "portable",
-        "metal"
+        "portable"
       ],
       "environments": [
-        "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "hosted"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T03",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Known element/key/value types should specialize to direct typed storage; allocation and tracing remain explicit reachability decisions.",
-      "ruleId": "collection-storage"
+      "tests": [
+        "test/differential/int-map/generated/Main.hx",
+        "test/differential/int-map/int_map_runtime.c",
+        "test/differential/int-map/run.py"
+      ],
+      "notes": "The admitted Map<Int, Bool> specialization reports key presence separately from the stored value. A stored false value therefore remains present.",
+      "ruleId": "int-map-exists-bool-partial"
     },
     {
       "id": "hxc-stdlib-api-v1:f5f90c5959677f4ddfc9b0b98f9bd0a92ed66f2a184715f1abf4aeba09b53da0",
@@ -30857,33 +31055,30 @@
       "kind": "method",
       "signature": "(key : Int) -> Null<haxe.ds.IntMap.T>",
       "isStatic": false,
-      "owner": "target-source-override",
+      "owner": "runtime-slice",
       "runtimeFeatures": [
-        "alloc",
-        "array",
-        "gc",
-        "object"
+        "int-map"
       ],
       "profiles": [
-        "portable",
-        "metal"
+        "portable"
       ],
       "environments": [
-        "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "hosted"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T03",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Known element/key/value types should specialize to direct typed storage; allocation and tracing remain explicit reachability decisions.",
-      "ruleId": "collection-storage"
+      "tests": [
+        "test/differential/int-map/generated/Main.hx",
+        "test/differential/int-map/int_map_runtime.c",
+        "test/differential/int-map/run.py"
+      ],
+      "notes": "The admitted Map<Int, Bool> specialization returns a tagged Null<Bool>. This exact carrier distinguishes missing keys from stored false values without boxing.",
+      "ruleId": "int-map-get-bool-partial"
     },
     {
       "id": "hxc-stdlib-api-v1:6ef108865f79a6c061e194990ff9510dedae79b1507d991c241d0942bba4d157",
@@ -31013,33 +31208,30 @@
       "kind": "constructor",
       "signature": "() -> Void",
       "isStatic": false,
-      "owner": "target-source-override",
+      "owner": "runtime-slice",
       "runtimeFeatures": [
-        "alloc",
-        "array",
-        "gc",
-        "object"
+        "int-map"
       ],
       "profiles": [
-        "portable",
-        "metal"
+        "portable"
       ],
       "environments": [
-        "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "hosted"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T03",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Known element/key/value types should specialize to direct typed storage; allocation and tracing remain explicit reachability decisions.",
-      "ruleId": "collection-storage"
+      "tests": [
+        "test/differential/int-map/generated/Main.hx",
+        "test/differential/int-map/int_map_runtime.c",
+        "test/differential/int-map/run.py"
+      ],
+      "notes": "The admitted Map<Int, Bool> specialization creates one empty reference-counted table. Local assignments retain the same mutable identity.",
+      "ruleId": "int-map-new-bool-partial"
     },
     {
       "id": "hxc-stdlib-api-v1:17f8eb32f0e6a4a51de698cbdce915f67244cb016486f2d5ecc5f0d2bbea22d0",
@@ -31052,33 +31244,30 @@
       "kind": "method",
       "signature": "(key : Int) -> Bool",
       "isStatic": false,
-      "owner": "target-source-override",
+      "owner": "runtime-slice",
       "runtimeFeatures": [
-        "alloc",
-        "array",
-        "gc",
-        "object"
+        "int-map"
       ],
       "profiles": [
-        "portable",
-        "metal"
+        "portable"
       ],
       "environments": [
-        "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "hosted"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T03",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Known element/key/value types should specialize to direct typed storage; allocation and tracing remain explicit reachability decisions.",
-      "ruleId": "collection-storage"
+      "tests": [
+        "test/differential/int-map/generated/Main.hx",
+        "test/differential/int-map/int_map_runtime.c",
+        "test/differential/int-map/run.py"
+      ],
+      "notes": "The admitted Map<Int, Bool> specialization removes one key without breaking later keys in the same collision chain. Every alias observes the removal.",
+      "ruleId": "int-map-remove-bool-partial"
     },
     {
       "id": "hxc-stdlib-api-v1:6f237e839a1c6b6f04b17bd76903cca0b4199b7b1948b48b3c3b8d18fefcd6ad",
@@ -31091,33 +31280,30 @@
       "kind": "method",
       "signature": "(key : Int, value : haxe.ds.IntMap.T) -> Void",
       "isStatic": false,
-      "owner": "target-source-override",
+      "owner": "runtime-slice",
       "runtimeFeatures": [
-        "alloc",
-        "array",
-        "gc",
-        "object"
+        "int-map"
       ],
       "profiles": [
-        "portable",
-        "metal"
+        "portable"
       ],
       "environments": [
-        "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "hosted"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T03",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Known element/key/value types should specialize to direct typed storage; allocation and tracing remain explicit reachability decisions.",
-      "ruleId": "collection-storage"
+      "tests": [
+        "test/differential/int-map/generated/Main.hx",
+        "test/differential/int-map/int_map_runtime.c",
+        "test/differential/int-map/run.py"
+      ],
+      "notes": "The admitted Map<Int, Bool> specialization inserts or replaces exact Int and Bool values. Growth preserves all entries or leaves the old table unchanged.",
+      "ruleId": "int-map-set-bool-partial"
     },
     {
       "id": "hxc-stdlib-api-v1:95c27fa2ee8302bb937bca555631b8a24be80eecfa955788b3e0e9a2b3186045",

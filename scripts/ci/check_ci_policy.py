@@ -128,7 +128,6 @@ REQUIRED_GATE_FILES = (
     "test/differential/int-map/generated/Main.hx",
     "test/differential/int-map/generated/oracle.hxml",
     "test/differential/int-map/int_map_runtime.c",
-    "test/differential/int-map/negative/get/Main.hx",
     "test/differential/int-map/negative/value_type/Main.hx",
     "test/differential/int-map/run.py",
     "test/differential/string-map/case.json",
@@ -1970,8 +1969,11 @@ def validate() -> list[str]:
         "render_server_pair",
         "-fsanitize=address,undefined",
         "hxc_int_bool_map_ref_exists",
+        "hxc_int_bool_map_ref_get",
+        "hxc_int_bool_map_ref_remove",
+        "hxc_int_bool_map_ref_clear",
         "runtime-none",
-        "IntMap.get:not-yet-admitted",
+        'runtime(feature="int-map",operation="get")',
         "nm",
     ):
         if required_int_map_contract not in int_map_runner:
