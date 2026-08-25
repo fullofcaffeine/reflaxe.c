@@ -1468,6 +1468,186 @@ def check_interface_reference_records(*, requested_toolchain: str) -> None:
         )
 
 
+def check_array_literal_flow(*, requested_toolchain: str) -> None:
+    """Keep earlier Array elements valid when a later element branches."""
+    fixture = FIXTURES / "array_literal_flow"
+    oracle = run_bounded_process(
+        [development_tool("haxe"), "-cp", str(fixture), "-main", "Main", "--interp"],
+        cwd=ROOT,
+        env=haxe_environment(),
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    if oracle.returncode != 0 or oracle.stdout or oracle.stderr:
+        raise AggregateLoweringFailure(
+            "Array-literal flow Eval oracle failed\n"
+            f"stdout:\n{oracle.stdout}\nstderr:\n{oracle.stderr}"
+        )
+
+    with tempfile.TemporaryDirectory(prefix="hxc-array-literal-flow-") as temporary:
+        root = Path(temporary)
+        port = available_port()
+        endpoint = str(port)
+        server = subprocess.Popen(
+            [development_tool("haxe"), "--wait", endpoint],
+            cwd=ROOT,
+            env=haxe_environment(server=True),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+        try:
+            wait_for_server(server, port)
+            rendered: list[tuple[Path, str]] = []
+            for name in ("server-cold", "server-warm"):
+                output = root / name
+                hxcir = reported_hxcir(
+                    custom_target(
+                        fixture,
+                        output,
+                        main="Main",
+                        connect=endpoint,
+                        hxcir_report=True,
+                        timeout=120,
+                    ),
+                    f"{name} Array-literal flow compile",
+                )
+                rendered.append((output, hxcir))
+        finally:
+            server.terminate()
+            try:
+                server.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                server.kill()
+                server.wait(timeout=5)
+
+        baseline_output, hxcir = rendered[0]
+        warm_output, warm_hxcir = rendered[1]
+        if hxcir != warm_hxcir or generated_tree(baseline_output) != generated_tree(
+            warm_output
+        ):
+            raise AggregateLoweringFailure(
+                "warm-server Array-literal output differed from the cold server build"
+            )
+
+        expected_load_types = {
+            "primitiveValues": ":i32",
+            "stringValues": ":managed-string-utf8",
+            "choiceValues": ':instance("instance.enum.',
+            "recordValues": ':instance("instance.closed-record.',
+        }
+        for function_name, load_type in expected_load_types.items():
+            section = named_function_section(hxcir, "Main", function_name)
+            initialize = section.find(".array-literal-element-0-initialize")
+            load = section.find('.array-literal-element-0-load" result="value.')
+            create = section.find(".array-create-literal")
+            if (
+                initialize == -1
+                or load == -1
+                or load_type not in section[load : load + 220]
+                or not initialize < load < create
+            ):
+                raise AggregateLoweringFailure(
+                    f"{function_name} did not stage and reload its exact first element"
+                )
+
+        straight = named_function_section(hxcir, "Main", "straightLine")
+        if (
+            "array-literal-element-" in straight
+            or 'arguments=["value.0","value.1","value.2"]' not in straight
+        ):
+            raise AggregateLoweringFailure(
+                "straight-line Array literal gained unnecessary staging"
+            )
+
+        for function_name, cleanup_prefix in (
+            ("stringValues", "string-temporary."),
+            ("choiceValues", "enum-temporary."),
+            ("recordValues", "record-temporary."),
+        ):
+            section = named_function_section(hxcir, "Main", function_name)
+            create_line = next(
+                (
+                    line
+                    for line in section.splitlines()
+                    if ".array-create-literal" in line
+                ),
+                "",
+            )
+            if (
+                cleanup_prefix not in section
+                or cleanup_prefix not in create_line
+                or "cleanup=[]" in create_line
+            ):
+                raise AggregateLoweringFailure(
+                    f"{function_name} lost the earlier managed owner on Array allocation failure"
+                )
+
+        sources = tuple(
+            path.relative_to(baseline_output).as_posix()
+            for path in sorted(baseline_output.rglob("*.c"))
+        )
+        headers = tuple(
+            path.relative_to(baseline_output).as_posix()
+            for path in sorted(baseline_output.rglob("*.h"))
+        )
+        base = CFixtureProject(
+            "array-literal-flow",
+            sources,
+            headers,
+            ("include", "runtime/include"),
+            "",
+            (
+                "array-literal-flow",
+                "generated-executable",
+                "managed-element-cleanup",
+                "source-order",
+            ),
+        )
+        for optimization in ("-O0", "-O2"):
+            report = run_c_fixture_corpus(
+                suite=f"array-literal-flow-{optimization[1:].lower()}",
+                projects=(base,),
+                fixture_root=baseline_output,
+                build_root=root / "native" / optimization[1:].lower(),
+                repository_root=ROOT,
+                requested_toolchain=requested_toolchain,
+                strict_flags=(*C11_STRICT_FLAGS, optimization),
+            )
+            validate_report(report, required_coverage=frozenset(base.coverage))
+
+        sanitized = CFixtureProject(
+            "array-literal-flow-sanitized",
+            base.sources,
+            base.headers,
+            base.include_directories,
+            base.expected_stdout,
+            (*base.coverage, "asan-ubsan"),
+            link_arguments=("-fsanitize=address,undefined",),
+        )
+        sanitizer_report = run_c_fixture_corpus(
+            suite="array-literal-flow-sanitized",
+            projects=(sanitized,),
+            fixture_root=baseline_output,
+            build_root=root / "sanitized",
+            repository_root=ROOT,
+            requested_toolchain=requested_toolchain,
+            strict_flags=(
+                *C11_STRICT_FLAGS,
+                "-O1",
+                "-g",
+                "-fno-omit-frame-pointer",
+                "-fno-sanitize-recover=all",
+                "-fsanitize=address,undefined",
+            ),
+        )
+        validate_report(
+            sanitizer_report, required_coverage=frozenset(sanitized.coverage)
+        )
+
+
 def check_mutable_record_borrow(
     *, requested_toolchain: str, connect: str | None = None
 ) -> None:
@@ -2066,6 +2246,7 @@ def parse_args(arguments: Iterable[str]) -> argparse.Namespace:
     parser.add_argument("--native-only", action="store_true")
     parser.add_argument("--managed-optional-only", action="store_true")
     parser.add_argument("--mutable-borrow-only", action="store_true")
+    parser.add_argument("--array-literal-flow-only", action="store_true")
     return parser.parse_args(list(arguments))
 
 
@@ -2082,6 +2263,10 @@ def main(arguments: Iterable[str] = ()) -> int:
         if args.mutable_borrow_only:
             check_mutable_record_matrix(requested_toolchain=args.toolchain)
             print("aggregate-lowering: OK: mutable record borrow focused matrix passed")
+            return 0
+        if args.array_literal_flow_only:
+            check_array_literal_flow(requested_toolchain=args.toolchain)
+            print("aggregate-lowering: OK: Array-literal flow focused matrix passed")
             return 0
         if args.native_only:
             report = snapshot_report()
@@ -2108,6 +2293,7 @@ def main(arguments: Iterable[str] = ()) -> int:
         check_managed_optional(requested_toolchain=args.toolchain)
         check_class_reference_records(requested_toolchain=args.toolchain)
         check_interface_reference_records(requested_toolchain=args.toolchain)
+        check_array_literal_flow(requested_toolchain=args.toolchain)
         check_mutable_record_matrix(requested_toolchain=args.toolchain)
         check_negative_cases()
     except (

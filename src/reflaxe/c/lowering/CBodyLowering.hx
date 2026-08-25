@@ -12505,7 +12505,7 @@ private class FunctionBuilder {
 		final array = mapping.arrayValue();
 		if (array == null)
 			return unsupported(expression, 'TArrayDecl(non-Array-result:${mapping.cSpelling})');
-		final arguments:Array<String> = [];
+		final stagedArguments:Array<StagedFlowValue> = [];
 		for (index in 0...elements.length) {
 			final element = elements[index];
 			var loweredElement = coerce(lowerValue(element, array.element), array.element, element.pos, 'TArrayDecl(element:$index)');
@@ -12517,8 +12517,9 @@ private class FunctionBuilder {
 			loweredElement = stabilizeFreshManagedBytes(loweredElement, element.pos, 'array-literal-element-$index');
 			loweredElement = stabilizeFreshManagedEnum(loweredElement, element.pos, 'array-literal-element-$index');
 			loweredElement = stabilizeFreshManagedAggregate(loweredElement, element.pos, 'array-literal-element-$index');
-			arguments.push(loweredElement.id);
+			stagedArguments.push(stageFlowValue(loweredElement, element, laterExpressionCreatesFlow(elements, index), 'array-literal-element-$index'));
 		}
+		final arguments = restoreCallArguments(stagedArguments, "array-literal-element");
 		final source = sourceSpan(expression.pos);
 		final result:HxcIRResult = {id: nextValueId(), type: mapping.irType};
 		appendInstruction(result, IRIOCall({
