@@ -401,6 +401,13 @@ HXC_API hxc_status hxc_array_ref_splice_one_discard(
   int32_t position
 );
 
+/** Copy one removed element into an empty result Array, then mutate the source. */
+HXC_API hxc_status hxc_array_ref_splice_one_copy(
+  hxc_array_ref *array,
+  int32_t position,
+  hxc_array_ref *out_removed
+);
+
 /**
  * Insert one copied element using Haxe's signed position rules.
  *

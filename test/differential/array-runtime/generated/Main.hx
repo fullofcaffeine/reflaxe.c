@@ -199,7 +199,7 @@ final class Main {
 		final shiftedEmpty = shiftedIntegers.shift();
 		final splicedIntegers = [10, 20, 30, 40];
 		final splicedIntegersAlias = splicedIntegers;
-		splicedIntegers.splice(1, 1);
+		final removedInteger = splicedIntegers.splice(1, 1);
 		splicedIntegers.splice(-1, 1);
 		splicedIntegers.splice(99, 1);
 		splicedIntegers.splice(-99, 1);
@@ -207,7 +207,7 @@ final class Main {
 		emptySplice.splice(0, 1);
 		final splicedLabels = labels.copy();
 		final splicedLabelsAlias = splicedLabels;
-		splicedLabels.splice(1, 1);
+		final removedLabel = splicedLabels.splice(1, 1);
 		final insertedIntegers = [20, 30];
 		final insertedIntegersAlias = insertedIntegers;
 		insertedIntegers.insert(0, 10);
@@ -368,9 +368,13 @@ final class Main {
 			|| shiftedEight != 8
 			|| shiftedEmpty != null
 			|| shiftedIntegersAlias.length != 0
+			|| removedInteger.length != 1
+			|| removedInteger[0] != 20
 			|| splicedIntegersAlias.length != 1
 			|| splicedIntegersAlias[0] != 30
 			|| emptySplice.length != 0
+			|| removedLabel.length != 1
+			|| removedLabel[0] != "café"
 			|| splicedLabelsAlias.length != 2
 			|| splicedLabelsAlias[0] != "ready"
 			|| splicedLabelsAlias[1] != "a\u0000b"

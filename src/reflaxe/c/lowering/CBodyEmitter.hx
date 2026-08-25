@@ -6013,6 +6013,76 @@ class CBodyEmitter {
 			return fail('managed Array call `${instruction.id}` in `${fn.id}` has no finalized result temporary');
 		addLineDirective(statements, instruction.source, lineDirectives);
 		switch operation {
+			case "splice-one-copy":
+				if (call.arguments.length != 2)
+					return fail('Array splice-one-copy `${instruction.id}` in `${fn.id}` lost its receiver or position');
+				final instanceId = requireArrayInstanceId(result.type, instruction.id, fn.id);
+				final elementType = requireArrayElementType(instanceId);
+				final arrayPlan = requireArrayPlan(instanceId);
+				final resultDeclaration = typedDeclarator(result.type, DName(temporary));
+				statements.push(SDecl({
+					storage: [],
+					alignments: [],
+					type: resultDeclaration.type,
+					declarator: resultDeclaration.declarator,
+					initializer: IExpr(ENull),
+					attributes: []
+				}));
+				final elementDeclaration = typedDeclarator(elementType, DName(null));
+				final elementOperations = if (arrayPlan.hasLifecycle()) {
+					if (arrayPlan.copyName == null || arrayPlan.assignName == null || arrayPlan.destroyName == null)
+						return fail('managed Array `$instanceId` lost its finalized lifecycle callback names');
+					ECompoundLiteral(new CType(TNamed(CBodyRuntimeNames.identifier(CBRNArrayElementOpsType))), DName(null), IList([
+						{designators: [], value: IExpr(ESizeOfType(elementDeclaration.type, elementDeclaration.declarator))},
+						{designators: [], value: IExpr(EAlignOfType(elementDeclaration.type, elementDeclaration.declarator))},
+						{designators: [], value: IExpr(ENull)},
+						{designators: [], value: IExpr(EIdentifier(arrayPlan.copyName))},
+						{designators: [], value: IExpr(EIdentifier(arrayPlan.assignName))},
+						{designators: [], value: IExpr(EIdentifier(arrayPlan.destroyName))}
+					]));
+				} else ECompoundLiteral(new CType(TNamed(CBodyRuntimeNames.identifier(CBRNArrayElementOpsType))), DName(null), IList([
+					{designators: [], value: IExpr(ESizeOfType(elementDeclaration.type, elementDeclaration.declarator))},
+					{designators: [], value: IExpr(EAlignOfType(elementDeclaration.type, elementDeclaration.declarator))},
+					{designators: [], value: IExpr(ENull)},
+					{designators: [], value: IExpr(ENull)},
+					{designators: [], value: IExpr(ENull)},
+					{designators: [], value: IExpr(ENull)}
+				]));
+				if (arrayPlan.prepared.managedByCollector) {
+					final descriptor = arrayPlan.descriptorName;
+					final program = managedProgram;
+					if (descriptor == null || program == null)
+						return fail('collector-managed Array `$instanceId` lost its descriptor or program context');
+					emitStatusAbort(statements, ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNGcAllocate)), [
+						EUnary(AddressOf, EIdentifier(program.collector)),
+						EUnary(AddressOf, EIdentifier(descriptor)),
+						ECast(new CType(TVoid), DPointer(DPointer(DName(null), []), []), EUnary(AddressOf, EIdentifier(temporary)))
+					]), boundsAbortName, instruction.id, fn.id);
+					emitStatusAbort(statements, ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNArrayInitInPlace)), [
+						ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNDefaultAllocator)), []),
+						elementOperations,
+						EIdentifier(temporary)
+					]), boundsAbortName, instruction.id, fn.id);
+				} else {
+					final createCall = if (arrayPlan.hasLifecycle()) ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNArrayCreate)),
+						[
+							ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNDefaultAllocator)), []),
+							elementOperations,
+							EUnary(AddressOf, EIdentifier(temporary))
+						]) else ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNArrayCreateTrivial)), [
+							ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNDefaultAllocator)), []),
+							ESizeOfType(elementDeclaration.type, elementDeclaration.declarator),
+							EAlignOfType(elementDeclaration.type, elementDeclaration.declarator),
+							EUnary(AddressOf, EIdentifier(temporary))
+					]);
+					emitStatusAbort(statements, createCall, boundsAbortName, instruction.id, fn.id);
+				}
+				emitStatusAbort(statements, ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNArraySpliceOneCopy)), [
+					requireValue(values, call.arguments[0], fn.id),
+					requireValue(values, call.arguments[1], fn.id),
+					EIdentifier(temporary)
+				]), boundsAbortName, instruction.id, fn.id);
+				values.set(result.id, EIdentifier(temporary));
 			case "create-literal":
 				final instanceId = requireArrayInstanceId(result.type, instruction.id, fn.id);
 				final elementType = requireArrayElementType(instanceId);

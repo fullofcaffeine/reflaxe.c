@@ -1906,7 +1906,7 @@
       "notes": "The admitted `resize(0)` form clears an existing Array in place, preserves alias identity, and destroys managed elements in reverse order through their exact lifecycle callbacks. Only a literal zero is accepted because it proves the operation cannot grow and therefore needs no target-typed default element. Dynamic and nonzero lengths remain source-positioned failures until growth and rollback have complete representation-aware evidence."
     },
     {
-      "id": "array-splice-one-discard-partial",
+      "id": "array-splice-one-partial",
       "selector": {
         "module": "Array",
         "type": "Array",
@@ -1936,10 +1936,9 @@
       ],
       "tests": [
         "test/differential/array-runtime/generated/Main.hx",
-        "test/differential/array-runtime/negative/splice_return/Main.hx",
         "test/differential/array-runtime/run.py"
       ],
-      "notes": "The admitted `splice(pos, 1)` form mutates one shared Array when its returned Array is discarded. It evaluates the receiver and position once, applies Haxe's negative-position and out-of-range rules, destroys one removed managed element exactly once, preserves remaining order, and allocates no result container. Other lengths and any use of the returned Array remain source-positioned failures until returned-Array construction, ownership, and rollback have complete evidence."
+      "notes": "The admitted `splice(pos, 1)` form mutates one shared Array and either discards or returns the one-element removed Array. It evaluates the receiver and position once, applies Haxe's negative-position and out-of-range rules, preserves aliases and remaining order, and copies managed ownership into the result before mutating the source so allocation or copy failure preserves the original sequence. Other lengths remain source-positioned failures."
     },
     {
       "id": "array-sort-partial",
@@ -4584,11 +4583,10 @@
       ],
       "tests": [
         "test/differential/array-runtime/generated/Main.hx",
-        "test/differential/array-runtime/negative/splice_return/Main.hx",
         "test/differential/array-runtime/run.py"
       ],
-      "notes": "The admitted `splice(pos, 1)` form mutates one shared Array when its returned Array is discarded. It evaluates the receiver and position once, applies Haxe's negative-position and out-of-range rules, destroys one removed managed element exactly once, preserves remaining order, and allocates no result container. Other lengths and any use of the returned Array remain source-positioned failures until returned-Array construction, ownership, and rollback have complete evidence.",
-      "ruleId": "array-splice-one-discard-partial"
+      "notes": "The admitted `splice(pos, 1)` form mutates one shared Array and either discards or returns the one-element removed Array. It evaluates the receiver and position once, applies Haxe's negative-position and out-of-range rules, preserves aliases and remaining order, and copies managed ownership into the result before mutating the source so allocation or copy failure preserves the original sequence. Other lengths remain source-positioned failures.",
+      "ruleId": "array-splice-one-partial"
     },
     {
       "id": "hxc-stdlib-api-v1:662424a3147c9931b409f420d7e407470f6f414f5b9799779017f4cb638bed35",

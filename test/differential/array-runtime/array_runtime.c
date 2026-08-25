@@ -1205,6 +1205,27 @@ static int hxc_test_shared_array(
   arena->force_failure = false;
   HXC_TEST_CHECK(managed_copy == NULL && managed->value.length == 2u);
 
+  /* Returned splice copies before mutation, so copy failure is source-atomic. */
+  HXC_TEST_CHECK(
+    hxc_array_ref_create(*allocator, managed_elements, &managed_copy)
+      == HXC_STATUS_OK
+  );
+  lifecycle.copy_failure_armed = true;
+  lifecycle.copies_before_failure = 0u;
+  HXC_TEST_CHECK(
+    hxc_array_ref_splice_one_copy(managed, 0, managed_copy)
+      == HXC_STATUS_OUT_OF_MEMORY
+  );
+  lifecycle.copy_failure_armed = false;
+  HXC_TEST_CHECK(
+    managed->value.length == 2u
+    && managed_copy->value.length == 0u
+    && first_object.references == 2u
+    && second_object.references == 2u
+  );
+  HXC_TEST_CHECK(hxc_array_ref_release(managed_copy) == HXC_STATUS_OK);
+  managed_copy = NULL;
+
   HXC_TEST_CHECK(
     hxc_array_ref_get_copy(managed, 0u, &managed_output) == HXC_STATUS_OK
   );

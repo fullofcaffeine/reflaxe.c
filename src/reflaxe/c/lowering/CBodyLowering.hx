@@ -3274,6 +3274,7 @@ private class FunctionPreparer {
 	public static function parameterRetainedOnlyBySelfField(body:TypedExpr, compilerId:Int):Bool {
 		var safe = true;
 		var retained = false;
+		var forwardedToConstructor = false;
 		function visit(expression:TypedExpr):Void {
 			if (!safe)
 				return;
@@ -3293,9 +3294,12 @@ private class FunctionPreparer {
 				case TThrow(value) if (isDirectParameterValue(value, compilerId)):
 					safe = false;
 				case TNew(_, _, arguments):
-					for (argument in arguments)
-						if (!isDirectParameterValue(argument, compilerId))
+					for (argument in arguments) {
+						if (isDirectParameterValue(argument, compilerId))
+							forwardedToConstructor = true;
+						else
 							visit(argument);
+					}
 					return;
 				case TFunction(_) if (referencesParameter(expression, compilerId)):
 					safe = false;
@@ -3305,7 +3309,7 @@ private class FunctionPreparer {
 				TypedExprTools.iter(expression, visit);
 		}
 		visit(body);
-		return safe && retained;
+		return safe && (retained || forwardedToConstructor);
 	}
 
 	/** Recognize the typed left side of an assignment to the object being built. */
@@ -12284,16 +12288,33 @@ private class FunctionBuilder {
 			case "splice":
 				if (arguments.length != 2)
 					return unsupported(expression, 'TCall(Array.splice:argument-count=${arguments.length})');
-				if (materializeResult)
-					return unsupported(expression, "TCall(Array.splice:returned-Array-not-yet-admitted)");
 				if (constantInt(arguments[1]) != 1)
-					return unsupported(arguments[1], "TCall(Array.splice:only-discarded-one-element-form-admitted)");
+					return unsupported(arguments[1], "TCall(Array.splice:only-one-element-form-admitted)");
 				final indexMapping = bodyValueType(arguments[0].t, arguments[0].pos, "TCall(Array.splice:index-type)");
 				if (typeKey(indexMapping.irType) != typeKey(IRTInt(32, true)))
 					return unsupported(arguments[0], 'TCall(Array.splice:index-must-be-Haxe-Int:${indexMapping.cSpelling})');
 				final index = coerce(lowerValue(arguments[0], indexMapping), indexMapping, arguments[0].pos, "TCall(Array.splice:index)");
 				final callReceiver = restoreStagedLoweredValue(stagedReceiver, "array-splice-one-discard-receiver-load");
 				final source = sourceSpan(expression.pos);
+				if (materializeResult) {
+					final resultMapping = bodyValueType(expression.t, expression.pos, "TCall(Array.splice:result-type)");
+					final resultArray = resultMapping.arrayValue();
+					if (resultArray == null || resultArray.semanticKey != array.semanticKey)
+						return unsupported(expression, 'TCall(Array.splice:result-specialization-mismatch:${resultMapping.cSpelling})');
+					final result:HxcIRResult = {id: nextValueId(), type: resultMapping.irType};
+					appendInstruction(result, IRIOCall({
+						dispatch: IRCDRuntime("array", "splice-one-copy"),
+						arguments: [callReceiver.id, index.id],
+						returnType: result.type,
+						failure: managedArrayFailure()
+					}), source, "array-splice-one-copy");
+					registerValueTemporary(result.id, "array-splice-one-copy-result");
+					if (!array.managedByCollector)
+						freshManagedArrayValueIds.set(result.id, true);
+					runtimeRequirements.push(new CBodyRuntimeRequirement("array", "splice-one-copy",
+						"ordinary Haxe Array.splice(pos, 1) returned Array with failure-atomic source mutation", source, expression.pos));
+					return {id: result.id, type: result.type, mapping: resultMapping};
+				}
 				appendInstruction(null, IRIOCall({
 					dispatch: IRCDRuntime("array", "splice-one-discard"),
 					arguments: [callReceiver.id, index.id],

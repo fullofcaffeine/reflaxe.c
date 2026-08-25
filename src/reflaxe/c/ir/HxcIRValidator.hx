@@ -3399,6 +3399,15 @@ private class HxcIRValidationState {
 					|| call.returnType != IRTVoid) {
 					add(path, "discarded Array.splice(pos, 1) requires one managed Array plus a Haxe Int position and returns Void", source);
 				}
+			case "splice-one-copy":
+				if (argumentTypes.length != 2
+					|| receiverElement == null
+					|| secondArgumentType == null
+					|| typeKey(secondArgumentType) != typeKey(IRTInt(32, true))
+					|| argumentTypes[0] == null
+					|| typeKey(call.returnType) != typeKey(argumentTypes[0])) {
+					add(path, "returned Array.splice(pos, 1) requires one managed Array plus a Haxe Int position and returns the same specialization", source);
+				}
 			case "insert":
 				if (argumentTypes.length != 3
 					|| receiverElement == null

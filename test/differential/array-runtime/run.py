@@ -315,11 +315,12 @@ def validate_generated_hxcir(hxcir: str) -> None:
         'runtime(feature="array",operation="copy")',
         'runtime(feature="array",operation="length")',
         'runtime(feature="array",operation="get-checked")',
-		'runtime(feature="array",operation="insert")',
+        'runtime(feature="array",operation="insert")',
         'runtime(feature="array",operation="push")',
         'runtime(feature="array",operation="pop")',
         'runtime(feature="array",operation="shift")',
         'runtime(feature="array",operation="splice-one-discard")',
+        'runtime(feature="array",operation="splice-one-copy")',
         'runtime(feature="array",operation="resize-zero")',
         'runtime(feature="array",operation="sort")',
         'function-reference target="function.lambda.function.Main.main.',
@@ -654,11 +655,15 @@ def validate_generated_hxcir(hxcir: str) -> None:
             "Array.shift coverage no longer contains primitive and managed "
             "present, repeated, and empty ownership transfers"
         )
-    if entry.count('runtime(feature="array",operation="splice-one-discard")') != 6:
+    if entry.count('runtime(feature="array",operation="splice-one-discard")') != 4:
         raise ArrayRuntimeFailure(
-            "discarded Array.splice coverage no longer contains primitive "
-            "middle/negative/out-of-range/clamped/empty cases plus one managed "
-            "String removal"
+            "discarded Array.splice coverage no longer contains negative, "
+            "out-of-range, clamped, and empty cases"
+        )
+    if entry.count('runtime(feature="array",operation="splice-one-copy")') != 2:
+        raise ArrayRuntimeFailure(
+            "returned Array.splice coverage no longer contains primitive and "
+            "managed String ownership transfers"
         )
     if (
         entry.count('runtime(feature="array",operation="resize-zero")') != 2
@@ -1126,7 +1131,6 @@ def run_generated_negative_cases(root: Path) -> None:
         "resize_dynamic": "TCall(Array.resize:only-literal-zero-admitted)",
         "resize_nonzero": "TCall(Array.resize:only-literal-zero-admitted)",
         "sort_capturing_comparator": "TFunction(capturing-closure:outer-local:direction)",
-        "splice_return": "TCall(Array.splice:returned-Array-not-yet-admitted)",
     }
     for name, marker in expected.items():
         output = root / f"negative-{name}"

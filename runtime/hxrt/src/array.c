@@ -968,6 +968,51 @@ hxc_status hxc_array_ref_splice_one_discard(
   return hxc_array_remove_at(&array->value, index);
 }
 
+hxc_status hxc_array_ref_splice_one_copy(
+  hxc_array_ref *array,
+  int32_t position,
+  hxc_array_ref *out_removed
+) {
+  int64_t normalized;
+  size_t index;
+  hxc_status status;
+
+  if (!hxc_array_ref_is_valid(array)
+      || !hxc_array_ref_is_valid(out_removed)
+      || array == out_removed
+      || out_removed->value.length != 0u
+      || array->value.elements.size != out_removed->value.elements.size
+      || array->value.elements.alignment != out_removed->value.elements.alignment
+      || array->value.elements.context != out_removed->value.elements.context
+      || array->value.elements.copy != out_removed->value.elements.copy
+      || array->value.elements.assign != out_removed->value.elements.assign
+      || array->value.elements.destroy != out_removed->value.elements.destroy) {
+    return HXC_STATUS_INVALID_ARGUMENT;
+  }
+  if (array->value.length > (size_t)INT32_MAX) {
+    return HXC_STATUS_SIZE_OVERFLOW;
+  }
+  normalized = (int64_t)position;
+  if (normalized < 0) {
+    normalized += (int64_t)array->value.length;
+    if (normalized < 0) {
+      normalized = 0;
+    }
+  }
+  index = (size_t)normalized;
+  if (index >= array->value.length) {
+    return HXC_STATUS_OK;
+  }
+  status = hxc_array_push_copy(
+    &out_removed->value,
+    hxc_array_slot_const(&array->value, index)
+  );
+  if (status != HXC_STATUS_OK) {
+    return status;
+  }
+  return hxc_array_remove_at(&array->value, index);
+}
+
 hxc_status hxc_array_ref_insert_copy(
   hxc_array_ref *array,
   int32_t position,

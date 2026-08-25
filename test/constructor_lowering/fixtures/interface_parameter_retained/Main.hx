@@ -78,6 +78,20 @@ final class RetainedScoreMirror {
 		return source.score(seed);
 }
 
+/** Forwards an interface directly to the child that owns its retained edge. */
+final class ForwardedScoreOwner {
+	final mirror:RetainedScoreMirror;
+
+	/** Let the prepared child constructor prove and own the retained interface. */
+	public function new(source:ScoreSource) {
+		mirror = new RetainedScoreMirror(source);
+	}
+
+	/** Dispatch through the child after this forwarding constructor returned. */
+	public function read(seed:Int):Int
+		return mirror.read(seed);
+}
+
 /**
  * Owns one interface value beyond the constructor call that supplied it.
  *
@@ -199,12 +213,13 @@ final class Main {
 	static function main():Void {
 		final observed = inspect(new FixedScore(40));
 		final value = build();
+		final forwarded = new ForwardedScoreOwner(new FixedScore(40));
 		value.advance();
 		value.advance();
 		value.installDirect(40);
 		forceCollectionPressure();
-		while (observed != 42 || value.advances != 2 || value.read(2) != 42 || value.readMirror(2) != 42 || value.readDirect(2) != 42
-			|| value.readDraft() != 42) {}
+		while (observed != 42 || forwarded.read(2) != 42 || value.advances != 2 || value.read(2) != 42 || value.readMirror(2) != 42
+			|| value.readDirect(2) != 42 || value.readDraft() != 42) {}
 		value.keepDraft();
 		value.replaceDraft(39);
 		forceCollectionPressure();

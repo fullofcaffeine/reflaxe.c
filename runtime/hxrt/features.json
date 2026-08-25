@@ -144,7 +144,7 @@
         "referencePath": "docs/hxrt.md",
         "selectionRoots": [
           {
-            "description": "A reachable ordinary Haxe Array length, checked indexing, insert, push, pop, shift, or discarded one-element splice operation.",
+            "description": "A reachable ordinary Haxe Array length, checked indexing, insert, push, pop, shift, or one-element splice operation.",
             "id": "collection-operation",
             "kind": "hxc-ir-operation"
           },
@@ -161,6 +161,11 @@
           {
             "description": "A reachable ordinary Haxe Array.sort call with an admitted exact typed comparator.",
             "id": "sort",
+            "kind": "hxc-ir-operation"
+          },
+          {
+            "description": "A reachable ordinary Haxe Array.splice(pos, 1) that returns the removed typed Array.",
+            "id": "splice-one-copy",
             "kind": "hxc-ir-operation"
           },
           {
@@ -211,6 +216,7 @@
         "hxc_array_ref_set_copy",
         "hxc_array_ref_shift_move",
         "hxc_array_ref_sort",
+        "hxc_array_ref_splice_one_copy",
         "hxc_array_ref_splice_one_discard",
         "hxc_array_remove_at",
         "hxc_array_reserve",
@@ -220,13 +226,13 @@
       ],
       "artifacts": [
         {
-          "sourceSha256": "ba36d8bd4fe5999cdf4866c7e7d0a95dba0f7cd88f9b6b23939f156293cecdf6",
+          "sourceSha256": "15f55b87b100b5087cdf71f30a1c8284196de0ce27aef5988a579603c97d08fa",
           "kind": "runtime-header",
           "outputPath": "runtime/include/hxrt/array.h",
           "sourcePath": "runtime/hxrt/include/hxrt/array.h"
         },
         {
-          "sourceSha256": "6b7947486d6f0c2dc0d78ba05af9d0a3974ec0737e45e2e92d46799d8a36ba41",
+          "sourceSha256": "4a544ac49331b2fcaf3e8ee67ed3fa3c9d7d060d0834f350efbee6f9c594d980",
           "kind": "runtime-source",
           "outputPath": "runtime/src/array.c",
           "sourcePath": "runtime/hxrt/src/array.c"
@@ -1425,7 +1431,7 @@
     "releaseProvenance": {
       "runtimeCStandard": "c11",
       "sourceHashAlgorithm": "sha256",
-      "sourceSetSha256": "cd901a675778cad5a7683ba4b9f5084b8ac4345fea335bb78288189ce693acae",
+      "sourceSetSha256": "5bede905a84e16fa6fff2931f454fb4905e66082105e00220737c912163faac8",
       "publicHeaderCppStandard": "c++17"
     },
     "generatedCodeCompatibility": "same-major",
