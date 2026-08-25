@@ -44,7 +44,7 @@ private enum HxcIRDispatchLayoutKind {
 
 /** Validates the semantic invariants required before any HxcIR reaches C AST lowering. */
 class HxcIRValidator {
-	public static inline final SCHEMA_VERSION = 24;
+	public static inline final SCHEMA_VERSION = 25;
 
 	public function new() {}
 
@@ -970,6 +970,27 @@ private class HxcIRValidationState {
 						add(borrowPath, 'borrowed interface-record parameter `$parameterId` must be a direct record', parameter.source);
 				}
 		}
+		final mutableAggregateBorrowParameterIds = fn.mutableAggregateBorrowParameterIds == null ? [] : fn.mutableAggregateBorrowParameterIds;
+		for (index => parameterId in mutableAggregateBorrowParameterIds) {
+			final borrowPath = '$path.mutableAggregateBorrowParameter:$index';
+			validateStableId(parameterId, borrowPath, fn.source);
+			if (borrowedIds.exists(parameterId)) {
+				add(borrowPath, 'duplicate borrowed reference parameter `$parameterId`', fn.source);
+				continue;
+			}
+			borrowedIds.set(parameterId, true);
+			final parameter = parametersById.get(parameterId);
+			if (parameter == null) {
+				add(borrowPath, 'mutable aggregate borrow `$parameterId` is not a function parameter', fn.source);
+			} else
+				switch parameter.type {
+					case IRTPointer(IRTInstance(instanceId), false):
+						if (!isDirectAggregateInstance(instanceId))
+							add(borrowPath, 'mutable aggregate borrow `$parameterId` must point to one exact direct record', parameter.source);
+					case _:
+						add(borrowPath, 'mutable aggregate borrow `$parameterId` must be a non-null direct-record pointer', parameter.source);
+				}
+		}
 		for (local in sorted(fn.locals, item -> item.id)) {
 			final localPath = '$path.local:${local.id}';
 			validateStableId(local.id, '$localPath.id', local.source);
@@ -1071,6 +1092,35 @@ private class HxcIRValidationState {
 			}
 			if (local.initialState != IRISUninitialized)
 				add(borrowPath, 'borrowed interface-record local `$localId` must begin uninitialized', local.source);
+		}
+		final mutableAggregateBorrowLocalIds = fn.mutableAggregateBorrowLocalIds == null ? [] : fn.mutableAggregateBorrowLocalIds;
+		for (index => localId in mutableAggregateBorrowLocalIds) {
+			final borrowPath = '$path.mutableAggregateBorrowLocal:$index';
+			validateStableId(localId, borrowPath, fn.source);
+			if (borrowedLocalIds.exists(localId)) {
+				add(borrowPath, 'duplicate borrowed reference local `$localId`', fn.source);
+				continue;
+			}
+			borrowedLocalIds.set(localId, true);
+			final local = locals.get(localId);
+			if (local == null) {
+				add(borrowPath, 'mutable aggregate borrow local `$localId` is not a function local', fn.source);
+				continue;
+			}
+			switch local.type {
+				case IRTPointer(IRTInstance(instanceId), false):
+					if (!isDirectAggregateInstance(instanceId))
+						add(borrowPath, 'mutable aggregate borrow local `$localId` must point to one exact direct record', local.source);
+				case _:
+					add(borrowPath, 'mutable aggregate borrow local `$localId` must be a non-null direct-record pointer', local.source);
+			}
+			switch local.storage {
+				case IRLSAutomatic:
+				case IRLSStatic | IRLSFrame | IRLSRegion(_):
+					add(borrowPath, 'mutable aggregate borrow local `$localId` must use automatic function storage', local.source);
+			}
+			if (local.initialState != IRISUninitialized)
+				add(borrowPath, 'mutable aggregate borrow local `$localId` must begin uninitialized', local.source);
 		}
 
 		final blocks:Map<String, HxcIRBlock> = [];
@@ -1256,7 +1306,7 @@ private class HxcIRValidationState {
 	/**
 		Prove that every function root names one exact collector-managed value.
 
-		Block parameters are deliberately rejected in schema 24. Their value changes
+		Block parameters are deliberately rejected in schema 25. Their value changes
 		on incoming edges, so they need an edge-owned root update rather than the
 		simpler "store immediately after definition" rule used for parameters and
 		instruction results.
@@ -1264,7 +1314,7 @@ private class HxcIRValidationState {
 	function validateManagedRoots(fn:HxcIRFunction, path:String, values:Map<String, HxcIRTypeRef>, parameters:Map<String, HxcIRParameter>,
 			valueSites:Map<String, HxcIRInstructionSite>, blockParameterIds:Map<String, Bool>):Void {
 		if (fn.managedRoots == null) {
-			add('$path.managedRoots', "function has no explicit managed-root plan for schema 24", fn.source);
+			add('$path.managedRoots', "function has no explicit managed-root plan for schema 25", fn.source);
 			return;
 		}
 		final rootIds:Map<String, Bool> = [];
@@ -1885,9 +1935,24 @@ private class HxcIRValidationState {
 		final borrowedAggregateParameterIds = fn.borrowedAggregateParameterIds == null ? [] : fn.borrowedAggregateParameterIds;
 		for (parameterId in borrowedAggregateParameterIds)
 			borrowedReferenceValues.set(parameterId, true);
+		final mutableAggregateBorrowParameterIds = fn.mutableAggregateBorrowParameterIds == null ? [] : fn.mutableAggregateBorrowParameterIds;
+		for (parameterId in mutableAggregateBorrowParameterIds)
+			borrowedReferenceValues.set(parameterId, true);
 		for (parameter in block.parameters) {
 			available.set(parameter.id, parameter.type);
 		}
+		final mutableAggregateBorrowValueUses:Map<String, Bool> = [];
+		final mutableAggregateBorrowLocalIds = fn.mutableAggregateBorrowLocalIds == null ? [] : fn.mutableAggregateBorrowLocalIds;
+		for (instruction in block.instructions)
+			switch instruction.kind {
+				case IRIOInitialize(IRPLocal(localId), valueId, _, _) if (mutableAggregateBorrowLocalIds.indexOf(localId) != -1):
+					mutableAggregateBorrowValueUses.set(valueId, true);
+				case IRIOCall({dispatch: IRCDDirect(functionId), arguments: arguments}):
+					for (index => valueId in arguments)
+						if (directTargetMutablyBorrowsArgument(functionId, index))
+							mutableAggregateBorrowValueUses.set(valueId, true);
+				case _:
+			}
 
 		final boundsProofs:Map<String, Bool> = [];
 		final nullProofs:Map<String, Bool> = [];
@@ -1901,11 +1966,11 @@ private class HxcIRValidationState {
 			final instructionPath = '$path.instruction:$index:${instruction.id}';
 			validateInstruction(instruction, instructionPath, block, available, locals, blocks, regions, instructionSites, valueSites, boundsProofs,
 				nullProofs, dominanceProofs);
-			validateBorrowedReferenceInstruction(instruction, instructionPath, borrowedReferenceValues, borrowedReferenceLocals);
+			validateBorrowedReferenceInstruction(instruction, instructionPath, available, locals, borrowedReferenceValues, borrowedReferenceLocals);
 			validateBorrowedSpanInstruction(instruction, instructionPath, available, locals, returnedSpanValues);
 			if (instruction.result != null) {
 				available.set(instruction.result.id, instruction.result.type);
-				if (instructionResultBorrowsReference(instruction, borrowedReferenceValues, borrowedReferenceLocals))
+				if (instructionResultBorrowsReference(instruction, borrowedReferenceValues, borrowedReferenceLocals, mutableAggregateBorrowValueUses))
 					borrowedReferenceValues.set(instruction.result.id, true);
 				switch instruction.kind {
 					case IRIOBorrowSpan(_):
@@ -2042,16 +2107,16 @@ private class HxcIRValidationState {
 	}
 
 	/**
-		Enforce caller-owned class and interface reference contracts before C.
+		Enforce caller-owned reference contracts before C.
 
-		A borrowed class pointer or interface pair refers to storage that this
-		function may use during the call but may not keep. Scalar field mutation
-		and interface dispatch are therefore fine; copying the reference into
-		another owner, returning it, or handing it to a callee without the same
-		checked contract is not.
+		A borrowed class pointer, interface pair, or mutable-record pointer refers
+		to storage that this function may use during the call but may not keep.
+		Scalar field mutation and interface dispatch are therefore fine. Copying
+		the reference into another owner, returning it, or handing it to a callee
+		without the same checked contract is not.
 	**/
-	function validateBorrowedReferenceInstruction(instruction:HxcIRInstruction, path:String, borrowed:Map<String, Bool>,
-			borrowedLocals:Map<String, Bool>):Void {
+	function validateBorrowedReferenceInstruction(instruction:HxcIRInstruction, path:String, available:Map<String, HxcIRTypeRef>,
+			locals:Map<String, HxcIRLocal>, borrowed:Map<String, Bool>, borrowedLocals:Map<String, Bool>):Void {
 		function rejectValue(valueId:String, role:String):Void {
 			if (borrowed.exists(valueId))
 				add(path, 'borrowed reference value `$valueId` escapes through $role', instruction.source);
@@ -2065,7 +2130,12 @@ private class HxcIRValidationState {
 		switch instruction.kind {
 			case IRIOStore(IRPLocal(localId), _) if (borrowedLocals.exists(localId)):
 				add(path, 'borrowed reference local `$localId` cannot be reassigned', instruction.source);
-			case IRIOStore(_, valueId):
+			case IRIOStore(place, valueId):
+				if (placeUsesMutableAggregateBorrow(place, borrowed, available)) {
+					final terminalField = terminalPlaceField(place, available, locals);
+					if (terminalField != null && !terminalField.mutable)
+						add(path, 'store cannot change immutable field `${terminalField.name}` through a mutable-record borrow', instruction.source);
+				}
 				rejectValue(valueId, "a store");
 			case IRIOInitialize(IRPLocal(localId), valueId, _, _) if (borrowedLocals.exists(localId)):
 				if (!borrowed.exists(valueId))
@@ -2136,7 +2206,7 @@ private class HxcIRValidationState {
 				}
 	}
 
-	/** Check one direct-call parameter against both admitted borrow carriers. */
+	/** Check one direct-call parameter against every admitted borrow carrier. */
 	function directTargetBorrowsArgument(functionId:String, argumentIndex:Int):Bool {
 		// A constructor's first argument is the address of storage allocated and
 		// owned by its caller. The constructor initializes through that pointer
@@ -2149,9 +2219,20 @@ private class HxcIRValidationState {
 		final parameterId = target.parameters[argumentIndex].id;
 		final borrowedInterfaces = target.borrowedInterfaceParameterIds == null ? [] : target.borrowedInterfaceParameterIds;
 		final borrowedAggregates = target.borrowedAggregateParameterIds == null ? [] : target.borrowedAggregateParameterIds;
+		final mutableAggregates = target.mutableAggregateBorrowParameterIds == null ? [] : target.mutableAggregateBorrowParameterIds;
 		return target.borrowedClassParameterIds.indexOf(parameterId) != -1
 			|| borrowedInterfaces.indexOf(parameterId) != -1
-			|| borrowedAggregates.indexOf(parameterId) != -1;
+			|| borrowedAggregates.indexOf(parameterId) != -1
+			|| mutableAggregates.indexOf(parameterId) != -1;
+	}
+
+	/** Whether one direct argument is the exact mutable-record pointer contract. */
+	function directTargetMutablyBorrowsArgument(functionId:String, argumentIndex:Int):Bool {
+		final target = functions.get(functionId);
+		if (target == null || argumentIndex >= target.parameters.length)
+			return false;
+		final borrowed = target.mutableAggregateBorrowParameterIds;
+		return borrowed != null && borrowed.indexOf(target.parameters[argumentIndex].id) != -1;
 	}
 
 	function borrowedDispatchReceivers(dispatch:HxcIRCallDispatch):Array<String> {
@@ -2162,22 +2243,26 @@ private class HxcIRValidationState {
 		};
 	}
 
-	/** Track class pointers and interface pairs whose lifetime remains tied to borrowed storage. */
-	function instructionResultBorrowsReference(instruction:HxcIRInstruction, borrowed:Map<String, Bool>, borrowedLocals:Map<String, Bool>):Bool {
+	/** Track typed reference carriers whose lifetime remains tied to borrowed storage. */
+	function instructionResultBorrowsReference(instruction:HxcIRInstruction, borrowed:Map<String, Bool>, borrowedLocals:Map<String, Bool>,
+			mutableAggregateBorrowValueUses:Map<String, Bool>):Bool {
 		final result = instruction.result;
 		if (result == null)
 			return false;
 		return switch instruction.kind {
-			case IRIOLoad(IRPLocal(localId)): isBorrowedReferenceCarrier(result.type) && borrowedLocals.exists(localId);
+			case IRIOLoad(place): isBorrowedReferenceCarrier(result.type) && (switch place {
+					case IRPLocal(localId): borrowedLocals.exists(localId);
+					case _: placeUsesBorrowedReference(place, borrowed);
+				});
 			case IRIOBorrowClassField(_):
 				isConcreteClassReference(result.type);
-			case IRIOAddress(_):
-				// A concrete-class pointer produced by taking an address refers to
+			case IRIOAddress(place): // A concrete-class pointer produced by taking an address refers to
 				// direct storage owned by a local, field, or caller. The pointer is
 				// therefore a borrow even when the storage place is itself owned.
 				// Collector-managed references are already pointer values and use a
 				// load rather than taking the address of their pointer slot.
-				isConcreteClassReference(result.type);
+				isConcreteClassReference(result.type) || (isMutableAggregateBorrowPointer(result.type)
+					&& (mutableAggregateBorrowValueUses.exists(result.id) || placeUsesBorrowedReference(place, borrowed)));
 			case IRIOConvert(valueId, _, _, _, _): isBorrowedReferenceCarrier(result.type) && borrowed.exists(valueId);
 			case IRIOConstructInterface(_, objectValueId, _):
 				borrowed.exists(objectValueId);
@@ -2245,6 +2330,19 @@ private class HxcIRValidationState {
 		};
 	}
 
+	/** Whether a place is rooted in one exact call-bounded record pointer. */
+	function placeUsesMutableAggregateBorrow(place:HxcIRPlace, borrowed:Map<String, Bool>, available:Map<String, HxcIRTypeRef>):Bool {
+		return switch place {
+			case IRPDereference(pointerValueId):
+				if (!borrowed.exists(pointerValueId)) false; else switch available.get(pointerValueId) {
+					case null: false;
+					case type: isMutableAggregateBorrowPointer(type);
+				};
+			case IRPField(base, _) | IRPIndex(base, _): placeUsesMutableAggregateBorrow(base, borrowed, available);
+			case IRPLocal(_) | IRPGlobal(_): false;
+		};
+	}
+
 	/**
 	 * Distinguish a borrowed object address from storage owned by that object.
 	 *
@@ -2290,13 +2388,19 @@ private class HxcIRValidationState {
 	/** True for either admitted non-owning reference carrier in function-local storage. */
 	function isBorrowedReferenceCarrier(type:HxcIRTypeRef):Bool {
 		return switch type {
-			case IRTPointer(IRTInstance(instanceId), _):
-				isClassInstance(instanceId);
+			case IRTPointer(IRTInstance(instanceId), _): isClassInstance(instanceId) || isDirectAggregateInstance(instanceId);
 			case IRTInstance(instanceId): isDirectInterfaceReference(instanceId) || typeContainsInterfaceReference(type);
 			case _:
 				false;
 		};
 	}
+
+	/** Recognize the one non-null pointer carrier used for mutable record borrows. */
+	function isMutableAggregateBorrowPointer(type:HxcIRTypeRef):Bool
+		return switch type {
+			case IRTPointer(IRTInstance(instanceId), false): isDirectAggregateInstance(instanceId);
+			case _: false;
+		};
 
 	/** Recognize the by-value object-pointer/table-pointer pair used for one interface. */
 	function isDirectInterfaceReference(instanceId:String):Bool {
@@ -4493,6 +4597,12 @@ private class HxcIRValidationState {
 	}
 
 	function aggregateFieldType(type:HxcIRTypeRef, fieldName:String):Null<HxcIRTypeRef> {
+		final field = aggregateField(type, fieldName);
+		return field == null ? null : field.type;
+	}
+
+	/** Return the declaration metadata for one structural aggregate or class field. */
+	function aggregateField(type:HxcIRTypeRef, fieldName:String):Null<HxcIRTypeField> {
 		return switch type {
 			case IRTInstance(instanceId):
 				final instance = typeInstances.get(instanceId);
@@ -4510,7 +4620,7 @@ private class HxcIRValidationState {
 								null;
 							} else {
 								final field = findAggregateField(fields, fieldName);
-								field == null ? null : field.type;
+								field;
 							}
 						case IRTKClass(layout):
 							final fieldBearing = switch instance.representation {
@@ -4522,9 +4632,9 @@ private class HxcIRValidationState {
 							} else {
 								final field = findAggregateField(layout.fields, fieldName);
 								if (field != null) {
-									field.type;
+									field;
 								} else if (layout.baseInstanceId != null) {
-									aggregateFieldType(IRTInstance(layout.baseInstanceId), fieldName);
+									aggregateField(IRTInstance(layout.baseInstanceId), fieldName);
 								} else {
 									null;
 								}
@@ -4535,6 +4645,15 @@ private class HxcIRValidationState {
 			case _: null;
 		};
 	}
+
+	/** Return metadata only when the final place step names a declared field. */
+	function terminalPlaceField(place:HxcIRPlace, available:Map<String, HxcIRTypeRef>, locals:Map<String, HxcIRLocal>):Null<HxcIRTypeField>
+		return switch place {
+			case IRPField(base, fieldName):
+				final baseType = knownPlaceType(base, available, locals);
+				baseType == null ? null : aggregateField(baseType, fieldName);
+			case IRPLocal(_) | IRPGlobal(_) | IRPDereference(_) | IRPIndex(_, _): null;
+		};
 
 	function isClassInstance(instanceId:String):Bool {
 		final instance = typeInstances.get(instanceId);

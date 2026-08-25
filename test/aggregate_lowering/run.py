@@ -931,6 +931,7 @@ def custom_target(
     connect: str | None = None,
     hxcir_report: bool = False,
     reverse: bool = False,
+    timeout: float = 30,
 ) -> subprocess.CompletedProcess[str]:
     command = [development_tool("haxe")]
     if connect is not None:
@@ -963,7 +964,7 @@ def custom_target(
         check=False,
         capture_output=True,
         text=True,
-        timeout=30,
+        timeout=timeout,
     )
 
 
@@ -1467,19 +1468,167 @@ def check_interface_reference_records(*, requested_toolchain: str) -> None:
         )
 
 
-def check_negative_cases() -> None:
-    cases = {
-        "mutation": "TField(value:anonymous-field-mutation-requires-identity-preserving-alias-analysis)",
-        "identity_equality": "TBinop(OpEq:left-type):closed-record-not-admitted-in-primitive-operation",
-        "dynamic": "TFunction(argument:record):the dynamic source semantic type cannot stand in for a primitive",
-        "void_field": "TFunction(return-type).field:value:Void-not-an-object-type",
-        "interface_reference_escape": "TReturn(owned-class-borrow-escape)",
-    }
-    with tempfile.TemporaryDirectory(prefix="hxc-aggregate-negative-") as temporary:
+def check_mutable_record_borrow(
+    *, requested_toolchain: str, connect: str | None = None
+) -> None:
+    """Prove direct helpers mutate one caller-owned anonymous-record identity."""
+    fixture = FIXTURES / "mutation"
+    oracle = run_bounded_process(
+        [development_tool("haxe"), "-cp", str(fixture), "-main", "Main", "--interp"],
+        cwd=ROOT,
+        env=haxe_environment(),
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    if oracle.returncode != 0 or oracle.stdout or oracle.stderr:
+        raise AggregateLoweringFailure(
+            "mutable-record Eval oracle failed\n"
+            f"stdout:\n{oracle.stdout}\nstderr:\n{oracle.stderr}"
+        )
+
+    with tempfile.TemporaryDirectory(prefix="hxc-mutable-record-borrow-") as temporary:
+        root = Path(temporary)
+        output = root / "generated"
+        hxcir = reported_hxcir(
+            custom_target(
+                fixture,
+                output,
+                main="Main",
+                runtime="none",
+                hxcir_report=True,
+                timeout=120,
+                connect=connect,
+            ),
+            "mutable-record borrow compile",
+        )
+        for marker in (
+            'type=pointer(nonnull,instance("instance.closed-record.',
+            "ownership=mutable-aggregate-borrow",
+            'address place=local("local.',
+            'field(dereference("parameter.0"),"value")',
+            'field(dereference("parameter.0"),"visits")',
+        ):
+            if marker not in hxcir:
+                raise AggregateLoweringFailure(
+                    f"mutable-record borrow HxcIR omitted {marker!r}"
+                )
+        if not re.search(
+            r'local "local\.[0-9]+" type=pointer\(nonnull,instance\("instance\.closed-record\.[^"]+"\)\) '
+            r"ownership=mutable-aggregate-borrow",
+            hxcir,
+        ):
+            raise AggregateLoweringFailure(
+                "mutable-record borrow HxcIR omitted pointer staging across argument flow"
+            )
+
+        header = (output / "include/hxc/program.h").read_text(encoding="utf-8")
+        source = (output / "src/program.c").read_text(encoding="utf-8")
+        for marker in (
+            "struct hxc_MutableRecord *",
+            "(*hxc_l_record).hxc_value",
+            "(*hxc_l_record).hxc_visits",
+            "&hxc_l_record",
+        ):
+            if marker not in header + source:
+                raise AggregateLoweringFailure(
+                    f"mutable-record generated C omitted {marker!r}"
+                )
+        if "hxc_Main_immutableValue(struct hxc_ImmutableRecord" not in header + source:
+            raise AggregateLoweringFailure(
+                "immutable record control no longer used the ordinary by-value C ABI"
+            )
+        if any(
+            marker in (header + source).lower()
+            for marker in ("hxrt_", "malloc(", "calloc(", "realloc(")
+        ):
+            raise AggregateLoweringFailure(
+                "mutable-record borrow unexpectedly acquired a generic runtime or heap box"
+            )
+
+        sources = tuple(
+            path.relative_to(output).as_posix()
+            for path in sorted(output.rglob("*.c"))
+        )
+        headers = tuple(
+            path.relative_to(output).as_posix()
+            for path in sorted(output.rglob("*.h"))
+        )
+        base = CFixtureProject(
+            "mutable-record-borrow",
+            sources,
+            headers,
+            ("include",),
+            "",
+            (
+                "alias-identity",
+                "generated-executable",
+                "mutable-record-borrow",
+                "runtime-free",
+            ),
+        )
+        for optimization in ("-O0", "-O2"):
+            report = run_c_fixture_corpus(
+                suite=f"mutable-record-borrow-{optimization[1:].lower()}",
+                projects=(base,),
+                fixture_root=output,
+                build_root=root / "native" / optimization[1:].lower(),
+                repository_root=ROOT,
+                requested_toolchain=requested_toolchain,
+                strict_flags=(*C11_STRICT_FLAGS, optimization),
+            )
+            validate_report(report, required_coverage=frozenset(base.coverage))
+
+        sanitized = CFixtureProject(
+            "mutable-record-borrow-sanitized",
+            base.sources,
+            base.headers,
+            base.include_directories,
+            base.expected_stdout,
+            (*base.coverage, "asan-ubsan"),
+            link_arguments=("-fsanitize=address,undefined",),
+        )
+        sanitizer_report = run_c_fixture_corpus(
+            suite="mutable-record-borrow-sanitized",
+            projects=(sanitized,),
+            fixture_root=output,
+            build_root=root / "sanitized",
+            repository_root=ROOT,
+            requested_toolchain=requested_toolchain,
+            strict_flags=(
+                *C11_STRICT_FLAGS,
+                "-O1",
+                "-g",
+                "-fno-omit-frame-pointer",
+                "-fno-sanitize-recover=all",
+                "-fsanitize=address,undefined",
+            ),
+        )
+        validate_report(
+            sanitizer_report, required_coverage=frozenset(sanitized.coverage)
+        )
+
+
+def check_fail_closed_cases(
+    cases: dict[str, str],
+    *,
+    temporary_prefix: str,
+    timeout: float = 30,
+    connect: str | None = None,
+) -> None:
+    """Require exact source diagnostics and no artifacts for focused fixtures."""
+    with tempfile.TemporaryDirectory(prefix=temporary_prefix) as temporary:
         root = Path(temporary)
         for directory, marker in cases.items():
             output = root / directory
-            result = custom_target(FIXTURES / directory, output, main="Main")
+            result = custom_target(
+                FIXTURES / directory,
+                output,
+                main="Main",
+                timeout=timeout,
+                connect=connect,
+            )
             combined = (result.stdout + result.stderr).replace("\\", "/")
             if (
                 result.returncode != 1
@@ -1493,6 +1642,60 @@ def check_negative_cases() -> None:
                     f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
                 )
 
+
+def check_mutable_record_negative_cases(*, connect: str | None = None) -> None:
+    """Reject mutable-record temporaries, escapes, and unmanaged root changes."""
+    check_fail_closed_cases(
+        {
+            "mutation_temporary": "mutable-record-borrow-requires-stable-local-or-incoming-borrow",
+            "mutation_escape": "mutable-record-identity-escapes-direct-call",
+            "mutation_managed_field": "TBinop(OpAssign:managed-Array-reassignment-not-admitted)",
+        },
+        temporary_prefix="hxc-mutable-record-negative-",
+        timeout=120,
+        connect=connect,
+    )
+
+
+def check_mutable_record_matrix(*, requested_toolchain: str) -> None:
+    """Share one isolated Haxe server across the focused positive/negative lane."""
+    port = available_port()
+    endpoint = str(port)
+    server = subprocess.Popen(
+        [development_tool("haxe"), "--wait", endpoint],
+        cwd=ROOT,
+        env=haxe_environment(server=True),
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+    try:
+        wait_for_server(server, port)
+        check_mutable_record_borrow(
+            requested_toolchain=requested_toolchain, connect=endpoint
+        )
+        check_mutable_record_negative_cases(connect=endpoint)
+    finally:
+        server.terminate()
+        try:
+            server.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            server.kill()
+            server.wait(timeout=5)
+
+
+def check_negative_cases() -> None:
+    cases = {
+        "identity_equality": "TBinop(OpEq:left-type):closed-record-not-admitted-in-primitive-operation",
+        "dynamic": "TFunction(argument:record):the dynamic source semantic type cannot stand in for a primitive",
+        "void_field": "TFunction(return-type).field:value:Void-not-an-object-type",
+        "interface_reference_escape": "TReturn(owned-class-borrow-escape)",
+    }
+    check_fail_closed_cases(
+        cases, temporary_prefix="hxc-aggregate-negative-"
+    )
+    with tempfile.TemporaryDirectory(prefix="hxc-aggregate-negative-") as temporary:
+        root = Path(temporary)
         # A contextual object literal with the wrong shape is rejected by the
         # Haxe typer before haxe.c receives TypedExpr. This separate assertion
         # keeps the source-positioned boundary honest without manufacturing an
@@ -1862,6 +2065,7 @@ def parse_args(arguments: Iterable[str]) -> argparse.Namespace:
     parser.add_argument("--toolchain", choices=("auto", "gcc", "clang"), default="auto")
     parser.add_argument("--native-only", action="store_true")
     parser.add_argument("--managed-optional-only", action="store_true")
+    parser.add_argument("--mutable-borrow-only", action="store_true")
     return parser.parse_args(list(arguments))
 
 
@@ -1874,6 +2078,10 @@ def main(arguments: Iterable[str] = ()) -> int:
         if args.managed_optional_only:
             check_managed_optional(requested_toolchain=args.toolchain)
             print("aggregate-lowering: OK: managed optional focused matrix passed")
+            return 0
+        if args.mutable_borrow_only:
+            check_mutable_record_matrix(requested_toolchain=args.toolchain)
+            print("aggregate-lowering: OK: mutable record borrow focused matrix passed")
             return 0
         if args.native_only:
             report = snapshot_report()
@@ -1900,6 +2108,7 @@ def main(arguments: Iterable[str] = ()) -> int:
         check_managed_optional(requested_toolchain=args.toolchain)
         check_class_reference_records(requested_toolchain=args.toolchain)
         check_interface_reference_records(requested_toolchain=args.toolchain)
+        check_mutable_record_matrix(requested_toolchain=args.toolchain)
         check_negative_cases()
     except (
         AggregateLoweringFailure,

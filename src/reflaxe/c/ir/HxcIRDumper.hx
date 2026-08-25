@@ -117,6 +117,7 @@ class HxcIRDumper {
 			line('    managed-root ${quote(root.id)} value=${quote(root.valueId)} path=${quote(HxcIRManagedRootPaths.key(root.projections))} ${source(root.source)}');
 		final borrowedInterfaceParameterIds = fn.borrowedInterfaceParameterIds == null ? [] : fn.borrowedInterfaceParameterIds;
 		final borrowedAggregateParameterIds = fn.borrowedAggregateParameterIds == null ? [] : fn.borrowedAggregateParameterIds;
+		final mutableAggregateBorrowParameterIds = fn.mutableAggregateBorrowParameterIds == null ? [] : fn.mutableAggregateBorrowParameterIds;
 		for (parameter in fn.parameters) {
 			final ownership = if (fn.borrowedClassParameterIds.indexOf(parameter.id) >= 0) {
 				"borrowed-class";
@@ -124,6 +125,8 @@ class HxcIRDumper {
 				"borrowed-interface";
 			} else if (borrowedAggregateParameterIds.indexOf(parameter.id) >= 0) {
 				"borrowed-interface-record";
+			} else if (mutableAggregateBorrowParameterIds.indexOf(parameter.id) >= 0) {
+				"mutable-aggregate-borrow";
 			} else {
 				"owned-or-value";
 			};
@@ -131,6 +134,7 @@ class HxcIRDumper {
 		}
 		final borrowedInterfaceLocalIds = fn.borrowedInterfaceLocalIds == null ? [] : fn.borrowedInterfaceLocalIds;
 		final borrowedAggregateLocalIds = fn.borrowedAggregateLocalIds == null ? [] : fn.borrowedAggregateLocalIds;
+		final mutableAggregateBorrowLocalIds = fn.mutableAggregateBorrowLocalIds == null ? [] : fn.mutableAggregateBorrowLocalIds;
 		for (local in sorted(fn.locals, item -> item.id)) {
 			final ownership = if (fn.borrowedClassLocalIds.indexOf(local.id) >= 0) {
 				"borrowed-class";
@@ -138,6 +142,8 @@ class HxcIRDumper {
 				"borrowed-interface";
 			} else if (borrowedAggregateLocalIds.indexOf(local.id) >= 0) {
 				"borrowed-interface-record";
+			} else if (mutableAggregateBorrowLocalIds.indexOf(local.id) >= 0) {
+				"mutable-aggregate-borrow";
 			} else {
 				"owned-or-value";
 			};

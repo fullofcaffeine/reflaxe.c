@@ -27,7 +27,7 @@ import reflaxe.c.naming.CSymbolRequest;
 @:noCompletion
 class CBodyFunctionReplayCache {
 	/** Bump this whenever the retained payload or canonical key contract changes. */
-	public static inline final SCHEMA_VERSION = 1;
+	public static inline final SCHEMA_VERSION = 2;
 
 	/** Disable replay while keeping ordinary function construction authoritative. */
 	public static inline final DISABLE_DEFINE = "reflaxe_c_test_disable_body_function_replay_cache";
@@ -273,9 +273,11 @@ class CBodyFunctionReplayCache {
 			borrowedClassParameterIds: value.borrowedClassParameterIds.copy(),
 			borrowedInterfaceParameterIds: value.borrowedInterfaceParameterIds == null ? null : value.borrowedInterfaceParameterIds.copy(),
 			borrowedAggregateParameterIds: value.borrowedAggregateParameterIds == null ? null : value.borrowedAggregateParameterIds.copy(),
+			mutableAggregateBorrowParameterIds: value.mutableAggregateBorrowParameterIds == null ? null : value.mutableAggregateBorrowParameterIds.copy(),
 			borrowedClassLocalIds: value.borrowedClassLocalIds.copy(),
 			borrowedInterfaceLocalIds: value.borrowedInterfaceLocalIds == null ? null : value.borrowedInterfaceLocalIds.copy(),
 			borrowedAggregateLocalIds: value.borrowedAggregateLocalIds == null ? null : value.borrowedAggregateLocalIds.copy(),
+			mutableAggregateBorrowLocalIds: value.mutableAggregateBorrowLocalIds == null ? null : value.mutableAggregateBorrowLocalIds.copy(),
 			managedRoots: managedRoots,
 			locals: value.locals.copy(),
 			returnType: value.returnType,

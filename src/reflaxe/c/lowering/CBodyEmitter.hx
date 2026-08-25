@@ -1334,7 +1334,7 @@ class CBodyEmitter {
 					final expression = helperCall(helperId, [requireValue(state.values, valueId, fn.id)], state.helperNames, instruction.id, fn.id);
 					recordPureResult(statements, state.values, state.referencedValues, instruction, result, expression, state.lineDirectives, fn.id);
 				case IRIOCall(call):
-					if (isNonReturningSelfCall(fn.id, call, state.nonReturningFunctionIds)) {
+					if (isNonReturningSelfCall(fn, call, state.nonReturningFunctionIds)) {
 						emitTailLoopCall(statements, state.values, instruction, call, fn, state.parameterNames, state.tailArgumentNames, state.lineDirectives);
 						terminatedByNonReturningCall = true;
 						state.terminatedByTailLoop = true;
@@ -6786,10 +6786,13 @@ class CBodyEmitter {
 		statements.push(SIf(failed, SBlock(failedStatements), null));
 	}
 
-	static function isNonReturningSelfCall(functionId:String, call:HxcIRCall, nonReturningFunctionIds:Null<Map<String, Bool>>):Bool {
+	static function isNonReturningSelfCall(fn:HxcIRFunction, call:HxcIRCall, nonReturningFunctionIds:Null<Map<String, Bool>>):Bool {
+		final functionId = fn.id;
 		if (nonReturningFunctionIds == null || !nonReturningFunctionIds.exists(functionId)) {
 			return false;
 		}
+		if (fn.mutableAggregateBorrowParameterIds != null && fn.mutableAggregateBorrowParameterIds.length > 0)
+			return false;
 		return switch call.dispatch {
 			case IRCDDirect(targetId): targetId == functionId;
 			case _: false;

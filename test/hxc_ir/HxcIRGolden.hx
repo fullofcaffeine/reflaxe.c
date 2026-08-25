@@ -14,6 +14,14 @@ private enum ManagedCarrierLinearMutation {
 	LinearOwnedExit;
 }
 
+/** Select one focused mutation of the mutable-record borrow contract. */
+private enum MutableAggregateBorrowMutation {
+	MutableBorrowValid;
+	MutableBorrowNullableParameter;
+	MutableBorrowImmutableField;
+	MutableBorrowReturnEscape;
+}
+
 /** Builds deterministic semantic IR fixtures without invoking C emission. */
 class HxcIRGolden {
 	static inline final REPORT_PREFIX = "HXC_IR_REPORT=";
@@ -41,6 +49,12 @@ class HxcIRGolden {
 		validator.requireValid(borrowedClassAliasProgram(), PROFILE);
 		validator.requireValid(borrowedClassOwnedFieldReleaseProgram(), PROFILE);
 		validator.requireValid(borrowedInterfaceAliasProgram(), PROFILE);
+		validator.requireValid(mutableAggregateBorrowProgram(MutableBorrowValid), PROFILE);
+		requireInvalidMarker(mutableAggregateBorrowProgram(MutableBorrowNullableParameter), "must be a non-null direct-record pointer",
+			"nullable mutable-record borrow");
+		requireInvalidMarker(mutableAggregateBorrowProgram(MutableBorrowImmutableField),
+			"store cannot change immutable field `x` through a mutable-record borrow", "immutable field below mutable-record borrow");
+		requireInvalidMarker(mutableAggregateBorrowProgram(MutableBorrowReturnEscape), "escapes through a return", "returned mutable-record borrow");
 		validator.requireValid(borrowedSpanReturnProgram(false), PROFILE);
 		validator.requireValid(borrowedSpanReturnProgram(false, true), PROFILE);
 		final unrootedManagedSpanDiagnostics = invalidDiagnostics(unrootedManagedBorrowedSpanReturnProgram());
@@ -635,7 +649,7 @@ class HxcIRGolden {
 	}
 
 	/**
-		Exercise the schema-23 exact-root contract without involving C emission.
+		Exercise the schema-25 exact-root contract without involving C emission.
 
 		The negative variant deliberately roots an Int. A collector cannot learn
 		anything from that address-shaped mistake, so validation must reject it
@@ -1993,6 +2007,75 @@ class HxcIRGolden {
 			representation: IRRDirect,
 			source: span(file, 1)
 		});
+		return program;
+	}
+
+	/**
+	 * Build the smallest explicit mutable-record borrow and malformed neighbors.
+	 *
+	 * The valid shape initializes one automatic pointer alias, reloads it, and
+	 * stores through a mutable field. Variants independently test non-null ABI,
+	 * field mutability, and the rule that caller-owned storage cannot be returned.
+	 */
+	static function mutableAggregateBorrowProgram(mutation:MutableAggregateBorrowMutation):HxcIRProgram {
+		final file = mutation == MutableBorrowValid ? "test/hxc_ir/fixtures/MutableAggregateBorrow.hx" : "test/negative/MutableAggregateBorrow.hx";
+		final nullable = mutation == MutableBorrowNullableParameter;
+		final pointerType = IRTPointer(IRTInstance("instance.record"), nullable);
+		final instructions = [
+			instruction("borrow.alias-initialize", null, IRIOInitialize(IRPLocal("local.borrow"), "value.borrowed", IRISUninitialized, IRISInitialized), file,
+				2),
+			instruction("borrow.alias-load", result("value.reloaded", pointerType), IRIOLoad(IRPLocal("local.borrow")), file, 3),
+			instruction("borrow.field-store", null, IRIOStore(IRPField(IRPDereference("value.reloaded"), "x"), "value.next"), file, 4)
+		];
+		final program = aggregateProgram(file, instructions, [local("local.borrow", pointerType, IRLSAutomatic, IRISUninitialized, file, 1)],
+			"fixture.MutableAggregateBorrow");
+		final declaration = program.modules[0].types[0];
+		program.modules[0].types[0] = switch declaration.kind {
+			case IRTKAggregate(fields):
+				{
+					id: declaration.id,
+					displayName: declaration.displayName,
+					kind: IRTKAggregate([
+						{
+							name: fields[0].name,
+							type: fields[0].type,
+							mutable: mutation != MutableBorrowImmutableField,
+							source: fields[0].source
+						},
+						fields[1]
+					]),
+					source: declaration.source
+				};
+			case _: declaration;
+		};
+		final fn = program.modules[0].functions[0];
+		fn.parameters.push(parameter("value.borrowed", pointerType, file, 1));
+		fn.parameters.push(parameter("value.next", IRTInt(32, true), file, 1));
+		final borrowParameters = fn.mutableAggregateBorrowParameterIds;
+		final borrowLocals = fn.mutableAggregateBorrowLocalIds;
+		if (borrowParameters == null || borrowLocals == null)
+			throw "mutable-record borrow fixture lost its explicit ownership lists";
+		borrowParameters.push("value.borrowed");
+		borrowLocals.push("local.borrow");
+		if (mutation == MutableBorrowReturnEscape) {
+			program.modules[0].functions[0] = {
+				id: fn.id,
+				displayName: fn.displayName,
+				parameters: fn.parameters,
+				borrowedClassParameterIds: fn.borrowedClassParameterIds,
+				mutableAggregateBorrowParameterIds: borrowParameters,
+				borrowedClassLocalIds: fn.borrowedClassLocalIds,
+				mutableAggregateBorrowLocalIds: borrowLocals,
+				managedRoots: fn.managedRoots,
+				locals: fn.locals,
+				returnType: pointerType,
+				failureConvention: fn.failureConvention,
+				entryBlockId: fn.entryBlockId,
+				blocks: [block("entry", instructions, IRTReturn("value.borrowed", []), file, 5)],
+				cleanupRegions: fn.cleanupRegions,
+				source: fn.source
+			};
+		}
 		return program;
 	}
 
@@ -3491,7 +3574,9 @@ class HxcIRGolden {
 							displayName: '$moduleId.main',
 							parameters: [],
 							borrowedClassParameterIds: [],
+							mutableAggregateBorrowParameterIds: [],
 							borrowedClassLocalIds: [],
+							mutableAggregateBorrowLocalIds: [],
 							managedRoots: [],
 							locals: locals,
 							returnType: functionReturnType,
@@ -3531,6 +3616,15 @@ class HxcIRGolden {
 			}
 		}
 		return diagnostics.map(diagnostic -> diagnostic.render());
+	}
+
+	/** Require one malformed focused fixture to expose its intended contract. */
+	static function requireInvalidMarker(program:HxcIRProgram, marker:String, label:String):Void {
+		final diagnostics = invalidDiagnostics(program);
+		for (diagnostic in diagnostics)
+			if (diagnostic.indexOf(marker) != -1)
+				return;
+		throw '$label did not report `$marker`';
 	}
 
 	static function voidFunction(id:String, displayName:String, file:String, line:Int, ?failureConvention:HxcIRFunctionFailureConvention):HxcIRFunction {

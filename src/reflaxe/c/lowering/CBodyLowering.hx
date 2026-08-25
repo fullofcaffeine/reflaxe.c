@@ -368,10 +368,11 @@ class CBodyLowering {
 		inputs.sort(compareInputs);
 		final aggregateRegistry = new CBodyAggregateRegistry(context, typedProgram, typedContract,
 			programCreatesStrings(inputFunctions, inputGlobals, inputInitializers, inputConstructors, context.profile));
+		final mutableAggregateBorrowPlan = MutableAggregateBorrowPlanner.plan(context, inputs);
 		final prepared:Array<PreparedBodyFunction> = [];
 		final preparedById:Map<String, PreparedBodyFunction> = [];
 		for (input in inputs) {
-			final fn = new FunctionPreparer(context, input, aggregateRegistry).prepare();
+			final fn = new FunctionPreparer(context, input, aggregateRegistry, mutableAggregateBorrowPlan.get(functionInputId(input))).prepare();
 			if (preparedById.exists(fn.irId)) {
 				throw new CBodyEmissionError('body lowering received duplicate semantic function `${fn.irId}`');
 			}
@@ -841,6 +842,7 @@ class CBodyLowering {
 			replayPart(fn.functionRequest.stableKey()),
 			replayPart(fn.functionRequest.namingFingerprint()),
 			replayPart(parameters),
+			replayPart(fn.mutableAggregateIdentityIds.join(",")),
 			replayPart(FunctionBuilder.typeKey(fn.returnMapping.irType)),
 			replayPart(Std.string(fn.borrowedSpanReturn)),
 			replayPart(closure)
@@ -851,7 +853,9 @@ class CBodyLowering {
 		final defaultValue = parameter.defaultValue == null ? "none" : typedExpressionReplayText(parameter.defaultValue, parameter.ir.source.file);
 		return [
 			replayPart(parameter.ir.id),
+			replayPart(FunctionBuilder.typeKey(parameter.mapping.irType)),
 			replayPart(FunctionBuilder.typeKey(parameter.ir.type)),
+			replayPart(Std.string(parameter.passing)),
 			replayPart(parameter.ir.source.display()),
 			replayPart(Std.string(parameter.borrowedReference)),
 			replayPart(defaultValue)
@@ -1727,6 +1731,18 @@ private typedef StagedFlowValue = {
 	final position:Position;
 }
 
+/** One source record identity backed by owned storage or an incoming pointer. */
+private enum MutableAggregateIdentityBinding {
+	MAIBOwned(place:HxcIRPlace, mapping:CBodyValueType);
+	MAIBBorrowed(pointerValueId:String, mapping:CBodyValueType);
+}
+
+/** One direct-call argument with either source-value or borrow-pointer staging. */
+private enum StagedDirectCallArgument {
+	SDCAValue(value:StagedFlowValue);
+	SDCAMutableAggregateBorrow(valueId:String, type:HxcIRTypeRef, localId:Null<String>, position:Position);
+}
+
 private typedef LoweredPlace = {
 	final place:HxcIRPlace;
 	final mapping:CBodyValueType;
@@ -1822,6 +1838,15 @@ private typedef EnumConstructorAccess = {
 	final field:EnumField;
 }
 
+/** Select how one authored parameter crosses the settled HxcIR call boundary. */
+private enum PreparedParameterPassing {
+	/** Pass the authored value with the same source and HxcIR representation. */
+	PPValue;
+
+	/** Pass a non-null pointer to caller-owned mutable record storage. */
+	PPMutableAggregateBorrow;
+}
+
 private typedef BodyNewExpression = {
 	final classReference:Ref<ClassType>;
 	final parameters:Array<Type>;
@@ -1831,7 +1856,12 @@ private typedef BodyNewExpression = {
 private typedef PreparedParameter = {
 	final compilerId:Int;
 	final ir:HxcIRParameter;
+
+	/** The authored Haxe value type used for field lookup and source coercion. */
 	final mapping:CBodyValueType;
+
+	/** The checked relationship between the authored type and settled HxcIR ABI. */
+	final passing:PreparedParameterPassing;
 
 	/**
 		Whether the parameter may name caller-owned object storage for this call.
@@ -1898,6 +1928,10 @@ private typedef PreparedBodyFunction = {
 	final borrowedSpanReturn:Null<HxcIRBorrowedSpanReturn>;
 	final functionRequest:CSymbolRequest;
 	final parameterRequests:Map<String, CSymbolRequest>;
+
+	/** Source compiler IDs that share a mutable record identity in this body. */
+	final mutableAggregateIdentityIds:Array<Int>;
+
 	final closureEnvironment:Null<PreparedStackClosureEnvironment>;
 }
 
@@ -2205,6 +2239,7 @@ private class EnumConstructorAdapterRegistry {
 				compilerId: -2147483647,
 				ir: {id: contextId, type: contextMapping.irType, source: source},
 				mapping: contextMapping,
+				passing: PPValue,
 				borrowedReference: false,
 				defaultValue: null
 			});
@@ -2225,6 +2260,7 @@ private class EnumConstructorAdapterRegistry {
 				compilerId: -1 - index,
 				ir: {id: parameterId, type: payload.valueType.irType, source: source},
 				mapping: payload.valueType,
+				passing: PPValue,
 				borrowedReference: false,
 				defaultValue: null
 			});
@@ -2255,6 +2291,7 @@ private class EnumConstructorAdapterRegistry {
 			borrowedSpanReturn: null,
 			functionRequest: request,
 			parameterRequests: parameterRequests,
+			mutableAggregateIdentityIds: [],
 			closureEnvironment: null
 		};
 		byId.set(id, prepared);
@@ -2346,9 +2383,11 @@ private class EnumConstructorAdapterRegistry {
 			borrowedClassParameterIds: [],
 			borrowedInterfaceParameterIds: [],
 			borrowedAggregateParameterIds: [],
+			mutableAggregateBorrowParameterIds: [],
 			borrowedClassLocalIds: [],
 			borrowedInterfaceLocalIds: [],
 			borrowedAggregateLocalIds: [],
+			mutableAggregateBorrowLocalIds: [],
 			managedRoots: [],
 			locals: locals,
 			returnType: prepared.returnMapping.irType,
@@ -2528,6 +2567,7 @@ private class FunctionLiteralRegistry {
 				compilerId: -2147483647,
 				ir: {id: contextId, type: contextMapping.irType, source: source},
 				mapping: contextMapping,
+				passing: PPValue,
 				borrowedReference: false,
 				defaultValue: null
 			});
@@ -2567,6 +2607,7 @@ private class FunctionLiteralRegistry {
 				compilerId: argument.v.id,
 				ir: {id: parameterId, type: mapping.irType, source: source},
 				mapping: mapping,
+				passing: PPValue,
 				borrowedReference: mapping.classValue() != null,
 				defaultValue: null
 			});
@@ -2599,6 +2640,7 @@ private class FunctionLiteralRegistry {
 			borrowedSpanReturn: null,
 			functionRequest: request,
 			parameterRequests: parameterRequests,
+			mutableAggregateIdentityIds: [],
 			closureEnvironment: closureEnvironment
 		};
 		byKey.set(key, prepared);
@@ -2658,6 +2700,9 @@ private class FunctionLiteralRegistry {
 		if (target.parameters.length != closure.parameters.length)
 			return reject(owner, expression.pos,
 				'synchronous-callback-adapter:${target.irId}:parameter-count=${target.parameters.length},expected=${closure.parameters.length}');
+		for (parameter in target.parameters)
+			if (parameter.passing == PPMutableAggregateBorrow)
+				return reject(owner, expression.pos, 'synchronous-callback-adapter:${target.irId}:mutable-record-borrow-function-value-not-admitted');
 		for (index in 0...target.parameters.length)
 			if (FunctionBuilder.typeKey(target.parameters[index].mapping.irType) != FunctionBuilder.typeKey(closure.parameters[index].irType))
 				return reject(owner, expression.pos, 'synchronous-callback-adapter:${target.irId}:parameter-$index-type-mismatch');
@@ -2679,6 +2724,7 @@ private class FunctionLiteralRegistry {
 				compilerId: -2147483647,
 				ir: {id: "parameter.context", type: contextMapping.irType, source: source},
 				mapping: contextMapping,
+				passing: PPValue,
 				borrowedReference: false,
 				defaultValue: null
 			}
@@ -2696,6 +2742,7 @@ private class FunctionLiteralRegistry {
 				compilerId: -2147483646 + index,
 				ir: {id: parameterId, type: sourceParameter.mapping.irType, source: source},
 				mapping: sourceParameter.mapping,
+				passing: sourceParameter.passing,
 				borrowedReference: sourceParameter.borrowedReference,
 				defaultValue: null
 			});
@@ -2721,6 +2768,7 @@ private class FunctionLiteralRegistry {
 			borrowedSpanReturn: null,
 			functionRequest: request,
 			parameterRequests: parameterRequests,
+			mutableAggregateIdentityIds: [],
 			closureEnvironment: null
 		};
 		staticAdaptersById.set(id, prepared);
@@ -2787,9 +2835,12 @@ private class FunctionLiteralRegistry {
 				&& parameter.mapping.aggregateValue() != null
 				&& parameter.mapping.containsInterfaceReference())
 				.map(parameter -> parameter.ir.id),
+			mutableAggregateBorrowParameterIds: prepared.parameters.filter(parameter -> parameter.passing == PPMutableAggregateBorrow)
+				.map(parameter -> parameter.ir.id),
 			borrowedClassLocalIds: [],
 			borrowedInterfaceLocalIds: [],
 			borrowedAggregateLocalIds: [],
+			mutableAggregateBorrowLocalIds: [],
 			managedRoots: [],
 			locals: [],
 			returnType: prepared.returnMapping.irType,
@@ -2972,17 +3023,311 @@ private class FunctionLiteralRegistry {
 	}
 }
 
+/** One exact direct-call edge that can carry a source record identity. */
+private typedef MutableAggregateBorrowForward = {
+	final sourceParameterId:Int;
+	final targetFunctionId:String;
+	final targetParameterId:Int;
+}
+
+/** Source facts for one function before any ABI-dependent symbol is requested. */
+private typedef MutableAggregateBorrowFunctionInfo = {
+	final input:CBodyFunctionInput;
+	final id:String;
+	final body:TypedExpr;
+	final parameterIds:Array<Int>;
+	final aliases:Map<Int, Int>;
+	final required:Map<Int, Bool>;
+	final escapes:Map<Int, TypedExpr>;
+	final forwards:Array<MutableAggregateBorrowForward>;
+}
+
+/**
+	Settle mutable-record pointer parameters before function symbols are registered.
+
+	A field write seeds the grow-only analysis. Exact direct calls propagate that
+	requirement back to their callers, including recursive cycles. Transparent
+	local aliases belong to the same source identity. Any use that can outlive an
+	exact synchronous call stops with a source-positioned diagnostic.
+**/
+private class MutableAggregateBorrowPlanner {
+	public static function plan(context:CompilationContext, inputs:Array<CBodyFunctionInput>):Map<String, Map<Int, Bool>> {
+		final byId:Map<String, MutableAggregateBorrowFunctionInfo> = [];
+		final ordered:Array<MutableAggregateBorrowFunctionInfo> = [];
+		for (input in inputs) {
+			final functionValue = switch input.expression.expr {
+				case TFunction(value): value;
+				case _: continue;
+			};
+			final aliases:Map<Int, Int> = [];
+			final parameterIds = functionValue.args.map(argument -> argument.v.id);
+			for (argument in functionValue.args)
+				if (isAnonymousRecordType(argument.v.t))
+					aliases.set(argument.v.id, argument.v.id);
+			final info:MutableAggregateBorrowFunctionInfo = {
+				input: input,
+				id: CBodyLowering.functionInputId(input),
+				body: functionValue.expr,
+				parameterIds: parameterIds,
+				aliases: aliases,
+				required: [],
+				escapes: [],
+				forwards: []
+			};
+			byId.set(info.id, info);
+			ordered.push(info);
+		}
+
+		for (info in ordered)
+			discoverAliases(info.body, info.aliases);
+		for (info in ordered)
+			discoverFacts(context, info, byId);
+
+		final reverseForwards:Map<String, Array<{info:MutableAggregateBorrowFunctionInfo, sourceId:Int}>> = [];
+		for (info in ordered)
+			for (forward in info.forwards) {
+				final key = borrowKey(forward.targetFunctionId, forward.targetParameterId);
+				var incoming = reverseForwards.get(key);
+				if (incoming == null) {
+					incoming = [];
+					reverseForwards.set(key, incoming);
+				}
+				incoming.push({info: info, sourceId: forward.sourceParameterId});
+			}
+		final pending:Array<{info:MutableAggregateBorrowFunctionInfo, sourceId:Int}> = [];
+		for (info in ordered)
+			for (sourceId in sortedRequiredIds(info))
+				pending.push({info: info, sourceId: sourceId});
+		var pendingIndex = 0;
+		while (pendingIndex < pending.length) {
+			final settled = pending[pendingIndex++];
+			final incoming = reverseForwards.get(borrowKey(settled.info.id, settled.sourceId));
+			if (incoming == null)
+				continue;
+			for (predecessor in incoming)
+				if (!predecessor.info.required.exists(predecessor.sourceId)) {
+					predecessor.info.required.set(predecessor.sourceId, true);
+					pending.push(predecessor);
+				}
+		}
+
+		final result:Map<String, Map<Int, Bool>> = [];
+		for (info in ordered) {
+			for (parameterId in sortedRequiredIds(info)) {
+				final escape = info.escapes.get(parameterId);
+				if (escape != null)
+					reject(context, info.input, escape, 'TLocal(parameter.$parameterId:mutable-record-identity-escapes-direct-call)');
+			}
+			result.set(info.id, info.required);
+		}
+		return result;
+	}
+
+	/** Build one collision-free lookup key for a direct parameter identity. */
+	static function borrowKey(functionId:String, parameterId:Int):String
+		return '$functionId\x00$parameterId';
+
+	/** Keep diagnostics and queue seeds stable across map iteration orders. */
+	static function sortedRequiredIds(info:MutableAggregateBorrowFunctionInfo):Array<Int> {
+		final result = [for (parameterId in info.required.keys()) parameterId];
+		result.sort((left, right) -> left - right);
+		return result;
+	}
+
+	/** Build exact local-alias components in source order and ignore nested bodies. */
+	static function discoverAliases(expression:TypedExpr, aliases:Map<Int, Int>):Void {
+		switch expression.expr {
+			case TFunction(_):
+			case TVar(variable, initializer):
+				if (initializer != null) {
+					discoverAliases(initializer, aliases);
+					final root = directAliasRoot(initializer, aliases);
+					if (root != null) {
+						aliases.set(variable.id, root);
+					} else if (isAnonymousRecordType(variable.t)) {
+						aliases.set(variable.id, variable.id);
+					}
+				}
+			case _:
+				TypedExprTools.iter(expression, nested -> discoverAliases(nested, aliases));
+		}
+	}
+
+	/** Find writes, forwarding edges, and uses that can keep one identity. */
+	static function discoverFacts(context:CompilationContext, info:MutableAggregateBorrowFunctionInfo,
+			byId:Map<String, MutableAggregateBorrowFunctionInfo>):Void {
+		function markEscape(root:Null<Int>, expression:TypedExpr):Void
+			if (root != null && !info.escapes.exists(root))
+				info.escapes.set(root, expression);
+
+		function visit(expression:TypedExpr):Void {
+			switch expression.expr {
+				case TFunction(_):
+					final captured = firstReferencedRoot(expression, info.aliases);
+					markEscape(captured, expression);
+				case TBinop(OpAssign, left, right):
+					final fieldRoot = mutableFieldRoot(left, info.aliases);
+					if (fieldRoot != null)
+						info.required.set(fieldRoot, true);
+					markEscape(directAliasRoot(left, info.aliases), left);
+					markEscape(directAliasRoot(right, info.aliases), right);
+					visit(left);
+					visit(right);
+				case TBinop(OpAssignOp(_), left, right):
+					final fieldRoot = mutableFieldRoot(left, info.aliases);
+					if (fieldRoot != null)
+						info.required.set(fieldRoot, true);
+					markEscape(directAliasRoot(left, info.aliases), left);
+					visit(left);
+					visit(right);
+				case TUnop(OpIncrement, _, target) | TUnop(OpDecrement, _, target):
+					final fieldRoot = mutableFieldRoot(target, info.aliases);
+					if (fieldRoot != null)
+						info.required.set(fieldRoot, true);
+					visit(target);
+				case TReturn(value) if (value != null):
+					markEscape(directAliasRoot(value, info.aliases), value);
+					visit(value);
+				case TThrow(value):
+					markEscape(directAliasRoot(value, info.aliases), value);
+					visit(value);
+				case TCall(callee, arguments):
+					final argumentRoots = arguments.map(argument -> directAliasRoot(argument, info.aliases));
+					final hasTrackedIdentity = Lambda.exists(argumentRoots, root -> root != null);
+					final target = hasTrackedIdentity ? directTarget(context, info, callee, arguments, byId) : null;
+					for (index => argument in arguments) {
+						final root = argumentRoots[index];
+						if (root != null) {
+							if (target == null || index >= target.parameterIds.length) {
+								markEscape(root, argument);
+							} else {
+								info.forwards.push({
+									sourceParameterId: root,
+									targetFunctionId: target.id,
+									targetParameterId: target.parameterIds[index]
+								});
+							}
+						}
+						visit(argument);
+					}
+					visit(callee);
+				case TObjectDecl(fields):
+					for (field in fields) {
+						markEscape(directAliasRoot(field.expr, info.aliases), field.expr);
+						visit(field.expr);
+					}
+				case TArrayDecl(values):
+					for (value in values) {
+						markEscape(directAliasRoot(value, info.aliases), value);
+						visit(value);
+					}
+				case TVar(_, initializer):
+					if (initializer != null)
+						visit(initializer);
+				case _:
+					TypedExprTools.iter(expression, visit);
+			}
+		}
+		visit(info.body);
+	}
+
+	/** Resolve a direct local spelling to its root parameter identity. */
+	static function directAliasRoot(expression:TypedExpr, aliases:Map<Int, Int>):Null<Int>
+		return switch expression.expr {
+			case TLocal(variable): aliases.get(variable.id);
+			case TParenthesis(inner) | TMeta(_, inner) | TCast(inner, _): directAliasRoot(inner, aliases);
+			case _: null;
+		};
+
+	/** Recognize the closed anonymous source shape that can own stable storage. */
+	static function isAnonymousRecordType(type:Type):Bool
+		return switch TypeTools.follow(type) {
+			case TAnonymous(_): true;
+			case _: false;
+		};
+
+	/** Admit one immediate anonymous field below an exact identity component. */
+	static function mutableFieldRoot(expression:TypedExpr, aliases:Map<Int, Int>):Null<Int>
+		return switch expression.expr {
+			case TField(receiver, FAnon(_)): directAliasRoot(receiver, aliases);
+			case TParenthesis(inner) | TMeta(_, inner): mutableFieldRoot(inner, aliases);
+			case _: null;
+		};
+
+	/** Find one captured alias without treating nested declarations as new owners. */
+	static function firstReferencedRoot(expression:TypedExpr, aliases:Map<Int, Int>):Null<Int> {
+		var found:Null<Int> = null;
+		function visit(value:TypedExpr):Void {
+			if (found != null)
+				return;
+			switch value.expr {
+				case TLocal(variable):
+					found = aliases.get(variable.id);
+				case _:
+					TypedExprTools.iter(value, visit);
+			}
+		}
+		visit(expression);
+		return found;
+	}
+
+	/** Reuse the compiler's exact static and final/private instance-call proof. */
+	static function directTarget(context:CompilationContext, caller:MutableAggregateBorrowFunctionInfo, callee:TypedExpr, arguments:Array<TypedExpr>,
+			byId:Map<String, MutableAggregateBorrowFunctionInfo>):Null<MutableAggregateBorrowFunctionInfo> {
+		return switch callee.expr {
+			case TField(_, FStatic(classReference, fieldReference)):
+				final owner = classReference.get();
+				final field = fieldReference.get();
+				final baseId = CBodyLowering.functionId(owner.pack.concat([owner.name]).join("."), field.name);
+				final targetId = CGenericCallResolver.resolve(baseId, field.type, field.params, callee.t, arguments.map(argument -> argument.t),
+					caller.input.specialization, context.profile, callee.pos, (position, node) -> rejectAt(context, caller.input, position, node))
+					.instanceId();
+				byId.get(targetId);
+			case TField(receiver, FInstance(owner, _, fieldReference)):
+				final field = fieldReference.get();
+				final declaration = CBodyDispatchCatalog.declaringClass(owner, fieldReference);
+				if (CBodyDispatchCatalog.directReason(receiver, declaration, field) == null) {
+					null;
+				} else {
+					final baseId = CBodyDispatchCatalog.methodIdForAccess(owner, fieldReference);
+					final targetId = CGenericCallResolver.resolve(baseId, field.type, field.params, callee.t, arguments.map(argument -> argument.t),
+						caller.input.specialization, context.profile, callee.pos, (position, node) -> rejectAt(context, caller.input, position, node))
+						.instanceId();
+					byId.get(targetId);
+				}
+			case TParenthesis(inner) | TMeta(_, inner) | TCast(inner, _): directTarget(context, caller, inner, arguments, byId);
+			case _: null;
+		};
+	}
+
+	/** Report one unsupported identity lifetime at its authored source position. */
+	static function reject<T>(context:CompilationContext, input:CBodyFunctionInput, expression:TypedExpr, node:String):T {
+		return rejectAt(context, input, expression.pos, node);
+	}
+
+	/** Report a resolver failure when only the exact compiler position remains. */
+	static function rejectAt<T>(context:CompilationContext, input:CBodyFunctionInput, position:Position, node:String):T {
+		final source = HaxeSourceSpan.fromPosition(position, input.sourcePath);
+		throw new CBodyLoweringError(HxcIRDiagnostic.unsupportedTypedAstNode(Std.string(context.profile), node,
+			'function ${input.declarationPath}.${input.fieldName} mutable-record borrow plan', source),
+			position);
+	}
+}
+
 private class FunctionPreparer {
 	final context:CompilationContext;
 	final input:CBodyFunctionInput;
 	final aggregateRegistry:CBodyAggregateRegistry;
 	final functionContext:String;
+	final mutableAggregateBorrowParameterIds:Map<Int, Bool>;
 
-	public function new(context:CompilationContext, input:CBodyFunctionInput, aggregateRegistry:CBodyAggregateRegistry) {
+	public function new(context:CompilationContext, input:CBodyFunctionInput, aggregateRegistry:CBodyAggregateRegistry,
+			?mutableAggregateBorrowParameterIds:Map<Int, Bool>) {
 		this.context = context;
 		this.input = input;
 		this.aggregateRegistry = aggregateRegistry;
 		this.functionContext = 'function ${input.declarationPath}.${input.fieldName} signature';
+		this.mutableAggregateBorrowParameterIds = mutableAggregateBorrowParameterIds == null ? [] : mutableAggregateBorrowParameterIds;
 	}
 
 	public function prepare():PreparedBodyFunction {
@@ -3034,14 +3379,26 @@ private class FunctionPreparer {
 					unsupported(input.expression.pos, 'TFunction(argument:${argument.v.name}:borrowed-span-generic-specialization-not-admitted)');
 				}
 			}
-			final enumArgument = mapping.enumValue();
 			final parameterId = 'parameter.$index';
 			final source = HaxeSourceSpan.fromPosition(input.expression.pos, input.sourcePath);
-			final callBoundedReference = mapping.classValue() != null || mapping.containsInterfaceReference();
+			final mutableAggregateBorrow = this.mutableAggregateBorrowParameterIds.exists(argument.v.id);
+			if (mutableAggregateBorrow) {
+				if (mapping.aggregateValue() == null)
+					unsupported(input.expression.pos, 'TFunction(argument:${argument.v.name}:mutable-borrow-requires-exact-record)');
+				if (input.specialization != null)
+					unsupported(input.expression.pos, 'TFunction(argument:${argument.v.name}:mutable-borrow-generic-specialization-not-admitted)');
+				if (input.instanceOwner != null && !input.instanceOwner.get().isFinal)
+					unsupported(input.expression.pos, 'TFunction(argument:${argument.v.name}:mutable-borrow-requires-static-or-final-method)');
+				if (argument.value != null)
+					unsupported(input.expression.pos, 'TFunction(argument:${argument.v.name}:mutable-borrow-default-not-admitted)');
+			}
+			final callBoundedReference = !mutableAggregateBorrow && (mapping.classValue() != null || mapping.containsInterfaceReference());
+			final parameterType = mutableAggregateBorrow ? IRTPointer(mapping.irType, false) : mapping.irType;
 			parameters.push({
 				compilerId: argument.v.id,
-				ir: {id: parameterId, type: mapping.irType, source: source},
+				ir: {id: parameterId, type: parameterType, source: source},
 				mapping: mapping,
+				passing: mutableAggregateBorrow ? PPMutableAggregateBorrow : PPValue,
 				// A direct static function can borrow either a concrete class
 				// pointer or a class-plus-table interface value when its typed body
 				// proves the reference never leaves the call. This lets ordinary
@@ -3079,6 +3436,7 @@ private class FunctionPreparer {
 				compilerId: -1,
 				ir: {id: "parameter.self", type: selfMapping.irType, source: HaxeSourceSpan.fromPosition(input.expression.pos, input.sourcePath)},
 				mapping: selfMapping,
+				passing: PPValue,
 				borrowedReference: true,
 				defaultValue: null
 			};
@@ -3086,7 +3444,10 @@ private class FunctionPreparer {
 		final signatureParameters = parameters.copy();
 		if (selfParameter != null)
 			signatureParameters.unshift(selfParameter);
-		final overloadSignature = signatureParameters.length == 0 ? [] : signatureParameters.map(parameter -> valueTypeKey(parameter.ir.type));
+		final overloadSignature = signatureParameters.length == 0 ? [] : signatureParameters.map(parameter -> switch parameter.passing {
+			case PPValue: valueTypeKey(parameter.ir.type);
+			case PPMutableAggregateBorrow: 'mutable-record-borrow:${parameter.mapping.cSpelling}';
+		});
 		final specializationArguments = input.specialization == null ? [] : input.specialization.arguments.map(argument -> argument.key);
 		final readableName = input.readableDeclarationPath == null ? null : input.readableDeclarationPath.split(".").concat([input.fieldName]);
 		final functionRequest = new CSymbolRequest(CSKMethod, input.declarationPath.split(".").concat([input.fieldName]), CNSOrdinary("translation-unit"),
@@ -3106,6 +3467,8 @@ private class FunctionPreparer {
 			context.symbols.register(request);
 			parameterRequests.set(parameter.ir.id, request);
 		}
+		final mutableAggregateIdentityIds = [for (compilerId in this.mutableAggregateBorrowParameterIds.keys()) compilerId];
+		mutableAggregateIdentityIds.sort((left, right) -> left - right);
 		return {
 			modulePath: input.modulePath,
 			declarationPath: input.declarationPath,
@@ -3122,6 +3485,7 @@ private class FunctionPreparer {
 			borrowedSpanReturn: borrowedSpanReturn,
 			functionRequest: functionRequest,
 			parameterRequests: parameterRequests,
+			mutableAggregateIdentityIds: mutableAggregateIdentityIds,
 			closureEnvironment: null
 		};
 	}
@@ -3428,6 +3792,7 @@ private class BorrowContractRefiner {
 						compilerId: parameter.compilerId,
 						ir: parameter.ir,
 						mapping: parameter.mapping,
+						passing: parameter.passing,
 						borrowedReference: borrowed,
 						defaultValue: parameter.defaultValue
 					});
@@ -3520,6 +3885,7 @@ private class BorrowContractRefiner {
 			borrowedSpanReturn: fn.borrowedSpanReturn,
 			functionRequest: fn.functionRequest,
 			parameterRequests: fn.parameterRequests,
+			mutableAggregateIdentityIds: fn.mutableAggregateIdentityIds,
 			closureEnvironment: fn.closureEnvironment
 		};
 }
@@ -3588,6 +3954,7 @@ private class ConstructorPreparer {
 					source: HaxeSourceSpan.fromPosition(input.expression.pos, input.sourcePath)
 				},
 				mapping: mapping,
+				passing: PPValue,
 				// A call-bounded interface may still point at caller-owned stack
 				// storage. A `this.field` capture instead enters the collector graph
 				// settled before this body is lowered.
@@ -3621,6 +3988,7 @@ private class ConstructorPreparer {
 			compilerId: -1,
 			ir: {id: "parameter.self", type: signature.selfMapping.irType, source: source},
 			mapping: signature.selfMapping,
+			passing: PPValue,
 			borrowedReference: false,
 			defaultValue: null
 		};
@@ -3654,6 +4022,7 @@ private class ConstructorPreparer {
 			borrowedSpanReturn: null,
 			functionRequest: functionRequest,
 			parameterRequests: parameterRequests,
+			mutableAggregateIdentityIds: [],
 			closureEnvironment: null
 		};
 	}
@@ -3777,6 +4146,7 @@ private class InitializerPreparer {
 			borrowedSpanReturn: null,
 			functionRequest: functionRequest,
 			parameterRequests: [],
+			mutableAggregateIdentityIds: [],
 			closureEnvironment: null
 		};
 	}
@@ -3797,6 +4167,8 @@ private class FunctionBuilder {
 	final functionContext:String;
 	final parameterValuesByCompilerId:Map<Int, LoweredValue> = [];
 	final capturedPlacesByCompilerId:Map<Int, CapturedPlaceBinding> = [];
+	final mutableAggregateIdentityIds:Map<Int, Bool> = [];
+	final mutableAggregateIdentitiesByCompilerId:Map<Int, MutableAggregateIdentityBinding> = [];
 
 	/**
 		Addressable storage for a parameter whose Haxe value may change.
@@ -3858,6 +4230,9 @@ private class FunctionBuilder {
 	final borrowedInterfaceLocalIds:Map<String, Bool> = [];
 
 	final borrowedAggregateLocalIds:Map<String, Bool> = [];
+
+	/** Pointer locals that stage a mutable record borrow across expression flow. */
+	final mutableAggregateBorrowLocalIds:Map<String, Bool> = [];
 
 	/** Class pointers and interface pairs whose referenced object remains borrowed. */
 	final borrowedReferenceValueIds:Map<String, Bool> = [];
@@ -3950,6 +4325,8 @@ private class FunctionBuilder {
 		this.functionContext = 'function ${input.declarationPath}.${input.displayName} body';
 		this.collectProfileWork = CPhaseTiming.collectsWork();
 		this.sourceSpans = new HaxeSourceSpanResolver(input.sourcePath, collectProfileWork);
+		for (compilerId in prepared.mutableAggregateIdentityIds)
+			mutableAggregateIdentityIds.set(compilerId, true);
 		this.localOrdinal = prepared.parameters.length;
 		this.currentBlock = createEntryBlock(sourceSpan(prepared.bodyExpression.pos));
 		if (prepared.borrowedSpanReturn != null) {
@@ -3959,6 +4336,12 @@ private class FunctionBuilder {
 			spanLengthRequests.set(returnedSpanLengthId(), request);
 		}
 		for (parameter in prepared.parameters) {
+			if (parameter.passing == PPMutableAggregateBorrow) {
+				if (!mutableAggregateIdentityIds.exists(parameter.compilerId))
+					throw new CBodyEmissionError('mutable aggregate parameter `${parameter.ir.id}` in `${prepared.irId}` lost its source identity plan');
+				mutableAggregateIdentitiesByCompilerId.set(parameter.compilerId, MAIBBorrowed(parameter.ir.id, parameter.mapping));
+				continue;
+			}
 			final value:LoweredValue = {id: parameter.ir.id, type: parameter.ir.type, mapping: parameter.mapping};
 			if (parameter.borrowedReference)
 				borrowedReferenceValueIds.set(parameter.ir.id, true);
@@ -4738,6 +5121,8 @@ private class FunctionBuilder {
 		borrowedInterfaceLocals.sort((left, right) -> left < right ? -1 : left > right ? 1 : 0);
 		final borrowedAggregateLocals = [for (localId in borrowedAggregateLocalIds.keys()) localId];
 		borrowedAggregateLocals.sort((left, right) -> left < right ? -1 : left > right ? 1 : 0);
+		final mutableAggregateBorrowLocals = [for (localId in mutableAggregateBorrowLocalIds.keys()) localId];
+		mutableAggregateBorrowLocals.sort((left, right) -> left < right ? -1 : left > right ? 1 : 0);
 		final ir:HxcIRFunction = {
 			id: prepared.irId,
 			displayName: '${input.declarationPath}.${input.displayName}',
@@ -4753,9 +5138,12 @@ private class FunctionBuilder {
 				&& parameter.mapping.aggregateValue() != null
 				&& parameter.mapping.containsInterfaceReference())
 				.map(parameter -> parameter.ir.id),
+			mutableAggregateBorrowParameterIds: prepared.parameters.filter(parameter -> parameter.passing == PPMutableAggregateBorrow)
+				.map(parameter -> parameter.ir.id),
 			borrowedClassLocalIds: borrowedClassLocals,
 			borrowedInterfaceLocalIds: borrowedInterfaceLocals,
 			borrowedAggregateLocalIds: borrowedAggregateLocals,
+			mutableAggregateBorrowLocalIds: mutableAggregateBorrowLocals,
 			managedRoots: [],
 			locals: locals,
 			returnType: prepared.returnMapping.irType,
@@ -5987,6 +6375,17 @@ private class FunctionBuilder {
 	}
 
 	function lowerVariable(variable:TVar, initializer:Null<TypedExpr>, position:Position, compilerFlowCarrier:Bool = false):Void {
+		if (initializer != null) {
+			final identity = mutableAggregateIdentity(initializer);
+			if (identity != null) {
+				final localMapping = localStorageValueType(variable, initializer, position, 'TVar(${variable.name}:mutable-record-alias-type)');
+				final identityMapping = mutableAggregateIdentityMapping(identity);
+				if (typeKey(localMapping.irType) != typeKey(identityMapping.irType))
+					return unsupportedAt(position, 'TVar(${variable.name}:mutable-record-alias-requires-exact-type)');
+				mutableAggregateIdentitiesByCompilerId.set(variable.id, identity);
+				return;
+			}
+		}
 		final ordinal = localOrdinal++;
 		final localId = 'local.$ordinal';
 		var stackReferenceAlias = false;
@@ -6283,6 +6682,11 @@ private class FunctionBuilder {
 		}
 		localIdsByCompilerId.set(variable.id, localId);
 		localTypesByCompilerId.set(variable.id, localMapping);
+		if (mutableAggregateIdentityIds.exists(variable.id)) {
+			if (localMapping.aggregateValue() == null)
+				return unsupportedAt(position, 'TVar(${variable.name}:mutable-record-owner-requires-exact-record)');
+			mutableAggregateIdentitiesByCompilerId.set(variable.id, MAIBOwned(IRPLocal(localId), localMapping));
+		}
 		if (managedFlowCarrier)
 			managedFlowCarriersByCompilerId.set(variable.id, {
 				localId: localId,
@@ -6617,10 +7021,33 @@ private class FunctionBuilder {
 		C-shaped temporary local.
 	**/
 	function lowerDirectCallArgument(expression:TypedExpr, parameter:PreparedParameter, role:String):LoweredValue {
+		if (parameter.passing != PPValue)
+			return unsupported(expression, '$role:mutable-record-borrow-requires-pointer-argument-path');
 		final construction = newExpression(expression);
 		final value = construction != null
 			&& parameter.borrowedReference ? lowerConstructedReceiver(expression, construction) : lowerValue(expression, parameter.mapping);
 		return coerce(value, parameter.mapping, expression.pos, role);
+	}
+
+	/** Produce or forward the exact pointer required by one mutable-record target. */
+	function lowerMutableAggregateBorrowArgument(expression:TypedExpr, parameter:PreparedParameter, role:String):String {
+		if (parameter.passing != PPMutableAggregateBorrow)
+			return unsupported(expression, '$role:value-parameter-used-as-mutable-record-borrow');
+		final identity = mutableAggregateIdentity(expression);
+		if (identity == null)
+			return unsupported(expression, '$role:mutable-record-borrow-requires-stable-local-or-incoming-borrow');
+		final mapping = mutableAggregateIdentityMapping(identity);
+		if (typeKey(mapping.irType) != typeKey(parameter.mapping.irType))
+			return unsupported(expression, '$role:mutable-record-borrow-requires-exact-record-type');
+		return switch identity {
+			case MAIBBorrowed(pointerValueId, _):
+				pointerValueId;
+			case MAIBOwned(place, _):
+				final result:HxcIRResult = {id: nextValueId(), type: parameter.ir.type};
+				appendInstruction(result, IRIOAddress(place), sourceSpan(expression.pos), role + "-address");
+				registerValueTemporary(result.id, role + "-address");
+				result.id;
+		};
 	}
 
 	/**
@@ -8058,16 +8485,21 @@ private class FunctionBuilder {
 	function aggregateReadPlace(expression:TypedExpr):Null<HxcIRPlace> {
 		return switch expression.expr {
 			case TLocal(variable):
-				final localType = localTypesByCompilerId.get(variable.id);
-				if (localType == null || localType.aggregateValue() == null) {
-					null;
+				final identity = mutableAggregateIdentitiesByCompilerId.get(variable.id);
+				if (identity != null) {
+					mutableAggregateIdentityPlace(identity);
 				} else {
-					final carrier = managedFlowCarriersByCompilerId.get(variable.id);
-					if (carrier != null) {
-						IRPLocal(materializeManagedFlowCarrierOwner(variable.id, carrier, expression.pos));
+					final localType = localTypesByCompilerId.get(variable.id);
+					if (localType == null || localType.aggregateValue() == null) {
+						null;
 					} else {
-						final localId = localIdsByCompilerId.get(variable.id);
-						localId == null ? null : IRPLocal(localId);
+						final carrier = managedFlowCarriersByCompilerId.get(variable.id);
+						if (carrier != null) {
+							IRPLocal(materializeManagedFlowCarrierOwner(variable.id, carrier, expression.pos));
+						} else {
+							final localId = localIdsByCompilerId.get(variable.id);
+							localId == null ? null : IRPLocal(localId);
+						}
 					}
 				}
 			case TField(base, FAnon(fieldReference)):
@@ -9355,7 +9787,35 @@ private class FunctionBuilder {
 		};
 	}
 
+	/** Resolve only the stable local spellings admitted by the borrow planner. */
+	function mutableAggregateIdentity(expression:TypedExpr):Null<MutableAggregateIdentityBinding>
+		return switch expression.expr {
+			case TLocal(variable): mutableAggregateIdentitiesByCompilerId.get(variable.id);
+			case TParenthesis(inner) | TMeta(_, inner) | TCast(inner, _): mutableAggregateIdentity(inner);
+			case _: null;
+		};
+
+	/** Return the authored record type carried by one identity binding. */
+	static function mutableAggregateIdentityMapping(binding:MutableAggregateIdentityBinding):CBodyValueType
+		return switch binding {
+			case MAIBOwned(_, mapping) | MAIBBorrowed(_, mapping): mapping;
+		};
+
+	/** Return the one addressable HxcIR place for an identity binding. */
+	static function mutableAggregateIdentityPlace(binding:MutableAggregateIdentityBinding):HxcIRPlace
+		return switch binding {
+			case MAIBOwned(place, _): place;
+			case MAIBBorrowed(pointerValueId, _): IRPDereference(pointerValueId);
+		};
+
 	function lowerLocal(expression:TypedExpr, variable:TVar):LoweredValue {
+		final mutableAggregate = mutableAggregateIdentitiesByCompilerId.get(variable.id);
+		if (mutableAggregate != null)
+			return loadPlace({
+				place: mutableAggregateIdentityPlace(mutableAggregate),
+				mapping: mutableAggregateIdentityMapping(mutableAggregate),
+				mutable: false
+			}, expression.pos, 'mutable-record-identity-load:${variable.name}');
 		final shadow = parameterShadowPlaces.get(variable.id);
 		if (shadow != null)
 			return loadPlace(shadow, expression.pos,
@@ -9505,9 +9965,12 @@ private class FunctionBuilder {
 			return unsupported(expression, 'TField(function-value:signature-lost:$targetId)');
 		if (signature.parameters.length != target.parameters.length)
 			return unsupported(expression, 'TField(function-value:parameter-count:$targetId)');
-		for (index in 0...signature.parameters.length)
+		for (index in 0...signature.parameters.length) {
+			if (target.parameters[index].passing == PPMutableAggregateBorrow)
+				return unsupported(expression, 'TField(function-value:mutable-record-borrow-target-not-admitted:$targetId)');
 			if (typeKey(signature.parameters[index].irType) != typeKey(target.parameters[index].mapping.irType))
 				return unsupported(expression, 'TField(function-value:parameter-$index-type:$targetId)');
+		}
 		if (typeKey(signature.result.irType) != typeKey(target.returnMapping.irType))
 			return unsupported(expression, 'TField(function-value:return-type:$targetId)');
 		final closure = expectedMapping == null ? null : expectedMapping.stackClosureValue();
@@ -11162,6 +11625,8 @@ private class FunctionBuilder {
 		return switch expression.expr {
 			case TArray(collection, index): lowerCollectionIndexPlace(expression, collection, index);
 			case TLocal(variable):
+				if (mutableAggregateIdentitiesByCompilerId.exists(variable.id))
+					return unsupported(expression, 'TLocal(${variable.name}:mutable-record-identity-reassignment-not-admitted)');
 				final shadow = parameterShadowPlaces.get(variable.id);
 				if (shadow != null)
 					return shadow;
@@ -11183,8 +11648,25 @@ private class FunctionBuilder {
 					return unsupported(expression, 'TLocal(${variable.name}:borrowed-reference-alias-assignment)');
 				}
 				{place: IRPLocal(localId), mapping: localType, mutable: true};
-			case TField(_, FAnon(fieldReference)):
-				unsupported(expression, 'TField(${fieldReference.get().name}:anonymous-field-mutation-requires-identity-preserving-alias-analysis)');
+			case TField(receiver, FAnon(fieldReference)):
+				final fieldName = fieldReference.get().name;
+				final identity = mutableAggregateIdentity(receiver);
+				if (identity == null)
+					return unsupported(expression, 'TField($fieldName:anonymous-field-mutation-requires-identity-preserving-alias-analysis)');
+				final mapping = mutableAggregateIdentityMapping(identity);
+				final aggregate = mapping.aggregateValue();
+				if (aggregate == null)
+					return unsupported(expression, 'TField($fieldName:mutable-record-identity-lost-exact-type)');
+				final field = preparedAggregateField(aggregate, fieldName);
+				if (field == null)
+					return unsupported(expression, 'TField($fieldName:unknown-record-field)');
+				if (field.type.containsCollectorManagedReference())
+					return unsupported(expression, 'TField($fieldName:collector-managed-field-replacement-requires-root-refresh)');
+				{
+					place: IRPField(mutableAggregateIdentityPlace(identity), fieldName),
+					mapping: field.type,
+					mutable: field.mutable
+				};
 			case TField(receiver, FInstance(_, _, fieldReference)):
 				final fieldName = fieldReference.get().name;
 				final receiverType = bodyValueType(receiver.t, receiver.pos, 'TField($fieldName:receiver-class-place-type)');
@@ -11414,10 +11896,16 @@ private class FunctionBuilder {
 		final argumentExpressions = completeDirectCallArguments(expression, call.arguments, target.parameters, 0, targetId, "argument");
 		final callCleanupDepth = normalCleanupActionIds.length;
 		final callConstructionCount = constructedObjects.length;
-		final stagedArguments:Array<StagedFlowValue> = [];
+		final stagedArguments:Array<StagedDirectCallArgument> = [];
 		for (index in 0...argumentExpressions.length) {
 			final argumentExpression = argumentExpressions[index];
 			final parameter = target.parameters[index];
+			if (parameter.passing == PPMutableAggregateBorrow) {
+				final pointerValueId = lowerMutableAggregateBorrowArgument(argumentExpression, parameter, 'TCall(argument:$index,target=$targetId)');
+				stagedArguments.push(stageMutableAggregateBorrow(pointerValueId, parameter.ir.type, argumentExpression,
+					laterExpressionCreatesFlow(argumentExpressions, index), 'static-call-argument-$index'));
+				continue;
+			}
 			if (referencesStackConstructedValue(argumentExpression) && !parameter.borrowedReference) {
 				return unsupported(argumentExpression, 'TNew(stack-reference-escape:static-call-argument:$index,target=$targetId)');
 			}
@@ -11436,10 +11924,10 @@ private class FunctionBuilder {
 				return unsupported(argumentExpression, 'TCall(fresh-managed-StringMap-argument-needs-owner:$index,target=$targetId)');
 			if (!parameter.borrowedReference)
 				rejectOwnedClassBorrow(converted, argumentExpression.pos, 'TCall(owned-class-borrow-escape:static-call-argument:$index,target=$targetId)');
-			stagedArguments.push(stageFlowValue(converted, argumentExpression, laterExpressionCreatesFlow(argumentExpressions, index),
-				'static-call-argument-$index'));
+			stagedArguments.push(SDCAValue(stageFlowValue(converted, argumentExpression, laterExpressionCreatesFlow(argumentExpressions, index),
+				'static-call-argument-$index')));
 		}
-		final arguments = restoreCallArguments(stagedArguments, "static-call-argument");
+		final arguments = restoreDirectCallArguments(stagedArguments, "static-call-argument");
 		final source = sourceSpan(expression.pos);
 		final returnType = target.returnMapping.irType;
 		if (returnType == IRTVoid) {
@@ -13411,9 +13899,16 @@ private class FunctionBuilder {
 				'TCall(instance-argument-count=${effectiveArgumentExpressions.length},expected=${explicitMappings.length},target=$targetId)');
 		final stagedReceiver = stageFlowValue(receiver, access.receiver, laterExpressionCreatesFlow(effectiveArgumentExpressions, -1),
 			"instance-call-receiver");
-		final stagedArguments:Array<StagedFlowValue> = [];
+		final stagedArguments:Array<StagedDirectCallArgument> = [];
 		for (index in 0...effectiveArgumentExpressions.length) {
 			final argument = effectiveArgumentExpressions[index];
+			final directParameter = directTarget == null ? null : directTarget.parameters[index + 1];
+			if (directParameter != null && directParameter.passing == PPMutableAggregateBorrow) {
+				final pointerValueId = lowerMutableAggregateBorrowArgument(argument, directParameter, 'TCall(instance-argument:$index,target=$targetId)');
+				stagedArguments.push(stageMutableAggregateBorrow(pointerValueId, directParameter.ir.type, argument,
+					laterExpressionCreatesFlow(effectiveArgumentExpressions, index), 'instance-call-argument-$index'));
+				continue;
+			}
 			if (referencesStackConstructedValue(argument) && !explicitBorrowedClasses[index])
 				return unsupported(argument, 'TNew(stack-reference-escape:instance-call-argument:$index,target=$targetId)');
 			var value = if (directTarget == null) {
@@ -13435,11 +13930,11 @@ private class FunctionBuilder {
 				return unsupported(argument, 'TCall(fresh-managed-StringMap-argument-needs-owner:$index,target=$targetId)');
 			if (!explicitBorrowedClasses[index])
 				rejectOwnedClassBorrow(value, argument.pos, 'TCall(owned-class-borrow-escape:instance-call-argument:$index,target=$targetId)');
-			stagedArguments.push(stageFlowValue(value, argument, laterExpressionCreatesFlow(effectiveArgumentExpressions, index),
-				'instance-call-argument-$index'));
+			stagedArguments.push(SDCAValue(stageFlowValue(value, argument, laterExpressionCreatesFlow(effectiveArgumentExpressions, index),
+				'instance-call-argument-$index')));
 		}
 		receiver = restoreStagedLoweredValue(stagedReceiver, "instance-call-receiver-load");
-		final explicitArguments = restoreCallArguments(stagedArguments, "instance-call-argument");
+		final explicitArguments = restoreDirectCallArguments(stagedArguments, "instance-call-argument");
 		// Keep the early check above so a null receiver aborts before argument side
 		// effects. If argument control flow reloads that receiver under a new HxcIR
 		// identity, check the restored value too so the call has a local proof.
@@ -14230,6 +14725,36 @@ private class FunctionBuilder {
 		return localId;
 	}
 
+	/** Save one settled ABI pointer without pretending it is a source record value. */
+	function createMutableAggregateBorrowFlowLocal(type:HxcIRTypeRef, valueId:String, source:HxcSourceSpan, role:String):String {
+		final ordinal = localOrdinal++;
+		final localId = 'local.$ordinal';
+		locallyRequireMutableAggregatePointer(type, role);
+		locals.push({
+			id: localId,
+			type: type,
+			storage: IRLSAutomatic,
+			initialState: IRISUninitialized,
+			source: source
+		});
+		final request = new CSymbolRequest(CSKTemporary, input.declarationPath.split(".").concat([input.fieldName, role]),
+			CNSOrdinary(prepared.functionRequest.stableKey()), CSVInternal, null, [], [], ordinal);
+		context.symbols.register(request);
+		localRequests.set(localId, request);
+		appendInstruction(null, IRIOInitialize(IRPLocal(localId), valueId, IRISUninitialized, IRISInitialized), source, role + "-initialize");
+		mutableAggregateBorrowLocalIds.set(localId, true);
+		return localId;
+	}
+
+	/** Keep internal pointer staging restricted to one exact non-null record pointer. */
+	function locallyRequireMutableAggregatePointer(type:HxcIRTypeRef, role:String):Void {
+		switch type {
+			case IRTPointer(IRTInstance(_), false):
+			case _:
+				throw new CBodyEmissionError('mutable aggregate borrow flow local `$role` in `${prepared.irId}` has non-pointer type `${typeKey(type)}`');
+		}
+	}
+
 	function createEntryBlock(source:HxcSourceSpan):MutableBodyBlock {
 		final block:MutableBodyBlock = {
 			id: "entry",
@@ -14650,6 +15175,12 @@ private class FunctionBuilder {
 		return {value: value, localId: localId, position: expression.pos};
 	}
 
+	/** Save one borrow pointer when a later argument introduces control flow. */
+	function stageMutableAggregateBorrow(valueId:String, type:HxcIRTypeRef, expression:TypedExpr, crossesFlow:Bool, role:String):StagedDirectCallArgument {
+		final localId = crossesFlow ? createMutableAggregateBorrowFlowLocal(type, valueId, sourceSpan(expression.pos), role) : null;
+		return SDCAMutableAggregateBorrow(valueId, type, localId, expression.pos);
+	}
+
 	/**
 	 * Reload one saved value while preserving a direct class borrow.
 	 *
@@ -14676,6 +15207,26 @@ private class FunctionBuilder {
 		final restored:Array<String> = [];
 		for (index => argument in arguments)
 			restored.push(restoreStagedValue(argument, '$role-$index-load'));
+		return restored;
+	}
+
+	/** Restore mixed source values and borrow pointers in authored argument order. */
+	function restoreDirectCallArguments(arguments:Array<StagedDirectCallArgument>, role:String):Array<String> {
+		final restored:Array<String> = [];
+		for (index => argument in arguments)
+			switch argument {
+				case SDCAValue(value):
+					restored.push(restoreStagedValue(value, '$role-$index-load'));
+				case SDCAMutableAggregateBorrow(valueId, type, localId, position):
+					if (localId == null) {
+						restored.push(valueId);
+					} else {
+						final result:HxcIRResult = {id: nextValueId(), type: type};
+						appendInstruction(result, IRIOLoad(IRPLocal(localId)), sourceSpan(position), '$role-$index-load');
+						registerValueTemporary(result.id, '$role-$index-load');
+						restored.push(result.id);
+					}
+			}
 		return restored;
 	}
 
@@ -14744,10 +15295,24 @@ private class FunctionBuilder {
 	function placeUsesBlockValue(place:HxcIRPlace):Bool {
 		return switch place {
 			case IRPLocal(_) | IRPGlobal(_): false;
-			case IRPDereference(_): true;
+			case IRPDereference(pointerId): !isMutableAggregateBorrowParameter(pointerId);
 			case IRPField(base, _): placeUsesBlockValue(base);
 			case IRPIndex(_, _): true;
 		};
+	}
+
+	/**
+	 * Whether a value is one call-bounded record pointer from this function's ABI.
+	 *
+	 * Parameter values are available in every basic block, so a field below this
+	 * pointer does not need a temporary address when the assigned value creates
+	 * control flow. Instruction results still need the ordinary staging rule.
+	 */
+	function isMutableAggregateBorrowParameter(valueId:String):Bool {
+		for (parameter in prepared.parameters)
+			if (parameter.ir.id == valueId && parameter.passing == PPMutableAggregateBorrow)
+				return true;
+		return false;
 	}
 
 	function anyExpressionCreatesFlow(expressions:Array<TypedExpr>):Bool {

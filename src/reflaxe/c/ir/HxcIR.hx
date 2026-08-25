@@ -670,6 +670,15 @@ typedef HxcIRFunction = {
 	/** Direct-record parameters whose interface fields remain caller-owned. */
 	final ?borrowedAggregateParameterIds:Array<String>;
 
+	/**
+		Non-null pointers that lend one exact mutable record for this direct call.
+
+		The caller keeps the record owner and storage. The callee can read or
+		change fields through the pointer, but it cannot store, return, capture,
+		or otherwise keep the pointer after the call.
+	**/
+	final ?mutableAggregateBorrowParameterIds:Array<String>;
+
 	/** Automatic pointer locals that only rename caller- or parent-owned class storage. */
 	final borrowedClassLocalIds:Array<String>;
 
@@ -685,6 +694,9 @@ typedef HxcIRFunction = {
 
 	/** Automatic direct-record locals whose interface fields remain caller-owned. */
 	final ?borrowedAggregateLocalIds:Array<String>;
+
+	/** Automatic pointer locals that only stage one mutable-record borrow. */
+	final ?mutableAggregateBorrowLocalIds:Array<String>;
 
 	/**
 		Exact managed parameters and instruction results kept alive until return.
@@ -702,7 +714,7 @@ typedef HxcIRFunction = {
 		How this function may lend a read-only span across its return boundary.
 
 		The optional field preserves compatibility with older hand-built HxcIR
-		fixtures. Compiler-produced schema-23 functions always supply either the
+		fixtures. Compiler-produced schema-25 functions always supply either the
 		closed receiver-field contract or `null`.
 	**/
 	final ?borrowedSpanReturn:HxcIRBorrowedSpanReturn;
