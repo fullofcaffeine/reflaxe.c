@@ -206,6 +206,42 @@
       "root": "std/c/_std",
       "defaultUpstreamComponent": "haxe-standard-library",
       "files": [
+		{
+		  "path": "std/c/_std/Array.hx",
+		  "sha256": "349e2f9ce8778084f36caab911749f4f74704e9a75994d501477952ae4135e50",
+		  "classification": "upstream-derived",
+		  "upstreamComponent": "haxe-standard-library",
+		  "upstreamPath": "std/Array.hx",
+		  "upstreamRevision": "2c1e544e0a2c7524ef4c8e103f1b0580362ea538",
+		  "licenseExpression": "MIT",
+		  "noticeFiles": [
+			"LICENSES/HAXE-STDLIB-MIT.txt"
+		  ]
+		},
+		{
+		  "path": "std/c/_std/haxe/iterators/ArrayIterator.hx",
+		  "sha256": "32bbb6a753df523c961da8a81ea5e8bc8a0316dc5a7228a9db24c25aa08b1134",
+		  "classification": "upstream-derived",
+		  "upstreamComponent": "haxe-standard-library",
+		  "upstreamPath": "std/haxe/iterators/ArrayIterator.hx",
+		  "upstreamRevision": "2c1e544e0a2c7524ef4c8e103f1b0580362ea538",
+		  "licenseExpression": "MIT",
+		  "noticeFiles": [
+			"LICENSES/HAXE-STDLIB-MIT.txt"
+		  ]
+		},
+		{
+		  "path": "std/c/_std/haxe/iterators/ArrayKeyValueIterator.hx",
+		  "sha256": "8b646471a64f2958730334b0a4707a8782916290b2a6f6b190aea4b84535c0b8",
+		  "classification": "upstream-derived",
+		  "upstreamComponent": "haxe-standard-library",
+		  "upstreamPath": "std/haxe/iterators/ArrayKeyValueIterator.hx",
+		  "upstreamRevision": "2c1e544e0a2c7524ef4c8e103f1b0580362ea538",
+		  "licenseExpression": "MIT",
+		  "noticeFiles": [
+			"LICENSES/HAXE-STDLIB-MIT.txt"
+		  ]
+		},
         {
           "path": "std/c/_std/haxe/io/Bytes.hx",
           "sha256": "7d76540be301b06efe259be41a9f0f7a197f45618d9924bc84dd3e9ab4c1e095",

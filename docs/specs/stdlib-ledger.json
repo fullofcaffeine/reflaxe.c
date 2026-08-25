@@ -76,7 +76,7 @@
     "applicableSourceCount": 183,
     "applicableSourceSha256": "be53a7994b9d58654465038f02792ebc70f5c2d283854ad19d755e4af780aa8a",
     "apiCount": 2311,
-    "apiSurfaceSha256": "20712f1813414eec4d0d1442de718fde6d9ce97413b61098467d4f513a0dab95"
+    "apiSurfaceSha256": "05c93d83268fe1836ac6245d5325c33eb9e7a070f29e5dc44879f6a421d44a9a"
   },
   "applicability": {
     "publicSurface": "non-private typed declarations and fields visible to the pinned compiler; @:noCompletion declarations are excluded",
@@ -1798,6 +1798,610 @@
       "notes": "Bool and Int values use Eval-compatible punctuation and scalar spelling in map iteration order; managed value formatting remains unsupported."
     },
     {
+      "id": "array-type-partial",
+      "selector": {
+        "module": "Array",
+        "type": "Array",
+        "member": null,
+        "kind": "class",
+        "isStatic": true,
+        "signature": "Array"
+      },
+      "owner": "direct-compiler-lowering",
+      "runtimeFeatures": [
+        "array"
+      ],
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "environments": [
+        "hosted",
+        "freestanding"
+      ],
+      "status": "partial",
+      "ownerBeads": "E5.T03",
+      "testOwnerBeads": "E5.T12",
+      "diagnosticPolicies": [
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
+      ],
+      "tests": [
+        "test/differential/array-runtime/generated/Main.hx",
+        "test/differential/array-runtime/array_runtime.c",
+        "test/differential/array-runtime/run.py"
+      ],
+      "notes": "The C target keeps admitted Array elements unboxed in exact typed specializations while preserving shared mutable identity, checked failure, and representation-specific ownership. Unsupported element and ownership shapes remain fail-closed."
+    },
+    {
+      "id": "array-constructor-partial",
+      "selector": {
+        "module": "Array",
+        "type": "Array",
+        "member": "new",
+        "kind": "constructor",
+        "isStatic": false,
+        "signature": "() -> Void"
+      },
+      "owner": "direct-compiler-lowering",
+      "runtimeFeatures": [
+        "array"
+      ],
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "environments": [
+        "hosted",
+        "freestanding"
+      ],
+      "status": "partial",
+      "ownerBeads": "E5.T03",
+      "testOwnerBeads": "E5.T12",
+      "diagnosticPolicies": [
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
+      ],
+      "tests": [
+        "test/differential/array-runtime/generated/Main.hx",
+        "test/differential/array-runtime/run.py"
+      ],
+      "notes": "An exact `new Array<T>()` creates the same empty typed shared container as an empty Array literal and transfers one fresh owner to its destination."
+    },
+    {
+      "id": "array-length-partial",
+      "selector": {
+        "module": "Array",
+        "type": "Array",
+        "member": "length",
+        "kind": "field",
+        "isStatic": false,
+        "signature": "Int"
+      },
+      "owner": "direct-compiler-lowering",
+      "runtimeFeatures": [
+        "array"
+      ],
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "environments": [
+        "hosted",
+        "freestanding"
+      ],
+      "status": "partial",
+      "ownerBeads": "E5.T03",
+      "testOwnerBeads": "E5.T12",
+      "diagnosticPolicies": [
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
+      ],
+      "tests": [
+        "test/differential/array-runtime/generated/Main.hx",
+        "test/differential/array-runtime/run.py"
+      ],
+      "notes": "Length reads the current shared container after the compiler proves an admitted exact Array representation."
+    },
+    {
+      "id": "array-pop-partial",
+      "selector": {
+        "module": "Array",
+        "type": "Array",
+        "member": "pop",
+        "kind": "method",
+        "isStatic": false,
+        "signature": "() -> Null<Array.T>"
+      },
+      "owner": "direct-compiler-lowering",
+      "runtimeFeatures": [
+        "array"
+      ],
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "environments": [
+        "hosted",
+        "freestanding"
+      ],
+      "status": "partial",
+      "ownerBeads": "E5.T03",
+      "testOwnerBeads": "E5.T12",
+      "diagnosticPolicies": [
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
+      ],
+      "tests": [
+        "test/differential/array-runtime/generated/Main.hx",
+        "test/differential/array-runtime/array_runtime.c",
+        "test/differential/array-runtime/run.py"
+      ],
+      "notes": "A present pop moves the final exact element owner into its nullable result without copying or destroying it; an empty Array reports absence and every alias observes the shorter container."
+    },
+    {
+      "id": "array-push-partial",
+      "selector": {
+        "module": "Array",
+        "type": "Array",
+        "member": "push",
+        "kind": "method",
+        "isStatic": false,
+        "signature": "(x : Array.T) -> Int"
+      },
+      "owner": "direct-compiler-lowering",
+      "runtimeFeatures": [
+        "array"
+      ],
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "environments": [
+        "hosted",
+        "freestanding"
+      ],
+      "status": "partial",
+      "ownerBeads": "E5.T03",
+      "testOwnerBeads": "E5.T12",
+      "diagnosticPolicies": [
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
+      ],
+      "tests": [
+        "test/differential/array-runtime/generated/Main.hx",
+        "test/differential/array-runtime/array_runtime.c",
+        "test/differential/array-runtime/run.py"
+      ],
+      "notes": "Push evaluates receiver and element once, copy-constructs the exact element into shared storage, returns the new length, and leaves the sequence unchanged on allocation or copy failure."
+    },
+    {
+      "id": "array-concat-partial",
+      "selector": {
+        "module": "Array",
+        "type": "Array",
+        "member": "concat",
+        "kind": "inline-method",
+        "isStatic": false,
+        "signature": "(a : Array<Array.T>) -> Array<Array.T>"
+      },
+      "owner": "target-source-override",
+      "runtimeFeatures": [
+        "array"
+      ],
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "environments": [
+        "hosted",
+        "freestanding"
+      ],
+      "status": "partial",
+      "ownerBeads": "E5.T03",
+      "testOwnerBeads": "E5.T12",
+      "diagnosticPolicies": [
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
+      ],
+      "tests": [
+        "test/differential/array-runtime/generated/Main.hx",
+        "test/differential/array-runtime/run.py"
+      ],
+      "notes": "Typed Haxe copies the receiver, then pushes the other Array's current elements in source order; exact Array copy and element-lifecycle rules preserve shallow ownership and failure behavior."
+    },
+    {
+      "id": "array-reverse-partial",
+      "selector": {
+        "module": "Array",
+        "type": "Array",
+        "member": "reverse",
+        "kind": "inline-method",
+        "isStatic": false,
+        "signature": "() -> Void"
+      },
+      "owner": "target-source-override",
+      "runtimeFeatures": [
+        "array"
+      ],
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "environments": [
+        "hosted",
+        "freestanding"
+      ],
+      "status": "partial",
+      "ownerBeads": "E5.T03",
+      "testOwnerBeads": "E5.T12",
+      "diagnosticPolicies": [
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
+      ],
+      "tests": [
+        "test/differential/array-runtime/generated/Main.hx",
+        "test/differential/array-runtime/run.py"
+      ],
+      "notes": "Typed Haxe swaps exact indexed values in place, so every alias observes the reversal and managed assignments retain replacements before releasing old slots."
+    },
+    {
+      "id": "array-slice-partial",
+      "selector": {
+        "module": "Array",
+        "type": "Array",
+        "member": "slice",
+        "kind": "inline-method",
+        "isStatic": false,
+        "signature": "(pos : Int, ?end : Null<Int>) -> Array<Array.T>"
+      },
+      "owner": "target-source-override",
+      "runtimeFeatures": [
+        "array"
+      ],
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "environments": [
+        "hosted",
+        "freestanding"
+      ],
+      "status": "partial",
+      "ownerBeads": "E5.T03",
+      "testOwnerBeads": "E5.T12",
+      "diagnosticPolicies": [
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
+      ],
+      "tests": [
+        "test/differential/array-runtime/generated/Main.hx",
+        "test/differential/array-runtime/run.py"
+      ],
+      "notes": "Typed Haxe normalizes negative and clamped half-open bounds, then shallow-copies the selected exact elements into a fresh Array in source order."
+    },
+    {
+      "id": "array-unshift-partial",
+      "selector": {
+        "module": "Array",
+        "type": "Array",
+        "member": "unshift",
+        "kind": "inline-method",
+        "isStatic": false,
+        "signature": "(x : Array.T) -> Void"
+      },
+      "owner": "target-source-override",
+      "runtimeFeatures": [
+        "array"
+      ],
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "environments": [
+        "hosted",
+        "freestanding"
+      ],
+      "status": "partial",
+      "ownerBeads": "E5.T03",
+      "testOwnerBeads": "E5.T12",
+      "diagnosticPolicies": [
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
+      ],
+      "tests": [
+        "test/differential/array-runtime/generated/Main.hx",
+        "test/differential/array-runtime/run.py"
+      ],
+      "notes": "The target override delegates to the exact checked insertion at index zero, preserving one evaluation, aliases, order, and failure atomicity."
+    },
+    {
+      "id": "array-remove-partial",
+      "selector": {
+        "module": "Array",
+        "type": "Array",
+        "member": "remove",
+        "kind": "inline-method",
+        "isStatic": false,
+        "signature": "(x : Array.T) -> Bool"
+      },
+      "owner": "target-source-override",
+      "runtimeFeatures": [
+        "array"
+      ],
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "environments": [
+        "hosted",
+        "freestanding"
+      ],
+      "status": "partial",
+      "ownerBeads": "E5.T03",
+      "testOwnerBeads": "E5.T12",
+      "diagnosticPolicies": [
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
+      ],
+      "tests": [
+        "test/differential/array-runtime/generated/Main.hx",
+        "test/differential/array-runtime/run.py"
+      ],
+      "notes": "Typed Haxe finds the first exact equal element and discards a one-element splice; supported equality and element ownership remain representation checked."
+    },
+    {
+      "id": "array-contains-partial",
+      "selector": {
+        "module": "Array",
+        "type": "Array",
+        "member": "contains",
+        "kind": "inline-method",
+        "isStatic": false,
+        "signature": "(x : Array.T) -> Bool"
+      },
+      "owner": "target-source-override",
+      "runtimeFeatures": [
+        "array"
+      ],
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "environments": [
+        "hosted",
+        "freestanding"
+      ],
+      "status": "partial",
+      "ownerBeads": "E5.T03",
+      "testOwnerBeads": "E5.T12",
+      "diagnosticPolicies": [
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
+      ],
+      "tests": [
+        "test/differential/array-runtime/generated/Main.hx",
+        "test/differential/array-runtime/run.py"
+      ],
+      "notes": "Contains reports whether the exact forward search finds a supported equal element; unsupported equality shapes fail before C is written."
+    },
+    {
+      "id": "array-index-of-partial",
+      "selector": {
+        "module": "Array",
+        "type": "Array",
+        "member": "indexOf",
+        "kind": "inline-method",
+        "isStatic": false,
+        "signature": "(x : Array.T, ?fromIndex : Null<Int>) -> Int"
+      },
+      "owner": "target-source-override",
+      "runtimeFeatures": [
+        "array"
+      ],
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "environments": [
+        "hosted",
+        "freestanding"
+      ],
+      "status": "partial",
+      "ownerBeads": "E5.T03",
+      "testOwnerBeads": "E5.T12",
+      "diagnosticPolicies": [
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
+      ],
+      "tests": [
+        "test/differential/array-runtime/generated/Main.hx",
+        "test/differential/array-runtime/run.py"
+      ],
+      "notes": "Typed Haxe normalizes the optional signed start and returns the first supported equal element index or -1."
+    },
+    {
+      "id": "array-last-index-of-partial",
+      "selector": {
+        "module": "Array",
+        "type": "Array",
+        "member": "lastIndexOf",
+        "kind": "inline-method",
+        "isStatic": false,
+        "signature": "(x : Array.T, ?fromIndex : Null<Int>) -> Int"
+      },
+      "owner": "target-source-override",
+      "runtimeFeatures": [
+        "array"
+      ],
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "environments": [
+        "hosted",
+        "freestanding"
+      ],
+      "status": "partial",
+      "ownerBeads": "E5.T03",
+      "testOwnerBeads": "E5.T12",
+      "diagnosticPolicies": [
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
+      ],
+      "tests": [
+        "test/differential/array-runtime/generated/Main.hx",
+        "test/differential/array-runtime/run.py"
+      ],
+      "notes": "Typed Haxe normalizes the optional signed start and searches backward for the last supported equal element index."
+    },
+    {
+      "id": "array-iterator-partial",
+      "selector": {
+        "module": "Array",
+        "type": "Array",
+        "member": "iterator",
+        "kind": "inline-method",
+        "isStatic": false,
+        "signature": "() -> haxe.iterators.ArrayIterator<Array.T>"
+      },
+      "owner": "target-source-override",
+      "runtimeFeatures": [
+        "array",
+        "iterator"
+      ],
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "environments": [
+        "hosted",
+        "freestanding"
+      ],
+      "status": "partial",
+      "ownerBeads": "E5.T03",
+      "testOwnerBeads": "E5.T12",
+      "diagnosticPolicies": [
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
+      ],
+      "tests": [
+        "test/differential/array-runtime/generated/Main.hx",
+        "test/differential/array-runtime/array_runtime.c",
+        "test/differential/array-runtime/run.py"
+      ],
+      "notes": "The standard constructor becomes a live shared cursor over the same reference-counted Array. Later pushes and shrinks affect exhaustion, and next advances only after an exact element copy succeeds. Collector-owned Array anchors remain fail-closed."
+    },
+    {
+      "id": "array-key-value-iterator-partial",
+      "selector": {
+        "module": "Array",
+        "type": "Array",
+        "member": "keyValueIterator",
+        "kind": "inline-method",
+        "isStatic": false,
+        "signature": "() -> haxe.iterators.ArrayKeyValueIterator<Array.T>"
+      },
+      "owner": "target-source-override",
+      "runtimeFeatures": [
+        "array",
+        "iterator"
+      ],
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "environments": [
+        "hosted",
+        "freestanding"
+      ],
+      "status": "partial",
+      "ownerBeads": "E5.T03",
+      "testOwnerBeads": "E5.T12",
+      "diagnosticPolicies": [
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
+      ],
+      "tests": [
+        "test/differential/array-runtime/generated/Main.hx",
+        "test/differential/array-runtime/array_runtime.c",
+        "test/differential/array-runtime/run.py"
+      ],
+      "notes": "The live cursor writes each current Int index and exact copied value into a validated non-overlapping pair layout while preserving shared Array mutation semantics."
+    },
+    {
+      "id": "array-map-partial",
+      "selector": {
+        "module": "Array",
+        "type": "Array",
+        "member": "map",
+        "kind": "inline-method",
+        "isStatic": false,
+        "signature": "(f : (Array.T -> map.S)) -> Array<map.S>"
+      },
+      "owner": "target-source-override",
+      "runtimeFeatures": [
+        "array",
+        "iterator"
+      ],
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "environments": [
+        "hosted",
+        "freestanding"
+      ],
+      "status": "partial",
+      "ownerBeads": "E5.T03",
+      "testOwnerBeads": "E5.T12",
+      "diagnosticPolicies": [
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
+      ],
+      "tests": [
+        "test/differential/array-runtime/generated/Main.hx",
+        "test/differential/array-runtime/run.py"
+      ],
+      "notes": "Typed Haxe applies an admitted exact callable once per live iteration value and pushes each exact result into a fresh specialized Array in source order. Unsupported closures or result representations remain fail-closed."
+    },
+    {
+      "id": "array-filter-partial",
+      "selector": {
+        "module": "Array",
+        "type": "Array",
+        "member": "filter",
+        "kind": "inline-method",
+        "isStatic": false,
+        "signature": "(f : (Array.T -> Bool)) -> Array<Array.T>"
+      },
+      "owner": "target-source-override",
+      "runtimeFeatures": [
+        "array",
+        "iterator"
+      ],
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "environments": [
+        "hosted",
+        "freestanding"
+      ],
+      "status": "partial",
+      "ownerBeads": "E5.T03",
+      "testOwnerBeads": "E5.T12",
+      "diagnosticPolicies": [
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
+      ],
+      "tests": [
+        "test/differential/array-runtime/generated/Main.hx",
+        "test/differential/array-runtime/run.py"
+      ],
+      "notes": "Typed Haxe evaluates an admitted predicate once per live iteration value and shallow-copies matching exact elements into a fresh Array in source order."
+    },
+    {
       "id": "array-copy-partial",
       "selector": {
         "module": "Array",
@@ -1869,7 +2473,7 @@
       "notes": "The admitted typed Array specializations evaluate receiver, signed position, and element once; clamp negative and oversized positions exactly like Haxe; preserve shared identity; and copy primitive or managed elements through the exact lifecycle plan. Allocation or element-copy failure leaves the original sequence visible through every alias. Element families without a complete typed ownership plan remain fail-closed."
     },
     {
-      "id": "array-resize-zero-partial",
+      "id": "array-resize-exact-default-partial",
       "selector": {
         "module": "Array",
         "type": "Array",
@@ -1898,15 +2502,15 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [
+        "test/differential/array-runtime/array_runtime.c",
         "test/differential/array-runtime/generated/Main.hx",
-        "test/differential/array-runtime/negative/resize_dynamic/Main.hx",
-        "test/differential/array-runtime/negative/resize_nonzero/Main.hx",
+        "test/differential/array-runtime/negative/resize_no_default/Main.hx",
         "test/differential/array-runtime/run.py"
       ],
-      "notes": "The admitted `resize(0)` form clears an existing Array in place, preserves alias identity, and destroys managed elements in reverse order through their exact lifecycle callbacks. Only a literal zero is accepted because it proves the operation cannot grow and therefore needs no target-typed default element. Dynamic and nonzero lengths remain source-positioned failures until growth and rollback have complete representation-aware evidence."
+      "notes": "A runtime Int length shrinks or grows the shared Array after one receiver check. Shrink destroys the removed suffix in reverse order. Growth copy-constructs the exact static zero, false, or null-carrier default and rolls back a partial suffix on failure. Unboxed records and enums without an honest null carrier remain source-positioned failures when growth is possible; literal zero remains admitted for them."
     },
     {
-      "id": "array-splice-one-partial",
+      "id": "array-splice-range-partial",
       "selector": {
         "module": "Array",
         "type": "Array",
@@ -1935,10 +2539,11 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [
+        "test/differential/array-runtime/array_runtime.c",
         "test/differential/array-runtime/generated/Main.hx",
         "test/differential/array-runtime/run.py"
       ],
-      "notes": "The admitted `splice(pos, 1)` form mutates one shared Array and either discards or returns the one-element removed Array. It evaluates the receiver and position once, applies Haxe's negative-position and out-of-range rules, preserves aliases and remaining order, and copies managed ownership into the result before mutating the source so allocation or copy failure preserves the original sequence. Other lengths remain source-positioned failures."
+      "notes": "Splice evaluates receiver, position, and runtime length once; normalizes negative and out-of-range inputs; preserves aliases and suffix order; and either discards the range without a result allocation or shallow-copies the complete removed range before mutating the source. Allocation or managed copy failure destroys the partial result and preserves the original sequence. Literal one-element calls retain their smaller specialized path."
     },
     {
       "id": "array-sort-partial",
@@ -2086,6 +2691,300 @@
         "test/string_output/run.py"
       ],
       "notes": "When the typed argument is Bool, ordinary Std.string evaluates it once and selects the immutable Haxe spelling `true` or `false` without boxing, allocation, reflection, or a generic Dynamic helper. A typed Int evaluates once and uses a locale-independent managed decimal formatter with exact INT_MIN/INT_MAX behavior; interpolation consumes the same conversion. In a hosted environment, a typed Float evaluates once and uses the first 12-, 15-, or 18-digit spelling that round-trips exactly, including Haxe's non-finite names. A value already typed as String evaluates once and returns the same static or managed carrier: it emits no conversion call or allocation and preserves the existing ownership fact for the surrounding read, store, container, or return. The public Dynamic signature does not broaden this evidence: object, enum, and other source families remain fail-closed until their representation and formatting rules are proven."
+    },
+    {
+      "id": "array-iterator-type-partial",
+      "selector": {
+        "module": "haxe.iterators.ArrayIterator",
+        "type": "haxe.iterators.ArrayIterator",
+        "member": null,
+        "kind": "class",
+        "isStatic": true,
+        "signature": "haxe.iterators.ArrayIterator"
+      },
+      "owner": "direct-compiler-lowering",
+      "runtimeFeatures": [
+        "array",
+        "iterator"
+      ],
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "environments": [
+        "hosted",
+        "freestanding"
+      ],
+      "status": "partial",
+      "ownerBeads": "E5.T03",
+      "testOwnerBeads": "E5.T12",
+      "diagnosticPolicies": [
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
+      ],
+      "tests": [
+        "test/differential/array-runtime/generated/Main.hx",
+        "test/differential/array-runtime/array_runtime.c",
+        "test/differential/array-runtime/run.py"
+      ],
+      "notes": "The exact pinned standard class uses the managed Iterator carrier with an unboxed element specialization and a retained live Array anchor; unrelated generic classes do not enter this lowering."
+    },
+    {
+      "id": "array-iterator-constructor-partial",
+      "selector": {
+        "module": "haxe.iterators.ArrayIterator",
+        "type": "haxe.iterators.ArrayIterator",
+        "member": "new",
+        "kind": "constructor",
+        "isStatic": false,
+        "signature": "(array : Array<haxe.iterators.ArrayIterator.T>) -> Void"
+      },
+      "owner": "direct-compiler-lowering",
+      "runtimeFeatures": [
+        "array",
+        "iterator"
+      ],
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "environments": [
+        "hosted",
+        "freestanding"
+      ],
+      "status": "partial",
+      "ownerBeads": "E5.T03",
+      "testOwnerBeads": "E5.T12",
+      "diagnosticPolicies": [
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
+      ],
+      "tests": [
+        "test/differential/array-runtime/generated/Main.hx",
+        "test/differential/array-runtime/run.py"
+      ],
+      "notes": "Construction retains the same non-collector Array container and starts its shared cursor at zero without snapshotting elements."
+    },
+    {
+      "id": "array-iterator-has-next-partial",
+      "selector": {
+        "module": "haxe.iterators.ArrayIterator",
+        "type": "haxe.iterators.ArrayIterator",
+        "member": "hasNext",
+        "kind": "method",
+        "isStatic": false,
+        "signature": "() -> Bool"
+      },
+      "owner": "direct-compiler-lowering",
+      "runtimeFeatures": [
+        "array",
+        "iterator"
+      ],
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "environments": [
+        "hosted",
+        "freestanding"
+      ],
+      "status": "partial",
+      "ownerBeads": "E5.T03",
+      "testOwnerBeads": "E5.T12",
+      "diagnosticPolicies": [
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
+      ],
+      "tests": [
+        "test/differential/array-runtime/generated/Main.hx",
+        "test/differential/array-runtime/array_runtime.c",
+        "test/differential/array-runtime/run.py"
+      ],
+      "notes": "The shared cursor compares its current index with the retained Array's current length, so later mutation changes exhaustion exactly like the pinned implementation."
+    },
+    {
+      "id": "array-iterator-next-partial",
+      "selector": {
+        "module": "haxe.iterators.ArrayIterator",
+        "type": "haxe.iterators.ArrayIterator",
+        "member": "next",
+        "kind": "method",
+        "isStatic": false,
+        "signature": "() -> haxe.iterators.ArrayIterator.T"
+      },
+      "owner": "direct-compiler-lowering",
+      "runtimeFeatures": [
+        "array",
+        "iterator"
+      ],
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "environments": [
+        "hosted",
+        "freestanding"
+      ],
+      "status": "partial",
+      "ownerBeads": "E5.T03",
+      "testOwnerBeads": "E5.T12",
+      "diagnosticPolicies": [
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
+      ],
+      "tests": [
+        "test/differential/array-runtime/generated/Main.hx",
+        "test/differential/array-runtime/array_runtime.c",
+        "test/differential/array-runtime/run.py"
+      ],
+      "notes": "Next checked-copies the exact current element and advances only after success; managed copy failure leaves the cursor retryable."
+    },
+    {
+      "id": "array-key-value-iterator-type-partial",
+      "selector": {
+        "module": "haxe.iterators.ArrayKeyValueIterator",
+        "type": "haxe.iterators.ArrayKeyValueIterator",
+        "member": null,
+        "kind": "class",
+        "isStatic": true,
+        "signature": "haxe.iterators.ArrayKeyValueIterator"
+      },
+      "owner": "direct-compiler-lowering",
+      "runtimeFeatures": [
+        "array",
+        "iterator"
+      ],
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "environments": [
+        "hosted",
+        "freestanding"
+      ],
+      "status": "partial",
+      "ownerBeads": "E5.T03",
+      "testOwnerBeads": "E5.T12",
+      "diagnosticPolicies": [
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
+      ],
+      "tests": [
+        "test/differential/array-runtime/generated/Main.hx",
+        "test/differential/array-runtime/array_runtime.c",
+        "test/differential/array-runtime/run.py"
+      ],
+      "notes": "The exact pinned key/value class shares the managed live-Array cursor carrier and preserves its closed Int/value result type without boxing."
+    },
+    {
+      "id": "array-key-value-iterator-constructor-partial",
+      "selector": {
+        "module": "haxe.iterators.ArrayKeyValueIterator",
+        "type": "haxe.iterators.ArrayKeyValueIterator",
+        "member": "new",
+        "kind": "constructor",
+        "isStatic": false,
+        "signature": "(array : Array<haxe.iterators.ArrayKeyValueIterator.T>) -> Void"
+      },
+      "owner": "direct-compiler-lowering",
+      "runtimeFeatures": [
+        "array",
+        "iterator"
+      ],
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "environments": [
+        "hosted",
+        "freestanding"
+      ],
+      "status": "partial",
+      "ownerBeads": "E5.T03",
+      "testOwnerBeads": "E5.T12",
+      "diagnosticPolicies": [
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
+      ],
+      "tests": [
+        "test/differential/array-runtime/generated/Main.hx",
+        "test/differential/array-runtime/run.py"
+      ],
+      "notes": "Construction retains the same non-collector Array and validates the exact key/value result layout before native emission."
+    },
+    {
+      "id": "array-key-value-iterator-has-next-partial",
+      "selector": {
+        "module": "haxe.iterators.ArrayKeyValueIterator",
+        "type": "haxe.iterators.ArrayKeyValueIterator",
+        "member": "hasNext",
+        "kind": "method",
+        "isStatic": false,
+        "signature": "() -> Bool"
+      },
+      "owner": "direct-compiler-lowering",
+      "runtimeFeatures": [
+        "array",
+        "iterator"
+      ],
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "environments": [
+        "hosted",
+        "freestanding"
+      ],
+      "status": "partial",
+      "ownerBeads": "E5.T03",
+      "testOwnerBeads": "E5.T12",
+      "diagnosticPolicies": [
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
+      ],
+      "tests": [
+        "test/differential/array-runtime/generated/Main.hx",
+        "test/differential/array-runtime/array_runtime.c",
+        "test/differential/array-runtime/run.py"
+      ],
+      "notes": "The shared cursor compares its current index with the retained Array's current length, including later push or shrink mutation."
+    },
+    {
+      "id": "array-key-value-iterator-next-partial",
+      "selector": {
+        "module": "haxe.iterators.ArrayKeyValueIterator",
+        "type": "haxe.iterators.ArrayKeyValueIterator",
+        "member": "next",
+        "kind": "method",
+        "isStatic": false,
+        "signature": "() -> { value : haxe.iterators.ArrayKeyValueIterator.T, key : Int }"
+      },
+      "owner": "direct-compiler-lowering",
+      "runtimeFeatures": [
+        "array",
+        "iterator"
+      ],
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "environments": [
+        "hosted",
+        "freestanding"
+      ],
+      "status": "partial",
+      "ownerBeads": "E5.T03",
+      "testOwnerBeads": "E5.T12",
+      "diagnosticPolicies": [
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
+      ],
+      "tests": [
+        "test/differential/array-runtime/generated/Main.hx",
+        "test/differential/array-runtime/array_runtime.c",
+        "test/differential/array-runtime/run.py"
+      ],
+      "notes": "Next writes the current Int key and exact copied value into non-overlapping validated fields, then advances only after the copy succeeds."
     },
     {
       "id": "bytes-type-partial",
@@ -3710,12 +4609,9 @@
       "kind": "class",
       "signature": "Array",
       "isStatic": true,
-      "owner": "target-source-override",
+      "owner": "direct-compiler-lowering",
       "runtimeFeatures": [
-        "alloc",
-        "array",
-        "gc",
-        "object"
+        "array"
       ],
       "profiles": [
         "portable",
@@ -3723,38 +4619,37 @@
       ],
       "environments": [
         "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "freestanding"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T03",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Known element/key/value types should specialize to direct typed storage; allocation and tracing remain explicit reachability decisions.",
-      "ruleId": "collection-storage"
+      "tests": [
+        "test/differential/array-runtime/generated/Main.hx",
+        "test/differential/array-runtime/array_runtime.c",
+        "test/differential/array-runtime/run.py"
+      ],
+      "notes": "The C target keeps admitted Array elements unboxed in exact typed specializations while preserving shared mutable identity, checked failure, and representation-specific ownership. Unsupported element and ownership shapes remain fail-closed.",
+      "ruleId": "array-type-partial"
     },
     {
-      "id": "hxc-stdlib-api-v1:cd7eac8d903ea1a8ad207faa74575d72de05eb221e2c2cda10386e2ab45075d1",
+      "id": "hxc-stdlib-api-v1:5b613f243cfe28e1f299bd0fd451471139844a39a2fe661880985d72ce3ff2d6",
       "module": "Array",
       "source": "Array.hx",
       "sourceSha256": "ea6780139e194a0fdafdff6485640183835df0c5928ccf64b1a562a6b00381e7",
       "probeScope": "c-common",
       "type": "Array",
       "member": "concat",
-      "kind": "method",
+      "kind": "inline-method",
       "signature": "(a : Array<Array.T>) -> Array<Array.T>",
       "isStatic": false,
       "owner": "target-source-override",
       "runtimeFeatures": [
-        "alloc",
-        "array",
-        "gc",
-        "object"
+        "array"
       ],
       "profiles": [
         "portable",
@@ -3762,38 +4657,36 @@
       ],
       "environments": [
         "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "freestanding"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T03",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Known element/key/value types should specialize to direct typed storage; allocation and tracing remain explicit reachability decisions.",
-      "ruleId": "collection-storage"
+      "tests": [
+        "test/differential/array-runtime/generated/Main.hx",
+        "test/differential/array-runtime/run.py"
+      ],
+      "notes": "Typed Haxe copies the receiver, then pushes the other Array's current elements in source order; exact Array copy and element-lifecycle rules preserve shallow ownership and failure behavior.",
+      "ruleId": "array-concat-partial"
     },
     {
-      "id": "hxc-stdlib-api-v1:a52dd238ce48d775105f507c9ea7c63b7a2a47665f12fe799afe0e2d4c52a56e",
+      "id": "hxc-stdlib-api-v1:88a860298e7ff4436c78d3e3baaca7a343661de5beef8bbf2fa3a007be20ac1f",
       "module": "Array",
       "source": "Array.hx",
       "sourceSha256": "ea6780139e194a0fdafdff6485640183835df0c5928ccf64b1a562a6b00381e7",
       "probeScope": "c-common",
       "type": "Array",
       "member": "contains",
-      "kind": "method",
+      "kind": "inline-method",
       "signature": "(x : Array.T) -> Bool",
       "isStatic": false,
       "owner": "target-source-override",
       "runtimeFeatures": [
-        "alloc",
-        "array",
-        "gc",
-        "object"
+        "array"
       ],
       "profiles": [
         "portable",
@@ -3801,20 +4694,21 @@
       ],
       "environments": [
         "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "freestanding"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T03",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Known element/key/value types should specialize to direct typed storage; allocation and tracing remain explicit reachability decisions.",
-      "ruleId": "collection-storage"
+      "tests": [
+        "test/differential/array-runtime/generated/Main.hx",
+        "test/differential/array-runtime/run.py"
+      ],
+      "notes": "Contains reports whether the exact forward search finds a supported equal element; unsupported equality shapes fail before C is written.",
+      "ruleId": "array-contains-partial"
     },
     {
       "id": "hxc-stdlib-api-v1:5ab5bcdaa9a581acf30b8ac03a73261b8177090bd35c128002eb108b7174805b",
@@ -3867,10 +4761,8 @@
       "isStatic": false,
       "owner": "target-source-override",
       "runtimeFeatures": [
-        "alloc",
         "array",
-        "gc",
-        "object"
+        "iterator"
       ],
       "profiles": [
         "portable",
@@ -3878,38 +4770,36 @@
       ],
       "environments": [
         "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "freestanding"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T03",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Known element/key/value types should specialize to direct typed storage; allocation and tracing remain explicit reachability decisions.",
-      "ruleId": "collection-storage"
+      "tests": [
+        "test/differential/array-runtime/generated/Main.hx",
+        "test/differential/array-runtime/run.py"
+      ],
+      "notes": "Typed Haxe evaluates an admitted predicate once per live iteration value and shallow-copies matching exact elements into a fresh Array in source order.",
+      "ruleId": "array-filter-partial"
     },
     {
-      "id": "hxc-stdlib-api-v1:5714abc89732d2349edde719450c6bb9c8764a0819e98073b767ef17c867a924",
+      "id": "hxc-stdlib-api-v1:7d09f998b2b5c287458234de345468b188143aca944c11579ce7f91ec907d00d",
       "module": "Array",
       "source": "Array.hx",
       "sourceSha256": "ea6780139e194a0fdafdff6485640183835df0c5928ccf64b1a562a6b00381e7",
       "probeScope": "c-common",
       "type": "Array",
       "member": "indexOf",
-      "kind": "method",
+      "kind": "inline-method",
       "signature": "(x : Array.T, ?fromIndex : Null<Int>) -> Int",
       "isStatic": false,
       "owner": "target-source-override",
       "runtimeFeatures": [
-        "alloc",
-        "array",
-        "gc",
-        "object"
+        "array"
       ],
       "profiles": [
         "portable",
@@ -3917,20 +4807,21 @@
       ],
       "environments": [
         "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "freestanding"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T03",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Known element/key/value types should specialize to direct typed storage; allocation and tracing remain explicit reachability decisions.",
-      "ruleId": "collection-storage"
+      "tests": [
+        "test/differential/array-runtime/generated/Main.hx",
+        "test/differential/array-runtime/run.py"
+      ],
+      "notes": "Typed Haxe normalizes the optional signed start and returns the first supported equal element index or -1.",
+      "ruleId": "array-index-of-partial"
     },
     {
       "id": "hxc-stdlib-api-v1:e65541c0ad0c67a659603240ab09d0b52ab965b883916d29954422207db754c2",
@@ -3982,10 +4873,8 @@
       "isStatic": false,
       "owner": "target-source-override",
       "runtimeFeatures": [
-        "alloc",
         "array",
-        "gc",
-        "object"
+        "iterator"
       ],
       "profiles": [
         "portable",
@@ -3993,20 +4882,22 @@
       ],
       "environments": [
         "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "freestanding"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T03",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Known element/key/value types should specialize to direct typed storage; allocation and tracing remain explicit reachability decisions.",
-      "ruleId": "collection-storage"
+      "tests": [
+        "test/differential/array-runtime/generated/Main.hx",
+        "test/differential/array-runtime/array_runtime.c",
+        "test/differential/array-runtime/run.py"
+      ],
+      "notes": "The standard constructor becomes a live shared cursor over the same reference-counted Array. Later pushes and shrinks affect exhaustion, and next advances only after an exact element copy succeeds. Collector-owned Array anchors remain fail-closed.",
+      "ruleId": "array-iterator-partial"
     },
     {
       "id": "hxc-stdlib-api-v1:16cb2d54ac8932f30666bd253676b53f2bdea281366b4494f714440cd4250350",
@@ -4057,10 +4948,8 @@
       "isStatic": false,
       "owner": "target-source-override",
       "runtimeFeatures": [
-        "alloc",
         "array",
-        "gc",
-        "object"
+        "iterator"
       ],
       "profiles": [
         "portable",
@@ -4068,38 +4957,37 @@
       ],
       "environments": [
         "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "freestanding"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T03",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Known element/key/value types should specialize to direct typed storage; allocation and tracing remain explicit reachability decisions.",
-      "ruleId": "collection-storage"
+      "tests": [
+        "test/differential/array-runtime/generated/Main.hx",
+        "test/differential/array-runtime/array_runtime.c",
+        "test/differential/array-runtime/run.py"
+      ],
+      "notes": "The live cursor writes each current Int index and exact copied value into a validated non-overlapping pair layout while preserving shared Array mutation semantics.",
+      "ruleId": "array-key-value-iterator-partial"
     },
     {
-      "id": "hxc-stdlib-api-v1:cac3d4a1762c2443ec67c333b0442a84ead6197c03c8642c3951b67c24e64d74",
+      "id": "hxc-stdlib-api-v1:60ebf020fce1f0f6ca82e45672ef8abc0d94aa5d86b916f7205e9c78f9fba950",
       "module": "Array",
       "source": "Array.hx",
       "sourceSha256": "ea6780139e194a0fdafdff6485640183835df0c5928ccf64b1a562a6b00381e7",
       "probeScope": "c-common",
       "type": "Array",
       "member": "lastIndexOf",
-      "kind": "method",
+      "kind": "inline-method",
       "signature": "(x : Array.T, ?fromIndex : Null<Int>) -> Int",
       "isStatic": false,
       "owner": "target-source-override",
       "runtimeFeatures": [
-        "alloc",
-        "array",
-        "gc",
-        "object"
+        "array"
       ],
       "profiles": [
         "portable",
@@ -4107,20 +4995,21 @@
       ],
       "environments": [
         "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "freestanding"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T03",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Known element/key/value types should specialize to direct typed storage; allocation and tracing remain explicit reachability decisions.",
-      "ruleId": "collection-storage"
+      "tests": [
+        "test/differential/array-runtime/generated/Main.hx",
+        "test/differential/array-runtime/run.py"
+      ],
+      "notes": "Typed Haxe normalizes the optional signed start and searches backward for the last supported equal element index.",
+      "ruleId": "array-last-index-of-partial"
     },
     {
       "id": "hxc-stdlib-api-v1:2cc201eb4056387f4fcf41036c8a3962642920570e3a56608641b4bee1c7e9c2",
@@ -4133,12 +5022,9 @@
       "kind": "field",
       "signature": "Int",
       "isStatic": false,
-      "owner": "target-source-override",
+      "owner": "direct-compiler-lowering",
       "runtimeFeatures": [
-        "alloc",
-        "array",
-        "gc",
-        "object"
+        "array"
       ],
       "profiles": [
         "portable",
@@ -4146,20 +5032,21 @@
       ],
       "environments": [
         "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "freestanding"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T03",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Known element/key/value types should specialize to direct typed storage; allocation and tracing remain explicit reachability decisions.",
-      "ruleId": "collection-storage"
+      "tests": [
+        "test/differential/array-runtime/generated/Main.hx",
+        "test/differential/array-runtime/run.py"
+      ],
+      "notes": "Length reads the current shared container after the compiler proves an admitted exact Array representation.",
+      "ruleId": "array-length-partial"
     },
     {
       "id": "hxc-stdlib-api-v1:725e7f5e827be652ef13114bbdc4a410d7708dac5c744543cd269647f295f965",
@@ -4174,10 +5061,8 @@
       "isStatic": false,
       "owner": "target-source-override",
       "runtimeFeatures": [
-        "alloc",
         "array",
-        "gc",
-        "object"
+        "iterator"
       ],
       "profiles": [
         "portable",
@@ -4185,20 +5070,21 @@
       ],
       "environments": [
         "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "freestanding"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T03",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Known element/key/value types should specialize to direct typed storage; allocation and tracing remain explicit reachability decisions.",
-      "ruleId": "collection-storage"
+      "tests": [
+        "test/differential/array-runtime/generated/Main.hx",
+        "test/differential/array-runtime/run.py"
+      ],
+      "notes": "Typed Haxe applies an admitted exact callable once per live iteration value and pushes each exact result into a fresh specialized Array in source order. Unsupported closures or result representations remain fail-closed.",
+      "ruleId": "array-map-partial"
     },
     {
       "id": "hxc-stdlib-api-v1:e8b2715177ab9f56f904dc6f7d4c58617a5d8046d78513277493e012e25e0c85",
@@ -4211,12 +5097,9 @@
       "kind": "constructor",
       "signature": "() -> Void",
       "isStatic": false,
-      "owner": "target-source-override",
+      "owner": "direct-compiler-lowering",
       "runtimeFeatures": [
-        "alloc",
-        "array",
-        "gc",
-        "object"
+        "array"
       ],
       "profiles": [
         "portable",
@@ -4224,20 +5107,21 @@
       ],
       "environments": [
         "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "freestanding"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T03",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Known element/key/value types should specialize to direct typed storage; allocation and tracing remain explicit reachability decisions.",
-      "ruleId": "collection-storage"
+      "tests": [
+        "test/differential/array-runtime/generated/Main.hx",
+        "test/differential/array-runtime/run.py"
+      ],
+      "notes": "An exact `new Array<T>()` creates the same empty typed shared container as an empty Array literal and transfers one fresh owner to its destination.",
+      "ruleId": "array-constructor-partial"
     },
     {
       "id": "hxc-stdlib-api-v1:9b6be57878d1491524062317471714b54495bbc468ca494948ac1c030c9dc66c",
@@ -4250,12 +5134,9 @@
       "kind": "method",
       "signature": "() -> Null<Array.T>",
       "isStatic": false,
-      "owner": "target-source-override",
+      "owner": "direct-compiler-lowering",
       "runtimeFeatures": [
-        "alloc",
-        "array",
-        "gc",
-        "object"
+        "array"
       ],
       "profiles": [
         "portable",
@@ -4263,20 +5144,22 @@
       ],
       "environments": [
         "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "freestanding"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T03",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Known element/key/value types should specialize to direct typed storage; allocation and tracing remain explicit reachability decisions.",
-      "ruleId": "collection-storage"
+      "tests": [
+        "test/differential/array-runtime/generated/Main.hx",
+        "test/differential/array-runtime/array_runtime.c",
+        "test/differential/array-runtime/run.py"
+      ],
+      "notes": "A present pop moves the final exact element owner into its nullable result without copying or destroying it; an empty Array reports absence and every alias observes the shorter container.",
+      "ruleId": "array-pop-partial"
     },
     {
       "id": "hxc-stdlib-api-v1:b9ecf928964f697bda6bc46644813511240b814062bf79304fc9f7845d71c85e",
@@ -4289,12 +5172,9 @@
       "kind": "method",
       "signature": "(x : Array.T) -> Int",
       "isStatic": false,
-      "owner": "target-source-override",
+      "owner": "direct-compiler-lowering",
       "runtimeFeatures": [
-        "alloc",
-        "array",
-        "gc",
-        "object"
+        "array"
       ],
       "profiles": [
         "portable",
@@ -4302,38 +5182,37 @@
       ],
       "environments": [
         "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "freestanding"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T03",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Known element/key/value types should specialize to direct typed storage; allocation and tracing remain explicit reachability decisions.",
-      "ruleId": "collection-storage"
+      "tests": [
+        "test/differential/array-runtime/generated/Main.hx",
+        "test/differential/array-runtime/array_runtime.c",
+        "test/differential/array-runtime/run.py"
+      ],
+      "notes": "Push evaluates receiver and element once, copy-constructs the exact element into shared storage, returns the new length, and leaves the sequence unchanged on allocation or copy failure.",
+      "ruleId": "array-push-partial"
     },
     {
-      "id": "hxc-stdlib-api-v1:ce808f16c564eef151404b52f8ade7958a55c419fa5c26a22f8053261d84019c",
+      "id": "hxc-stdlib-api-v1:eba45026e27bab60e4746b975f013e90691e03d120b98615e20acea8b8e32900",
       "module": "Array",
       "source": "Array.hx",
       "sourceSha256": "ea6780139e194a0fdafdff6485640183835df0c5928ccf64b1a562a6b00381e7",
       "probeScope": "c-common",
       "type": "Array",
       "member": "remove",
-      "kind": "method",
+      "kind": "inline-method",
       "signature": "(x : Array.T) -> Bool",
       "isStatic": false,
       "owner": "target-source-override",
       "runtimeFeatures": [
-        "alloc",
-        "array",
-        "gc",
-        "object"
+        "array"
       ],
       "profiles": [
         "portable",
@@ -4341,20 +5220,21 @@
       ],
       "environments": [
         "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "freestanding"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T03",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Known element/key/value types should specialize to direct typed storage; allocation and tracing remain explicit reachability decisions.",
-      "ruleId": "collection-storage"
+      "tests": [
+        "test/differential/array-runtime/generated/Main.hx",
+        "test/differential/array-runtime/run.py"
+      ],
+      "notes": "Typed Haxe finds the first exact equal element and discards a one-element splice; supported equality and element ownership remain representation checked.",
+      "ruleId": "array-remove-partial"
     },
     {
       "id": "hxc-stdlib-api-v1:e61ec6a2f72c2b297f5c18e561635f7e53a1cecdd82d74cab5335c79f89af978",
@@ -4387,31 +5267,28 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [
+        "test/differential/array-runtime/array_runtime.c",
         "test/differential/array-runtime/generated/Main.hx",
-        "test/differential/array-runtime/negative/resize_dynamic/Main.hx",
-        "test/differential/array-runtime/negative/resize_nonzero/Main.hx",
+        "test/differential/array-runtime/negative/resize_no_default/Main.hx",
         "test/differential/array-runtime/run.py"
       ],
-      "notes": "The admitted `resize(0)` form clears an existing Array in place, preserves alias identity, and destroys managed elements in reverse order through their exact lifecycle callbacks. Only a literal zero is accepted because it proves the operation cannot grow and therefore needs no target-typed default element. Dynamic and nonzero lengths remain source-positioned failures until growth and rollback have complete representation-aware evidence.",
-      "ruleId": "array-resize-zero-partial"
+      "notes": "A runtime Int length shrinks or grows the shared Array after one receiver check. Shrink destroys the removed suffix in reverse order. Growth copy-constructs the exact static zero, false, or null-carrier default and rolls back a partial suffix on failure. Unboxed records and enums without an honest null carrier remain source-positioned failures when growth is possible; literal zero remains admitted for them.",
+      "ruleId": "array-resize-exact-default-partial"
     },
     {
-      "id": "hxc-stdlib-api-v1:6192538040e07b7ee71ac1983de0bc451389463d67f3ed2a38d4bc1655ccbcc3",
+      "id": "hxc-stdlib-api-v1:8baa5f738467f6600a06b0673ed9b4c929ba5843164a096eebaefc1e46999c2d",
       "module": "Array",
       "source": "Array.hx",
       "sourceSha256": "ea6780139e194a0fdafdff6485640183835df0c5928ccf64b1a562a6b00381e7",
       "probeScope": "c-common",
       "type": "Array",
       "member": "reverse",
-      "kind": "method",
+      "kind": "inline-method",
       "signature": "() -> Void",
       "isStatic": false,
       "owner": "target-source-override",
       "runtimeFeatures": [
-        "alloc",
-        "array",
-        "gc",
-        "object"
+        "array"
       ],
       "profiles": [
         "portable",
@@ -4419,20 +5296,21 @@
       ],
       "environments": [
         "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "freestanding"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T03",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Known element/key/value types should specialize to direct typed storage; allocation and tracing remain explicit reachability decisions.",
-      "ruleId": "collection-storage"
+      "tests": [
+        "test/differential/array-runtime/generated/Main.hx",
+        "test/differential/array-runtime/run.py"
+      ],
+      "notes": "Typed Haxe swaps exact indexed values in place, so every alias observes the reversal and managed assignments retain replacements before releasing old slots.",
+      "ruleId": "array-reverse-partial"
     },
     {
       "id": "hxc-stdlib-api-v1:43fa953492c3a876f57a51aa485187d23d3d00b3c6616fc922661f1cd512864a",
@@ -4474,22 +5352,19 @@
       "ruleId": "array-shift-partial"
     },
     {
-      "id": "hxc-stdlib-api-v1:bc5cebb90639c6a5648f9c011fdb90cc993139e585cca1945d8bf63e2b36d9cd",
+      "id": "hxc-stdlib-api-v1:01eea9b559bece4f13ea13b1890d5d29b44a22cccfa373c09665a7e831a18f7a",
       "module": "Array",
       "source": "Array.hx",
       "sourceSha256": "ea6780139e194a0fdafdff6485640183835df0c5928ccf64b1a562a6b00381e7",
       "probeScope": "c-common",
       "type": "Array",
       "member": "slice",
-      "kind": "method",
+      "kind": "inline-method",
       "signature": "(pos : Int, ?end : Null<Int>) -> Array<Array.T>",
       "isStatic": false,
       "owner": "target-source-override",
       "runtimeFeatures": [
-        "alloc",
-        "array",
-        "gc",
-        "object"
+        "array"
       ],
       "profiles": [
         "portable",
@@ -4497,20 +5372,21 @@
       ],
       "environments": [
         "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "freestanding"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T03",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Known element/key/value types should specialize to direct typed storage; allocation and tracing remain explicit reachability decisions.",
-      "ruleId": "collection-storage"
+      "tests": [
+        "test/differential/array-runtime/generated/Main.hx",
+        "test/differential/array-runtime/run.py"
+      ],
+      "notes": "Typed Haxe normalizes negative and clamped half-open bounds, then shallow-copies the selected exact elements into a fresh Array in source order.",
+      "ruleId": "array-slice-partial"
     },
     {
       "id": "hxc-stdlib-api-v1:f08405c507e5af27251329b68eb9a58d6b592c6d25f5e5045fa32a6e86052ccd",
@@ -4582,11 +5458,12 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [
+        "test/differential/array-runtime/array_runtime.c",
         "test/differential/array-runtime/generated/Main.hx",
         "test/differential/array-runtime/run.py"
       ],
-      "notes": "The admitted `splice(pos, 1)` form mutates one shared Array and either discards or returns the one-element removed Array. It evaluates the receiver and position once, applies Haxe's negative-position and out-of-range rules, preserves aliases and remaining order, and copies managed ownership into the result before mutating the source so allocation or copy failure preserves the original sequence. Other lengths remain source-positioned failures.",
-      "ruleId": "array-splice-one-partial"
+      "notes": "Splice evaluates receiver, position, and runtime length once; normalizes negative and out-of-range inputs; preserves aliases and suffix order; and either discards the range without a result allocation or shallow-copies the complete removed range before mutating the source. Allocation or managed copy failure destroys the partial result and preserves the original sequence. Literal one-element calls retain their smaller specialized path.",
+      "ruleId": "array-splice-range-partial"
     },
     {
       "id": "hxc-stdlib-api-v1:662424a3147c9931b409f420d7e407470f6f414f5b9799779017f4cb638bed35",
@@ -4628,22 +5505,19 @@
       "ruleId": "collection-storage"
     },
     {
-      "id": "hxc-stdlib-api-v1:e662ef0c2a71b872439b965df94f45c2f404980523fae927dc85d0e025d7e209",
+      "id": "hxc-stdlib-api-v1:82239335c6f06768114c7260da677c9662d5912077797ea9790b01eede63a932",
       "module": "Array",
       "source": "Array.hx",
       "sourceSha256": "ea6780139e194a0fdafdff6485640183835df0c5928ccf64b1a562a6b00381e7",
       "probeScope": "c-common",
       "type": "Array",
       "member": "unshift",
-      "kind": "method",
+      "kind": "inline-method",
       "signature": "(x : Array.T) -> Void",
       "isStatic": false,
       "owner": "target-source-override",
       "runtimeFeatures": [
-        "alloc",
-        "array",
-        "gc",
-        "object"
+        "array"
       ],
       "profiles": [
         "portable",
@@ -4651,20 +5525,21 @@
       ],
       "environments": [
         "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "freestanding"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T03",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Known element/key/value types should specialize to direct typed storage; allocation and tracing remain explicit reachability decisions.",
-      "ruleId": "collection-storage"
+      "tests": [
+        "test/differential/array-runtime/generated/Main.hx",
+        "test/differential/array-runtime/run.py"
+      ],
+      "notes": "The target override delegates to the exact checked insertion at index zero, preserving one evaluation, aliases, order, and failure atomicity.",
+      "ruleId": "array-unshift-partial"
     },
     {
       "id": "hxc-stdlib-api-v1:79e7a89a55f7439b64a235c740ed39e315214faec1f43c3ee686ada04e97d02e",
@@ -33938,14 +34813,14 @@
       "ruleId": "collection-source"
     },
     {
-      "id": "hxc-stdlib-api-v1:0ee02259a9489b094f27ae78c30abbb98bf6979565e0ddbd304936a6a4f51e52",
+      "id": "hxc-stdlib-api-v1:c9323024356ef887749fc770aee93bc620b1216e7367487d323567fbe10c12c0",
       "module": "haxe.ds.ReadOnlyArray",
       "source": "haxe/ds/ReadOnlyArray.hx",
       "sourceSha256": "526484c5a10a575e2dd4aa084583a90a65e745732b31681c2ffcafd21891a81b",
       "probeScope": "c-common",
       "type": "haxe.ds.ReadOnlyArray",
       "member": "contains",
-      "kind": "forwarded-method",
+      "kind": "forwarded-inline-method",
       "signature": "(x : haxe.ds.ReadOnlyArray.T) -> Bool",
       "isStatic": false,
       "owner": "direct-compiler-lowering",
@@ -34070,14 +34945,14 @@
       "ruleId": "collection-source"
     },
     {
-      "id": "hxc-stdlib-api-v1:e4cd6a72177d644e811299b72655bfea7797e1e3d78dd8ccccebde4ee6e3809f",
+      "id": "hxc-stdlib-api-v1:3ad6576803eb82fd9beec47fa53ed4b6e55a67d25622b6dc33293de62dafa964",
       "module": "haxe.ds.ReadOnlyArray",
       "source": "haxe/ds/ReadOnlyArray.hx",
       "sourceSha256": "526484c5a10a575e2dd4aa084583a90a65e745732b31681c2ffcafd21891a81b",
       "probeScope": "c-common",
       "type": "haxe.ds.ReadOnlyArray",
       "member": "indexOf",
-      "kind": "forwarded-method",
+      "kind": "forwarded-inline-method",
       "signature": "(x : haxe.ds.ReadOnlyArray.T, ?fromIndex : Null<Int>) -> Int",
       "isStatic": false,
       "owner": "direct-compiler-lowering",
@@ -34202,14 +35077,14 @@
       "ruleId": "collection-source"
     },
     {
-      "id": "hxc-stdlib-api-v1:9c2fdeddd1076aa228ae8346865fd86457c8440d1de189b3fdf250e269727193",
+      "id": "hxc-stdlib-api-v1:fd3fa0e804877212107964586c1d007142ab0f515e1b6dd59f9e986940616568",
       "module": "haxe.ds.ReadOnlyArray",
       "source": "haxe/ds/ReadOnlyArray.hx",
       "sourceSha256": "526484c5a10a575e2dd4aa084583a90a65e745732b31681c2ffcafd21891a81b",
       "probeScope": "c-common",
       "type": "haxe.ds.ReadOnlyArray",
       "member": "lastIndexOf",
-      "kind": "forwarded-method",
+      "kind": "forwarded-inline-method",
       "signature": "(x : haxe.ds.ReadOnlyArray.T, ?fromIndex : Null<Int>) -> Int",
       "isStatic": false,
       "owner": "direct-compiler-lowering",
@@ -34301,14 +35176,14 @@
       "ruleId": "collection-source"
     },
     {
-      "id": "hxc-stdlib-api-v1:1c914df341ac781db79caebe5675e0f447406bc12b8c535af54a44c2b0bcf8b8",
+      "id": "hxc-stdlib-api-v1:03f2b5b8fa80fe12fb16b7a7faf4e7b6607481f6c9b1d47b50b5ff7d4b248abf",
       "module": "haxe.ds.ReadOnlyArray",
       "source": "haxe/ds/ReadOnlyArray.hx",
       "sourceSha256": "526484c5a10a575e2dd4aa084583a90a65e745732b31681c2ffcafd21891a81b",
       "probeScope": "c-common",
       "type": "haxe.ds.ReadOnlyArray",
       "member": "slice",
-      "kind": "forwarded-method",
+      "kind": "forwarded-inline-method",
       "signature": "(pos : Int, ?end : Null<Int>) -> Array<haxe.ds.ReadOnlyArray.T>",
       "isStatic": false,
       "owner": "direct-compiler-lowering",
@@ -59930,59 +60805,71 @@
       "signature": "haxe.iterators.ArrayIterator",
       "isStatic": true,
       "owner": "direct-compiler-lowering",
-      "runtimeFeatures": [],
+      "runtimeFeatures": [
+        "array",
+        "iterator"
+      ],
       "profiles": [
         "portable",
         "metal"
       ],
       "environments": [
         "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "freestanding"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T03",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
-        "planned-unsupported"
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Pure Haxe algorithms and iterator shapes should lower and inline through typed collection representations without an iterator runtime by default.",
-      "ruleId": "collection-source"
+      "tests": [
+        "test/differential/array-runtime/generated/Main.hx",
+        "test/differential/array-runtime/array_runtime.c",
+        "test/differential/array-runtime/run.py"
+      ],
+      "notes": "The exact pinned standard class uses the managed Iterator carrier with an unboxed element specialization and a retained live Array anchor; unrelated generic classes do not enter this lowering.",
+      "ruleId": "array-iterator-type-partial"
     },
     {
-      "id": "hxc-stdlib-api-v1:d32f8cd9d6ba2ed4c0abb7fb8c33fc6797691d987c93a52c5b803c3cd651f483",
+      "id": "hxc-stdlib-api-v1:85544eb043bb4d540023f5223f935273f3ccc2dadd772d50868451fafca449e1",
       "module": "haxe.iterators.ArrayIterator",
       "source": "haxe/iterators/ArrayIterator.hx",
       "sourceSha256": "0b464103419ea8212695cecfe2465c16405646af009f2cb52eba31c379226bdb",
       "probeScope": "c-common",
       "type": "haxe.iterators.ArrayIterator",
       "member": "hasNext",
-      "kind": "inline-method",
+      "kind": "method",
       "signature": "() -> Bool",
       "isStatic": false,
       "owner": "direct-compiler-lowering",
-      "runtimeFeatures": [],
+      "runtimeFeatures": [
+        "array",
+        "iterator"
+      ],
       "profiles": [
         "portable",
         "metal"
       ],
       "environments": [
         "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "freestanding"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T03",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
-        "planned-unsupported"
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Pure Haxe algorithms and iterator shapes should lower and inline through typed collection representations without an iterator runtime by default.",
-      "ruleId": "collection-source"
+      "tests": [
+        "test/differential/array-runtime/generated/Main.hx",
+        "test/differential/array-runtime/array_runtime.c",
+        "test/differential/array-runtime/run.py"
+      ],
+      "notes": "The shared cursor compares its current index with the retained Array's current length, so later mutation changes exhaustion exactly like the pinned implementation.",
+      "ruleId": "array-iterator-has-next-partial"
     },
     {
       "id": "hxc-stdlib-api-v1:98fd15e21c4cfe0c415a37ca88b6356a6bae5532723ff8122115d682f65b452b",
@@ -59996,59 +60883,70 @@
       "signature": "(array : Array<haxe.iterators.ArrayIterator.T>) -> Void",
       "isStatic": false,
       "owner": "direct-compiler-lowering",
-      "runtimeFeatures": [],
+      "runtimeFeatures": [
+        "array",
+        "iterator"
+      ],
       "profiles": [
         "portable",
         "metal"
       ],
       "environments": [
         "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "freestanding"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T03",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
-        "planned-unsupported"
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Pure Haxe algorithms and iterator shapes should lower and inline through typed collection representations without an iterator runtime by default.",
-      "ruleId": "collection-source"
+      "tests": [
+        "test/differential/array-runtime/generated/Main.hx",
+        "test/differential/array-runtime/run.py"
+      ],
+      "notes": "Construction retains the same non-collector Array container and starts its shared cursor at zero without snapshotting elements.",
+      "ruleId": "array-iterator-constructor-partial"
     },
     {
-      "id": "hxc-stdlib-api-v1:e9b065984c29b76c9049cddbb115d327ffc470c652531fc209d50c8fbf3b4b8f",
+      "id": "hxc-stdlib-api-v1:3c610afcc5bd396ad8604b8d3b4b31eb6acf1e5ee612171229730dc105ada39a",
       "module": "haxe.iterators.ArrayIterator",
       "source": "haxe/iterators/ArrayIterator.hx",
       "sourceSha256": "0b464103419ea8212695cecfe2465c16405646af009f2cb52eba31c379226bdb",
       "probeScope": "c-common",
       "type": "haxe.iterators.ArrayIterator",
       "member": "next",
-      "kind": "inline-method",
+      "kind": "method",
       "signature": "() -> haxe.iterators.ArrayIterator.T",
       "isStatic": false,
       "owner": "direct-compiler-lowering",
-      "runtimeFeatures": [],
+      "runtimeFeatures": [
+        "array",
+        "iterator"
+      ],
       "profiles": [
         "portable",
         "metal"
       ],
       "environments": [
         "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "freestanding"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T03",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
-        "planned-unsupported"
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Pure Haxe algorithms and iterator shapes should lower and inline through typed collection representations without an iterator runtime by default.",
-      "ruleId": "collection-source"
+      "tests": [
+        "test/differential/array-runtime/generated/Main.hx",
+        "test/differential/array-runtime/array_runtime.c",
+        "test/differential/array-runtime/run.py"
+      ],
+      "notes": "Next checked-copies the exact current element and advances only after success; managed copy failure leaves the cursor retryable.",
+      "ruleId": "array-iterator-next-partial"
     },
     {
       "id": "hxc-stdlib-api-v1:c436eeb873a2a16842afccaa9cb12fd25fea7ec57bc24bb3634b33716f06aad1",
@@ -60062,59 +60960,71 @@
       "signature": "haxe.iterators.ArrayKeyValueIterator",
       "isStatic": true,
       "owner": "direct-compiler-lowering",
-      "runtimeFeatures": [],
+      "runtimeFeatures": [
+        "array",
+        "iterator"
+      ],
       "profiles": [
         "portable",
         "metal"
       ],
       "environments": [
         "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "freestanding"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T03",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
-        "planned-unsupported"
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Pure Haxe algorithms and iterator shapes should lower and inline through typed collection representations without an iterator runtime by default.",
-      "ruleId": "collection-source"
+      "tests": [
+        "test/differential/array-runtime/generated/Main.hx",
+        "test/differential/array-runtime/array_runtime.c",
+        "test/differential/array-runtime/run.py"
+      ],
+      "notes": "The exact pinned key/value class shares the managed live-Array cursor carrier and preserves its closed Int/value result type without boxing.",
+      "ruleId": "array-key-value-iterator-type-partial"
     },
     {
-      "id": "hxc-stdlib-api-v1:cdb5099abe990ecf4d2d96e06f47657a6196ba646fde6350d5e2c14adcb873c0",
+      "id": "hxc-stdlib-api-v1:ac6ea5a2d2d6f9a7f9552b6a997f28f5cfe020323001d3172823301940657f3a",
       "module": "haxe.iterators.ArrayKeyValueIterator",
       "source": "haxe/iterators/ArrayKeyValueIterator.hx",
       "sourceSha256": "bd3c5f7b55573a14dd27d8c3eefcc2becda817e5c65b9f17d6ae52e4f3c80bc0",
       "probeScope": "c-common",
       "type": "haxe.iterators.ArrayKeyValueIterator",
       "member": "hasNext",
-      "kind": "inline-method",
+      "kind": "method",
       "signature": "() -> Bool",
       "isStatic": false,
       "owner": "direct-compiler-lowering",
-      "runtimeFeatures": [],
+      "runtimeFeatures": [
+        "array",
+        "iterator"
+      ],
       "profiles": [
         "portable",
         "metal"
       ],
       "environments": [
         "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "freestanding"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T03",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
-        "planned-unsupported"
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Pure Haxe algorithms and iterator shapes should lower and inline through typed collection representations without an iterator runtime by default.",
-      "ruleId": "collection-source"
+      "tests": [
+        "test/differential/array-runtime/generated/Main.hx",
+        "test/differential/array-runtime/array_runtime.c",
+        "test/differential/array-runtime/run.py"
+      ],
+      "notes": "The shared cursor compares its current index with the retained Array's current length, including later push or shrink mutation.",
+      "ruleId": "array-key-value-iterator-has-next-partial"
     },
     {
       "id": "hxc-stdlib-api-v1:ab5e057b195e8d6a774b9499f5f831c1a7200ed9e8407491828e562084c20861",
@@ -60128,59 +61038,70 @@
       "signature": "(array : Array<haxe.iterators.ArrayKeyValueIterator.T>) -> Void",
       "isStatic": false,
       "owner": "direct-compiler-lowering",
-      "runtimeFeatures": [],
+      "runtimeFeatures": [
+        "array",
+        "iterator"
+      ],
       "profiles": [
         "portable",
         "metal"
       ],
       "environments": [
         "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "freestanding"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T03",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
-        "planned-unsupported"
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Pure Haxe algorithms and iterator shapes should lower and inline through typed collection representations without an iterator runtime by default.",
-      "ruleId": "collection-source"
+      "tests": [
+        "test/differential/array-runtime/generated/Main.hx",
+        "test/differential/array-runtime/run.py"
+      ],
+      "notes": "Construction retains the same non-collector Array and validates the exact key/value result layout before native emission.",
+      "ruleId": "array-key-value-iterator-constructor-partial"
     },
     {
-      "id": "hxc-stdlib-api-v1:55aa4e7d2898098d558195f13c9a3f39cc405be62d5289c8f41ce9baca012865",
+      "id": "hxc-stdlib-api-v1:4e3372e1bb081d24b73abbd4446b65a104c0e30ecc457e61a574aeb7406b5aa2",
       "module": "haxe.iterators.ArrayKeyValueIterator",
       "source": "haxe/iterators/ArrayKeyValueIterator.hx",
       "sourceSha256": "bd3c5f7b55573a14dd27d8c3eefcc2becda817e5c65b9f17d6ae52e4f3c80bc0",
       "probeScope": "c-common",
       "type": "haxe.iterators.ArrayKeyValueIterator",
       "member": "next",
-      "kind": "inline-method",
+      "kind": "method",
       "signature": "() -> { value : haxe.iterators.ArrayKeyValueIterator.T, key : Int }",
       "isStatic": false,
       "owner": "direct-compiler-lowering",
-      "runtimeFeatures": [],
+      "runtimeFeatures": [
+        "array",
+        "iterator"
+      ],
       "profiles": [
         "portable",
         "metal"
       ],
       "environments": [
         "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "freestanding"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T03",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
-        "planned-unsupported"
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Pure Haxe algorithms and iterator shapes should lower and inline through typed collection representations without an iterator runtime by default.",
-      "ruleId": "collection-source"
+      "tests": [
+        "test/differential/array-runtime/generated/Main.hx",
+        "test/differential/array-runtime/array_runtime.c",
+        "test/differential/array-runtime/run.py"
+      ],
+      "notes": "Next writes the current Int key and exact copied value into non-overlapping validated fields, then advances only after the copy succeeds.",
+      "ruleId": "array-key-value-iterator-next-partial"
     },
     {
       "id": "hxc-stdlib-api-v1:024075a9e72b83d6b92e9192a7b0fbe528326bdbe80af6562a6639af05889e5d",

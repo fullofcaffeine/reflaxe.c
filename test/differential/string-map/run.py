@@ -32,6 +32,7 @@ FIXTURE = CASE / "string_map_runtime.c"
 INCLUDE = ROOT / "runtime/hxrt/include"
 RUNTIME_SOURCES = (
     ROOT / "runtime/hxrt/src/allocator.c",
+    ROOT / "runtime/hxrt/src/array.c",
     ROOT / "runtime/hxrt/src/iterator.c",
     ROOT / "runtime/hxrt/src/string.c",
     ROOT / "runtime/hxrt/src/string_map.c",
@@ -757,7 +758,7 @@ def run_native(toolchains: list[Toolchain], *, generated_haxe: bool) -> None:
                 build / "native-o2",
                 ("-O2",),
             )
-            inspect_symbols(native, toolchain.family)
+            inspect_symbols(native, toolchain.family, allow_array=True)
             if generated_haxe:
                 for layout, project in projects.items():
                     sources = sorted((project / "runtime/src").glob("*.c")) + sorted(

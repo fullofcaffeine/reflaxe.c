@@ -202,7 +202,7 @@ def validate_catalog(catalog: dict[str, object]) -> None:
     provenance = record(runtime_abi.get("releaseProvenance"), "runtime release provenance")
     if (
         runtime_abi.get("stability") != "internal-versioned"
-        or version != {"major": 0, "minor": 15, "patch": 0}
+        or version != {"major": 0, "minor": 17, "patch": 0}
         or runtime_abi.get("generatedCodeCompatibility") != "same-major"
         or runtime_abi.get("generatedCodeCheck") != "c11-static-assert"
         or runtime_abi.get("runtimeMajorMacro") != "HXC_RUNTIME_ABI_MAJOR"
@@ -263,7 +263,7 @@ def validate_catalog(catalog: dict[str, object]) -> None:
         "array": ["alloc"],
         "array-join": ["array", "string"],
         "int-map": ["alloc", "iterator", "string"],
-        "iterator": ["alloc"],
+        "iterator": ["alloc", "array"],
         "string-map": ["alloc", "iterator", "string", "string-literal"],
         "string-float": ["string"],
         "string-split": ["array", "string"],
@@ -544,7 +544,7 @@ def validate_plans(plans: dict[str, object]) -> None:
     if array.get("features") != ["runtime-base", "status", "alloc", "array"]:
         raise RuntimeFeatureFailure("array closure is incomplete or nondeterministic")
     if int_map.get("features") != [
-        "runtime-base", "status", "alloc", "iterator", "string-literal",
+        "runtime-base", "status", "alloc", "array", "iterator", "string-literal",
         "string-scalar", "string", "int-map",
     ]:
         raise RuntimeFeatureFailure("IntMap closure is incomplete or nondeterministic")
@@ -552,6 +552,7 @@ def validate_plans(plans: dict[str, object]) -> None:
         "runtime-base",
         "status",
         "alloc",
+		"array",
         "iterator",
         "string-literal",
         "string-scalar",

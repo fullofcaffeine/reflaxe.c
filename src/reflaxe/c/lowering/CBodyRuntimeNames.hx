@@ -65,6 +65,8 @@ enum CBodyRuntimeName {
 	CBRNArrayShiftMove;
 	CBRNArraySpliceOneDiscard;
 	CBRNArraySpliceOneCopy;
+	CBRNArraySpliceDiscard;
+	CBRNArraySpliceCopy;
 	CBRNArrayInsertCopy;
 	CBRNArrayPushCopy;
 	CBRNArraySetCopy;
@@ -73,6 +75,7 @@ enum CBodyRuntimeName {
 	CBRNArrayRelease;
 	CBRNArrayStoragePushCopy;
 	CBRNArrayStorageResize;
+	CBRNArrayResizeDefault;
 	CBRNArrayValueMember;
 	CBRNStringMapCreate;
 	CBRNStringMapCreateWithOps;
@@ -89,6 +92,8 @@ enum CBodyRuntimeName {
 	CBRNStringMapKeyIterator;
 	CBRNStringMapPairIterator;
 	CBRNStringMapToString;
+	CBRNIteratorCreateArrayValues;
+	CBRNIteratorCreateArrayPairs;
 	CBRNIteratorRetain;
 	CBRNIteratorRelease;
 	CBRNIteratorHasNext;
@@ -179,6 +184,8 @@ class CBodyRuntimeNames {
 			case CBRNArrayShiftMove: "hxc_array_ref_shift_move";
 			case CBRNArraySpliceOneDiscard: "hxc_array_ref_splice_one_discard";
 			case CBRNArraySpliceOneCopy: "hxc_array_ref_splice_one_copy";
+			case CBRNArraySpliceDiscard: "hxc_array_ref_splice_discard";
+			case CBRNArraySpliceCopy: "hxc_array_ref_splice_copy";
 			case CBRNArrayInsertCopy: "hxc_array_ref_insert_copy";
 			case CBRNArrayPushCopy: "hxc_array_ref_push_copy";
 			case CBRNArraySetCopy: "hxc_array_ref_set_copy";
@@ -187,6 +194,7 @@ class CBodyRuntimeNames {
 			case CBRNArrayRelease: "hxc_array_ref_release";
 			case CBRNArrayStoragePushCopy: "hxc_array_push_copy";
 			case CBRNArrayStorageResize: "hxc_array_resize";
+			case CBRNArrayResizeDefault: "hxc_array_ref_resize_default";
 			case CBRNArrayValueMember: "value";
 			case CBRNStringMapCreate: "hxc_string_map_ref_create";
 			case CBRNStringMapCreateWithOps: "hxc_string_map_ref_create_with_ops";
@@ -203,6 +211,8 @@ class CBodyRuntimeNames {
 			case CBRNStringMapKeyIterator: "hxc_string_map_ref_key_iterator";
 			case CBRNStringMapPairIterator: "hxc_string_map_ref_pair_iterator";
 			case CBRNStringMapToString: "hxc_string_map_ref_to_string";
+			case CBRNIteratorCreateArrayValues: "hxc_iterator_ref_create_array_values";
+			case CBRNIteratorCreateArrayPairs: "hxc_iterator_ref_create_array_pairs";
 			case CBRNIteratorRetain: "hxc_iterator_ref_retain";
 			case CBRNIteratorRelease: "hxc_iterator_ref_release";
 			case CBRNIteratorHasNext: "hxc_iterator_ref_has_next";

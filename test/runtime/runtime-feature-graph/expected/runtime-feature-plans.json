@@ -1068,6 +1068,63 @@
         "dependencies": [
           "alloc"
         ],
+        "id": "array",
+        "reasonIds": [
+          "fixture.string-map"
+        ],
+        "availability": "compiler-selectable",
+        "symbols": [
+          "hxc_array_at",
+          "hxc_array_at_const",
+          "hxc_array_dispose",
+          "hxc_array_element_ops_is_valid",
+          "hxc_array_init",
+          "hxc_array_insert_copy",
+          "hxc_array_is_valid",
+          "hxc_array_move",
+          "hxc_array_pop_move",
+          "hxc_array_push_copy",
+          "hxc_array_ref_copy",
+          "hxc_array_ref_copy_in_place",
+          "hxc_array_ref_create",
+          "hxc_array_ref_create_trivial",
+          "hxc_array_ref_dispose_in_place",
+          "hxc_array_ref_get_copy",
+          "hxc_array_ref_init_in_place",
+          "hxc_array_ref_insert_copy",
+          "hxc_array_ref_is_valid",
+          "hxc_array_ref_length",
+          "hxc_array_ref_pop_move",
+          "hxc_array_ref_push_copy",
+          "hxc_array_ref_release",
+          "hxc_array_ref_resize_default",
+          "hxc_array_ref_retain",
+          "hxc_array_ref_set_copy",
+          "hxc_array_ref_shift_move",
+          "hxc_array_ref_sort",
+          "hxc_array_ref_splice_copy",
+          "hxc_array_ref_splice_discard",
+          "hxc_array_ref_splice_one_copy",
+          "hxc_array_ref_splice_one_discard",
+          "hxc_array_remove_at",
+          "hxc_array_reserve",
+          "hxc_array_resize",
+          "hxc_array_set_copy",
+          "hxc_array_shift_move"
+        ],
+        "artifacts": [
+          "runtime/include/hxrt/array.h",
+          "runtime/src/array.c"
+        ],
+        "libraries": [],
+        "defines": [],
+        "root": false
+      },
+      {
+        "dependencies": [
+          "alloc",
+          "array"
+        ],
         "id": "iterator",
         "reasonIds": [
           "fixture.string-map"
@@ -1075,6 +1132,8 @@
         "availability": "compiler-selectable",
         "symbols": [
           "hxc_iterator_element_ops_is_valid",
+          "hxc_iterator_ref_create_array_pairs",
+          "hxc_iterator_ref_create_array_values",
           "hxc_iterator_ref_create_snapshot",
           "hxc_iterator_ref_has_next",
           "hxc_iterator_ref_next_move",
@@ -1236,11 +1295,25 @@
         "dependencyId": "status"
       },
       {
+        "featureId": "array",
+        "reasonIds": [
+          "fixture.string-map"
+        ],
+        "dependencyId": "alloc"
+      },
+      {
         "featureId": "iterator",
         "reasonIds": [
           "fixture.string-map"
         ],
         "dependencyId": "alloc"
+      },
+      {
+        "featureId": "iterator",
+        "reasonIds": [
+          "fixture.string-map"
+        ],
+        "dependencyId": "array"
       },
       {
         "featureId": "status",
@@ -1319,6 +1392,7 @@
       "runtime-base",
       "status",
       "alloc",
+      "array",
       "iterator",
       "string-literal",
       "string-scalar",
@@ -1331,6 +1405,12 @@
         "kind": "runtime-header",
         "outputPath": "runtime/include/hxrt/allocator.h",
         "sourcePath": "runtime/hxrt/include/hxrt/allocator.h"
+      },
+      {
+        "featureId": "array",
+        "kind": "runtime-header",
+        "outputPath": "runtime/include/hxrt/array.h",
+        "sourcePath": "runtime/hxrt/include/hxrt/array.h"
       },
       {
         "featureId": "runtime-base",
@@ -1387,6 +1467,12 @@
         "sourcePath": "runtime/hxrt/src/allocator.c"
       },
       {
+        "featureId": "array",
+        "kind": "runtime-source",
+        "outputPath": "runtime/src/array.c",
+        "sourcePath": "runtime/hxrt/src/array.c"
+      },
+      {
         "featureId": "iterator",
         "kind": "runtime-source",
         "outputPath": "runtime/src/iterator.c",
@@ -1423,10 +1509,49 @@
       "hxc_allocation_resize",
       "hxc_allocator_is_valid",
       "hxc_allocator_same_identity",
+      "hxc_array_at",
+      "hxc_array_at_const",
+      "hxc_array_dispose",
+      "hxc_array_element_ops_is_valid",
+      "hxc_array_init",
+      "hxc_array_insert_copy",
+      "hxc_array_is_valid",
+      "hxc_array_move",
+      "hxc_array_pop_move",
+      "hxc_array_push_copy",
+      "hxc_array_ref_copy",
+      "hxc_array_ref_copy_in_place",
+      "hxc_array_ref_create",
+      "hxc_array_ref_create_trivial",
+      "hxc_array_ref_dispose_in_place",
+      "hxc_array_ref_get_copy",
+      "hxc_array_ref_init_in_place",
+      "hxc_array_ref_insert_copy",
+      "hxc_array_ref_is_valid",
+      "hxc_array_ref_length",
+      "hxc_array_ref_pop_move",
+      "hxc_array_ref_push_copy",
+      "hxc_array_ref_release",
+      "hxc_array_ref_resize_default",
+      "hxc_array_ref_retain",
+      "hxc_array_ref_set_copy",
+      "hxc_array_ref_shift_move",
+      "hxc_array_ref_sort",
+      "hxc_array_ref_splice_copy",
+      "hxc_array_ref_splice_discard",
+      "hxc_array_ref_splice_one_copy",
+      "hxc_array_ref_splice_one_discard",
+      "hxc_array_remove_at",
+      "hxc_array_reserve",
+      "hxc_array_resize",
+      "hxc_array_set_copy",
+      "hxc_array_shift_move",
       "hxc_byte_view_from_cstring",
       "hxc_default_allocator",
       "hxc_free",
       "hxc_iterator_element_ops_is_valid",
+      "hxc_iterator_ref_create_array_pairs",
+      "hxc_iterator_ref_create_array_values",
       "hxc_iterator_ref_create_snapshot",
       "hxc_iterator_ref_has_next",
       "hxc_iterator_ref_next_move",
@@ -1490,6 +1615,7 @@
     "resolvedPolicy": "auto",
     "artifacts": [
       "runtime/include/hxrt/allocator.h",
+      "runtime/include/hxrt/array.h",
       "runtime/include/hxrt/base.h",
       "runtime/include/hxrt/iterator.h",
       "runtime/include/hxrt/status.h",
@@ -1499,6 +1625,7 @@
       "runtime/include/hxrt/string_map.h",
       "runtime/include/hxrt/string_scalar.h",
       "runtime/src/allocator.c",
+      "runtime/src/array.c",
       "runtime/src/iterator.c",
       "runtime/src/string.c",
       "runtime/src/string_map.c",
@@ -1937,10 +2064,13 @@
           "hxc_array_ref_pop_move",
           "hxc_array_ref_push_copy",
           "hxc_array_ref_release",
+          "hxc_array_ref_resize_default",
           "hxc_array_ref_retain",
           "hxc_array_ref_set_copy",
           "hxc_array_ref_shift_move",
           "hxc_array_ref_sort",
+          "hxc_array_ref_splice_copy",
+          "hxc_array_ref_splice_discard",
           "hxc_array_ref_splice_one_copy",
           "hxc_array_ref_splice_one_discard",
           "hxc_array_remove_at",
@@ -2068,10 +2198,13 @@
       "hxc_array_ref_pop_move",
       "hxc_array_ref_push_copy",
       "hxc_array_ref_release",
+      "hxc_array_ref_resize_default",
       "hxc_array_ref_retain",
       "hxc_array_ref_set_copy",
       "hxc_array_ref_shift_move",
       "hxc_array_ref_sort",
+      "hxc_array_ref_splice_copy",
+      "hxc_array_ref_splice_discard",
       "hxc_array_ref_splice_one_copy",
       "hxc_array_ref_splice_one_discard",
       "hxc_array_remove_at",
@@ -3431,10 +3564,13 @@
           "hxc_array_ref_pop_move",
           "hxc_array_ref_push_copy",
           "hxc_array_ref_release",
+          "hxc_array_ref_resize_default",
           "hxc_array_ref_retain",
           "hxc_array_ref_set_copy",
           "hxc_array_ref_shift_move",
           "hxc_array_ref_sort",
+          "hxc_array_ref_splice_copy",
+          "hxc_array_ref_splice_discard",
           "hxc_array_ref_splice_one_copy",
           "hxc_array_ref_splice_one_discard",
           "hxc_array_remove_at",
@@ -3778,10 +3914,13 @@
       "hxc_array_ref_pop_move",
       "hxc_array_ref_push_copy",
       "hxc_array_ref_release",
+      "hxc_array_ref_resize_default",
       "hxc_array_ref_retain",
       "hxc_array_ref_set_copy",
       "hxc_array_ref_shift_move",
       "hxc_array_ref_sort",
+      "hxc_array_ref_splice_copy",
+      "hxc_array_ref_splice_discard",
       "hxc_array_ref_splice_one_copy",
       "hxc_array_ref_splice_one_discard",
       "hxc_array_remove_at",
@@ -4819,6 +4958,63 @@
         "dependencies": [
           "alloc"
         ],
+        "id": "array",
+        "reasonIds": [
+          "fixture.int-map"
+        ],
+        "availability": "compiler-selectable",
+        "symbols": [
+          "hxc_array_at",
+          "hxc_array_at_const",
+          "hxc_array_dispose",
+          "hxc_array_element_ops_is_valid",
+          "hxc_array_init",
+          "hxc_array_insert_copy",
+          "hxc_array_is_valid",
+          "hxc_array_move",
+          "hxc_array_pop_move",
+          "hxc_array_push_copy",
+          "hxc_array_ref_copy",
+          "hxc_array_ref_copy_in_place",
+          "hxc_array_ref_create",
+          "hxc_array_ref_create_trivial",
+          "hxc_array_ref_dispose_in_place",
+          "hxc_array_ref_get_copy",
+          "hxc_array_ref_init_in_place",
+          "hxc_array_ref_insert_copy",
+          "hxc_array_ref_is_valid",
+          "hxc_array_ref_length",
+          "hxc_array_ref_pop_move",
+          "hxc_array_ref_push_copy",
+          "hxc_array_ref_release",
+          "hxc_array_ref_resize_default",
+          "hxc_array_ref_retain",
+          "hxc_array_ref_set_copy",
+          "hxc_array_ref_shift_move",
+          "hxc_array_ref_sort",
+          "hxc_array_ref_splice_copy",
+          "hxc_array_ref_splice_discard",
+          "hxc_array_ref_splice_one_copy",
+          "hxc_array_ref_splice_one_discard",
+          "hxc_array_remove_at",
+          "hxc_array_reserve",
+          "hxc_array_resize",
+          "hxc_array_set_copy",
+          "hxc_array_shift_move"
+        ],
+        "artifacts": [
+          "runtime/include/hxrt/array.h",
+          "runtime/src/array.c"
+        ],
+        "libraries": [],
+        "defines": [],
+        "root": false
+      },
+      {
+        "dependencies": [
+          "alloc",
+          "array"
+        ],
         "id": "iterator",
         "reasonIds": [
           "fixture.int-map"
@@ -4826,6 +5022,8 @@
         "availability": "compiler-selectable",
         "symbols": [
           "hxc_iterator_element_ops_is_valid",
+          "hxc_iterator_ref_create_array_pairs",
+          "hxc_iterator_ref_create_array_values",
           "hxc_iterator_ref_create_snapshot",
           "hxc_iterator_ref_has_next",
           "hxc_iterator_ref_next_move",
@@ -4984,6 +5182,13 @@
         "dependencyId": "status"
       },
       {
+        "featureId": "array",
+        "reasonIds": [
+          "fixture.int-map"
+        ],
+        "dependencyId": "alloc"
+      },
+      {
         "featureId": "int-map",
         "reasonIds": [
           "fixture.int-map"
@@ -5010,6 +5215,13 @@
           "fixture.int-map"
         ],
         "dependencyId": "alloc"
+      },
+      {
+        "featureId": "iterator",
+        "reasonIds": [
+          "fixture.int-map"
+        ],
+        "dependencyId": "array"
       },
       {
         "featureId": "status",
@@ -5060,6 +5272,7 @@
       "runtime-base",
       "status",
       "alloc",
+      "array",
       "iterator",
       "string-literal",
       "string-scalar",
@@ -5072,6 +5285,12 @@
         "kind": "runtime-header",
         "outputPath": "runtime/include/hxrt/allocator.h",
         "sourcePath": "runtime/hxrt/include/hxrt/allocator.h"
+      },
+      {
+        "featureId": "array",
+        "kind": "runtime-header",
+        "outputPath": "runtime/include/hxrt/array.h",
+        "sourcePath": "runtime/hxrt/include/hxrt/array.h"
       },
       {
         "featureId": "runtime-base",
@@ -5128,6 +5347,12 @@
         "sourcePath": "runtime/hxrt/src/allocator.c"
       },
       {
+        "featureId": "array",
+        "kind": "runtime-source",
+        "outputPath": "runtime/src/array.c",
+        "sourcePath": "runtime/hxrt/src/array.c"
+      },
+      {
         "featureId": "int-map",
         "kind": "runtime-source",
         "outputPath": "runtime/src/int_map.c",
@@ -5164,6 +5389,43 @@
       "hxc_allocation_resize",
       "hxc_allocator_is_valid",
       "hxc_allocator_same_identity",
+      "hxc_array_at",
+      "hxc_array_at_const",
+      "hxc_array_dispose",
+      "hxc_array_element_ops_is_valid",
+      "hxc_array_init",
+      "hxc_array_insert_copy",
+      "hxc_array_is_valid",
+      "hxc_array_move",
+      "hxc_array_pop_move",
+      "hxc_array_push_copy",
+      "hxc_array_ref_copy",
+      "hxc_array_ref_copy_in_place",
+      "hxc_array_ref_create",
+      "hxc_array_ref_create_trivial",
+      "hxc_array_ref_dispose_in_place",
+      "hxc_array_ref_get_copy",
+      "hxc_array_ref_init_in_place",
+      "hxc_array_ref_insert_copy",
+      "hxc_array_ref_is_valid",
+      "hxc_array_ref_length",
+      "hxc_array_ref_pop_move",
+      "hxc_array_ref_push_copy",
+      "hxc_array_ref_release",
+      "hxc_array_ref_resize_default",
+      "hxc_array_ref_retain",
+      "hxc_array_ref_set_copy",
+      "hxc_array_ref_shift_move",
+      "hxc_array_ref_sort",
+      "hxc_array_ref_splice_copy",
+      "hxc_array_ref_splice_discard",
+      "hxc_array_ref_splice_one_copy",
+      "hxc_array_ref_splice_one_discard",
+      "hxc_array_remove_at",
+      "hxc_array_reserve",
+      "hxc_array_resize",
+      "hxc_array_set_copy",
+      "hxc_array_shift_move",
       "hxc_byte_view_from_cstring",
       "hxc_default_allocator",
       "hxc_free",
@@ -5181,6 +5443,8 @@
       "hxc_int_bool_map_ref_to_string",
       "hxc_int_bool_map_ref_value_iterator",
       "hxc_iterator_element_ops_is_valid",
+      "hxc_iterator_ref_create_array_pairs",
+      "hxc_iterator_ref_create_array_values",
       "hxc_iterator_ref_create_snapshot",
       "hxc_iterator_ref_has_next",
       "hxc_iterator_ref_next_move",
@@ -5229,6 +5493,7 @@
     "resolvedPolicy": "auto",
     "artifacts": [
       "runtime/include/hxrt/allocator.h",
+      "runtime/include/hxrt/array.h",
       "runtime/include/hxrt/base.h",
       "runtime/include/hxrt/int_map.h",
       "runtime/include/hxrt/iterator.h",
@@ -5238,6 +5503,7 @@
       "runtime/include/hxrt/string_literal.h",
       "runtime/include/hxrt/string_scalar.h",
       "runtime/src/allocator.c",
+      "runtime/src/array.c",
       "runtime/src/int_map.c",
       "runtime/src/iterator.c",
       "runtime/src/string.c",

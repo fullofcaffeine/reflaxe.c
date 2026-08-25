@@ -32,6 +32,7 @@ INCLUDE = ROOT / "runtime/hxrt/include"
 SOURCES = (
     ROOT / "runtime/hxrt/src/allocator.c",
     ROOT / "runtime/hxrt/src/array.c",
+    ROOT / "runtime/hxrt/src/iterator.c",
 )
 JOIN_SOURCES = (
     ROOT / "runtime/hxrt/src/allocator.c",
@@ -321,9 +322,17 @@ def validate_generated_hxcir(hxcir: str) -> None:
         'runtime(feature="array",operation="shift")',
         'runtime(feature="array",operation="splice-one-discard")',
         'runtime(feature="array",operation="splice-one-copy")',
+        'runtime(feature="array",operation="splice-discard")',
+        'runtime(feature="array",operation="splice-copy")',
         'runtime(feature="array",operation="resize-zero")',
+        'runtime(feature="array",operation="resize-default")',
         'runtime(feature="array",operation="set")',
         'runtime(feature="array",operation="sort")',
+        'representation=managed("iterator")',
+        'runtime(feature="iterator",operation="create-array-values")',
+        'runtime(feature="iterator",operation="create-array-key-values")',
+        'runtime(feature="iterator",operation="has-next")',
+        'runtime(feature="iterator",operation="next")',
         'function-reference target="function.lambda.function.Main.main.',
         'implementation=program-local("array-element-lifecycle:instance.closed-record.',
         'array-element-owner-initialize',
@@ -711,15 +720,25 @@ def validate_generated_hxcir(hxcir: str) -> None:
             "Array.shift coverage no longer contains primitive and managed "
             "present, repeated, and empty ownership transfers"
         )
-    if entry.count('runtime(feature="array",operation="splice-one-discard")') != 4:
+    if entry.count('runtime(feature="array",operation="splice-one-discard")') != 7:
         raise ArrayRuntimeFailure(
-            "discarded Array.splice coverage no longer contains negative, "
-            "out-of-range, clamped, and empty cases"
+            "discarded one-element Array.splice coverage no longer contains the "
+            "three pinned remove delegations plus negative, out-of-range, clamped, "
+            "and empty direct cases"
         )
     if entry.count('runtime(feature="array",operation="splice-one-copy")') != 2:
         raise ArrayRuntimeFailure(
             "returned Array.splice coverage no longer contains primitive and "
             "managed String ownership transfers"
+        )
+    if entry.count('runtime(feature="array",operation="splice-discard")') != 1:
+        raise ArrayRuntimeFailure(
+            "discarded arbitrary-length Array.splice coverage drifted"
+        )
+    if entry.count('runtime(feature="array",operation="splice-copy")') != 3:
+        raise ArrayRuntimeFailure(
+            "returned arbitrary-length Array.splice coverage lost primitive, "
+            "negative-length, or managed ownership cases"
         )
     if (
         entry.count('runtime(feature="array",operation="resize-zero")') != 2
@@ -728,6 +747,14 @@ def validate_generated_hxcir(hxcir: str) -> None:
         raise ArrayRuntimeFailure(
             "Array.resize(0) lost its two typed clear operations or their "
             "dominating receiver checks"
+        )
+    if (
+        entry.count('runtime(feature="array",operation="resize-default")') != 2
+        or entry.count("array-resize-receiver-null-check") != 2
+    ):
+        raise ArrayRuntimeFailure(
+            "Array.resize with a dynamic nonzero length lost primitive or managed "
+            "default initialization"
         )
     if (
         'action "optional-local.' not in entry
@@ -881,6 +908,7 @@ def validate_generated_project(output: Path) -> None:
         "string",
         "array-join",
         "bytes",
+        "iterator",
     ]:
         raise ArrayRuntimeFailure("generated Array program selected the wrong runtime closure")
     reasons = plan.get("rootReasons")
@@ -930,11 +958,14 @@ def validate_generated_project(output: Path) -> None:
         "push",
         "retain",
         "resize-zero",
+        "resize-default",
         "set",
         "shift",
         "sort",
         "splice-one-copy",
         "splice-one-discard",
+        "splice-copy",
+        "splice-discard",
     }
     if operations != expected:
         raise ArrayRuntimeFailure(
@@ -948,6 +979,24 @@ def validate_generated_project(output: Path) -> None:
     if join_operations != {"join"}:
         raise ArrayRuntimeFailure(
             f"generated Array join operations drifted: {sorted(join_operations)!r}"
+        )
+    iterator_operations = {
+        reason.get("operationId")
+        for reason in reasons
+        if isinstance(reason, dict) and reason.get("featureId") == "iterator"
+    }
+    expected_iterator_operations = {
+        "cleanup-release",
+        "create-array-key-values",
+        "create-array-values",
+        "has-next",
+        "managed-type-representation",
+        "next",
+    }
+    if iterator_operations != expected_iterator_operations:
+        raise ArrayRuntimeFailure(
+            "generated Array iterator operations drifted: "
+            f"{sorted(iterator_operations)!r}"
         )
     sources = "\n".join(
         path.read_text(encoding="utf-8")
@@ -968,10 +1017,18 @@ def validate_generated_project(output: Path) -> None:
         "hxc_array_ref_pop_move",
         "hxc_array_ref_shift_move",
         "hxc_array_ref_splice_one_discard",
+        "hxc_array_ref_splice_discard",
+        "hxc_array_ref_splice_copy",
 		"hxc_array_ref_insert_copy",
         "hxc_array_ref_get_copy",
         "hxc_array_resize",
+        "hxc_array_ref_resize_default",
         "hxc_array_ref_sort",
+        "hxc_iterator_ref_create_array_values",
+        "hxc_iterator_ref_create_array_pairs",
+        "hxc_iterator_ref_has_next",
+        "hxc_iterator_ref_next_move",
+        "hxc_iterator_ref_release",
         "hxc_array_string_join",
         "_element_copy(",
         "_element_assign(",
@@ -983,6 +1040,22 @@ def validate_generated_project(output: Path) -> None:
     ):
         if marker not in sources:
             raise ArrayRuntimeFailure(f"generated C omitted {marker}")
+    for result_marker in (
+        "iterator_create_array_values_result",
+        "iterator_create_array_key_values_result",
+    ):
+        declarations = [
+            line.strip()
+            for line in sources.splitlines()
+            if "struct hxc_iterator_ref *" in line and result_marker in line
+        ]
+        if not declarations or any(
+            not declaration.endswith(" = NULL;") for declaration in declarations
+        ):
+            raise ArrayRuntimeFailure(
+                "generated Iterator creation did not zero-initialize every "
+                f"{result_marker} out-result"
+            )
     if "struct hxc_array_ref *hxc_Main_maybeValues(bool" not in headers:
         raise ArrayRuntimeFailure(
             "Null<Array<Int>> acquired storage beyond the existing Array pointer"
@@ -992,18 +1065,39 @@ def validate_generated_project(output: Path) -> None:
 
 
 def render_generated_pair(root: Path) -> Path:
-    normal = root / "generated-normal"
-    reverse = root / "generated-reverse"
-    first = compile_generated_haxe(GENERATED, normal, report=True)
-    second = compile_generated_haxe(GENERATED, reverse, reverse=True)
-    for label, result in (("normal", first), ("reverse", second)):
-        if result.returncode != 0:
+    canonical_by_layout: dict[str, dict[str, bytes]] = {}
+    first_result: subprocess.CompletedProcess[str] | None = None
+    normal_split: Path | None = None
+    for layout in ("split", "package", "unity"):
+        normal = root / f"generated-{layout}-normal"
+        reverse = root / f"generated-{layout}-reverse"
+        first = compile_generated_haxe(
+            GENERATED, normal, report=layout == "split", layout=layout
+        )
+        second = compile_generated_haxe(
+            GENERATED, reverse, reverse=True, layout=layout
+        )
+        for label, result in (
+            (f"{layout}-normal", first),
+            (f"{layout}-reverse", second),
+        ):
+            if result.returncode != 0:
+                raise ArrayRuntimeFailure(
+                    f"{label} generated Array compile failed\n"
+                    f"stdout={result.stdout!r}\nstderr={result.stderr!r}"
+                )
+        canonical = generated_tree(normal)
+        if canonical != generated_tree(reverse):
             raise ArrayRuntimeFailure(
-                f"{label} generated Array compile failed\n"
-                f"stdout={result.stdout!r}\nstderr={result.stderr!r}"
+                f"generated Array {layout} project changed under reversed discovery"
             )
-    if generated_tree(normal) != generated_tree(reverse):
-        raise ArrayRuntimeFailure("generated Array project changed under reversed discovery")
+        canonical_by_layout[layout] = canonical
+        if layout == "split":
+            normal_split = normal
+            first_result = first
+
+    if normal_split is None or first_result is None:
+        raise ArrayRuntimeFailure("generated Array lost its split reference build")
     metal_normal = root / "generated-metal-normal"
     metal_reverse = root / "generated-metal-reverse"
     metal_defines = ("reflaxe_c_profile=metal",)
@@ -1029,12 +1123,16 @@ def render_generated_pair(root: Path) -> Path:
         raise ArrayRuntimeFailure(
             "generated metal Array project changed under reversed discovery"
         )
-    validate_generated_hxcir(extract_hxcir(first))
+    validate_generated_hxcir(extract_hxcir(first_result))
     server_first, server_second = render_server_pair(root)
-    canonical = generated_tree(normal)
-    if generated_tree(server_first) != canonical or generated_tree(server_second) != canonical:
-        raise ArrayRuntimeFailure("generated Array project changed under warm compiler-server reuse")
-    validate_generated_project(normal)
+    if (
+        generated_tree(server_first) != canonical_by_layout["split"]
+        or generated_tree(server_second) != canonical_by_layout["split"]
+    ):
+        raise ArrayRuntimeFailure(
+            "generated Array project changed under warm compiler-server reuse"
+        )
+    validate_generated_project(normal_split)
     oracle = run_bounded_process(
         [development_tool("haxe"), "oracle.hxml"],
         cwd=GENERATED,
@@ -1049,7 +1147,7 @@ def render_generated_pair(root: Path) -> Path:
             "ordinary-Haxe generated fixture oracle failed: "
             f"exit={oracle.returncode} stdout={oracle.stdout!r} stderr={oracle.stderr!r}"
         )
-    return normal
+    return normal_split
 
 
 def render_managed_class_pair(root: Path) -> Path:
@@ -1185,8 +1283,7 @@ def run_generated_negative_cases(root: Path) -> None:
         "indirect_fresh_argument": "TCall(indirect-managed-argument-needs-explicit-ownership:0)",
         "join_non_string": "TCall(Array.join:element-not-managed-String:",
         "reassignment": "TBinop(OpAssign:managed-Array-reassignment-not-admitted)",
-        "resize_dynamic": "TCall(Array.resize:only-literal-zero-admitted)",
-        "resize_nonzero": "TCall(Array.resize:only-literal-zero-admitted)",
+        "resize_no_default": "TCall(Array.resize:element-has-no-exact-static-default:",
         "sort_capturing_comparator": "TFunction(capturing-closure:outer-local:direction)",
     }
     for name, marker in expected.items():
@@ -1430,11 +1527,20 @@ def inspect_symbols(executable: Path, family: str) -> None:
         "hxc_array_ref_init_in_place",
         "hxc_array_ref_release",
         "hxc_array_ref_retain",
+        "hxc_iterator_ref_create_array_pairs",
+        "hxc_iterator_ref_create_array_values",
+        "hxc_iterator_ref_has_next",
+        "hxc_iterator_ref_next_move",
+        "hxc_iterator_ref_release",
+        "hxc_iterator_ref_retain",
         "hxc_array_pop_move",
         "hxc_array_ref_pop_move",
         "hxc_array_shift_move",
         "hxc_array_ref_shift_move",
         "hxc_array_ref_splice_one_discard",
+        "hxc_array_ref_splice_discard",
+        "hxc_array_ref_splice_copy",
+        "hxc_array_ref_resize_default",
         "hxc_array_resize",
         "hxc_array_remove_at",
     ):

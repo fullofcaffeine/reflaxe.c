@@ -30,6 +30,7 @@ NATIVE_FIXTURE = CASE / "int_map_runtime.c"
 RUNTIME_INCLUDE = ROOT / "runtime/hxrt/include"
 RUNTIME_SOURCES = (
     ROOT / "runtime/hxrt/src/allocator.c",
+    ROOT / "runtime/hxrt/src/array.c",
     ROOT / "runtime/hxrt/src/iterator.c",
     ROOT / "runtime/hxrt/src/int_map.c",
     ROOT / "runtime/hxrt/src/string.c",

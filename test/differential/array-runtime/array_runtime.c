@@ -1,6 +1,8 @@
 #include "hxrt/array.h"
+#include "hxrt/iterator.h"
 
 #include <inttypes.h>
+#include <stddef.h>
 #include <stdio.h>
 
 #define HXC_TEST_CHECK(condition) \
@@ -45,6 +47,12 @@ typedef struct hxc_test_lifecycle {
   size_t assignments;
   size_t destructions;
 } hxc_test_lifecycle;
+
+/** Exact unboxed result layout for one ArrayKeyValueIterator element. */
+typedef struct hxc_test_array_pair {
+  int32_t key;
+  int32_t value;
+} hxc_test_array_pair;
 
 typedef struct hxc_test_sort_context {
   bool descending;
@@ -1254,6 +1262,339 @@ static int hxc_test_shared_array(
   return 0;
 }
 
+/**
+ * Prove live Array cursor mutation, aliasing, pair layout, and ownership.
+ *
+ * Value and key/value cursors retain the source Array instead of snapshotting
+ * it. Managed next() calls copy one exact owner and advance only after that
+ * copy succeeds, so an allocation-style lifecycle failure is retryable.
+ */
+static int hxc_test_array_iterators(
+  hxc_test_arena *arena,
+  const hxc_allocator *allocator
+) {
+  hxc_array_ref *values = NULL;
+  hxc_array_ref *managed = NULL;
+  hxc_iterator_ref *iterator = NULL;
+  hxc_iterator_ref *alias = NULL;
+  hxc_iterator_ref *pairs = NULL;
+  hxc_iterator_ref *failed = NULL;
+  hxc_test_lifecycle lifecycle = {0};
+  hxc_test_object first = {41, 1u};
+  hxc_test_object second = {43, 1u};
+  hxc_test_object *first_value = &first;
+  hxc_test_object *second_value = &second;
+  hxc_test_object *first_output = NULL;
+  hxc_test_object *second_output = NULL;
+  hxc_array_element_ops managed_elements = hxc_test_ref_ops(&lifecycle);
+  hxc_test_array_pair pair = {0};
+  int32_t two = 2;
+  int32_t three = 3;
+  int32_t five = 5;
+  int32_t output = -1;
+  int32_t pushed_length = -1;
+  bool has_next = true;
+  size_t references_before;
+
+  HXC_TEST_CHECK(
+    hxc_array_ref_create_trivial(
+      *allocator,
+      sizeof(int32_t),
+      HXC_ALIGNOF(int32_t),
+      &values
+    ) == HXC_STATUS_OK
+  );
+  HXC_TEST_CHECK(
+    hxc_iterator_ref_create_array_values(values, &iterator) == HXC_STATUS_OK
+  );
+  HXC_TEST_CHECK(values->references == 2u);
+  alias = iterator;
+  HXC_TEST_CHECK(hxc_iterator_ref_retain(alias) == HXC_STATUS_OK);
+  HXC_TEST_CHECK(
+    hxc_iterator_ref_has_next(iterator, &has_next) == HXC_STATUS_OK
+    && !has_next
+  );
+
+  /* Appends after construction remain visible through either alias. */
+  HXC_TEST_CHECK(
+    hxc_array_ref_push_copy(values, &two, &pushed_length) == HXC_STATUS_OK
+  );
+  HXC_TEST_CHECK(
+    hxc_iterator_ref_has_next(alias, &has_next) == HXC_STATUS_OK && has_next
+  );
+  HXC_TEST_CHECK(
+    hxc_iterator_ref_next_move(alias, &output) == HXC_STATUS_OK && output == 2
+  );
+  HXC_TEST_CHECK(
+    hxc_array_ref_push_copy(values, &three, &pushed_length) == HXC_STATUS_OK
+  );
+  HXC_TEST_CHECK(
+    hxc_array_ref_push_copy(values, &five, &pushed_length) == HXC_STATUS_OK
+  );
+  HXC_TEST_CHECK(
+    hxc_iterator_ref_next_move(iterator, &output) == HXC_STATUS_OK
+    && output == 3
+  );
+
+  /* Shrinking below the shared cursor stops both aliases immediately. */
+  HXC_TEST_CHECK(
+    hxc_array_resize(&values->value, 2u, NULL) == HXC_STATUS_OK
+  );
+  HXC_TEST_CHECK(
+    hxc_iterator_ref_has_next(alias, &has_next) == HXC_STATUS_OK
+    && !has_next
+  );
+  HXC_TEST_CHECK(
+    hxc_iterator_ref_next_move(iterator, &output)
+      == HXC_STATUS_INVALID_ARGUMENT
+  );
+  HXC_TEST_CHECK(hxc_iterator_ref_release(alias) == HXC_STATUS_OK);
+  HXC_TEST_CHECK(hxc_iterator_ref_release(iterator) == HXC_STATUS_OK);
+  iterator = NULL;
+  alias = NULL;
+  HXC_TEST_CHECK(values->references == 1u);
+
+  HXC_TEST_CHECK(
+    hxc_iterator_ref_create_array_pairs(
+      values,
+      sizeof(hxc_test_array_pair),
+      HXC_ALIGNOF(hxc_test_array_pair),
+      offsetof(hxc_test_array_pair, key),
+      offsetof(hxc_test_array_pair, value),
+      &pairs
+    ) == HXC_STATUS_OK
+  );
+  HXC_TEST_CHECK(
+    hxc_iterator_ref_next_move(pairs, &pair) == HXC_STATUS_OK
+    && pair.key == 0
+    && pair.value == 2
+  );
+  HXC_TEST_CHECK(hxc_iterator_ref_release(pairs) == HXC_STATUS_OK);
+  pairs = NULL;
+
+  /* Overlapping fields are rejected before an element can be copied. */
+  HXC_TEST_CHECK(
+    hxc_iterator_ref_create_array_pairs(
+      values,
+      sizeof(int32_t),
+      HXC_ALIGNOF(int32_t),
+      0u,
+      0u,
+      &pairs
+    ) == HXC_STATUS_INVALID_ARGUMENT
+    && pairs == NULL
+  );
+
+  /* A failed iterator allocation neither publishes nor retains the Array. */
+  references_before = values->references;
+  arena->force_failure = true;
+  HXC_TEST_CHECK(
+    hxc_iterator_ref_create_array_values(values, &failed)
+      == HXC_STATUS_OUT_OF_MEMORY
+  );
+  arena->force_failure = false;
+  HXC_TEST_CHECK(failed == NULL && values->references == references_before);
+  HXC_TEST_CHECK(hxc_array_ref_release(values) == HXC_STATUS_OK);
+  values = NULL;
+
+  HXC_TEST_CHECK(
+    hxc_array_ref_create(*allocator, managed_elements, &managed)
+      == HXC_STATUS_OK
+  );
+  HXC_TEST_CHECK(
+    hxc_array_ref_push_copy(managed, &first_value, &pushed_length)
+      == HXC_STATUS_OK
+  );
+  HXC_TEST_CHECK(
+    hxc_array_ref_push_copy(managed, &second_value, &pushed_length)
+      == HXC_STATUS_OK
+  );
+  HXC_TEST_CHECK(
+    hxc_iterator_ref_create_array_values(managed, &iterator) == HXC_STATUS_OK
+  );
+  HXC_TEST_CHECK(
+    hxc_iterator_ref_next_move(iterator, &first_output) == HXC_STATUS_OK
+    && first_output == &first
+    && first.references == 3u
+  );
+  lifecycle.copy_failure_armed = true;
+  lifecycle.copies_before_failure = 0u;
+  HXC_TEST_CHECK(
+    hxc_iterator_ref_next_move(iterator, &second_output)
+      == HXC_STATUS_OUT_OF_MEMORY
+    && second_output == NULL
+  );
+  lifecycle.copy_failure_armed = false;
+  HXC_TEST_CHECK(
+    hxc_iterator_ref_next_move(iterator, &second_output) == HXC_STATUS_OK
+    && second_output == &second
+    && second.references == 3u
+  );
+  HXC_TEST_CHECK(hxc_iterator_ref_release(iterator) == HXC_STATUS_OK);
+  iterator = NULL;
+  HXC_TEST_CHECK(hxc_array_ref_release(managed) == HXC_STATUS_OK);
+  managed = NULL;
+  managed_elements.destroy(managed_elements.context, &second_output);
+  managed_elements.destroy(managed_elements.context, &first_output);
+  hxc_test_drop(&lifecycle, &first);
+  hxc_test_drop(&lifecycle, &second);
+  HXC_TEST_CHECK(
+    first.references == 0u
+    && second.references == 0u
+    && !lifecycle.invalid_release
+    && !arena->invalid_release
+  );
+  return 0;
+}
+
+/** Prove arbitrary splice ranges and exact static-target resize defaults. */
+static int hxc_test_array_ranges(
+  hxc_test_arena *arena,
+  const hxc_allocator *allocator
+) {
+  static const int32_t initial[] = {1, 2, 3, 4, 5};
+  static const int32_t removed_expected[] = {2, 3, 4};
+  static const int32_t source_expected[] = {1, 5};
+  static const int32_t resized_expected[] = {1, 5, 0, 0};
+  static const int managed_source_expected[] = {51, 53, 55};
+  static const int managed_removed_expected[] = {53, 55};
+  hxc_array_ref *values = NULL;
+  hxc_array_ref *removed = NULL;
+  hxc_array_ref *managed = NULL;
+  hxc_array_ref *managed_removed = NULL;
+  hxc_test_lifecycle lifecycle = {0};
+  hxc_test_object first = {51, 1u};
+  hxc_test_object second = {53, 1u};
+  hxc_test_object third = {55, 1u};
+  hxc_test_object *first_value = &first;
+  hxc_test_object *second_value = &second;
+  hxc_test_object *third_value = &third;
+  hxc_test_object *null_value = NULL;
+  hxc_array_element_ops managed_elements = hxc_test_ref_ops(&lifecycle);
+  int32_t zero = 0;
+  int32_t pushed_length = -1;
+  size_t index;
+
+  HXC_TEST_CHECK(
+    hxc_array_ref_create_trivial(
+      *allocator,
+      sizeof(int32_t),
+      HXC_ALIGNOF(int32_t),
+      &values
+    ) == HXC_STATUS_OK
+  );
+  HXC_TEST_CHECK(
+    hxc_array_ref_create_trivial(
+      *allocator,
+      sizeof(int32_t),
+      HXC_ALIGNOF(int32_t),
+      &removed
+    ) == HXC_STATUS_OK
+  );
+  for (index = 0u; index < sizeof(initial) / sizeof(initial[0]); index++) {
+    HXC_TEST_CHECK(
+      hxc_array_ref_push_copy(values, &initial[index], &pushed_length)
+        == HXC_STATUS_OK
+    );
+  }
+  HXC_TEST_CHECK(
+    hxc_array_ref_splice_copy(values, -4, 3, removed) == HXC_STATUS_OK
+  );
+  HXC_TEST_CHECK(
+    hxc_test_expect_i32(&removed->value, removed_expected, 3u) == 0
+    && hxc_test_expect_i32(&values->value, source_expected, 2u) == 0
+  );
+  HXC_TEST_CHECK(
+    hxc_array_ref_resize_default(values, 4, &zero) == HXC_STATUS_OK
+    && hxc_test_expect_i32(&values->value, resized_expected, 4u) == 0
+  );
+  HXC_TEST_CHECK(
+    hxc_array_ref_resize_default(values, -1, &zero)
+      == HXC_STATUS_INVALID_ARGUMENT
+  );
+  HXC_TEST_CHECK(
+    hxc_array_ref_splice_discard(values, 1, 99) == HXC_STATUS_OK
+    && values->value.length == 1u
+  );
+  HXC_TEST_CHECK(hxc_array_ref_release(removed) == HXC_STATUS_OK);
+  HXC_TEST_CHECK(hxc_array_ref_release(values) == HXC_STATUS_OK);
+  removed = NULL;
+  values = NULL;
+
+  HXC_TEST_CHECK(
+    hxc_array_ref_create(*allocator, managed_elements, &managed)
+      == HXC_STATUS_OK
+  );
+  HXC_TEST_CHECK(
+    hxc_array_ref_create(*allocator, managed_elements, &managed_removed)
+      == HXC_STATUS_OK
+  );
+  HXC_TEST_CHECK(
+    hxc_array_ref_push_copy(managed, &first_value, &pushed_length)
+      == HXC_STATUS_OK
+  );
+  HXC_TEST_CHECK(
+    hxc_array_ref_push_copy(managed, &second_value, &pushed_length)
+      == HXC_STATUS_OK
+  );
+  HXC_TEST_CHECK(
+    hxc_array_ref_push_copy(managed, &third_value, &pushed_length)
+      == HXC_STATUS_OK
+  );
+  lifecycle.copy_failure_armed = true;
+  lifecycle.copies_before_failure = 1u;
+  HXC_TEST_CHECK(
+    hxc_array_ref_splice_copy(managed, 0, 3, managed_removed)
+      == HXC_STATUS_OUT_OF_MEMORY
+  );
+  lifecycle.copy_failure_armed = false;
+  HXC_TEST_CHECK(
+    managed_removed->value.length == 0u
+    && hxc_test_expect_refs(&managed->value, managed_source_expected, 3u) == 0
+    && first.references == 2u
+    && second.references == 2u
+    && third.references == 2u
+  );
+  HXC_TEST_CHECK(
+    hxc_array_ref_splice_copy(managed, 1, 2, managed_removed)
+      == HXC_STATUS_OK
+  );
+  HXC_TEST_CHECK(
+    managed->value.length == 1u
+    && hxc_test_expect_refs(
+      &managed_removed->value,
+      managed_removed_expected,
+      2u
+    ) == 0
+    && first.references == 2u
+    && second.references == 2u
+    && third.references == 2u
+  );
+  HXC_TEST_CHECK(
+    hxc_array_ref_resize_default(managed, 3, &null_value) == HXC_STATUS_OK
+    && managed->value.length == 3u
+    && first.references == 2u
+  );
+  HXC_TEST_CHECK(
+    hxc_array_ref_resize_default(managed, 1, NULL) == HXC_STATUS_OK
+  );
+  HXC_TEST_CHECK(hxc_array_ref_release(managed) == HXC_STATUS_OK);
+  HXC_TEST_CHECK(hxc_array_ref_release(managed_removed) == HXC_STATUS_OK);
+  managed = NULL;
+  managed_removed = NULL;
+  hxc_test_drop(&lifecycle, &first);
+  hxc_test_drop(&lifecycle, &second);
+  hxc_test_drop(&lifecycle, &third);
+  HXC_TEST_CHECK(
+    first.references == 0u
+    && second.references == 0u
+    && third.references == 0u
+    && !lifecycle.invalid_release
+    && !arena->invalid_release
+  );
+  return 0;
+}
+
 int main(void) {
   hxc_test_arena arena = {0};
   hxc_allocator allocator = hxc_test_allocator(&arena);
@@ -1285,6 +1626,8 @@ int main(void) {
   HXC_TEST_CHECK(hxc_test_pop(&arena, &allocator) == 0);
   HXC_TEST_CHECK(hxc_test_shift(&arena, &allocator) == 0);
   HXC_TEST_CHECK(hxc_test_shared_array(&arena, &allocator) == 0);
+  HXC_TEST_CHECK(hxc_test_array_iterators(&arena, &allocator) == 0);
+  HXC_TEST_CHECK(hxc_test_array_ranges(&arena, &allocator) == 0);
   HXC_TEST_CHECK(!arena.invalid_release);
   HXC_TEST_CHECK(arena.allocation_count == arena.release_count);
   for (index = 0u; index < HXC_TEST_BANK_COUNT; index++) {

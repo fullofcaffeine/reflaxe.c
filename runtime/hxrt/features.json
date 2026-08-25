@@ -144,7 +144,7 @@
         "referencePath": "docs/hxrt.md",
         "selectionRoots": [
           {
-            "description": "A reachable ordinary Haxe Array length, checked indexing, insert, push, pop, shift, or one-element splice operation.",
+            "description": "A reachable ordinary Haxe Array length, checked indexing, mutation, copy, arbitrary-range splice, resize, or sort operation.",
             "id": "collection-operation",
             "kind": "hxc-ir-operation"
           },
@@ -212,10 +212,13 @@
         "hxc_array_ref_pop_move",
         "hxc_array_ref_push_copy",
         "hxc_array_ref_release",
+        "hxc_array_ref_resize_default",
         "hxc_array_ref_retain",
         "hxc_array_ref_set_copy",
         "hxc_array_ref_shift_move",
         "hxc_array_ref_sort",
+        "hxc_array_ref_splice_copy",
+        "hxc_array_ref_splice_discard",
         "hxc_array_ref_splice_one_copy",
         "hxc_array_ref_splice_one_discard",
         "hxc_array_remove_at",
@@ -226,13 +229,13 @@
       ],
       "artifacts": [
         {
-          "sourceSha256": "15f55b87b100b5087cdf71f30a1c8284196de0ce27aef5988a579603c97d08fa",
+          "sourceSha256": "a956c23d87ab178201680d8ba3bf5ebebfe440d368b0f9034d41b12564f14056",
           "kind": "runtime-header",
           "outputPath": "runtime/include/hxrt/array.h",
           "sourcePath": "runtime/hxrt/include/hxrt/array.h"
         },
         {
-          "sourceSha256": "4a544ac49331b2fcaf3e8ee67ed3fa3c9d7d060d0834f350efbee6f9c594d980",
+          "sourceSha256": "0a25417f171789397134d802fff42ef8b441f6a874e893eb5a61dcd23a8b9f2e",
           "kind": "runtime-source",
           "outputPath": "runtime/src/array.c",
           "sourcePath": "runtime/hxrt/src/array.c"
@@ -624,6 +627,11 @@
         "referencePath": "docs/hxrt.md",
         "selectionRoots": [
           {
+            "description": "A reachable ArrayIterator or ArrayKeyValueIterator whose shared live cursor crosses a call or return.",
+            "id": "array-cursor",
+            "kind": "hxc-ir-operation"
+          },
+          {
             "description": "A reachable Iterator owner must release unconsumed snapshot elements when its Haxe lifetime ends.",
             "id": "cleanup-release",
             "kind": "hxc-ir-operation"
@@ -644,22 +652,26 @@
             "kind": "hxc-ir-operation"
           }
         ],
-        "runtimeRationale": "General Iterator values need run-time shared cursor identity, but their exact element layout and lifecycle remain compiler-selected.",
+        "runtimeRationale": "General Iterator values need run-time shared cursor identity. Map snapshots and live Array cursors share the carrier, while their exact element layout and lifecycle remain compiler-selected.",
         "evidence": [
+          "test/differential/array-runtime/run.py",
           "test/differential/string-map/run.py",
           "test/runtime/runtime-feature-graph/run.py"
         ],
         "directAlternative": "Compile-time-known iteration can remain direct control flow when no Iterator value or shared cursor is observable.",
-        "contract": "Preserves one shared cursor across Iterator aliases while keeping each element exact and unboxed; creation snapshots the producer, next moves ownership, and release destroys only unconsumed elements.",
+        "contract": "Preserves one shared cursor across Iterator aliases while keeping each element exact and unboxed; maps snapshot their producer, while Array cursors retain live identity and observe later length changes.",
         "programLocalAlternative": "A closed producer may use a program-local cursor only when aliases, element lifetime, and exhaustion behavior remain identical."
       },
       "dependencies": [
-        "alloc"
+        "alloc",
+        "array"
       ],
       "id": "iterator",
       "availability": "compiler-selectable",
       "symbols": [
         "hxc_iterator_element_ops_is_valid",
+        "hxc_iterator_ref_create_array_pairs",
+        "hxc_iterator_ref_create_array_values",
         "hxc_iterator_ref_create_snapshot",
         "hxc_iterator_ref_has_next",
         "hxc_iterator_ref_next_move",
@@ -668,13 +680,13 @@
       ],
       "artifacts": [
         {
-          "sourceSha256": "e8589914b0fe4da833864061de5fe8259d7066edff689d0c98442a6f8872f0f1",
+          "sourceSha256": "5bc0d5bbf8c781900cfaf55205da67b4a21589176613eca336139bc233a2d877",
           "kind": "runtime-header",
           "outputPath": "runtime/include/hxrt/iterator.h",
           "sourcePath": "runtime/hxrt/include/hxrt/iterator.h"
         },
         {
-          "sourceSha256": "0d03adbe76bfb3a2e6911589395452eb3b52f8ae6cd2e77947aca9177cfdc2f6",
+          "sourceSha256": "c19d81c3f20ba6c288a216997a004ffb62062d8aa47dada946b7bacd9f6a9db0",
           "kind": "runtime-source",
           "outputPath": "runtime/src/iterator.c",
           "sourcePath": "runtime/hxrt/src/iterator.c"
@@ -682,7 +694,7 @@
       ],
       "libraries": [],
       "minimalAllowed": true,
-      "summary": "Shared-cursor typed snapshots for standard Haxe Iterator values.",
+      "summary": "Shared-cursor typed snapshots and live Array cursors for standard Haxe Iterator values.",
       "defines": [],
       "environments": [
         "freestanding",
@@ -1392,7 +1404,7 @@
     "version": {
       "major": 0,
       "patch": 0,
-      "minor": 15
+      "minor": 17
     },
     "publicBoundary": {
       "applicationAbiStatus": "unsupported",
@@ -1431,7 +1443,7 @@
     "releaseProvenance": {
       "runtimeCStandard": "c11",
       "sourceHashAlgorithm": "sha256",
-      "sourceSetSha256": "5bede905a84e16fa6fff2931f454fb4905e66082105e00220737c912163faac8",
+      "sourceSetSha256": "9c1088d331b91903227af0531aaf8e3bf8e70ea8d519be68ee3b3639f31db5bb",
       "publicHeaderCppStandard": "c++17"
     },
     "generatedCodeCompatibility": "same-major",

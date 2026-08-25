@@ -72,6 +72,8 @@ import reflaxe.c.lowering.CBodyIntrinsicReceiver.CBodyIntrinsicReceiverFamily;
 import reflaxe.c.lowering.CBodyIntMap.CBodyIntMapRecognition;
 import reflaxe.c.lowering.CBodyIntMap.CPreparedBodyIntMap;
 import reflaxe.c.lowering.CBodyIterator.CPreparedBodyIterator;
+import reflaxe.c.lowering.CBodyIterator.CBodyArrayIteratorKind;
+import reflaxe.c.lowering.CBodyIterator.CBodyIteratorRecognition;
 import reflaxe.c.lowering.CBodyOptional.CLoweredBodyOptional;
 import reflaxe.c.lowering.CBodyOptional.CPreparedBodyOptional;
 import reflaxe.c.lowering.CBodyStringMap.CBodyStringMapRecognition;
@@ -4764,7 +4766,15 @@ private class FunctionBuilder {
 				} else {
 					mayDiscoverSharedBodyType(TypeTools.applyTypeParameters(value.type, value.params, parameters), depth + 1);
 				}
-			case TInst(reference, _): final value = reference.get(); final packageName = value.pack.join("."); value.meta.has(":c.layout") || (packageName == "haxe.ds"
+			case TInst(reference, _):
+				final value = reference.get();
+				final packageName = value.pack.join(".");
+				// Concrete standard Array cursors are runtime Iterator carriers, not
+				// ordinary generic classes. Discover each element specialization before
+				// replay freezes so authoritative lowering cannot change the plan.
+				CBodyIteratorRecognition.arrayKind(reference) != null
+				|| value.meta.has(":c.layout")
+				|| (packageName == "haxe.ds"
 					&& (value.name == "IntMap" || value.name == "StringMap")) // A local may be the program's first and only Bytes owner. Register
 				// that managed representation during the output-inert prepass so
 				// authoritative lowering cannot change the settled replay plan.
@@ -6393,6 +6403,7 @@ private class FunctionBuilder {
 			final construction = newExpression(initializer);
 			if (construction != null
 				&& !CBodyArrayRecognition.isCoreArray(construction.classReference)
+				&& CBodyIteratorRecognition.arrayKind(construction.classReference) == null
 				&& !CBodyIntMapRecognition.isIntMap(construction.classReference)
 				&& !CBodyStringMapRecognition.isStringMap(construction.classReference)) {
 				// Constructor preparation already owns the admitted nominal class. Use
@@ -8127,6 +8138,8 @@ private class FunctionBuilder {
 				// mutable container. Reusing the literal path preserves the resolved
 				// element specialization, allocation failure, and fresh-owner cleanup.
 				lowerManagedArrayLiteral(expression, [], expectedMapping);
+			case TNew(classReference, _, arguments) if (CBodyIteratorRecognition.arrayKind(classReference) != null):
+				lowerArrayIteratorConstruction(expression, classReference, arguments, expectedMapping);
 			case TNew(_, _, _):
 				final construction = newExpression(expression);
 				if (construction == null)
@@ -11867,15 +11880,22 @@ private class FunctionBuilder {
 		if (imported != null)
 			return lowerImportCall(expression, call.arguments, imported, materializeResult);
 		final instanceAccess = CBodyDispatchCatalog.instanceAccess(call.callee);
-		if (instanceAccess != null)
+		if (instanceAccess != null) {
+			final concreteIteratorMapping = bodyValueType(instanceAccess.receiver.t, instanceAccess.receiver.pos,
+				'TCall(Iterator.${instanceAccess.field.get().name}:concrete-receiver-type)');
+			if (concreteIteratorMapping.iteratorValue() != null)
+				return lowerIteratorCall(expression, instanceAccess.receiver, instanceAccess.field.get().name, call.arguments, concreteIteratorMapping);
 			return switch CBodyIntrinsicReceiver.classify(instanceAccess) {
 				case CBIRArray: lowerManagedArrayCall(expression, instanceAccess, call.arguments, materializeResult);
 				case CBIRIntMap: lowerIntMapCall(expression, instanceAccess, call.arguments, materializeResult);
 				case CBIRStringMap: lowerStringMapCall(expression, instanceAccess, call.arguments, materializeResult);
+				case CBIRIterator: lowerIteratorCall(expression, instanceAccess.receiver, instanceAccess.field.get().name, call.arguments,
+						concreteIteratorMapping);
 				case CBIRBytes: lowerManagedBytesCall(expression, instanceAccess, call.arguments, materializeResult);
 				case CBIRString: lowerStringCall(expression, instanceAccess, call.arguments);
 				case CBIROrdinaryClass: lowerInstanceCall(expression, instanceAccess, call.arguments, materializeResult);
 			};
+		}
 		if (!isDirectStaticFunctionExpression(call.callee)) {
 			final callableMapping = bodyValueType(call.callee.t, call.callee.pos, "TCall(indirect-callee-type)");
 			if (callableMapping.functionValue() != null)
@@ -12729,6 +12749,16 @@ private class FunctionBuilder {
 			|| StringTools.startsWith(role, "enum-switch-");
 	}
 
+	/** True when all-zero storage is the exact static-target Array growth value. */
+	static function arrayHasExactResizeDefault(element:CBodyValueType):Bool {
+		if (element.hasExactNullCarrier())
+			return true;
+		return switch element.irType {
+			case IRTBool | IRTInt(_, _) | IRTFloat(_): true;
+			case _: false;
+		};
+	}
+
 	/** Lower the first mutating Array method without entering virtual dispatch. */
 	function lowerManagedArrayCall(expression:TypedExpr, access:reflaxe.c.lowering.CBodyDispatch.CBodyInstanceCallAccess, arguments:Array<TypedExpr>,
 			materializeResult:Bool):Null<LoweredValue> {
@@ -12823,13 +12853,18 @@ private class FunctionBuilder {
 			case "splice":
 				if (arguments.length != 2)
 					return unsupported(expression, 'TCall(Array.splice:argument-count=${arguments.length})');
-				if (constantInt(arguments[1]) != 1)
-					return unsupported(arguments[1], "TCall(Array.splice:only-one-element-form-admitted)");
 				final indexMapping = bodyValueType(arguments[0].t, arguments[0].pos, "TCall(Array.splice:index-type)");
 				if (typeKey(indexMapping.irType) != typeKey(IRTInt(32, true)))
 					return unsupported(arguments[0], 'TCall(Array.splice:index-must-be-Haxe-Int:${indexMapping.cSpelling})');
 				final index = coerce(lowerValue(arguments[0], indexMapping), indexMapping, arguments[0].pos, "TCall(Array.splice:index)");
-				final callReceiver = restoreStagedLoweredValue(stagedReceiver, "array-splice-one-discard-receiver-load");
+				final stagedIndex = stageFlowValue(index, arguments[0], expressionCreatesFlow(arguments[1]), "array-splice-index");
+				final lengthMapping = bodyValueType(arguments[1].t, arguments[1].pos, "TCall(Array.splice:length-type)");
+				if (typeKey(lengthMapping.irType) != typeKey(IRTInt(32, true)))
+					return unsupported(arguments[1], 'TCall(Array.splice:length-must-be-Haxe-Int:${lengthMapping.cSpelling})');
+				final length = coerce(lowerValue(arguments[1], lengthMapping), lengthMapping, arguments[1].pos, "TCall(Array.splice:length)");
+				final callReceiver = restoreStagedLoweredValue(stagedReceiver, "array-splice-receiver-load");
+				final callIndex = restoreStagedLoweredValue(stagedIndex, "array-splice-index-load");
+				final oneElement = constantInt(arguments[1]) == 1;
 				final source = sourceSpan(expression.pos);
 				if (materializeResult) {
 					final resultMapping = bodyValueType(expression.t, expression.pos, "TCall(Array.splice:result-type)");
@@ -12837,27 +12872,29 @@ private class FunctionBuilder {
 					if (resultArray == null || resultArray.semanticKey != array.semanticKey)
 						return unsupported(expression, 'TCall(Array.splice:result-specialization-mismatch:${resultMapping.cSpelling})');
 					final result:HxcIRResult = {id: nextValueId(), type: resultMapping.irType};
+					final operation = oneElement ? "splice-one-copy" : "splice-copy";
 					appendInstruction(result, IRIOCall({
-						dispatch: IRCDRuntime("array", "splice-one-copy"),
-						arguments: [callReceiver.id, index.id],
+						dispatch: IRCDRuntime("array", operation),
+						arguments: oneElement ? [callReceiver.id, callIndex.id] : [callReceiver.id, callIndex.id, length.id],
 						returnType: result.type,
 						failure: managedArrayFailure()
-					}), source, "array-splice-one-copy");
-					registerValueTemporary(result.id, "array-splice-one-copy-result");
+					}), source, 'array-$operation');
+					registerValueTemporary(result.id, 'array-$operation-result');
 					if (!array.managedByCollector)
 						freshManagedArrayValueIds.set(result.id, true);
-					runtimeRequirements.push(new CBodyRuntimeRequirement("array", "splice-one-copy",
-						"ordinary Haxe Array.splice(pos, 1) returned Array with failure-atomic source mutation", source, expression.pos));
+					runtimeRequirements.push(new CBodyRuntimeRequirement("array", operation,
+						"ordinary Haxe Array.splice returned Array with failure-atomic source mutation", source, expression.pos));
 					return {id: result.id, type: result.type, mapping: resultMapping};
 				}
+				final operation = oneElement ? "splice-one-discard" : "splice-discard";
 				appendInstruction(null, IRIOCall({
-					dispatch: IRCDRuntime("array", "splice-one-discard"),
-					arguments: [callReceiver.id, index.id],
+					dispatch: IRCDRuntime("array", operation),
+					arguments: oneElement ? [callReceiver.id, callIndex.id] : [callReceiver.id, callIndex.id, length.id],
 					returnType: IRTVoid,
 					failure: managedArrayFailure()
-				}), source, "array-splice-one-discard");
-				runtimeRequirements.push(new CBodyRuntimeRequirement("array", "splice-one-discard",
-					"ordinary Haxe Array.splice(pos, 1) mutation when the removed Array result is discarded", source, expression.pos));
+				}), source, 'array-$operation');
+				runtimeRequirements.push(new CBodyRuntimeRequirement("array", operation,
+					"ordinary Haxe Array.splice mutation when the removed Array result is discarded", source, expression.pos));
 				null;
 			case "insert":
 				if (arguments.length != 2)
@@ -12910,23 +12947,38 @@ private class FunctionBuilder {
 			case "resize":
 				if (arguments.length != 1)
 					return unsupported(expression, 'TCall(Array.resize:argument-count=${arguments.length})');
-				// A literal zero can only shrink, so it needs no target-typed
-				// default element. Dynamic and nonzero lengths remain closed
-				// until growth has a complete construction and rollback plan.
-				if (constantInt(arguments[0]) != 0)
-					return unsupported(arguments[0], "TCall(Array.resize:only-literal-zero-admitted)");
-				final callReceiver = restoreStagedLoweredValue(stagedReceiver, "array-resize-zero-receiver-load");
-				appendInstruction(null, IRIONullCheck(callReceiver.id, IRNCPCheckedAbort(Std.string(context.profile), Std.string(context.buildMode))),
-					sourceSpan(access.receiver.pos), "array-resize-zero-receiver-null-check");
 				final source = sourceSpan(expression.pos);
+				if (constantInt(arguments[0]) == 0) {
+					final callReceiver = restoreStagedLoweredValue(stagedReceiver, "array-resize-zero-receiver-load");
+					appendInstruction(null, IRIONullCheck(callReceiver.id, IRNCPCheckedAbort(Std.string(context.profile), Std.string(context.buildMode))),
+						sourceSpan(access.receiver.pos), "array-resize-zero-receiver-null-check");
+					appendInstruction(null, IRIOCall({
+						dispatch: IRCDRuntime("array", "resize-zero"),
+						arguments: [callReceiver.id],
+						returnType: IRTVoid,
+						failure: managedArrayFailure()
+					}), source, "array-resize-zero");
+					runtimeRequirements.push(new CBodyRuntimeRequirement("array", "resize-zero", "ordinary Haxe Array.resize(0) ownership-aware clear",
+						source, expression.pos));
+					return null;
+				}
+				if (!arrayHasExactResizeDefault(array.element))
+					return unsupported(arguments[0], 'TCall(Array.resize:element-has-no-exact-static-default:${array.element.cSpelling})');
+				final lengthMapping = bodyValueType(arguments[0].t, arguments[0].pos, "TCall(Array.resize:length-type)");
+				if (typeKey(lengthMapping.irType) != typeKey(IRTInt(32, true)))
+					return unsupported(arguments[0], 'TCall(Array.resize:length-must-be-Haxe-Int:${lengthMapping.cSpelling})');
+				final length = coerce(lowerValue(arguments[0], lengthMapping), lengthMapping, arguments[0].pos, "TCall(Array.resize:length)");
+				final callReceiver = restoreStagedLoweredValue(stagedReceiver, "array-resize-receiver-load");
+				appendInstruction(null, IRIONullCheck(callReceiver.id, IRNCPCheckedAbort(Std.string(context.profile), Std.string(context.buildMode))),
+					sourceSpan(access.receiver.pos), "array-resize-receiver-null-check");
 				appendInstruction(null, IRIOCall({
-					dispatch: IRCDRuntime("array", "resize-zero"),
-					arguments: [callReceiver.id],
+					dispatch: IRCDRuntime("array", "resize-default"),
+					arguments: [callReceiver.id, length.id],
 					returnType: IRTVoid,
 					failure: managedArrayFailure()
-				}), source, "array-resize-zero");
-				runtimeRequirements.push(new CBodyRuntimeRequirement("array", "resize-zero", "ordinary Haxe Array.resize(0) ownership-aware clear", source,
-					expression.pos));
+				}), source, "array-resize-default");
+				runtimeRequirements.push(new CBodyRuntimeRequirement("array", "resize-default",
+					"ordinary Haxe Array.resize with an exact static-target default", source, expression.pos));
 				null;
 			case "sort":
 				if (arguments.length != 1)
@@ -13297,6 +13349,72 @@ private class FunctionBuilder {
 			}
 		}
 		runtimeRequirements.push(new CBodyRuntimeRequirement("string-map", method, 'ordinary Haxe StringMap.$method', source, expression.pos));
+		return {id: result.id, type: result.type, mapping: resultMapping};
+	}
+
+	/**
+		Construct one live standard Array cursor without snapshotting its elements.
+
+		The runtime retains the same Array container and reads its current length on
+		each `hasNext` call. A later `push` is therefore visible, matching the pinned
+		`ArrayIterator` classes. Key/value cursors use the exact generated pair layout
+		but keep the same live Array and shared cursor ownership.
+	**/
+	function lowerArrayIteratorConstruction(expression:TypedExpr, classReference:Ref<ClassType>, arguments:Array<TypedExpr>,
+			expected:Null<CBodyValueType>):LoweredValue {
+		final kind = CBodyIteratorRecognition.arrayKind(classReference);
+		if (kind == null)
+			return unsupported(expression, "TNew(ArrayIterator:class-identity-lost)");
+		if (arguments.length != 1)
+			return unsupported(expression, 'TNew(ArrayIterator:argument-count=${arguments.length},expected=1)');
+		final resultMapping = bodyValueType(expression.t, expression.pos, "TNew(ArrayIterator:result-type)");
+		final iterator = resultMapping.iteratorValue();
+		if (iterator == null)
+			return unsupported(expression, "TNew(ArrayIterator:result-not-standard-Iterator)");
+		if (expected != null && typeKey(expected.irType) != typeKey(resultMapping.irType))
+			return unsupported(expression, 'TNew(ArrayIterator:expected-type-mismatch:${expected.cSpelling})');
+		final arrayMapping = bodyValueType(arguments[0].t, arguments[0].pos, "TNew(ArrayIterator:Array-type)");
+		final array = arrayMapping.arrayValue();
+		if (array == null)
+			return unsupported(arguments[0], "TNew(ArrayIterator:argument-not-Array)");
+		if (array.managedByCollector)
+			return unsupported(arguments[0], "TNew(ArrayIterator:collector-managed-Array-anchor-not-yet-admitted)");
+		switch kind {
+			case CBAIValues:
+				if (typeKey(iterator.element.irType) != typeKey(array.element.irType))
+					return unsupported(expression, "TNew(ArrayIterator:element-specialization-mismatch)");
+			case CBAIKeyValues:
+				final pair = iterator.element.aggregateValue();
+				if (pair == null)
+					return unsupported(expression, "TNew(ArrayKeyValueIterator:result-not-pair-record)");
+				var keyField:Null<CPreparedBodyAggregateField> = null;
+				var valueField:Null<CPreparedBodyAggregateField> = null;
+				for (field in pair.fields) {
+					if (field.name == "key")
+						keyField = field;
+					else if (field.name == "value")
+						valueField = field;
+				}
+				final hasIntKey = keyField != null && typeKey(keyField.type.irType) == typeKey(IRTInt(32, true));
+				final hasMatchingValue = valueField != null && typeKey(valueField.type.irType) == typeKey(array.element.irType);
+				if (!hasIntKey || !hasMatchingValue)
+					return unsupported(expression, "TNew(ArrayKeyValueIterator:pair-fields-mismatch)");
+		}
+		var receiver = coerce(lowerValue(arguments[0], arrayMapping), arrayMapping, arguments[0].pos, "TNew(ArrayIterator:Array)");
+		receiver = stabilizeFreshManagedArray(receiver, arguments[0].pos, "array-iterator-anchor");
+		final result:HxcIRResult = {id: nextValueId(), type: resultMapping.irType};
+		final operation = kind == CBAIValues ? "create-array-values" : "create-array-key-values";
+		final source = sourceSpan(expression.pos);
+		appendInstruction(result, IRIOCall({
+			dispatch: IRCDRuntime("iterator", operation),
+			arguments: [receiver.id],
+			returnType: result.type,
+			failure: managedArrayFailure()
+		}), source, 'iterator-$operation');
+		registerValueTemporary(result.id, 'iterator-$operation-result');
+		freshManagedIteratorValueIds.set(result.id, true);
+		runtimeRequirements.push(new CBodyRuntimeRequirement("iterator", operation, "standard Haxe Array iterator with live shared Array identity", source,
+			expression.pos));
 		return {id: result.id, type: result.type, mapping: resultMapping};
 	}
 

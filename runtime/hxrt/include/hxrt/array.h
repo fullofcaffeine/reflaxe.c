@@ -409,6 +409,33 @@ HXC_API hxc_status hxc_array_ref_splice_one_copy(
 );
 
 /**
+ * Remove the normalized range without allocating its discarded result.
+ *
+ * A negative length or a position beyond the current end is a successful
+ * no-op. Negative positions count from the end and clamp to zero. The length
+ * clamps to the remaining suffix, matching the pinned Haxe Array contract.
+ */
+HXC_API hxc_status hxc_array_ref_splice_discard(
+  hxc_array_ref *array,
+  int32_t position,
+  int32_t length
+);
+
+/**
+ * Copy the normalized removed range into an empty matching Array, then mutate.
+ *
+ * Copy or allocation failure rolls the result back to empty and leaves the
+ * source unchanged. This gives generated Haxe one failure-atomic ownership
+ * boundary for primitive and managed elements of any requested range length.
+ */
+HXC_API hxc_status hxc_array_ref_splice_copy(
+  hxc_array_ref *array,
+  int32_t position,
+  int32_t length,
+  hxc_array_ref *out_removed
+);
+
+/**
  * Insert one copied element using Haxe's signed position rules.
  *
  * Negative positions count from the end and clamp to zero. Positions beyond
@@ -426,6 +453,13 @@ HXC_API hxc_status hxc_array_ref_push_copy(
   hxc_array_ref *array,
   const void *element,
   int32_t *out_length
+);
+
+/** Resize through Haxe's signed Int boundary using one exact default element. */
+HXC_API hxc_status hxc_array_ref_resize_default(
+  hxc_array_ref *array,
+  int32_t length,
+  const void *default_element
 );
 
 /** Replace one trivial element after a bounds check. */

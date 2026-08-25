@@ -1,14 +1,15 @@
 /*
  * hxrt feature: iterator (compiler-selectable).
  *
- * Standard Haxe Iterator<T> values use one shared cursor over an immutable
- * typed snapshot. Elements remain unboxed. next() moves one existing owner out
- * of the snapshot, while release destroys only elements that were not yielded.
+ * Standard Haxe Iterator<T> values use one shared cursor. Map producers publish
+ * immutable typed snapshots; Array iterators retain the live Array identity so
+ * later mutations follow the pinned standard-library cursor behavior.
  */
 #ifndef HXRT_ITERATOR_H_INCLUDED
 #define HXRT_ITERATOR_H_INCLUDED
 
 #include "hxrt/allocator.h"
+#include "hxrt/array.h"
 
 #if defined(__cplusplus)
 extern "C" {
@@ -68,22 +69,51 @@ HXC_API hxc_status hxc_iterator_ref_create_snapshot(
   hxc_iterator_ref **out_iterator
 );
 
+/**
+ * Create a shared cursor that reads values from the current live Array.
+ *
+ * The iterator retains `array`. `hasNext()` reads its current length, and
+ * `next()` copy-constructs the element at the current cursor before advancing.
+ * This makes appends visible and shrinking stop iteration without snapshotting.
+ */
+HXC_API hxc_status hxc_iterator_ref_create_array_values(
+  hxc_array_ref *array,
+  hxc_iterator_ref **out_iterator
+);
+
+/**
+ * Create the live key/value variant with one compiler-proved pair layout.
+ *
+ * `key_offset` names an aligned `int32_t` member and `value_offset` names one
+ * exact Array element member inside the uninitialized `pair_size` result. The
+ * members must not overlap, and the pair size must be a multiple of its
+ * alignment, as it is for a complete C object type.
+ */
+HXC_API hxc_status hxc_iterator_ref_create_array_pairs(
+  hxc_array_ref *array,
+  size_t pair_size,
+  size_t pair_alignment,
+  size_t key_offset,
+  size_t value_offset,
+  hxc_iterator_ref **out_iterator
+);
+
 /** Retain or release one alias to the same cursor; NULL is a successful no-op. */
 HXC_API hxc_status hxc_iterator_ref_retain(hxc_iterator_ref *iterator);
 HXC_API hxc_status hxc_iterator_ref_release(hxc_iterator_ref *iterator);
 
-/** Report whether one or more snapshot elements remain without advancing. */
+/** Report whether the snapshot or current live Array has another element. */
 HXC_API hxc_status hxc_iterator_ref_has_next(
   const hxc_iterator_ref *iterator,
   bool *out_has_next
 );
 
 /**
- * Move the next exact element owner into uninitialized caller storage.
+ * Move or copy the next exact element owner into uninitialized caller storage.
  *
  * Calling this operation after exhaustion is an invalid argument. On success
- * the shared cursor advances exactly once and release no longer destroys that
- * yielded element.
+ * the shared cursor advances exactly once. Snapshot release no longer destroys
+ * that yielded element; live Array iteration leaves the Array slot unchanged.
  */
 HXC_API hxc_status hxc_iterator_ref_next_move(
   hxc_iterator_ref *iterator,

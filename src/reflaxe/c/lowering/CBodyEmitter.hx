@@ -5860,15 +5860,44 @@ class CBodyEmitter {
 		final temporary = requireIteratorTemporary(temporaryNames, result.id, instruction.id, fn.id);
 		final declaration = typedDeclarator(result.type, DName(temporary));
 		addLineDirective(statements, instruction.source, lineDirectives);
+		// Creation publishes only a complete iterator and requires a null output
+		// slot. Other operations intentionally receive uninitialized typed storage.
 		statements.push(SDecl({
 			storage: [],
 			alignments: [],
 			type: declaration.type,
 			declarator: declaration.declarator,
-			initializer: null,
+			initializer: switch operation {
+				case "create-array-values" | "create-array-key-values":
+					IExpr(constantExpressionForType(IRCNull, result.type));
+				case _: null;
+			},
 			attributes: []
 		}));
 		switch operation {
+			case "create-array-values":
+				emitStatusAbort(statements, ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNIteratorCreateArrayValues)), [
+					requireValue(values, call.arguments[0], fn.id),
+					EUnary(AddressOf, EIdentifier(temporary))
+				]), boundsAbortName, instruction.id, fn.id);
+			case "create-array-key-values":
+				final iteratorElement = switch result.type {
+					case IRTInstance(iteratorId): iteratorElementTypes.get(iteratorId);
+					case _: null;
+				};
+				final pairId = switch iteratorElement {
+					case IRTInstance(instanceId): instanceId;
+					case _: return fail('Array keyValueIterator `${instruction.id}` lost its pair aggregate');
+				};
+				final pairType = new CType(TStruct(requireAggregateTag(pairId)));
+				emitStatusAbort(statements, ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNIteratorCreateArrayPairs)), [
+					requireValue(values, call.arguments[0], fn.id),
+					ESizeOfType(pairType, DName(null)),
+					EAlignOfType(pairType, DName(null)),
+					EOffsetOf(pairType, DName(null), requireAggregateFieldName(pairId, "key", instruction.id, fn.id)),
+					EOffsetOf(pairType, DName(null), requireAggregateFieldName(pairId, "value", instruction.id, fn.id)),
+					EUnary(AddressOf, EIdentifier(temporary))
+				]), boundsAbortName, instruction.id, fn.id);
 			case "has-next":
 				emitStatusAbort(statements, ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNIteratorHasNext)), [
 					requireValue(values, call.arguments[0], fn.id),
@@ -5966,6 +5995,30 @@ class CBodyEmitter {
 			]), boundsAbortName, instruction.id, fn.id);
 			return;
 		}
+		if (operation == "resize-default") {
+			if (call.arguments.length != 2 || call.returnType != IRTVoid)
+				return fail('Array resize-default `${instruction.id}` in `${fn.id}` lost its receiver/length/Void signature');
+			final receiverType = valueType(fn, call.arguments[0]);
+			if (receiverType == null)
+				return fail('Array resize-default `${instruction.id}` in `${fn.id}` lost its receiver type');
+			final instanceId = requireArrayInstanceId(receiverType, instruction.id, fn.id);
+			final elementType = requireArrayElementType(instanceId);
+			requireArrayPlan(instanceId);
+			final lengthType = valueType(fn, call.arguments[1]);
+			if (lengthType == null || exactTypeKey(lengthType) != exactTypeKey(IRTInt(32, true)))
+				return fail('Array resize-default `${instruction.id}` in `${fn.id}` lost its Haxe Int length');
+			final elementDeclaration = typedDeclarator(elementType, DName(null));
+			final defaultElement = EUnary(AddressOf,
+				ECompoundLiteral(elementDeclaration.type, elementDeclaration.declarator,
+					IList([{designators: [], value: IExpr(EInt(CIntegerLiteral.decimal("0")))}])));
+			addLineDirective(statements, instruction.source, lineDirectives);
+			emitStatusAbort(statements, ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNArrayResizeDefault)), [
+				requireValue(values, call.arguments[0], fn.id),
+				requireValue(values, call.arguments[1], fn.id),
+				defaultElement
+			]), boundsAbortName, instruction.id, fn.id);
+			return;
+		}
 		if (operation == "splice-one-discard") {
 			if (call.arguments.length != 2 || call.returnType != IRTVoid)
 				return fail('Array splice-one-discard `${instruction.id}` in `${fn.id}` lost its receiver/index/Void signature');
@@ -5980,6 +6033,26 @@ class CBodyEmitter {
 			emitStatusAbort(statements, ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNArraySpliceOneDiscard)), [
 				requireValue(values, call.arguments[0], fn.id),
 				requireValue(values, call.arguments[1], fn.id)
+			]), boundsAbortName, instruction.id, fn.id);
+			return;
+		}
+		if (operation == "splice-discard") {
+			if (call.arguments.length != 3 || call.returnType != IRTVoid)
+				return fail('Array splice-discard `${instruction.id}` in `${fn.id}` lost its receiver/position/length/Void signature');
+			final receiverType = valueType(fn, call.arguments[0]);
+			if (receiverType == null)
+				return fail('Array splice-discard `${instruction.id}` in `${fn.id}` lost its receiver type');
+			requireArrayPlan(requireArrayInstanceId(receiverType, instruction.id, fn.id));
+			for (argumentIndex in 1...3) {
+				final argumentType = valueType(fn, call.arguments[argumentIndex]);
+				if (argumentType == null || exactTypeKey(argumentType) != exactTypeKey(IRTInt(32, true)))
+					return fail('Array splice-discard `${instruction.id}` in `${fn.id}` lost Haxe Int argument $argumentIndex');
+			}
+			addLineDirective(statements, instruction.source, lineDirectives);
+			emitStatusAbort(statements, ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNArraySpliceDiscard)), [
+				requireValue(values, call.arguments[0], fn.id),
+				requireValue(values, call.arguments[1], fn.id),
+				requireValue(values, call.arguments[2], fn.id)
 			]), boundsAbortName, instruction.id, fn.id);
 			return;
 		}
@@ -6013,9 +6086,10 @@ class CBodyEmitter {
 			return fail('managed Array call `${instruction.id}` in `${fn.id}` has no finalized result temporary');
 		addLineDirective(statements, instruction.source, lineDirectives);
 		switch operation {
-			case "splice-one-copy":
-				if (call.arguments.length != 2)
-					return fail('Array splice-one-copy `${instruction.id}` in `${fn.id}` lost its receiver or position');
+			case "splice-one-copy" | "splice-copy":
+				final expectedArgumentCount = operation == "splice-one-copy" ? 2 : 3;
+				if (call.arguments.length != expectedArgumentCount)
+					return fail('Array $operation `${instruction.id}` in `${fn.id}` lost its receiver, position, or length');
 				final instanceId = requireArrayInstanceId(result.type, instruction.id, fn.id);
 				final elementType = requireArrayElementType(instanceId);
 				final arrayPlan = requireArrayPlan(instanceId);
@@ -6077,11 +6151,16 @@ class CBodyEmitter {
 					]);
 					emitStatusAbort(statements, createCall, boundsAbortName, instruction.id, fn.id);
 				}
-				emitStatusAbort(statements, ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNArraySpliceOneCopy)), [
+				final spliceArguments = [
 					requireValue(values, call.arguments[0], fn.id),
-					requireValue(values, call.arguments[1], fn.id),
-					EIdentifier(temporary)
-				]), boundsAbortName, instruction.id, fn.id);
+					requireValue(values, call.arguments[1], fn.id)
+				];
+				if (operation == "splice-copy")
+					spliceArguments.push(requireValue(values, call.arguments[2], fn.id));
+				spliceArguments.push(EIdentifier(temporary));
+				final spliceName = operation == "splice-one-copy" ? CBRNArraySpliceOneCopy : CBRNArraySpliceCopy;
+				emitStatusAbort(statements, ECall(EIdentifier(CBodyRuntimeNames.identifier(spliceName)), spliceArguments), boundsAbortName, instruction.id,
+					fn.id);
 				values.set(result.id, EIdentifier(temporary));
 			case "create-literal":
 				final instanceId = requireArrayInstanceId(result.type, instruction.id, fn.id);

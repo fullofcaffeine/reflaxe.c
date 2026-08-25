@@ -3516,6 +3516,27 @@ private class HxcIRValidationState {
 					|| !returnsReceiverSpecialization) {
 					add(path, "returned Array.splice(pos, 1) requires one managed Array plus a Haxe Int position and returns the same specialization", source);
 				}
+			case "splice-discard":
+				if (argumentTypes.length != 3
+					|| receiverElement == null
+					|| secondArgumentType == null
+					|| thirdArgumentType == null
+					|| typeKey(secondArgumentType) != typeKey(IRTInt(32, true))
+					|| typeKey(thirdArgumentType) != typeKey(IRTInt(32, true))
+					|| call.returnType != IRTVoid) {
+					add(path, "discarded Array.splice(pos, len) requires one managed Array plus two Haxe Int values and returns Void", source);
+				}
+			case "splice-copy":
+				if (argumentTypes.length != 3
+					|| receiverElement == null
+					|| secondArgumentType == null
+					|| thirdArgumentType == null
+					|| typeKey(secondArgumentType) != typeKey(IRTInt(32, true))
+					|| typeKey(thirdArgumentType) != typeKey(IRTInt(32, true))
+					|| !returnsReceiverSpecialization) {
+					add(path, "returned Array.splice(pos, len) requires one managed Array plus two Haxe Int values and returns the same specialization",
+						source);
+				}
 			case "insert":
 				if (argumentTypes.length != 3
 					|| receiverElement == null
@@ -3545,6 +3566,20 @@ private class HxcIRValidationState {
 					add(path, "Array.resize(0) requires one managed Array and returns Void", source);
 				if (call.arguments.length > 0 && !nullProofs.exists(call.arguments[0]))
 					add(path, "Array.resize(0) requires a preceding dominating receiver null check", source);
+			case "resize-default":
+				final hasDefault = receiverElement != null && (hasExactNullCarrier(receiverElement) || switch receiverElement {
+					case IRTBool | IRTInt(_, _) | IRTFloat(_): true;
+					case _: false;
+				});
+				if (argumentTypes.length != 2
+					|| receiverElement == null
+					|| secondArgumentType == null
+					|| typeKey(secondArgumentType) != typeKey(IRTInt(32, true))
+					|| call.returnType != IRTVoid
+					|| !hasDefault)
+					add(path, "Array.resize requires one managed Array with an exact static default plus a Haxe Int length and returns Void", source);
+				if (call.arguments.length > 0 && !nullProofs.exists(call.arguments[0]))
+					add(path, "Array.resize requires a preceding dominating receiver null check", source);
 			case "set":
 				if (argumentTypes.length != 3 || receiverElement == null || secondArgumentType == null || thirdArgumentType == null) {
 					add(path, "Array indexed assignment requires managed Array + Haxe Int + matching element", source);
@@ -3780,6 +3815,23 @@ private class HxcIRValidationState {
 		final element = argumentTypes.length == 0 ? null : managedIteratorElement(argumentTypes[0]);
 		final elementKey = element == null ? null : typeKey(element);
 		switch operationId {
+			case "create-array-values":
+				final arrayElement = argumentTypes.length == 1 ? managedArrayElement(argumentTypes[0]) : null;
+				final resultElement = managedIteratorElement(call.returnType);
+				final hasMatchingElement = arrayElement != null
+					&& resultElement != null
+					&& typeKey(arrayElement) == typeKey(resultElement);
+				if (!hasMatchingElement)
+					add(path, "ArrayIterator creation requires one Array<E> and returns Iterator<E>", source);
+			case "create-array-key-values":
+				final arrayElement = argumentTypes.length == 1 ? managedArrayElement(argumentTypes[0]) : null;
+				final resultElement = managedIteratorElement(call.returnType);
+				final keyType = resultElement == null ? null : aggregateFieldType(resultElement, "key");
+				final valueType = resultElement == null ? null : aggregateFieldType(resultElement, "value");
+				final hasIntKey = keyType != null && typeKey(keyType) == typeKey(IRTInt(32, true));
+				final hasMatchingValue = arrayElement != null && valueType != null && typeKey(arrayElement) == typeKey(valueType);
+				if (resultElement == null || !hasIntKey || !hasMatchingValue)
+					add(path, "ArrayKeyValueIterator creation requires one Array<E> and returns Iterator<{key:Int,value:E}>", source);
 			case "has-next":
 				if (argumentTypes.length != 1 || element == null || call.returnType != IRTBool)
 					add(path, "Iterator.hasNext requires one Iterator<E> and returns Bool", source);

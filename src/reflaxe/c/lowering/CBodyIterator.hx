@@ -24,6 +24,33 @@ class CBodyIterator {
 	private function new() {}
 }
 
+/** The two standard concrete Array cursor classes admitted by haxe.c. */
+enum CBodyArrayIteratorKind {
+	CBAIValues;
+	CBAIKeyValues;
+}
+
+/**
+	Recognizes only Haxe's pinned Array iterator classes.
+
+	These classes are generic implementation details of the standard library, not
+	permission to specialize arbitrary generic classes. Their C carrier can share
+	the existing managed Iterator reference because both APIs expose one aliased
+	cursor; construction selects live Array behavior instead of a map snapshot.
+**/
+class CBodyIteratorRecognition {
+	public static function arrayKind(reference:Ref<ClassType>):Null<CBodyArrayIteratorKind> {
+		final definition = reference.get();
+		if (definition.pack.length != 2 || definition.pack[0] != "haxe" || definition.pack[1] != "iterators")
+			return null;
+		return switch definition.name {
+			case "ArrayIterator": CBAIValues;
+			case "ArrayKeyValueIterator": CBAIKeyValues;
+			case _: null;
+		};
+	}
+}
+
 /** Maps one iterator element through the normal typed body-value boundary. */
 typedef CBodyIteratorElementResolver = (Type, Position, String, String, (Position, String) -> Void, String) -> CBodyValueType;
 
@@ -98,12 +125,10 @@ class CBodyIteratorRegistry {
 	**/
 	public function valueType(type:Type, position:Position, ownerModule:String, sourcePath:String, fail:(Position, String) -> Void,
 			node:String):Null<CPreparedBodyIterator> {
-		final parameters = iteratorParameters(type);
-		if (parameters == null)
+		final elementType = iteratorElementType(type);
+		if (elementType == null)
 			return null;
-		if (parameters.length != 1)
-			return rejected(fail, position, '$node:Iterator-arity:${parameters.length}');
-		final element = resolveElement(parameters[0], position, ownerModule, sourcePath, fail, '$node.Iterator-element');
+		final element = resolveElement(elementType, position, ownerModule, sourcePath, fail, '$node.Iterator-element');
 		final semanticKey = 'haxe-iterator-v1(${canonicalPart(element.cSpelling)})';
 		final existing = bySemanticKey.get(semanticKey);
 		if (existing != null)
@@ -121,19 +146,45 @@ class CBodyIteratorRegistry {
 		return values;
 	}
 
-	static function iteratorParameters(type:Type):Null<Array<Type>>
+	/** Return the value produced by one structural or concrete standard iterator. */
+	static function iteratorElementType(type:Type):Null<Type>
 		return switch type {
 			case TType(reference, parameters) if (reference.get().pack.length == 0 && reference.get().name == "Iterator"):
-				parameters;
+				parameters.length == 1 ? parameters[0] : null;
 			case TType(reference, parameters) if (reference.get().pack.length == 0 && reference.get().name == "KeyValueIterator"):
 				final definition = reference.get();
-				iteratorParameters(TypeTools.applyTypeParameters(definition.type, definition.params, parameters));
+				iteratorElementType(TypeTools.applyTypeParameters(definition.type, definition.params, parameters));
+			case TInst(reference, parameters) if (CBodyIteratorRecognition.arrayKind(reference) != null):
+				final definition = reference.get();
+				if (parameters.length != 1) {
+					null;
+				} else {
+					switch CBodyIteratorRecognition.arrayKind(reference) {
+						case CBAIValues: parameters[0];
+						case CBAIKeyValues: arrayKeyValueElement(definition, parameters);
+						case null: null;
+					};
+				}
 			case TMono(reference):
 				final resolved = reference.get();
-				resolved == null ? null : iteratorParameters(resolved);
-			case TLazy(resolve): iteratorParameters(resolve());
+				resolved == null ? null : iteratorElementType(resolved);
+			case TLazy(resolve): iteratorElementType(resolve());
 			case _: null;
 		};
+
+	/** Read the pinned key/value iterator's applied `next()` result type. */
+	static function arrayKeyValueElement(definition:ClassType, parameters:Array<Type>):Null<Type> {
+		for (field in definition.fields.get()) {
+			if (field.name != "next")
+				continue;
+			final applied = TypeTools.applyTypeParameters(field.type, definition.params, parameters);
+			return switch applied {
+				case TFun(_, result): result;
+				case _: null;
+			};
+		}
+		return null;
+	}
 
 	static function canonicalPart(value:String):String {
 		final bytes = Bytes.ofString(value);

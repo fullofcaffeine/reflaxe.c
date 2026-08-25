@@ -139,8 +139,11 @@ class RuntimeFeatureCatalog {
 					"hxc_array_ref_shift_move",
 					"hxc_array_ref_splice_one_discard",
 					"hxc_array_ref_splice_one_copy",
+					"hxc_array_ref_splice_discard",
+					"hxc_array_ref_splice_copy",
 					"hxc_array_ref_insert_copy",
 					"hxc_array_ref_push_copy",
+					"hxc_array_ref_resize_default",
 					"hxc_array_ref_release",
 					"hxc_array_ref_retain",
 					"hxc_array_ref_set_copy",
@@ -161,7 +164,7 @@ class RuntimeFeatureCatalog {
 						new RuntimeFeatureSelectionRoot("create-literal", RuntimeFeatureSelectionRootKind.HxcIrOperation,
 							"A reachable ordinary Haxe Array literal for an admitted unboxed element representation."),
 						new RuntimeFeatureSelectionRoot("collection-operation", RuntimeFeatureSelectionRootKind.HxcIrOperation,
-							"A reachable ordinary Haxe Array length, checked indexing, insert, push, pop, shift, or one-element splice operation."),
+							"A reachable ordinary Haxe Array length, checked indexing, mutation, copy, arbitrary-range splice, resize, or sort operation."),
 						new RuntimeFeatureSelectionRoot("splice-one-discard", RuntimeFeatureSelectionRootKind.HxcIrOperation,
 							"A reachable ordinary Haxe Array.splice(pos, 1) whose removed Array result is discarded."),
 						new RuntimeFeatureSelectionRoot("splice-one-copy", RuntimeFeatureSelectionRootKind.HxcIrOperation,
@@ -177,22 +180,26 @@ class RuntimeFeatureCatalog {
 						"test/differential/array-runtime/run.py",
 						"test/runtime/runtime-feature-graph/run.py"
 					])),
-			new RuntimeFeatureDefinition(iterator, "Shared-cursor typed snapshots for standard Haxe Iterator values.", CompilerSelectable, true, environments,
-				[alloc], [header("iterator.h"), source("iterator.c")], [
+			new RuntimeFeatureDefinition(iterator, "Shared-cursor typed snapshots and live Array cursors for standard Haxe Iterator values.",
+				CompilerSelectable, true, environments, [alloc, array], [header("iterator.h"), source("iterator.c")], [
 					"hxc_iterator_element_ops_is_valid",
 					"hxc_iterator_ref_create_snapshot",
+					"hxc_iterator_ref_create_array_values",
+					"hxc_iterator_ref_create_array_pairs",
 					"hxc_iterator_ref_retain",
 					"hxc_iterator_ref_release",
 					"hxc_iterator_ref_has_next",
 					"hxc_iterator_ref_next_move"
 				],
 				[], [],
-				documentation("Preserves one shared cursor across Iterator aliases while keeping each element exact and unboxed; creation snapshots the producer, next moves ownership, and release destroys only unconsumed elements.",
+				documentation("Preserves one shared cursor across Iterator aliases while keeping each element exact and unboxed; maps snapshot their producer, while Array cursors retain live identity and observe later length changes.",
 					[
 						new RuntimeFeatureSelectionRoot("managed-type-representation", RuntimeFeatureSelectionRootKind.HxcIrOperation,
 							"A reachable standard Haxe Iterator<T> whose shared cursor crosses ordinary expressions or calls."),
 						new RuntimeFeatureSelectionRoot("iterator-operation", RuntimeFeatureSelectionRootKind.HxcIrOperation,
 							"A reachable standard Iterator.hasNext or Iterator.next operation."),
+						new RuntimeFeatureSelectionRoot("array-cursor", RuntimeFeatureSelectionRootKind.HxcIrOperation,
+							"A reachable ArrayIterator or ArrayKeyValueIterator whose shared live cursor crosses a call or return."),
 						new RuntimeFeatureSelectionRoot("retain", RuntimeFeatureSelectionRootKind.HxcIrOperation,
 							"A reachable Iterator alias must retain the same shared cursor."),
 						new RuntimeFeatureSelectionRoot("cleanup-release", RuntimeFeatureSelectionRootKind.HxcIrOperation,
@@ -200,9 +207,10 @@ class RuntimeFeatureCatalog {
 					],
 					"Compile-time-known iteration can remain direct control flow when no Iterator value or shared cursor is observable.",
 					"A closed producer may use a program-local cursor only when aliases, element lifetime, and exhaustion behavior remain identical.",
-					"General Iterator values need run-time shared cursor identity, but their exact element layout and lifecycle remain compiler-selected.",
+					"General Iterator values need run-time shared cursor identity. Map snapshots and live Array cursors share the carrier, while their exact element layout and lifecycle remain compiler-selected.",
 					"docs/hxrt.md",
 					[
+						"test/differential/array-runtime/run.py",
 						"test/differential/string-map/run.py",
 						"test/runtime/runtime-feature-graph/run.py"
 					])),
@@ -576,7 +584,7 @@ class RuntimeFeatureCatalog {
 		return switch name {
 			case "abi.h": "787d82dc867999ba8e8e6987cc6933ad6f6ab5d087b415e97042934c454ccf62";
 			case "allocator.h": "6e21c0bc498eb40bcec901914a04dd1bee33b6b21e5a27f1ac5f169a8a1cc448";
-			case "array.h": "15f55b87b100b5087cdf71f30a1c8284196de0ce27aef5988a579603c97d08fa";
+			case "array.h": "a956c23d87ab178201680d8ba3bf5ebebfe440d368b0f9034d41b12564f14056";
 			case "array_join.h": "5829a159dab0bd3446b5bc418c2ee32ad2902c0fec6bcc04f82efeb66c294fea";
 			case "base.h": "9df654b0fae47eefcd799187258e64df12c969a41d5d7f3654f0ea67de65f276";
 			case "bytes.h": "3f2dc89578ee5381e98051c5b3d06dcb6859e0cce10535edaba9c9bf5b38f31d";
@@ -584,7 +592,7 @@ class RuntimeFeatureCatalog {
 			case "gc.h": "2ca9523f1c74c62877c3f006bab9bd8a3a2a1eced93d67ad59d015a7c6ecb9de";
 			case "io.h": "4b92f03451dc4d04ea74c857ca3ce54d52fbe80d31f155b93781ee2fab946589";
 			case "int_map.h": "69dfbe45cc182cfb66fbc5e44b38c7cf3205386ff8edabd7d33bc1daabe5ef83";
-			case "iterator.h": "e8589914b0fe4da833864061de5fe8259d7066edff689d0c98442a6f8872f0f1";
+			case "iterator.h": "5bc0d5bbf8c781900cfaf55205da67b4a21589176613eca336139bc233a2d877";
 			case "object.h": "779b452097e4c58c7971b90743ace19a2dc6c91e381557abc84fbd5f9b30f1e5";
 			case "status.h": "6bf20f5d82594014ad0f2b79a25cb81417791bd9c07375d2fb89835e415be1c4";
 			case "status_name.h": "64bf3917787ffcf924369c8e1c0a525cf10902d004d5bb4b898f2af46a7456cc";
@@ -603,14 +611,14 @@ class RuntimeFeatureCatalog {
 		return switch name {
 			case "abi.c": "3300a4498a7ca20f771b1334d7be8f2c908d2bb067ea8f2fe3c059300e680b32";
 			case "allocator.c": "13385273c7c3d4a15785caa3095dd82d97bda8a026ebd9b6d54e2f531eb3b10e";
-			case "array.c": "4a544ac49331b2fcaf3e8ee67ed3fa3c9d7d060d0834f350efbee6f9c594d980";
+			case "array.c": "0a25417f171789397134d802fff42ef8b441f6a874e893eb5a61dcd23a8b9f2e";
 			case "array_join.c": "b158708b62c7e407f9da21c24a1b3306d4b41baa6b63f2d8019f631a98008fde";
 			case "bytes.c": "902f1a40eb6ff1d94cc58d48a8096c9c0cb60eef4e6e9b0d0469448f929bfcb8";
 			case "bytes_string.c": "0ee9604f1b4ae78baeeaf7cac8b2a35b5634f115c958a7575230c790e8aa6ca6";
 			case "gc.c": "96cf942d6752070aaa5005eae3bc45c7d00aca37c360dfecaeb76d8db767b4cc";
 			case "io.c": "898b3f351b60a91f25fd1ffdfe8d832e95a5a6a738ffe226ac33581f1fcb5b0f";
 			case "int_map.c": "743339e9c3dea7a1894e1c7920cfe4b717c4bc0436224837f64c837038496fcc";
-			case "iterator.c": "0d03adbe76bfb3a2e6911589395452eb3b52f8ae6cd2e77947aca9177cfdc2f6";
+			case "iterator.c": "c19d81c3f20ba6c288a216997a004ffb62062d8aa47dada946b7bacd9f6a9db0";
 			case "object.c": "0e7fc6a55b562eaaf03fe63eca743dd73248f0bee1c09e21b79464917e8c89c0";
 			case "status.c": "0695ab2528db6e29d5cf29d905ad736b7c1a3a79333082347ec18faea2d4e6d8";
 			case "string.c": "9e267e14bdca44436a282b4956121b5340e71e0dffc5060306fee898c11d181a";

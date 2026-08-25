@@ -7,6 +7,7 @@ import reflaxe.c.lowering.CBodyArray.CBodyArrayRecognition;
 import reflaxe.c.lowering.CBodyBytes.CBodyBytesRecognition;
 import reflaxe.c.lowering.CBodyDispatch.CBodyInstanceCallAccess;
 import reflaxe.c.lowering.CBodyIntMap.CBodyIntMapRecognition;
+import reflaxe.c.lowering.CBodyIterator.CBodyIteratorRecognition;
 import reflaxe.c.lowering.CBodyStringMap.CBodyStringMapRecognition;
 
 /**
@@ -21,6 +22,7 @@ enum CBodyIntrinsicReceiverFamily {
 	CBIRArray;
 	CBIRIntMap;
 	CBIRStringMap;
+	CBIRIterator;
 	CBIRBytes;
 	CBIRString;
 	CBIROrdinaryClass;
@@ -45,6 +47,8 @@ class CBodyIntrinsicReceiver {
 			return CBIRIntMap;
 		if (CBodyStringMapRecognition.isStringMap(access.owner))
 			return CBIRStringMap;
+		if (CBodyIteratorRecognition.arrayKind(access.owner) != null)
+			return CBIRIterator;
 		if (CBodyBytesRecognition.isCoreBytes(access.owner))
 			return CBIRBytes;
 		if (isCoreString(access.owner))

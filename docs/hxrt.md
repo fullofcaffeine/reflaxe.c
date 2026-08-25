@@ -245,7 +245,7 @@ strategy is selected, as required by
 
 ### ABI and versioning
 
-The runtime ABI is internal and versioned, currently 0.16.0. Generated
+The runtime ABI is internal and versioned, currently 0.17.0. Generated
 runtime-using C emits a structural C11 `_Static_assert` for the required major.
 Minor and patch changes within the same major are compatible by current policy;
 a major mismatch fails native compilation. Runtime-free output contains no
@@ -323,16 +323,17 @@ select it transitively; arbitrary generated allocation remains unsupported. See
 Compiler-selectable resizable unboxed array storage built on `alloc`. The first
 ordinary-Haxe slice adds shared identity, local retain/release ownership,
 literals, length, checked indexing, push, ownership-transferring `pop` and
-`shift`, signed-index `insert`, shallow copy, in-place sort, and source-order iteration for admitted
-elements. Generated
+`shift`, signed-index `insert`, arbitrary-range splice, typed resize, shallow
+copy, in-place sort, and source-order iteration for admitted elements. Generated
 Bytes elements and closed records containing Bytes use typed program-local
 copy/assign/destroy callbacks; they remain unboxed and do not select reflection
 or a collector. `pop` moves the last live element and `shift` moves the first
 one into the caller's nullable result without invoking those callbacks.
-`shift` then relocates the remaining suffix left while keeping its order. The
-native layer additionally proves alias-safe resize paths that generated Haxe
-does not yet expose. `insert` clamps negative and oversized positions exactly
-as Haxe specifies, and a failed growth or managed-element copy leaves every
+`shift` then relocates the remaining suffix left while keeping its order.
+Splice copies the complete returned range before mutating the source, and resize
+uses the compiler-supplied exact static default for growth. `insert` clamps
+negative and oversized positions exactly as Haxe specifies, and a failed
+growth or managed-element copy leaves every
 alias unchanged. Fixed
 arrays and spans stay direct and runtime-free. See
 [array runtime](array-runtime.md).
@@ -402,24 +403,29 @@ matching assumptions.
 <!-- hxrt-feature:iterator -->
 ### `iterator`
 
-Compiler-selectable storage for an exact standard Haxe `Iterator<T>` value.
-Each iterator owns a typed snapshot and one cursor that all aliases share.
-Thus, a call through one alias advances the position that every alias sees.
+Compiler-selectable storage for an exact standard Haxe `Iterator<T>` value. It
+depends on `array` because standard Array cursors retain and read their live
+source container. Each iterator owns one cursor that all aliases share. Thus, a
+call through one alias advances the position that every alias sees.
 
-The snapshot keeps each `T` value unboxed. The compiler supplies its exact
-size, alignment, copy operation, and destroy operation. `next()` moves one
-element owner to the caller. Final release destroys only the elements that the
-program did not consume.
+Map iterators own a snapshot that keeps each `T` value unboxed. The compiler
+supplies its exact size, alignment, copy operation, and destroy operation.
+`next()` moves one snapshot element owner to the caller. Final release destroys
+only the elements that the program did not consume.
 
 The producer fills the complete snapshot before the runtime publishes the
 iterator. If a fill operation fails, the runtime destroys the completed prefix.
 It also frees the unpublished storage. The caller still owns the producer
 anchor after this error.
 
-An iterator can keep an optional producer anchor alive. StringMap iterators use
-this anchor for the map's value callback policy. Therefore, the iterator stays
-valid after the source map local ends. The final iterator release drops the
-anchor after all element callbacks finish.
+An iterator can keep a producer anchor alive. StringMap iterators use this
+anchor for the map's value callback policy. Array iterators instead retain the
+same reference-counted Array and read its current length on every `hasNext()`.
+Their `next()` copies the current element and advances only after success.
+Therefore, a later Array push can extend an active iteration and a shrink can
+end it earlier. A key/value Array cursor writes the current `Int` index and
+copied value into one compiler-validated pair layout. The final iterator release
+drops either anchor after all element work finishes.
 
 The current compiler recognizes the exact standard `Iterator<T>` typedef. It
 supports `hasNext()` and `next()` across locals, aliases, calls, and returns.
@@ -685,7 +691,7 @@ them.
 | `include/hxrt/allocator.h`, `src/allocator.c` | Dependency-only allocator callbacks, owner lifecycle, checked arithmetic, and aligned hosted implementation; selected transitively by managed collections. |
 | `include/hxrt/array.h`, `src/array.c` | Compiler-selectable resizable typed storage, shared Array identity, and element lifecycle. |
 | `include/hxrt/int_map.h`, `src/int_map.c` | Compiler-selectable Int-keyed shared `Map<Int, Bool>` storage with exact unboxed keys, values, and membership. |
-| `include/hxrt/iterator.h`, `src/iterator.c` | Compiler-selectable typed snapshots with one cursor shared by all standard Haxe Iterator aliases. |
+| `include/hxrt/iterator.h`, `src/iterator.c` | Compiler-selectable typed map snapshots and live Array cursors with one position shared by all standard Haxe Iterator aliases. |
 | `include/hxrt/string_map.h`, `src/string_map.c` | Compiler-selectable String-keyed shared map storage with copied keys and exact unboxed values. |
 | `include/hxrt/bytes.h`, `src/bytes.c` | Compiler-selectable fixed-length mutable byte storage, shared identity, checked ranges, and overlap-safe copying. |
 | `include/hxrt/bytes_string.h`, `src/bytes_string.c` | Compiler-selectable checked UTF-8 decoding from mutable Bytes into a separately owned String. |
