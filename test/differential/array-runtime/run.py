@@ -423,6 +423,9 @@ def validate_generated_hxcir(hxcir: str) -> None:
     managed_element_assignment = hxcir_function(
         hxcir, "function.Main.replaceManagedEnvelope"
     )
+    discarded_managed_element = hxcir_function(
+        hxcir, "function.Main.discardManagedEnvelope"
+    )
     field_self_assignment = hxcir_function(
         hxcir, "method.ArrayFieldOwner.assignToSelf"
     )
@@ -460,6 +463,32 @@ def validate_generated_hxcir(hxcir: str) -> None:
     ):
         raise ArrayRuntimeFailure(
             "fresh managed enum Array replacement lost its bounded temporary owner"
+        )
+    discarded_call = discarded_managed_element.find(
+        'dispatch=direct("function.Main.copyManagedEnvelope")'
+    )
+    discarded_owner = discarded_managed_element.find(
+        "discarded-enum-owner-initialize", discarded_call
+    )
+    discarded_destroy = discarded_managed_element.find(
+        "destroy-discarded-enum", discarded_owner
+    )
+    discarded_return = discarded_managed_element.find(
+        "terminator return value=none cleanup=[]", discarded_destroy
+    )
+    if (
+        discarded_call == -1
+        or discarded_owner == -1
+        or discarded_destroy == -1
+        or discarded_return == -1
+        or not discarded_call
+        < discarded_owner
+        < discarded_destroy
+        < discarded_return
+        or discarded_managed_element.count("destroy-discarded-enum") != 1
+    ):
+        raise ArrayRuntimeFailure(
+            "discarded fresh managed enum lost its immediate exact-once cleanup"
         )
     require_ordered_events(
         field_self_assignment,

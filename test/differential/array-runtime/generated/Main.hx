@@ -228,6 +228,7 @@ final class Main {
 		final arguments:Array<ManagedCommand> = [Number(7)];
 		final scheduled = makeSchedule(arguments);
 		final copied = scheduled;
+		discardManagedEnvelope(copied);
 		final returnedRecord = returnedManagedRecord();
 		final envelopes:Array<ManagedEnvelope> = [];
 		envelopes.push(Idle);
@@ -573,6 +574,10 @@ final class Main {
 	/** Return a separate enum owner while preserving the payload Array identity. */
 	static function copyManagedEnvelope(value:ManagedEnvelope):ManagedEnvelope
 		return value;
+
+	/** Discard one fresh enum copy without releasing the caller's borrowed owner. */
+	static function discardManagedEnvelope(value:ManagedEnvelope):Void
+		copyManagedEnvelope(value);
 
 	/**
 	 * Replace one existing Array slot with a fresh managed enum result.

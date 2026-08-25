@@ -1660,6 +1660,8 @@ def check_managed_optional(*, requested_toolchain: str) -> None:
                     "project-tag value=",
                     "retain-optional-alias",
                     "release-optional-assignment-target",
+                    "discarded-optional-owner-initialize",
+                    "destroy-discarded-optional",
                     'implementation=program-local("optional-lifecycle:',
                 ):
                     if marker not in hxcir:

@@ -576,6 +576,26 @@ def validate_std_string_identity_ownership(hxcir: str) -> None:
         )
 
 
+def validate_discarded_string_ownership(hxcir: str) -> None:
+    """Prove an ignored fresh String result is destroyed at its statement."""
+    function = hxcir_function(hxcir, "Main.discardFromCode")
+    events = (
+        'dispatch=direct("function.Main.fromCode")',
+        "discarded-string-owner-initialize",
+        "destroy-discarded-string",
+        "terminator return value=none cleanup=[]",
+    )
+    positions = [function.find(event) for event in events]
+    if (
+        any(position < 0 for position in positions)
+        or positions != sorted(positions)
+        or function.count("destroy-discarded-string") != 1
+    ):
+        raise StringRuntimeFailure(
+            "an ignored fresh String lost its immediate exact-once cleanup"
+        )
+
+
 def validate_conditional_view_ownership(hxcir: str) -> None:
     """Prove a retained String view transfers through an outer conditional."""
     for display_name in (
@@ -691,6 +711,7 @@ def validate_generated_project(output: Path, hxcir: str) -> None:
         raise StringRuntimeFailure("managed String HxcIR leaked the checkout path")
     validate_switch_join_ownership(hxcir)
     validate_std_string_identity_ownership(hxcir)
+    validate_discarded_string_ownership(hxcir)
     validate_conditional_view_ownership(hxcir)
     validate_conditional_compound_ownership(hxcir)
     validate_projected_enum_payload_ownership(hxcir)

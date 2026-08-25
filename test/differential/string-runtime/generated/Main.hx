@@ -183,7 +183,7 @@ final class Main {
 
 	/** Evaluate and immediately release one ignored runtime-created String. */
 	static function discardFromCode(code:Int):Void
-		String.fromCharCode(code);
+		fromCode(code);
 
 	/**
 		Prove that `Std.string(String)` is an ownership-preserving identity.

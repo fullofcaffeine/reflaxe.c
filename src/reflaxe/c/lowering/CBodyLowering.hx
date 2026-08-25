@@ -4922,22 +4922,8 @@ private class FunctionBuilder {
 				lowerSuperCall(expression, arguments);
 			case TCall(_, _):
 				final result = lowerCall(expression, false);
-				if (result != null) {
-					destroyDiscardedFreshManagedOptional(result, expression.pos);
-					destroyDiscardedFreshManagedString(result, expression.pos);
-				}
-				if (result != null && freshManagedStringMapValueIds.exists(result.id))
-					unsupported(expression, "TCall(discarded-fresh-managed-StringMap-needs-owner)");
-				if (result != null && freshManagedBytesValueIds.exists(result.id))
-					unsupported(expression, "TCall(discarded-fresh-managed-Bytes-needs-owner)");
-				if (result != null && freshManagedStringValueIds.exists(result.id))
-					unsupported(expression, "TCall(discarded-fresh-managed-String-needs-owner)");
-				if (result != null && freshManagedEnumValueIds.exists(result.id))
-					unsupported(expression, "TCall(discarded-fresh-managed-enum-needs-owner)");
-				if (result != null && freshManagedAggregateValueIds.exists(result.id))
-					unsupported(expression, "TCall(discarded-fresh-managed-record-needs-owner)");
-				if (result != null && freshManagedOptionalValueIds.exists(result.id))
-					unsupported(expression, "TCall(discarded-fresh-managed-optional-needs-owner)");
+				if (result != null)
+					destroyDiscardedFreshManagedCallResult(result, expression.pos);
 			case TThrow(value):
 				lowerThrow(expression, value);
 			case TIf(condition, whenTrue, whenFalse):
@@ -4958,21 +4944,73 @@ private class FunctionBuilder {
 	}
 
 	/**
-		Destroy one ignored managed `Null<T>` call result at the statement boundary.
+		Destroy one ignored fresh managed call result at the statement boundary.
 
-		Haxe still evaluates a call when its result is unused. If the present
-		optional payload owns memory, the returned C value also owns that payload;
-		simply dropping its bits would leak it. A fresh-result marker proves this
-		call supplied the one transferable owner. Moving the value into a typed
-		automatic place and immediately invoking the optional's existing destroy
-		plan consumes that owner exactly once. An absent optional follows the same
-		call but its presence flag makes destruction a no-op.
-
-		This rule is intentionally specific to the already-proven managed optional
-		family. Other managed result families keep their explicit fail-closed
-		diagnostics until their own immediate-destruction contracts are tested.
+		Haxe still evaluates a call whose result is unused. Every fresh-result map
+		proves that the returned value carries one transferable owner. This one
+		boundary selects the family's existing destroy implementation, then moves
+		the value into automatic storage before releasing it. Borrowed results have
+		no fresh marker and pass through untouched.
 	**/
-	function destroyDiscardedFreshManagedOptional(value:LoweredValue, position:Position):Void {
+	function destroyDiscardedFreshManagedCallResult(value:LoweredValue, position:Position):Void {
+		if (freshManagedArrayValueIds.remove(value.id)) {
+			final array = value.mapping.arrayValue();
+			if (array == null || array.managedByCollector)
+				throw new CBodyEmissionError('fresh managed Array `${value.id}` lost its reference-counted Array representation');
+			destroyDiscardedManagedCallResult(value, position, IRIRuntime("array"), "array");
+			return;
+		}
+		if (freshManagedStringMapValueIds.remove(value.id)) {
+			if (value.mapping.stringMapValue() == null)
+				throw new CBodyEmissionError('fresh managed StringMap `${value.id}` lost its StringMap representation');
+			destroyDiscardedManagedCallResult(value, position, IRIRuntime("string-map"), "string-map");
+			return;
+		}
+		if (freshManagedIteratorValueIds.remove(value.id)) {
+			if (value.mapping.iteratorValue() == null)
+				throw new CBodyEmissionError('fresh managed Iterator `${value.id}` lost its Iterator representation');
+			destroyDiscardedManagedCallResult(value, position, IRIRuntime("iterator"), "iterator");
+			return;
+		}
+		if (freshManagedIntMapValueIds.remove(value.id)) {
+			if (value.mapping.intMapValue() == null)
+				throw new CBodyEmissionError('fresh managed IntMap `${value.id}` lost its IntMap representation');
+			destroyDiscardedManagedCallResult(value, position, IRIRuntime("int-map"), "int-map");
+			return;
+		}
+		if (freshManagedBytesValueIds.remove(value.id)) {
+			if (value.mapping.bytesValue() == null)
+				throw new CBodyEmissionError('fresh managed Bytes `${value.id}` lost its Bytes representation');
+			destroyDiscardedManagedCallResult(value, position, IRIRuntime("bytes"), "bytes");
+			return;
+		}
+		if (freshManagedStringValueIds.remove(value.id)) {
+			freshManagedStringValueRoles.remove(value.id);
+			if (value.mapping.irType != IRTManagedString)
+				throw new CBodyEmissionError('fresh managed String `${value.id}` lost its managed String representation');
+			destroyDiscardedManagedCallResult(value, position, IRIRuntime("string"), "string");
+			return;
+		}
+		if (freshManagedEnumValueIds.remove(value.id)) {
+			final managed = value.mapping.enumValue();
+			if (managed == null || !managed.managedLifetime)
+				throw new CBodyEmissionError('fresh managed enum `${value.id}` lost its managed enum representation');
+			final destroyId = managed.destroyImplementationId();
+			if (destroyId == null)
+				throw new CBodyEmissionError('managed enum `${managed.instanceId}` lost its destroy plan');
+			destroyDiscardedManagedCallResult(value, position, IRIProgramLocal(destroyId), "enum");
+			return;
+		}
+		if (freshManagedAggregateValueIds.remove(value.id)) {
+			final managed = value.mapping.aggregateValue();
+			if (managed == null || !managed.managedLifetime)
+				throw new CBodyEmissionError('fresh managed record `${value.id}` lost its managed record representation');
+			final destroyId = managed.destroyImplementationId();
+			if (destroyId == null)
+				throw new CBodyEmissionError('managed record `${managed.instanceId}` lost its destroy plan');
+			destroyDiscardedManagedCallResult(value, position, IRIProgramLocal(destroyId), "record");
+			return;
+		}
 		if (!freshManagedOptionalValueIds.remove(value.id))
 			return;
 		final optional = value.mapping.optionalValue();
@@ -4981,36 +5019,28 @@ private class FunctionBuilder {
 		final destroyId = optional.destroyImplementationId();
 		if (destroyId == null)
 			throw new CBodyEmissionError('managed optional `${optional.planId}` lost its destroy plan');
-		final source = sourceSpan(position);
-		// Statement calls normally avoid naming an unused C return value. This
-		// result is not semantically unused: the destroy operation needs its exact
-		// bits, so materialize it before moving it into the owner place.
-		registerValueTemporary(value.id, "discarded-optional-call-result");
-		final ownerLocalId = createFlowLocal(value.mapping, value.id, source, "discarded-optional-owner");
-		appendInstruction(null, IRIORelease(IRPLocal(ownerLocalId), IRIProgramLocal(destroyId)), source, "destroy-discarded-optional");
+		destroyDiscardedManagedCallResult(value, position, IRIProgramLocal(destroyId), "optional");
 	}
 
 	/**
-		Release one ignored runtime-created String at its statement boundary.
+		Materialize one ignored owning result and release it immediately.
 
-		A String-returning call still runs when Haxe ignores its result. The result
-		owns its optional UTF-8 allocation, so dropping the C carrier would leak that
-		owner. Materializing the result in one typed automatic local and immediately
-		releasing it consumes the fresh owner once. Literal-backed Strings follow the
-		same runtime operation, whose null owner makes release a successful no-op.
+		Statement calls normally avoid naming unused C return values. Destruction
+		needs the exact returned bits, so this helper reserves a typed result name,
+		initializes one automatic owner, and emits its family's release operation
+		with no intervening control-flow edge.
 	**/
-	function destroyDiscardedFreshManagedString(value:LoweredValue, position:Position):Void {
-		if (!freshManagedStringValueIds.remove(value.id))
-			return;
-		freshManagedStringValueRoles.remove(value.id);
-		if (value.mapping.irType != IRTManagedString)
-			throw new CBodyEmissionError('fresh managed String `${value.id}` lost its managed String representation');
+	function destroyDiscardedManagedCallResult(value:LoweredValue, position:Position, implementation:HxcIRImplementation, role:String):Void {
 		final source = sourceSpan(position);
-		registerValueTemporary(value.id, "discarded-string-call-result");
-		final ownerLocalId = createFlowLocal(value.mapping, value.id, source, "discarded-string-owner");
-		appendInstruction(null, IRIORelease(IRPLocal(ownerLocalId), IRIRuntime("string")), source, "destroy-discarded-string");
-		runtimeRequirements.push(new CBodyRuntimeRequirement("string", "cleanup-release", "ignored ordinary Haxe managed String call result", source,
-			position));
+		registerValueTemporary(value.id, 'discarded-$role-call-result');
+		final ownerLocalId = createFlowLocal(value.mapping, value.id, source, 'discarded-$role-owner');
+		appendInstruction(null, IRIORelease(IRPLocal(ownerLocalId), implementation), source, 'destroy-discarded-$role');
+		switch implementation {
+			case IRIRuntime(featureId):
+				runtimeRequirements.push(new CBodyRuntimeRequirement(featureId, "cleanup-release", 'ignored ordinary Haxe managed $role call result', source,
+					position));
+			case IRIStatic | IRIProgramLocal(_):
+		}
 	}
 
 	function lowerStatementBlock(expressions:Array<TypedExpr>):Void {
