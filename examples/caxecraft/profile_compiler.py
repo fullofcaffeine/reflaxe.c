@@ -2294,7 +2294,14 @@ def workload_arguments(output: Path, workload: str) -> tuple[str, ...]:
             ),
         ]
         if workload == "editor-shell":
-            arguments.extend(["-D", "hxc_runtime_report=summary"])
+            arguments.extend(
+                [
+                    "-D",
+                    "hxc_runtime_report=summary",
+                    "-D",
+                    "reflaxe_c_phase_progress",
+                ]
+            )
             if platform_name in ("macos", "linux"):
                 arguments.extend(["-D", "caxecraft_posix_hosted"])
             if platform_name == "macos":

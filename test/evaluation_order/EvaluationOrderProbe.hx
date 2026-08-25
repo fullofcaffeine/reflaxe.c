@@ -479,10 +479,9 @@ class EvaluationOrderProbe {
 			throw new haxe.Exception('early-return ladder used ${ladderResult.work.normalJoinCandidateProofs} candidate proofs for '
 				+ '${ladderResult.work.normalJoinSearches} searches; ranked search should need at most one build proof and one validation proof per branch');
 		final maximumCompletionWork = ladderResult.work.completionSetSearches * earlyReturnLadder.blocks.length;
-		if (ladderResult.work.completionSetInitialBlockScans != maximumCompletionWork)
-			throw new haxe.Exception('early-return ladder scanned ${ladderResult.work.completionSetInitialBlockScans} completion blocks; '
-				+ 'one seed scan for each of ${ladderResult.work.completionSetSearches} searches over ${earlyReturnLadder.blocks.length} blocks '
-				+ 'requires exactly $maximumCompletionWork');
+		if (ladderResult.work.completionSetInitialBlockScans * 4 >= maximumCompletionWork * 3)
+			throw new haxe.Exception('early-return ladder initialized ${ladderResult.work.completionSetInitialBlockScans} completion rules; '
+				+ 'lazy reverse discovery must stay below three quarters of the $maximumCompletionWork rules required by full-graph scans');
 		if (ladderResult.work.completionSetWorklistDequeues > maximumCompletionWork)
 			throw new haxe.Exception('early-return ladder dequeued ${ladderResult.work.completionSetWorklistDequeues} completion blocks; '
 				+ 'the reverse worklist may resolve each block at most once per search');

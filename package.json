@@ -22,6 +22,7 @@
     "test:bootstrap": "python3 test/bootstrap/run.py",
     "test:diagnostics": "python3 test/diagnostics/run.py",
     "test:hxc-config": "python3 test/hxc_config/run.py",
+    "test:compiler-phase-progress": "python3 test/compiler_phase_progress/run.py",
     "test:c-ast": "python3 test/c_ast/run.py",
     "test:declaration-plan": "python3 test/declaration_plan/run.py",
     "test:symbol-registry": "python3 test/symbol_registry/run.py",

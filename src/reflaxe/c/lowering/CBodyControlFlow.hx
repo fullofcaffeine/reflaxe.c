@@ -275,14 +275,14 @@ class CBodyControlFlowPlanningResult {
 	A "candidate proof" is the expensive check that every normal path reaches a
 	possible join and that branch prefixes do not overlap. A "distance search"
 	walks the admitted graph once from one branch start. Each completion-set
-	search scans the admitted blocks once to seed a reverse worklist, then
-	dequeues a block only when all of that block's required successors have
-	completed. An *immediate post-dominator* is the first block that every path
-	from a source block must reach; plan construction and validation may ask for
-	that same settled graph fact. Its query, computation, and cache-hit counts
-	prove that repeated questions reuse the fact without reusing the builder's
-	plan verdict. Keeping these counts separate makes repeated graph work visible
-	without relying on machine timing.
+	search lazily initializes predecessor rules reached from a completed block or
+	an admitted boundary, then dequeues a block only when all of that block's
+	required successors have completed. An *immediate post-dominator* is the first
+	block that every path from a source block must reach; plan construction and
+	validation may ask for that same settled graph fact. Its query, computation,
+	and cache-hit counts prove that repeated questions reuse the fact without
+	reusing the builder's plan verdict. Keeping these counts separate makes
+	repeated graph work visible without relying on machine timing.
 **/
 @:noCompletion
 class CBodyControlFlowWorkReport {
@@ -1419,22 +1419,24 @@ private class CBodyControlFlowAnalysis {
 	final successorsByBlock:Map<String, Array<String>> = [];
 	final successorIndicesByBlock:Array<Array<Int>> = [];
 	final predecessorIndicesByBlock:Array<Array<Int>> = [];
+	final abruptTerminalIndices:Array<Int> = [];
 	final completionLoopTemplates:Array<CBodyCompletionLoopTemplate> = [];
 	// These facts belong only to this immutable function analysis. The separate
 	// map records null results too, so "no post-dominator" is computed once.
 	final immediatePostDominatorByBlock:Map<String, String> = [];
 	final immediatePostDominatorComputed:Map<String, Bool> = [];
-	// Normal-join candidates are checked one at a time. Reusing dense scratch
-	// storage keeps block-indexed lookup cheap without allocating three full
-	// arrays for every candidate. The proof asks only whether each arm start
-	// completes, so this request-local state never escapes the analysis.
-	final completionResultByIndex:Array<Bool> = [];
+	// Normal-join candidates are checked one at a time. Generation stamps reuse
+	// dense block-indexed scratch storage without clearing the whole function for
+	// every candidate. A predecessor rule is initialized only after one of its
+	// successors becomes complete or reaches an admitted boundary.
+	final completionResultGenerationByIndex:Array<Int> = [];
+	final completionResultOrderByIndex:Array<Int> = [];
+	final completionStartGenerationByIndex:Array<Int> = [];
 	final completionRemainingByIndex:Array<Int> = [];
-	final completionQueuedByIndex:Array<Bool> = [];
-	final completionAllowedByIndex:Array<Bool> = [];
-	final completionEscapeByIndex:Array<Bool> = [];
-	final completionContinuationByIndex:Array<Bool> = [];
+	final completionRemainingGenerationByIndex:Array<Int> = [];
+	final completionInitializedAfterOrderByIndex:Array<Int> = [];
 	final completionReady:Array<Int> = [];
+	var completionSearchGeneration:Int = 0;
 
 	public final orderedReachable:Array<String> = [];
 	public final reachable:Map<String, Bool> = [];
@@ -1473,12 +1475,14 @@ private class CBodyControlFlowAnalysis {
 			blocks.set(block.id, block);
 			blockOrder.set(block.id, index);
 			predecessors.set(block.id, []);
-			completionResultByIndex.push(false);
+			completionResultGenerationByIndex.push(0);
+			completionResultOrderByIndex.push(0);
+			completionStartGenerationByIndex.push(0);
 			completionRemainingByIndex.push(-1);
-			completionQueuedByIndex.push(false);
-			completionAllowedByIndex.push(false);
-			completionEscapeByIndex.push(false);
-			completionContinuationByIndex.push(false);
+			completionRemainingGenerationByIndex.push(0);
+			completionInitializedAfterOrderByIndex.push(0);
+			if (isAbruptTerminal(block))
+				abruptTerminalIndices.push(index);
 		}
 		for (block in fn.blocks)
 			successorsByBlock.set(block.id, collectSuccessors(block));
@@ -1849,59 +1853,104 @@ private class CBodyControlFlowAnalysis {
 			continuation:Map<String, Bool>):Bool {
 		completionSetSearches++;
 		final blockCount = orderedReachable.length;
-		final resultByIndex = completionResultByIndex;
+		completionSearchGeneration++;
+		if (completionSearchGeneration <= 0) {
+			for (index in 0...blockCount) {
+				completionResultGenerationByIndex[index] = 0;
+				completionStartGenerationByIndex[index] = 0;
+				completionRemainingGenerationByIndex[index] = 0;
+			}
+			completionSearchGeneration = 1;
+		}
+		final generation = completionSearchGeneration;
+		final resultGenerationByIndex = completionResultGenerationByIndex;
+		final resultOrderByIndex = completionResultOrderByIndex;
+		final startGenerationByIndex = completionStartGenerationByIndex;
 		final remainingByIndex = completionRemainingByIndex;
-		final queuedByIndex = completionQueuedByIndex;
-		final allowedByIndex = completionAllowedByIndex;
-		final escapeByIndex = completionEscapeByIndex;
-		final continuationByIndex = completionContinuationByIndex;
+		final remainingGenerationByIndex = completionRemainingGenerationByIndex;
+		final initializedAfterOrderByIndex = completionInitializedAfterOrderByIndex;
 		final ready = completionReady;
 		ready.resize(0);
-		for (index in 0...blockCount) {
-			final blockId = orderedReachable[index];
-			resultByIndex[index] = false;
-			remainingByIndex[index] = -1;
-			queuedByIndex[index] = false;
-			allowedByIndex[index] = allowed.exists(blockId);
-			escapeByIndex[index] = escapeTargets.exists(blockId);
-			continuationByIndex[index] = continuation.exists(blockId);
-		}
 		final candidateIndex = requireInt(blockOrder, candidate);
-		resultByIndex[candidateIndex] = true;
+		var completionOrder = 0;
+		var remainingStarts = 0;
+		for (start in starts) {
+			if (escapeTargets.exists(start))
+				continue;
+			final startIndex = requireInt(blockOrder, start);
+			if (startGenerationByIndex[startIndex] != generation) {
+				startGenerationByIndex[startIndex] = generation;
+				remainingStarts++;
+			}
+		}
+		if (remainingStarts == 0)
+			return true;
+
+		function markComplete(blockIndex:Int):Void {
+			if (resultGenerationByIndex[blockIndex] == generation)
+				return;
+			completionOrder++;
+			resultGenerationByIndex[blockIndex] = generation;
+			resultOrderByIndex[blockIndex] = completionOrder;
+			if (startGenerationByIndex[blockIndex] == generation)
+				remainingStarts--;
+			ready.push(blockIndex);
+		}
+
+		/**
+			Initialize one reverse rule only when a completed successor can affect it.
+
+			The completion order distinguishes successors that were already complete
+			when the rule was counted from successors that complete later. This keeps
+			each required edge counted once even when several seeds share a predecessor.
+		**/
+		function initializePredecessor(blockIndex:Int):Void {
+			if (remainingGenerationByIndex[blockIndex] == generation || resultGenerationByIndex[blockIndex] == generation)
+				return;
+			final blockId = orderedReachable[blockIndex];
+			if (!allowed.exists(blockId))
+				return;
+			final outgoing = successorIndicesByBlock[blockIndex];
+			if (outgoing.length == 0)
+				return;
+			completionSetInitialBlockScans++;
+			var remaining = 0;
+			for (targetIndex in outgoing) {
+				final targetId = orderedReachable[targetIndex];
+				if (!escapeTargets.exists(targetId)
+					&& targetIndex != candidateIndex
+					&& (!allowed.exists(targetId) || resultGenerationByIndex[targetIndex] != generation))
+					remaining++;
+			}
+			remainingByIndex[blockIndex] = remaining;
+			remainingGenerationByIndex[blockIndex] = generation;
+			initializedAfterOrderByIndex[blockIndex] = completionOrder;
+			if (remaining == 0)
+				markComplete(blockIndex);
+		}
+
+		markComplete(candidateIndex);
 		// A loop's continue/header target starts a later iteration. Do not walk
 		// through it while deciding which abrupt paths belong to this iteration;
 		// otherwise a later iteration can make the current return arm look like
 		// part of the candidate's continuation and hide the real local join.
-		for (index => blockId in orderedReachable)
-			if (allowedByIndex[index] && !continuationByIndex[index] && isAbruptTerminal(requireBlock(blockId)))
-				resultByIndex[index] = true;
-
-		/*
-			Each candidate scans every reachable block. Dense arrays store the
-			request-local completion flags and successor counts by stable block index.
-			This avoids thousands of temporary string-map entries for a large function.
-			The reverse worklist still computes the same least fixed point: when one
-			successor completes, only its predecessor rules and loop-exit rules wake.
-		 */
-		for (blockIndex => blockId in orderedReachable) {
-			completionSetInitialBlockScans++;
-			if (!allowedByIndex[blockIndex] || resultByIndex[blockIndex])
-				continue;
-			final outgoing = successorIndicesByBlock[blockIndex];
-			if (outgoing.length == 0)
-				continue;
-			var remaining = 0;
-			for (targetIndex in outgoing)
-				if (!escapeByIndex[targetIndex]
-					&& targetIndex != candidateIndex
-					&& (!allowedByIndex[targetIndex] || !resultByIndex[targetIndex]))
-					remaining++;
-			remainingByIndex[blockIndex] = remaining;
-			if (remaining == 0) {
-				ready.push(blockIndex);
-				queuedByIndex[blockIndex] = true;
-			}
+		for (blockIndex in abruptTerminalIndices) {
+			final blockId = orderedReachable[blockIndex];
+			if (allowed.exists(blockId) && !continuation.exists(blockId))
+				markComplete(blockIndex);
 		}
+		if (remainingStarts == 0)
+			return true;
+		// Escape targets are completion boundaries, not completed blocks. Wake only
+		// their incoming rules so an unrelated region is never scanned.
+		for (escapeTarget in escapeTargets.keys()) {
+			final escapeIndex = blockOrder.get(escapeTarget);
+			if (escapeIndex != null)
+				for (predecessorIndex in predecessorIndicesByBlock[escapeIndex])
+					initializePredecessor(predecessorIndex);
+		}
+		if (remainingStarts == 0)
+			return true;
 
 		final loopRulesByExit:Map<Int, Array<CBodyCompletionLoopRule>> = [];
 		final immediatelyReadyLoops:Array<CBodyCompletionLoopRule> = [];
@@ -1910,22 +1959,28 @@ private class CBodyControlFlowAnalysis {
 				continue;
 			var admitted = true;
 			for (blockIndex in template.nodes)
-				if (!allowedByIndex[blockIndex]) {
+				if (!allowed.exists(orderedReachable[blockIndex])) {
 					admitted = false;
 					break;
 				}
 			if (!admitted)
 				continue;
 			var unresolvedExitCount = 0;
-			for (targetIndex in template.exits)
-				if (!escapeByIndex[targetIndex] && targetIndex != candidateIndex && !resultByIndex[targetIndex])
+			for (targetIndex in template.exits) {
+				final targetId = orderedReachable[targetIndex];
+				if (!escapeTargets.exists(targetId) && targetIndex != candidateIndex && resultGenerationByIndex[targetIndex] != generation)
 					unresolvedExitCount++;
+			}
 			final rule = new CBodyCompletionLoopRule(template.nodes, unresolvedExitCount);
 			if (rule.remaining == 0) {
 				immediatelyReadyLoops.push(rule);
 			} else {
 				for (targetIndex in template.exits) {
-					if (escapeByIndex[targetIndex] || targetIndex == candidateIndex || resultByIndex[targetIndex] || !allowedByIndex[targetIndex])
+					final targetId = orderedReachable[targetIndex];
+					if (escapeTargets.exists(targetId)
+						|| targetIndex == candidateIndex
+						|| resultGenerationByIndex[targetIndex] == generation
+						|| !allowed.exists(targetId))
 						continue;
 					var rules = loopRulesByExit.get(targetIndex);
 					if (rules == null) {
@@ -1937,15 +1992,6 @@ private class CBodyControlFlowAnalysis {
 			}
 		}
 
-		function markComplete(blockIndex:Int):Void {
-			if (!resultByIndex[blockIndex]) {
-				resultByIndex[blockIndex] = true;
-				if (!queuedByIndex[blockIndex]) {
-					ready.push(blockIndex);
-					queuedByIndex[blockIndex] = true;
-				}
-			}
-		}
 		function resolveLoop(rule:CBodyCompletionLoopRule):Void {
 			if (rule.resolved || rule.remaining != 0)
 				return;
@@ -1955,15 +2001,21 @@ private class CBodyControlFlowAnalysis {
 		}
 		for (rule in immediatelyReadyLoops)
 			resolveLoop(rule);
+		if (remainingStarts == 0)
+			return true;
 		var readyIndex = 0;
 		while (readyIndex < ready.length) {
 			completionSetWorklistDequeues++;
 			final completedIndex = ready[readyIndex++];
-			if (!resultByIndex[completedIndex])
-				resultByIndex[completedIndex] = true;
 			for (predecessorIndex in predecessorIndicesByBlock[completedIndex]) {
+				if (resultGenerationByIndex[predecessorIndex] == generation)
+					continue;
+				if (remainingGenerationByIndex[predecessorIndex] != generation) {
+					initializePredecessor(predecessorIndex);
+					continue;
+				}
 				final remaining = remainingByIndex[predecessorIndex];
-				if (remaining < 0 || remaining == 0 || resultByIndex[predecessorIndex])
+				if (remaining == 0 || resultOrderByIndex[completedIndex] <= initializedAfterOrderByIndex[predecessorIndex])
 					continue;
 				final next = remaining - 1;
 				remainingByIndex[predecessorIndex] = next;
@@ -1978,13 +2030,10 @@ private class CBodyControlFlowAnalysis {
 					rule.remaining--;
 					resolveLoop(rule);
 				}
+			if (remainingStarts == 0)
+				return true;
 		}
-		for (start in starts) {
-			final startIndex = requireInt(blockOrder, start);
-			if (!escapeByIndex[startIndex] && !resultByIndex[startIndex])
-				return false;
-		}
-		return true;
+		return false;
 	}
 
 	/**

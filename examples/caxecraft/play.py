@@ -31,6 +31,10 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(PROVISION_DIR))
 import provision  # type: ignore  # noqa: E402
+from compiler_progress import (  # noqa: E402
+    compiler_process_detail,
+    compiler_timeout_suffix,
+)
 from dev_build_state import (  # noqa: E402
     BuildStateFailure,
     ExternalFile,
@@ -188,6 +192,7 @@ EXPECTED_PLAY_RUNTIME_FEATURES = (
     "bytes-string",
     "object",
     "gc",
+    "iterator",
     "int-map",
     "io",
     "string-float",
@@ -735,10 +740,21 @@ def run(
             text=True,
             timeout=timeout,
         )
-    except (OSError, subprocess.TimeoutExpired) as error:
+    except subprocess.TimeoutExpired as error:
+        suffix = compiler_timeout_suffix(
+            error.stdout,
+            error.stderr,
+            missing_status=(
+                "no haxe.c phase marker; request remained in Haxe frontend or server startup"
+                if label == "Caxecraft Haxe-to-C compile"
+                else None
+            ),
+        )
+        raise PlayFailure(f"{label} could not run: {error}{suffix}") from error
+    except OSError as error:
         raise PlayFailure(f"{label} could not run: {error}") from error
     if result.returncode != 0:
-        detail = "\n".join(value.strip() for value in (result.stdout, result.stderr) if value.strip())
+        detail = compiler_process_detail(result.stdout, result.stderr)
         suffix = f"\n{detail}" if detail else ""
         raise PlayFailure(f"{label} failed with exit {result.returncode}{suffix}")
     return result
@@ -2098,6 +2114,8 @@ def compile_haxe(
         ),
         "-D",
         f"hxc_runtime_report={runtime_report}",
+        "-D",
+        "reflaxe_c_phase_progress",
     ]
     for define in hosted_content_haxe_defines(platform_name):
         arguments.extend(["-D", define])
@@ -2114,6 +2132,10 @@ def compile_haxe(
             ["-D", "caxecraft_pilot", "-D", pilot_metadata(pilot).haxe_define]
         )
     arguments.extend(["--custom-target", f"c={generated}"])
+    print(
+        "caxecraft: Haxe-to-C compile started; current stage: Haxe frontend or server startup",
+        flush=True,
+    )
     if server_lease is None:
         run(
             [
@@ -2147,7 +2169,16 @@ def compile_haxe(
                     text=True,
                     timeout=120,
                 )
-            except (OSError, subprocess.TimeoutExpired) as error:
+            except subprocess.TimeoutExpired as error:
+                suffix = compiler_timeout_suffix(
+                    error.stdout,
+                    error.stderr,
+                    missing_status="no haxe.c phase marker; request remained in Haxe frontend or server startup",
+                )
+                raise PlayFailure(
+                    f"Caxecraft Haxe-to-C server request could not run: {error}{suffix}"
+                ) from error
+            except OSError as error:
                 raise PlayFailure(
                     f"Caxecraft Haxe-to-C server request could not run: {error}"
                 ) from error
@@ -2167,11 +2198,7 @@ def compile_haxe(
             )
             result = request(server_lease)
         if result.returncode != 0:
-            detail = "\n".join(
-                value.strip()
-                for value in (result.stdout, result.stderr)
-                if value.strip()
-            )
+            detail = compiler_process_detail(result.stdout, result.stderr)
             suffix = f"\n{detail}" if detail else ""
             raise PlayFailure(
                 "Caxecraft Haxe-to-C compile failed with exit "

@@ -678,6 +678,8 @@ class CaxecraftTimingTests(unittest.TestCase):
                 "-D",
                 "hxc_runtime_report=summary",
                 "-D",
+                "reflaxe_c_phase_progress",
+                "-D",
                 "caxecraft_posix_hosted",
                 "-D",
                 "caxecraft_posix_darwin",
@@ -701,6 +703,7 @@ class CaxecraftTimingTests(unittest.TestCase):
             mock.patch.object(play, "run") as run_process,
             mock.patch.object(play, "validate_compiled_haxe", return_value={}),
             mock.patch.object(play, "validate_content_platform_output"),
+            mock.patch("builtins.print"),
         ):
             play.compile_haxe(
                 output,
