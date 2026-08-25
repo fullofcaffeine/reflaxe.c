@@ -77,6 +77,7 @@ import caxecraft.app.HudLayout.hudWrappedCharacterLimit;
 import caxecraft.app.HudLayout.hudWrappedLineLimit;
 import caxecraft.app.HudLayout.hudWrappedTextFits;
 import caxecraft.app.RuntimeInventoryBinding.inventoryKindForRuntimeItem;
+import caxecraft.app.RuntimeInventoryBinding.runtimeItemContentIdForInventoryKind;
 import caxecraft.app.SpawnCameraHeading.headingForSpawn;
 import caxecraft.app.StatefulObjectRenderer.drawStatefulObjects;
 import caxecraft.app.VoxelFrameAnimation.VoxelFrameAnimationPlayer;
@@ -96,6 +97,7 @@ import caxecraft.domain.ActorControllerTick.ActorControllerTickStatus;
 import caxecraft.domain.AquaticMedium;
 import caxecraft.domain.EntityId;
 import caxecraft.domain.GameSession;
+import caxecraft.domain.GameSession.CharacterDamageCause;
 import caxecraft.domain.PlayerCamera.PlayerCameraMode;
 import caxecraft.domain.PlayerCamera.togglePlayerCamera;
 import caxecraft.domain.Aquatics.canMine as playerCanMine;
@@ -421,6 +423,8 @@ final class CaxecraftApp {
 			if (!editorScreen.applyPilotBuildCapture())
 				rejectedEditCount++;
 			else if (!editorScreen.applyPilotDirectObjectEdits())
+				rejectedEditCount++;
+			else if (!editorScreen.applyPilotFlowAuthoring())
 				rejectedEditCount++;
 			else if (!editorScreen.applyPilotHistoryRoundTrip())
 				rejectedEditCount++;
@@ -1434,6 +1438,10 @@ final class CaxecraftApp {
 			// ten held moves land on Play before the south face button
 			// confirms it through the same device-neutral screen handler.
 			final editorPilotFrame = applyEditorPilotFrame(pilotName, onEditor, frameCount, editorScreen);
+			if (pilotName == PilotScriptName.EditorShell && onEditor && frameCount == 7)
+				// Earlier checkpoints retain the default locale; the final card/save
+				// frame proves the same native editor through the next validated locale.
+				locale = uiCatalog.nextLocale(locale);
 			editorNavigationCommand = editorPilotFrame.navigationCommand;
 			placedBlocks += editorPilotFrame.placedBlockCount;
 			rejectedEdits += editorPilotFrame.rejectedEditCount;
@@ -1501,6 +1509,8 @@ final class CaxecraftApp {
 				character = gameTick.character;
 				final flow = gameTick.flow;
 				if (flow != null) {
+					if (screen == AppScreen.EditorTestPlay)
+						editorScreen.observeFlowTrace(flow.trace);
 					#if caxecraft_pilot
 					if (flow.firedRules.length > 0)
 						flowRuleObserved = true;
@@ -1644,8 +1654,13 @@ final class CaxecraftApp {
 						final swordDecision = decideSwordCombat(swordCombat, inventory, character.vitals, enemyActor, character.body.x, character.body.z,
 							lookX, lookZ);
 						if (swordDecision == SwordCombatDecision.Hit && session.characterAcceptsMeleeDamage(enemyActorId)) {
-							final damage = session.damageCharacter(enemyActorId, 1);
-							if (!damage.resolved)
+							final swordItemType = runtimeItemContentIdForInventoryKind(contentRegistry, ItemKind.CopperSword);
+							final damage = swordItemType == null ? null : session.damageCharacter({
+								target: enemyActorId,
+								amount: 1,
+								cause: CharacterDamageCause.LocalPlayerItem(swordItemType)
+							});
+							if (damage == null || !damage.resolved)
 								quit = true;
 							else if (damage.damageApplied > 0) {
 								enemyActor = damage.character;
@@ -1664,6 +1679,8 @@ final class CaxecraftApp {
 				measuredUpdateMicroseconds += Std.int((Raylib.GetTime() - updateStarted) * 1000000.0);
 			#end
 
+			// Selection is authoritative gameplay: it originates at the latest committed
+			// body, never at the presentation-only camera position below.
 			// Gameplay always aims from the committed eye. Behind-player mode moves
 			// only the later interpolated render camera, so view preference cannot
 			// change mining, placing, talking, or combat reach.
@@ -1698,6 +1715,8 @@ final class CaxecraftApp {
 								inventoryFullReason = InventoryFullReason.BlockStack;
 								inventoryFullFrames = 90;
 							}
+							if (mining.outcome == MiningOutcome.FlowEventUnavailable)
+								quit = true;
 						}
 					} else if (hit.hit) {
 						final removedCoordinate = World.coord(hit.cellX, hit.cellY, hit.cellZ);
@@ -1713,7 +1732,8 @@ final class CaxecraftApp {
 			}
 			if (screenCapturesPointer(screen) && conversation == null && !conversationOwnedInput && secondaryPressed) {
 				if (!characterIsDefeated(character.vitals)) {
-					final recovery = session.useSelectedRecovery(inventory);
+					final selectedItemType = runtimeItemContentIdForInventoryKind(contentRegistry, Inventory.itemAt(inventory.selected));
+					final recovery = session.useSelectedRecovery(inventory, selectedItemType);
 					character = recovery.character;
 					if (!recovery.resolved)
 						quit = true;
@@ -1725,10 +1745,12 @@ final class CaxecraftApp {
 						final placement = World.coord(hit.previousX, hit.previousY, hit.previousZ);
 						final selectedBlock = Inventory.selectedBlock(inventory);
 						final hasItem = Inventory.countAt(inventory, inventory.selected) > 0;
+						final placementItemType = selectedMode == GameMode.Adventure ? selectedItemType : null;
 						if (!hasItem
 							|| !World.isPlaceable(selectedBlock)
 							|| !playerCanPlaceAt(character.body, placement)
-							|| !session.placeTerrain(placement, selectedBlock)) {
+							|| (selectedMode == GameMode.Adventure && placementItemType == null)
+							|| !session.placeTerrain(placement, selectedBlock, placementItemType)) {
 							placementBlockedFrames = 60;
 							#if caxecraft_pilot
 							rejectedEdits++;
@@ -1821,8 +1843,7 @@ final class CaxecraftApp {
 			final eyeX = cameraView.positionX;
 			final eyeY = cameraView.positionY;
 			final eyeZ = cameraView.positionZ;
-			final camera = Camera3D.make(Vector3.fromFloat(eyeX, eyeY, eyeZ),
-				Vector3.fromFloat(cameraView.targetX, cameraView.targetY, cameraView.targetZ),
+			final camera = Camera3D.make(Vector3.fromFloat(eyeX, eyeY, eyeZ), Vector3.fromFloat(cameraView.targetX, cameraView.targetY, cameraView.targetZ),
 				Vector3.fromFloat(0.0, 1.0, 0.0), c.Float32.fromFloat(70.0), CameraProjection.Perspective);
 			#if caxecraft_pilot
 			var visibleBlocks = 0;
@@ -2074,6 +2095,7 @@ final class CaxecraftApp {
 			#if caxecraft_pilot_runtime
 			if ((runtimeCheckpoint != null || agentResponseReady) && runtimePilotFrameAccepted) {
 				final observationScreenshot = agentResponseReady ? "caxecraft-agent-session.png" : runtimeCheckpointScreenshot(runtimeCheckpoint.label);
+				final observationSequence = agentObservationSequence + 1;
 				if (agentResponseReady)
 					reviewScreenshotObserved = capturePilotScreenshot("caxecraft-agent-session.png");
 				else if (runtimeCheckpoint.label == "title-selection")
@@ -2106,7 +2128,8 @@ final class CaxecraftApp {
 				final playerCellY = Std.int(character.body.y);
 				final playerCellZ = Std.int(character.body.z);
 				Sys.println("CAXECRAFT_AGENT_OBSERVATION=" + renderAgentWorldObservation({
-					sequence: agentResponseReady ? agentObservationSequence + 1 : frameCount + 1,
+					sequence: observationSequence,
+					terminal: agentResponseReady,
 					frame: frameCount,
 					tick: completedTicks,
 					screen: observedScreen,
@@ -2141,10 +2164,10 @@ final class CaxecraftApp {
 					events: recentEvents,
 					screenshot: reviewScreenshotObserved ? observationScreenshot : "none"
 				}));
+				agentObservationSequence = observationSequence;
 			}
 			if (agentSession && !agentWaiting) {
 				if (agentResponseReady) {
-					agentObservationSequence++;
 					agentWaiting = true;
 				}
 				runtimePilotFrame++;

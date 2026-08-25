@@ -744,9 +744,9 @@ private function loadRuntimeLevelInternal(source:RuntimeLevelSource, generationI
 					case _:
 				}
 			generation.session()
-				.installValidatedScenarioFlow(scenario, actorEntities, actorIds, itemContentIds, statefulObjectIds, statefulObjectPositionsMilli,
-					statefulObjectRadiiMilli, statefulObjectBoundsMilli, statefulObjectStateStarts, statefulObjectStateCounts, statefulObjectCollisionStates,
-					statefulObjectCollisionSolid, triggerZoneIds, triggerZoneBounds);
+				.installValidatedScenarioFlow(scenario, validationRegistry, generation.plan().player().authoredId, actorEntities, actorIds, itemContentIds,
+					statefulObjectIds, statefulObjectPositionsMilli, statefulObjectRadiiMilli, statefulObjectBoundsMilli, statefulObjectStateStarts,
+					statefulObjectStateCounts, statefulObjectCollisionStates, statefulObjectCollisionSolid, triggerZoneIds, triggerZoneBounds);
 			RuntimeLevelReady(new RuntimeLevelCandidate(generation, {
 				authority: input.authority,
 				rootLabel: input.rootLabel,

@@ -338,13 +338,14 @@ final class ScenarioCodecProbe {
 	}
 
 	static function checkRoleSpecificReferences(canonical:Bytes, fullCanonical:Bytes):Void {
-		expectInvalidRule(replace(canonical, "when enter-zone zone.welcome", "when enter-zone guide.ivvy"), "npc-used-as-zone", "rule.meet-ivvy", 44, 3, 44);
-		expectInvalidRule(replace(fullCanonical, "when block-changed zone.test", "when block-changed state.bridge"), "stateful-used-as-zone", "rule.block",
-			79, 3, 79);
-		expectInvalidRule(replace(fullCanonical, "when entity-defeated entity.browser", "when entity-defeated npc.ivvy"), "npc-used-as-entity", "rule.defeat",
-			96, 3, 96);
-		expectInvalidRule(replace(fullCanonical, "do checkpoint checkpoint.start", "do checkpoint npc.ivvy"), "npc-used-as-checkpoint", "rule.leave", 111, 3,
-			111);
+		expectInvalidRuleReference(replace(canonical, "when enter-zone zone.welcome", "when enter-zone guide.ivvy"), "npc-used-as-zone", "rule.meet-ivvy",
+			"event.zone", "guide.ivvy", "trigger-zone", 44, 3, 44);
+		expectInvalidRuleReference(replace(fullCanonical, "when block-changed zone.test", "when block-changed state.bridge"), "stateful-used-as-zone",
+			"rule.block", "event.zone", "state.bridge", "trigger-zone", 79, 3, 79);
+		expectInvalidRuleReference(replace(fullCanonical, "when entity-defeated entity.browser", "when entity-defeated npc.ivvy"), "npc-used-as-entity",
+			"rule.defeat", "event.entity", "npc.ivvy", "entity", 96, 3, 96);
+		expectInvalidRuleReference(replace(fullCanonical, "do checkpoint checkpoint.start", "do checkpoint npc.ivvy"), "npc-used-as-checkpoint", "rule.leave",
+			"action.checkpoint", "npc.ivvy", "checkpoint", 111, 3, 111);
 	}
 
 	static function checkFlowVariableScopes(fullCanonical:Bytes):Void {
@@ -354,8 +355,8 @@ final class ScenarioCodecProbe {
 			75, 3, 75);
 		expectInvalidRule(replace(fullCanonical, "do call sequence.helper value flag true", "do call sequence.helper variable local.choice"),
 			"rule-cannot-read-sequence-local", "rule.signal", 122, 3, 122);
-		expectInvalidRule(replace(fullCanonical, "when state-changed map.ready", "when state-changed local.choice"), "local-change-cannot-cross-ticks",
-			"rule.state", 125, 3, 125);
+		expectInvalidRuleReference(replace(fullCanonical, "when state-changed map.ready", "when state-changed local.choice"),
+			"local-change-cannot-cross-ticks", "rule.state", "event.variable", "local.choice", "persistent-variable", 125, 3, 125);
 	}
 
 	static function checkFlowBoundsAndGrammar(canonical:Bytes, fullCanonical:Bytes):Void {
@@ -376,6 +377,11 @@ final class ScenarioCodecProbe {
 		expectExactFailureAt(replace(canonical, "rule rule.meet-ivvy", cycle + "rule rule.meet-ivvy"), "sequence-cycle", 43, 1, 43, "RuleCycle(depth.a)",
 			kind -> switch kind {
 				case RuleCycle(id): id.text() == "depth.a";
+				case _: false;
+			});
+		expectExactFailureAt(replace(fullCanonical, "  do call sequence.helper value flag true", "  do signal caxecraft:bridge-lowered"),
+			"deferred-event-cycle", 119, 1, 119, "RuleCycle(rule.signal)", kind -> switch kind {
+				case RuleCycle(id): id.text() == "rule.signal";
 				case _: false;
 			});
 
@@ -497,6 +503,13 @@ final class ScenarioCodecProbe {
 			case _: false;
 		});
 
+	static function expectInvalidRuleReference(bytes:Bytes, label:String, owner:String, field:String, reference:String, expected:String, line:Int, column:Int,
+			record:Int):Void
+		expectExactFailureAt(bytes, label, line, column, record, 'InvalidRuleReference($owner, $field, $reference, $expected)', kind -> switch kind {
+			case InvalidRuleReference(id, actualField, actualReference, actualExpected): id.text() == owner && actualField == field && actualReference.text() == reference && actualExpected == expected;
+			case _: false;
+		});
+
 	static function expectLimit(bytes:Bytes, label:String, expectedLimit:ScenarioLimitKind, expectedMaximum:Int, line:Int, column:Int, record:Int):Void
 		expectExactFailureAt(bytes, label, line, column, record, 'LimitExceeded(${Std.string(expectedLimit)}, $expectedMaximum)', kind -> switch kind {
 			case LimitExceeded(limit, maximum): limit == expectedLimit && maximum == expectedMaximum;
@@ -555,6 +568,7 @@ final class ScenarioCodecProbe {
 			case UnresolvedContent(_): "unresolved-content";
 			case ImpossiblePlacement(_): "impossible-placement";
 			case InvalidRule(_): "invalid-rule";
+			case InvalidRuleReference(_, _, _, _): "invalid-rule-reference";
 			case RuleCycle(_): "rule-cycle";
 			case InvalidExtension(_): "invalid-extension";
 			case EventBudgetExhausted(_): "event-budget-exhausted";
@@ -685,6 +699,22 @@ private final class ProbeContentRegistry implements ScenarioContentRegistry {
 		return -1;
 	}
 
+	public function blockContentIdForStorageCode(code:Int):Null<ContentId> {
+		return switch code {
+			case 0: new ContentId("caxecraft:air");
+			case 1: new ContentId("caxecraft:grass");
+			case 2: new ContentId("caxecraft:dirt");
+			case 3: new ContentId("caxecraft:stone");
+			case 4: new ContentId("caxecraft:bedrock");
+			case 5: new ContentId("caxecraft:sand");
+			case 6: new ContentId("caxecraft:wood");
+			case 7: new ContentId("caxecraft:leaves");
+			case 8: new ContentId("caxecraft:snow");
+			case 9: new ContentId("caxecraft:ash");
+			case _: null;
+		};
+	}
+
 	public function hasFluid(id:ContentId):Bool
 		return id.text() == "caxecraft:water";
 
@@ -718,6 +748,9 @@ private final class ProbeContentRegistry implements ScenarioContentRegistry {
 
 	public function hasState(id:ContentId):Bool
 		return id.text() == "caxecraft:closed" || id.text() == "caxecraft:open";
+
+	public function statefulObjectHasState(objectType:ContentId, state:ContentId):Bool
+		return hasStatefulObject(objectType) && hasState(state);
 
 	public function hasEffect(id:ContentId):Bool
 		return id.text() == "caxecraft:spark";

@@ -45,7 +45,26 @@ import caxecraft.editor.EditorFocus.EditorFocusTarget;
 import caxecraft.editor.EditorFocus.initialFocus;
 import caxecraft.editor.EditorFocus.moveFocus;
 import caxecraft.editor.EditorFlowProjection.EditorZoneRuleProjection;
-import caxecraft.editor.EditorObjectDuplicate.duplicateObject;
+import caxecraft.editor.EditorFlowProjection.EditorFlowCard;
+import caxecraft.editor.EditorFlowReferences.EditorFlowReference;
+import caxecraft.editor.EditorFlowReferences.EditorFlowReferenceRole;
+import caxecraft.editor.EditorFlowProjection.EditorFlowRuleProjection;
+import caxecraft.editor.EditorFlowProjection.EditorFlowTraceProjection;
+import caxecraft.editor.EditorFlowProjection.EditorFlowTraceRow;
+import caxecraft.editor.EditorFlowProjection.EditorTriggerOverlap;
+import caxecraft.editor.EditorFlowProjection.EditorFlowUiMessage;
+import caxecraft.editor.EditorFlowProjection.retainLatestFlowTrace;
+import caxecraft.editor.EditorFlowAuthoring.EditorFlowAuthoringResult;
+import caxecraft.editor.EditorFlowAuthoring.EditorFlowCardAddress;
+import caxecraft.editor.EditorFlowAuthoring.EditorFlowCardEdit;
+import caxecraft.editor.EditorFlowAuthoring.applyFlowWorldPick;
+import caxecraft.editor.EditorFlowAuthoring.connectZone;
+import caxecraft.editor.EditorFlowAuthoring.editFlowCard;
+import caxecraft.editor.EditorFlowAuthoring.isWorldPickableFlowRole;
+import caxecraft.editor.EditorFlowAuthoring.nextZoneConnectionRuleId;
+import caxecraft.editor.EditorFlowAuthoring.worldPickFor;
+import caxecraft.editor.EditorObjectDuplicate.duplicateObjectWithConnectedRules;
+import caxecraft.editor.EditorObjectDelete.deleteObjectWithConnectedRules;
 import caxecraft.editor.EditorObjectPresentation.EditorObjectVisual;
 import caxecraft.editor.EditorObjectPresentation.visualFor as objectVisualFor;
 import caxecraft.editor.EditorObjectPresentation.visualUsesBillboard;
@@ -58,6 +77,7 @@ import caxecraft.editor.EditorTypes.EditorQuery;
 import caxecraft.editor.EditorTypes.EditorSelection;
 import caxecraft.editor.EditorTypes.EditorSelectionResult;
 import caxecraft.editor.EditorTypes.EditorValidationResult;
+import caxecraft.editor.EditorTypes.EditorValidationObservation;
 import caxecraft.editor.EditorViewport.EditorViewportLayout;
 import caxecraft.editor.EditorViewport.EditorViewportProjection;
 import caxecraft.editor.EditorViewport.EditorTool;
@@ -101,9 +121,16 @@ import caxecraft.localization.UiTypes.UiMessage;
 import caxecraft.scenario.ScenarioGeometry.VoxelBounds;
 import caxecraft.scenario.ScenarioGeometry.VoxelPoint;
 import caxecraft.scenario.ScenarioGeometry.VoxelSize;
+import caxecraft.scenario.CaxeFlow.FlowAction;
+import caxecraft.scenario.CaxeFlow.FlowEvent;
+import caxecraft.scenario.CaxeFlow.FlowPredicate;
+import caxecraft.scenario.CaxeFlow.FlowRepeatPolicy;
+import caxecraft.scenario.CaxeFlow.FlowRule;
+import caxecraft.scenario.CaxeFlowRuntime.FlowTraceEntry;
 import caxecraft.scenario.ScenarioEnvironment;
 import caxecraft.scenario.ScenarioEnvironment.ScenarioHorizonEdge;
 import caxecraft.scenario.ScenarioId;
+import caxecraft.scenario.ScenarioObject;
 import caxecraft.scenario.ScenarioText;
 import caxecraft.app.EditorObjectRenderer.drawEditorObject;
 import caxecraft.app.EditorObjectRenderer.EditorRenderResources;
@@ -145,6 +172,15 @@ private enum abstract EditorWorkspaceView(Int) {
 	var PlanView = 1;
 }
 
+/** One bounded two-step gesture that fills a typed card from the world view. */
+private enum EditorFlowWorldPickMode {
+	NoFlowWorldPick;
+	ConnectZoneWorldPick(zone:ScenarioId, revision:Int);
+	ReplaceFlowReferenceWorldPick(zone:ScenarioId, rule:ScenarioId, card:EditorFlowCardAddress, referenceIndex:Int, revision:Int);
+	InsertDoWorldPick(zone:ScenarioId, rule:ScenarioId, actionIndex:Int, revision:Int);
+	ReplaceIfActorWorldPick(zone:ScenarioId, rule:ScenarioId, revision:Int);
+}
+
 /** One object or world point that Orbit keeps in view. */
 private typedef EditorCameraFocus = {
 	final target:EditorWorldVector;
@@ -172,11 +208,13 @@ private typedef EditorCameraFocus = {
  * child-facing slice edits terrain and creates checkpoints, pack objects, and
  * one-cell trigger volumes. Creators can move objects by whole cells and rotate
  * transform-backed objects in quarter turns. They can also resize trigger
- * volumes by one cell on each axis. The reducer rejects a size that leaves the
- * finite world. Native source save and bounded horizontal layer controls are
- * available. Flow authoring and cinematic tools remain separate. Test Play
- * uses a disposable ordinary game runtime while this class keeps the exact
- * editor workspace alive.
+ * volumes by one cell on each axis. The reducer rejects a size outside the
+ * finite world. A selected trigger shows its registry-backed WHEN / IF / DO
+ * cards. Their compact controls replace conditions, insert, replace, move, or
+ * remove actions, and bind typed world references. These edits write the same
+ * typed rules that Advanced mode uses. Native source save and bounded
+ * horizontal layer controls are available.
+ * Test Play uses a disposable game runtime and keeps the editor workspace.
  */
 final class CaxecraftEditorScreen {
 	final contentRegistry:RuntimeContentRegistry;
@@ -192,7 +230,11 @@ final class CaxecraftEditorScreen {
 	var objectVisuals:Array<EditorObjectVisual>;
 	var objectLabels:String;
 	var flowRuleCount:Int;
+	var flowRules:Array<EditorFlowRuleProjection>;
 	var zoneRuleLinks:Array<EditorZoneRuleProjection>;
+	var flowOverlaps:Array<EditorTriggerOverlap>;
+	var flowTrace:EditorFlowTraceProjection;
+	var flowWorldPickMode:EditorFlowWorldPickMode;
 	var camera:Null<EditorCameraState>;
 	var selection:Null<VoxelBounds>;
 	var focusedControl:EditorFocusTarget;
@@ -255,6 +297,12 @@ final class CaxecraftEditorScreen {
 	 */
 	final worldName:Null<GuiTextBoxState>;
 
+	/** Temporary native buffer for the selected object's canonical identity. */
+	final objectName:Null<GuiTextBoxState>;
+
+	/** Stable object whose identity currently appears in `objectName`. */
+	var objectNameTarget:Null<ScenarioId>;
+
 	/** Start with the package-backed session opened from the active game generation. */
 	public function new(contentRegistry:RuntimeContentRegistry, uiCatalog:RuntimeUiCatalog, editorPackage:EditorPackageSession) {
 		this.contentRegistry = contentRegistry;
@@ -270,7 +318,11 @@ final class CaxecraftEditorScreen {
 		objectVisuals = [];
 		objectLabels = "";
 		flowRuleCount = 0;
+		flowRules = [];
 		zoneRuleLinks = [];
+		flowOverlaps = [];
+		flowTrace = {rows: [], truncated: false};
+		flowWorldPickMode = NoFlowWorldPick;
 		camera = null;
 		selection = null;
 		focusedControl = initialFocus();
@@ -294,6 +346,8 @@ final class CaxecraftEditorScreen {
 		buildConfirmationSeconds = 0.0;
 		objectList = new GuiListViewState(-1);
 		worldName = GuiTextBoxState.create(64);
+		objectName = GuiTextBoxState.create(64);
+		objectNameTarget = null;
 		refreshProjection(true, RefreshAllTerrain);
 	}
 
@@ -320,7 +374,11 @@ final class CaxecraftEditorScreen {
 				return navigationAction;
 		}
 		final editedName = worldName;
-		final shortcutInputAvailable = !leavePromptOpen && !environmentPanelOpen && (editedName == null || !editedName.isEditing());
+		final editedObjectName = objectName;
+		final shortcutInputAvailable = !leavePromptOpen
+			&& !environmentPanelOpen
+			&& (editedName == null || !editedName.isEditing())
+			&& (editedObjectName == null || !editedObjectName.isEditing());
 		switch objectShortcutAction({
 			inputAvailable: shortcutInputAvailable,
 			buildActive: workspaceView == BuildView,
@@ -668,8 +726,15 @@ final class CaxecraftEditorScreen {
 		final objectIndex = selectedObjectIndex();
 		if (objectIndex >= 0) {
 			final gizmo = objectGizmos[objectIndex];
-			Raylib.DrawTextString(gizmo.id.text(), left + 14, cursorTop, 16, CaxecraftPalette.selection());
-			cursorTop += 28;
+			syncObjectName(gizmo.id);
+			final selectedName = objectName;
+			if (selectedName != null) {
+				final result = selectedName.draw(Rectangle.fromFloat(left + 14, cursorTop, width - 28, 30));
+				if (result.has(GuiResult.Pressed) && !selectedName.isEditing())
+					commitObjectName(selectedName.text());
+			} else
+				Raylib.DrawTextString(gizmo.id.text(), left + 14, cursorTop, 16, CaxecraftPalette.selection());
+			cursorTop += 36;
 			Raylib.DrawTextString(uiCatalog.text(locale, UiMessage.EditorCoordinates), left + 14, cursorTop, 14, Color.rgba(126, 205, 209));
 			cursorTop += 22;
 			Raylib.DrawTextString('${Std.int(gizmo.x)}, ${Std.int(gizmo.y)}, ${Std.int(gizmo.z)}', left + 14, cursorTop, 18, CaxecraftPalette.hudText());
@@ -701,6 +766,8 @@ final class CaxecraftEditorScreen {
 			if (detailsOpen) {
 				Raylib.DrawTextString('${gizmo.width} x ${gizmo.height} x ${gizmo.depth}', left + 14, cursorTop, 15, CaxecraftPalette.hudText());
 				cursorTop += 28;
+				if (gizmo.kind == TriggerZoneGizmo)
+					cursorTop = drawSelectedTriggerFlowCards(locale, gizmo.id, left + 14, cursorTop, width - 28, top + height - 12);
 			}
 		}
 		if (worldListOpen) {
@@ -715,6 +782,195 @@ final class CaxecraftEditorScreen {
 				}
 			}
 		}
+	}
+
+	/** Draw registry-backed WHEN / IF / DO cards connected to one trigger. */
+	function drawSelectedTriggerFlowCards(locale:LocaleCursor, zone:ScenarioId, left:Int, top:Int, width:Int, bottom:Int):Int {
+		var cursor = top;
+		if (cursor + 34 < bottom) {
+			final connectLabel = uiCatalog.format(locale, EditorFlowUiMessage.ConnectObjectMessage.messageId(), []);
+			if (Raygui.ButtonString(Rectangle.fromFloat(left, cursor, width, 30), connectLabel).has(GuiResult.Pressed))
+				beginZoneConnection(zone);
+			cursor += 38;
+		}
+		for (overlap in flowOverlaps)
+			if (overlap.first.text() == zone.text() || overlap.second.text() == zone.text()) {
+				if (cursor + 26 >= bottom)
+					return cursor;
+				Raylib.DrawRectangle(left, cursor, width, 22, Color.rgba(71, 48, 15));
+				Raylib.DrawTextString(uiCatalog.format(locale, EditorFlowUiMessage.OverlapMessage.messageId(), [overlap.first.text(), overlap.second.text()]),
+					left + 5, cursor + 4, 11, Color.rgba(255, 211, 103));
+				cursor += 26;
+			}
+		for (rule in flowRules) {
+			if (!flowRuleUsesZone(rule, zone))
+				continue;
+			if (cursor + 20 < bottom) {
+				Raylib.DrawTextString(rule.ruleId.text(), left, cursor, 13, Color.rgba(236, 114, 255));
+				if (Raygui.ButtonString(Rectangle.fromFloat(left + width - 26, cursor - 3, 24, 20), "+").has(GuiResult.Pressed)) {
+					beginInsertDoPick(zone, rule.ruleId, rule.cards.length - 2);
+					return cursor + 20;
+				}
+				cursor += 20;
+			}
+			for (card in rule.cards) {
+				if (cursor + 34 >= bottom)
+					return cursor;
+				final visual = flowCardVisual(locale, card);
+				Raylib.DrawRectangle(left, cursor, width, 30, Color.rgba(14, 31, 38));
+				Raylib.DrawRectangle(left + 6, cursor + 6, 18, 18, visual.color);
+				Raylib.DrawTextString(visual.keyword, left + 30, cursor + 7, 13, visual.color);
+				Raylib.DrawTextString(visual.summary, left + 88, cursor + 7, 13, CaxecraftPalette.hudText());
+				if (drawFlowCardEditControls(locale, zone, rule.ruleId, card, left, cursor, width))
+					return cursor + 34;
+				drawFlowReferencePickers(zone, rule.ruleId, card, left, cursor, width, flowCardControlWidth(card));
+				cursor += 34;
+			}
+		}
+		return drawFlowTraceOverlay(locale, left, cursor, width, bottom);
+	}
+
+	/** Draw the latest non-empty ordinary-engine trace under the selected cards. */
+	function drawFlowTraceOverlay(locale:LocaleCursor, left:Int, top:Int, width:Int, bottom:Int):Int {
+		var cursor = top;
+		for (row in flowTrace.rows) {
+			if (cursor + 20 >= bottom)
+				return cursor;
+			Raylib.DrawRectangle(left, cursor, width, 18, Color.rgba(9, 23, 29));
+			Raylib.DrawTextString(flowTraceText(locale, row), left + 6, cursor + 2, 12, CaxecraftPalette.hudText());
+			cursor += 20;
+		}
+		if (flowTrace.truncated && cursor + 20 < bottom) {
+			Raylib.DrawTextString("…", left + 6, cursor + 2, 12, CaxecraftPalette.hudText());
+			cursor += 20;
+		}
+		return cursor;
+	}
+
+	/** Format stable trace IDs with localized card keywords and technical symbols. */
+	function flowTraceText(locale:LocaleCursor, row:EditorFlowTraceRow):String
+		return switch row {
+			case SourceTrace(event, actor):
+				uiCatalog.format(locale, EditorFlowUiMessage.WhenMessage.messageId(), [])
+				+ "  "
+				+ event
+				+ (actor == null ? "" : "  " + actor.text());
+			case PredicateTrace(rule, event, actor, passed):
+				uiCatalog.format(locale, EditorFlowUiMessage.IfMessage.messageId(), [])
+				+ "  "
+				+ rule.text()
+				+ "  "
+				+ event
+				+ (actor == null ? "" : "  " + actor.text())
+				+ (passed ? "  ✓" : "  ×");
+			case ActionTrace(owner, action):
+				uiCatalog.format(locale, EditorFlowUiMessage.DoMessage.messageId(), [])
+				+ "  "
+				+ owner.text()
+				+ "  "
+				+ action;
+			case FollowUpTrace(owner, event, readyTick):
+				'→  ${owner.text()}  $event  @${readyTick.epoch}:${readyTick.offset}';
+			case SequenceTrace(owner, timer, sequence, readyTick):
+				'→  ${owner.text()}  ${timer.text()}  ${sequence.text()}  @${readyTick.epoch}:${readyTick.offset}';
+		};
+
+	/** Draw one numbered target button for each world-pickable card reference. */
+	function drawFlowReferencePickers(zone:ScenarioId, rule:ScenarioId, card:EditorFlowCard, left:Int, top:Int, width:Int, rightInset:Int):Void {
+		final references = flowCardReferences(card);
+		var visibleIndex = 0;
+		for (referenceIndex in 0...references.length) {
+			final reference = references[referenceIndex];
+			if (!isWorldPickableFlowRole(reference.role))
+				continue;
+			final buttonLeft = left + width - rightInset - 29 * (visibleIndex + 1);
+			if (Raygui.ButtonString(Rectangle.fromFloat(buttonLeft, top + 3, 26, 24), '◎${referenceIndex + 1}').has(GuiResult.Pressed))
+				beginFlowReferencePick(zone, rule, flowCardAddress(card), referenceIndex);
+			visibleIndex++;
+		}
+	}
+
+	/** Keep fixed card controls separate from typed field-picker buttons. */
+	static function flowCardControlWidth(card:EditorFlowCard):Int
+		return switch card {
+			case WhenFlowCard(_, _, _): 96;
+			case IfFlowCard(_, _, _): 48;
+			case DoFlowCard(_, _, _, _): 183;
+		};
+
+	/** Draw minimal complete mutation controls over the canonical card model. */
+	function drawFlowCardEditControls(locale:LocaleCursor, zone:ScenarioId, ruleId:ScenarioId, card:EditorFlowCard, left:Int, top:Int, width:Int):Bool {
+		return switch card {
+			case WhenFlowCard(_, _, _):
+				if (Raygui.ButtonString(Rectangle.fromFloat(left + width - 93, top + 3, 90, 24),
+					uiCatalog.format(locale, EditorFlowUiMessage.ToggleEnterLeaveMessage.messageId(), []))
+					.has(GuiResult.Pressed)) toggleFlowEvent(zone, ruleId); else false;
+			case IfFlowCard(_, _, _):
+				if (Raygui.ButtonString(Rectangle.fromFloat(left + width - 45, top + 3, 42, 24),
+					uiCatalog.format(locale, EditorFlowUiMessage.IfMessage.messageId(), []))
+					.has(GuiResult.Pressed)) toggleFlowPredicate(zone, ruleId); else false;
+			case DoFlowCard(index, _, _, _):
+				final first = left + width - 180;
+				if (Raygui.ButtonString(Rectangle.fromFloat(first, top + 3, 92, 24),
+					uiCatalog.format(locale, EditorFlowUiMessage.ToggleSpawnDespawnMessage.messageId(), []))
+					.has(GuiResult.Pressed)) toggleFlowAction(zone, ruleId,
+						index); else if (Raygui.ButtonString(Rectangle.fromFloat(first + 95, top + 3, 26, 24), "^")
+					.has(GuiResult.Pressed)) commitFlowEdit(zone, ruleId,
+						MoveDo(index,
+							index - 1)); else if (Raygui.ButtonString(Rectangle.fromFloat(first + 124, top + 3, 26, 24), "v")
+					.has(GuiResult.Pressed)) commitFlowEdit(zone, ruleId,
+						MoveDo(index,
+							index + 1)); else if (Raygui.ButtonString(Rectangle.fromFloat(first + 153, top + 3, 26, 24), "X")
+					.has(GuiResult.Pressed)) commitFlowEdit(zone, ruleId, RemoveDo(index)); else false;
+		};
+	}
+
+	/** Return the immutable references carried by any projected card kind. */
+	static function flowCardReferences(card:EditorFlowCard):Array<EditorFlowReference>
+		return switch card {
+			case WhenFlowCard(_, _, references) | IfFlowCard(_, _, references) | DoFlowCard(_, _, _, references): references;
+		};
+
+	/** Convert a projected row to the canonical card address used by mutation. */
+	static function flowCardAddress(card:EditorFlowCard):EditorFlowCardAddress
+		return switch card {
+			case WhenFlowCard(_, _, _): WhenCardAddress;
+			case IfFlowCard(_, _, _): IfCardAddress;
+			case DoFlowCard(index, _, _, _): DoCardAddress(index);
+		};
+
+	/** True when a projected rule's source card points at this trigger. */
+	static function flowRuleUsesZone(rule:EditorFlowRuleProjection, zone:ScenarioId):Bool {
+		for (card in rule.cards)
+			switch card {
+				case WhenFlowCard(_, _, references):
+					for (reference in references)
+						if (reference.id.text() == zone.text())
+							return true;
+				case IfFlowCard(_, _, _) | DoFlowCard(_, _, _, _):
+			}
+		return false;
+	}
+
+	/** Resolve data-owned card prose while retaining descriptor-backed content. */
+	function flowCardVisual(locale:LocaleCursor, card:EditorFlowCard):{final keyword:String; final summary:String; final color:Color;} {
+		return switch card {
+			case WhenFlowCard(_, cardText, _): {
+					keyword: uiCatalog.format(locale, EditorFlowUiMessage.WhenMessage.messageId(), []),
+					summary: uiCatalog.format(locale, cardText.message, cardText.arguments),
+					color: Color.rgba(210, 105, 230)
+				};
+			case IfFlowCard(_, cardText, _): {
+					keyword: uiCatalog.format(locale, EditorFlowUiMessage.IfMessage.messageId(), []),
+					summary: uiCatalog.format(locale, cardText.message, cardText.arguments),
+					color: Color.rgba(84, 191, 205)
+				};
+			case DoFlowCard(_, _, cardText, _): {
+					keyword: uiCatalog.format(locale, EditorFlowUiMessage.DoMessage.messageId(), []),
+					summary: uiCatalog.format(locale, cardText.message, cardText.arguments),
+					color: Color.rgba(111, 174, 91)
+				};
+		};
 	}
 
 	/** Draw every admitted environment field in one visible two-column modal. */
@@ -1126,7 +1382,7 @@ final class CaxecraftEditorScreen {
 	/**
 	 * Publish the current draft and update the clean baseline after success.
 	 *
-	 * A save first commits the temporary title buffer. Package validation and
+	 * A save first commits the temporary title and object-name buffers. Package validation and
 	 * publication then run through `EditorPackageSession`. Rejection keeps the
 	 * draft, history, and previous clean baseline available for another attempt.
 	 */
@@ -1140,6 +1396,14 @@ final class CaxecraftEditorScreen {
 		if (name != null && name.isEditing()) {
 			name.setEditing(false);
 			if (!commitWorldName(name.text())) {
+				notice = SaveFailed;
+				return false;
+			}
+		}
+		final selectedName = objectName;
+		if (selectedName != null && selectedName.isEditing()) {
+			selectedName.setEditing(false);
+			if (!commitObjectName(selectedName.text())) {
 				notice = SaveFailed;
 				return false;
 			}
@@ -1482,6 +1746,235 @@ final class CaxecraftEditorScreen {
 		}
 	}
 
+	/** Start a two-step connection: keep the trigger selected, then pick its target. */
+	function beginZoneConnection(zone:ScenarioId):Void {
+		final current = session;
+		if (current == null)
+			return;
+		flowWorldPickMode = ConnectZoneWorldPick(zone, current.revision());
+		setWorkspaceView(BuildView);
+		setActiveTool(EditorTool.SelectTool);
+		setBuildPointerState(EditorBuildPointerState.Released);
+		detailsOpen = true;
+		notice = Ready;
+	}
+
+	/** Start replacing one typed card reference from a visible world object. */
+	function beginFlowReferencePick(zone:ScenarioId, rule:ScenarioId, card:EditorFlowCardAddress, referenceIndex:Int):Void {
+		final current = session;
+		if (current == null)
+			return;
+		flowWorldPickMode = ReplaceFlowReferenceWorldPick(zone, rule, card, referenceIndex, current.revision());
+		setWorkspaceView(BuildView);
+		setActiveTool(EditorTool.SelectTool);
+		setBuildPointerState(EditorBuildPointerState.Released);
+		detailsOpen = true;
+		notice = Ready;
+	}
+
+	/** Start an ordered DO insertion whose target comes from the visible world. */
+	function beginInsertDoPick(zone:ScenarioId, rule:ScenarioId, actionIndex:Int):Void {
+		final current = session;
+		if (current == null)
+			return;
+		flowWorldPickMode = InsertDoWorldPick(zone, rule, actionIndex, current.revision());
+		prepareFlowWorldPick();
+	}
+
+	/** Start replacing the IF card with an actor-context condition. */
+	function beginReplaceIfActorPick(zone:ScenarioId, rule:ScenarioId):Void {
+		final current = session;
+		if (current == null)
+			return;
+		flowWorldPickMode = ReplaceIfActorWorldPick(zone, rule, current.revision());
+		prepareFlowWorldPick();
+	}
+
+	/** Put every world-picker gesture into the same Build selection state. */
+	function prepareFlowWorldPick():Void {
+		setWorkspaceView(BuildView);
+		setActiveTool(EditorTool.SelectTool);
+		setBuildPointerState(EditorBuildPointerState.Released);
+		detailsOpen = true;
+		notice = Ready;
+	}
+
+	/** Apply the pending connection or card-field replacement through `PutRule`. */
+	function applyFlowObjectPick(object:ScenarioObject):Bool {
+		final current = session;
+		if (current == null)
+			return false;
+		return switch flowWorldPickMode {
+			case NoFlowWorldPick:
+				false;
+			case ConnectZoneWorldPick(zone, revision):
+				if (current.revision() != revision) {
+					flowWorldPickMode = NoFlowWorldPick;
+					notice = Invalid;
+					false;
+				} else if (zone.text() == object.id.text()) {
+					notice = Invalid;
+					false;
+				} else {
+					final draft = presentationDraft;
+					if (draft == null) {
+						notice = Invalid;
+						false;
+					} else
+						commitFlowRule(zone, connectZone({
+							ruleId: nextZoneConnectionRuleId(zone, draft.ruleIds),
+							priority: 0,
+							repeat: Once,
+							zone: zone,
+							predicate: Always,
+							actions: [Spawn(object.id)]
+						}));
+				}
+			case ReplaceFlowReferenceWorldPick(zone, ruleId, card, referenceIndex, revision):
+				final rule = current.revision() == revision ? currentFlowRule(ruleId) : null;
+				if (rule == null) {
+					flowWorldPickMode = NoFlowWorldPick;
+					notice = Invalid;
+					false;
+				} else switch applyFlowWorldPick(rule, card, referenceIndex, worldPickFor(object)) {
+					case FlowRuleAuthored(next): commitFlowRule(zone, next);
+					case FlowRuleUnchanged:
+						flowWorldPickMode = NoFlowWorldPick;
+						notice = Ready;
+						true;
+					case FlowRuleAuthoringRejected(_):
+						notice = Invalid;
+						false;
+				}
+			case InsertDoWorldPick(zone, ruleId, actionIndex, revision):
+				if (current.revision() != revision) staleFlowPick(); else commitFlowEdit(zone, ruleId, InsertDo(actionIndex, Spawn(object.id)));
+			case ReplaceIfActorWorldPick(zone, ruleId, revision):
+				final pick = worldPickFor(object);
+				if (current.revision() != revision) staleFlowPick(); else if (!pickHasActorRole(pick.roles)) {
+					notice = Invalid;
+					false;
+				} else commitFlowEdit(zone, ruleId, ReplaceIf(EventActorIs(object.id)));
+		};
+	}
+
+	/** Reject a picker whose target changed while the creator was in the world. */
+	function staleFlowPick():Bool {
+		flowWorldPickMode = NoFlowWorldPick;
+		notice = Invalid;
+		return false;
+	}
+
+	/** True when one selected placement can supply event actor context. */
+	static function pickHasActorRole(roles:Array<EditorFlowReferenceRole>):Bool {
+		for (role in roles)
+			if (role == ActorFlowReference)
+				return true;
+		return false;
+	}
+
+	/** Commit one authored rule, retain trigger selection, and expose its cards. */
+	function commitFlowRule(zone:ScenarioId, rule:FlowRule):Bool {
+		final current = session;
+		if (current == null)
+			return false;
+		return switch current.mutate({baseRevision: current.revision(), mutation: Apply(PutRule(rule))}) {
+			case MutationApplied(_, _, _, _, _, _):
+				flowWorldPickMode = NoFlowWorldPick;
+				notice = Ready;
+				refreshProjection(false, KeepTerrain);
+				selectObject(zone);
+				detailsOpen = true;
+				true;
+			case MutationUnchanged(_, _):
+				flowWorldPickMode = NoFlowWorldPick;
+				notice = Ready;
+				true;
+			case MutationRejected(_, _):
+				notice = Invalid;
+				false;
+		};
+	}
+
+	/** Apply one narrow card edit through the canonical whole-rule command. */
+	function commitFlowEdit(zone:ScenarioId, ruleId:ScenarioId, edit:EditorFlowCardEdit):Bool {
+		final rule = currentFlowRule(ruleId);
+		if (rule == null)
+			return staleFlowPick();
+		return switch editFlowCard(rule, edit) {
+			case FlowRuleAuthored(next): commitFlowRule(zone, next);
+			case FlowRuleUnchanged:
+				notice = Ready;
+				false;
+			case FlowRuleAuthoringRejected(_):
+				notice = Invalid;
+				false;
+		};
+	}
+
+	/** Toggle the child-facing spatial source while retaining its zone reference. */
+	function toggleFlowEvent(zone:ScenarioId, ruleId:ScenarioId):Bool {
+		final rule = currentFlowRule(ruleId);
+		if (rule == null)
+			return false;
+		final next = switch rule.event {
+			case EnterZone(id): LeaveZone(id);
+			case LeaveZone(id): EnterZone(id);
+			case _: EnterZone(zone);
+		};
+		return commitFlowEdit(zone, ruleId, ReplaceWhen(next));
+	}
+
+	/** Toggle between no condition and an actor picked from the world. */
+	function toggleFlowPredicate(zone:ScenarioId, ruleId:ScenarioId):Bool {
+		final rule = currentFlowRule(ruleId);
+		if (rule == null)
+			return false;
+		return switch rule.predicate {
+			case Always:
+				beginReplaceIfActorPick(zone, ruleId);
+				false;
+			case _: commitFlowEdit(zone, ruleId, ReplaceIf(Always));
+		};
+	}
+
+	/** Toggle the two common world-lifecycle actions without changing the target. */
+	function toggleFlowAction(zone:ScenarioId, ruleId:ScenarioId, actionIndex:Int):Bool {
+		final rule = currentFlowRule(ruleId);
+		if (rule == null || actionIndex < 0 || actionIndex >= rule.actions.length)
+			return false;
+		final next = switch rule.actions[actionIndex] {
+			case Spawn(id): Despawn(id);
+			case Despawn(id): Spawn(id);
+			case _: return false;
+		};
+		return commitFlowEdit(zone, ruleId, ReplaceDo(actionIndex, next));
+	}
+
+	/** Read one copy-owned rule only when a card gesture needs to mutate it. */
+	function currentFlowRule(expected:ScenarioId):Null<FlowRule> {
+		final current = session;
+		if (current == null)
+			return null;
+		return switch current.query(InspectDraft) {
+			case DraftObserved(_, draft):
+				var found:Null<FlowRule> = null;
+				for (rule in draft.flow.rules)
+					if (rule.id.text() == expected.text())
+						found = rule;
+				found;
+			case _:
+				null;
+		};
+	}
+
+	/** True while the next visible object click belongs to a card gesture. */
+	function flowWorldPickActive():Bool
+		return switch flowWorldPickMode {
+			case NoFlowWorldPick: false;
+			case ConnectZoneWorldPick(_,
+				_) | ReplaceFlowReferenceWorldPick(_, _, _, _, _) | InsertDoWorldPick(_, _, _, _) | ReplaceIfActorWorldPick(_, _, _): true;
+		};
+
 	/** Delete the shared object target through canonical history and clear stale UI state. */
 	function deleteSelectedObject():Void {
 		final current = session;
@@ -1491,8 +1984,11 @@ final class CaxecraftEditorScreen {
 			case NodeSelection(ObjectNode(value)): value;
 			case NoEditorSelection | VoxelSelection(_) | NodeSelection(_): return;
 		};
-		switch current.mutate({baseRevision: current.revision(), mutation: Apply(RemoveObject(id))}) {
+		final plan = deleteObjectWithConnectedRules(id, current.draftSnapshot().flow.rules);
+		switch current.mutate({baseRevision: current.revision(), mutation: ApplyBatch(plan.commands)}) {
 			case MutationApplied(_, _, _, _, _, _):
+				flowWorldPickMode = NoFlowWorldPick;
+				objectNameTarget = null;
 				selection = current.selectedBounds();
 				objectList = new GuiListViewState(-1);
 				detailsOpen = false;
@@ -1515,12 +2011,13 @@ final class CaxecraftEditorScreen {
 			case NodeSelection(ObjectNode(value)): value;
 			case NoEditorSelection | VoxelSelection(_) | NodeSelection(_): return;
 		};
-		final duplicate = duplicateObject(sourceId, draft.objects);
+		final canonicalDraft = current.draftSnapshot();
+		final duplicate = duplicateObjectWithConnectedRules(sourceId, draft.objects, canonicalDraft.flow.rules);
 		if (duplicate == null) {
 			notice = Invalid;
 			return;
 		}
-		switch current.mutate({baseRevision: current.revision(), mutation: Apply(duplicate.command)}) {
+		switch current.mutate({baseRevision: current.revision(), mutation: ApplyBatch(duplicate.commands)}) {
 			case MutationApplied(_, _, _, _, _, _):
 				notice = Ready;
 				refreshProjection(false, KeepTerrain);
@@ -1560,6 +2057,17 @@ final class CaxecraftEditorScreen {
 			if (objectGizmos[index].id.text() == expected)
 				return index;
 		return -1;
+	}
+
+	/** Resolve a picker target from the copy-owned presentation, never a widget index. */
+	function presentationObject(id:ScenarioId):Null<ScenarioObject> {
+		final draft = presentationDraft;
+		if (draft == null)
+			return null;
+		for (object in draft.objects)
+			if (object.id.text() == id.text())
+				return object;
+		return null;
 	}
 
 	/** Select the crosshair object, then apply the shared presentation-only grab transition. */
@@ -1630,8 +2138,15 @@ final class CaxecraftEditorScreen {
 		if (current == null)
 			return false;
 		final started = current.beginExternalTestPlay();
+		if (started)
+			flowTrace = {rows: [], truncated: false};
 		notice = started ? Testing : Invalid;
 		return started;
+	}
+
+	/** Retain the latest non-empty bounded trace from ordinary external Test Play. */
+	public function observeFlowTrace(trace:Array<FlowTraceEntry>):Void {
+		flowTrace = retainLatestFlowTrace(flowTrace, trace, 12);
 	}
 
 	/** Unlock the same workspace after the disposable game runtime stops. */
@@ -1670,6 +2185,36 @@ final class CaxecraftEditorScreen {
 		};
 		refreshProjection(false, KeepTerrain);
 		return accepted;
+	}
+
+	/** Commit one selected object name and every typed reference in one history step. */
+	function commitObjectName(value:String):Bool {
+		final current = session;
+		final before = objectNameTarget;
+		if (current == null || before == null) {
+			notice = Invalid;
+			return false;
+		}
+		final after = new ScenarioId(value);
+		return switch current.mutate({baseRevision: current.revision(), mutation: Apply(RenameObject(before, after))}) {
+			case MutationApplied(_, _, _, _, _, _):
+				flowWorldPickMode = NoFlowWorldPick;
+				objectNameTarget = after;
+				notice = Ready;
+				refreshProjection(false, KeepTerrain);
+				selectObject(after);
+				true;
+			case MutationUnchanged(_, _):
+				objectNameTarget = before;
+				syncObjectName(before);
+				notice = Ready;
+				true;
+			case MutationRejected(_, _):
+				objectNameTarget = null;
+				syncObjectName(before);
+				notice = Invalid;
+				false;
+		};
 	}
 
 	/** Draw and edit the exact selected layer over the same draft used by Build. */
@@ -1950,7 +2495,7 @@ final class CaxecraftEditorScreen {
 				y: direction.y.toFloat(),
 				z: direction.z.toFloat()
 			}, editLayerY, 512.0);
-			if (activeTool == SelectTool && !holdingObject) {
+			if ((activeTool == SelectTool || flowWorldPickActive()) && !holdingObject) {
 				final objectHit = pickObject(objectGizmos, {x: origin.x.toFloat(), y: origin.y.toFloat(), z: origin.z.toFloat()}, {
 					x: direction.x.toFloat(),
 					y: direction.y.toFloat(),
@@ -1964,9 +2509,9 @@ final class CaxecraftEditorScreen {
 			selectGroundPalette(pickBuildPaletteCode(draft.world.palette, groundPaletteCode, defaultGroundPaletteCode(), hover.solid,
 				paletteCodeAtWorld(current, hover.point.x, hover.point.y, hover.point.z)));
 		final selectedGrabIndex = selectedObjectIndex();
-		final selectedGrabId:Null<ScenarioId> = if (cameraInputEnabled && activeTool == SelectTool && selectedGrabIndex >= 0)
+		final selectedGrabId:Null<ScenarioId> = if (cameraInputEnabled && activeTool == SelectTool && !flowWorldPickActive() && selectedGrabIndex >= 0)
 			objectGizmos[selectedGrabIndex].id else null;
-		final hoveredGrabId:Null<ScenarioId> = if (hoveredObject >= 0) objectGizmos[hoveredObject].id else null;
+		final hoveredGrabId:Null<ScenarioId> = if (!flowWorldPickActive() && hoveredObject >= 0) objectGizmos[hoveredObject].id else null;
 		updateObjectGrab(selectedGrabId, hoveredGrabId, grabPressed);
 		holdingObject = objectGrabActive(objectGrab);
 		final grabbedIndex = switch objectGrab {
@@ -2001,7 +2546,14 @@ final class CaxecraftEditorScreen {
 			invalidatePreview();
 		else
 			updatePreview(previewPoint, previewTool);
-		if (!capturePressed && aiming && objectPreview != null && leftPressed) {
+		if (!capturePressed && !holdingObject && flowWorldPickActive() && hoveredObject >= 0 && leftPressed) {
+			final picked = presentationObject(objectGizmos[hoveredObject].id);
+			if (picked != null && applyFlowObjectPick(picked))
+				showBuildConfirmation();
+			current = projection;
+			if (current == null)
+				return;
+		} else if (!capturePressed && aiming && objectPreview != null && leftPressed) {
 			final preview = objectPreview;
 			final delta = objectPlacementDelta(objectGizmos[grabbedIndex], preview.origin);
 			final id = objectGizmos[grabbedIndex].id;
@@ -2108,6 +2660,11 @@ final class CaxecraftEditorScreen {
 			final shortcutText = '${uiCatalog.text(locale, UiMessage.EditorDuplicate)}: CTRL/CMD+D  ·  ${uiCatalog.text(locale, UiMessage.EditorDelete)}: BACKSPACE';
 			Raylib.DrawRectangle(left + 8, top + height - 28, width - 16, 22, Color.rgba(8, 20, 24));
 			Raylib.DrawTextString(shortcutText, left + 14, top + height - 24, 14, CaxecraftPalette.hudText());
+		}
+		if (flowWorldPickActive()) {
+			final pickText = uiCatalog.format(locale, EditorFlowUiMessage.PickObjectMessage.messageId(), []);
+			Raylib.DrawRectangle(left + 8, top + height - 54, width - 16, 22, Color.rgba(8, 20, 24));
+			Raylib.DrawTextString(pickText, left + 14, top + height - 50, 14, CaxecraftPalette.selection());
 		}
 		if (aiming) {
 			final centerX = left + Std.int(width / 2);
@@ -2341,6 +2898,7 @@ final class CaxecraftEditorScreen {
 		final current = session;
 		if (current == null) {
 			terrainPresentation.clear();
+			flowWorldPickMode = NoFlowWorldPick;
 			presentationDraft = null;
 			projection = null;
 			planProjection = null;
@@ -2349,7 +2907,9 @@ final class CaxecraftEditorScreen {
 			objectVisuals = [];
 			objectLabels = "";
 			flowRuleCount = 0;
+			flowRules = [];
 			zoneRuleLinks = [];
+			flowOverlaps = [];
 			environment = null;
 			camera = null;
 			selection = null;
@@ -2430,7 +2990,9 @@ final class CaxecraftEditorScreen {
 		objectGizmos = projectObjects(draft.objects);
 		objectVisuals = [for (object in draft.objects) objectVisualFor(contentRegistry, object)];
 		flowRuleCount = draft.flowRuleCount;
+		flowRules = draft.flowRules;
 		zoneRuleLinks = draft.zoneRuleLinks;
+		flowOverlaps = draft.flowOverlaps;
 		final labels:Array<String> = [];
 		for (gizmo in objectGizmos)
 			labels.push(gizmo.id.text());
@@ -2478,7 +3040,9 @@ final class CaxecraftEditorScreen {
 			objects: details.objects,
 			ruleIds: details.ruleIds,
 			flowRuleCount: details.flowRuleCount,
-			zoneRuleLinks: details.zoneRuleLinks
+			flowRules: details.flowRules,
+			zoneRuleLinks: details.zoneRuleLinks,
+			flowOverlaps: details.flowOverlaps
 		};
 	}
 
@@ -2499,6 +3063,19 @@ final class CaxecraftEditorScreen {
 				name.replace(value);
 			case Message(_):
 		}
+	}
+
+	/** Replace the temporary object-name buffer only when selection identity changes. */
+	function syncObjectName(id:ScenarioId):Void {
+		final name = objectName;
+		if (name == null)
+			return;
+		final current = objectNameTarget;
+		if (current != null && current.text() == id.text())
+			return;
+		objectNameTarget = id;
+		name.setEditing(false);
+		name.replace(id.text());
 	}
 
 	#if caxecraft_pilot
@@ -2776,6 +3353,82 @@ final class CaxecraftEditorScreen {
 			return false;
 		selectObject(editedId);
 		return selectedObjectIndex() >= 0;
+	}
+
+	/**
+		Exercise native trigger and WHEN/IF/DO authoring through production commands.
+
+		The pilot selects real projected objects and bypasses only operating-system
+		pointer delivery. Resize, connect, typed world pick, card edits, copy cleanup,
+		validation, history, canonical save, and Test Play keep their ordinary owners.
+	**/
+	public function applyPilotFlowAuthoring():Bool {
+		var triggerIndex = -1;
+		var actorIndex = -1;
+		for (index in 0...objectGizmos.length)
+			switch objectVisuals[index] {
+				case TriggerVolumeVisual if (triggerIndex < 0):
+					triggerIndex = index;
+				case ActorVisual(_, _) if (actorIndex < 0):
+					actorIndex = index;
+				case _:
+			}
+		if (triggerIndex < 0 || actorIndex < 0)
+			return false;
+		final zone = objectGizmos[triggerIndex];
+		final actor = objectGizmos[actorIndex];
+		final draft = presentationDraft;
+		if (draft == null)
+			return false;
+		var actorObject:Null<ScenarioObject> = null;
+		for (object in draft.objects)
+			if (object.id.text() == actor.id.text())
+				actorObject = object;
+		if (actorObject == null)
+			return false;
+		final connected = nextZoneConnectionRuleId(zone.id, draft.ruleIds);
+
+		selectObject(zone.id);
+		resizeSelectedTrigger({
+			width: Std.int(zone.width) + 1,
+			height: Std.int(zone.height),
+			depth: Std.int(zone.depth)
+		});
+		beginZoneConnection(zone.id);
+		if (!applyFlowObjectPick(actorObject))
+			return false;
+		if (currentFlowRule(connected) == null || !toggleFlowEvent(zone.id, connected) || !toggleFlowAction(zone.id, connected, 0))
+			return false;
+		beginReplaceIfActorPick(zone.id, connected);
+		if (!applyFlowObjectPick(actorObject)
+			|| !commitFlowEdit(zone.id, connected, InsertDo(1, Spawn(actor.id)))
+			|| !commitFlowEdit(zone.id, connected, MoveDo(1, 0))
+			|| !commitFlowEdit(zone.id, connected, RemoveDo(1)))
+			return false;
+
+		final beforeObjects = objectGizmos.length;
+		final beforeRules = flowRuleCount;
+		var copiedRuleCount = 0;
+		for (rule in flowRules)
+			if (flowRuleUsesZone(rule, zone.id))
+				copiedRuleCount++;
+		if (copiedRuleCount < 1)
+			return false;
+		duplicateSelectedObject();
+		if (objectGizmos.length != beforeObjects + 1 || flowRuleCount != beforeRules + copiedRuleCount)
+			return false;
+		deleteSelectedObject();
+		if (objectGizmos.length != beforeObjects || flowRuleCount != beforeRules)
+			return false;
+		selectObject(zone.id);
+		final current = session;
+		if (current == null)
+			return false;
+		return switch current.query(InspectValidation) {
+			case ValidationObserved(_, DraftPlayable(_)): true;
+			case _:
+				false;
+		};
 	}
 
 	/**

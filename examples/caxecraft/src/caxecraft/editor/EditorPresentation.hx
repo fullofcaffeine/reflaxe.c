@@ -1,6 +1,10 @@
 package caxecraft.editor;
 
 import caxecraft.editor.EditorFlowProjection.EditorZoneRuleProjection;
+import caxecraft.editor.EditorFlowProjection.EditorFlowRuleProjection;
+import caxecraft.editor.EditorFlowProjection.EditorTriggerOverlap;
+import caxecraft.editor.EditorFlowProjection.projectFlowRules;
+import caxecraft.editor.EditorFlowProjection.projectTriggerOverlaps;
 import caxecraft.editor.EditorFlowProjection.projectZoneRules;
 import caxecraft.editor.EditorWorldViewport.EditorWorldProjection;
 import caxecraft.editor.EditorWorldViewport.projectWorld;
@@ -37,7 +41,9 @@ typedef EditorPresentationDetails = {
 	final objects:Array<ScenarioObject>;
 	final ruleIds:Array<ScenarioId>;
 	final flowRuleCount:Int;
+	final flowRules:Array<EditorFlowRuleProjection>;
 	final zoneRuleLinks:Array<EditorZoneRuleProjection>;
+	final flowOverlaps:Array<EditorTriggerOverlap>;
 }
 
 /** One complete revision-independent visual view of the current typed draft. */
@@ -49,7 +55,9 @@ typedef EditorPresentationSnapshot = {
 	final objects:Array<ScenarioObject>;
 	final ruleIds:Array<ScenarioId>;
 	final flowRuleCount:Int;
+	final flowRules:Array<EditorFlowRuleProjection>;
 	final zoneRuleLinks:Array<EditorZoneRuleProjection>;
+	final flowOverlaps:Array<EditorTriggerOverlap>;
 }
 
 /**
@@ -68,7 +76,9 @@ function project(scenario:Scenario):EditorPresentationSnapshot {
 		objects: details.objects,
 		ruleIds: details.ruleIds,
 		flowRuleCount: details.flowRuleCount,
-		zoneRuleLinks: details.zoneRuleLinks
+		flowRules: details.flowRules,
+		zoneRuleLinks: details.zoneRuleLinks,
+		flowOverlaps: details.flowOverlaps
 	};
 }
 
@@ -87,7 +97,9 @@ function projectDetails(scenario:Scenario):EditorPresentationDetails {
 		objects: [for (object in scenario.objects) copyObject(object)],
 		ruleIds: [for (rule in scenario.flow.rules) rule.id],
 		flowRuleCount: scenario.flow.rules.length,
-		zoneRuleLinks: projectZoneRules(scenario.flow.rules, scenario.objects)
+		flowRules: projectFlowRules(scenario.flow.rules),
+		zoneRuleLinks: projectZoneRules(scenario.flow.rules, scenario.objects),
+		flowOverlaps: projectTriggerOverlaps(scenario.flow.rules, scenario.objects)
 	};
 }
 

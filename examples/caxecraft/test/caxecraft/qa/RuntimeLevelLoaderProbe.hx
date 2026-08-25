@@ -26,6 +26,8 @@ import caxecraft.domain.Aquatics.input as aquaticInput;
 import caxecraft.domain.BlockKind;
 import caxecraft.domain.CaxecraftTrace;
 import caxecraft.domain.CharacterDamagePolicy;
+import caxecraft.domain.GameSession.CharacterDamageCause;
+import caxecraft.domain.CharacterPhysics.body as createBody;
 import caxecraft.domain.EntityId;
 import caxecraft.domain.Vitals.MAX_HEALTH;
 import caxecraft.domain.World;
@@ -38,7 +40,12 @@ import caxecraft.qa.FocusedContentFixture.tideweaveAquaticProfile;
 import caxecraft.scenario.LocaleId;
 import caxecraft.scenario.MessageId;
 import caxecraft.scenario.ScenarioId;
+import caxecraft.scenario.ContentId;
+import caxecraft.scenario.CaxeFlow.FlowEvent;
+import caxecraft.scenario.CaxeFlowEventRegistry.flowEventOccurrence;
 import caxecraft.scenario.CaxeFlowRuntime.FlowPresentationEvent;
+import caxecraft.scenario.CaxeFlowRuntime.FlowTickResult;
+import caxecraft.scenario.CaxeFlowRuntime.FlowTraceEntry;
 import haxe.io.Bytes;
 
 /**
@@ -108,6 +115,8 @@ function selfCheck():Int {
 		case PackageStoreOpened(value): value;
 		case PackageStoreRejected(_): return 1;
 	};
+	if (!spatialFlowCheck(store, registry, options))
+		return 141;
 	final presentationPath = "test/fixtures/caxemap/runtime-presentation.caxemap";
 	final presentationCandidate = switch loadRuntimeLevel(NativePackageFile(store, presentationPath), ContentGenerationId.fromSequence(99), registry,
 		registry, options) {
@@ -171,6 +180,19 @@ function selfCheck():Int {
 		|| initialFlowTick.flow.activeObjective == null
 		|| initialFlowTick.flow.activeObjective.text() != "objective.marker")
 		return 111;
+	final editedCell = World.coord(10, 1, 10);
+	if (!flowSession.placeTerrain(editedCell, BlockKind.Grass, new ContentId("caxecraft:grass-block")))
+		return 128;
+	final placementFlow = idleFlowTick(flowSession);
+	if (placementFlow == null
+		|| !sameText(observedActors(placementFlow, "block-changed"), ["player.start"])
+		|| !sameText(observedActors(placementFlow, "use-item"), ["player.start"]))
+		return 129;
+	if (!flowSession.removeTerrain(editedCell))
+		return 130;
+	final removalFlow = idleFlowTick(flowSession);
+	if (removalFlow == null || !sameText(observedActors(removalFlow, "block-changed"), ["player.start"]))
+		return 131;
 	if (flowActors.length != 2
 		|| !guideEntity.isValid()
 		|| !enemyEntity.isValid()
@@ -321,9 +343,10 @@ function selfCheck():Int {
 		|| equipmentTick.flow.activeObjective == null
 		|| equipmentTick.flow.activeObjective.text() != "objective.equipped")
 		return 118;
-	if (!flowSession.damageCharacter(enemyEntity, 1).resolved
-		|| !flowSession.damageCharacter(enemyEntity, 1).resolved
-		|| !flowSession.damageCharacter(enemyEntity, 1).defeated)
+	final swordCause = CharacterDamageCause.LocalPlayerItem(new ContentId("caxecraft:copper-sword"));
+	if (!flowSession.damageCharacter({target: enemyEntity, amount: 1, cause: swordCause}).resolved
+		|| !flowSession.damageCharacter({target: enemyEntity, amount: 1, cause: swordCause}).resolved
+		|| !flowSession.damageCharacter({target: enemyEntity, amount: 1, cause: swordCause}).defeated)
 		return 126;
 	final defeatTick = flowSession.tick({
 		intent: aquaticInput(0.0, 0.0, false, false),
@@ -335,7 +358,9 @@ function selfCheck():Int {
 		|| defeatTick.flow.firedRules.length != 1
 		|| defeatTick.flow.firedRules[0].text() != "rule.fixture-defeat"
 		|| defeatTick.flow.activeObjective == null
-		|| defeatTick.flow.activeObjective.text() != "objective.defeated")
+		|| defeatTick.flow.activeObjective.text() != "objective.defeated"
+		|| !sameText(observedActors(defeatTick.flow, "use-item"), ["player.start", "player.start", "player.start"])
+		|| !sameText(observedActors(defeatTick.flow, "entity-defeated"), ["player.start"]))
 		return 127;
 	final logicalPath = "scenarios/first-playable/map.caxemap";
 	final checkedIn = switch store.read(logicalPath) {
@@ -502,6 +527,152 @@ function selfCheck():Int {
 	traceActorMechanics = digestActorMechanics(nativeCandidate);
 	traceAuthority = authorityCode(nativeReceipt.authority);
 	return traceByteLength == checkedIn.bytes.length && traceAuthority == 2 ? 0 : 18;
+}
+
+/**
+ * Exercise the real loader-to-session spatial event boundary with synthetic data.
+ *
+ * The fixture keeps actor names, zone geometry, and rule outcomes reloadable. It
+ * checks local-first actor order, spawn-inside events, a fast swept crossing,
+ * the exclusive maximum face, and disable/re-enable membership reset.
+ */
+function spatialFlowCheck(store:ContentPackageStore, registry:FocusedContentRegistry, options:LevelPlayerOptions):Bool {
+	final candidate = switch loadRuntimeLevel(NativePackageFile(store, "test/fixtures/caxemap/runtime-flow-spatial.caxemap"),
+		ContentGenerationId.fromSequence(98), registry, registry, options) {
+		case RuntimeLevelReady(value): value;
+		case RuntimeLevelRejected(_): return false;
+	};
+	final session = candidate.generation().session();
+	final initial = idleFlowTick(session);
+	if (initial == null
+		|| !sameText(observedActors(initial, "enter-zone"), ["player.start", "guide.nia"])
+		|| !hasFired(initial, "rule.player-enter")
+		|| !hasFired(initial, "rule.guide-enter"))
+		return false;
+
+	if (!session.reviveLocalPlayerAt(createBody(0.5, 1.0, 1.5)).resolved)
+		return false;
+	final ordinaryLeave = idleFlowTick(session);
+	if (ordinaryLeave == null || observedActors(ordinaryLeave, "leave-zone").length != 1 || hasFired(ordinaryLeave, "rule.swept-leave"))
+		return false;
+
+	if (!session.reviveLocalPlayerAt(createBody(5.5, 1.0, 1.5)).resolved)
+		return false;
+	final swept = idleFlowTick(session);
+	if (swept == null
+		|| !sameText(observedActors(swept, "enter-zone"), ["player.start"])
+		|| !sameText(observedActors(swept, "leave-zone"), ["player.start"])
+		|| !hasFired(swept, "rule.player-enter")
+		|| !hasFired(swept, "rule.swept-enter")
+		|| !hasFired(swept, "rule.swept-leave"))
+		return false;
+
+	// Reaching the excluded maximum face does not enter the half-open zone.
+	if (!session.reviveLocalPlayerAt(createBody(4.0, 1.0, 0.5)).resolved)
+		return false;
+	final maximumFace = idleFlowTick(session);
+	if (maximumFace == null || zoneEventCount(maximumFace) != 0)
+		return false;
+	if (!session.reviveLocalPlayerAt(createBody(4.0, 1.0, 3.5)).resolved)
+		return false;
+	final tangent = idleFlowTick(session);
+	if (tangent == null || zoneEventCount(tangent) != 0)
+		return false;
+
+	if (!session.reviveLocalPlayerAt(createBody(2.5, 1.0, 1.5)).resolved)
+		return false;
+	final entered = idleFlowTick(session);
+	if (entered == null || observedActors(entered, "enter-zone").length != 1)
+		return false;
+	final saved = session.caxeFlowSnapshot();
+	if (saved == null)
+		return false;
+	final restoredCandidate = switch loadRuntimeLevel(NativePackageFile(store, "test/fixtures/caxemap/runtime-flow-spatial.caxemap"),
+		ContentGenerationId.fromSequence(97), registry, registry, options) {
+		case RuntimeLevelReady(value): value;
+		case RuntimeLevelRejected(_): return false;
+	};
+	final restoredSession = restoredCandidate.generation().session();
+	if (restoredSession.restoreCaxeFlowSnapshot({
+		executor: saved.executor,
+		pendingEvents: [flowEventOccurrence(FlowEvent.LevelEntered(new ScenarioId("level.stale")))],
+		actors: saved.actors,
+		memberships: saved.memberships
+	}))
+		return false;
+	if (!restoredSession.restoreCaxeFlowSnapshot(saved))
+		return false;
+	final resumed = idleFlowTick(restoredSession);
+	if (resumed == null || zoneEventCount(resumed) != 0)
+		return false;
+
+	if (!restoredSession.queueFlowEvent(flowEventOccurrence(FlowEvent.SignalReceived(new ContentId("caxecraft:disable-zone")))))
+		return false;
+	final disabled = idleFlowTick(restoredSession);
+	if (disabled == null || !hasFired(disabled, "rule.disable-zone") || zoneEventCount(disabled) != 0)
+		return false;
+	if (!restoredSession.queueFlowEvent(flowEventOccurrence(FlowEvent.SignalReceived(new ContentId("caxecraft:enable-zone")))))
+		return false;
+	final enabled = idleFlowTick(restoredSession);
+	if (enabled == null || !hasFired(enabled, "rule.enable-zone") || zoneEventCount(enabled) != 0)
+		return false;
+	final reentered = idleFlowTick(restoredSession);
+	return reentered != null
+		&& sameText(observedActors(reentered, "enter-zone"), ["player.start", "guide.nia"])
+		&& hasFired(reentered, "rule.player-enter")
+		&& hasFired(reentered, "rule.guide-enter");
+}
+
+/** Advance one no-input session tick and return only a successful Flow result. */
+function idleFlowTick(session:caxecraft.domain.GameSession):Null<FlowTickResult> {
+	final result = session.tick({
+		intent: aquaticInput(0.0, 0.0, false, false),
+		damagePolicy: CharacterDamagePolicy.Invulnerable,
+		waterUpdateBudget: 0
+	});
+	return result.committed && result.flow != null && result.flow.diagnostics.length == 0 ? result.flow : null;
+}
+
+/** Return actor IDs for one observed event while preserving runtime order. */
+function observedActors(result:FlowTickResult, eventName:String):Array<String> {
+	final actors:Array<String> = [];
+	for (entry in result.trace)
+		switch entry {
+			case FlowTraceEntry.EventObserved(event, actor) if (event.text() == eventName && actor != null):
+				actors.push(actor.text());
+			case _:
+		}
+	return actors;
+}
+
+/** Count enter and leave observations without exposing executor state. */
+function zoneEventCount(result:FlowTickResult):Int {
+	var count = 0;
+	for (entry in result.trace)
+		switch entry {
+			case FlowTraceEntry.EventObserved(event, _) if (event.text() == "enter-zone" || event.text() == "leave-zone"):
+				count++;
+			case _:
+		}
+	return count;
+}
+
+/** True when one exact reloadable rule fired in this tick. */
+function hasFired(result:FlowTickResult, expected:String):Bool {
+	for (id in result.firedRules)
+		if (id.text() == expected)
+			return true;
+	return false;
+}
+
+/** Compare short ordered text observations without a test-framework dependency. */
+function sameText(left:Array<String>, right:Array<String>):Bool {
+	if (left.length != right.length)
+		return false;
+	for (index in 0...left.length)
+		if (left[index] != right[index])
+			return false;
+	return true;
 }
 
 /** Remove the one reviewed fluid record without adding string conversion to C. */

@@ -8,7 +8,9 @@ import caxecraft.editor.EditorWorldGrid.EditorWorldResult;
 import caxecraft.editor.EditorWorldGrid.fill as fillWorld;
 import caxecraft.editor.EditorWorldGrid.paintMany as paintWorld;
 import caxecraft.editor.EditorWorldGrid.resize as resizeWorld;
+import caxecraft.editor.EditorObjectRename.renameScenarioObject;
 import caxecraft.scenario.CaxeFlow.FlowRule;
+import caxecraft.scenario.CaxeFlowCopy.copyFlowRule;
 import caxecraft.scenario.ContentId;
 import caxecraft.scenario.LocaleId;
 import caxecraft.scenario.MessageId;
@@ -19,6 +21,7 @@ import caxecraft.scenario.ScenarioGeometry.VoxelBounds;
 import caxecraft.scenario.ScenarioGeometry.VoxelPoint;
 import caxecraft.scenario.ScenarioGeometry.VoxelSize;
 import caxecraft.scenario.ScenarioId;
+import caxecraft.scenario.ScenarioId.isValidScenarioIdText;
 import caxecraft.scenario.ScenarioObject;
 import caxecraft.scenario.ScenarioObject.ObjectPlacement;
 import caxecraft.scenario.ScenarioStory.ScenarioDialogue;
@@ -98,6 +101,8 @@ function apply(scenario:Scenario, command:EditorCommand, settings:EditorSettings
 			rotateObjectBy(scenario, id, degrees);
 		case ResizeTriggerTo(id, size):
 			resizeTriggerTo(scenario, id, size);
+		case RenameObject(before, after):
+			renamePlacedObject(scenario, before, after);
 		case RemoveObject(id):
 			removePlacedObject(scenario, id);
 		case PutDialogue(dialogue):
@@ -320,6 +325,17 @@ private function resizeTriggerTo(scenario:Scenario, id:ScenarioId, size:VoxelSiz
 		tags: existing.tags.copy(),
 		placement: TriggerZone({origin: copyPoint(bounds.origin), size: copySize(size)})
 	})), Placement);
+}
+
+/** Rename one object only when its new canonical identity is valid and unused. */
+private function renamePlacedObject(scenario:Scenario, before:ScenarioId, after:ScenarioId):EditorReductionResult {
+	if (!hasObject(scenario, before))
+		return ReductionRejected(MissingObject(before));
+	if (!isValidScenarioIdText(after.text()))
+		return ReductionRejected(InvalidObjectName(after));
+	if (!same(before, after) && hasObject(scenario, after))
+		return ReductionRejected(DuplicateObject(after));
+	return ready(renameScenarioObject(scenario, before, after), Placement);
 }
 
 /** Apply yaw only to placements that store an authored transform. */
@@ -595,14 +611,7 @@ private function removeObjective(values:Array<ScenarioObjective>, id:ScenarioId)
 
 private function putRule(values:Array<FlowRule>, replacement:FlowRule):Array<FlowRule> {
 	final result = [for (value in values) if (!same(value.id, replacement.id)) value];
-	result.push({
-		id: replacement.id,
-		priority: replacement.priority,
-		repeat: replacement.repeat,
-		event: replacement.event,
-		predicate: replacement.predicate,
-		actions: replacement.actions.copy()
-	});
+	result.push(copyFlowRule(replacement));
 	return result;
 }
 

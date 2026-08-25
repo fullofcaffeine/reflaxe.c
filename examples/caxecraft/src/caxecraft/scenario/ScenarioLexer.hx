@@ -24,7 +24,7 @@ final class ScenarioLexer {
 		final decoded = Utf8Decoder.decode(input, ScenarioLimits.MAX_FILE_BYTES);
 		return switch decoded {
 			case Utf8Rejected(offset): fail(1, 1, 0, MalformedUtf8(offset));
-			case Utf8Decoded(text): tokenize(text);
+			case Utf8Decoded(text, _): tokenize(text);
 		}
 	}
 

@@ -466,8 +466,8 @@ final class EditorSession {
 				RestoreLastPlayable:
 				TerrainChanged;
 			case SetTitle(_) | SetEnvironment(_) | PutFluid(_) | RemoveFluid(_) | StampPrefab(_, _, _, _) | PutObject(_) | MoveObjectBy(_, _) |
-				RotateObjectBy(_, _) | ResizeTriggerTo(_, _) | RemoveObject(_) | PutDialogue(_) | RemoveDialogue(_) | PutObjective(_) | RemoveObjective(_) |
-				PutRule(_) | RemoveRule(_) | SetDefaultLocale(_) | PutLocale(_) | RemoveLocale(_) | PutMessage(_, _) | RemoveMessage(_, _):
+				RotateObjectBy(_, _) | ResizeTriggerTo(_, _) | RenameObject(_, _) | RemoveObject(_) | PutDialogue(_) | RemoveDialogue(_) | PutObjective(_) |
+				RemoveObjective(_) | PutRule(_) | RemoveRule(_) | SetDefaultLocale(_) | PutLocale(_) | RemoveLocale(_) | PutMessage(_, _) | RemoveMessage(_, _):
 				TerrainUnchanged;
 		};
 	}
@@ -490,8 +490,8 @@ final class EditorSession {
 			case ResizeWorld(_) | SetPaletteEntry(_, _) | PaintVoxels(_, _) | EraseVoxels(_) | FillBounds(_, _) | RestoreLastPlayable:
 				{undo: TerrainChanged, redo: TerrainChanged};
 			case SetTitle(_) | SetEnvironment(_) | PutFluid(_) | RemoveFluid(_) | StampPrefab(_, _, _, _) | PutObject(_) | MoveObjectBy(_, _) |
-				RotateObjectBy(_, _) | ResizeTriggerTo(_, _) | RemoveObject(_) | PutDialogue(_) | RemoveDialogue(_) | PutObjective(_) | RemoveObjective(_) |
-				PutRule(_) | RemoveRule(_) | SetDefaultLocale(_) | PutLocale(_) | RemoveLocale(_) | PutMessage(_, _) | RemoveMessage(_, _):
+				RotateObjectBy(_, _) | ResizeTriggerTo(_, _) | RenameObject(_, _) | RemoveObject(_) | PutDialogue(_) | RemoveDialogue(_) | PutObjective(_) |
+				RemoveObjective(_) | PutRule(_) | RemoveRule(_) | SetDefaultLocale(_) | PutLocale(_) | RemoveLocale(_) | PutMessage(_, _) | RemoveMessage(_, _):
 				{undo: TerrainUnchanged, redo: TerrainUnchanged};
 		};
 	}
@@ -527,7 +527,7 @@ final class EditorSession {
 	function captureReduction(command:EditorCommand, scenario:Scenario):EditorScenarioImageResult {
 		return switch command {
 			case PaintVoxel(_, _) | EraseVoxel(_) | PaintVoxels(_, _) | EraseVoxels(_) | FillBounds(_, _) | StampPrefab(_, _, _, _) | PutObject(_) |
-				MoveObjectBy(_, _) | RotateObjectBy(_, _) | ResizeTriggerTo(_, _) | RemoveObject(_):
+				MoveObjectBy(_, _) | RotateObjectBy(_, _) | ResizeTriggerTo(_, _) | RenameObject(_, _) | RemoveObject(_):
 				captureReducerOwnedEdit(scenario);
 			case _: captureScenario(scenario);
 		}
@@ -613,7 +613,7 @@ final class EditorSession {
 					if (snapshot == null)
 						TestPlayBlocked(NoPlayableScenario);
 					else {
-						playState = LocalCaxeFlowTest(new EditorTestPlay(snapshot));
+						playState = LocalCaxeFlowTest(new EditorTestPlay(snapshot, registry));
 						TestPlayStarted;
 					}
 				}

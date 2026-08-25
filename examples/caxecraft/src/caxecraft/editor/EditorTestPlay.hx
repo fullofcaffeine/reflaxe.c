@@ -8,6 +8,7 @@ import caxecraft.scenario.CaxeFlowRuntime.FlowTickInput;
 import caxecraft.scenario.CaxeFlowRuntime.FlowTickResult;
 import caxecraft.scenario.ContentId;
 import caxecraft.scenario.Scenario;
+import caxecraft.scenario.ScenarioContentRegistry;
 import caxecraft.scenario.ScenarioId;
 import caxecraft.scenario.ScenarioStory.ObjectiveState;
 
@@ -23,9 +24,9 @@ final class EditorTestPlay {
 
 	/** Only `EditorSession` may create a test from its validated deep copy. */
 	@:allow(caxecraft.editor.EditorSession)
-	function new(scenario:Scenario) {
+	function new(scenario:Scenario, registry:ScenarioContentRegistry) {
 		this.scenario = scenario;
-		this.executor = new CaxeFlowExecutor(scenario);
+		this.executor = new CaxeFlowExecutor(scenario, registry);
 	}
 
 	public inline function runTick(input:FlowTickInput):FlowTickResult

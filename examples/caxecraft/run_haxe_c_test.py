@@ -168,8 +168,8 @@ EVAL_CASES = {
         probes=(
             EvalProbe(
                 "caxeflow.hxml",
-                "caxeflow: 10 events, 12 predicates, 19 actions; "
-                "stable order/repeat/defer/sequence/budgets; trace=-670871898\n",
+                "caxeflow: 13 events, 14 predicates, 19 actions; "
+                "context/trace/per-actor/repeat/defer/sequence/budgets; trace=-670871898\n",
             ),
         ),
         alternate_locale=True,
@@ -258,7 +258,7 @@ EVAL_CASES = {
     "scenario-model": EvalTestCase(
         case_id="scenario-model",
         probes=(
-            EvalProbe("scenario-model.hxml", "scenario-model: -1725217016\n"),
+            EvalProbe("scenario-model.hxml", "scenario-model: -1919555730\n"),
             EvalProbe(
                 "scenario-codec.hxml",
                 "scenario-codec: 1192 + 4027 + 15610 bytes, staged round-trip and "
@@ -427,6 +427,12 @@ CASES = {
         forbidden_source_markers=("goto ",),
         output_line_count=1,
         success_line="0",
+        expected_runtime_features=(
+            "runtime-base",
+            "status",
+            "alloc",
+            "array",
+        ),
     ),
     "aquatics": HaxeCTestCase(
         case_id="aquatics",
@@ -1047,11 +1053,12 @@ CASES = {
             "array",
             "string-literal",
             "bytes",
+            "string-scalar",
+            "string",
+            "bytes-string",
             "object",
             "gc",
             "int-map",
-            "string-scalar",
-            "string",
             "string-map",
             "string-split",
         ),
@@ -1135,11 +1142,12 @@ CASES = {
             "array",
             "string-literal",
             "bytes",
+            "string-scalar",
+            "string",
+            "bytes-string",
             "object",
             "gc",
             "int-map",
-            "string-scalar",
-            "string",
             "string-map",
             "string-split",
         ),
@@ -1163,14 +1171,16 @@ CASES = {
                 required_markers=("ScenarioValidator_validate",),
                 forbidden_markers=("goto ",),
             ),
+            GeneratedSourceCheck(
+                path="src/modules/caxecraft/content/ContentPackageStore.c",
+                required_markers=("ContentPackageStore_open", "ContentPackageStore_read"),
+                forbidden_markers=("LoadFileData", "goto "),
+            ),
         ),
         runs_generated_main=True,
-        embedded_source_path="scenarios/first-playable/map.caxemap",
-        embedded_haxe_path="test/caxecraft/qa/ScenarioNativeCodecProbe.hx",
-        embedded_source_functions=(
-            "firstPlayablePrefix",
-            "firstPlayableSuffix",
-        ),
+        haxe_defines=("caxecraft_posix_hosted",),
+        native_defines=("_POSIX_C_SOURCE=200809L", "_DARWIN_C_SOURCE=1"),
+        native_runs_from_case_root=True,
     ),
     "water": HaxeCTestCase(
         case_id="water",

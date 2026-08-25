@@ -7,16 +7,16 @@ import caxecraft.content.RuntimeSchema.RuntimeSchemaDiagnostic;
 import caxecraft.content.RuntimeSchema.RuntimeSchemaReader;
 import caxecraft.localization.UiTypes.LocaleCursor;
 import caxecraft.localization.UiTypes.UiMessage;
+import caxecraft.scenario.MessageId;
 import haxe.io.Bytes;
 
 /**
  * Admits the shipped UI JSON into an immutable runtime text catalog.
  *
- * Locale and message arrays remain private. The checked JSON must still match
- * the current typed `LocaleCursor` and `UiMessage` constructors exactly, so a
- * data edit cannot silently reinterpret an existing call site. Text remains
- * owned Haxe `String`; converting it to a native rendering borrow belongs to
- * the later publication/application boundary.
+ * Locale and message arrays remain private. Typed call sites carry stable data
+ * keys, while the JSON catalog alone owns message membership, ordering, and
+ * translated prose. Text remains owned Haxe `String`; converting it to a native
+ * rendering borrow belongs to the later publication/application boundary.
  */
 /** Complete runtime UI catalog or one located fail-closed diagnostic. */
 enum RuntimeUiCatalogResult {
@@ -33,17 +33,22 @@ enum RuntimeUiCatalogResult {
  * Arrays remain private and are indexed only after the typed abstract's scalar
  * code passes the catalog bounds. This preserves the existing source API while
  * moving text ownership from generated literals to validated runtime Strings.
+ * Parameterized templates use stable message IDs and checked replacement
+ * slots, so diagnostics and editor cards do not duplicate translated prose in
+ * authored Haxe.
  */
 final class RuntimeUiCatalog {
 	final catalogIdValue:String;
 	final locales:Array<String>;
 	final messages:Array<RuntimeUiMessageDefinition>;
+	final templates:Array<RuntimeUiTemplateDefinition>;
 
 	/** Construct one complete catalog after every candidate check passed. */
-	public function new(catalogId:String, locales:Array<String>, messages:Array<RuntimeUiMessageDefinition>) {
+	public function new(catalogId:String, locales:Array<String>, messages:Array<RuntimeUiMessageDefinition>, templates:Array<RuntimeUiTemplateDefinition>) {
 		this.catalogIdValue = catalogId;
 		this.locales = locales;
 		this.messages = messages;
+		this.templates = templates;
 	}
 
 	/** Decode one complete UI candidate without filesystem or renderer authority. */
@@ -52,7 +57,14 @@ final class RuntimeUiCatalog {
 		final root = reader.parse(input);
 		if (root == null)
 			return rejected(reader);
-		final fields = reader.object(root, "UI catalog", ["schemaVersion", "catalogId", "defaultLocale", "locales", "messages"]);
+		final fields = reader.object(root, "UI catalog", [
+			"schemaVersion",
+			"catalogId",
+			"defaultLocale",
+			"locales",
+			"messages",
+			"templates"
+		]);
 		if (fields == null)
 			return rejected(reader);
 
@@ -101,39 +113,26 @@ final class RuntimeUiCatalog {
 			reader.reject(defaultNode, SchemaInvalidLocale("defaultLocale"));
 			return rejected(reader);
 		}
-		if (!sameStrings(locales, ["en", "es-MX"])) {
-			reader.reject(localeNode, SchemaIncompatibleTypedCatalog("locales"));
-			return rejected(reader);
-		}
-
 		final messageNode = reader.field(fields, "messages");
 		final messageValues = reader.array(messageNode, "messages", 1, 128);
 		if (messageValues == null)
 			return rejected(reader);
-		final expectedIds = expectedMessageIds();
-		final expectedSymbols = expectedMessageSymbols();
 		final messages:Array<RuntimeUiMessageDefinition> = [];
 		for (index in 0...messageValues.length) {
 			final path = "messages[" + index + "]";
-			final messageFields = reader.object(messageValues[index], path, ["id", "symbol", "text"]);
+			final messageFields = reader.object(messageValues[index], path, ["id", "text"]);
 			if (messageFields == null)
 				return rejected(reader);
 			final idNode = reader.field(messageFields, "id");
-			final symbolNode = reader.field(messageFields, "symbol");
 			final id = reader.string(idNode, path + ".id", 128);
-			final symbol = reader.string(symbolNode, path + ".symbol", 128);
-			if (id == null || symbol == null)
+			if (id == null)
 				return rejected(reader);
 			if (!RuntimeSchemaReader.validMessageId(id)) {
 				reader.reject(idNode, SchemaInvalidString(path + ".id"));
 				return rejected(reader);
 			}
-			if (!RuntimeSchemaReader.validSymbol(symbol)) {
-				reader.reject(symbolNode, SchemaInvalidString(path + ".symbol"));
-				return rejected(reader);
-			}
 			for (existing in messages)
-				if (existing.id == id || existing.symbol == symbol) {
+				if (existing.id == id) {
 					reader.reject(idNode, SchemaDuplicateId("messages", id));
 					return rejected(reader);
 				}
@@ -141,194 +140,16 @@ final class RuntimeUiCatalog {
 				reader.reject(idNode, SchemaNonCanonicalOrder("messages"));
 				return rejected(reader);
 			}
-			if (index < expectedIds.length && id == expectedIds[index] && symbol != expectedSymbols[index]) {
-				reader.reject(symbolNode, SchemaIncompatibleTypedCatalog(path));
-				return rejected(reader);
-			}
 			final texts = readTexts(reader, reader.field(messageFields, "text"), path + ".text", locales);
 			if (texts == null)
 				return rejected(reader);
-			messages.push(new RuntimeUiMessageDefinition(id, symbol, texts));
+			messages.push(new RuntimeUiMessageDefinition(id, texts));
 		}
-		if (messages.length != expectedIds.length) {
-			reader.reject(messageNode, SchemaIncompatibleTypedCatalog("messages"));
+		final templates = readTemplates(reader, reader.field(fields, "templates"), locales);
+		if (templates == null)
 			return rejected(reader);
-		}
-		for (index in 0...messages.length)
-			if (messages[index].id != expectedIds[index] || messages[index].symbol != expectedSymbols[index]) {
-				reader.reject(messageValues[index], SchemaIncompatibleTypedCatalog("messages[" + index + "]"));
-				return rejected(reader);
-			}
-		return RuntimeUiCatalogReady(new RuntimeUiCatalog(catalogId, locales, messages));
+		return RuntimeUiCatalogReady(new RuntimeUiCatalog(catalogId, locales, messages, templates));
 	}
-
-	/** Return the typed API's reviewed message IDs in constructor order. */
-	static function expectedMessageIds():Array<String>
-		return [
-			"aquatic_gear_equipped",
-			"brand",
-			"capture_prompt",
-			"controls",
-			"conversation_help",
-			"conversation_narrator",
-			"debug_cells",
-			"debug_draws",
-			"debug_frame",
-			"debug_tick",
-			"debug_visible",
-			"editor_advanced",
-			"editor_back",
-			"editor_build",
-			"editor_camera",
-			"editor_camera_fly",
-			"editor_camera_orbit",
-			"editor_camera_walk",
-			"editor_canvas_help",
-			"editor_checkpoint",
-			"editor_coordinates",
-			"editor_delete",
-			"editor_duplicate",
-			"editor_environment",
-			"editor_environment_clouds",
-			"editor_environment_done",
-			"editor_environment_east",
-			"editor_environment_enabled",
-			"editor_environment_north",
-			"editor_environment_off",
-			"editor_environment_on",
-			"editor_environment_radius",
-			"editor_environment_seed",
-			"editor_environment_sky",
-			"editor_environment_south",
-			"editor_environment_sun",
-			"editor_environment_water",
-			"editor_environment_west",
-			"editor_erase",
-			"editor_ground",
-			"editor_invalid",
-			"editor_keep_editing",
-			"editor_layer",
-			"editor_leave_without_saving",
-			"editor_material",
-			"editor_more_details",
-			"editor_name",
-			"editor_new_world",
-			"editor_plan",
-			"editor_ready",
-			"editor_redo",
-			"editor_save",
-			"editor_save_failed",
-			"editor_saved",
-			"editor_scene",
-			"editor_select",
-			"editor_stop_test",
-			"editor_test",
-			"editor_testing",
-			"editor_title",
-			"editor_tool_list",
-			"editor_trigger",
-			"editor_undo",
-			"editor_unsaved_changes",
-			"editor_valid",
-			"editor_validate",
-			"editor_world_list",
-			"health_full",
-			"menu_adventure",
-			"menu_creative",
-			"menu_editor",
-			"menu_instructions",
-			"no_block_in_reach",
-			"pause_help",
-			"pause_title",
-			"place_blocked",
-			"player_fallen",
-			"return_prompt",
-			"title_fallback"
-		];
-
-	/** Return the existing typed message constructors in matching storage order. */
-	static function expectedMessageSymbols():Array<String>
-		return [
-			"AquaticGearEquipped",
-			"Brand",
-			"CapturePrompt",
-			"Controls",
-			"ConversationHelp",
-			"ConversationNarrator",
-			"DebugCells",
-			"DebugDraws",
-			"DebugFrame",
-			"DebugTick",
-			"DebugVisible",
-			"EditorAdvanced",
-			"EditorBack",
-			"EditorBuild",
-			"EditorCamera",
-			"EditorCameraFly",
-			"EditorCameraOrbit",
-			"EditorCameraWalk",
-			"EditorCanvasHelp",
-			"EditorCheckpoint",
-			"EditorCoordinates",
-			"EditorDelete",
-			"EditorDuplicate",
-			"EditorEnvironment",
-			"EditorEnvironmentClouds",
-			"EditorEnvironmentDone",
-			"EditorEnvironmentEast",
-			"EditorEnvironmentEnabled",
-			"EditorEnvironmentNorth",
-			"EditorEnvironmentOff",
-			"EditorEnvironmentOn",
-			"EditorEnvironmentRadius",
-			"EditorEnvironmentSeed",
-			"EditorEnvironmentSky",
-			"EditorEnvironmentSouth",
-			"EditorEnvironmentSun",
-			"EditorEnvironmentWater",
-			"EditorEnvironmentWest",
-			"EditorErase",
-			"EditorGround",
-			"EditorInvalid",
-			"EditorKeepEditing",
-			"EditorLayer",
-			"EditorLeaveWithoutSaving",
-			"EditorMaterial",
-			"EditorMoreDetails",
-			"EditorName",
-			"EditorNewWorld",
-			"EditorPlan",
-			"EditorReady",
-			"EditorRedo",
-			"EditorSave",
-			"EditorSaveFailed",
-			"EditorSaved",
-			"EditorScene",
-			"EditorSelect",
-			"EditorStopTest",
-			"EditorTest",
-			"EditorTesting",
-			"EditorTitle",
-			"EditorToolList",
-			"EditorTrigger",
-			"EditorUndo",
-			"EditorUnsavedChanges",
-			"EditorValid",
-			"EditorValidate",
-			"EditorWorldList",
-			"HealthFull",
-			"MenuAdventure",
-			"MenuCreative",
-			"MenuEditor",
-			"MenuInstructions",
-			"NoBlockInReach",
-			"PauseHelp",
-			"PauseTitle",
-			"PlaceBlocked",
-			"PlayerFallen",
-			"ReturnPrompt",
-			"TitleFallback"
-		];
 
 	/** Stable catalog identity copied from the admitted document. */
 	public inline function catalogId():String
@@ -342,6 +163,14 @@ final class RuntimeUiCatalog {
 	public inline function messageCount():Int
 		return messages.length;
 
+	/** Number of data-owned parameterized messages available at every locale. */
+	public inline function templateCount():Int
+		return templates.length;
+
+	/** True only when one validated parameterized message exists in every locale. */
+	public function hasTemplate(message:MessageId):Bool
+		return templateFor(message.text()) != null;
+
 	/** Return the locale selected by the validated document's default entry. */
 	public inline function defaultLocale():LocaleCursor
 		return LocaleCursor.Locale0;
@@ -354,13 +183,82 @@ final class RuntimeUiCatalog {
 			case _: LocaleCursor.Locale0;
 		};
 
-	/** Return owned text for one typed locale/message pair, or empty on invalid raw codes. */
+	/** Return owned text for one typed locale/message pair, or empty when absent. */
 	public function text(locale:LocaleCursor, message:UiMessage):String {
 		final localeCode = localeStorageCode(locale);
-		final messageCode = messageStorageCode(message);
-		if (localeCode < 0 || localeCode >= locales.length || messageCode < 0 || messageCode >= messages.length)
+		if (localeCode < 0 || localeCode >= locales.length)
 			return "";
-		return messages[messageCode].texts[localeCode];
+		final definition = messageFor(message.text());
+		return definition == null ? "" : definition.texts[localeCode];
+	}
+
+	/** Resolve one stable template ID and substitute its ordered typed arguments. */
+	public function format(locale:LocaleCursor, message:MessageId, arguments:Array<String>):String {
+		final localeCode = localeStorageCode(locale);
+		if (localeCode < 0 || localeCode >= locales.length)
+			return "";
+		final template = templateFor(message.text());
+		if (template == null || arguments.length != template.argumentCount)
+			return "";
+		var result = template.texts[localeCode];
+		for (index in 0...arguments.length)
+			result = replacePlaceholder(result, index, arguments[index]);
+		return result;
+	}
+
+	/** Replace every one-digit slot in one bounded pass without an Array join. */
+	static function replacePlaceholder(text:String, slot:Int, value:String):String {
+		var result = "";
+		var index = 0;
+		while (index < text.length) {
+			if (index + 2 < text.length
+				&& text.charCodeAt(index) == 0x7b
+				&& text.charCodeAt(index + 1) == 0x30 + slot
+				&& text.charCodeAt(index + 2) == 0x7d) {
+				result += value;
+				index += 3;
+			} else {
+				result += text.charAt(index);
+				index++;
+			}
+		}
+		return result;
+	}
+
+	/** Find one canonical template in logarithmic time without a mutable map. */
+	function templateFor(expected:String):Null<RuntimeUiTemplateDefinition> {
+		var low = 0;
+		var high = templates.length - 1;
+		while (low <= high) {
+			final middle = low + Std.int((high - low) / 2);
+			final candidate = templates[middle];
+			final ordering = RuntimeSchemaReader.compareUtf8(candidate.id, expected);
+			if (ordering == 0)
+				return candidate;
+			if (ordering < 0)
+				low = middle + 1;
+			else
+				high = middle - 1;
+		}
+		return null;
+	}
+
+	/** Find one canonical non-parameterized message by its stable data key. */
+	function messageFor(expected:String):Null<RuntimeUiMessageDefinition> {
+		var low = 0;
+		var high = messages.length - 1;
+		while (low <= high) {
+			final middle = low + Std.int((high - low) / 2);
+			final candidate = messages[middle];
+			final ordering = RuntimeSchemaReader.compareUtf8(candidate.id, expected);
+			if (ordering == 0)
+				return candidate;
+			if (ordering < 0)
+				low = middle + 1;
+			else
+				high = middle - 1;
+		}
+		return null;
 	}
 
 	/** Map the existing closed locale constructors without an unchecked cast. */
@@ -368,92 +266,6 @@ final class RuntimeUiCatalog {
 		return switch locale {
 			case Locale0: 0;
 			case Locale1: 1;
-			case _: -1;
-		};
-	}
-
-	/** Map the existing closed message constructors without an unchecked cast. */
-	static function messageStorageCode(message:UiMessage):Int {
-		return switch message {
-			case AquaticGearEquipped: 0;
-			case Brand: 1;
-			case CapturePrompt: 2;
-			case Controls: 3;
-			case ConversationHelp: 4;
-			case ConversationNarrator: 5;
-			case DebugCells: 6;
-			case DebugDraws: 7;
-			case DebugFrame: 8;
-			case DebugTick: 9;
-			case DebugVisible: 10;
-			case EditorAdvanced: 11;
-			case EditorBack: 12;
-			case EditorBuild: 13;
-			case EditorCamera: 14;
-			case EditorCameraFly: 15;
-			case EditorCameraOrbit: 16;
-			case EditorCameraWalk: 17;
-			case EditorCanvasHelp: 18;
-			case EditorCheckpoint: 19;
-			case EditorCoordinates: 20;
-			case EditorDelete: 21;
-			case EditorDuplicate: 22;
-			case EditorEnvironment: 23;
-			case EditorEnvironmentClouds: 24;
-			case EditorEnvironmentDone: 25;
-			case EditorEnvironmentEast: 26;
-			case EditorEnvironmentEnabled: 27;
-			case EditorEnvironmentNorth: 28;
-			case EditorEnvironmentOff: 29;
-			case EditorEnvironmentOn: 30;
-			case EditorEnvironmentRadius: 31;
-			case EditorEnvironmentSeed: 32;
-			case EditorEnvironmentSky: 33;
-			case EditorEnvironmentSouth: 34;
-			case EditorEnvironmentSun: 35;
-			case EditorEnvironmentWater: 36;
-			case EditorEnvironmentWest: 37;
-			case EditorErase: 38;
-			case EditorGround: 39;
-			case EditorInvalid: 40;
-			case EditorKeepEditing: 41;
-			case EditorLayer: 42;
-			case EditorLeaveWithoutSaving: 43;
-			case EditorMaterial: 44;
-			case EditorMoreDetails: 45;
-			case EditorName: 46;
-			case EditorNewWorld: 47;
-			case EditorPlan: 48;
-			case EditorReady: 49;
-			case EditorRedo: 50;
-			case EditorSave: 51;
-			case EditorSaveFailed: 52;
-			case EditorSaved: 53;
-			case EditorScene: 54;
-			case EditorSelect: 55;
-			case EditorStopTest: 56;
-			case EditorTest: 57;
-			case EditorTesting: 58;
-			case EditorTitle: 59;
-			case EditorToolList: 60;
-			case EditorTrigger: 61;
-			case EditorUndo: 62;
-			case EditorUnsavedChanges: 63;
-			case EditorValid: 64;
-			case EditorValidate: 65;
-			case EditorWorldList: 66;
-			case HealthFull: 67;
-			case MenuAdventure: 68;
-			case MenuCreative: 69;
-			case MenuEditor: 70;
-			case MenuInstructions: 71;
-			case NoBlockInReach: 72;
-			case PauseHelp: 73;
-			case PauseTitle: 74;
-			case PlaceBlocked: 75;
-			case PlayerFallen: 76;
-			case ReturnPrompt: 77;
-			case TitleFallback: 78;
 			case _: -1;
 		};
 	}
@@ -466,6 +278,97 @@ final class RuntimeUiCatalog {
 				reader.reject(node, SchemaWrongType(path, "locale text object"));
 				null;
 		};
+	}
+
+	/** Decode canonically ordered parameterized messages without Haxe symbols. */
+	static function readTemplates(reader:RuntimeSchemaReader, node:ContentJsonNode, locales:Array<String>):Null<Array<RuntimeUiTemplateDefinition>> {
+		final values = reader.array(node, "templates", 1, 128);
+		if (values == null)
+			return null;
+		final result:Array<RuntimeUiTemplateDefinition> = [];
+		for (index in 0...values.length) {
+			final path = 'templates[$index]';
+			final fields = reader.object(values[index], path, ["id", "text"]);
+			if (fields == null)
+				return null;
+			final idNode = reader.field(fields, "id");
+			final id = reader.string(idNode, path + ".id", 128);
+			if (id == null)
+				return null;
+			if (!RuntimeSchemaReader.validMessageId(id)) {
+				reader.reject(idNode, SchemaInvalidString(path + ".id"));
+				return null;
+			}
+			if (result.length > 0 && RuntimeSchemaReader.compareUtf8(result[result.length - 1].id, id) >= 0) {
+				reader.reject(idNode, result[result.length - 1].id == id ? SchemaDuplicateId("templates", id) : SchemaNonCanonicalOrder("templates"));
+				return null;
+			}
+			final texts = readTexts(reader, reader.field(fields, "text"), path + ".text", locales);
+			if (texts == null)
+				return null;
+			final argumentCount = placeholderArgumentCount(texts);
+			if (argumentCount < 0) {
+				reader.reject(values[index], SchemaIncompatibleTypedCatalog(path + ".text"));
+				return null;
+			}
+			result.push(new RuntimeUiTemplateDefinition(id, texts, argumentCount));
+		}
+		return result;
+	}
+
+	/** Require every locale to retain the same bounded replacement slots. */
+	static function placeholderArgumentCount(texts:Array<String>):Int {
+		if (texts.length == 0)
+			return -1;
+		for (text in texts)
+			if (!validPlaceholderTokens(text))
+				return -1;
+		var argumentCount = 0;
+		for (slot in 0...10) {
+			final expected = placeholderCount(texts[0], slot);
+			for (index in 1...texts.length)
+				if (placeholderCount(texts[index], slot) != expected)
+					return -1;
+			if (expected > 0) {
+				if (slot != argumentCount)
+					return -1;
+				argumentCount++;
+			}
+		}
+		return argumentCount;
+	}
+
+	/** Reject unmatched braces and replacement slots outside the bounded 0..9 set. */
+	static function validPlaceholderTokens(text:String):Bool {
+		var index = 0;
+		while (index < text.length) {
+			final code = text.charCodeAt(index);
+			if (code == 0x7b) {
+				if (index + 2 >= text.length || text.charCodeAt(index + 1) < 0x30 || text.charCodeAt(index + 1) > 0x39 || text.charCodeAt(index + 2) != 0x7d)
+					return false;
+				index += 3;
+			} else {
+				if (code == 0x7d)
+					return false;
+				index++;
+			}
+		}
+		return true;
+	}
+
+	/** Count one exact replacement token without regular expressions or locale rules. */
+	static function placeholderCount(text:String, slot:Int):Int {
+		final token = '{$slot}';
+		var count = 0;
+		var offset = 0;
+		while (offset <= text.length - token.length) {
+			final found = text.indexOf(token, offset);
+			if (found < 0)
+				break;
+			count++;
+			offset = found + token.length;
+		}
+		return count;
 	}
 
 	/** Validate one translation object's exact locale keys and bounded texts. */
@@ -518,16 +421,6 @@ final class RuntimeUiCatalog {
 		return value;
 	}
 
-	/** Compare two small ordered String arrays without exposing either one. */
-	static function sameStrings(left:Array<String>, right:Array<String>):Bool {
-		if (left.length != right.length)
-			return false;
-		for (index in 0...left.length)
-			if (left[index] != right[index])
-				return false;
-		return true;
-	}
-
 	/** Return the reader's first failure, with an unreachable defensive fallback. */
 	static function rejected(reader:RuntimeSchemaReader):RuntimeUiCatalogResult {
 		final diagnostic = reader.failure;
@@ -539,21 +432,31 @@ final class RuntimeUiCatalog {
 	}
 }
 
-/** One typed message identity and locale-ordered owned text vector. */
+/** One data-owned message identity and locale-ordered text vector. */
 private final class RuntimeUiMessageDefinition {
 	/** Stable JSON message ID. */
 	public final id:String;
-
-	/** Existing typed `UiMessage` constructor spelling. */
-	public final symbol:String;
 
 	/** One complete text per catalog locale; never exposed as an Array. */
 	public final texts:Array<String>;
 
 	/** Construct one complete message after locale validation. */
-	public function new(id:String, symbol:String, texts:Array<String>) {
+	public function new(id:String, texts:Array<String>) {
 		this.id = id;
-		this.symbol = symbol;
 		this.texts = texts;
+	}
+}
+
+/** One stable parameterized message with locale-ordered data-owned text. */
+private final class RuntimeUiTemplateDefinition {
+	public final id:String;
+	public final texts:Array<String>;
+	public final argumentCount:Int;
+
+	/** Construct one complete template after locale and placeholder validation. */
+	public function new(id:String, texts:Array<String>, argumentCount:Int) {
+		this.id = id;
+		this.texts = texts;
+		this.argumentCount = argumentCount;
 	}
 }

@@ -28,6 +28,7 @@ function changesFor(command:EditorCommand):Array<EditorChangeId> {
 		case StampPrefab(id, _, _, _): [ChangedObject(id)];
 		case PutObject(object): [ChangedObject(object.id)];
 		case MoveObjectBy(id, _) | RotateObjectBy(id, _) | ResizeTriggerTo(id, _): [ChangedObject(id)];
+		case RenameObject(_, _): [ChangedDocument];
 		case RemoveObject(id): [ChangedObject(id)];
 		case PutDialogue(dialogue): [ChangedDialogue(dialogue.id)];
 		case RemoveDialogue(id): [ChangedDialogue(id)];

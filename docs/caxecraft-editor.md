@@ -29,8 +29,9 @@ the campaign, runtime-content, and outer-package receipts as one planned
 operation. The native editor uses one package-backed `EditorSession`; Save and
 the visual controls cannot drift into separate drafts. A failed publication
 keeps the draft, history, and previous clean-state marker so the creator can
-retry. Visual CaxeFlow editing and cutscene editing remain separate work. A
-local JSON Lines process can also open, inspect, edit,
+retry. The current visual CaxeFlow slice edits canonical rules; the broader
+child card library and cutscene editor remain separate work. A local JSON Lines
+process can also open, inspect, edit,
 validate, and save one verified package level.
 
 ## What this layer owns
@@ -425,7 +426,7 @@ this version. Importing selected play changes later would need its own closed
 command and clear ownership rules. Silent import would make a test run mutate
 the map and defeat reversible experimentation.
 
-## Planned visual event and cinematic authoring
+## Current visual event authoring and planned cinematic depth
 
 The native editor will not have separate trigger systems for doors, encounters,
 music, quests, and cutscenes. They all use one CaxeFlow relationship:
@@ -434,13 +435,26 @@ music, quests, and cutscenes. They all use one CaxeFlow relationship:
 event source -> conditions -> ordered actions
 ```
 
-A spatial volume is one event source. The world view will let a creator place,
-name, resize, filter, enable, duplicate, and select its visible gizmo. The card
-view will show the same data as icon-and-text WHEN/IF/DO sentences and will pick
-objects or actions from the world and shared registries instead of asking a
-child to type IDs. An event-flow overlay and bounded test trace will explain
-which source fired, why each condition passed or failed, which actions ran, and
-which signals or state changes were deferred.
+A spatial volume is one event source. The world view can place, name, resize,
+duplicate, and select its visible gizmo. A selected volume shows localized
+WHEN/IF/DO cards projected from the canonical typed rule. The current compact
+controls can switch enter/leave, replace a condition with a picked event actor
+or `Always`, insert a picked-object `Spawn` action, switch `Spawn` and
+`Despawn`, reorder or remove actions, and replace compatible object references
+by selecting the object in the world. The renderer-independent command also
+supports replacing any closed event, predicate, or admitted action plus changing
+priority and repeat policy. Every gesture commits the ordinary `PutRule`
+command, so Undo, Redo, validation, save, and Advanced mode observe the same
+CaxeFlow data. A world-pick gesture records the document revision and rejects a
+stale target instead of applying it to a changed card.
+
+The shared renderer-independent trace projection bounds and classifies source,
+predicate, action, and deferred-event rows. Native Test Play retains the latest
+non-empty bounded trace and draws it under the selected cards after the creator
+returns. A live overlay while the game screen is still open, polished
+registry-driven field forms, filters/enabled controls, and non-world document
+pickers remain planned work. The current screen is a complete minimal spatial
+rule editor, not yet the complete child-facing card library.
 
 The same typed draft has three authoring depths. **Guided** mode uses large
 icon-and-sentence cards, templates, and world picking. **Advanced visual** mode
@@ -461,10 +475,11 @@ Starting a cutscene is one possible action, not a privileged trigger. Its
 focused editor will arrange named camera anchors, actor staging markers,
 ordered beats, limited parallel movement/camera/audio lanes, localized cards,
 fades, choices, and persistent CaxeFlow changes. Normal and skip previews must
-reach the same required persistent state and restore camera and controls. This
-work is planned under `haxe_c-xge.19.10`, `haxe_c-xge.19.6`, and
-`haxe_c-xge.20.3`; the implemented renderer-independent editor described above
-does not yet provide these native visual tools.
+reach the same required persistent state and restore camera and controls. The
+remaining visual depth is tracked under `haxe_c-xge.19.6` and cinematic
+authoring under `haxe_c-xge.20.3`. The current native trigger-card slice does not
+yet provide the complete card library, advanced visual tree, text workspace, or
+cinematic timeline.
 
 ## Executable evidence
 
@@ -516,5 +531,6 @@ starts and stops two ordinary-engine Test Play runs in one process. Each run
 completes a fixed game tick and uses a new disposable generation.
 
 The final report also proves that the normal generation and publication count
-did not change. It does not prove visual CaxeFlow editing, cutscenes, or
-crash-durable filesystem publication.
+did not change. The renderer-independent proof covers canonical CaxeFlow card
+edits and typed world picks; native pointer-control coverage, cutscenes, and
+crash-durable filesystem publication remain separate evidence.

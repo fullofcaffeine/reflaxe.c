@@ -18,8 +18,14 @@ import haxe.io.Bytes;
  * decoder does not throw, retain the input `Bytes`, or publish partial text.
  */
 enum Utf8DecodeResult {
-	/** Every byte formed a valid admitted Unicode scalar sequence. */
-	Utf8Decoded(text:String);
+	/**
+	 * Every byte formed a valid admitted Unicode scalar sequence.
+	 *
+	 * `scalars` preserves the same text as direct code points. A bounded parser
+	 * can traverse that array in linear time instead of repeatedly asking the C
+	 * String runtime to find a scalar index from the start of its UTF-8 storage.
+	 */
+	Utf8Decoded(text:String, scalars:Array<Int>);
 
 	/** Decoding stopped at the first malformed byte offset. */
 	Utf8Rejected(byteOffset:Int);
@@ -48,6 +54,7 @@ final class Utf8Decoder {
 		if (input.length >= 3 && input.get(0) == 0xef && input.get(1) == 0xbb && input.get(2) == 0xbf)
 			return Utf8Rejected(0);
 		final output = new StringBuf();
+		final scalars:Array<Int> = [];
 		var offset = 0;
 		while (offset < input.length) {
 			final asciiStart = offset;
@@ -57,8 +64,11 @@ final class Utf8Decoder {
 					break;
 				offset++;
 			}
-			if (offset > asciiStart)
+			if (offset > asciiStart) {
 				output.add(input.getString(asciiStart, offset - asciiStart));
+				for (asciiOffset in asciiStart...offset)
+					scalars.push(input.get(asciiOffset));
+			}
 			if (offset == input.length)
 				break;
 			final first = input.get(offset);
@@ -88,8 +98,9 @@ final class Utf8Decoder {
 			if (overlong || scalar > 0x10ffff || (scalar >= 0xd800 && scalar <= 0xdfff))
 				return Utf8Rejected(offset);
 			output.addChar(scalar);
+			scalars.push(scalar);
 			offset += width;
 		}
-		return Utf8Decoded(output.toString());
+		return Utf8Decoded(output.toString(), scalars);
 	}
 }

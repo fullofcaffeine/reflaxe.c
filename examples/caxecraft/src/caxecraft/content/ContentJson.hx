@@ -154,11 +154,12 @@ final class ContentJson {
 	/**
 	 * Largest JSON source admitted by this bounded content schema.
 	 *
-	 * Twenty-four KiB admits the reviewed 17.2 KiB asset inventory while keeping
-	 * untrusted syntax and allocation work bounded. The focused asset/export
-	 * tracer supplies representative generated-C timing and sanitizer evidence.
+	 * Forty-eight KiB admits the reviewed runtime UI catalog, including its
+	 * data-owned diagnostic and editor templates, while keeping untrusted syntax
+	 * and allocation work bounded. The focused content-JSON and runtime-schema
+	 * tracers supply generated-C timing and sanitizer evidence for this limit.
 	 */
-	public static inline final MAXIMUM_BYTES:Int = 24 * 1024;
+	public static inline final MAXIMUM_BYTES:Int = 48 * 1024;
 
 	/** Deep enough for the current schemas while bounding recursive work. */
 	public static inline final MAXIMUM_DEPTH:Int = 24;
@@ -175,15 +176,15 @@ final class ContentJson {
 	/** Per-object and per-array entry bound with room above shipped catalogs. */
 	public static inline final MAXIMUM_COLLECTION_ENTRIES:Int = 128;
 
-	final text:String;
+	final scalars:Array<Int>;
 	var index:Int = 0;
 	var line:Int = 1;
 	var column:Int = 1;
 	var nodes:Int = 0;
 	var failure:Null<ContentJsonDiagnostic> = null;
 
-	private function new(text:String) {
-		this.text = text;
+	private function new(scalars:Array<Int>) {
+		this.scalars = scalars;
 	}
 
 	/**
@@ -196,12 +197,12 @@ final class ContentJson {
 	public static function read(input:Bytes):ContentJsonReadResult {
 		if (input.length > MAXIMUM_BYTES)
 			return ContentJsonRejected({line: 1, column: 1, kind: JsonFileTooLarge(MAXIMUM_BYTES)});
-		final text = switch Utf8Decoder.decode(input, MAXIMUM_BYTES) {
-			case Utf8Decoded(value): value;
+		final scalars = switch Utf8Decoder.decode(input, MAXIMUM_BYTES) {
+			case Utf8Decoded(_, value): value;
 			case Utf8Rejected(byteOffset):
 				return ContentJsonRejected({line: 1, column: 1, kind: JsonMalformedUtf8(byteOffset)});
 		};
-		return new ContentJson(text).parse();
+		return new ContentJson(scalars).parse();
 	}
 
 	/** Parse one root and reject any trailing non-whitespace text. */
@@ -489,7 +490,10 @@ final class ContentJson {
 				return null;
 			}
 		}
-		return text.substring(start, index);
+		final output = new StringBuf();
+		for (scalarIndex in start...index)
+			output.addChar(scalars[scalarIndex]);
+		return output.toString();
 	}
 
 	/** Consume at least one ASCII decimal digit. */
@@ -549,7 +553,7 @@ final class ContentJson {
 		} else if (value == 0x0a) {
 			// JSON admits CR, LF, and CRLF whitespace. A CRLF pair is one
 			// source line even though the cursor consumes two code points.
-			if (index < 2 || text.charCodeAt(index - 2) != 0x0d)
+			if (index < 2 || scalars[index - 2] != 0x0d)
 				line++;
 			column = 1;
 		} else {
@@ -560,11 +564,11 @@ final class ContentJson {
 
 	/** Current code point, or null after the last character. */
 	inline function peekCode():Null<Int>
-		return index >= text.length ? null : text.charCodeAt(index);
+		return index >= scalars.length ? null : scalars[index];
 
 	/** True after the final decoded character. */
 	inline function atEnd():Bool
-		return index >= text.length;
+		return index >= scalars.length;
 
 	/** Record only the first syntax failure so diagnostics stay deterministic. */
 	function setFailure(kind:ContentJsonErrorKind):Void {

@@ -9,7 +9,6 @@
   "messages": [
     {
       "id": "aquatic_gear_equipped",
-      "symbol": "AquaticGearEquipped",
       "text": {
         "en": "AQUATIC GEAR EQUIPPED",
         "es-MX": "EQUIPO ACUÁTICO ACTIVADO"
@@ -17,7 +16,6 @@
     },
     {
       "id": "brand",
-      "symbol": "Brand",
       "text": {
         "en": "CAXECRAFT  //  C + HAXE",
         "es-MX": "CAXECRAFT  //  C + HAXE"
@@ -25,7 +23,6 @@
     },
     {
       "id": "capture_prompt",
-      "symbol": "CapturePrompt",
       "text": {
         "en": "CLICK TO CAPTURE",
         "es-MX": "CLIC PARA CAPTURAR"
@@ -33,7 +30,6 @@
     },
     {
       "id": "controls",
-      "symbol": "Controls",
       "text": {
         "en": "WASD MOVE  1-9 ITEMS  SPACE JUMP/RISE  SHIFT DIVE  E INTERACT  LMB MINE  RMB USE",
         "es-MX": "WASD MOVER  1-9 OBJETOS  ESPACIO SALTAR/SUBIR  SHIFT BUCEAR  E INTERACTUAR  IZQ MINAR  DER USAR"
@@ -41,7 +37,6 @@
     },
     {
       "id": "conversation_help",
-      "symbol": "ConversationHelp",
       "text": {
         "en": "E: COMPLETE / CONTINUE   HOLD SPACE: SKIP",
         "es-MX": "E: COMPLETAR / SEGUIR   MANTÉN ESPACIO: OMITIR"
@@ -49,7 +44,6 @@
     },
     {
       "id": "conversation_narrator",
-      "symbol": "ConversationNarrator",
       "text": {
         "en": "STORY",
         "es-MX": "HISTORIA"
@@ -57,7 +51,6 @@
     },
     {
       "id": "debug_cells",
-      "symbol": "DebugCells",
       "text": {
         "en": "CELLS",
         "es-MX": "CELDAS"
@@ -65,7 +58,6 @@
     },
     {
       "id": "debug_draws",
-      "symbol": "DebugDraws",
       "text": {
         "en": "DRAWS",
         "es-MX": "DIBUJOS"
@@ -73,7 +65,6 @@
     },
     {
       "id": "debug_frame",
-      "symbol": "DebugFrame",
       "text": {
         "en": "FRAME",
         "es-MX": "CUADRO"
@@ -81,7 +72,6 @@
     },
     {
       "id": "debug_tick",
-      "symbol": "DebugTick",
       "text": {
         "en": "TICK",
         "es-MX": "PASO"
@@ -89,7 +79,6 @@
     },
     {
       "id": "debug_visible",
-      "symbol": "DebugVisible",
       "text": {
         "en": "VISIBLE",
         "es-MX": "VISIBLES"
@@ -97,7 +86,6 @@
     },
     {
       "id": "editor_advanced",
-      "symbol": "EditorAdvanced",
       "text": {
         "en": "ADVANCED TOOLS",
         "es-MX": "HERRAMIENTAS AVANZADAS"
@@ -105,7 +93,6 @@
     },
     {
       "id": "editor_back",
-      "symbol": "EditorBack",
       "text": {
         "en": "BACK",
         "es-MX": "VOLVER"
@@ -113,7 +100,6 @@
     },
     {
       "id": "editor_build",
-      "symbol": "EditorBuild",
       "text": {
         "en": "BUILD",
         "es-MX": "CONSTRUIR"
@@ -121,7 +107,6 @@
     },
     {
       "id": "editor_camera",
-      "symbol": "EditorCamera",
       "text": {
         "en": "CAMERA",
         "es-MX": "CÁMARA"
@@ -129,7 +114,6 @@
     },
     {
       "id": "editor_camera_fly",
-      "symbol": "EditorCameraFly",
       "text": {
         "en": "FLY",
         "es-MX": "VOLAR"
@@ -137,7 +121,6 @@
     },
     {
       "id": "editor_camera_orbit",
-      "symbol": "EditorCameraOrbit",
       "text": {
         "en": "ORBIT",
         "es-MX": "ÓRBITA"
@@ -145,7 +128,6 @@
     },
     {
       "id": "editor_camera_walk",
-      "symbol": "EditorCameraWalk",
       "text": {
         "en": "WALK",
         "es-MX": "CAMINAR"
@@ -153,7 +135,6 @@
     },
     {
       "id": "editor_canvas_help",
-      "symbol": "EditorCanvasHelp",
       "text": {
         "en": "CLICK WORLD · WHEEL/1-5 TOOLS · G GRAB · LMB USE/PLACE · RMB BLOCK · ARROWS MOVE · R TURN · ESC · C CAMERA",
         "es-MX": "CLIC MUNDO · RUEDA/1-5 HERR. · G TOMAR · IZQ USAR/PONER · DER BLOQUE · FLECHAS MOVER · R GIRAR · ESC · C CÁMARA"
@@ -161,7 +142,6 @@
     },
     {
       "id": "editor_checkpoint",
-      "symbol": "EditorCheckpoint",
       "text": {
         "en": "CHECKPOINT",
         "es-MX": "PUNTO DE CONTROL"
@@ -169,7 +149,6 @@
     },
     {
       "id": "editor_coordinates",
-      "symbol": "EditorCoordinates",
       "text": {
         "en": "POSITION",
         "es-MX": "POSICIÓN"
@@ -177,7 +156,6 @@
     },
     {
       "id": "editor_delete",
-      "symbol": "EditorDelete",
       "text": {
         "en": "DELETE OBJECT",
         "es-MX": "BORRAR OBJETO"
@@ -185,7 +163,6 @@
     },
     {
       "id": "editor_duplicate",
-      "symbol": "EditorDuplicate",
       "text": {
         "en": "DUPLICATE",
         "es-MX": "DUPLICAR"
@@ -193,7 +170,6 @@
     },
     {
       "id": "editor_environment",
-      "symbol": "EditorEnvironment",
       "text": {
         "en": "ENVIRONMENT",
         "es-MX": "AMBIENTE"
@@ -201,7 +177,6 @@
     },
     {
       "id": "editor_environment_clouds",
-      "symbol": "EditorEnvironmentClouds",
       "text": {
         "en": "CLOUDS",
         "es-MX": "NUBES"
@@ -209,7 +184,6 @@
     },
     {
       "id": "editor_environment_done",
-      "symbol": "EditorEnvironmentDone",
       "text": {
         "en": "DONE",
         "es-MX": "LISTO"
@@ -217,7 +191,6 @@
     },
     {
       "id": "editor_environment_east",
-      "symbol": "EditorEnvironmentEast",
       "text": {
         "en": "EAST EDGE",
         "es-MX": "BORDE ESTE"
@@ -225,7 +198,6 @@
     },
     {
       "id": "editor_environment_enabled",
-      "symbol": "EditorEnvironmentEnabled",
       "text": {
         "en": "CUSTOM SKY",
         "es-MX": "CIELO PROPIO"
@@ -233,7 +205,6 @@
     },
     {
       "id": "editor_environment_north",
-      "symbol": "EditorEnvironmentNorth",
       "text": {
         "en": "NORTH EDGE",
         "es-MX": "BORDE NORTE"
@@ -241,7 +212,6 @@
     },
     {
       "id": "editor_environment_off",
-      "symbol": "EditorEnvironmentOff",
       "text": {
         "en": "OFF",
         "es-MX": "NO"
@@ -249,7 +219,6 @@
     },
     {
       "id": "editor_environment_on",
-      "symbol": "EditorEnvironmentOn",
       "text": {
         "en": "ON",
         "es-MX": "SÍ"
@@ -257,7 +226,6 @@
     },
     {
       "id": "editor_environment_radius",
-      "symbol": "EditorEnvironmentRadius",
       "text": {
         "en": "SIZE",
         "es-MX": "TAMAÑO"
@@ -265,7 +233,6 @@
     },
     {
       "id": "editor_environment_seed",
-      "symbol": "EditorEnvironmentSeed",
       "text": {
         "en": "PATTERN",
         "es-MX": "PATRÓN"
@@ -273,7 +240,6 @@
     },
     {
       "id": "editor_environment_sky",
-      "symbol": "EditorEnvironmentSky",
       "text": {
         "en": "SKY",
         "es-MX": "CIELO"
@@ -281,7 +247,6 @@
     },
     {
       "id": "editor_environment_south",
-      "symbol": "EditorEnvironmentSouth",
       "text": {
         "en": "SOUTH EDGE",
         "es-MX": "BORDE SUR"
@@ -289,7 +254,6 @@
     },
     {
       "id": "editor_environment_sun",
-      "symbol": "EditorEnvironmentSun",
       "text": {
         "en": "SUN",
         "es-MX": "SOL"
@@ -297,7 +261,6 @@
     },
     {
       "id": "editor_environment_water",
-      "symbol": "EditorEnvironmentWater",
       "text": {
         "en": "CONTINUE WATER",
         "es-MX": "CONTINUAR AGUA"
@@ -305,7 +268,6 @@
     },
     {
       "id": "editor_environment_west",
-      "symbol": "EditorEnvironmentWest",
       "text": {
         "en": "WEST EDGE",
         "es-MX": "BORDE OESTE"
@@ -313,7 +275,6 @@
     },
     {
       "id": "editor_erase",
-      "symbol": "EditorErase",
       "text": {
         "en": "ERASE",
         "es-MX": "BORRAR"
@@ -321,7 +282,6 @@
     },
     {
       "id": "editor_ground",
-      "symbol": "EditorGround",
       "text": {
         "en": "GROUND",
         "es-MX": "TERRENO"
@@ -329,7 +289,6 @@
     },
     {
       "id": "editor_invalid",
-      "symbol": "EditorInvalid",
       "text": {
         "en": "THE DRAFT NEEDS REPAIR BEFORE TEST PLAY",
         "es-MX": "CORRIGE EL BORRADOR ANTES DE PROBARLO"
@@ -337,7 +296,6 @@
     },
     {
       "id": "editor_keep_editing",
-      "symbol": "EditorKeepEditing",
       "text": {
         "en": "KEEP EDITING",
         "es-MX": "SEGUIR EDITANDO"
@@ -345,7 +303,6 @@
     },
     {
       "id": "editor_layer",
-      "symbol": "EditorLayer",
       "text": {
         "en": "LAYER",
         "es-MX": "CAPA"
@@ -353,7 +310,6 @@
     },
     {
       "id": "editor_leave_without_saving",
-      "symbol": "EditorLeaveWithoutSaving",
       "text": {
         "en": "LEAVE WITHOUT SAVING",
         "es-MX": "SALIR SIN GUARDAR"
@@ -361,7 +317,6 @@
     },
     {
       "id": "editor_material",
-      "symbol": "EditorMaterial",
       "text": {
         "en": "MATERIAL",
         "es-MX": "MATERIAL"
@@ -369,7 +324,6 @@
     },
     {
       "id": "editor_more_details",
-      "symbol": "EditorMoreDetails",
       "text": {
         "en": "MORE DETAILS",
         "es-MX": "MÁS DETALLES"
@@ -377,7 +331,6 @@
     },
     {
       "id": "editor_name",
-      "symbol": "EditorName",
       "text": {
         "en": "WORLD NAME",
         "es-MX": "NOMBRE DEL MUNDO"
@@ -385,7 +338,6 @@
     },
     {
       "id": "editor_new_world",
-      "symbol": "EditorNewWorld",
       "text": {
         "en": "NEW WORLD",
         "es-MX": "MUNDO NUEVO"
@@ -393,7 +345,6 @@
     },
     {
       "id": "editor_plan",
-      "symbol": "EditorPlan",
       "text": {
         "en": "PLAN",
         "es-MX": "PLANO"
@@ -401,7 +352,6 @@
     },
     {
       "id": "editor_ready",
-      "symbol": "EditorReady",
       "text": {
         "en": "READY — EDITS USE THE REAL CAXEMAP SESSION",
         "es-MX": "LISTO — LOS CAMBIOS USAN LA SESIÓN CAXEMAP REAL"
@@ -409,7 +359,6 @@
     },
     {
       "id": "editor_redo",
-      "symbol": "EditorRedo",
       "text": {
         "en": "REDO",
         "es-MX": "REHACER"
@@ -417,7 +366,6 @@
     },
     {
       "id": "editor_save",
-      "symbol": "EditorSave",
       "text": {
         "en": "SAVE",
         "es-MX": "GUARDAR"
@@ -425,7 +373,6 @@
     },
     {
       "id": "editor_save_failed",
-      "symbol": "EditorSaveFailed",
       "text": {
         "en": "SAVE FAILED — YOUR DRAFT IS STILL OPEN",
         "es-MX": "NO SE GUARDÓ — TU BORRADOR SIGUE ABIERTO"
@@ -433,7 +380,6 @@
     },
     {
       "id": "editor_saved",
-      "symbol": "EditorSaved",
       "text": {
         "en": "SAVED — SAFE TO LEAVE",
         "es-MX": "GUARDADO — PUEDES SALIR"
@@ -441,7 +387,6 @@
     },
     {
       "id": "editor_scene",
-      "symbol": "EditorScene",
       "text": {
         "en": "OBJECTS / RULES",
         "es-MX": "OBJETOS / REGLAS"
@@ -449,7 +394,6 @@
     },
     {
       "id": "editor_select",
-      "symbol": "EditorSelect",
       "text": {
         "en": "SELECT",
         "es-MX": "SELECCIONAR"
@@ -457,7 +401,6 @@
     },
     {
       "id": "editor_stop_test",
-      "symbol": "EditorStopTest",
       "text": {
         "en": "STOP TEST",
         "es-MX": "DETENER PRUEBA"
@@ -465,7 +408,6 @@
     },
     {
       "id": "editor_test",
-      "symbol": "EditorTest",
       "text": {
         "en": "TEST PLAY",
         "es-MX": "PROBAR"
@@ -473,7 +415,6 @@
     },
     {
       "id": "editor_testing",
-      "symbol": "EditorTesting",
       "text": {
         "en": "TEST PLAY USES A DISPOSABLE COPY",
         "es-MX": "LA PRUEBA USA UNA COPIA DESECHABLE"
@@ -481,7 +422,6 @@
     },
     {
       "id": "editor_title",
-      "symbol": "EditorTitle",
       "text": {
         "en": "CAXECRAFT WORLD EDITOR",
         "es-MX": "EDITOR DE MUNDOS CAXECRAFT"
@@ -489,7 +429,6 @@
     },
     {
       "id": "editor_tool_list",
-      "symbol": "EditorToolList",
       "text": {
         "en": "SELECT;PAINT;ERASE;FILL",
         "es-MX": "SELECCIONAR;PINTAR;BORRAR;RELLENAR"
@@ -497,7 +436,6 @@
     },
     {
       "id": "editor_trigger",
-      "symbol": "EditorTrigger",
       "text": {
         "en": "TRIGGER",
         "es-MX": "ACTIVADOR"
@@ -505,7 +443,6 @@
     },
     {
       "id": "editor_undo",
-      "symbol": "EditorUndo",
       "text": {
         "en": "UNDO",
         "es-MX": "DESHACER"
@@ -513,7 +450,6 @@
     },
     {
       "id": "editor_unsaved_changes",
-      "symbol": "EditorUnsavedChanges",
       "text": {
         "en": "YOU HAVE UNSAVED CHANGES.",
         "es-MX": "HAY CAMBIOS SIN GUARDAR."
@@ -521,7 +457,6 @@
     },
     {
       "id": "editor_valid",
-      "symbol": "EditorValid",
       "text": {
         "en": "VALID CAXEMAP — READY TO TEST",
         "es-MX": "CAXEMAP VÁLIDO — LISTO PARA PROBAR"
@@ -529,7 +464,6 @@
     },
     {
       "id": "editor_validate",
-      "symbol": "EditorValidate",
       "text": {
         "en": "VALIDATE",
         "es-MX": "VALIDAR"
@@ -537,7 +471,6 @@
     },
     {
       "id": "editor_world_list",
-      "symbol": "EditorWorldList",
       "text": {
         "en": "WORLD LIST",
         "es-MX": "LISTA DEL MUNDO"
@@ -545,7 +478,6 @@
     },
     {
       "id": "health_full",
-      "symbol": "HealthFull",
       "text": {
         "en": "HEALTH ALREADY FULL",
         "es-MX": "SALUD COMPLETA"
@@ -553,7 +485,6 @@
     },
     {
       "id": "menu_adventure",
-      "symbol": "MenuAdventure",
       "text": {
         "en": "ADVENTURE",
         "es-MX": "AVENTURA"
@@ -561,7 +492,6 @@
     },
     {
       "id": "menu_creative",
-      "symbol": "MenuCreative",
       "text": {
         "en": "CREATIVE MODE",
         "es-MX": "MODO CREATIVO"
@@ -569,7 +499,6 @@
     },
     {
       "id": "menu_editor",
-      "symbol": "MenuEditor",
       "text": {
         "en": "WORLD EDITOR",
         "es-MX": "EDITOR DE MUNDOS"
@@ -577,7 +506,6 @@
     },
     {
       "id": "menu_instructions",
-      "symbol": "MenuInstructions",
       "text": {
         "en": "ARROWS / MOUSE TO CHOOSE   ENTER TO PLAY   L: ESPAÑOL",
         "es-MX": "FLECHAS / RATÓN PARA ELEGIR   ENTER PARA JUGAR   L: ENGLISH"
@@ -585,7 +513,6 @@
     },
     {
       "id": "no_block_in_reach",
-      "symbol": "NoBlockInReach",
       "text": {
         "en": "NO BLOCK IN REACH",
         "es-MX": "NINGÚN BLOQUE AL ALCANCE"
@@ -593,7 +520,6 @@
     },
     {
       "id": "pause_help",
-      "symbol": "PauseHelp",
       "text": {
         "en": "CLICK TO CAPTURE  //  Q TO QUIT",
         "es-MX": "CLIC PARA CAPTURAR  //  Q PARA SALIR"
@@ -601,7 +527,6 @@
     },
     {
       "id": "pause_title",
-      "symbol": "PauseTitle",
       "text": {
         "en": "PAUSED",
         "es-MX": "PAUSA"
@@ -609,7 +534,6 @@
     },
     {
       "id": "place_blocked",
-      "symbol": "PlaceBlocked",
       "text": {
         "en": "PLACE BLOCKED: PLAYER OR WORLD EDGE",
         "es-MX": "NO SE PUEDE COLOCAR: JUGADOR O BORDE"
@@ -617,7 +541,6 @@
     },
     {
       "id": "player_fallen",
-      "symbol": "PlayerFallen",
       "text": {
         "en": "HAXIRIO FELL",
         "es-MX": "HAXIRIO CAYÓ"
@@ -625,7 +548,6 @@
     },
     {
       "id": "return_prompt",
-      "symbol": "ReturnPrompt",
       "text": {
         "en": "E  RETURN TO THE MEADOW",
         "es-MX": "E  VOLVER AL PRADO"
@@ -633,10 +555,627 @@
     },
     {
       "id": "title_fallback",
-      "symbol": "TitleFallback",
       "text": {
         "en": "CAXECRAFT",
         "es-MX": "CAXECRAFT"
+      }
+    }
+  ],
+  "templates": [
+    {
+      "id": "caxeflow.runtime.invalid-event-context",
+      "text": {
+        "en": "Event {0} arrived with missing or incompatible context.",
+        "es-MX": "El evento {0} llegó con contexto faltante o incompatible."
+      }
+    },
+    {
+      "id": "caxeflow.runtime.limit",
+      "text": {
+        "en": "CaxeFlow stopped after reaching the {0} limit of {1}.",
+        "es-MX": "CaxeFlow se detuvo al alcanzar el límite {0} de {1}."
+      }
+    },
+    {
+      "id": "caxeflow.runtime.limit-owner",
+      "text": {
+        "en": "Rule or sequence {0} stopped after reaching the {1} limit of {2}.",
+        "es-MX": "La regla o secuencia {0} se detuvo al alcanzar el límite {1} de {2}."
+      }
+    },
+    {
+      "id": "caxeflow.runtime.stale-reference",
+      "text": {
+        "en": "CaxeFlow cannot find {0}. Choose an existing item in the editor.",
+        "es-MX": "CaxeFlow no encuentra {0}. Elige un elemento existente en el editor."
+      }
+    },
+    {
+      "id": "caxeflow.runtime.unsupported-action",
+      "text": {
+        "en": "Rule or sequence {0} requested an action that this runtime cannot run.",
+        "es-MX": "La regla o secuencia {0} solicitó una acción que este motor no puede ejecutar."
+      }
+    },
+    {
+      "id": "editor.action.add-counter.label",
+      "text": {
+        "en": "add {1} to {0}",
+        "es-MX": "sumar {1} a {0}"
+      }
+    },
+    {
+      "id": "editor.action.call.label",
+      "text": {
+        "en": "run {0} with {1} values",
+        "es-MX": "ejecutar {0} con {1} valores"
+      }
+    },
+    {
+      "id": "editor.action.campaign-exit.label",
+      "text": {
+        "en": "request exit {0}",
+        "es-MX": "solicitar salida {0}"
+      }
+    },
+    {
+      "id": "editor.action.checkpoint.label",
+      "text": {
+        "en": "set checkpoint {0}",
+        "es-MX": "fijar punto de control {0}"
+      }
+    },
+    {
+      "id": "editor.action.choose.label",
+      "text": {
+        "en": "choose one of {1} paths using {0}",
+        "es-MX": "elegir una de {1} rutas usando {0}"
+      }
+    },
+    {
+      "id": "editor.action.despawn.label",
+      "text": {
+        "en": "hide {0}",
+        "es-MX": "ocultar {0}"
+      }
+    },
+    {
+      "id": "editor.action.dialogue.label",
+      "text": {
+        "en": "show dialogue {0}",
+        "es-MX": "mostrar diálogo {0}"
+      }
+    },
+    {
+      "id": "editor.action.effect.label",
+      "text": {
+        "en": "play effect {0} at {1}",
+        "es-MX": "reproducir efecto {0} en {1}"
+      }
+    },
+    {
+      "id": "editor.action.give-item.label",
+      "text": {
+        "en": "give {2} of {1} to {0}",
+        "es-MX": "dar {2} de {1} a {0}"
+      }
+    },
+    {
+      "id": "editor.action.journal.label",
+      "text": {
+        "en": "add journal {0}",
+        "es-MX": "agregar diario {0}"
+      }
+    },
+    {
+      "id": "editor.action.objective.label",
+      "text": {
+        "en": "set objective {0} to {1}",
+        "es-MX": "poner objetivo {0} en {1}"
+      }
+    },
+    {
+      "id": "editor.action.schedule.label",
+      "text": {
+        "en": "after {1} ticks run {2} as {0} with {3} values",
+        "es-MX": "después de {1} pasos ejecutar {2} como {0} con {3} valores"
+      }
+    },
+    {
+      "id": "editor.action.set-counter.label",
+      "text": {
+        "en": "set {0} to {1}",
+        "es-MX": "poner {0} en {1}"
+      }
+    },
+    {
+      "id": "editor.action.set-flag.label",
+      "text": {
+        "en": "set {0} to {1}",
+        "es-MX": "poner {0} en {1}"
+      }
+    },
+    {
+      "id": "editor.action.set-object-state.label",
+      "text": {
+        "en": "set object {0} to {1}",
+        "es-MX": "poner objeto {0} en {1}"
+      }
+    },
+    {
+      "id": "editor.action.set-state.label",
+      "text": {
+        "en": "set state {0} to {1}",
+        "es-MX": "poner estado {0} en {1}"
+      }
+    },
+    {
+      "id": "editor.action.signal.label",
+      "text": {
+        "en": "send signal {0}",
+        "es-MX": "enviar señal {0}"
+      }
+    },
+    {
+      "id": "editor.action.spawn.label",
+      "text": {
+        "en": "show {0}",
+        "es-MX": "mostrar {0}"
+      }
+    },
+    {
+      "id": "editor.action.take-item.label",
+      "text": {
+        "en": "take {2} of {1} from {0}",
+        "es-MX": "quitar {2} de {1} a {0}"
+      }
+    },
+    {
+      "id": "editor.event.block-changed.label",
+      "text": {
+        "en": "a block in {0} changes to {1}",
+        "es-MX": "un bloque en {0} cambia a {1}"
+      }
+    },
+    {
+      "id": "editor.event.campaign-exit-requested.label",
+      "text": {
+        "en": "exit {0} is requested",
+        "es-MX": "se solicita la salida {0}"
+      }
+    },
+    {
+      "id": "editor.event.collect-item.label",
+      "text": {
+        "en": "collect {0}",
+        "es-MX": "recoger {0}"
+      }
+    },
+    {
+      "id": "editor.event.enter-zone.label",
+      "text": {
+        "en": "enter {0}",
+        "es-MX": "entrar en {0}"
+      }
+    },
+    {
+      "id": "editor.event.entity-defeated.label",
+      "text": {
+        "en": "defeat {0}",
+        "es-MX": "derrotar a {0}"
+      }
+    },
+    {
+      "id": "editor.event.interact.label",
+      "text": {
+        "en": "interact with {0}",
+        "es-MX": "interactuar con {0}"
+      }
+    },
+    {
+      "id": "editor.event.leave-zone.label",
+      "text": {
+        "en": "leave {0}",
+        "es-MX": "salir de {0}"
+      }
+    },
+    {
+      "id": "editor.event.level-entered.label",
+      "text": {
+        "en": "enter level {0}",
+        "es-MX": "entrar al nivel {0}"
+      }
+    },
+    {
+      "id": "editor.event.objective-changed.label",
+      "text": {
+        "en": "objective {0} changes",
+        "es-MX": "el objetivo {0} cambia"
+      }
+    },
+    {
+      "id": "editor.event.signal.label",
+      "text": {
+        "en": "receive signal {0}",
+        "es-MX": "recibir señal {0}"
+      }
+    },
+    {
+      "id": "editor.event.state-changed.label",
+      "text": {
+        "en": "state {0} changes",
+        "es-MX": "el estado {0} cambia"
+      }
+    },
+    {
+      "id": "editor.event.timer.label",
+      "text": {
+        "en": "timer {0} finishes",
+        "es-MX": "el temporizador {0} termina"
+      }
+    },
+    {
+      "id": "editor.event.use-item.label",
+      "text": {
+        "en": "use {0}",
+        "es-MX": "usar {0}"
+      }
+    },
+    {
+      "id": "editor.flow.connect-object",
+      "text": {
+        "en": "CONNECT TO OBJECT",
+        "es-MX": "CONECTAR A OBJETO"
+      }
+    },
+    {
+      "id": "editor.flow.do",
+      "text": {
+        "en": "DO",
+        "es-MX": "HAZ"
+      }
+    },
+    {
+      "id": "editor.flow.if",
+      "text": {
+        "en": "IF",
+        "es-MX": "SI"
+      }
+    },
+    {
+      "id": "editor.flow.overlap",
+      "text": {
+        "en": "{0} overlaps {1}; both can fire. Priority then rule ID decides order.",
+        "es-MX": "{0} se superpone con {1}; ambos pueden activarse. La prioridad y luego el ID de regla deciden el orden."
+      }
+    },
+    {
+      "id": "editor.flow.pick-object",
+      "text": {
+        "en": "PICK A WORLD OBJECT FOR THE CARD",
+        "es-MX": "ELIGE UN OBJETO DEL MUNDO PARA LA TARJETA"
+      }
+    },
+    {
+      "id": "editor.flow.toggle-enter-leave",
+      "text": {
+        "en": "ENTER / LEAVE",
+        "es-MX": "ENTRAR / SALIR"
+      }
+    },
+    {
+      "id": "editor.flow.toggle-spawn-despawn",
+      "text": {
+        "en": "SPAWN / HIDE",
+        "es-MX": "CREAR / OCULTAR"
+      }
+    },
+    {
+      "id": "editor.flow.when",
+      "text": {
+        "en": "WHEN",
+        "es-MX": "CUANDO"
+      }
+    },
+    {
+      "id": "editor.predicate.all.label",
+      "text": {
+        "en": "all {0} conditions are true",
+        "es-MX": "las {0} condiciones son verdaderas"
+      }
+    },
+    {
+      "id": "editor.predicate.always.label",
+      "text": {
+        "en": "always",
+        "es-MX": "siempre"
+      }
+    },
+    {
+      "id": "editor.predicate.any.label",
+      "text": {
+        "en": "any of {0} conditions is true",
+        "es-MX": "alguna de {0} condiciones es verdadera"
+      }
+    },
+    {
+      "id": "editor.predicate.counter.label",
+      "text": {
+        "en": "{0} {1} {2}",
+        "es-MX": "{0} {1} {2}"
+      }
+    },
+    {
+      "id": "editor.predicate.event-actor.label",
+      "text": {
+        "en": "event actor is {0}",
+        "es-MX": "el actor del evento es {0}"
+      }
+    },
+    {
+      "id": "editor.predicate.event-swept.label",
+      "text": {
+        "en": "fast crossing is {0}",
+        "es-MX": "el cruce rápido es {0}"
+      }
+    },
+    {
+      "id": "editor.predicate.flag.label",
+      "text": {
+        "en": "{0} is {1}",
+        "es-MX": "{0} es {1}"
+      }
+    },
+    {
+      "id": "editor.predicate.inventory.label",
+      "text": {
+        "en": "{0} has {1} {2} of {3}",
+        "es-MX": "{0} tiene {1} {2} de {3}"
+      }
+    },
+    {
+      "id": "editor.predicate.mode.label",
+      "text": {
+        "en": "mode is {0}",
+        "es-MX": "el modo es {0}"
+      }
+    },
+    {
+      "id": "editor.predicate.near.label",
+      "text": {
+        "en": "{0} is within {1} of {2}",
+        "es-MX": "{0} está a menos de {1} de {2}"
+      }
+    },
+    {
+      "id": "editor.predicate.not.label",
+      "text": {
+        "en": "not {0}",
+        "es-MX": "no {0}"
+      }
+    },
+    {
+      "id": "editor.predicate.object-state.label",
+      "text": {
+        "en": "object {0} is {1}",
+        "es-MX": "el objeto {0} está en {1}"
+      }
+    },
+    {
+      "id": "editor.predicate.objective.label",
+      "text": {
+        "en": "objective {0} is {1}",
+        "es-MX": "el objetivo {0} está en {1}"
+      }
+    },
+    {
+      "id": "editor.predicate.state.label",
+      "text": {
+        "en": "state {0} is {1}",
+        "es-MX": "el estado {0} es {1}"
+      }
+    },
+    {
+      "id": "scenario.diagnostic.default-locale",
+      "text": {
+        "en": "Default locale {0} has no message catalog. Check line {1}, column {2}.",
+        "es-MX": "La configuración regional predeterminada {0} no tiene catálogo. Revisa la línea {1}, columna {2}."
+      }
+    },
+    {
+      "id": "scenario.diagnostic.duplicate-content",
+      "text": {
+        "en": "Content ID {0} appears more than once. Check line {1}, column {2}.",
+        "es-MX": "El ID de contenido {0} aparece más de una vez. Revisa la línea {1}, columna {2}."
+      }
+    },
+    {
+      "id": "scenario.diagnostic.duplicate-id",
+      "text": {
+        "en": "Name {0} appears more than once in the same section. Check line {1}, column {2}.",
+        "es-MX": "El nombre {0} aparece más de una vez en la misma sección. Revisa la línea {1}, columna {2}."
+      }
+    },
+    {
+      "id": "scenario.diagnostic.duplicate-locale",
+      "text": {
+        "en": "Locale {0} appears more than once. Check line {1}, column {2}.",
+        "es-MX": "La configuración regional {0} aparece más de una vez. Revisa la línea {1}, columna {2}."
+      }
+    },
+    {
+      "id": "scenario.diagnostic.duplicate-message",
+      "text": {
+        "en": "Message {0} repeats in {1}. Check line {2}, column {3}.",
+        "es-MX": "El mensaje {0} se repite en {1}. Revisa la línea {2}, columna {3}."
+      }
+    },
+    {
+      "id": "scenario.diagnostic.duplicate-palette",
+      "text": {
+        "en": "Palette code {0} appears more than once. Check line {1}, column {2}.",
+        "es-MX": "El código de paleta {0} aparece más de una vez. Revisa la línea {1}, columna {2}."
+      }
+    },
+    {
+      "id": "scenario.diagnostic.duplicate-tag",
+      "text": {
+        "en": "Object {0} repeats tag {1}. Check line {2}, column {3}.",
+        "es-MX": "El objeto {0} repite la etiqueta {1}. Revisa la línea {2}, columna {3}."
+      }
+    },
+    {
+      "id": "scenario.diagnostic.event-budget",
+      "text": {
+        "en": "CaxeFlow stopped after {0} events. Check rules that send each other signals. Check line {1}, column {2}.",
+        "es-MX": "CaxeFlow se detuvo después de {0} eventos. Revisa las reglas que se envían señales. Revisa la línea {1}, columna {2}."
+      }
+    },
+    {
+      "id": "scenario.diagnostic.integer-range",
+      "text": {
+        "en": "This whole number is outside the supported range. Check line {0}, column {1}.",
+        "es-MX": "Este número entero está fuera del rango compatible. Revisa la línea {0}, columna {1}."
+      }
+    },
+    {
+      "id": "scenario.diagnostic.invalid-escape",
+      "text": {
+        "en": "This text contains an invalid escape sequence. Check line {0}, column {1}.",
+        "es-MX": "Este texto contiene una secuencia de escape no válida. Revisa la línea {0}, columna {1}."
+      }
+    },
+    {
+      "id": "scenario.diagnostic.invalid-extension",
+      "text": {
+        "en": "Extension {0} has invalid data. Check line {1}, column {2}.",
+        "es-MX": "La extensión {0} tiene datos no válidos. Revisa la línea {1}, columna {2}."
+      }
+    },
+    {
+      "id": "scenario.diagnostic.invalid-rule",
+      "text": {
+        "en": "Rule {0} has incompatible fields or references. Check line {1}, column {2}.",
+        "es-MX": "La regla {0} tiene campos o referencias incompatibles. Revisa la línea {1}, columna {2}."
+      }
+    },
+    {
+      "id": "scenario.diagnostic.invalid-rule-reference",
+      "text": {
+        "en": "Rule {0}: field {1} uses {2}, which is not a {3}. Check line {4}, column {5}.",
+        "es-MX": "Regla {0}: el campo {1} usa {2}, que no es un {3}. Revisa la línea {4}, columna {5}."
+      }
+    },
+    {
+      "id": "scenario.diagnostic.invalid-token",
+      "text": {
+        "en": "This value has invalid CAXEMAP syntax. Check line {0}, column {1}.",
+        "es-MX": "Este valor tiene sintaxis CAXEMAP no válida. Revisa la línea {0}, columna {1}."
+      }
+    },
+    {
+      "id": "scenario.diagnostic.limit",
+      "text": {
+        "en": "This document exceeds the {0} limit of {1}. Check line {2}, column {3}.",
+        "es-MX": "Este documento supera el límite {0} de {1}. Revisa la línea {2}, columna {3}."
+      }
+    },
+    {
+      "id": "scenario.diagnostic.malformed-utf8",
+      "text": {
+        "en": "The file has invalid UTF-8 at byte {0}. Check line {1}, column {2}.",
+        "es-MX": "El archivo tiene UTF-8 no válido en el byte {0}. Revisa la línea {1}, columna {2}."
+      }
+    },
+    {
+      "id": "scenario.diagnostic.missing-content",
+      "text": {
+        "en": "Content {0} is not available in this pack. Check line {1}, column {2}.",
+        "es-MX": "El contenido {0} no está disponible en este paquete. Revisa la línea {1}, columna {2}."
+      }
+    },
+    {
+      "id": "scenario.diagnostic.missing-message",
+      "text": {
+        "en": "Message {0} does not exist. Check line {1}, column {2}.",
+        "es-MX": "El mensaje {0} no existe. Revisa la línea {1}, columna {2}."
+      }
+    },
+    {
+      "id": "scenario.diagnostic.missing-record",
+      "text": {
+        "en": "Add the required {0} record. Check line {1}, column {2}.",
+        "es-MX": "Agrega el registro obligatorio {0}. Revisa la línea {1}, columna {2}."
+      }
+    },
+    {
+      "id": "scenario.diagnostic.missing-translation",
+      "text": {
+        "en": "Message {0} needs a {1} translation. Check line {2}, column {3}.",
+        "es-MX": "El mensaje {0} necesita una traducción para {1}. Revisa la línea {2}, columna {3}."
+      }
+    },
+    {
+      "id": "scenario.diagnostic.persistence",
+      "text": {
+        "en": "Saving failed during {0}. The previous file is unchanged. Check line {1}, column {2}.",
+        "es-MX": "El guardado falló durante {0}. El archivo anterior no cambió. Revisa la línea {1}, columna {2}."
+      }
+    },
+    {
+      "id": "scenario.diagnostic.placement",
+      "text": {
+        "en": "Object {0} is outside the editable world or overlaps an invalid area. Check line {1}, column {2}.",
+        "es-MX": "El objeto {0} está fuera del mundo editable o cruza un área no válida. Revisa la línea {1}, columna {2}."
+      }
+    },
+    {
+      "id": "scenario.diagnostic.rule-cycle",
+      "text": {
+        "en": "Flow path {0} feeds back into itself without a stopping condition. Check line {1}, column {2}.",
+        "es-MX": "La ruta de Flow {0} vuelve a sí misma sin una condición de parada. Revisa la línea {1}, columna {2}."
+      }
+    },
+    {
+      "id": "scenario.diagnostic.run-total",
+      "text": {
+        "en": "Chunk {0} needs {1} cells but provides {2}. Check line {3}, column {4}.",
+        "es-MX": "El bloque {0} necesita {1} celdas, pero contiene {2}. Revisa la línea {3}, columna {4}."
+      }
+    },
+    {
+      "id": "scenario.diagnostic.stale-reference",
+      "text": {
+        "en": "Reference {0} does not point to an existing record. Check line {1}, column {2}.",
+        "es-MX": "La referencia {0} no apunta a un registro existente. Revisa la línea {1}, columna {2}."
+      }
+    },
+    {
+      "id": "scenario.diagnostic.unexpected-record",
+      "text": {
+        "en": "Record {0} is not allowed here. Check line {1}, column {2}.",
+        "es-MX": "El registro {0} no se permite aquí. Revisa la línea {1}, columna {2}."
+      }
+    },
+    {
+      "id": "scenario.diagnostic.unknown-feature",
+      "text": {
+        "en": "Required feature {0} is not supported. Check line {1}, column {2}.",
+        "es-MX": "La función obligatoria {0} no es compatible. Revisa la línea {1}, columna {2}."
+      }
+    },
+    {
+      "id": "scenario.diagnostic.unknown-translation",
+      "text": {
+        "en": "Translation {0} in {1} has no source message. Check line {2}, column {3}.",
+        "es-MX": "La traducción {0} en {1} no tiene mensaje de origen. Revisa la línea {2}, columna {3}."
+      }
+    },
+    {
+      "id": "scenario.diagnostic.unknown-version",
+      "text": {
+        "en": "CAXEMAP version {0} is not supported. Check line {1}, column {2}.",
+        "es-MX": "La versión {0} de CAXEMAP no es compatible. Revisa la línea {1}, columna {2}."
       }
     }
   ]

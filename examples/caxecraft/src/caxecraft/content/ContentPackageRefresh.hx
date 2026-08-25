@@ -312,7 +312,12 @@ private function canonicalLevel(bytes:Bytes, registry:RuntimeContentRegistry, lo
 private function schemaDiagnosticText(diagnostic:RuntimeSchemaDiagnostic):String
 	return 'schema rejected at line ${diagnostic.line}, column ${diagnostic.column}';
 
-/** Describe one typed CAXEMAP rejection at its creator-visible coordinate. */
+/**
+	Describe one early CAXEMAP rejection before the UI catalog is available.
+
+	This one-language bootstrap fallback owns no translated alternative. Normal
+	editor presentation resolves the typed diagnostic through locale data.
+**/
 private function scenarioDiagnosticText(diagnostic:ScenarioDiagnostic):String
 	return 'scenario rejected at line ${diagnostic.coordinate.line}, column ${diagnostic.coordinate.column}';
 

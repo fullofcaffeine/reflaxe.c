@@ -38,6 +38,7 @@ enum ScenarioDiagnosticKind {
 	UnresolvedContent(id:ContentId);
 	ImpossiblePlacement(id:ScenarioId);
 	InvalidRule(id:ScenarioId);
+	InvalidRuleReference(id:ScenarioId, field:String, reference:ScenarioId, expected:String);
 	RuleCycle(id:ScenarioId);
 	InvalidExtension(id:ScenarioId);
 	EventBudgetExhausted(maximum:Int);

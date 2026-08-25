@@ -132,6 +132,27 @@ prose must never turn planned behavior or unsupported lowering into fact.
 - Preserve precision. Plain language must not blur a normative distinction,
   weaken a safety rule, or overstate support. Give the simple explanation first,
   then state the exact bounded contract and unsupported cases.
+- Keep editable product facts in one authoritative representation. This rule
+  applies to localization, content catalogs, assets, schemas, registries,
+  configuration, campaigns, tools, and other data-owned systems. Authored code
+  may define stable keys, precise types, validators, and generic behavior; it
+  must not manually mirror the data as parallel arrays, switches, fallback
+  tables, copied records, or generated-source literals. When code needs an
+  exhaustive typed surface, derive it mechanically from the authoritative data
+  and verify the derivation for drift, or keep only the small stable protocol
+  keys that real call sites use. Never make contributors update the same fact in
+  two hand-authored places to keep a feature working.
+- Keep localized user-facing text in validated data catalogs as its single
+  source of truth. Authored Haxe may carry stable message keys, typed arguments,
+  locale-independent technical tokens, and bounded formatting logic; it must
+  not duplicate English, es-MX, or other translated prose in switch branches,
+  parallel fallback tables, diagnostics, editor widgets, gameplay systems, or
+  generated source. Add or change wording in the owning locale data, validate
+  every required key and locale atomically, and test catalog completeness plus
+  placeholder compatibility. A minimal code fallback is allowed only at a
+  documented bootstrap or recovery boundary where validated locale data cannot
+  exist. Keep that fallback in one owner, use one language, and do not present
+  it as normal localized behavior.
 - Do not describe an idea, intended architecture, roadmap item, or partial seed
   as behavior the repository already has. Before making a present-tense claim,
   check the current checkout and cite the nearest executable evidence: a test,

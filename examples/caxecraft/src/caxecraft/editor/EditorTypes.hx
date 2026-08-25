@@ -70,6 +70,9 @@ enum EditorCommand {
 	/** Resize one trigger volume to an exact positive voxel size without changing its origin or identity. */
 	ResizeTriggerTo(id:ScenarioId, size:VoxelSize);
 
+	/** Rename one object and every typed object-role reference as one atomic edit. */
+	RenameObject(before:ScenarioId, after:ScenarioId);
+
 	RemoveObject(id:ScenarioId);
 	PutDialogue(dialogue:ScenarioDialogue);
 	RemoveDialogue(id:ScenarioId);
@@ -239,6 +242,7 @@ enum EditorError {
 	UnknownPaletteCode(code:Int);
 	MissingFluid(id:ScenarioId);
 	DuplicateObject(id:ScenarioId);
+	InvalidObjectName(id:ScenarioId);
 	MissingObject(id:ScenarioId);
 
 	/** The requested whole-voxel move would place some or all of the object outside the finite world. */

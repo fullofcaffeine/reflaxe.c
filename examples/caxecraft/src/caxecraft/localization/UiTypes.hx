@@ -3,9 +3,11 @@ package caxecraft.localization;
 /**
 	Closed identities shared by runtime UI data and its typed Haxe consumers.
 
-	The JSON decoder verifies that its locale and message order matches these
-	identities before publishing a catalog. This module owns no player-visible
-	text, filesystem path, rendering behavior, or package selection.
+	Each message value is only a stable lookup key used by a real call site. The
+	JSON catalog independently owns membership, canonical order, and translated
+	prose, so adding or reordering data never requires a parallel code table. This
+	module owns no player-visible text, filesystem path, rendering behavior, or
+	package selection.
 **/
 /** Locale position inside one admitted runtime catalog. */
 enum abstract LocaleCursor(Int) {
@@ -13,111 +15,79 @@ enum abstract LocaleCursor(Int) {
 	var Locale1 = 1;
 }
 
-/** Stable message identity understood by the current application surface. */
-enum abstract UiMessage(Int) {
-	var AquaticGearEquipped = 0;
-	var Brand = 1;
-	var CapturePrompt = 2;
-	var Controls = 3;
-	var DebugCells = 4;
-	var DebugDraws = 5;
-	var DebugFrame = 6;
-	var DebugTick = 7;
-	var DebugVisible = 8;
-	var EditorAdvanced = 9;
-	var EditorBack = 10;
-	var EditorCanvasHelp = 11;
-	var EditorInvalid = 12;
-	var EditorName = 13;
-	var EditorNewWorld = 14;
-	var EditorReady = 15;
-	var EditorRedo = 16;
-	var EditorStopTest = 17;
-	var EditorTest = 18;
-	var EditorTesting = 19;
-	var EditorTitle = 20;
-	var EditorToolList = 21;
-	var EditorUndo = 22;
-	var EditorValid = 23;
-	var EditorValidate = 24;
-	var HealthFull = 25;
-	var MenuAdventure = 26;
-	var MenuCreative = 27;
-	var MenuEditor = 28;
-	var MenuInstructions = 29;
-	var NoBlockInReach = 30;
-	var PauseHelp = 31;
-	var PauseTitle = 32;
-	var PlaceBlocked = 33;
-	var TitleFallback = 34;
+/** Stable catalog key understood by one typed application call site. */
+enum abstract UiMessage(String) {
+	var AquaticGearEquipped = "aquatic_gear_equipped";
+	var CapturePrompt = "capture_prompt";
+	var DebugDraws = "debug_draws";
+	var DebugFrame = "debug_frame";
+	var DebugTick = "debug_tick";
+	var DebugVisible = "debug_visible";
+	var EditorBack = "editor_back";
+	var EditorCanvasHelp = "editor_canvas_help";
+	var EditorInvalid = "editor_invalid";
+	var EditorReady = "editor_ready";
+	var EditorRedo = "editor_redo";
+	var EditorTest = "editor_test";
+	var EditorTesting = "editor_testing";
+	var EditorTitle = "editor_title";
+	var EditorUndo = "editor_undo";
+	var EditorValid = "editor_valid";
+	var HealthFull = "health_full";
+	var MenuAdventure = "menu_adventure";
+	var MenuCreative = "menu_creative";
+	var MenuEditor = "menu_editor";
+	var MenuInstructions = "menu_instructions";
+	var NoBlockInReach = "no_block_in_reach";
+	var PauseHelp = "pause_help";
+	var PauseTitle = "pause_title";
+	var PlaceBlocked = "place_blocked";
+	var TitleFallback = "title_fallback";
+	var EditorBuild = "editor_build";
+	var EditorCoordinates = "editor_coordinates";
+	var EditorErase = "editor_erase";
+	var EditorGround = "editor_ground";
+	var EditorKeepEditing = "editor_keep_editing";
+	var EditorLeaveWithoutSaving = "editor_leave_without_saving";
+	var EditorMaterial = "editor_material";
+	var EditorMoreDetails = "editor_more_details";
+	var EditorPlan = "editor_plan";
+	var EditorSelect = "editor_select";
+	var EditorUnsavedChanges = "editor_unsaved_changes";
+	var EditorWorldList = "editor_world_list";
+	var EditorCheckpoint = "editor_checkpoint";
+	var EditorDelete = "editor_delete";
+	var EditorDuplicate = "editor_duplicate";
+	var EditorEnvironment = "editor_environment";
+	var EditorEnvironmentClouds = "editor_environment_clouds";
+	var EditorEnvironmentDone = "editor_environment_done";
+	var EditorEnvironmentEast = "editor_environment_east";
+	var EditorEnvironmentEnabled = "editor_environment_enabled";
+	var EditorEnvironmentNorth = "editor_environment_north";
+	var EditorEnvironmentOff = "editor_environment_off";
+	var EditorEnvironmentOn = "editor_environment_on";
+	var EditorEnvironmentRadius = "editor_environment_radius";
+	var EditorEnvironmentSeed = "editor_environment_seed";
+	var EditorEnvironmentSky = "editor_environment_sky";
+	var EditorEnvironmentSouth = "editor_environment_south";
+	var EditorEnvironmentSun = "editor_environment_sun";
+	var EditorEnvironmentWater = "editor_environment_water";
+	var EditorEnvironmentWest = "editor_environment_west";
+	var EditorSave = "editor_save";
+	var EditorSaveFailed = "editor_save_failed";
+	var EditorSaved = "editor_saved";
+	var EditorLayer = "editor_layer";
+	var EditorTrigger = "editor_trigger";
+	var ConversationHelp = "conversation_help";
+	var ConversationNarrator = "conversation_narrator";
+	var ReturnPrompt = "return_prompt";
+	var PlayerFallen = "player_fallen";
+	var EditorCamera = "editor_camera";
+	var EditorCameraWalk = "editor_camera_walk";
+	var EditorCameraFly = "editor_camera_fly";
+	var EditorCameraOrbit = "editor_camera_orbit";
 
-	/** Appended so existing message codes remain stable. Catalog storage stays ID-sorted. */
-	var EditorScene = 35;
-
-	var EditorBuild = 36;
-	var EditorCoordinates = 37;
-	var EditorErase = 38;
-	var EditorGround = 39;
-	var EditorKeepEditing = 40;
-	var EditorLeaveWithoutSaving = 41;
-	var EditorMaterial = 42;
-	var EditorMoreDetails = 43;
-	var EditorPlan = 44;
-	var EditorSelect = 45;
-	var EditorUnsavedChanges = 46;
-	var EditorWorldList = 47;
-
-	/** Appended so existing message codes remain stable. Catalog storage stays ID-sorted. */
-	var EditorCheckpoint = 48;
-
-	/** Appended so existing message codes remain stable. Catalog storage stays ID-sorted. */
-	var EditorDelete = 49;
-
-	/** Appended so existing message codes remain stable. Catalog storage stays ID-sorted. */
-	var EditorDuplicate = 50;
-
-	var EditorEnvironment = 51;
-	var EditorEnvironmentClouds = 52;
-	var EditorEnvironmentDone = 53;
-	var EditorEnvironmentEast = 54;
-	var EditorEnvironmentEnabled = 55;
-	var EditorEnvironmentNorth = 56;
-	var EditorEnvironmentOff = 57;
-	var EditorEnvironmentOn = 58;
-	var EditorEnvironmentRadius = 59;
-	var EditorEnvironmentSeed = 60;
-	var EditorEnvironmentSky = 61;
-	var EditorEnvironmentSouth = 62;
-	var EditorEnvironmentSun = 63;
-	var EditorEnvironmentWater = 64;
-	var EditorEnvironmentWest = 65;
-
-	/** Appended so existing message codes remain stable. Catalog storage stays ID-sorted. */
-	var EditorSave = 66;
-
-	var EditorSaveFailed = 67;
-	var EditorSaved = 68;
-
-	/** Appended so existing message codes remain stable. Catalog storage stays ID-sorted. */
-	var EditorLayer = 69;
-
-	/** Appended so existing message codes remain stable. Catalog storage stays ID-sorted. */
-	var EditorTrigger = 70;
-
-	/** Appended so existing message codes remain stable. Catalog storage stays ID-sorted. */
-	var ConversationHelp = 71;
-
-	/** Appended so existing message codes remain stable. Catalog storage stays ID-sorted. */
-	var ConversationNarrator = 72;
-
-	/** Appended so existing message codes remain stable. Catalog storage stays ID-sorted. */
-	var ReturnPrompt = 73;
-
-	/** Appended so existing message codes remain stable. Catalog storage stays ID-sorted. */
-	var PlayerFallen = 74;
-
-	var EditorCamera = 75;
-	var EditorCameraWalk = 76;
-	var EditorCameraFly = 77;
-	var EditorCameraOrbit = 78;
+	/** Expose the stable data key without a cast or parallel ordinal table. */
+	public inline function text():String
+		return this;
 }

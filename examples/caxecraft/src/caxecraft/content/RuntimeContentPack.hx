@@ -270,6 +270,14 @@ final class RuntimeContentRegistry implements ScenarioContentRegistry implements
 		return block == null ? -1 : block.storageCode;
 	}
 
+	/** Return the canonical terrain ID represented by one compact world byte. */
+	public function blockContentIdForStorageCode(code:Int):Null<ContentId> {
+		for (block in blocks)
+			if (block.storageCode == code)
+				return new ContentId(block.id);
+		return null;
+	}
+
 	/** True when the admitted pack allows this terrain to become its declared drop. */
 	public function blockIsCollectable(id:ContentId):Bool {
 		final block = findBlock(id.text());
@@ -450,6 +458,12 @@ final class RuntimeContentRegistry implements ScenarioContentRegistry implements
 			if (state.id == id.text())
 				return true;
 		return false;
+	}
+
+	/** True only when the object definition owns the requested closed state. */
+	public function statefulObjectHasState(objectType:ContentId, state:ContentId):Bool {
+		final object = findStatefulObject(objectType.text());
+		return object != null && object.presentationFor(state.text()) != null;
 	}
 
 	/** Return one interactive object's bounded proximity, or zero when unknown. */

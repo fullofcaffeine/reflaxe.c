@@ -33,7 +33,24 @@ import caxecraft.editor.EditorFocus.EditorFocusTarget;
 import caxecraft.editor.EditorFocus.initialFocus;
 import caxecraft.editor.EditorFocus.moveFocus;
 import caxecraft.editor.EditorFlowProjection.EditorZoneRuleProjection;
+import caxecraft.editor.EditorFlowProjection.EditorFlowCard;
+import caxecraft.editor.EditorFlowReferences.EditorFlowReferenceRole;
+import caxecraft.editor.EditorFlowProjection.EditorFlowTraceRow;
+import caxecraft.editor.EditorFlowProjection.projectFlowRules;
+import caxecraft.editor.EditorFlowProjection.projectFlowTrace;
+import caxecraft.editor.EditorFlowProjection.projectTriggerOverlaps;
+import caxecraft.editor.EditorFlowProjection.retainLatestFlowTrace;
 import caxecraft.editor.EditorFlowProjection.projectZoneRules;
+import caxecraft.editor.EditorFlowAuthoring.EditorFlowAuthoringResult;
+import caxecraft.editor.EditorFlowAuthoring.EditorFlowAuthoringError;
+import caxecraft.editor.EditorFlowAuthoring.EditorFlowCardAddress;
+import caxecraft.editor.EditorFlowAuthoring.EditorFlowCardEdit;
+import caxecraft.editor.EditorFlowAuthoring.applyFlowWorldPick;
+import caxecraft.editor.EditorFlowAuthoring.connectZone;
+import caxecraft.editor.EditorFlowAuthoring.editFlowCard;
+import caxecraft.editor.EditorFlowAuthoring.isWorldPickableFlowRole;
+import caxecraft.editor.EditorFlowAuthoring.nextZoneConnectionRuleId;
+import caxecraft.editor.EditorFlowAuthoring.worldPickFor;
 import caxecraft.editor.EditorEnvironment.EditorEnvironmentControl;
 import caxecraft.editor.EditorEnvironment.EditorEnvironmentDirection;
 import caxecraft.editor.EditorEnvironment.editEnvironment;
@@ -45,6 +62,8 @@ import caxecraft.editor.EditorPolicy.defaults as defaultEditorSettings;
 import caxecraft.editor.EditorPlacement.checkpointCommand;
 import caxecraft.editor.EditorPlacement.checkpointTemplate;
 import caxecraft.editor.EditorObjectDuplicate.duplicateObject;
+import caxecraft.editor.EditorObjectDuplicate.duplicateObjectWithConnectedRules;
+import caxecraft.editor.EditorObjectDelete.deleteObjectWithConnectedRules;
 import caxecraft.editor.EditorPlacement.objectRecipeCommand;
 import caxecraft.editor.EditorPlacement.triggerZoneCommand;
 import caxecraft.editor.EditorObservationPlan.changesFor;
@@ -120,9 +139,19 @@ import caxecraft.input.NavigationInput.NavigationRepeater;
 import caxecraft.input.NavigationInput.NavigationSample;
 import caxecraft.scenario.CaxeFlow.FlowAction;
 import caxecraft.scenario.CaxeFlow.FlowEvent;
+import caxecraft.scenario.CaxeFlow.FlowEventContext;
 import caxecraft.scenario.CaxeFlow.FlowPredicate;
 import caxecraft.scenario.CaxeFlow.FlowRepeatPolicy;
+import caxecraft.scenario.CaxeFlow.FlowRule;
 import caxecraft.scenario.CaxeFlowActionRegistry.flowActionArgumentRoles;
+import caxecraft.scenario.CaxeFlowActionRegistry.flowActionDescriptor;
+import caxecraft.scenario.CaxeFlowEventRegistry.flowEventDescriptor;
+import caxecraft.scenario.CaxeFlowEventRegistry.flowEventOccurrence;
+import caxecraft.scenario.CaxeFlowPredicateRegistry.allFlowPredicateDescriptors;
+import caxecraft.scenario.CaxeFlowPredicateRegistry.validateFlowPredicateDescriptors;
+import caxecraft.scenario.CaxeFlowRegistry.caxeFlowRegistry;
+import caxecraft.scenario.CaxeFlowRuntime.FlowTraceEntry;
+import caxecraft.scenario.CaxeFlowRuntime.FlowTick;
 import caxecraft.scenario.ContentId;
 import caxecraft.scenario.LogicalPath;
 import caxecraft.scenario.LocaleId;
@@ -133,6 +162,7 @@ import caxecraft.scenario.ScenarioCodecModel.ScenarioReadResult;
 import caxecraft.scenario.ScenarioContentRegistry;
 import caxecraft.scenario.ScenarioDiagnostic.ScenarioDiagnosticKind;
 import caxecraft.scenario.ScenarioDiagnostic.ScenarioExpectedRecord;
+import caxecraft.scenario.ScenarioDiagnosticText.scenarioDiagnosticMessage;
 import caxecraft.scenario.ScenarioGeometry.VoxelBounds;
 import caxecraft.scenario.ScenarioGeometry.VoxelPoint;
 import caxecraft.scenario.ScenarioGeometry.VoxelSize;
@@ -189,10 +219,13 @@ final class EditorProbe {
 		final worldViewportChecks = checkWorldViewport();
 		final runtimeTerrainChecks = checkRuntimeTerrainProjection() + checkTerrainHistoryFootprints();
 		checkZoneRuleProjection();
+		checkFlowAuthoring();
+		checkLocalizedScenarioDiagnostics();
 		final activeLevelChecks = checkActiveLevelProjection();
 		checkEnvironmentTextRoundTrip();
 		checkObjectMovement();
 		checkObjectRotation();
+		checkObjectRename();
 		checkTriggerResize();
 		checkCheckpointPlacement();
 		checkTriggerPlacement();
@@ -265,6 +298,7 @@ final class EditorProbe {
 		checkHistoryStateChanges();
 		checkSnapshotFidelity();
 		checkPlacementInputIsolation();
+		checkRuleInputIsolation();
 		checkDeferredPlacementValidation();
 		checkTestPlayLocksEditing();
 		checkExternalTestPlayAtomicity();
@@ -603,7 +637,7 @@ final class EditorProbe {
 		requireTestStarted(session.enterTestPlay(), "playable checkpoint template");
 		final test = session.testPlay();
 		require(test != null, "checkpoint template Test Play did not start");
-		test.runTick({events: [Interact(template.objectId)], positions: []});
+		test.runTick({events: [flowEventOccurrence(Interact(template.objectId), ActorEventContext(PLAYER))], positions: []});
 		final activeCheckpoint = test.checkpoint();
 		require(activeCheckpoint != null && activeCheckpoint.text() == template.objectId.text(),
 			"checkpoint template interaction did not change Test Play checkpoint state");
@@ -720,6 +754,82 @@ final class EditorProbe {
 		final checkpointCopy = duplicateObject(checkpointId, session.draftSnapshot().objects);
 		require(checkpointCopy != null, "object duplication lost a selected checkpoint");
 		roundTrip(session, checkpointCopy.command, Placement);
+
+		final triggerId = id("duplicate.trigger");
+		final triggerPlan = duplicateObjectWithConnectedRules(triggerId, [
+			{id: triggerId, tags: [], placement: TriggerZone({origin: {x: 0, y: 0, z: 0}, size: {width: 2, height: 2, depth: 2}})}
+		], [
+			{
+				id: id("rule.trigger-enter"),
+				priority: 1,
+				repeat: Once,
+				event: EnterZone(triggerId),
+				predicate: Always,
+				actions: [Spawn(checkpointId)]
+			},
+			{
+				id: id("rule.unrelated"),
+				priority: 2,
+				repeat: Repeat,
+				event: Interact(checkpointId),
+				predicate: Always,
+				actions: []
+			}
+		]);
+		if (triggerPlan == null)
+			throw "normal trigger duplication lost its source";
+		require(triggerPlan.commands.length == 2, "normal trigger duplication omitted connected behavior or copied an unrelated rule");
+		switch triggerPlan.commands[1] {
+			case PutRule(rule):
+				switch rule.event {
+					case EnterZone(zone):
+						require(zone.text() == triggerPlan.id.text() && rule.id.text() == "rule.trigger-enter.copy.n1",
+							"trigger behavior copy retained the old source or rule identity");
+					case _: throw "trigger behavior copy changed its event kind";
+				}
+			case _:
+				throw "trigger behavior copy did not use the canonical rule command";
+		}
+
+		final lifecycle = open(defaultEditorSettings());
+		final lifecycleTrigger = id("duplicate.lifecycle-trigger");
+		expectApplied(lifecycle.apply(PutObject({
+			id: lifecycleTrigger,
+			tags: [],
+			placement: TriggerZone({origin: {x: 0, y: 0, z: 0}, size: {width: 1, height: 1, depth: 1}})
+		})), Placement, "prepare trigger lifecycle");
+		expectApplied(lifecycle.apply(PutRule({
+			id: id("rule.lifecycle-enter"),
+			priority: 1,
+			repeat: Once,
+			event: EnterZone(lifecycleTrigger),
+			predicate: Always,
+			actions: []
+		})), Rule, "prepare connected trigger behavior");
+		final lifecycleCopy = duplicateObjectWithConnectedRules(lifecycleTrigger, lifecycle.draftSnapshot().objects, lifecycle.draftSnapshot().flow.rules);
+		if (lifecycleCopy == null)
+			throw "trigger lifecycle copy lost its source";
+		switch lifecycle.mutate({baseRevision: lifecycle.revision(), mutation: ApplyBatch(lifecycleCopy.commands)}) {
+			case MutationApplied(_, _, _, _, _, _):
+			case other:
+				throw 'trigger lifecycle copy failed: $other';
+		}
+		final deletePlan = deleteObjectWithConnectedRules(lifecycleCopy.id, lifecycle.draftSnapshot().flow.rules);
+		require(deletePlan.commands.length == 2, "trigger deletion did not include its copied rule");
+		switch lifecycle.mutate({baseRevision: lifecycle.revision(), mutation: ApplyBatch(deletePlan.commands)}) {
+			case MutationApplied(families, changes, _, _, _, _):
+				require(families.length == 2 && families[0] == Rule && families[1] == Placement, "trigger deletion changed command ownership");
+				require(changes.length == 2, "trigger deletion lost the copied object or rule identity");
+			case other:
+				throw 'trigger lifecycle deletion failed: $other';
+		}
+		switch lifecycle.query(InspectValidation) {
+			case ValidationObserved(_, DraftPlayable(_)):
+			case ValidationObserved(_, DraftInvalid(diagnostics)):
+				throw 'trigger deletion left an invalid draft: ${Std.string(diagnostics[0])}';
+			case _:
+				throw "trigger deletion returned the wrong validation observation";
+		}
 	}
 
 	/** Preserve an optional environment through the editor's text-byte boundary. */
@@ -1244,6 +1354,12 @@ final class EditorProbe {
 			require(descriptor.editorHelp.text() == 'editor.action.${expected[index]}.help', "editor action help key drifted");
 			require(flowActionArgumentRoles(descriptor.schema).length > 0, "editor action lost its typed form fields");
 		}
+		final predicates = allFlowPredicateDescriptors();
+		require(predicates.length == 14
+			&& validateFlowPredicateDescriptors(predicates).length == 0, "editor condition palette is incomplete or invalid");
+		final registry = caxeFlowRegistry();
+		require(registry.events.length == 13 && registry.predicates.length == 14 && registry.actions.length == 19,
+			"shared WHEN / IF / DO registry exposed a partial authoring language");
 	}
 
 	/**
@@ -2721,8 +2837,8 @@ final class EditorProbe {
 				priority: 0,
 				repeat: Once,
 				event: EnterZone(zone),
-				predicate: Always,
-				actions: []
+				predicate: All([EventActorIs(PLAYER), EventSweptIs(false)]),
+				actions: [Spawn(CHECKPOINT), EmitSignal(content("caxecraft:card-signal"))]
 			},
 			{
 				id: id("rule.interact"),
@@ -2758,7 +2874,347 @@ final class EditorProbe {
 			case _:
 				throw "missing zone-rule projection invented geometry";
 		}
+		final overlapZone = id("zone.overlap");
+		final touchingZone = id("zone.touching");
+		final overlapRules:Array<FlowRule> = [
+			{
+				id: id("rule.overlap-a"),
+				priority: 0,
+				repeat: Repeat,
+				event: EnterZone(zone),
+				predicate: Always,
+				actions: []
+			},
+			{
+				id: id("rule.overlap-b"),
+				priority: 0,
+				repeat: Repeat,
+				event: EnterZone(overlapZone),
+				predicate: Always,
+				actions: []
+			},
+			{
+				id: id("rule.touching"),
+				priority: 0,
+				repeat: Repeat,
+				event: EnterZone(touchingZone),
+				predicate: Always,
+				actions: []
+			}
+		];
+		final overlaps = projectTriggerOverlaps(overlapRules, [
+			{id: zone, tags: [], placement: TriggerZone(bounds)},
+			{id: overlapZone, tags: [], placement: TriggerZone({origin: {x: 2, y: 1, z: 3}, size: {width: 2, height: 2, depth: 2}})},
+			{id: touchingZone, tags: [], placement: TriggerZone({origin: {x: 3, y: 0, z: 2}, size: {width: 1, height: 1, depth: 1}})}
+		]);
+		require(overlaps.length == 1 && overlaps[0].first.text() == zone.text() && overlaps[0].second.text() == overlapZone.text(),
+			"connected overlap warning missed shared volume or treated a half-open face as overlap");
+		final cards = projectFlowRules(rules);
+		require(cards.length == 3 && cards[0].cards.length == 4, "rule cards lost WHEN, IF, or ordered DO rows");
+		switch cards[0].cards[0] {
+			case WhenFlowCard(descriptor, text, references):
+				require(descriptor.id.text() == "enter-zone"
+					&& text.message.text() == descriptor.editorLabel.text()
+					&& text.arguments.length == 1
+					&& text.arguments[0] == zone.text()
+					&& references.length == 1
+					&& references[0].id.text() == zone.text(),
+					"WHEN card lost its registry descriptor or world-picker reference");
+			case _:
+				throw "first rule card was not WHEN";
+		}
+		switch cards[0].cards[1] {
+			case IfFlowCard(descriptor, text, references):
+				require(descriptor.id.text() == "all"
+					&& text.message.text() == descriptor.editorLabel.text()
+					&& text.arguments.length == 1
+					&& text.arguments[0] == "2"
+					&& references.length == 1,
+					"IF card lost nested event context or its actor picker");
+			case _:
+				throw "second rule card was not IF";
+		}
+		switch cards[0].cards[2] {
+			case DoFlowCard(0, descriptor, text, references):
+				require(descriptor.id.text() == "spawn"
+					&& text.message.text() == descriptor.editorLabel.text()
+					&& text.arguments.length == 1
+					&& text.arguments[0] == CHECKPOINT.text()
+					&& references.length == 1,
+					"DO card lost ordered action metadata or its world picker");
+			case _:
+				throw "third rule card was not the first DO action";
+		}
+
+		final ready:FlowTick = {epoch: 0, offset: 2};
+		final trace = projectFlowTrace([
+			FlowTraceEntry.EventObserved(flowEventDescriptor(EnterZone(zone)).id, PLAYER),
+			FlowTraceEntry.PredicateEvaluated(rules[0].id, flowEventDescriptor(EnterZone(zone)).id, PLAYER, true),
+			FlowTraceEntry.ActionExecuted(rules[0].id, flowActionDescriptor(Spawn(CHECKPOINT)).id),
+			FlowTraceEntry.FollowUpDeferred(rules[0].id, flowEventDescriptor(SignalReceived(content("caxecraft:card-signal"))).id, ready),
+			FlowTraceEntry.SequenceDeferred(rules[0].id, id("timer.card"), id("sequence.card"), ready)
+		], 4);
+		require(trace.rows.length == 4 && trace.truncated, "event-flow overlay ignored its explicit row bound");
+		require(retainLatestFlowTrace(trace, [], 1) == trace, "quiet test-play tick erased the latest meaningful event-flow trace");
+		final replacedTrace = retainLatestFlowTrace(trace, [FlowTraceEntry.EventObserved(flowEventDescriptor(LeaveZone(zone)).id, PLAYER)], 1);
+		require(replacedTrace.rows.length == 1 && !replacedTrace.truncated, "new event-flow evidence did not replace the older bounded trace");
+		switch trace.rows[1] {
+			case PredicateTrace(ruleId, event, actor, true):
+				require(ruleId.text() == "rule.enter" && event == "enter-zone" && actor != null && actor.text() == PLAYER.text(),
+					"event-flow overlay lost predicate pass context");
+			case _:
+				throw "event-flow overlay lost its predicate row";
+		}
 	}
+
+	/** Prove visual cards edit canonical typed rules and reject wrong world kinds. */
+	static function checkFlowAuthoring():Void {
+		final zone = id("zone.authoring");
+		final target = id("object.authoring");
+		final actor = id("actor.authoring");
+		final predicateChildren:Array<FlowPredicate> = [EventActorIs(PLAYER)];
+		final sourceActions:Array<FlowAction> = [Spawn(CHECKPOINT)];
+		final connected = connectZone({
+			ruleId: id("rule.authoring"),
+			priority: 7,
+			repeat: OncePerActor,
+			zone: zone,
+			predicate: All(predicateChildren),
+			actions: sourceActions
+		});
+		require(nextZoneConnectionRuleId(zone, [id("editor.rule.zone.authoring.n1"), id("other")]).text() == "editor.rule.zone.authoring.n2",
+			"zone connection identity replaced an existing rule or depended on rule order");
+		predicateChildren.push(Always);
+		sourceActions[0] = Despawn(CHECKPOINT);
+		switch [connected.predicate, connected.actions[0]] {
+			case [All(children), Spawn(objectId)]:
+				require(children.length == 1 && objectId.text() == CHECKPOINT.text(), "zone connection retained caller-owned predicate or action arrays");
+			case _:
+				throw "zone connection changed its typed cards";
+		}
+
+		final triggerPick = worldPickFor({
+			id: id("zone.target"),
+			tags: [],
+			placement: TriggerZone({origin: {x: 0, y: 0, z: 0}, size: {width: 1, height: 1, depth: 1}})
+		});
+		final actorPick = worldPickFor({id: actor, tags: [], placement: Entity(content("caxecraft:mossling"), transform(0, 0, 0))});
+		final objectPick = worldPickFor({id: target, tags: [], placement: Checkpoint(transform(0, 0, 0))});
+		require(isWorldPickableFlowRole(triggerPick.roles[0]) && !isWorldPickableFlowRole(LevelFlowReference),
+			"world-picker role classification admitted a document-only level or rejected a zone");
+
+		final movedZone = authoredRule(applyFlowWorldPick(connected, WhenCardAddress, 0, triggerPick), "replace WHEN zone");
+		switch movedZone.event {
+			case EnterZone(id):
+				require(id.text() == "zone.target", "WHEN world pick did not replace the zone");
+			case _:
+				throw "WHEN world pick changed the event constructor";
+		}
+		switch applyFlowWorldPick(connected, WhenCardAddress, 0, actorPick) {
+			case FlowRuleAuthoringRejected(WrongReferenceRole(ZoneFlowReference)):
+			case _:
+				throw "WHEN world pick accepted an actor as a zone";
+		}
+		final movedAction = authoredRule(applyFlowWorldPick(connected, DoCardAddress(0), 0, objectPick), "replace DO object");
+		switch movedAction.actions[0] {
+			case Spawn(id):
+				require(id.text() == target.text(), "DO world pick did not replace the object");
+			case _:
+				throw "DO world pick changed the action constructor";
+		}
+
+		final nearRule = authoredRule(editFlowCard(connected, ReplaceIf(NearObject(PLAYER, CHECKPOINT, 2500))), "replace IF card");
+		final movedActor = authoredRule(applyFlowWorldPick(nearRule, IfCardAddress, 0, actorPick), "replace IF actor");
+		final movedNearObject = authoredRule(applyFlowWorldPick(movedActor, IfCardAddress, 1, triggerPick), "replace IF object");
+		switch movedNearObject.predicate {
+			case NearObject(actorId, objectId, 2500):
+				require(actorId.text() == actor.text() && objectId.text() == "zone.target", "nested IF world picks lost depth-first reference order");
+			case _:
+				throw "IF world pick changed the predicate constructor";
+		}
+		switch applyFlowWorldPick(nearRule, IfCardAddress, 0, triggerPick) {
+			case FlowRuleAuthoringRejected(WrongReferenceRole(ActorFlowReference)):
+			case _:
+				throw "IF world pick accepted a trigger as an actor";
+		}
+		switch applyFlowWorldPick(nearRule, IfCardAddress, 2, actorPick) {
+			case FlowRuleAuthoringRejected(InvalidReferenceIndex(2)):
+			case _:
+				throw "IF world pick admitted a missing reference slot";
+		}
+
+		final inserted = authoredRule(editFlowCard(connected, InsertDo(1, Despawn(target))), "insert DO card");
+		require(inserted.actions.length == 2, "card insertion lost ordered actions");
+		final moved = authoredRule(editFlowCard(inserted, MoveDo(1, 0)), "move DO card");
+		switch moved.actions[0] {
+			case Despawn(id):
+				require(id.text() == target.text(), "card movement changed the moved action");
+			case _:
+				throw "card movement did not preserve ordered action identity";
+		}
+		final configured = authoredRule(editFlowCard(authoredRule(editFlowCard(moved, SetPriority(9)), "set card priority"), SetRepeat(Repeat)),
+			"set card repeat");
+		require(configured.priority == 9 && configured.repeat == Repeat, "card configuration lost priority or per-actor repeat policy");
+		final replaced = authoredRule(editFlowCard(configured, ReplaceDo(0, EmitSignal(content("caxecraft:authored")))), "replace DO card");
+		final removed = authoredRule(editFlowCard(replaced, RemoveDo(1)), "remove DO card");
+		require(removed.actions.length == 1, "card removal did not preserve the remaining action");
+		switch editFlowCard(removed, RemoveDo(4)) {
+			case FlowRuleAuthoringRejected(InvalidDoIndex(4)):
+			case _:
+				throw "card edit admitted an out-of-range DO index";
+		}
+	}
+
+	/** Keep scenario failures linked to data-owned messages and exact arguments. */
+	static function checkLocalizedScenarioDiagnostics():Void {
+		final stale = scenarioDiagnosticMessage({
+			coordinate: {line: 21, column: 5, record: 8},
+			kind: ScenarioDiagnosticKind.UnresolvedReference(id("object.gone"))
+		});
+		require(stale.message.text() == "scenario.diagnostic.stale-reference"
+			&& stale.arguments.length == 3
+			&& stale.arguments[0] == "object.gone"
+			&& stale.arguments[1] == "21"
+			&& stale.arguments[2] == "5",
+			"stale-reference diagnostic lost its key, reference, or coordinate arguments");
+		final cycle = scenarioDiagnosticMessage({coordinate: {line: 9, column: 1, record: 3}, kind: ScenarioDiagnosticKind.RuleCycle(id("sequence.loop"))});
+		require(cycle.message.text() == "scenario.diagnostic.rule-cycle"
+			&& cycle.arguments.length == 3
+			&& cycle.arguments[0] == "sequence.loop",
+			"sequence-cycle diagnostic lost its stable data-catalog request");
+	}
+
+	/** Prove `PutRule` recursively detaches every caller-owned CaxeFlow array. */
+	static function checkRuleInputIsolation():Void {
+		final session = open(defaultEditorSettings());
+		final children:Array<FlowPredicate> = [Always];
+		final branchActions:Array<FlowAction> = [Spawn(PLAYER)];
+		final choices = [{weight: 1, actions: branchActions}];
+		final ruleId = id("rule.input-isolation");
+		expectApplied(session.apply(PutRule({
+			id: ruleId,
+			priority: 0,
+			repeat: Repeat,
+			event: Interact(PLAYER),
+			predicate: All(children),
+			actions: [ChooseSeeded(id("seed.input-isolation"), choices)]
+		})), Rule, "put nested rule");
+		children.push(EventActorIs(PLAYER));
+		branchActions.push(Despawn(PLAYER));
+		choices.push({weight: 2, actions: [EmitSignal(content("caxecraft:leaked"))]});
+		expectApplied(session.apply(SetTitle(Literal("Alias check"))), DocumentMetadata, "edit after caller mutation");
+		final draft = session.draftSnapshot();
+		var found = false;
+		for (rule in draft.flow.rules)
+			if (rule.id.text() == ruleId.text()) {
+				found = true;
+				switch [rule.predicate, rule.actions[0]] {
+					case [All(retainedChildren), ChooseSeeded(_, retainedChoices)]:
+						require(retainedChildren.length == 1 && retainedChoices.length == 1 && retainedChoices[0].actions.length == 1,
+							"accepted rule retained caller-owned predicate, choice, or action arrays");
+					case _:
+						throw "accepted nested rule changed constructor shape";
+				}
+			}
+		require(found, "nested rule disappeared after the isolation check");
+	}
+
+	/** Prove a canonical object name and all object-role links change atomically. */
+	static function checkObjectRename():Void {
+		final session = open(defaultEditorSettings());
+		final renamed = id("player.renamed");
+		final ruleId = id("rule.rename");
+		expectApplied(session.apply(PutObject({id: CHECKPOINT, tags: [], placement: Checkpoint(transform(1500, 0, 1500))})), Placement,
+			"place rename collision object");
+		expectApplied(session.apply(PutRule({
+			id: ruleId,
+			priority: 0,
+			repeat: Repeat,
+			event: Interact(PLAYER),
+			predicate: All([EventActorIs(PLAYER), NearObject(PLAYER, PLAYER, 2000)]),
+			actions: [
+				GiveItem(PLAYER, content("caxecraft:stone"), 1),
+				Spawn(PLAYER),
+				PlayEffect(content("caxecraft:rename"), PLAYER),
+				ChooseSeeded(id("seed.rename"), [
+					{
+						weight: 1,
+						actions: [Despawn(PLAYER)]
+					}
+				])
+			]
+		})), Rule, "place rename reference rule");
+		final before = session.canonicalDraft();
+		expectApplied(session.apply(RenameObject(PLAYER, renamed)), Placement, "rename object");
+		final after = session.canonicalDraft();
+		require(after.compare(before) != 0, "object rename did not change canonical bytes");
+		final draft = session.draftSnapshot();
+		var foundObject = false;
+		var foundRule = false;
+		for (object in draft.objects)
+			if (object.id.text() == renamed.text())
+				foundObject = true;
+		for (rule in draft.flow.rules)
+			if (rule.id.text() == ruleId.text()) {
+				foundRule = true;
+				switch [
+					rule.event,
+					rule.predicate,
+					rule.actions[0],
+					rule.actions[1],
+					rule.actions[2],
+					rule.actions[3]
+				] {
+					case [
+						Interact(eventObject),
+						All([EventActorIs(eventActor), NearObject(nearActor, nearObject, _)]),
+						GiveItem(owner, _, _),
+						Spawn(spawned),
+						PlayEffect(_, effectObject),
+						ChooseSeeded(_, [
+							{
+								actions: [Despawn(hidden)]
+							}
+						])
+					]:
+						require(eventObject.text() == renamed.text()
+							&& eventActor.text() == renamed.text()
+							&& nearActor.text() == renamed.text()
+							&& nearObject.text() == renamed.text()
+							&& owner.text() == renamed.text()
+							&& spawned.text() == renamed.text()
+							&& effectObject != null
+							&& effectObject.text() == renamed.text()
+							&& hidden.text() == renamed.text(),
+							"object rename left a stale event, predicate, action, or nested choice reference");
+					case _:
+						throw "object rename changed the CaxeFlow constructor shape";
+				}
+			}
+		require(foundObject && foundRule, "object rename lost the placement or connected rule");
+		final accepted = session.canonicalDraft();
+		expectRejected(session.apply(RenameObject(renamed, new ScenarioId("Not Valid"))), error -> switch error {
+			case InvalidObjectName(_): true;
+			case _: false;
+		}, "reject invalid object name");
+		expectRejected(session.apply(RenameObject(renamed, CHECKPOINT)), error -> switch error {
+			case DuplicateObject(id): id.text() == CHECKPOINT.text();
+			case _: false;
+		}, "reject duplicate object name");
+		require(session.canonicalDraft().compare(accepted) == 0, "rejected object name changed canonical bytes");
+		expectHistory(session.undo(), Placement, "undo object rename");
+		require(session.canonicalDraft().compare(before) == 0, "object rename undo changed unrelated bytes");
+		expectHistory(session.redo(), Placement, "redo object rename");
+		require(session.canonicalDraft().compare(after) == 0, "object rename redo did not restore exact bytes");
+	}
+
+	/** Unwrap one expected side-effect-free authoring result for compact checks. */
+	static function authoredRule(result:EditorFlowAuthoringResult, label:String):caxecraft.scenario.CaxeFlow.FlowRule
+		return switch result {
+			case FlowRuleAuthored(rule): rule;
+			case FlowRuleUnchanged: throw '$label unexpectedly made no change';
+			case FlowRuleAuthoringRejected(error): throw '$label was rejected: $error';
+		};
 
 	static inline function close(actual:Float, expected:Float):Bool
 		return actual > expected - 0.000001 && actual < expected + 0.000001;
@@ -2768,7 +3224,7 @@ final class EditorProbe {
 		final test = session.testPlay();
 		require(test != null, "test play did not publish its disposable simulation");
 		require(test.objectiveState(OBJECTIVE) == Active, "test play did not start from authored objective state");
-		final result = test.runTick({events: [Interact(CHECKPOINT)], positions: []});
+		final result = test.runTick({events: [flowEventOccurrence(Interact(CHECKPOINT), ActorEventContext(PLAYER))], positions: []});
 		require(result.diagnostics.length == 0, "test-play rule execution failed");
 		require(test.objectiveState(OBJECTIVE) == Complete, "test-play rule did not mutate disposable state");
 		require(session.leaveTestPlay(), "leaving active test play failed");
@@ -3375,6 +3831,9 @@ private final class Registry implements ScenarioContentRegistry {
 		return -1;
 	}
 
+	public function blockContentIdForStorageCode(code:Int):Null<ContentId>
+		return code == 0 ? new ContentId("caxecraft:air") : code == 3 ? new ContentId("caxecraft:stone") : null;
+
 	public function hasFluid(id:ContentId):Bool
 		return id.text() == "caxecraft:water";
 
@@ -3398,6 +3857,9 @@ private final class Registry implements ScenarioContentRegistry {
 
 	public function hasState(id:ContentId):Bool
 		return id.text() == "caxecraft:idle";
+
+	public function statefulObjectHasState(objectType:ContentId, state:ContentId):Bool
+		return hasStatefulObject(objectType) && hasState(state);
 
 	public function hasEffect(id:ContentId):Bool
 		return false;

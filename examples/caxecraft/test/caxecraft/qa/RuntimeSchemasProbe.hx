@@ -23,12 +23,19 @@ import caxecraft.app.RuntimeInventoryBinding.inventoryKindForRuntimeItem;
 import caxecraft.app.VoxelFrameAnimation.VoxelFrameAnimationPlayer;
 import caxecraft.editor.EditorObjectPresentation.EditorObjectVisual;
 import caxecraft.editor.EditorObjectPresentation.visualFor as editorObjectVisualFor;
+import caxecraft.editor.EditorFlowProjection.allEditorFlowUiMessages;
 import caxecraft.gameplay.ItemKind;
 import caxecraft.localization.RuntimeUiCatalog;
 import caxecraft.localization.RuntimeUiCatalog.RuntimeUiCatalogResult;
 import caxecraft.localization.UiTypes.LocaleCursor;
 import caxecraft.localization.UiTypes.UiMessage;
 import caxecraft.scenario.ContentId;
+import caxecraft.scenario.MessageId;
+import caxecraft.scenario.CaxeFlowActionRegistry.allFlowActionDescriptors;
+import caxecraft.scenario.CaxeFlowEventRegistry.allFlowEventDescriptors;
+import caxecraft.scenario.CaxeFlowPredicateRegistry.allFlowPredicateDescriptors;
+import caxecraft.scenario.CaxeFlowDiagnosticText.requiredCaxeFlowDiagnosticMessageIds;
+import caxecraft.scenario.ScenarioDiagnosticText.requiredScenarioDiagnosticMessageIds;
 import caxecraft.scenario.ScenarioGeometry.ScenarioTransform;
 import caxecraft.scenario.ScenarioId;
 import caxecraft.scenario.ScenarioObject.ObjectPlacement;
@@ -71,7 +78,7 @@ function main():Void {
 
 /** Return zero only when the real positive path and focused negatives agree. */
 function selfCheck():Int {
-	final store = switch ContentPackageStore.open(".", "caxecraft-runtime-schema", 32 * 1024) {
+	final store = switch ContentPackageStore.open(".", "caxecraft-runtime-schema", ContentJson.MAXIMUM_BYTES) {
 		case PackageStoreOpened(value): value;
 		case PackageStoreRejected(_): return 1;
 	};
@@ -204,13 +211,21 @@ function selfCheck():Int {
 
 	if (catalog.localeCount() != 2
 		|| catalog.messageCount() != 79
-		|| catalog.text(LocaleCursor.Locale0, UiMessage.Brand) != "CAXECRAFT  //  C + HAXE"
+		|| catalog.text(LocaleCursor.Locale0, UiMessage.MenuAdventure) != "ADVENTURE"
 		|| catalog.text(LocaleCursor.Locale1, UiMessage.MenuAdventure) != "AVENTURA"
 		|| catalog.text(LocaleCursor.Locale1, UiMessage.EditorTitle) != "EDITOR DE MUNDOS CAXECRAFT")
 		return 8;
-	if (!allUiMessagesHaveText(catalog)) {
-		return 9;
-	}
+	if (catalog.templateCount() != 88 || !allRequiredTemplatesExist(catalog))
+		return 71;
+	if (catalog.format(Locale0, allFlowEventDescriptors()[0].editorLabel, ["zone.harbor"]) != "enter zone.harbor"
+		|| catalog.format(Locale1, allFlowEventDescriptors()[0].editorLabel, ["zone.harbor"]) != "entrar en zone.harbor"
+		|| catalog.format(Locale0, new MessageId("scenario.diagnostic.stale-reference"),
+			["object.gone", "21", "5"]) != "Reference object.gone does not point to an existing record. Check line 21, column 5."
+		|| catalog.format(Locale0, new MessageId("scenario.diagnostic.stale-reference"), ["object.gone"]) != "")
+		return 72;
+	final mismatchedPlaceholders = replaceOnce(ui.bytes.toString(), '"es-MX": "sumar {1} a {0}"', '"es-MX": "sumar a {0}"');
+	if (!rejectsUiAt(mismatchedPlaceholders, IncompatibleTypedCatalog, "templates[5].text"))
+		return 73;
 	traceUi = catalog.messageCount() * 100 + catalog.localeCount() * 10 + catalog.text(LocaleCursor.Locale1, UiMessage.MenuAdventure).length;
 	if (traceUi != 7928)
 		return 36;
@@ -218,91 +233,25 @@ function selfCheck():Int {
 	return negativeChecks();
 }
 
-/** Exercise every typed message lookup and reject a missing translation. */
-function allUiMessagesHaveText(catalog:RuntimeUiCatalog):Bool {
-	final messages:Array<UiMessage> = [
-		AquaticGearEquipped,
-		Brand,
-		CapturePrompt,
-		Controls,
-		ConversationHelp,
-		ConversationNarrator,
-		DebugCells,
-		DebugDraws,
-		DebugFrame,
-		DebugTick,
-		DebugVisible,
-		EditorAdvanced,
-		EditorBack,
-		EditorBuild,
-		EditorCamera,
-		EditorCameraFly,
-		EditorCameraOrbit,
-		EditorCameraWalk,
-		EditorCanvasHelp,
-		EditorCheckpoint,
-		EditorCoordinates,
-		EditorDelete,
-		EditorDuplicate,
-		EditorEnvironment,
-		EditorEnvironmentClouds,
-		EditorEnvironmentDone,
-		EditorEnvironmentEast,
-		EditorEnvironmentEnabled,
-		EditorEnvironmentNorth,
-		EditorEnvironmentOff,
-		EditorEnvironmentOn,
-		EditorEnvironmentRadius,
-		EditorEnvironmentSeed,
-		EditorEnvironmentSky,
-		EditorEnvironmentSouth,
-		EditorEnvironmentSun,
-		EditorEnvironmentWater,
-		EditorEnvironmentWest,
-		EditorErase,
-		EditorGround,
-		EditorInvalid,
-		EditorKeepEditing,
-		EditorLayer,
-		EditorLeaveWithoutSaving,
-		EditorMaterial,
-		EditorMoreDetails,
-		EditorName,
-		EditorNewWorld,
-		EditorPlan,
-		EditorReady,
-		EditorRedo,
-		EditorSave,
-		EditorSaveFailed,
-		EditorSaved,
-		EditorScene,
-		EditorSelect,
-		EditorStopTest,
-		EditorTest,
-		EditorTesting,
-		EditorTitle,
-		EditorToolList,
-		EditorTrigger,
-		EditorUndo,
-		EditorUnsavedChanges,
-		EditorValid,
-		EditorValidate,
-		EditorWorldList,
-		HealthFull,
-		MenuAdventure,
-		MenuCreative,
-		MenuEditor,
-		MenuInstructions,
-		NoBlockInReach,
-		PauseHelp,
-		PauseTitle,
-		PlaceBlocked,
-		PlayerFallen,
-		ReturnPrompt,
-		TitleFallback
-	];
-	for (message in messages)
-		if (catalog.text(Locale0, message).length == 0 || catalog.text(Locale1, message).length == 0)
+/** Prove every code-owned key used by this slice exists in the data catalog. */
+function allRequiredTemplatesExist(catalog:RuntimeUiCatalog):Bool {
+	for (message in requiredCaxeFlowDiagnosticMessageIds())
+		if (!catalog.hasTemplate(message))
+			return false;
+	for (message in requiredScenarioDiagnosticMessageIds())
+		if (!catalog.hasTemplate(message))
+			return false;
+	for (message in allEditorFlowUiMessages())
+		if (!catalog.hasTemplate(message.messageId()))
+			return false;
+	for (descriptor in allFlowEventDescriptors())
+		if (!catalog.hasTemplate(descriptor.editorLabel))
+			return false;
+	for (descriptor in allFlowPredicateDescriptors())
+		if (!catalog.hasTemplate(descriptor.editorLabel))
+			return false;
+	for (descriptor in allFlowActionDescriptors())
+		if (!catalog.hasTemplate(descriptor.editorLabel))
 			return false;
 	return true;
 }
@@ -538,14 +487,14 @@ function minimalPack():String
 /**
  * Return the first two correctly shaped typed messages for fast UI negatives.
  *
- * Every mutation below fails before the complete-catalog compatibility check;
- * the real 71-message positive path remains the proof that all shipped text is
- * admitted and mapped to the existing constructors.
+ * These mutations fail before catalog compatibility is checked. The complete
+ * positive path proves that all shipped text maps to a typed key.
  */
 function minimalUiCatalog():String
 	return '{"schemaVersion":1,"catalogId":"caxecraft.ui","defaultLocale":"en","locales":["en","es-MX"],"messages":['
-		+ '{"id":"aquatic_gear_equipped","symbol":"AquaticGearEquipped","text":{"en":"AQUATIC GEAR EQUIPPED","es-MX":"EQUIPO ACUATICO ACTIVADO"}},'
-		+ '{"id":"brand","symbol":"Brand","text":{"en":"CAXECRAFT  //  C + HAXE","es-MX":"CAXECRAFT  //  C + HAXE"}}]}';
+		+ '{"id":"aquatic_gear_equipped","text":{"en":"AQUATIC GEAR EQUIPPED","es-MX":"EQUIPO ACUATICO ACTIVADO"}},'
+		+ '{"id":"brand","text":{"en":"CAXECRAFT  //  C + HAXE","es-MX":"CAXECRAFT  //  C + HAXE"}}],'
+		+ '"templates":[{"id":"test.template","text":{"en":"TEST {0}","es-MX":"PRUEBA {0}"}}]}';
 
 /** Exercise catalog identity, ordering, locale, message, and text bounds. */
 function uiNegativeChecks(ui:String):Int {
@@ -557,7 +506,7 @@ function uiNegativeChecks(ui:String):Int {
 		return 29;
 	if (!rejectsUi(replaceOnce(ui, '"id":"aquatic_gear_equipped"', '"id":"zz_aquatic_gear_equipped"'), NonCanonicalOrder))
 		return 30;
-	if (!rejectsUiAt(replaceOnce(ui, '"symbol":"Brand"', '"symbol":"DifferentBrand"'), IncompatibleTypedCatalog, "messages[1]"))
+	if (!rejectsUiAt(replaceOnce(ui, '"id":"brand"', '"extra":"duplicate-owner","id":"brand"'), UnknownField, "messages[1].extra"))
 		return 31;
 	if (!rejectsUi(replaceOnce(ui, '"es-MX":"CAXECRAFT  //  C + HAXE"', '"fr":"CAXECRAFT  //  C + HAXE"'), InvalidLocale))
 		return 32;
@@ -772,6 +721,7 @@ function rejectsUiAt(source:String, family:ExpectedSchemaFamily, expectedPath:St
 	return switch RuntimeUiCatalog.decode(Bytes.ofString(source)) {
 		case RuntimeUiCatalogRejected(diagnostic): final pathMatches = switch diagnostic.kind {
 				case SchemaIncompatibleTypedCatalog(path): path == expectedPath;
+				case SchemaUnknownField(path, field): '$path.$field' == expectedPath;
 				case _: false;
 			}; sameFamily(diagnostic.kind, family) && pathMatches && diagnostic.line > 0 && diagnostic.column > 0;
 		case RuntimeUiCatalogReady(_): false;
