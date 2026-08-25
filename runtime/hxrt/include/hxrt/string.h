@@ -118,6 +118,13 @@ HXC_API hxc_status hxc_string_concat_ref(
   hxc_string *out_string
 );
 
+/** Copy one valid String into an independently reference-counted Haxe value. */
+HXC_API hxc_status hxc_string_copy_ref(
+  hxc_string source,
+  hxc_allocator allocator,
+  hxc_string *out_string
+);
+
 /** Length-delimited view of a C string; null is rejected. Encoding is unchecked. */
 HXC_API hxc_status hxc_byte_view_from_cstring(
   const char *value,

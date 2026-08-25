@@ -5,6 +5,7 @@ import haxe.crypto.Sha256;
 import haxe.io.Bytes;
 import haxe.macro.Expr.Position;
 import haxe.macro.Type;
+import haxe.macro.TypeTools;
 import reflaxe.c.ir.HxcIR;
 import reflaxe.c.ir.HxcSourceSpan;
 import reflaxe.c.lowering.CBodyAggregate.CBodyValueType;
@@ -124,6 +125,9 @@ class CBodyIteratorRegistry {
 		return switch type {
 			case TType(reference, parameters) if (reference.get().pack.length == 0 && reference.get().name == "Iterator"):
 				parameters;
+			case TType(reference, parameters) if (reference.get().pack.length == 0 && reference.get().name == "KeyValueIterator"):
+				final definition = reference.get();
+				iteratorParameters(TypeTools.applyTypeParameters(definition.type, definition.params, parameters));
 			case TMono(reference):
 				final resolved = reference.get();
 				resolved == null ? null : iteratorParameters(resolved);

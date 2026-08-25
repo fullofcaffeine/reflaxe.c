@@ -53,6 +53,47 @@ final class Main {
 			&& copied.get(seed + 1) == null;
 	}
 
+	/** Prove that all three iterator forms own one creation-time snapshot. */
+	static function iteratorTrace(seed:Int):Bool {
+		final values:Map<Int, Bool> = [];
+		values.set(seed, false);
+		values.set(seed + 1, true);
+		final valueCursor = values.iterator();
+		final keyCursor = values.keys();
+		final pairCursor = values.keyValueIterator();
+		values.remove(seed);
+		values.set(seed + 2, true);
+
+		var falseCount = 0;
+		var trueCount = 0;
+		while (valueCursor.hasNext()) {
+			if (valueCursor.next())
+				trueCount++
+			else
+				falseCount++;
+		}
+		var keySum = 0;
+		while (keyCursor.hasNext())
+			keySum += keyCursor.next();
+		var pairKeySum = 0;
+		var pairTrueCount = 0;
+		while (pairCursor.hasNext()) {
+			final pair = pairCursor.next();
+			pairKeySum += pair.key;
+			if (pair.value)
+				pairTrueCount++;
+		}
+		return falseCount == 1 && trueCount == 1 && keySum == seed * 2 + 1 && pairKeySum == keySum && pairTrueCount == 1;
+	}
+
+	/** Keep formatting deterministic without making multi-entry hash order public. */
+	static function stringTrace(seed:Int):Bool {
+		final values:Map<Int, Bool> = [];
+		values.set(seed, false);
+		final rendered = values.toString();
+		return rendered == "[17 => false]";
+	}
+
 	/**
 		Run the bounded semantic trace without requiring console or file support.
 
@@ -60,7 +101,7 @@ final class Main {
 		the test runner observes it as a bounded timeout on both Eval and native C.
 	**/
 	static function main():Void {
-		if (!sharedMembership(40) || !lookupAndDeletion(40) || !independentCopy(60))
+		if (!sharedMembership(40) || !lookupAndDeletion(40) || !independentCopy(60) || !iteratorTrace(80) || !stringTrace(17))
 			while (true) {}
 	}
 }

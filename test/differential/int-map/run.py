@@ -30,7 +30,10 @@ NATIVE_FIXTURE = CASE / "int_map_runtime.c"
 RUNTIME_INCLUDE = ROOT / "runtime/hxrt/include"
 RUNTIME_SOURCES = (
     ROOT / "runtime/hxrt/src/allocator.c",
+    ROOT / "runtime/hxrt/src/iterator.c",
     ROOT / "runtime/hxrt/src/int_map.c",
+    ROOT / "runtime/hxrt/src/string.c",
+    ROOT / "runtime/hxrt/src/string_scalar.c",
 )
 TOOLCHAINS = ("gcc", "clang")
 LAYOUTS = ("split", "package", "unity")
@@ -210,6 +213,10 @@ def validate_generated_project(output: Path, hxcir: str) -> None:
         'runtime(feature="int-map",operation="remove")',
         'runtime(feature="int-map",operation="clear")',
         'runtime(feature="int-map",operation="copy")',
+		'runtime(feature="int-map",operation="iterator")',
+		'runtime(feature="int-map",operation="keys")',
+		'runtime(feature="int-map",operation="key-value-iterator")',
+		'runtime(feature="int-map",operation="to-string")',
         "retain place=local(",
         "release place=local(",
     ):
@@ -219,7 +226,10 @@ def validate_generated_project(output: Path, hxcir: str) -> None:
         raise IntMapFailure("IntMap HxcIR used raw syntax or leaked the checkout path")
 
     plan = json.loads((output / "hxc.runtime-plan.json").read_text(encoding="utf-8"))
-    if plan.get("features") != ["runtime-base", "status", "alloc", "int-map"]:
+    if plan.get("features") != [
+        "runtime-base", "status", "alloc", "iterator", "string-literal",
+        "string-scalar", "string", "int-map",
+    ]:
         raise IntMapFailure("generated IntMap program selected the wrong runtime closure")
     operations = {
         reason.get("operationId")
@@ -237,19 +247,23 @@ def validate_generated_project(output: Path, hxcir: str) -> None:
         "managed-type-representation",
         "retain",
         "set",
+		"iterator",
+		"keys",
+		"key-value-iterator",
+		"to-string",
     }:
         raise IntMapFailure(f"generated IntMap operations drifted: {sorted(operations)!r}")
     decisions = plan.get("directDecisions", [])
     if "managed-haxe-int-maps" not in decisions:
         raise IntMapFailure("runtime plan omitted the IntMap representation decision")
     if any(
-        decision.startswith("managed-haxe-") and decision != "managed-haxe-int-maps"
+        decision.startswith("managed-haxe-") and decision not in {"managed-haxe-int-maps", "managed-haxe-iterators"}
         for decision in decisions
     ):
         raise IntMapFailure("runtime plan selected an unrelated managed Haxe family")
     stdlib = json.loads((output / "hxc.stdlib-report.json").read_text(encoding="utf-8"))
     if (
-        stdlib.get("modules") != ["int-map"]
+        stdlib.get("modules") != ["String", "int-map", "iterator", "string"]
         or stdlib.get("capabilities")
         != [
             "cleanup-release",
@@ -258,10 +272,16 @@ def validate_generated_project(output: Path, hxcir: str) -> None:
             "create",
             "exists",
             "get",
+			"has-next",
+			"iterator",
+			"key-value-iterator",
+			"keys",
             "managed-type-representation",
-            "remove",
-            "retain",
-            "set",
+			"remove",
+			"retain",
+			"set",
+			"static-value",
+			"to-string",
         ]
     ):
         raise IntMapFailure("stdlib report did not name the exact admitted IntMap closure")
@@ -279,6 +299,10 @@ def validate_generated_project(output: Path, hxcir: str) -> None:
         "hxc_int_bool_map_ref_remove",
         "hxc_int_bool_map_ref_clear",
         "hxc_int_bool_map_ref_copy",
+		"hxc_int_bool_map_ref_value_iterator",
+		"hxc_int_bool_map_ref_key_iterator",
+		"hxc_int_bool_map_ref_pair_iterator",
+		"hxc_int_bool_map_ref_to_string",
         "hxc_int_bool_map_ref_retain",
         "hxc_int_bool_map_ref_release",
         "hxc_default_allocator()",
@@ -546,7 +570,7 @@ def main(argv: Iterable[str] = ()) -> int:
     print(
         "int-map: OK: "
         f"{families}; {mode} construction, set, exists, aliases, growth rollback, "
-        "lookup, removal, clear, copy independence and rollback, layouts, determinism, "
+        "lookup, removal, clear, copy independence and rollback, snapshot values/keys/pairs, toString, layouts, determinism, "
         "sanitizers, runtime-none, negative diagnostics, and selective symbols passed"
     )
     return 0

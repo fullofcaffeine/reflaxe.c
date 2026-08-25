@@ -314,10 +314,11 @@ class CBodyLoweringResult {
 
 	public function new(program:HxcIRProgram, functions:Array<CLoweredBodyFunction>, globals:Array<CLoweredBodyGlobal>,
 			aggregates:Array<CLoweredBodyAggregate>, enums:Array<CLoweredBodyEnum>, classes:Array<CLoweredBodyClass>, arrays:Array<CLoweredBodyArray>,
-			iterators:Array<CPreparedBodyIterator>, intMaps:Array<CPreparedBodyIntMap>, stringMaps:Array<CLoweredBodyStringMap>, bytes:Array<CPreparedBodyBytes>,
-			optionals:Array<CLoweredBodyOptional>, constructors:Array<CLoweredBodyConstructor>, dispatch:CLoweredBodyDispatch, imports:CLoweredImports,
-			helpers:Array<CPrimitiveHelperPlan>, buildFacts:Array<TypedCBuildFact>, symbolTable:CSymbolTableSnapshot, boundsAbortName:Null<CIdentifier>,
-			runtimeRequirements:Array<CBodyRuntimeRequirement>, managedProgram:Null<CManagedProgramNames>, ?hxcirDump:String) {
+			iterators:Array<CPreparedBodyIterator>, intMaps:Array<CPreparedBodyIntMap>, stringMaps:Array<CLoweredBodyStringMap>,
+			bytes:Array<CPreparedBodyBytes>, optionals:Array<CLoweredBodyOptional>, constructors:Array<CLoweredBodyConstructor>,
+			dispatch:CLoweredBodyDispatch, imports:CLoweredImports, helpers:Array<CPrimitiveHelperPlan>, buildFacts:Array<TypedCBuildFact>,
+			symbolTable:CSymbolTableSnapshot, boundsAbortName:Null<CIdentifier>, runtimeRequirements:Array<CBodyRuntimeRequirement>,
+			managedProgram:Null<CManagedProgramNames>, ?hxcirDump:String) {
 		this.program = program;
 		this.functions = functions.copy();
 		this.globals = globals.copy();
@@ -629,8 +630,8 @@ class CBodyLowering {
 		CPhaseTiming.stopDetail(nameProjectionTimer);
 		CPhaseTiming.stop(analysisTimer);
 		final castBodyTimer = CPhaseTiming.start(CPCASTBodyConstruction);
-		final emitter = new CBodyEmitter(loweredAggregates, loweredEnums, loweredClasses, loweredArrays, preparedIterators, preparedIntMaps, loweredStringMaps, preparedBytes,
-			loweredOptionals, loweredDispatch, loweredImports, managedProgram);
+		final emitter = new CBodyEmitter(loweredAggregates, loweredEnums, loweredClasses, loweredArrays, preparedIterators, preparedIntMaps,
+			loweredStringMaps, preparedBytes, loweredOptionals, loweredDispatch, loweredImports, managedProgram);
 		final lowered:Array<CLoweredBodyFunction> = [];
 		for (item in built) {
 			final controlFlow = CBodyEmitter.resolveControlFlow(item.ir, canonicalFunctions.get(item.ir.id));
@@ -715,8 +716,8 @@ class CBodyLowering {
 			}
 		runtimeRequirements.sort(compareRuntimeRequirements);
 		CPhaseTiming.setCounter(CPCounterRuntimeRequirements, runtimeRequirements.length);
-		return new CBodyLoweringResult(program, lowered, loweredGlobals, loweredAggregates, loweredEnums, loweredClasses, loweredArrays, preparedIterators, preparedIntMaps,
-			loweredStringMaps, preparedBytes, loweredOptionals, loweredConstructors, loweredDispatch, loweredImports, helpers,
+		return new CBodyLoweringResult(program, lowered, loweredGlobals, loweredAggregates, loweredEnums, loweredClasses, loweredArrays, preparedIterators,
+			preparedIntMaps, loweredStringMaps, preparedBytes, loweredOptionals, loweredConstructors, loweredDispatch, loweredImports, helpers,
 			helperSelection.buildFacts().concat(loweredImports.buildFacts), symbolTable, boundsAbortName, runtimeRequirements, managedProgram,
 			completeHxcIRDump);
 	}
@@ -1155,8 +1156,9 @@ class CBodyLowering {
 
 	static function buildProgram(functions:Array<BuiltBodyFunction>, globals:Array<PreparedBodyGlobal>, aggregates:Array<CPreparedBodyAggregate>,
 			enums:Array<CPreparedBodyEnumInstance>, classes:Array<CPreparedBodyClass>, interfaces:Array<CPreparedBodyInterface>,
-			arrays:Array<CPreparedBodyArray>, iterators:Array<CPreparedBodyIterator>, intMaps:Array<CPreparedBodyIntMap>, stringMaps:Array<CPreparedBodyStringMap>, bytes:Array<CPreparedBodyBytes>,
-			imports:Array<CPreparedImportType>, dispatch:CPreparedBodyDispatch):HxcIRProgram {
+			arrays:Array<CPreparedBodyArray>, iterators:Array<CPreparedBodyIterator>, intMaps:Array<CPreparedBodyIntMap>,
+			stringMaps:Array<CPreparedBodyStringMap>, bytes:Array<CPreparedBodyBytes>, imports:Array<CPreparedImportType>,
+			dispatch:CPreparedBodyDispatch):HxcIRProgram {
 		final byModule:Map<String, Array<BuiltBodyFunction>> = [];
 		for (fn in functions) {
 			var moduleFunctions = byModule.get(fn.prepared.modulePath);
@@ -1501,6 +1503,7 @@ class CBodyLowering {
 					|| isArrayJoinCall(callee)
 					|| isBytesStringCall(callee)
 					|| isStringBufferToStringCall(callee)
+					|| isMapOwnedStringCall(callee)
 					|| (arguments.length == 1 && isStdStringCall(callee) && switch CPrimitiveTypeMapper.map(arguments[0].t, profile) {
 						case CTPrimitive(mapping): mapping.sourceType == CPHaxeInt && mapping.nullability == CPNonNullable;
 						case _: false;
@@ -1517,6 +1520,18 @@ class CBodyLowering {
 		}
 		visit(root);
 		return found;
+	}
+
+	/** Recognize map calls that publish owned String values or String fields. */
+	static function isMapOwnedStringCall(expression:TypedExpr):Bool {
+		return switch expression.expr {
+			case TField(_, FInstance(reference, _, field)): final owner = reference.get(); final method = field.get()
+					.name; owner.pack.join(".") == "haxe.ds" && ((owner.name == "IntMap" && method == "toString")
+					|| (owner.name == "StringMap" && (method == "toString" || method == "keys" || method == "keyValueIterator")));
+			case TParenthesis(inner) | TMeta(_, inner) | TCast(inner, _):
+				isMapOwnedStringCall(inner);
+			case _: false;
+		};
 	}
 
 	/** Recognize the pinned core `Array.join` instance method. */
@@ -4346,7 +4361,10 @@ private class FunctionBuilder {
 				mayDiscoverSharedBodyType(resolve(), depth + 1);
 			case TType(reference, parameters):
 				final value = reference.get();
-				mayDiscoverSharedBodyType(TypeTools.applyTypeParameters(value.type, value.params, parameters), depth + 1);
+				if (value.pack.length == 0
+					&& (value.name == "Iterator" || value.name == "KeyValueIterator")) true; else
+					mayDiscoverSharedBodyType(TypeTools.applyTypeParameters(value.type, value.params, parameters), depth
+					+ 1);
 			case TAnonymous(_):
 				false;
 			case TAbstract(reference, parameters):
@@ -10211,7 +10229,8 @@ private class FunctionBuilder {
 			final result:HxcIRResult = {id: nextValueId(), type: IRTBool};
 			appendInstruction(result, IRIOUnary(operation == OpEq ? "haxe.string.is-null" : "haxe.string.is-not-null", value.id, IRIStatic),
 				sourceSpan(expression.pos), "string-null-equality");
-			return {id: result.id, type: result.type, mapping: boolMapping};
+			final stableResult = createFlowLocal(boolMapping, result.id, sourceSpan(expression.pos), "string-null-equality-result");
+			return loadPlace({place: IRPLocal(stableResult), mapping: boolMapping, mutable: false}, expression.pos, "string-null-equality-result");
 		}
 		if (leftMapping != null
 			&& rightMapping != null
@@ -10238,7 +10257,10 @@ private class FunctionBuilder {
 		final boolMapping = bodyValueType(expression.t, expression.pos, "TBinop(String-equality:result-type)");
 		if (boolMapping.irType != IRTBool)
 			return unsupported(expression, "TBinop(String-equality:result-not-Bool)");
-		return {id: result.id, type: result.type, mapping: boolMapping};
+		// Materialize before temporary String cleanup. A fresh runtime producer can
+		// otherwise be released before an inlined comparison reaches its terminator.
+		final stableResult = createFlowLocal(boolMapping, result.id, sourceSpan(expression.pos), "string-equality-result");
+		return loadPlace({place: IRPLocal(stableResult), mapping: boolMapping, mutable: false}, expression.pos, "string-equality-result");
 	}
 
 	/**
@@ -11453,7 +11475,8 @@ private class FunctionBuilder {
 			argument = stabilizeFreshManagedEnum(argument, argumentExpression.pos, 'indirect-call-argument-$index');
 			argument = stabilizeFreshManagedAggregate(argument, argumentExpression.pos, 'indirect-call-argument-$index');
 			argument = stabilizeFreshManagedOptional(argument, argumentExpression.pos, 'indirect-call-argument-$index');
-			if (freshManagedArrayValueIds.exists(argument.id) || freshManagedStringMapValueIds.exists(argument.id)
+			if (freshManagedArrayValueIds.exists(argument.id)
+				|| freshManagedStringMapValueIds.exists(argument.id)
 				|| freshManagedIteratorValueIds.exists(argument.id))
 				return unsupported(argumentExpression, 'TCall(indirect-managed-argument-needs-explicit-ownership:$index)');
 			rejectOwnedClassBorrow(argument, argumentExpression.pos, 'TCall(indirect-owned-class-borrow-escape:$index)');
@@ -12448,13 +12471,19 @@ private class FunctionBuilder {
 		if (map == null)
 			return unsupported(access.receiver, "TCall(IntMap:receiver-identity-lost)");
 		final method = access.field.get().name;
-		final expectedArguments = method == "clear" || method == "copy" ? 0 : method == "set" ? 2 : 1;
-		if (method != "set" && method != "exists" && method != "get" && method != "remove" && method != "clear" && method != "copy")
+		final runtimeMethod = method == "keyValueIterator" ? "key-value-iterator" : method == "toString" ? "to-string" : method;
+		final iteratorMethod = method == "iterator" || method == "keys" || method == "keyValueIterator";
+		final expectedArguments = method == "clear"
+			|| method == "copy"
+			|| method == "toString"
+			|| iteratorMethod ? 0 : method == "set" ? 2 : 1;
+		if (method != "set" && method != "exists" && method != "get" && method != "remove" && method != "clear" && method != "copy" && method != "toString"
+			&& !iteratorMethod)
 			return unsupported(expression, 'TCall(IntMap.$method:not-yet-admitted)');
 		if (arguments.length != expectedArguments)
 			return unsupported(expression, 'TCall(IntMap.$method:argument-count=${arguments.length},expected=$expectedArguments)');
 		final loweredArguments:Array<String> = [receiver.id];
-		if (method != "clear" && method != "copy") {
+		if (arguments.length > 0) {
 			final intMapping = bodyValueType(arguments[0].t, arguments[0].pos, 'TCall(IntMap.$method:key-type)');
 			switch intMapping.irType {
 				case IRTInt(32, true):
@@ -12467,6 +12496,40 @@ private class FunctionBuilder {
 		if (method == "set")
 			loweredArguments.push(coerce(lowerValue(arguments[1], map.value), map.value, arguments[1].pos, "TCall(IntMap.set:value)").id);
 		final source = sourceSpan(expression.pos);
+		if (iteratorMethod) {
+			final resultMapping = bodyValueType(expression.t, expression.pos, 'TCall(IntMap.$method:result-type)');
+			final iterator = resultMapping.iteratorValue();
+			if (iterator == null)
+				return unsupported(expression, 'TCall(IntMap.$method:result-not-Iterator)');
+			final expectedElement = method == "iterator" ? map.value.irType : method == "keys" ? IRTInt(32, true) : iterator.element.irType;
+			if (typeKey(iterator.element.irType) != typeKey(expectedElement))
+				return unsupported(expression, 'TCall(IntMap.$method:element-type-mismatch)');
+			final result:HxcIRResult = {id: nextValueId(), type: resultMapping.irType};
+			appendInstruction(result, IRIOCall({
+				dispatch: IRCDRuntime("int-map", runtimeMethod),
+				arguments: loweredArguments,
+				returnType: result.type,
+				failure: managedArrayFailure()
+			}), source, 'int-map-$method');
+			registerValueTemporary(result.id, 'int-map-$method-result');
+			freshManagedIteratorValueIds.set(result.id, true);
+			runtimeRequirements.push(new CBodyRuntimeRequirement("int-map", runtimeMethod, 'ordinary Haxe IntMap.$method snapshot', source, expression.pos));
+			return {id: result.id, type: result.type, mapping: resultMapping};
+		}
+		if (method == "toString") {
+			final resultMapping = bodyValueType(expression.t, expression.pos, "TCall(IntMap.toString:result-type)");
+			final result:HxcIRResult = {id: nextValueId(), type: resultMapping.irType};
+			appendInstruction(result, IRIOCall({
+				dispatch: IRCDRuntime("int-map", "to-string"),
+				arguments: loweredArguments,
+				returnType: result.type,
+				failure: managedArrayFailure()
+			}), source, "int-map-to-string");
+			registerValueTemporary(result.id, "int-map-to-string-result");
+			freshManagedStringValueIds.set(result.id, true);
+			runtimeRequirements.push(new CBodyRuntimeRequirement("int-map", "to-string", "ordinary Haxe IntMap.toString", source, expression.pos));
+			return {id: result.id, type: result.type, mapping: resultMapping};
+		}
 		if (method == "copy") {
 			final result:HxcIRResult = {id: nextValueId(), type: receiver.type};
 			appendInstruction(result, IRIOCall({
@@ -12541,7 +12604,12 @@ private class FunctionBuilder {
 		if (map == null)
 			return unsupported(access.receiver, "TCall(StringMap:receiver-identity-lost)");
 		final method = access.field.get().name;
-		final expectedArguments = method == "clear" || method == "copy" || method == "iterator" ? 0 : method == "set" ? 2 : 1;
+		final runtimeMethod = method == "keyValueIterator" ? "key-value-iterator" : method == "toString" ? "to-string" : method;
+		final iteratorMethod = method == "iterator" || method == "keys" || method == "keyValueIterator";
+		final expectedArguments = method == "clear"
+			|| method == "copy"
+			|| method == "toString"
+			|| iteratorMethod ? 0 : method == "set" ? 2 : 1;
 		if (arguments.length != expectedArguments)
 			return unsupported(expression, 'TCall(StringMap.$method:argument-count=${arguments.length},expected=$expectedArguments)');
 		final loweredArguments:Array<String> = [receiver.id];
@@ -12564,22 +12632,44 @@ private class FunctionBuilder {
 			loweredArguments.push(value.id);
 		}
 		final source = sourceSpan(expression.pos);
-		if (method == "iterator") {
-			final resultMapping = bodyValueType(expression.t, expression.pos, "TCall(StringMap.iterator:result-type)");
+		if (iteratorMethod) {
+			final resultMapping = bodyValueType(expression.t, expression.pos, 'TCall(StringMap.$method:result-type)');
 			final iterator = resultMapping.iteratorValue();
-			if (iterator == null || typeKey(iterator.element.irType) != typeKey(map.value.irType))
-				return unsupported(expression, "TCall(StringMap.iterator:element-type-mismatch)");
+			if (iterator == null)
+				return unsupported(expression, 'TCall(StringMap.$method:result-not-Iterator)');
+			final elementMatches = method == "iterator" ? typeKey(iterator.element.irType) == typeKey(map.value.irType) : method == "keys" ? iterator.element.staticStringIdentity() != null : true;
+			if (!elementMatches)
+				return unsupported(expression, 'TCall(StringMap.$method:element-type-mismatch)');
 			final result:HxcIRResult = {id: nextValueId(), type: resultMapping.irType};
 			appendInstruction(result, IRIOCall({
-				dispatch: IRCDRuntime("string-map", "iterator"),
+				dispatch: IRCDRuntime("string-map", runtimeMethod),
 				arguments: loweredArguments,
 				returnType: result.type,
 				failure: managedArrayFailure()
-			}), source, "string-map-iterator");
-			registerValueTemporary(result.id, "string-map-iterator-result");
+			}), source, 'string-map-$method');
+			registerValueTemporary(result.id, 'string-map-$method-result');
 			freshManagedIteratorValueIds.set(result.id, true);
-			runtimeRequirements.push(new CBodyRuntimeRequirement("string-map", "iterator", "ordinary Haxe StringMap.iterator snapshot", source,
+			runtimeRequirements.push(new CBodyRuntimeRequirement("string-map", runtimeMethod, 'ordinary Haxe StringMap.$method snapshot', source,
 				expression.pos));
+			return {id: result.id, type: result.type, mapping: resultMapping};
+		}
+		if (method == "toString") {
+			switch map.value.irType {
+				case IRTBool | IRTInt(32, true):
+				case _:
+					return unsupported(expression, 'TCall(StringMap.toString:value-not-yet-formattable:${map.value.cSpelling})');
+			}
+			final resultMapping = bodyValueType(expression.t, expression.pos, "TCall(StringMap.toString:result-type)");
+			final result:HxcIRResult = {id: nextValueId(), type: resultMapping.irType};
+			appendInstruction(result, IRIOCall({
+				dispatch: IRCDRuntime("string-map", "to-string"),
+				arguments: loweredArguments,
+				returnType: result.type,
+				failure: managedArrayFailure()
+			}), source, "string-map-to-string");
+			registerValueTemporary(result.id, "string-map-to-string-result");
+			freshManagedStringValueIds.set(result.id, true);
+			runtimeRequirements.push(new CBodyRuntimeRequirement("string-map", "to-string", "ordinary Haxe StringMap.toString", source, expression.pos));
 			return {id: result.id, type: result.type, mapping: resultMapping};
 		}
 		if (method == "copy") {
@@ -12639,8 +12729,7 @@ private class FunctionBuilder {
 		final iterator = receiverMapping.iteratorValue();
 		if (iterator == null)
 			return unsupported(receiverExpression, 'TCall(Iterator.$method:receiver-identity-lost)');
-		var receiver = coerce(lowerValue(receiverExpression, receiverMapping), receiverMapping, receiverExpression.pos,
-			'TCall(Iterator.$method:receiver)');
+		var receiver = coerce(lowerValue(receiverExpression, receiverMapping), receiverMapping, receiverExpression.pos, 'TCall(Iterator.$method:receiver)');
 		receiver = stabilizeFreshManagedIterator(receiver, receiverExpression.pos, 'iterator-$method-receiver');
 		final resultMapping = method == "hasNext" ? bodyValueType(expression.t, expression.pos, "TCall(Iterator.hasNext:result-type)") : iterator.element;
 		if (method == "hasNext" && resultMapping.irType != IRTBool)
@@ -12656,8 +12745,8 @@ private class FunctionBuilder {
 		registerValueTemporary(result.id, 'iterator-${method == "hasNext" ? "has-next" : "next"}-result');
 		if (method == "next")
 			markFreshArrayRemovalResult(result.id, resultMapping, "Iterator.next result");
-		runtimeRequirements.push(new CBodyRuntimeRequirement("iterator", method == "hasNext" ? "has-next" : "next",
-			'standard Haxe Iterator.$method', source, expression.pos));
+		runtimeRequirements.push(new CBodyRuntimeRequirement("iterator", method == "hasNext" ? "has-next" : "next", 'standard Haxe Iterator.$method', source,
+			expression.pos));
 		return {id: result.id, type: result.type, mapping: resultMapping};
 	}
 
@@ -13791,8 +13880,7 @@ private class FunctionBuilder {
 			source: source
 		});
 		normalCleanupActionIds.push(cleanupId);
-		runtimeRequirements.push(new CBodyRuntimeRequirement("iterator", "cleanup-release", "fresh standard Haxe Iterator call lifetime", source,
-			position));
+		runtimeRequirements.push(new CBodyRuntimeRequirement("iterator", "cleanup-release", "fresh standard Haxe Iterator call lifetime", source, position));
 		return loadPlace({place: IRPLocal(ownerLocalId), mapping: value.mapping, mutable: false}, position, role + "-borrow");
 	}
 

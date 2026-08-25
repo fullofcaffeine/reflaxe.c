@@ -181,7 +181,8 @@ class RuntimeFeatureCatalog {
 					"hxc_iterator_ref_release",
 					"hxc_iterator_ref_has_next",
 					"hxc_iterator_ref_next_move"
-				], [], [],
+				],
+				[], [],
 				documentation("Preserves one shared cursor across Iterator aliases while keeping each element exact and unboxed; creation snapshots the producer, next moves ownership, and release destroys only unconsumed elements.",
 					[
 						new RuntimeFeatureSelectionRoot("managed-type-representation", RuntimeFeatureSelectionRootKind.HxcIrOperation,
@@ -196,9 +197,13 @@ class RuntimeFeatureCatalog {
 					"Compile-time-known iteration can remain direct control flow when no Iterator value or shared cursor is observable.",
 					"A closed producer may use a program-local cursor only when aliases, element lifetime, and exhaustion behavior remain identical.",
 					"General Iterator values need run-time shared cursor identity, but their exact element layout and lifecycle remain compiler-selected.",
-					"docs/hxrt.md", ["test/differential/string-map/run.py", "test/runtime/runtime-feature-graph/run.py"])),
+					"docs/hxrt.md",
+					[
+						"test/differential/string-map/run.py",
+						"test/runtime/runtime-feature-graph/run.py"
+					])),
 			new RuntimeFeatureDefinition(stringMap, "String-keyed shared Haxe Map identity with copied UTF-8 keys and exact unboxed value storage.",
-				CompilerSelectable, true, environments, [alloc, iterator, stringLiteral], [header("string_map.h"), source("string_map.c")], [
+				CompilerSelectable, true, environments, [alloc, iterator, string, stringLiteral], [header("string_map.h"), source("string_map.c")], [
 					"hxc_string_map_ref_create",
 					"hxc_string_map_ref_create_with_ops",
 					"hxc_string_map_ref_retain",
@@ -210,6 +215,9 @@ class RuntimeFeatureCatalog {
 					"hxc_string_map_ref_remove",
 					"hxc_string_map_ref_clear",
 					"hxc_string_map_ref_value_iterator",
+					"hxc_string_map_ref_key_iterator",
+					"hxc_string_map_ref_pair_iterator",
+					"hxc_string_map_ref_to_string",
 					"hxc_string_map_value_ops_is_valid"
 				],
 				[], [],
@@ -229,7 +237,7 @@ class RuntimeFeatureCatalog {
 						"test/runtime/runtime-feature-graph/run.py"
 					])),
 			new RuntimeFeatureDefinition(intMap, "Integer-keyed shared Map<Int, Bool> identity with exact unboxed storage.", CompilerSelectable, true,
-				environments, [alloc], [header("int_map.h"), source("int_map.c")], [
+				environments, [alloc, iterator, string], [header("int_map.h"), source("int_map.c")], [
 					"hxc_int_bool_map_ref_create",
 					"hxc_int_bool_map_ref_retain",
 					"hxc_int_bool_map_ref_release",
@@ -238,7 +246,11 @@ class RuntimeFeatureCatalog {
 					"hxc_int_bool_map_ref_exists",
 					"hxc_int_bool_map_ref_get",
 					"hxc_int_bool_map_ref_remove",
-					"hxc_int_bool_map_ref_clear"
+					"hxc_int_bool_map_ref_clear",
+					"hxc_int_bool_map_ref_value_iterator",
+					"hxc_int_bool_map_ref_key_iterator",
+					"hxc_int_bool_map_ref_pair_iterator",
+					"hxc_int_bool_map_ref_to_string"
 				],
 				[], [],
 				documentation("Preserves ordinary Map<Int, Bool> alias identity and key presence while storing both key and value in their exact C scalar forms.",
@@ -417,6 +429,7 @@ class RuntimeFeatureCatalog {
 					"hxc_string_from_utf8_checked",
 					"hxc_string_from_utf8_lossy",
 					"hxc_string_copy",
+					"hxc_string_copy_ref",
 					"hxc_string_concat",
 					"hxc_owned_string_dispose",
 					"hxc_string_buffer_init",
@@ -566,16 +579,16 @@ class RuntimeFeatureCatalog {
 			case "bytes_string.h": "9d944e38a748696628076b0c5fd56339668e48953a220d51c8da1630fbdf9c40";
 			case "gc.h": "2ca9523f1c74c62877c3f006bab9bd8a3a2a1eced93d67ad59d015a7c6ecb9de";
 			case "io.h": "4b92f03451dc4d04ea74c857ca3ce54d52fbe80d31f155b93781ee2fab946589";
-			case "int_map.h": "79e8cce319aee8d4f0167db6b6f1e719161b8b948f309b07babbc8cd1bbaa5fd";
+			case "int_map.h": "69dfbe45cc182cfb66fbc5e44b38c7cf3205386ff8edabd7d33bc1daabe5ef83";
 			case "iterator.h": "e8589914b0fe4da833864061de5fe8259d7066edff689d0c98442a6f8872f0f1";
 			case "object.h": "779b452097e4c58c7971b90743ace19a2dc6c91e381557abc84fbd5f9b30f1e5";
 			case "status.h": "6bf20f5d82594014ad0f2b79a25cb81417791bd9c07375d2fb89835e415be1c4";
 			case "status_name.h": "64bf3917787ffcf924369c8e1c0a525cf10902d004d5bb4b898f2af46a7456cc";
-			case "string.h": "0ed1be29fb80b5bbbc2248874d214cc7126da20e6139d02711516c1b131480ca";
+			case "string.h": "60c745b0e4e0b35d1f285f913ed7b2a284438130b8ebd44c3751247ffeb9cae7";
 			case "string_decode.h": "aa93ea7f132aff625adfdcc7498532b139f621196deab4c0e9ecb5de2934fd48";
 			case "string_float.h": "8747a86c3cabae9bf54a4125305f043d6c70d7c97bc9f6f90174ba6185e3ecc1";
 			case "string_literal.h": "ac6b5ad9fa13004c62e3b33b9b28a935bfb8a22287cd4595ce6e6eb81490e283";
-			case "string_map.h": "4b67370c51dcf6e96c5e667ec6535b76ae47c38fa53718ffa3032ad93d04d6fc";
+			case "string_map.h": "8d5d791b4df91205d843e892e23c1da7582f05da3146b7f371a4a4a51f18ce2e";
 			case "string_scalar.h": "b400d7ef9af853410334b30627ea98a5af87d5c3a863f6aa4c770d7cc4b3d90b";
 			case "string_split.h": "a17c9cd6c31cfdb8da2cf4955b980090c144e68ee1ae4f1d0f0b543f4b6eb3eb";
 			case _: throw 'runtime feature header `$name` has no reviewed SHA-256 provenance';
@@ -592,13 +605,13 @@ class RuntimeFeatureCatalog {
 			case "bytes_string.c": "0ee9604f1b4ae78baeeaf7cac8b2a35b5634f115c958a7575230c790e8aa6ca6";
 			case "gc.c": "96cf942d6752070aaa5005eae3bc45c7d00aca37c360dfecaeb76d8db767b4cc";
 			case "io.c": "898b3f351b60a91f25fd1ffdfe8d832e95a5a6a738ffe226ac33581f1fcb5b0f";
-			case "int_map.c": "ba6868489be50e0d19973d253bf3a0a316d8d6fc0160cc2e502f65b7c7a055f9";
+			case "int_map.c": "743339e9c3dea7a1894e1c7920cfe4b717c4bc0436224837f64c837038496fcc";
 			case "iterator.c": "0d03adbe76bfb3a2e6911589395452eb3b52f8ae6cd2e77947aca9177cfdc2f6";
 			case "object.c": "0e7fc6a55b562eaaf03fe63eca743dd73248f0bee1c09e21b79464917e8c89c0";
 			case "status.c": "0695ab2528db6e29d5cf29d905ad736b7c1a3a79333082347ec18faea2d4e6d8";
-			case "string.c": "8313e359e18df7d5995faab32dd2e29cccd75ccd2338e475218549870d882736";
+			case "string.c": "9e267e14bdca44436a282b4956121b5340e71e0dffc5060306fee898c11d181a";
 			case "string_float.c": "60e5189e7f7304ccbc1f69136b7393e4eea35760cde590853ebced414bf39267";
-			case "string_map.c": "7dde064613173e737c16b3890b5d0b14ad8dd484ed90a67abeb87ec4b4f1b3f5";
+			case "string_map.c": "a1c2095e6b2948109ab5b7fb1771e56998e0606fdab3ec9caa0b9e1d80d632a1";
 			case "string_scalar.c": "2c44eebc655dd34ed374b58402de9dfe731425fb4e0b54997a7c16c12e1309fb";
 			case "string_split.c": "799fc917a450169e4babd86748e879fe7222b4abfef293880c47891e671f9d1b";
 			case _: throw 'runtime feature source `$name` has no reviewed SHA-256 provenance';

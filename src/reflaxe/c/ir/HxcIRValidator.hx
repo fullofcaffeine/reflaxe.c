@@ -3576,11 +3576,18 @@ private class HxcIRValidationState {
 				final resultElement = managedIteratorElement(call.returnType);
 				final resultElementKey = resultElement == null ? null : typeKey(resultElement);
 				final receiverValueKey = receiverValue == null ? null : typeKey(receiverValue);
-				if (argumentTypes.length != 1
-					|| receiverValueKey == null
-					|| resultElementKey == null
-					|| resultElementKey != receiverValueKey)
+				if (argumentTypes.length != 1 || receiverValueKey == null || resultElementKey == null || resultElementKey != receiverValueKey)
 					add(path, "StringMap.iterator requires one map and returns Iterator<V> for the exact stored V", source);
+			case "keys":
+				final element = managedIteratorElement(call.returnType);
+				if (argumentTypes.length != 1 || receiverValue == null || (element != IRTString && element != IRTManagedString))
+					add(path, "StringMap.keys requires one map and returns Iterator<String>", source);
+			case "key-value-iterator":
+				if (argumentTypes.length != 1 || receiverValue == null || managedIteratorElement(call.returnType) == null)
+					add(path, "StringMap.keyValueIterator requires one map and returns one exact pair Iterator", source);
+			case "to-string":
+				if (argumentTypes.length != 1 || receiverValue == null || call.returnType != IRTManagedString)
+					add(path, "StringMap.toString requires one primitive map and returns managed String", source);
 			case "exists" | "remove":
 				if (argumentTypes.length != 2 || receiverValue == null || !hasStringKey || !returnsBool)
 					add(path, 'StringMap.$operationId requires map + String and returns Bool', source);
@@ -3710,6 +3717,20 @@ private class HxcIRValidationState {
 			case "copy":
 				if (argumentTypes.length != 1 || !hasReceiver || receiverTypeKey == null || typeKey(call.returnType) != receiverTypeKey)
 					add(path, "IntMap.copy requires Map<Int, Bool> and returns the same specialization", source);
+			case "iterator":
+				if (argumentTypes.length != 1 || !hasReceiver || managedIteratorElement(call.returnType) != IRTBool)
+					add(path, "IntMap.iterator requires Map<Int, Bool> and returns Iterator<Bool>", source);
+			case "keys":
+				final element = managedIteratorElement(call.returnType);
+				final elementKey = element == null ? null : typeKey(element);
+				if (argumentTypes.length != 1 || !hasReceiver || elementKey == null || elementKey != typeKey(IRTInt(32, true)))
+					add(path, "IntMap.keys requires Map<Int, Bool> and returns Iterator<Int>", source);
+			case "key-value-iterator":
+				if (argumentTypes.length != 1 || !hasReceiver || managedIteratorElement(call.returnType) == null)
+					add(path, "IntMap.keyValueIterator requires Map<Int, Bool> and returns one exact pair Iterator", source);
+			case "to-string":
+				if (argumentTypes.length != 1 || !hasReceiver || call.returnType != IRTManagedString)
+					add(path, "IntMap.toString requires Map<Int, Bool> and returns managed String", source);
 			case _:
 				add(path, 'int-map runtime call names unsupported operation `$operationId`', source);
 		}

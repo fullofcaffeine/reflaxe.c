@@ -9,6 +9,8 @@
 #define HXRT_INT_MAP_H_INCLUDED
 
 #include "hxrt/allocator.h"
+#include "hxrt/iterator.h"
+#include "hxrt/string.h"
 
 #if defined(__cplusplus)
 extern "C" {
@@ -73,6 +75,37 @@ HXC_API hxc_status hxc_int_bool_map_ref_remove(
 
 /** Remove every entry while preserving the shared Map object and its aliases. */
 HXC_API hxc_status hxc_int_bool_map_ref_clear(hxc_int_bool_map_ref *map);
+
+/** Snapshot the current values in table iteration order. */
+HXC_API hxc_status hxc_int_bool_map_ref_value_iterator(
+  hxc_int_bool_map_ref *map,
+  hxc_iterator_ref **out_iterator
+);
+
+/** Snapshot the current keys in table iteration order. */
+HXC_API hxc_status hxc_int_bool_map_ref_key_iterator(
+  hxc_int_bool_map_ref *map,
+  hxc_iterator_ref **out_iterator
+);
+
+/**
+ * Snapshot `{key, value}` records using the exact generated aggregate layout.
+ * Both fields are unboxed, so the resulting elements need no callbacks.
+ */
+HXC_API hxc_status hxc_int_bool_map_ref_pair_iterator(
+  hxc_int_bool_map_ref *map,
+  size_t pair_size,
+  size_t pair_alignment,
+  size_t key_offset,
+  size_t value_offset,
+  hxc_iterator_ref **out_iterator
+);
+
+/** Format the map with the pinned Eval `[key => value]` spelling. */
+HXC_API hxc_status hxc_int_bool_map_ref_to_string(
+  const hxc_int_bool_map_ref *map,
+  hxc_string *out_string
+);
 
 #if defined(__cplusplus)
 } /* extern "C" */

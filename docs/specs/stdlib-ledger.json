@@ -1278,6 +1278,146 @@
       "notes": "The admitted Map<Int, Bool> specialization inserts or replaces exact Int and Bool values. Growth preserves all entries or leaves the old table unchanged."
     },
     {
+      "id": "int-map-iterator-bool-partial",
+      "selector": {
+        "module": "haxe.ds.IntMap",
+        "type": "haxe.ds.IntMap",
+        "member": "iterator",
+        "kind": "method",
+        "isStatic": false,
+        "signature": "() -> Iterator<haxe.ds.IntMap.T>"
+      },
+      "owner": "runtime-slice",
+      "runtimeFeatures": [
+        "int-map",
+        "iterator"
+      ],
+      "profiles": [
+        "portable"
+      ],
+      "environments": [
+        "hosted"
+      ],
+      "status": "partial",
+      "ownerBeads": "E5.T03",
+      "testOwnerBeads": "E5.T12",
+      "diagnosticPolicies": [
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
+      ],
+      "tests": [
+        "test/differential/int-map/generated/Main.hx",
+        "test/differential/int-map/int_map_runtime.c",
+        "test/differential/int-map/run.py"
+      ],
+      "notes": "The admitted Bool specialization snapshots exact unboxed values. Aliases share one cursor, and later map changes do not alter the snapshot."
+    },
+    {
+      "id": "int-map-key-value-iterator-bool-partial",
+      "selector": {
+        "module": "haxe.ds.IntMap",
+        "type": "haxe.ds.IntMap",
+        "member": "keyValueIterator",
+        "kind": "method",
+        "isStatic": false,
+        "signature": "() -> KeyValueIterator<Int, haxe.ds.IntMap.T>"
+      },
+      "owner": "runtime-slice",
+      "runtimeFeatures": [
+        "int-map",
+        "iterator"
+      ],
+      "profiles": [
+        "portable"
+      ],
+      "environments": [
+        "hosted"
+      ],
+      "status": "partial",
+      "ownerBeads": "E5.T03",
+      "testOwnerBeads": "E5.T12",
+      "diagnosticPolicies": [
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
+      ],
+      "tests": [
+        "test/differential/int-map/generated/Main.hx",
+        "test/differential/int-map/int_map_runtime.c",
+        "test/differential/int-map/run.py"
+      ],
+      "notes": "The admitted Bool specialization snapshots exact unboxed key/value records with shared cursor identity."
+    },
+    {
+      "id": "int-map-keys-bool-partial",
+      "selector": {
+        "module": "haxe.ds.IntMap",
+        "type": "haxe.ds.IntMap",
+        "member": "keys",
+        "kind": "method",
+        "isStatic": false,
+        "signature": "() -> Iterator<Int>"
+      },
+      "owner": "runtime-slice",
+      "runtimeFeatures": [
+        "int-map",
+        "iterator"
+      ],
+      "profiles": [
+        "portable"
+      ],
+      "environments": [
+        "hosted"
+      ],
+      "status": "partial",
+      "ownerBeads": "E5.T03",
+      "testOwnerBeads": "E5.T12",
+      "diagnosticPolicies": [
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
+      ],
+      "tests": [
+        "test/differential/int-map/generated/Main.hx",
+        "test/differential/int-map/int_map_runtime.c",
+        "test/differential/int-map/run.py"
+      ],
+      "notes": "The admitted Bool specialization snapshots exact signed Int keys without boxing."
+    },
+    {
+      "id": "int-map-to-string-bool-partial",
+      "selector": {
+        "module": "haxe.ds.IntMap",
+        "type": "haxe.ds.IntMap",
+        "member": "toString",
+        "kind": "method",
+        "isStatic": false,
+        "signature": "() -> String"
+      },
+      "owner": "runtime-slice",
+      "runtimeFeatures": [
+        "int-map",
+        "string"
+      ],
+      "profiles": [
+        "portable"
+      ],
+      "environments": [
+        "hosted"
+      ],
+      "status": "partial",
+      "ownerBeads": "E5.T03",
+      "testOwnerBeads": "E5.T12",
+      "diagnosticPolicies": [
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
+      ],
+      "tests": [
+        "test/differential/int-map/generated/Main.hx",
+        "test/differential/int-map/int_map_runtime.c",
+        "test/differential/int-map/run.py"
+      ],
+      "notes": "The admitted Bool specialization uses Eval-compatible punctuation and scalar spelling in map iteration order."
+    },
+    {
       "id": "string-map-copy-admitted-values-partial",
       "selector": {
         "module": "haxe.ds.StringMap",
@@ -1310,6 +1450,352 @@
         "test/differential/string-map/string_map_runtime.c"
       ],
       "notes": "Admitted direct and managed value families create an independent outer table. Managed values use exact copy callbacks for shallow Haxe ownership, while allocation or callback failure destroys the partial result and leaves the source unchanged."
+    },
+    {
+      "id": "string-map-clear-admitted-values-partial",
+      "selector": {
+        "module": "haxe.ds.StringMap",
+        "type": "haxe.ds.StringMap",
+        "member": "clear",
+        "kind": "method",
+        "isStatic": false,
+        "signature": "() -> Void"
+      },
+      "owner": "runtime-slice",
+      "runtimeFeatures": [
+        "string-map"
+      ],
+      "profiles": [
+        "portable"
+      ],
+      "environments": [
+        "hosted"
+      ],
+      "status": "partial",
+      "ownerBeads": "E5.T03",
+      "testOwnerBeads": "E5.T12",
+      "diagnosticPolicies": [
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
+      ],
+      "tests": [
+        "test/differential/string-map/generated/Main.hx",
+        "test/differential/string-map/string_map_runtime.c",
+        "test/differential/string-map/run.py"
+      ],
+      "notes": "Admitted exact value families clear the shared table and release every owned key and value."
+    },
+    {
+      "id": "string-map-exists-admitted-values-partial",
+      "selector": {
+        "module": "haxe.ds.StringMap",
+        "type": "haxe.ds.StringMap",
+        "member": "exists",
+        "kind": "method",
+        "isStatic": false,
+        "signature": "(key : String) -> Bool"
+      },
+      "owner": "runtime-slice",
+      "runtimeFeatures": [
+        "string-map"
+      ],
+      "profiles": [
+        "portable"
+      ],
+      "environments": [
+        "hosted"
+      ],
+      "status": "partial",
+      "ownerBeads": "E5.T03",
+      "testOwnerBeads": "E5.T12",
+      "diagnosticPolicies": [
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
+      ],
+      "tests": [
+        "test/differential/string-map/generated/Main.hx",
+        "test/differential/string-map/string_map_runtime.c",
+        "test/differential/string-map/run.py"
+      ],
+      "notes": "Admitted exact value families compare canonical UTF-8 key bytes and report membership separately from the value."
+    },
+    {
+      "id": "string-map-get-admitted-values-partial",
+      "selector": {
+        "module": "haxe.ds.StringMap",
+        "type": "haxe.ds.StringMap",
+        "member": "get",
+        "kind": "method",
+        "isStatic": false,
+        "signature": "(key : String) -> Null<haxe.ds.StringMap.T>"
+      },
+      "owner": "runtime-slice",
+      "runtimeFeatures": [
+        "string-map"
+      ],
+      "profiles": [
+        "portable"
+      ],
+      "environments": [
+        "hosted"
+      ],
+      "status": "partial",
+      "ownerBeads": "E5.T03",
+      "testOwnerBeads": "E5.T12",
+      "diagnosticPolicies": [
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
+      ],
+      "tests": [
+        "test/differential/string-map/generated/Main.hx",
+        "test/differential/string-map/string_map_runtime.c",
+        "test/differential/string-map/run.py"
+      ],
+      "notes": "Admitted exact value families return their typed nullable carrier and copy or retain managed children when present."
+    },
+    {
+      "id": "string-map-iterator-admitted-values-partial",
+      "selector": {
+        "module": "haxe.ds.StringMap",
+        "type": "haxe.ds.StringMap",
+        "member": "iterator",
+        "kind": "method",
+        "isStatic": false,
+        "signature": "() -> Iterator<haxe.ds.StringMap.T>"
+      },
+      "owner": "runtime-slice",
+      "runtimeFeatures": [
+        "string-map",
+        "iterator"
+      ],
+      "profiles": [
+        "portable"
+      ],
+      "environments": [
+        "hosted"
+      ],
+      "status": "partial",
+      "ownerBeads": "E5.T03",
+      "testOwnerBeads": "E5.T12",
+      "diagnosticPolicies": [
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
+      ],
+      "tests": [
+        "test/differential/string-map/generated/Main.hx",
+        "test/differential/string-map/string_map_runtime.c",
+        "test/differential/string-map/run.py"
+      ],
+      "notes": "Admitted exact value families snapshot values without boxing and share one cursor across iterator aliases."
+    },
+    {
+      "id": "string-map-key-value-iterator-admitted-values-partial",
+      "selector": {
+        "module": "haxe.ds.StringMap",
+        "type": "haxe.ds.StringMap",
+        "member": "keyValueIterator",
+        "kind": "method",
+        "isStatic": false,
+        "signature": "() -> KeyValueIterator<String, haxe.ds.StringMap.T>"
+      },
+      "owner": "runtime-slice",
+      "runtimeFeatures": [
+        "string-map",
+        "iterator",
+        "string"
+      ],
+      "profiles": [
+        "portable"
+      ],
+      "environments": [
+        "hosted"
+      ],
+      "status": "partial",
+      "ownerBeads": "E5.T03",
+      "testOwnerBeads": "E5.T12",
+      "diagnosticPolicies": [
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
+      ],
+      "tests": [
+        "test/differential/string-map/generated/Main.hx",
+        "test/differential/string-map/string_map_runtime.c",
+        "test/differential/string-map/run.py"
+      ],
+      "notes": "Admitted exact value families snapshot independently owned UTF-8 keys and exact value copies in typed pair records."
+    },
+    {
+      "id": "string-map-keys-admitted-values-partial",
+      "selector": {
+        "module": "haxe.ds.StringMap",
+        "type": "haxe.ds.StringMap",
+        "member": "keys",
+        "kind": "method",
+        "isStatic": false,
+        "signature": "() -> Iterator<String>"
+      },
+      "owner": "runtime-slice",
+      "runtimeFeatures": [
+        "string-map",
+        "iterator",
+        "string"
+      ],
+      "profiles": [
+        "portable"
+      ],
+      "environments": [
+        "hosted"
+      ],
+      "status": "partial",
+      "ownerBeads": "E5.T03",
+      "testOwnerBeads": "E5.T12",
+      "diagnosticPolicies": [
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
+      ],
+      "tests": [
+        "test/differential/string-map/generated/Main.hx",
+        "test/differential/string-map/string_map_runtime.c",
+        "test/differential/string-map/run.py"
+      ],
+      "notes": "Keys are creation-time snapshots with independently reference-counted UTF-8 storage."
+    },
+    {
+      "id": "string-map-new-admitted-values-partial",
+      "selector": {
+        "module": "haxe.ds.StringMap",
+        "type": "haxe.ds.StringMap",
+        "member": "new",
+        "kind": "constructor",
+        "isStatic": false,
+        "signature": "() -> Void"
+      },
+      "owner": "runtime-slice",
+      "runtimeFeatures": [
+        "string-map"
+      ],
+      "profiles": [
+        "portable"
+      ],
+      "environments": [
+        "hosted"
+      ],
+      "status": "partial",
+      "ownerBeads": "E5.T03",
+      "testOwnerBeads": "E5.T12",
+      "diagnosticPolicies": [
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
+      ],
+      "tests": [
+        "test/differential/string-map/generated/Main.hx",
+        "test/differential/string-map/string_map_runtime.c",
+        "test/differential/string-map/run.py"
+      ],
+      "notes": "Admitted exact value families create an empty shared table with copied UTF-8 key ownership."
+    },
+    {
+      "id": "string-map-remove-admitted-values-partial",
+      "selector": {
+        "module": "haxe.ds.StringMap",
+        "type": "haxe.ds.StringMap",
+        "member": "remove",
+        "kind": "method",
+        "isStatic": false,
+        "signature": "(key : String) -> Bool"
+      },
+      "owner": "runtime-slice",
+      "runtimeFeatures": [
+        "string-map"
+      ],
+      "profiles": [
+        "portable"
+      ],
+      "environments": [
+        "hosted"
+      ],
+      "status": "partial",
+      "ownerBeads": "E5.T03",
+      "testOwnerBeads": "E5.T12",
+      "diagnosticPolicies": [
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
+      ],
+      "tests": [
+        "test/differential/string-map/generated/Main.hx",
+        "test/differential/string-map/string_map_runtime.c",
+        "test/differential/string-map/run.py"
+      ],
+      "notes": "Removal preserves collision chains and releases the exact owned key and value once."
+    },
+    {
+      "id": "string-map-set-admitted-values-partial",
+      "selector": {
+        "module": "haxe.ds.StringMap",
+        "type": "haxe.ds.StringMap",
+        "member": "set",
+        "kind": "method",
+        "isStatic": false,
+        "signature": "(key : String, value : haxe.ds.StringMap.T) -> Void"
+      },
+      "owner": "runtime-slice",
+      "runtimeFeatures": [
+        "string-map"
+      ],
+      "profiles": [
+        "portable"
+      ],
+      "environments": [
+        "hosted"
+      ],
+      "status": "partial",
+      "ownerBeads": "E5.T03",
+      "testOwnerBeads": "E5.T12",
+      "diagnosticPolicies": [
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
+      ],
+      "tests": [
+        "test/differential/string-map/generated/Main.hx",
+        "test/differential/string-map/string_map_runtime.c",
+        "test/differential/string-map/run.py"
+      ],
+      "notes": "Insertion and replacement copy UTF-8 keys and preserve exact unboxed or managed value ownership atomically."
+    },
+    {
+      "id": "string-map-to-string-primitive-partial",
+      "selector": {
+        "module": "haxe.ds.StringMap",
+        "type": "haxe.ds.StringMap",
+        "member": "toString",
+        "kind": "method",
+        "isStatic": false,
+        "signature": "() -> String"
+      },
+      "owner": "runtime-slice",
+      "runtimeFeatures": [
+        "string-map",
+        "string"
+      ],
+      "profiles": [
+        "portable"
+      ],
+      "environments": [
+        "hosted"
+      ],
+      "status": "partial",
+      "ownerBeads": "E5.T03",
+      "testOwnerBeads": "E5.T12",
+      "diagnosticPolicies": [
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
+      ],
+      "tests": [
+        "test/differential/string-map/generated/Main.hx",
+        "test/differential/string-map/string_map_runtime.c",
+        "test/differential/string-map/run.py"
+      ],
+      "notes": "Bool and Int values use Eval-compatible punctuation and scalar spelling in map iteration order; managed value formatting remains unsupported."
     },
     {
       "id": "array-copy-partial",
@@ -31156,33 +31642,31 @@
       "kind": "method",
       "signature": "() -> Iterator<haxe.ds.IntMap.T>",
       "isStatic": false,
-      "owner": "target-source-override",
+      "owner": "runtime-slice",
       "runtimeFeatures": [
-        "alloc",
-        "array",
-        "gc",
-        "object"
+        "int-map",
+        "iterator"
       ],
       "profiles": [
-        "portable",
-        "metal"
+        "portable"
       ],
       "environments": [
-        "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "hosted"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T03",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Known element/key/value types should specialize to direct typed storage; allocation and tracing remain explicit reachability decisions.",
-      "ruleId": "collection-storage"
+      "tests": [
+        "test/differential/int-map/generated/Main.hx",
+        "test/differential/int-map/int_map_runtime.c",
+        "test/differential/int-map/run.py"
+      ],
+      "notes": "The admitted Bool specialization snapshots exact unboxed values. Aliases share one cursor, and later map changes do not alter the snapshot.",
+      "ruleId": "int-map-iterator-bool-partial"
     },
     {
       "id": "hxc-stdlib-api-v1:6955442086ac2844baa41eeaac10d8ff4e1441811ce1ba71b7000d957a44e731",
@@ -31195,33 +31679,31 @@
       "kind": "method",
       "signature": "() -> KeyValueIterator<Int, haxe.ds.IntMap.T>",
       "isStatic": false,
-      "owner": "target-source-override",
+      "owner": "runtime-slice",
       "runtimeFeatures": [
-        "alloc",
-        "array",
-        "gc",
-        "object"
+        "int-map",
+        "iterator"
       ],
       "profiles": [
-        "portable",
-        "metal"
+        "portable"
       ],
       "environments": [
-        "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "hosted"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T03",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Known element/key/value types should specialize to direct typed storage; allocation and tracing remain explicit reachability decisions.",
-      "ruleId": "collection-storage"
+      "tests": [
+        "test/differential/int-map/generated/Main.hx",
+        "test/differential/int-map/int_map_runtime.c",
+        "test/differential/int-map/run.py"
+      ],
+      "notes": "The admitted Bool specialization snapshots exact unboxed key/value records with shared cursor identity.",
+      "ruleId": "int-map-key-value-iterator-bool-partial"
     },
     {
       "id": "hxc-stdlib-api-v1:918dee0ce5be8b450baa53813aec123abed631fff50eab137e4d6b895ee11a34",
@@ -31234,33 +31716,31 @@
       "kind": "method",
       "signature": "() -> Iterator<Int>",
       "isStatic": false,
-      "owner": "target-source-override",
+      "owner": "runtime-slice",
       "runtimeFeatures": [
-        "alloc",
-        "array",
-        "gc",
-        "object"
+        "int-map",
+        "iterator"
       ],
       "profiles": [
-        "portable",
-        "metal"
+        "portable"
       ],
       "environments": [
-        "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "hosted"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T03",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Known element/key/value types should specialize to direct typed storage; allocation and tracing remain explicit reachability decisions.",
-      "ruleId": "collection-storage"
+      "tests": [
+        "test/differential/int-map/generated/Main.hx",
+        "test/differential/int-map/int_map_runtime.c",
+        "test/differential/int-map/run.py"
+      ],
+      "notes": "The admitted Bool specialization snapshots exact signed Int keys without boxing.",
+      "ruleId": "int-map-keys-bool-partial"
     },
     {
       "id": "hxc-stdlib-api-v1:9c0b4a622cd015061bcf96428e12528919fbd6c3f700a165d72d53eaa740e7b5",
@@ -31381,33 +31861,31 @@
       "kind": "method",
       "signature": "() -> String",
       "isStatic": false,
-      "owner": "target-source-override",
+      "owner": "runtime-slice",
       "runtimeFeatures": [
-        "alloc",
-        "array",
-        "gc",
-        "object"
+        "int-map",
+        "string"
       ],
       "profiles": [
-        "portable",
-        "metal"
+        "portable"
       ],
       "environments": [
-        "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "hosted"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T03",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Known element/key/value types should specialize to direct typed storage; allocation and tracing remain explicit reachability decisions.",
-      "ruleId": "collection-storage"
+      "tests": [
+        "test/differential/int-map/generated/Main.hx",
+        "test/differential/int-map/int_map_runtime.c",
+        "test/differential/int-map/run.py"
+      ],
+      "notes": "The admitted Bool specialization uses Eval-compatible punctuation and scalar spelling in map iteration order.",
+      "ruleId": "int-map-to-string-bool-partial"
     },
     {
       "id": "hxc-stdlib-api-v1:0977f04b61c5049e5241a3fa12be3bf6224003db9f4983f1edb1d99489dfedb0",
@@ -33940,33 +34418,30 @@
       "kind": "method",
       "signature": "() -> Void",
       "isStatic": false,
-      "owner": "target-source-override",
+      "owner": "runtime-slice",
       "runtimeFeatures": [
-        "alloc",
-        "array",
-        "gc",
-        "object"
+        "string-map"
       ],
       "profiles": [
-        "portable",
-        "metal"
+        "portable"
       ],
       "environments": [
-        "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "hosted"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T03",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Known element/key/value types should specialize to direct typed storage; allocation and tracing remain explicit reachability decisions.",
-      "ruleId": "collection-storage"
+      "tests": [
+        "test/differential/string-map/generated/Main.hx",
+        "test/differential/string-map/string_map_runtime.c",
+        "test/differential/string-map/run.py"
+      ],
+      "notes": "Admitted exact value families clear the shared table and release every owned key and value.",
+      "ruleId": "string-map-clear-admitted-values-partial"
     },
     {
       "id": "hxc-stdlib-api-v1:76a031526c286938b09a3c462a364241a182a1dba299b4eb53b66b0da0f77396",
@@ -34015,33 +34490,30 @@
       "kind": "method",
       "signature": "(key : String) -> Bool",
       "isStatic": false,
-      "owner": "target-source-override",
+      "owner": "runtime-slice",
       "runtimeFeatures": [
-        "alloc",
-        "array",
-        "gc",
-        "object"
+        "string-map"
       ],
       "profiles": [
-        "portable",
-        "metal"
+        "portable"
       ],
       "environments": [
-        "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "hosted"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T03",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Known element/key/value types should specialize to direct typed storage; allocation and tracing remain explicit reachability decisions.",
-      "ruleId": "collection-storage"
+      "tests": [
+        "test/differential/string-map/generated/Main.hx",
+        "test/differential/string-map/string_map_runtime.c",
+        "test/differential/string-map/run.py"
+      ],
+      "notes": "Admitted exact value families compare canonical UTF-8 key bytes and report membership separately from the value.",
+      "ruleId": "string-map-exists-admitted-values-partial"
     },
     {
       "id": "hxc-stdlib-api-v1:6c4a3f7e796f041c31d931f0dcd70b4dc735b3fac39639ae303fca312ed64805",
@@ -34054,33 +34526,30 @@
       "kind": "method",
       "signature": "(key : String) -> Null<haxe.ds.StringMap.T>",
       "isStatic": false,
-      "owner": "target-source-override",
+      "owner": "runtime-slice",
       "runtimeFeatures": [
-        "alloc",
-        "array",
-        "gc",
-        "object"
+        "string-map"
       ],
       "profiles": [
-        "portable",
-        "metal"
+        "portable"
       ],
       "environments": [
-        "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "hosted"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T03",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Known element/key/value types should specialize to direct typed storage; allocation and tracing remain explicit reachability decisions.",
-      "ruleId": "collection-storage"
+      "tests": [
+        "test/differential/string-map/generated/Main.hx",
+        "test/differential/string-map/string_map_runtime.c",
+        "test/differential/string-map/run.py"
+      ],
+      "notes": "Admitted exact value families return their typed nullable carrier and copy or retain managed children when present.",
+      "ruleId": "string-map-get-admitted-values-partial"
     },
     {
       "id": "hxc-stdlib-api-v1:9b31009bb965c6d1b715cde6fe170002a6f3f9e57bdd063046992ef58c296c36",
@@ -34093,33 +34562,31 @@
       "kind": "method",
       "signature": "() -> Iterator<haxe.ds.StringMap.T>",
       "isStatic": false,
-      "owner": "target-source-override",
+      "owner": "runtime-slice",
       "runtimeFeatures": [
-        "alloc",
-        "array",
-        "gc",
-        "object"
+        "string-map",
+        "iterator"
       ],
       "profiles": [
-        "portable",
-        "metal"
+        "portable"
       ],
       "environments": [
-        "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "hosted"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T03",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Known element/key/value types should specialize to direct typed storage; allocation and tracing remain explicit reachability decisions.",
-      "ruleId": "collection-storage"
+      "tests": [
+        "test/differential/string-map/generated/Main.hx",
+        "test/differential/string-map/string_map_runtime.c",
+        "test/differential/string-map/run.py"
+      ],
+      "notes": "Admitted exact value families snapshot values without boxing and share one cursor across iterator aliases.",
+      "ruleId": "string-map-iterator-admitted-values-partial"
     },
     {
       "id": "hxc-stdlib-api-v1:537f2ae71be7167b9e17d010739a725afe47481bc1c999fab0b348e5b6ef0f30",
@@ -34132,33 +34599,32 @@
       "kind": "method",
       "signature": "() -> KeyValueIterator<String, haxe.ds.StringMap.T>",
       "isStatic": false,
-      "owner": "target-source-override",
+      "owner": "runtime-slice",
       "runtimeFeatures": [
-        "alloc",
-        "array",
-        "gc",
-        "object"
+        "string-map",
+        "iterator",
+        "string"
       ],
       "profiles": [
-        "portable",
-        "metal"
+        "portable"
       ],
       "environments": [
-        "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "hosted"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T03",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Known element/key/value types should specialize to direct typed storage; allocation and tracing remain explicit reachability decisions.",
-      "ruleId": "collection-storage"
+      "tests": [
+        "test/differential/string-map/generated/Main.hx",
+        "test/differential/string-map/string_map_runtime.c",
+        "test/differential/string-map/run.py"
+      ],
+      "notes": "Admitted exact value families snapshot independently owned UTF-8 keys and exact value copies in typed pair records.",
+      "ruleId": "string-map-key-value-iterator-admitted-values-partial"
     },
     {
       "id": "hxc-stdlib-api-v1:82a933058e04fcf74981718a148e4610bc2485f859ab056bb5d723705222f800",
@@ -34171,33 +34637,32 @@
       "kind": "method",
       "signature": "() -> Iterator<String>",
       "isStatic": false,
-      "owner": "target-source-override",
+      "owner": "runtime-slice",
       "runtimeFeatures": [
-        "alloc",
-        "array",
-        "gc",
-        "object"
+        "string-map",
+        "iterator",
+        "string"
       ],
       "profiles": [
-        "portable",
-        "metal"
+        "portable"
       ],
       "environments": [
-        "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "hosted"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T03",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Known element/key/value types should specialize to direct typed storage; allocation and tracing remain explicit reachability decisions.",
-      "ruleId": "collection-storage"
+      "tests": [
+        "test/differential/string-map/generated/Main.hx",
+        "test/differential/string-map/string_map_runtime.c",
+        "test/differential/string-map/run.py"
+      ],
+      "notes": "Keys are creation-time snapshots with independently reference-counted UTF-8 storage.",
+      "ruleId": "string-map-keys-admitted-values-partial"
     },
     {
       "id": "hxc-stdlib-api-v1:2cfb3782407081e51abb92479295cac74303a186b147ed4e1d5a41786f1cba34",
@@ -34210,33 +34675,30 @@
       "kind": "constructor",
       "signature": "() -> Void",
       "isStatic": false,
-      "owner": "target-source-override",
+      "owner": "runtime-slice",
       "runtimeFeatures": [
-        "alloc",
-        "array",
-        "gc",
-        "object"
+        "string-map"
       ],
       "profiles": [
-        "portable",
-        "metal"
+        "portable"
       ],
       "environments": [
-        "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "hosted"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T03",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Known element/key/value types should specialize to direct typed storage; allocation and tracing remain explicit reachability decisions.",
-      "ruleId": "collection-storage"
+      "tests": [
+        "test/differential/string-map/generated/Main.hx",
+        "test/differential/string-map/string_map_runtime.c",
+        "test/differential/string-map/run.py"
+      ],
+      "notes": "Admitted exact value families create an empty shared table with copied UTF-8 key ownership.",
+      "ruleId": "string-map-new-admitted-values-partial"
     },
     {
       "id": "hxc-stdlib-api-v1:764593a6f8125b9e280e16385683f8f4c5e14efe8d813771b50d703f3da62ba3",
@@ -34249,33 +34711,30 @@
       "kind": "method",
       "signature": "(key : String) -> Bool",
       "isStatic": false,
-      "owner": "target-source-override",
+      "owner": "runtime-slice",
       "runtimeFeatures": [
-        "alloc",
-        "array",
-        "gc",
-        "object"
+        "string-map"
       ],
       "profiles": [
-        "portable",
-        "metal"
+        "portable"
       ],
       "environments": [
-        "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "hosted"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T03",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Known element/key/value types should specialize to direct typed storage; allocation and tracing remain explicit reachability decisions.",
-      "ruleId": "collection-storage"
+      "tests": [
+        "test/differential/string-map/generated/Main.hx",
+        "test/differential/string-map/string_map_runtime.c",
+        "test/differential/string-map/run.py"
+      ],
+      "notes": "Removal preserves collision chains and releases the exact owned key and value once.",
+      "ruleId": "string-map-remove-admitted-values-partial"
     },
     {
       "id": "hxc-stdlib-api-v1:fa5b95aac4be5a73f6bfd25953a513e99c404ecd66dc0ec96dc2df6bfa68001f",
@@ -34288,33 +34747,30 @@
       "kind": "method",
       "signature": "(key : String, value : haxe.ds.StringMap.T) -> Void",
       "isStatic": false,
-      "owner": "target-source-override",
+      "owner": "runtime-slice",
       "runtimeFeatures": [
-        "alloc",
-        "array",
-        "gc",
-        "object"
+        "string-map"
       ],
       "profiles": [
-        "portable",
-        "metal"
+        "portable"
       ],
       "environments": [
-        "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "hosted"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T03",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Known element/key/value types should specialize to direct typed storage; allocation and tracing remain explicit reachability decisions.",
-      "ruleId": "collection-storage"
+      "tests": [
+        "test/differential/string-map/generated/Main.hx",
+        "test/differential/string-map/string_map_runtime.c",
+        "test/differential/string-map/run.py"
+      ],
+      "notes": "Insertion and replacement copy UTF-8 keys and preserve exact unboxed or managed value ownership atomically.",
+      "ruleId": "string-map-set-admitted-values-partial"
     },
     {
       "id": "hxc-stdlib-api-v1:c6a4d0ea688043f60ad6fa11573c1938f50c09d02d6795ea199901ba6e871b1d",
@@ -34327,33 +34783,31 @@
       "kind": "method",
       "signature": "() -> String",
       "isStatic": false,
-      "owner": "target-source-override",
+      "owner": "runtime-slice",
       "runtimeFeatures": [
-        "alloc",
-        "array",
-        "gc",
-        "object"
+        "string-map",
+        "string"
       ],
       "profiles": [
-        "portable",
-        "metal"
+        "portable"
       ],
       "environments": [
-        "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "hosted"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T03",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Known element/key/value types should specialize to direct typed storage; allocation and tracing remain explicit reachability decisions.",
-      "ruleId": "collection-storage"
+      "tests": [
+        "test/differential/string-map/generated/Main.hx",
+        "test/differential/string-map/string_map_runtime.c",
+        "test/differential/string-map/run.py"
+      ],
+      "notes": "Bool and Int values use Eval-compatible punctuation and scalar spelling in map iteration order; managed value formatting remains unsupported.",
+      "ruleId": "string-map-to-string-primitive-partial"
     },
     {
       "id": "hxc-stdlib-api-v1:f161b453966c03d1e64dd3c10f67d1a6cfc19f06c9908ac5be1433dff6f8c317",

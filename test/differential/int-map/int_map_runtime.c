@@ -26,6 +26,11 @@ typedef struct test_allocator_state {
   bool fail;
 } test_allocator_state;
 
+typedef struct test_pair {
+  int32_t key;
+  bool value;
+} test_pair;
+
 static hxc_status test_allocate(
   void *context,
   size_t size,
@@ -76,6 +81,8 @@ static int prove_contract(void) {
   bool value = true;
   bool removed = false;
   int32_t key;
+	  hxc_iterator_ref *iterator = NULL;
+	  hxc_string rendered = HXC_STRING_INITIALIZER;
 
   CHECK(hxc_int_bool_map_ref_create(allocator, &map) == HXC_STATUS_OK);
   CHECK(map != NULL);
@@ -94,6 +101,29 @@ static int prove_contract(void) {
   CHECK(hxc_int_bool_map_ref_set(alias, INT32_MAX, true) == HXC_STATUS_OK);
   CHECK(hxc_int_bool_map_ref_exists(map, INT32_MAX, &found) == HXC_STATUS_OK);
   CHECK(found);
+
+  CHECK(hxc_int_bool_map_ref_key_iterator(map, &iterator) == HXC_STATUS_OK);
+  CHECK(hxc_int_bool_map_ref_clear(map) == HXC_STATUS_OK);
+  CHECK(hxc_iterator_ref_has_next(iterator, &found) == HXC_STATUS_OK && found);
+  CHECK(hxc_iterator_ref_next_move(iterator, &key) == HXC_STATUS_OK);
+  CHECK(hxc_iterator_ref_release(iterator) == HXC_STATUS_OK);
+  iterator = NULL;
+  CHECK(hxc_int_bool_map_ref_set(map, INT32_C(17), false) == HXC_STATUS_OK);
+  CHECK(hxc_int_bool_map_ref_pair_iterator(
+    map, sizeof(test_pair), HXC_ALIGNOF(test_pair),
+    offsetof(test_pair, key), offsetof(test_pair, value), &iterator
+  ) == HXC_STATUS_OK);
+  {
+    test_pair pair = {0};
+    CHECK(hxc_iterator_ref_next_move(iterator, &pair) == HXC_STATUS_OK);
+    CHECK(pair.key == INT32_C(17) && !pair.value);
+  }
+  CHECK(hxc_iterator_ref_release(iterator) == HXC_STATUS_OK);
+  iterator = NULL;
+  CHECK(hxc_int_bool_map_ref_to_string(map, &rendered) == HXC_STATUS_OK);
+  CHECK(rendered.byte_length == 13u);
+  CHECK(hxc_string_release(&rendered) == HXC_STATUS_OK);
+  CHECK(hxc_int_bool_map_ref_set(map, INT32_MAX, true) == HXC_STATUS_OK);
   /* Keys 0 and 1 share the first slot under the runtime's exact hash. */
   CHECK(hxc_int_bool_map_ref_set(map, INT32_C(0), false) == HXC_STATUS_OK);
   CHECK(hxc_int_bool_map_ref_set(map, INT32_C(1), true) == HXC_STATUS_OK);
@@ -120,6 +150,8 @@ static int prove_contract(void) {
     CHECK(hxc_int_bool_map_ref_set(map, key, (key & 1) != 0) == HXC_STATUS_OK);
   }
   state.fail = true;
+	  CHECK(hxc_int_bool_map_ref_value_iterator(map, &iterator) == HXC_STATUS_OUT_OF_MEMORY);
+	  CHECK(iterator == NULL);
   CHECK(hxc_int_bool_map_ref_set(map, INT32_C(99), true) == HXC_STATUS_OUT_OF_MEMORY);
   CHECK(hxc_int_bool_map_ref_exists(alias, INT32_MAX, &found) == HXC_STATUS_OK);
   CHECK(found);

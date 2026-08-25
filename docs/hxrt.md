@@ -367,13 +367,22 @@ Keys remain signed 32-bit Haxe `Int` values, and Bool values remain native C
 missing key. `get(Int)` returns a tagged `Null<Bool>` for the same reason.
 
 Assigning the map to a new local retains the same mutable table. Changes
-through either alias are visible through the other. The current method set is
-construction, `set`, `exists`, `get`, `remove`, `clear`, and `copy`. A copy has
-its own table: later insertions, replacements, removals, and clears do not
-change the source. Iteration, text conversion, and other value types still
-produce a source-positioned IntMap diagnostic.
+through either alias are visible through the other. The admitted Bool
+specialization supports construction, `set`, `exists`, `get`, `remove`,
+`clear`, `copy`, `iterator`, `keys`, `keyValueIterator`, and `toString`. A copy
+has its own table: later changes do not affect the source.
 
-The table uses open addressing. It hashes a key to a slot and checks later
+Each iterator captures the current entries before it returns. Value, key, and
+key/value iterators use the same table order and keep one shared cursor across
+aliases. Later map changes do not change that snapshot. This is a safe,
+documented haxe.c rule for mutation during iteration; code that requires
+another target's live-mutation details is not portable Haxe. `toString` uses
+the Eval punctuation and scalar spellings. Multi-entry order follows the map's
+iteration order and is not a sorted-map promise.
+
+The table compares keys as exact signed 32-bit values and hashes their bit
+patterns with a fixed 32-bit avalanche mixer. The table uses open addressing:
+it hashes a key to a slot and checks later
 slots after a collision. A removed slot keeps a tombstone marker, so later keys
 in the same collision chain remain reachable. Capacity is always a power of
 two, and the table keeps an empty slot. Thus, each lookup terminates. Growth
@@ -476,6 +485,10 @@ old value. Rehashing relocates the table's existing bytes without logically
 copying or destroying their owners; it is the same ownership move a
 handwritten C table performs when replacing its slot block.
 
+String keys compare their canonical UTF-8 bytes and use fixed FNV-1a hashing
+over those bytes. Hashing and equality therefore agree for empty, ASCII, and
+multibyte keys without depending on a C locale or process-specific seed.
+
 `copy` creates a new table with the same allocator and value policy. Keys and
 direct scalar values are copied into that table. Managed values use their exact
 copy callback, so a shallow Haxe copy retains nested owners such as Strings or
@@ -483,11 +496,20 @@ Arrays without sharing the outer map. The result is published only after every
 entry succeeds. If allocation or a value callback fails, the runtime destroys
 the partial copy and leaves the source unchanged.
 
-`iterator()` creates a typed snapshot of the values at call time. Iterator
-aliases share one cursor, but later map changes do not change the snapshot.
-The iterator retains the source map as a callback-policy anchor. This rule
-keeps nested Strings, Arrays, and other admitted owned values valid after the
-source map local ends.
+`iterator()`, `keys()`, and `keyValueIterator()` create typed snapshots at call
+time. Iterator aliases share one cursor, but later map changes do not change
+the snapshot. Key snapshots copy each UTF-8 key into an independent managed
+String. Pair snapshots own both that key and the exact value copy. Thus, a
+yielded key or pair remains valid after the iterator and source map are gone.
+The snapshot retains the source map as its value-policy anchor. This keeps
+nested Strings, Arrays, and other admitted owned values valid after the source
+map local ends.
+
+Primitive Bool and Int maps also support `toString()` with Eval-compatible
+punctuation and scalar spelling. Entry order is the same order observed by the
+three iterator producers; it is intentionally not a sorted-map contract.
+Other admitted managed value families still receive a precise formatting
+diagnostic until their ordinary `Std.string` operation is available.
 
 Tagged payload enums remain unsupported as top-level map values because their
 active union member needs a typed ownership policy. Float, class values,

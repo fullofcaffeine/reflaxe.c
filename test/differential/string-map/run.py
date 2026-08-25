@@ -32,7 +32,9 @@ INCLUDE = ROOT / "runtime/hxrt/include"
 RUNTIME_SOURCES = (
     ROOT / "runtime/hxrt/src/allocator.c",
     ROOT / "runtime/hxrt/src/iterator.c",
+    ROOT / "runtime/hxrt/src/string.c",
     ROOT / "runtime/hxrt/src/string_map.c",
+    ROOT / "runtime/hxrt/src/string_scalar.c",
 )
 TOOLCHAINS = ("gcc", "clang")
 LAYOUTS = ("split", "package", "unity")
@@ -217,6 +219,9 @@ def validate_generated_project(output: Path, hxcir: str) -> None:
         'runtime(feature="string-map",operation="get")',
         'runtime(feature="string-map",operation="remove")',
         'runtime(feature="string-map",operation="copy")',
+		'runtime(feature="string-map",operation="keys")',
+		'runtime(feature="string-map",operation="key-value-iterator")',
+		'runtime(feature="string-map",operation="to-string")',
         'binary operation="haxe.string-map-reference.equal"',
         'binary operation="haxe.string-map-reference.not-equal"',
         "static-call-argument-0-owner-initialize",
@@ -237,6 +242,9 @@ def validate_generated_project(output: Path, hxcir: str) -> None:
         "alloc",
         "array",
         "iterator",
+		"keys",
+		"key-value-iterator",
+		"to-string",
         "string-literal",
         "string-scalar",
         "string",
@@ -312,6 +320,9 @@ def validate_generated_project(output: Path, hxcir: str) -> None:
         "hxc_string_map_ref_retain",
         "hxc_string_map_ref_release",
         "hxc_string_map_ref_value_iterator",
+		"hxc_string_map_ref_key_iterator",
+		"hxc_string_map_ref_pair_iterator",
+		"hxc_string_map_ref_to_string",
         "hxc_iterator_ref_has_next",
         "hxc_iterator_ref_next_move",
         "hxc_iterator_ref_retain",
@@ -646,7 +657,7 @@ def main(argv: Iterable[str] = ()) -> int:
     print(
         "string-map: OK: "
         f"{families}; {mode}; missing-vs-false, replacement, removal, clear, copy independence, aliases, "
-        "nullable identity, empty keys, growth, allocation rollback, value-callback rollback, "
+        "nullable identity, empty keys, growth, allocation rollback, value-callback rollback, snapshot values/keys/pairs, toString, "
         "unsupported-class/abstract-class/payload-enum rejection, "
         "malformed-call rejection, layouts, determinism, sanitizers, C++ headers, runtime-none, and selective symbols passed"
     )

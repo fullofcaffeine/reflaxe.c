@@ -200,6 +200,36 @@ private final class MapBorrower {
 	separately through `exists` and nullable `get`.
 **/
 final class Main {
+	/** Prove independently owned key and pair snapshots survive source mutation. */
+	static function keyIteratorTrace():Bool {
+		final values:Map<String, Int> = [];
+		values.set("alpha", 3);
+		values.set("beta", 5);
+		final keys = values.keys();
+		final pairs = values.keyValueIterator();
+		values.clear();
+		values.set("later", 9);
+		var keyBytes = 0;
+		while (keys.hasNext())
+			keyBytes += keys.next().length;
+		var pairBytes = 0;
+		var pairValues = 0;
+		while (pairs.hasNext()) {
+			final pair = pairs.next();
+			pairBytes += pair.key.length;
+			pairValues += pair.value;
+		}
+		return keyBytes == 9 && pairBytes == 9 && pairValues == 8;
+	}
+
+	/** Exercise the primitive Eval-compatible map spelling. */
+	static function stringTrace():Bool {
+		final values:Map<String, Int> = [];
+		values.set("score", 8);
+		final rendered = values.toString();
+		return rendered == "[score => 8]";
+	}
+
 	/** Return a managed-record iterator after its source map local has ended. */
 	static function makeRecordIterator():Iterator<StoredRecord> {
 		final values:Map<String, StoredRecord> = [];
@@ -232,10 +262,10 @@ final class Main {
 		if (!alias.hasNext())
 			return false;
 		final second = alias.next();
-		final firstValid = first.score == 7 ? first.flags.length == 1 && first.flags[0] : first.score == 11
-			&& first.flags.length == 2 && !first.flags[0] && first.flags[1];
-		final secondValid = second.score == 7 ? second.flags.length == 1 && second.flags[0] : second.score == 11
-			&& second.flags.length == 2 && !second.flags[0] && second.flags[1];
+		final firstValid = first.score == 7 ? first.flags.length == 1 && first.flags[0] : first.score == 11 && first.flags.length == 2 && !first.flags[0]
+			&& first.flags[1];
+		final secondValid = second.score == 7 ? second.flags.length == 1 && second.flags[0] : second.score == 11 && second.flags.length == 2
+			&& !second.flags[0] && second.flags[1];
 		if (values.hasNext() || first.score + second.score != 18 || !firstValid || !secondValid)
 			return false;
 
@@ -516,10 +546,9 @@ final class Main {
 		final emptyBeforeClear = alias.exists("");
 		alias.clear();
 
-		while (!integerTrace() || !fieldlessEnumTrace() || !managedRecordTrace() || !managedRecordIteratorTrace() || !nominalStringTrace()
-			|| !freshArgumentTrace() || !independentCopy()
-			|| alias != values || absent != null || null != absent || values == null || alphaBefore == null || alphaBefore || missingBefore != null
-			|| !removedBeta || removedBetaAgain || !gammaBeforeClear || !emptyBeforeClear || values.exists("alpha") || values.exists("gamma")
-			|| values.exists("") || values.get("alpha") != null) {}
+		while (!integerTrace() || !fieldlessEnumTrace() || !managedRecordTrace() || !managedRecordIteratorTrace() || !keyIteratorTrace() || !stringTrace()
+			|| !nominalStringTrace() || !freshArgumentTrace() || !independentCopy() || alias != values || absent != null || null != absent || values == null
+			|| alphaBefore == null || alphaBefore || missingBefore != null || !removedBeta || removedBetaAgain || !gammaBeforeClear || !emptyBeforeClear
+			|| values.exists("alpha") || values.exists("gamma") || values.exists("") || values.get("alpha") != null) {}
 	}
 }

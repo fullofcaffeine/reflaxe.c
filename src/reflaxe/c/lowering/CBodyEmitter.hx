@@ -227,8 +227,9 @@ class CBodyEmitter {
 
 	#if (macro || reflaxe_runtime)
 	public function new(?aggregates:Array<CLoweredBodyAggregate>, ?enums:Array<CLoweredBodyEnum>, ?classes:Array<CLoweredBodyClass>,
-			?arrays:Array<CLoweredBodyArray>, ?iterators:Array<CPreparedBodyIterator>, ?intMaps:Array<CPreparedBodyIntMap>, ?stringMaps:Array<CLoweredBodyStringMap>, ?bytes:Array<CPreparedBodyBytes>,
-			?optionals:Array<CLoweredBodyOptional>, ?dispatch:CLoweredBodyDispatch, ?imports:CLoweredImports, ?managedProgram:CManagedProgramNames) {
+			?arrays:Array<CLoweredBodyArray>, ?iterators:Array<CPreparedBodyIterator>, ?intMaps:Array<CPreparedBodyIntMap>,
+			?stringMaps:Array<CLoweredBodyStringMap>, ?bytes:Array<CPreparedBodyBytes>, ?optionals:Array<CLoweredBodyOptional>,
+			?dispatch:CLoweredBodyDispatch, ?imports:CLoweredImports, ?managedProgram:CManagedProgramNames) {
 		this.imports = imports == null ? CLoweredImports.empty() : imports;
 		this.managedProgram = managedProgram;
 		if (aggregates != null) {
@@ -5547,6 +5548,63 @@ class CBodyEmitter {
 				values.set(result.id, EIdentifier(temporary));
 				if (!referencedValues.exists(result.id))
 					statements.push(SExpr(ECast(new CType(TVoid), DName(null), EIdentifier(temporary))));
+			case "iterator" | "keys" | "key-value-iterator":
+				final result = requireResult(instruction, fn.id);
+				final temporary = requireIntMapTemporary(temporaryNames, result.id, instruction.id, fn.id);
+				final declaration = typedDeclarator(result.type, DName(temporary));
+				statements.push(SDecl({
+					storage: [],
+					alignments: [],
+					type: declaration.type,
+					declarator: declaration.declarator,
+					initializer: IExpr(ENull),
+					attributes: []
+				}));
+				final runtimeCall = if (operation == "iterator") ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNIntMapValueIterator)),
+					[
+						requireValue(values, call.arguments[0], fn.id),
+						EUnary(AddressOf, EIdentifier(temporary))
+					]) else if (operation == "keys") ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNIntMapKeyIterator)), [
+						requireValue(values, call.arguments[0], fn.id),
+						EUnary(AddressOf, EIdentifier(temporary))
+				]) else {
+						final iteratorElement = switch result.type {
+							case IRTInstance(iteratorId): iteratorElementTypes.get(iteratorId);
+							case _: null;
+						};
+						final pairId = switch iteratorElement {
+							case IRTInstance(instanceId): instanceId;
+							case _: return fail('IntMap keyValueIterator `${instruction.id}` lost its pair aggregate');
+						};
+						final pairType = new CType(TStruct(requireAggregateTag(pairId)));
+						ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNIntMapPairIterator)), [
+							requireValue(values, call.arguments[0], fn.id),
+							ESizeOfType(pairType, DName(null)),
+							EAlignOfType(pairType, DName(null)),
+							EOffsetOf(pairType, DName(null), requireAggregateFieldName(pairId, "key", instruction.id, fn.id)),
+							EOffsetOf(pairType, DName(null), requireAggregateFieldName(pairId, "value", instruction.id, fn.id)),
+							EUnary(AddressOf, EIdentifier(temporary))
+						]);
+				};
+				emitStatusAbort(statements, runtimeCall, boundsAbortName, instruction.id, fn.id);
+				values.set(result.id, EIdentifier(temporary));
+			case "to-string":
+				final result = requireResult(instruction, fn.id);
+				final temporary = requireIntMapTemporary(temporaryNames, result.id, instruction.id, fn.id);
+				final declaration = typedDeclarator(result.type, DName(temporary));
+				statements.push(SDecl({
+					storage: [],
+					alignments: [],
+					type: declaration.type,
+					declarator: declaration.declarator,
+					initializer: IExpr(constantExpressionForType(IRCNull, result.type)),
+					attributes: []
+				}));
+				emitStatusAbort(statements, ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNIntMapToString)), [
+					requireValue(values, call.arguments[0], fn.id),
+					EUnary(AddressOf, EIdentifier(temporary))
+				]), boundsAbortName, instruction.id, fn.id);
+				values.set(result.id, EIdentifier(temporary));
 			case _:
 				fail('IntMap call `${instruction.id}` in `${fn.id}` names unsupported operation `$operation`');
 		}
@@ -5640,7 +5698,7 @@ class CBodyEmitter {
 					EUnary(AddressOf, EIdentifier(temporary))
 				]), boundsAbortName, instruction.id, fn.id);
 				values.set(result.id, EIdentifier(temporary));
-			case "iterator":
+			case "iterator" | "keys" | "key-value-iterator":
 				final result = requireResult(instruction, fn.id);
 				final temporary = requireStringMapTemporary(temporaryNames, result.id, instruction.id, fn.id);
 				final declaration = typedDeclarator(result.type, DName(temporary));
@@ -5652,8 +5710,58 @@ class CBodyEmitter {
 					initializer: IExpr(ENull),
 					attributes: []
 				}));
-				emitStatusAbort(statements, ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNStringMapValueIterator)), [
+				final runtimeCall = if (operation == "iterator") ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNStringMapValueIterator)),
+					[
+						requireValue(values, call.arguments[0], fn.id),
+						EUnary(AddressOf, EIdentifier(temporary))
+					]) else if (operation == "keys") ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNStringMapKeyIterator)), [
+						requireValue(values, call.arguments[0], fn.id),
+						EUnary(AddressOf, EIdentifier(temporary))
+				]) else {
+						final iteratorElement = switch result.type {
+							case IRTInstance(iteratorId): iteratorElementTypes.get(iteratorId);
+							case _: null;
+						};
+						final pairId = switch iteratorElement {
+							case IRTInstance(instanceId): instanceId;
+							case _: return fail('StringMap keyValueIterator `${instruction.id}` lost its pair aggregate');
+						};
+						final pairType = new CType(TStruct(requireAggregateTag(pairId)));
+						ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNStringMapPairIterator)), [
+							requireValue(values, call.arguments[0], fn.id),
+							ESizeOfType(pairType, DName(null)),
+							EAlignOfType(pairType, DName(null)),
+							EOffsetOf(pairType, DName(null), requireAggregateFieldName(pairId, "key", instruction.id, fn.id)),
+							EOffsetOf(pairType, DName(null), requireAggregateFieldName(pairId, "value", instruction.id, fn.id)),
+							EUnary(AddressOf, EIdentifier(temporary))
+						]);
+				};
+				emitStatusAbort(statements, runtimeCall, boundsAbortName, instruction.id, fn.id);
+				values.set(result.id, EIdentifier(temporary));
+			case "to-string":
+				final result = requireResult(instruction, fn.id);
+				final temporary = requireStringMapTemporary(temporaryNames, result.id, instruction.id, fn.id);
+				final declaration = typedDeclarator(result.type, DName(temporary));
+				final receiverType = valueType(fn, call.arguments[0]);
+				if (receiverType == null)
+					return fail('StringMap toString `${instruction.id}` lost its receiver type');
+				final storedType = requireStringMapValueType(receiverType, instruction.id, fn.id);
+				final formatName = switch storedType {
+					case IRTBool: new CIdentifier("HXC_STRING_MAP_FORMAT_BOOL");
+					case IRTInt(32, true): new CIdentifier("HXC_STRING_MAP_FORMAT_INT32");
+					case _: return fail('StringMap toString `${instruction.id}` has no primitive format');
+				};
+				statements.push(SDecl({
+					storage: [],
+					alignments: [],
+					type: declaration.type,
+					declarator: declaration.declarator,
+					initializer: IExpr(constantExpressionForType(IRCNull, result.type)),
+					attributes: []
+				}));
+				emitStatusAbort(statements, ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNStringMapToString)), [
 					requireValue(values, call.arguments[0], fn.id),
+					EIdentifier(formatName),
 					EUnary(AddressOf, EIdentifier(temporary))
 				]), boundsAbortName, instruction.id, fn.id);
 				values.set(result.id, EIdentifier(temporary));
@@ -5779,8 +5887,7 @@ class CBodyEmitter {
 			statements.push(SExpr(ECast(new CType(TVoid), DName(null), EIdentifier(temporary))));
 	}
 
-	static function requireIteratorTemporary(temporaryNames:Map<String, CIdentifier>, resultId:String, instructionId:String,
-			functionId:String):CIdentifier {
+	static function requireIteratorTemporary(temporaryNames:Map<String, CIdentifier>, resultId:String, instructionId:String, functionId:String):CIdentifier {
 		final temporary = temporaryNames.get(resultId);
 		if (temporary == null)
 			return fail('Iterator call `$instructionId` in `$functionId` has no finalized result temporary');

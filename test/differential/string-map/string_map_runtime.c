@@ -507,6 +507,49 @@ static int prove_iterator_failure_and_early_exit_cleanup(void) {
   return 0;
 }
 
+typedef struct string_int_pair {
+  hxc_string key;
+  int32_t value;
+} string_int_pair;
+
+static int prove_key_pair_and_string_snapshots(void) {
+  hxc_string_map_ref *map = NULL;
+  hxc_iterator_ref *keys = NULL;
+  hxc_iterator_ref *pairs = NULL;
+  hxc_string key = HXC_STRING_INITIALIZER;
+  hxc_string rendered = HXC_STRING_INITIALIZER;
+  string_int_pair pair = {HXC_STRING_INITIALIZER, 0};
+  int32_t value = INT32_C(8);
+
+  CHECK(hxc_string_map_ref_create(
+    hxc_default_allocator(), sizeof(value), HXC_ALIGNOF(int32_t), &map
+  ) == HXC_STATUS_OK);
+  CHECK(hxc_string_map_ref_set_copy(map, literal("score"), &value) == HXC_STATUS_OK);
+  CHECK(hxc_string_map_ref_key_iterator(map, &keys) == HXC_STATUS_OK);
+  CHECK(hxc_string_map_ref_pair_iterator(
+    map, sizeof(pair), HXC_ALIGNOF(string_int_pair),
+    offsetof(string_int_pair, key), offsetof(string_int_pair, value), &pairs
+  ) == HXC_STATUS_OK);
+  CHECK(hxc_string_map_ref_clear(map) == HXC_STATUS_OK);
+  CHECK(hxc_iterator_ref_next_move(keys, &key) == HXC_STATUS_OK);
+  CHECK(key.byte_length == 5u && memcmp(key.data, "score", 5u) == 0);
+  CHECK(hxc_string_release(&key) == HXC_STATUS_OK);
+  CHECK(hxc_iterator_ref_next_move(pairs, &pair) == HXC_STATUS_OK);
+  CHECK(pair.key.byte_length == 5u && pair.value == INT32_C(8));
+  CHECK(hxc_string_release(&pair.key) == HXC_STATUS_OK);
+  CHECK(hxc_iterator_ref_release(keys) == HXC_STATUS_OK);
+  CHECK(hxc_iterator_ref_release(pairs) == HXC_STATUS_OK);
+  value = INT32_C(8);
+  CHECK(hxc_string_map_ref_set_copy(map, literal("score"), &value) == HXC_STATUS_OK);
+  CHECK(hxc_string_map_ref_to_string(
+    map, HXC_STRING_MAP_FORMAT_INT32, &rendered
+  ) == HXC_STATUS_OK);
+  CHECK(rendered.byte_length == 12u);
+  CHECK(hxc_string_release(&rendered) == HXC_STATUS_OK);
+  CHECK(hxc_string_map_ref_release(map) == HXC_STATUS_OK);
+  return 0;
+}
+
 static int prove_invalid_inputs_fail_closed(void) {
   hxc_string_map_ref *map = NULL;
   hxc_string_map_ref *occupied_output;
@@ -635,6 +678,7 @@ int main(void) {
   CHECK(prove_managed_value_callbacks() == 0);
   CHECK(prove_shared_iterator_cursor_and_lifetime() == 0);
   CHECK(prove_iterator_failure_and_early_exit_cleanup() == 0);
+  CHECK(prove_key_pair_and_string_snapshots() == 0);
   CHECK(prove_invalid_inputs_fail_closed() == 0);
   return 0;
 }

@@ -262,9 +262,9 @@ def validate_catalog(catalog: dict[str, object]) -> None:
         "alloc": ["status"],
         "array": ["alloc"],
         "array-join": ["array", "string"],
-        "int-map": ["alloc"],
+        "int-map": ["alloc", "iterator", "string"],
         "iterator": ["alloc"],
-        "string-map": ["alloc", "iterator", "string-literal"],
+        "string-map": ["alloc", "iterator", "string", "string-literal"],
         "string-float": ["string"],
         "string-split": ["array", "string"],
         "bytes": ["alloc", "string-literal"],
@@ -543,7 +543,10 @@ def validate_plans(plans: dict[str, object]) -> None:
         raise RuntimeFeatureFailure("alloc closure is incomplete or nondeterministic")
     if array.get("features") != ["runtime-base", "status", "alloc", "array"]:
         raise RuntimeFeatureFailure("array closure is incomplete or nondeterministic")
-    if int_map.get("features") != ["runtime-base", "status", "alloc", "int-map"]:
+    if int_map.get("features") != [
+        "runtime-base", "status", "alloc", "iterator", "string-literal",
+        "string-scalar", "string", "int-map",
+    ]:
         raise RuntimeFeatureFailure("IntMap closure is incomplete or nondeterministic")
     if string_map.get("features") != [
         "runtime-base",
@@ -551,6 +554,8 @@ def validate_plans(plans: dict[str, object]) -> None:
         "alloc",
         "iterator",
         "string-literal",
+        "string-scalar",
+        "string",
         "string-map",
     ]:
         raise RuntimeFeatureFailure("StringMap closure is incomplete or nondeterministic")

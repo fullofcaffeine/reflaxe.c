@@ -84,6 +84,9 @@ enum CBodyRuntimeName {
 	CBRNStringMapRemove;
 	CBRNStringMapClear;
 	CBRNStringMapValueIterator;
+	CBRNStringMapKeyIterator;
+	CBRNStringMapPairIterator;
+	CBRNStringMapToString;
 	CBRNIteratorRetain;
 	CBRNIteratorRelease;
 	CBRNIteratorHasNext;
@@ -97,6 +100,10 @@ enum CBodyRuntimeName {
 	CBRNIntMapGet;
 	CBRNIntMapRemove;
 	CBRNIntMapClear;
+	CBRNIntMapValueIterator;
+	CBRNIntMapKeyIterator;
+	CBRNIntMapPairIterator;
+	CBRNIntMapToString;
 	CBRNBytesCreateZeroed;
 	CBRNBytesCreateUtf8Copy;
 	CBRNBytesLength;
@@ -189,6 +196,9 @@ class CBodyRuntimeNames {
 			case CBRNStringMapRemove: "hxc_string_map_ref_remove";
 			case CBRNStringMapClear: "hxc_string_map_ref_clear";
 			case CBRNStringMapValueIterator: "hxc_string_map_ref_value_iterator";
+			case CBRNStringMapKeyIterator: "hxc_string_map_ref_key_iterator";
+			case CBRNStringMapPairIterator: "hxc_string_map_ref_pair_iterator";
+			case CBRNStringMapToString: "hxc_string_map_ref_to_string";
 			case CBRNIteratorRetain: "hxc_iterator_ref_retain";
 			case CBRNIteratorRelease: "hxc_iterator_ref_release";
 			case CBRNIteratorHasNext: "hxc_iterator_ref_has_next";
@@ -202,6 +212,10 @@ class CBodyRuntimeNames {
 			case CBRNIntMapGet: "hxc_int_bool_map_ref_get";
 			case CBRNIntMapRemove: "hxc_int_bool_map_ref_remove";
 			case CBRNIntMapClear: "hxc_int_bool_map_ref_clear";
+			case CBRNIntMapValueIterator: "hxc_int_bool_map_ref_value_iterator";
+			case CBRNIntMapKeyIterator: "hxc_int_bool_map_ref_key_iterator";
+			case CBRNIntMapPairIterator: "hxc_int_bool_map_ref_pair_iterator";
+			case CBRNIntMapToString: "hxc_int_bool_map_ref_to_string";
 			case CBRNBytesCreateZeroed: "hxc_bytes_ref_create_zeroed";
 			case CBRNBytesCreateUtf8Copy: "hxc_bytes_ref_create_utf8_copy";
 			case CBRNBytesLength: "hxc_bytes_ref_length";

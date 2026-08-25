@@ -544,6 +544,24 @@ hxc_status hxc_string_concat_ref(
   );
 }
 
+hxc_status hxc_string_copy_ref(
+  hxc_string source,
+  hxc_allocator allocator,
+  hxc_string *out_string
+) {
+  if (!hxc_string_is_valid(source)) {
+    return HXC_STATUS_INVALID_ARGUMENT;
+  }
+  return hxc_string_ref_from_valid_segments(
+    source.data,
+    source.byte_length,
+    NULL,
+    0u,
+    allocator,
+    out_string
+  );
+}
+
 hxc_status hxc_byte_view_from_cstring(
   const char *value,
   hxc_byte_view *out_view

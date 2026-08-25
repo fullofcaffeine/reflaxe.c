@@ -507,7 +507,9 @@
         "programLocalAlternative": "A closed bounded key range can use a program-local bitset or table when the compiler can prove that range and preserve Map identity."
       },
       "dependencies": [
-        "alloc"
+        "alloc",
+        "iterator",
+        "string"
       ],
       "id": "int-map",
       "availability": "compiler-selectable",
@@ -517,20 +519,24 @@
         "hxc_int_bool_map_ref_create",
         "hxc_int_bool_map_ref_exists",
         "hxc_int_bool_map_ref_get",
+        "hxc_int_bool_map_ref_key_iterator",
+        "hxc_int_bool_map_ref_pair_iterator",
         "hxc_int_bool_map_ref_release",
         "hxc_int_bool_map_ref_remove",
         "hxc_int_bool_map_ref_retain",
-        "hxc_int_bool_map_ref_set"
+        "hxc_int_bool_map_ref_set",
+        "hxc_int_bool_map_ref_to_string",
+        "hxc_int_bool_map_ref_value_iterator"
       ],
       "artifacts": [
         {
-          "sourceSha256": "79e8cce319aee8d4f0167db6b6f1e719161b8b948f309b07babbc8cd1bbaa5fd",
+          "sourceSha256": "69dfbe45cc182cfb66fbc5e44b38c7cf3205386ff8edabd7d33bc1daabe5ef83",
           "kind": "runtime-header",
           "outputPath": "runtime/include/hxrt/int_map.h",
           "sourcePath": "runtime/hxrt/include/hxrt/int_map.h"
         },
         {
-          "sourceSha256": "ba6868489be50e0d19973d253bf3a0a316d8d6fc0160cc2e502f65b7c7a055f9",
+          "sourceSha256": "743339e9c3dea7a1894e1c7920cfe4b717c4bc0436224837f64c837038496fcc",
           "kind": "runtime-source",
           "outputPath": "runtime/src/int_map.c",
           "sourcePath": "runtime/hxrt/src/int_map.c"
@@ -987,6 +993,7 @@
         "hxc_string_concat",
         "hxc_string_concat_ref",
         "hxc_string_copy",
+        "hxc_string_copy_ref",
         "hxc_string_from_int32",
         "hxc_string_from_scalar",
         "hxc_string_from_utf8_checked",
@@ -997,13 +1004,13 @@
       ],
       "artifacts": [
         {
-          "sourceSha256": "0ed1be29fb80b5bbbc2248874d214cc7126da20e6139d02711516c1b131480ca",
+          "sourceSha256": "60c745b0e4e0b35d1f285f913ed7b2a284438130b8ebd44c3751247ffeb9cae7",
           "kind": "runtime-header",
           "outputPath": "runtime/include/hxrt/string.h",
           "sourcePath": "runtime/hxrt/include/hxrt/string.h"
         },
         {
-          "sourceSha256": "8313e359e18df7d5995faab32dd2e29cccd75ccd2338e475218549870d882736",
+          "sourceSha256": "9e267e14bdca44436a282b4956121b5340e71e0dffc5060306fee898c11d181a",
           "kind": "runtime-source",
           "outputPath": "runtime/src/string.c",
           "sourcePath": "runtime/hxrt/src/string.c"
@@ -1146,6 +1153,7 @@
       "dependencies": [
         "alloc",
         "iterator",
+        "string",
         "string-literal"
       ],
       "id": "string-map",
@@ -1157,22 +1165,25 @@
         "hxc_string_map_ref_create_with_ops",
         "hxc_string_map_ref_exists",
         "hxc_string_map_ref_get_copy",
+        "hxc_string_map_ref_key_iterator",
+        "hxc_string_map_ref_pair_iterator",
         "hxc_string_map_ref_release",
         "hxc_string_map_ref_remove",
         "hxc_string_map_ref_retain",
         "hxc_string_map_ref_set_copy",
+        "hxc_string_map_ref_to_string",
         "hxc_string_map_ref_value_iterator",
         "hxc_string_map_value_ops_is_valid"
       ],
       "artifacts": [
         {
-          "sourceSha256": "4b67370c51dcf6e96c5e667ec6535b76ae47c38fa53718ffa3032ad93d04d6fc",
+          "sourceSha256": "8d5d791b4df91205d843e892e23c1da7582f05da3146b7f371a4a4a51f18ce2e",
           "kind": "runtime-header",
           "outputPath": "runtime/include/hxrt/string_map.h",
           "sourcePath": "runtime/hxrt/include/hxrt/string_map.h"
         },
         {
-          "sourceSha256": "7dde064613173e737c16b3890b5d0b14ad8dd484ed90a67abeb87ec4b4f1b3f5",
+          "sourceSha256": "a1c2095e6b2948109ab5b7fb1771e56998e0606fdab3ec9caa0b9e1d80d632a1",
           "kind": "runtime-source",
           "outputPath": "runtime/src/string_map.c",
           "sourcePath": "runtime/hxrt/src/string_map.c"
@@ -1413,7 +1424,7 @@
     "releaseProvenance": {
       "runtimeCStandard": "c11",
       "sourceHashAlgorithm": "sha256",
-      "sourceSetSha256": "c1742aa236a886d69a1a1be80d2dcfc6cb1af478055321aa3832806a4a40dcb1",
+      "sourceSetSha256": "87080e8f3d78d6cbd336a0bbac04798bc2ef0dac51f2a1337bf49b144a29f070",
       "publicHeaderCppStandard": "c++17"
     },
     "generatedCodeCompatibility": "same-major",
