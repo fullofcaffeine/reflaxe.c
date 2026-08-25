@@ -768,35 +768,36 @@ class CProjectEmitter {
 			expectedDirectDecisions.push("compiler-planned-eager-static-initialization");
 		}
 		/*
-		 * `features` is dependency-closed: Bytes can select the String-literal
-		 * runtime artifact even when reachable HxcIR contains no literal value.
-		 * The direct decision is narrower. It promises that the program itself
-		 * required compiler-owned UTF-8 bytes, so rebuild it from root evidence
-		 * rather than mistaking a transitive implementation dependency for
-		 * source behavior.
+		 * `features` is dependency-closed, while a direct decision describes
+		 * behavior that reachable HxcIR actually requested. Rebuild the latter
+		 * from root evidence so a StringMap's bundled iterator implementation,
+		 * for example, does not claim that source code used a Haxe Iterator.
 		 */
-		var hasDirectStringLiteral = false;
+		final directRuntimeFeatures:Map<String, Bool> = [];
 		for (reason in runtimePlan.rootReasons)
-			if (reason.featureId == "string-literal") {
-				hasDirectStringLiteral = true;
-				break;
-			}
-		if (hasDirectStringLiteral) {
+			directRuntimeFeatures.set(reason.featureId, true);
+		if (directRuntimeFeatures.exists("string-literal")) {
 			expectedDirectDecisions.push("direct-utf8-string-literals");
 		}
-		if (runtimePlan.features.indexOf("string-scalar") != -1)
+		if (directRuntimeFeatures.exists("string-scalar")
+			|| directRuntimeFeatures.exists("string")
+			|| directRuntimeFeatures.exists("string-split")
+			|| directRuntimeFeatures.exists("array-join")
+			|| directRuntimeFeatures.exists("bytes-string"))
 			expectedDirectDecisions.push("allocation-free-unicode-scalar-strings");
-		if (runtimePlan.features.indexOf("array") != -1)
+		if (directRuntimeFeatures.exists("array")
+			|| directRuntimeFeatures.exists("string-split")
+			|| directRuntimeFeatures.exists("array-join"))
 			expectedDirectDecisions.push("managed-haxe-arrays");
-		if (runtimePlan.features.indexOf("iterator") != -1)
+		if (directRuntimeFeatures.exists("iterator"))
 			expectedDirectDecisions.push("managed-haxe-iterators");
-		if (runtimePlan.features.indexOf("string-map") != -1)
+		if (directRuntimeFeatures.exists("string-map"))
 			expectedDirectDecisions.push("managed-haxe-string-maps");
-		if (runtimePlan.features.indexOf("int-map") != -1)
+		if (directRuntimeFeatures.exists("int-map"))
 			expectedDirectDecisions.push("managed-haxe-int-maps");
-		if (runtimePlan.features.indexOf("bytes") != -1)
+		if (directRuntimeFeatures.exists("bytes"))
 			expectedDirectDecisions.push("managed-haxe-bytes");
-		if (runtimePlan.features.indexOf("gc") != -1)
+		if (directRuntimeFeatures.exists("gc"))
 			expectedDirectDecisions.push("exact-traced-haxe-object-graph");
 		expectedDirectDecisions.sort(compareUtf8);
 		if (runtimePlan.directDecisions.join("\n") != expectedDirectDecisions.join("\n")) {

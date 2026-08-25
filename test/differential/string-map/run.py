@@ -26,6 +26,7 @@ from scripts.test.bounded_process import run as run_bounded_process  # noqa: E40
 
 CASE = Path(__file__).resolve().parent
 GENERATED = CASE / "generated"
+DIRECT_DECISION = CASE / "direct_decision"
 NEGATIVE = CASE / "negative"
 FIXTURE = CASE / "string_map_runtime.c"
 INCLUDE = ROOT / "runtime/hxrt/include"
@@ -512,6 +513,173 @@ def compile_and_run(
         )
 
 
+def check_direct_runtime_decisions(toolchains: list[Toolchain]) -> None:
+    """Keep dependency artifacts distinct from source-reached behavior."""
+    oracle = run_bounded_process(
+        [
+            development_tool("haxe"),
+            "-cp",
+            str(DIRECT_DECISION),
+            "-main",
+            "Main",
+            "--interp",
+        ],
+        cwd=ROOT,
+        env=haxe_environment(),
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    if oracle.returncode != 0 or oracle.stdout or oracle.stderr:
+        raise StringMapFailure(
+            "StringMap direct-decision Eval oracle failed: "
+            f"{oracle.returncode} {oracle.stdout!r} {oracle.stderr!r}"
+        )
+
+    with tempfile.TemporaryDirectory(
+        prefix="reflaxe-c-string-map-direct-decisions-"
+    ) as temporary:
+        root = Path(temporary)
+        port = available_port()
+        endpoint = str(port)
+        server = subprocess.Popen(
+            [development_tool("haxe"), "--wait", endpoint],
+            cwd=ROOT,
+            env=haxe_environment(server=True),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+        try:
+            wait_for_server(server, port)
+            rendered: list[tuple[Path, str]] = []
+            for label in ("server-cold", "server-warm"):
+                output = root / label
+                result = compile_haxe(
+                    DIRECT_DECISION,
+                    output,
+                    layout="unity",
+                    report=True,
+                    connect=endpoint,
+                )
+                if result.returncode != 0:
+                    raise StringMapFailure(
+                        f"{label} direct-decision compile failed: "
+                        f"{result.stdout!r} {result.stderr!r}"
+                    )
+                rendered.append((output, extract_hxcir(result)))
+        finally:
+            server.terminate()
+            try:
+                server.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                server.kill()
+                server.wait(timeout=5)
+
+        output, hxcir = rendered[0]
+        warm_output, warm_hxcir = rendered[1]
+        if hxcir != warm_hxcir or generated_tree(output) != generated_tree(warm_output):
+            raise StringMapFailure(
+                "StringMap direct-decision output changed under warm server reuse"
+            )
+        if (
+            'representation=managed("string-map")' not in hxcir
+            or 'representation=managed("iterator")' in hxcir
+            or 'runtime(feature="iterator"' in hxcir
+        ):
+            raise StringMapFailure(
+                "StringMap-only HxcIR gained an unrequested Iterator value or operation"
+            )
+
+        plan = json.loads((output / "hxc.runtime-plan.json").read_text(encoding="utf-8"))
+        expected_features = [
+            "runtime-base",
+            "status",
+            "alloc",
+            "iterator",
+            "string-literal",
+            "string-scalar",
+            "string",
+            "string-map",
+        ]
+        if plan.get("features") != expected_features:
+            raise StringMapFailure(
+                "StringMap-only runtime dependency closure drifted: "
+                f"{plan.get('features')!r}"
+            )
+        root_features = {
+            reason.get("featureId")
+            for reason in plan.get("rootReasons", [])
+            if isinstance(reason, dict)
+        }
+        if root_features != {"string-literal", "string-map"}:
+            raise StringMapFailure(
+                f"StringMap-only runtime roots drifted: {sorted(root_features)!r}"
+            )
+        expected_decisions = [
+            "direct-calls",
+            "direct-utf8-string-literals",
+            "executable-entry-point",
+            "explicit-evaluation-order",
+            "managed-haxe-string-maps",
+            "primitive-static-storage",
+            "primitive-values",
+            "static-functions",
+            "ub-safe-primitive-operations",
+        ]
+        if plan.get("directDecisions") != expected_decisions:
+            raise StringMapFailure(
+                "StringMap-only direct decisions confused dependencies with source use: "
+                f"{plan.get('directDecisions')!r}"
+            )
+        iterator_feature = next(
+            (
+                feature
+                for feature in plan.get("selectedFeatures", [])
+                if isinstance(feature, dict) and feature.get("id") == "iterator"
+            ),
+            None,
+        )
+        if iterator_feature is None or iterator_feature.get("root") is not False:
+            raise StringMapFailure(
+                "StringMap-only runtime plan lost its transitive Iterator artifact"
+            )
+
+        program_sources = "\n".join(
+            path.read_text(encoding="utf-8")
+            for path in sorted((output / "src").rglob("*.c"))
+        )
+        if "hxc_iterator_ref_" in program_sources:
+            raise StringMapFailure(
+                "StringMap-only generated application C called an Iterator operation"
+            )
+
+        sources = sorted((output / "runtime/src").glob("*.c")) + sorted(
+            (output / "src").rglob("*.c")
+        )
+        include_roots = [output / "include", output / "runtime/include"]
+        for toolchain in toolchains:
+            build = root / toolchain.family
+            build.mkdir()
+            for optimization in ("-O0", "-O2"):
+                compile_and_run(
+                    toolchain.compiler,
+                    sources,
+                    include_roots,
+                    build / f"direct-decisions-{optimization[1:].lower()}",
+                    (optimization,),
+                )
+            if toolchain.family == "clang":
+                compile_and_run(
+                    toolchain.compiler,
+                    sources,
+                    include_roots,
+                    build / "direct-decisions-sanitized",
+                    SANITIZER_FLAGS,
+                )
+
+
 def validate_cpp_headers(project: Path, family: str, root: Path) -> None:
     compiler = shutil.which("clang++" if family == "clang" else "g++")
     if compiler is None:
@@ -566,6 +734,8 @@ def inspect_symbols(executable: Path, family: str, *, allow_array: bool = False)
 def run_native(toolchains: list[Toolchain], *, generated_haxe: bool) -> None:
     with tempfile.TemporaryDirectory(prefix="reflaxe-c-string-map-") as temporary:
         root = Path(temporary)
+        if generated_haxe:
+            check_direct_runtime_decisions(toolchains)
         projects = render_projects(root) if generated_haxe else {}
         if generated_haxe:
             run_negative_cases(root)
@@ -629,6 +799,7 @@ def parse_args(argv: Iterable[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--toolchain", choices=("auto", *TOOLCHAINS), default="auto")
     parser.add_argument("--native-only", action="store_true")
+    parser.add_argument("--direct-decision-only", action="store_true")
     return parser.parse_args(list(argv))
 
 
@@ -636,6 +807,13 @@ def main(argv: Iterable[str] = ()) -> int:
     args = parse_args(argv)
     try:
         toolchains = resolve_toolchains(args.toolchain)
+        if args.direct_decision_only:
+            check_direct_runtime_decisions(toolchains)
+            print(
+                "string-map: OK: dependency-closed Iterator artifacts remain "
+                "distinct from source-reached direct decisions"
+            )
+            return 0
         if not args.native_only:
             run_eval_oracle()
         run_native(toolchains, generated_haxe=not args.native_only)

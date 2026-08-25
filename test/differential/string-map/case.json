@@ -16,6 +16,7 @@
     "runtime/hxrt/include/hxrt/iterator.h",
     "runtime/hxrt/src/iterator.c",
     "runtime/hxrt/src/string_map.c",
+    "test/differential/string-map/direct_decision/Main.hx",
     "test/differential/string-map/generated/Main.hx",
     "test/differential/string-map/generated/oracle.hxml",
     "test/differential/string-map/negative/abstract_class_value/Main.hx",
