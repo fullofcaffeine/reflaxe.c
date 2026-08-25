@@ -5983,6 +5983,30 @@ class CBodyEmitter {
 			]), boundsAbortName, instruction.id, fn.id);
 			return;
 		}
+		if (operation == "insert") {
+			if (call.arguments.length != 3 || call.returnType != IRTVoid)
+				return fail('Array insert `${instruction.id}` in `${fn.id}` lost its receiver/index/element/Void signature');
+			final receiverType = valueType(fn, call.arguments[0]);
+			if (receiverType == null)
+				return fail('Array insert `${instruction.id}` in `${fn.id}` lost its receiver type');
+			final instanceId = requireArrayInstanceId(receiverType, instruction.id, fn.id);
+			final elementType = requireArrayElementType(instanceId);
+			requireArrayPlan(instanceId);
+			final indexType = valueType(fn, call.arguments[1]);
+			if (indexType == null || exactTypeKey(indexType) != exactTypeKey(IRTInt(32, true)))
+				return fail('Array insert `${instruction.id}` in `${fn.id}` lost its Haxe Int position');
+			final actualElementType = valueType(fn, call.arguments[2]);
+			if (actualElementType == null || exactTypeKey(actualElementType) != exactTypeKey(elementType))
+				return fail('Array insert `${instruction.id}` in `${fn.id}` lost its exact element type');
+			final elementDeclaration = typedDeclarator(elementType, DName(null));
+			addLineDirective(statements, instruction.source, lineDirectives);
+			emitStatusAbort(statements, ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNArrayInsertCopy)), [
+				requireValue(values, call.arguments[0], fn.id),
+				requireValue(values, call.arguments[1], fn.id),
+				arrayElementPointer(requireValue(values, call.arguments[2], fn.id), elementType, elementDeclaration)
+			]), boundsAbortName, instruction.id, fn.id);
+			return;
+		}
 		final result = requireResult(instruction, fn.id);
 		final temporary = temporaryNames.get(result.id);
 		if (temporary == null)

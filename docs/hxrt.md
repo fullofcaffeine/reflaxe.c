@@ -323,15 +323,17 @@ select it transitively; arbitrary generated allocation remains unsupported. See
 Compiler-selectable resizable unboxed array storage built on `alloc`. The first
 ordinary-Haxe slice adds shared identity, local retain/release ownership,
 literals, length, checked indexing, push, ownership-transferring `pop` and
-`shift`, shallow copy, in-place sort, and source-order iteration for admitted
+`shift`, signed-index `insert`, shallow copy, in-place sort, and source-order iteration for admitted
 elements. Generated
 Bytes elements and closed records containing Bytes use typed program-local
 copy/assign/destroy callbacks; they remain unboxed and do not select reflection
 or a collector. `pop` moves the last live element and `shift` moves the first
 one into the caller's nullable result without invoking those callbacks.
 `shift` then relocates the remaining suffix left while keeping its order. The
-native layer additionally proves
-alias-safe insert/resize paths that generated Haxe does not yet expose. Fixed
+native layer additionally proves alias-safe resize paths that generated Haxe
+does not yet expose. `insert` clamps negative and oversized positions exactly
+as Haxe specifies, and a failed growth or managed-element copy leaves every
+alias unchanged. Fixed
 arrays and spans stay direct and runtime-free. See
 [array runtime](array-runtime.md).
 

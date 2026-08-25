@@ -3399,6 +3399,16 @@ private class HxcIRValidationState {
 					|| call.returnType != IRTVoid) {
 					add(path, "discarded Array.splice(pos, 1) requires one managed Array plus a Haxe Int position and returns Void", source);
 				}
+			case "insert":
+				if (argumentTypes.length != 3
+					|| receiverElement == null
+					|| secondArgumentType == null
+					|| thirdArgumentType == null
+					|| typeKey(secondArgumentType) != typeKey(IRTInt(32, true))
+					|| typeKey(thirdArgumentType) != typeKey(receiverElement)
+					|| call.returnType != IRTVoid) {
+					add(path, "Array.insert requires managed Array + Haxe Int + matching element and returns Void", source);
+				}
 			case "get-checked":
 				if (argumentTypes.length != 2 || receiverElement == null || secondArgumentType == null) {
 					add(path, "checked Array indexing requires managed Array + Haxe Int and returns its element type", source);

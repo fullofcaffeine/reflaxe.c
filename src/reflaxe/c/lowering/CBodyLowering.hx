@@ -12303,6 +12303,31 @@ private class FunctionBuilder {
 				runtimeRequirements.push(new CBodyRuntimeRequirement("array", "splice-one-discard",
 					"ordinary Haxe Array.splice(pos, 1) mutation when the removed Array result is discarded", source, expression.pos));
 				null;
+			case "insert":
+				if (arguments.length != 2)
+					return unsupported(expression, 'TCall(Array.insert:argument-count=${arguments.length})');
+				final indexMapping = bodyValueType(arguments[0].t, arguments[0].pos, "TCall(Array.insert:index-type)");
+				if (typeKey(indexMapping.irType) != typeKey(IRTInt(32, true)))
+					return unsupported(arguments[0], 'TCall(Array.insert:index-must-be-Haxe-Int:${indexMapping.cSpelling})');
+				final index = coerce(lowerValue(arguments[0], indexMapping), indexMapping, arguments[0].pos, "TCall(Array.insert:index)");
+				var element = coerce(lowerValue(arguments[1], array.element), array.element, arguments[1].pos, "TCall(Array.insert:element)");
+				element = stabilizeFreshManagedString(element, arguments[1].pos, "array-insert-element");
+				element = stabilizeFreshManagedArray(element, arguments[1].pos, "array-insert-element");
+				element = stabilizeFreshManagedBytes(element, arguments[1].pos, "array-insert-element");
+				element = stabilizeFreshManagedEnum(element, arguments[1].pos, "array-insert-element");
+				element = stabilizeFreshManagedAggregate(element, arguments[1].pos, "array-insert-element");
+				element = stabilizeFreshManagedOptional(element, arguments[1].pos, "array-insert-element");
+				final callReceiver = restoreStagedLoweredValue(stagedReceiver, "array-insert-receiver-load");
+				final source = sourceSpan(expression.pos);
+				appendInstruction(null, IRIOCall({
+					dispatch: IRCDRuntime("array", "insert"),
+					arguments: [callReceiver.id, index.id, element.id],
+					returnType: IRTVoid,
+					failure: managedArrayFailure()
+				}), source, "array-insert");
+				runtimeRequirements.push(new CBodyRuntimeRequirement("array", "insert", "ordinary Haxe Array.insert with signed index normalization", source,
+					expression.pos));
+				null;
 			case "push":
 				if (arguments.length != 1)
 					return unsupported(expression, 'TCall(Array.push:argument-count=${arguments.length})');

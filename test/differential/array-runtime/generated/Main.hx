@@ -208,6 +208,16 @@ final class Main {
 		final splicedLabels = labels.copy();
 		final splicedLabelsAlias = splicedLabels;
 		splicedLabels.splice(1, 1);
+		final insertedIntegers = [20, 30];
+		final insertedIntegersAlias = insertedIntegers;
+		insertedIntegers.insert(0, 10);
+		insertedIntegers.insert(-1, 25);
+		insertedIntegers.insert(-99, 5);
+		insertedIntegers.insert(99, 40);
+		final insertedLabels:Array<String> = ["middle"];
+		final insertedLabelsAlias = insertedLabels;
+		insertedLabels.insert(0, fromCode(65));
+		insertedLabels.insert(99, labels[1]);
 
 		final row:Array<Int> = [1];
 		final rows:Array<Array<Int>> = [row];
@@ -364,6 +374,17 @@ final class Main {
 			|| splicedLabelsAlias.length != 2
 			|| splicedLabelsAlias[0] != "ready"
 			|| splicedLabelsAlias[1] != "a\u0000b"
+			|| insertedIntegersAlias.length != 6
+			|| insertedIntegersAlias[0] != 5
+			|| insertedIntegersAlias[1] != 10
+			|| insertedIntegersAlias[2] != 20
+			|| insertedIntegersAlias[3] != 25
+			|| insertedIntegersAlias[4] != 30
+			|| insertedIntegersAlias[5] != 40
+			|| insertedLabelsAlias.length != 3
+			|| insertedLabelsAlias[0] != "A"
+			|| insertedLabelsAlias[1] != "middle"
+			|| insertedLabelsAlias[2] != "café"
 			|| managedPayloadLength != 3
 			|| recordCopy.commands.length != 3
 			|| firstShiftedRecord == null

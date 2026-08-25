@@ -1834,6 +1834,41 @@
       "notes": "The admitted element specializations create distinct Array storage and shallow-copy slots in source order through their exact copy or retain operation. Primitive, String, Bytes, nested Array, managed enum/record, and traced class-reference evidence covers independent outer mutation, shared element identity, returns, allocation failure, and partial-copy rollback. Unsupported element representations remain fail-closed."
     },
     {
+      "id": "array-insert-partial",
+      "selector": {
+        "module": "Array",
+        "type": "Array",
+        "member": "insert",
+        "kind": "method",
+        "isStatic": false,
+        "signature": "(pos : Int, x : Array.T) -> Void"
+      },
+      "owner": "direct-compiler-lowering",
+      "runtimeFeatures": [
+        "array"
+      ],
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "environments": [
+        "hosted",
+        "freestanding"
+      ],
+      "status": "partial",
+      "ownerBeads": "E5.T03",
+      "testOwnerBeads": "E5.T12",
+      "diagnosticPolicies": [
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
+      ],
+      "tests": [
+        "test/differential/array-runtime/generated/Main.hx",
+        "test/differential/array-runtime/run.py"
+      ],
+      "notes": "The admitted typed Array specializations evaluate receiver, signed position, and element once; clamp negative and oversized positions exactly like Haxe; preserve shared identity; and copy primitive or managed elements through the exact lifecycle plan. Allocation or element-copy failure leaves the original sequence visible through every alias. Element families without a complete typed ownership plan remain fail-closed."
+    },
+    {
       "id": "array-resize-zero-partial",
       "selector": {
         "module": "Array",
@@ -3909,12 +3944,9 @@
       "kind": "method",
       "signature": "(pos : Int, x : Array.T) -> Void",
       "isStatic": false,
-      "owner": "target-source-override",
+      "owner": "direct-compiler-lowering",
       "runtimeFeatures": [
-        "alloc",
-        "array",
-        "gc",
-        "object"
+        "array"
       ],
       "profiles": [
         "portable",
@@ -3922,20 +3954,21 @@
       ],
       "environments": [
         "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "freestanding"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T03",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Known element/key/value types should specialize to direct typed storage; allocation and tracing remain explicit reachability decisions.",
-      "ruleId": "collection-storage"
+      "tests": [
+        "test/differential/array-runtime/generated/Main.hx",
+        "test/differential/array-runtime/run.py"
+      ],
+      "notes": "The admitted typed Array specializations evaluate receiver, signed position, and element once; clamp negative and oversized positions exactly like Haxe; preserve shared identity; and copy primitive or managed elements through the exact lifecycle plan. Allocation or element-copy failure leaves the original sequence visible through every alias. Element families without a complete typed ownership plan remain fail-closed.",
+      "ruleId": "array-insert-partial"
     },
     {
       "id": "hxc-stdlib-api-v1:aec8e6585ba3a1c1af08415b144f66082d33604e5780284d429ef449c8e751b2",

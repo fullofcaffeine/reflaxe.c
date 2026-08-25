@@ -968,6 +968,31 @@ hxc_status hxc_array_ref_splice_one_discard(
   return hxc_array_remove_at(&array->value, index);
 }
 
+hxc_status hxc_array_ref_insert_copy(
+  hxc_array_ref *array,
+  int32_t position,
+  const void *element
+) {
+  int64_t normalized;
+
+  if (!hxc_array_ref_is_valid(array) || element == NULL) {
+    return HXC_STATUS_INVALID_ARGUMENT;
+  }
+  if (array->value.length > (size_t)INT32_MAX) {
+    return HXC_STATUS_SIZE_OVERFLOW;
+  }
+  normalized = (int64_t)position;
+  if (normalized < 0) {
+    normalized += (int64_t)array->value.length;
+    if (normalized < 0) {
+      normalized = 0;
+    }
+  } else if ((size_t)normalized > array->value.length) {
+    normalized = (int64_t)array->value.length;
+  }
+  return hxc_array_insert_copy(&array->value, (size_t)normalized, element);
+}
+
 hxc_status hxc_array_ref_push_copy(
   hxc_array_ref *array,
   const void *element,

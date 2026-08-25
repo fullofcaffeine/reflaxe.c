@@ -144,7 +144,7 @@
         "referencePath": "docs/hxrt.md",
         "selectionRoots": [
           {
-            "description": "A reachable ordinary Haxe Array length, checked indexing, push, pop, shift, or discarded one-element splice operation.",
+            "description": "A reachable ordinary Haxe Array length, checked indexing, insert, push, pop, shift, or discarded one-element splice operation.",
             "id": "collection-operation",
             "kind": "hxc-ir-operation"
           },
@@ -201,6 +201,7 @@
         "hxc_array_ref_dispose_in_place",
         "hxc_array_ref_get_copy",
         "hxc_array_ref_init_in_place",
+        "hxc_array_ref_insert_copy",
         "hxc_array_ref_is_valid",
         "hxc_array_ref_length",
         "hxc_array_ref_pop_move",
@@ -219,13 +220,13 @@
       ],
       "artifacts": [
         {
-          "sourceSha256": "bf8775c44da8ab2c851cdb2e675d14320423f1a90b8fc4b13055e73e92445eed",
+          "sourceSha256": "ba36d8bd4fe5999cdf4866c7e7d0a95dba0f7cd88f9b6b23939f156293cecdf6",
           "kind": "runtime-header",
           "outputPath": "runtime/include/hxrt/array.h",
           "sourcePath": "runtime/hxrt/include/hxrt/array.h"
         },
         {
-          "sourceSha256": "8e0e6042aca21a231da5addd8a83562ec66c10dcedeb383477ae8ce27070baee",
+          "sourceSha256": "6b7947486d6f0c2dc0d78ba05af9d0a3974ec0737e45e2e92d46799d8a36ba41",
           "kind": "runtime-source",
           "outputPath": "runtime/src/array.c",
           "sourcePath": "runtime/hxrt/src/array.c"
@@ -1424,7 +1425,7 @@
     "releaseProvenance": {
       "runtimeCStandard": "c11",
       "sourceHashAlgorithm": "sha256",
-      "sourceSetSha256": "87080e8f3d78d6cbd336a0bbac04798bc2ef0dac51f2a1337bf49b144a29f070",
+      "sourceSetSha256": "cd901a675778cad5a7683ba4b9f5084b8ac4345fea335bb78288189ce693acae",
       "publicHeaderCppStandard": "c++17"
     },
     "generatedCodeCompatibility": "same-major",

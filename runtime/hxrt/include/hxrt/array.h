@@ -401,6 +401,19 @@ HXC_API hxc_status hxc_array_ref_splice_one_discard(
   int32_t position
 );
 
+/**
+ * Insert one copied element using Haxe's signed position rules.
+ *
+ * Negative positions count from the end and clamp to zero. Positions beyond
+ * the current length append. A failed allocation or element copy leaves every
+ * alias observing the original sequence.
+ */
+HXC_API hxc_status hxc_array_ref_insert_copy(
+  hxc_array_ref *array,
+  int32_t position,
+  const void *element
+);
+
 /** Append one trivial element and return the new Haxe Int length. */
 HXC_API hxc_status hxc_array_ref_push_copy(
   hxc_array_ref *array,
