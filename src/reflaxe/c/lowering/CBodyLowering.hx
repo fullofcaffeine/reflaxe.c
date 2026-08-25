@@ -4707,8 +4707,14 @@ private class FunctionBuilder {
 			unsupportedAt(bodyExpression.pos,
 				'function-exit:unowned-fresh-managed-String-value:$id:${role == null ? "unknown-producer" : role}:${producerSource == null ? "unknown-source" : producerSource.display()}');
 		}
-		if (freshManagedEnumValueIds.keys().hasNext())
-			unsupportedAt(bodyExpression.pos, "function-exit:unowned-fresh-managed-enum-value");
+		if (freshManagedEnumValueIds.keys().hasNext()) {
+			final ids = [for (id in freshManagedEnumValueIds.keys()) id];
+			ids.sort((left, right) -> left < right ? -1 : left > right ? 1 : 0);
+			final id = ids[0];
+			final producerSource = valueProducerSource(id);
+			unsupportedAt(bodyExpression.pos,
+				'function-exit:unowned-fresh-managed-enum-value:$id:${producerSource == null ? "unknown-source" : producerSource.display()}');
+		}
 		if (freshManagedAggregateValueIds.keys().hasNext()) {
 			final ids = [for (id in freshManagedAggregateValueIds.keys()) id];
 			ids.sort((left, right) -> left < right ? -1 : left > right ? 1 : 0);
@@ -9802,7 +9808,17 @@ private class FunctionBuilder {
 		final rightCreatesFlow = expressionCreatesFlow(right);
 		final receiverForSet = stageFlowValue(restoredReceiver, indexed.collection, rightCreatesFlow, "array-set-value-receiver");
 		final indexForSet = stageFlowValue(index, indexed.index, rightCreatesFlow, "array-set-value-index");
-		final element = coerce(lowerValue(right, array.element), array.element, right.pos, "TArray(set:value)");
+		var element = coerce(lowerValue(right, array.element), array.element, right.pos, "TArray(set:value)");
+		// Array set acquires a separate owner for the destination slot. Keep a
+		// fresh right-hand value under compiler-owned cleanup until that acquire
+		// succeeds, just as push and insert do, so failure and replacement cannot
+		// leak the original temporary.
+		element = stabilizeFreshManagedString(element, right.pos, "array-set-element");
+		element = stabilizeFreshManagedArray(element, right.pos, "array-set-element");
+		element = stabilizeFreshManagedBytes(element, right.pos, "array-set-element");
+		element = stabilizeFreshManagedEnum(element, right.pos, "array-set-element");
+		element = stabilizeFreshManagedAggregate(element, right.pos, "array-set-element");
+		element = stabilizeFreshManagedOptional(element, right.pos, "array-set-element");
 		final stableReceiver = restoreStagedLoweredValue(receiverForSet, "array-set-value-receiver-load");
 		final stableIndex = restoreStagedLoweredValue(indexForSet, "array-set-value-index-load");
 		final resultMapping = bodyValueType(expression.t, expression.pos, "TArray(set:result-type)");

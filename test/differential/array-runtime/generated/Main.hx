@@ -232,9 +232,16 @@ final class Main {
 		final envelopes:Array<ManagedEnvelope> = [];
 		envelopes.push(Idle);
 		envelopes.push(copied);
+		replaceManagedEnvelope(envelopes, 0, copied);
 		switch envelopes[1] {
 			case Schedule(projected):
 				projected.push(Number(9));
+			case Idle:
+		}
+		var replacedPayloadLength = -1;
+		switch envelopes[0] {
+			case Schedule(projected):
+				replacedPayloadLength = projected.length;
 			case Idle:
 		}
 		var managedPayloadLength = 0;
@@ -390,6 +397,7 @@ final class Main {
 			|| insertedLabelsAlias[1] != "middle"
 			|| insertedLabelsAlias[2] != "café"
 			|| managedPayloadLength != 3
+			|| replacedPayloadLength != 2
 			|| recordCopy.commands.length != 3
 			|| firstShiftedRecord == null
 			|| firstShiftedRecord.commands.length != 1
@@ -561,6 +569,20 @@ final class Main {
 	/** Return transfers the newly constructed enum owner to the caller. */
 	static function makeSchedule(arguments:Array<ManagedCommand>):ManagedEnvelope
 		return Schedule(arguments);
+
+	/** Return a separate enum owner while preserving the payload Array identity. */
+	static function copyManagedEnvelope(value:ManagedEnvelope):ManagedEnvelope
+		return value;
+
+	/**
+	 * Replace one existing Array slot with a fresh managed enum result.
+	 *
+	 * `copyManagedEnvelope` returns one new temporary owner. Indexed assignment
+	 * copies that value into the destination slot, so the temporary must remain
+	 * cleanup-owned until Array set succeeds and must then be released once.
+	 */
+	static function replaceManagedEnvelope(values:Array<ManagedEnvelope>, index:Int, value:ManagedEnvelope):Void
+		values[index] = copyManagedEnvelope(value);
 
 	/**
 		Return either an absent Array or one newly owned Array through the same pointer.

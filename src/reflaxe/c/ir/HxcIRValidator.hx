@@ -3347,9 +3347,14 @@ private class HxcIRValidationState {
 			case IRCDRuntime("array", value): value;
 			case _: return;
 		};
-		final receiverElement = argumentTypes.length == 0 ? null : managedArrayElement(argumentTypes[0]);
+		final firstArgumentType = argumentTypes.length == 0 ? null : argumentTypes[0];
+		final receiverElement = firstArgumentType == null ? null : managedArrayElement(firstArgumentType);
 		final secondArgumentType = argumentTypes.length < 2 ? null : argumentTypes[1];
 		final thirdArgumentType = argumentTypes.length < 3 ? null : argumentTypes[2];
+		final returnsReceiverSpecialization = switch firstArgumentType {
+			case null: false;
+			case receiverType: typeKey(call.returnType) == typeKey(receiverType);
+		};
 		switch operationId {
 			case "create-literal":
 				final resultElement = managedArrayElement(call.returnType);
@@ -3404,8 +3409,7 @@ private class HxcIRValidationState {
 					|| receiverElement == null
 					|| secondArgumentType == null
 					|| typeKey(secondArgumentType) != typeKey(IRTInt(32, true))
-					|| argumentTypes[0] == null
-					|| typeKey(call.returnType) != typeKey(argumentTypes[0])) {
+					|| !returnsReceiverSpecialization) {
 					add(path, "returned Array.splice(pos, 1) requires one managed Array plus a Haxe Int position and returns the same specialization", source);
 				}
 			case "insert":

@@ -322,6 +322,7 @@ def validate_generated_hxcir(hxcir: str) -> None:
         'runtime(feature="array",operation="splice-one-discard")',
         'runtime(feature="array",operation="splice-one-copy")',
         'runtime(feature="array",operation="resize-zero")',
+        'runtime(feature="array",operation="set")',
         'runtime(feature="array",operation="sort")',
         'function-reference target="function.lambda.function.Main.main.',
         'implementation=program-local("array-element-lifecycle:instance.closed-record.',
@@ -419,6 +420,9 @@ def validate_generated_hxcir(hxcir: str) -> None:
     choose_array = hxcir_function(hxcir, "function.Main.chooseArray")
     selected_pair_sum = hxcir_function(hxcir, "function.Main.selectedPairSum")
     delayed_plan = hxcir_function(hxcir, "function.Main.delayedPlanLength")
+    managed_element_assignment = hxcir_function(
+        hxcir, "function.Main.replaceManagedEnvelope"
+    )
     field_self_assignment = hxcir_function(
         hxcir, "method.ArrayFieldOwner.assignToSelf"
     )
@@ -434,6 +438,29 @@ def validate_generated_hxcir(hxcir: str) -> None:
     field_conditional_assignment = hxcir_function(
         hxcir, "method.ArrayFieldOwner.replaceConditional"
     )
+    managed_owner = managed_element_assignment.find(
+        "array-set-element-owner-initialize"
+    )
+    managed_set = managed_element_assignment.find(
+        'operation="set"', managed_owner
+    )
+    managed_return = managed_element_assignment.find(
+        "terminator return", managed_set
+    )
+    if (
+        managed_owner == -1
+        or managed_set == -1
+        or managed_return == -1
+        or not managed_owner < managed_set < managed_return
+        or re.search(
+            r'"enum-temporary\.local\.\d+\.release"',
+            managed_element_assignment[managed_return:],
+        )
+        is None
+    ):
+        raise ArrayRuntimeFailure(
+            "fresh managed enum Array replacement lost its bounded temporary owner"
+        )
     require_ordered_events(
         field_self_assignment,
         "same-container alias",
@@ -877,6 +904,7 @@ def validate_generated_project(output: Path) -> None:
         "set",
         "shift",
         "sort",
+        "splice-one-copy",
         "splice-one-discard",
     }
     if operations != expected:
