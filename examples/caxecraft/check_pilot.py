@@ -588,7 +588,8 @@ def check_motion_interpolation_boundary() -> None:
         "motionHistory = advanceMotion(motionHistory, character.body);",
         "motionHistory = resetMotion(character.body);",
         "final renderPosition = sampleMotion(motionHistory, accumulator, FIXED_SECONDS);",
-        "VoxelRaycast.trace(session.worldView(), selectionEyeX, selectionEyeY, selectionEyeZ",
+        "final interactionView = session.playerCamera(PlayerCameraMode.FirstPerson, character.body, lookX, lookY, lookZ);",
+        "VoxelRaycast.trace(session.worldView(), interactionView.interactionOriginX, interactionView.interactionOriginY,",
         "terrainRenderer.draw(session.worldView(), terrainTexture, terrainTextureReady, adventureTerrainTexture,",
     ):
         if required not in app:
