@@ -56,15 +56,21 @@ the final link with address and undefined-behavior checks enabled.
 The fixture-local extern subset is integration evidence, not yet the public
 RaylibHx raw binding.
 The generic-specialization suite adds full semantic-key sharing, closed
-primitive/function/enum instances, recursive worklist closure, bounded
-code-size reporting, exact dynamic/open/budget rejection, and runtime-free
-strict-C11 execution.
+primitive/function/enum instances, closed generic class and abstract owners,
+recursive worklist closure, bounded code-size reporting, exact
+dynamic/open/multiple-target/budget rejection, and runtime-free strict-C11
+execution.
 The runtime-feature suite
 adds deterministic graph/policy, selective provisional native-seed packaging,
 and the exact compiler-selected literal-output closure. The string-runtime suite
 adds a bounded native UTF-8/scalar/CString contract plus an Eval differential
 trace. The array-runtime suite adds bounded native primitive/reference growth,
 aliasing, lifecycle, and failure evidence plus a common Eval mutation trace.
+The Vector/List differential composes those layers through unchanged pinned
+Haxe source. It proves typed List nodes, mutation during traversal, the Vector
+Array carrier, closed owner and constructor report identity, deterministic
+project layouts, strict native execution, C++ header consumption, and
+sanitizers.
 The string-char-at suite adds the first ordinary-Haxe scalar String method. It
 compares ASCII, a non-BMP character, embedded NUL, empty input, and invalid
 indices with Eval; then it checks split/package/unity output, exact
@@ -530,6 +536,12 @@ source reasons, recursion, isolated function bytes and hashes, conservative
 specialized enum declaration/assertion bytes, payload totals, and the
 64/64/524,288 hard limits. An unrelated ordinary enum cannot consume that
 specialization budget.
+Separate `Box<Int>`/`Box<Payload>` fixtures prove closed class layouts,
+constructors, and methods even when calls are discovered before construction.
+`FirstBox<Int>` proves that a generic abstract implementation retains its owner
+argument over an Array carrier. A reachable generic base and child reject the
+provisional direct call because the method has two effective targets; the
+compiler does not depend on graph traversal order.
 Repeated isolated roots, reversed typed modules, another locale, a warm
 compiler server before and after rejection, and portable/metal/runtime-none
 payloads must be byte-identical; a successful non-generic same-root replacement

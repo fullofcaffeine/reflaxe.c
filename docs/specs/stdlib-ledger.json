@@ -394,7 +394,6 @@
         "haxe.ds.HashMap",
         "haxe.ds.IntMap",
         "haxe.ds.StringMap",
-        "haxe.ds.Vector",
         "haxe.ds.WeakMap"
       ],
       "owner": "target-source-override",
@@ -434,7 +433,6 @@
         "haxe.ds.BalancedTree",
         "haxe.ds.Either",
         "haxe.ds.GenericStack",
-        "haxe.ds.List",
         "haxe.ds.ListSort",
         "haxe.ds.Map",
         "haxe.ds.Option",
@@ -468,6 +466,71 @@
       ],
       "tests": [],
       "notes": "Pure Haxe algorithms and iterator shapes should lower and inline through typed collection representations without an iterator runtime by default."
+    },
+    {
+      "id": "linked-list-source",
+      "modulePatterns": [
+        "haxe.ds.List"
+      ],
+      "owner": "direct-compiler-lowering",
+      "runtimeFeatures": [
+        "alloc",
+        "gc",
+        "object",
+        "string"
+      ],
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "environments": [
+        "hosted"
+      ],
+      "status": "partial",
+      "ownerBeads": "E5.T03",
+      "testOwnerBeads": "E5.T12",
+      "diagnosticPolicies": [
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
+      ],
+      "tests": [
+        "test/differential/vector-list/generated/Main.hx",
+        "test/differential/vector-list/run.py"
+      ],
+      "notes": "The unchanged pinned List source lowers for closed Int and collector-managed class elements. It keeps exact typed node layouts, direct method calls, source-level traversal without iterator runtime machinery, and collector tracing; open or dynamically dispatched owner shapes remain unsupported."
+    },
+    {
+      "id": "vector-array-carrier",
+      "modulePatterns": [
+        "haxe.ds.Vector"
+      ],
+      "owner": "direct-compiler-lowering",
+      "runtimeFeatures": [
+        "alloc",
+        "array",
+        "gc",
+        "object"
+      ],
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "environments": [
+        "hosted"
+      ],
+      "status": "partial",
+      "ownerBeads": "E5.T03",
+      "testOwnerBeads": "E5.T12",
+      "diagnosticPolicies": [
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
+      ],
+      "tests": [
+        "test/differential/array-runtime/array_runtime.c",
+        "test/differential/vector-list/generated/Main.hx",
+        "test/differential/vector-list/run.py"
+      ],
+      "notes": "The unchanged pinned Vector abstract uses its typed Array carrier for closed Int and collector-managed class elements. Fixed valid-length access, overlap-safe blit, shallow copy and conversion, fill, map, and sort have executable evidence; other element and operation shapes remain unsupported."
     },
     {
       "id": "object-map-bounded",
@@ -32929,26 +32992,32 @@
       "signature": "haxe.ds.List",
       "isStatic": true,
       "owner": "direct-compiler-lowering",
-      "runtimeFeatures": [],
+      "runtimeFeatures": [
+        "alloc",
+        "gc",
+        "object",
+        "string"
+      ],
       "profiles": [
         "portable",
         "metal"
       ],
       "environments": [
-        "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "hosted"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T03",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
-        "planned-unsupported"
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Pure Haxe algorithms and iterator shapes should lower and inline through typed collection representations without an iterator runtime by default.",
-      "ruleId": "collection-source"
+      "tests": [
+        "test/differential/vector-list/generated/Main.hx",
+        "test/differential/vector-list/run.py"
+      ],
+      "notes": "The unchanged pinned List source lowers for closed Int and collector-managed class elements. It keeps exact typed node layouts, direct method calls, source-level traversal without iterator runtime machinery, and collector tracing; open or dynamically dispatched owner shapes remain unsupported.",
+      "ruleId": "linked-list-source"
     },
     {
       "id": "hxc-stdlib-api-v1:a0c8baa80840493fc1247ed29a0885618fc44413583029b71ea3593c6790a314",
@@ -32962,26 +33031,32 @@
       "signature": "(item : haxe.ds.List.T) -> Void",
       "isStatic": false,
       "owner": "direct-compiler-lowering",
-      "runtimeFeatures": [],
+      "runtimeFeatures": [
+        "alloc",
+        "gc",
+        "object",
+        "string"
+      ],
       "profiles": [
         "portable",
         "metal"
       ],
       "environments": [
-        "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "hosted"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T03",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
-        "planned-unsupported"
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Pure Haxe algorithms and iterator shapes should lower and inline through typed collection representations without an iterator runtime by default.",
-      "ruleId": "collection-source"
+      "tests": [
+        "test/differential/vector-list/generated/Main.hx",
+        "test/differential/vector-list/run.py"
+      ],
+      "notes": "The unchanged pinned List source lowers for closed Int and collector-managed class elements. It keeps exact typed node layouts, direct method calls, source-level traversal without iterator runtime machinery, and collector tracing; open or dynamically dispatched owner shapes remain unsupported.",
+      "ruleId": "linked-list-source"
     },
     {
       "id": "hxc-stdlib-api-v1:8ceb363b98626bbf08262e564a297306d1ff31e7755332d31b60e096fa60ee52",
@@ -32995,26 +33070,32 @@
       "signature": "() -> Void",
       "isStatic": false,
       "owner": "direct-compiler-lowering",
-      "runtimeFeatures": [],
+      "runtimeFeatures": [
+        "alloc",
+        "gc",
+        "object",
+        "string"
+      ],
       "profiles": [
         "portable",
         "metal"
       ],
       "environments": [
-        "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "hosted"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T03",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
-        "planned-unsupported"
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Pure Haxe algorithms and iterator shapes should lower and inline through typed collection representations without an iterator runtime by default.",
-      "ruleId": "collection-source"
+      "tests": [
+        "test/differential/vector-list/generated/Main.hx",
+        "test/differential/vector-list/run.py"
+      ],
+      "notes": "The unchanged pinned List source lowers for closed Int and collector-managed class elements. It keeps exact typed node layouts, direct method calls, source-level traversal without iterator runtime machinery, and collector tracing; open or dynamically dispatched owner shapes remain unsupported.",
+      "ruleId": "linked-list-source"
     },
     {
       "id": "hxc-stdlib-api-v1:bd0e9a8669cf5e22cddf9855f76bd2261ce1a42beeddf4bef863e29a12990c6a",
@@ -33028,26 +33109,32 @@
       "signature": "(f : (haxe.ds.List.T -> Bool)) -> haxe.ds.List<haxe.ds.List.T>",
       "isStatic": false,
       "owner": "direct-compiler-lowering",
-      "runtimeFeatures": [],
+      "runtimeFeatures": [
+        "alloc",
+        "gc",
+        "object",
+        "string"
+      ],
       "profiles": [
         "portable",
         "metal"
       ],
       "environments": [
-        "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "hosted"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T03",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
-        "planned-unsupported"
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Pure Haxe algorithms and iterator shapes should lower and inline through typed collection representations without an iterator runtime by default.",
-      "ruleId": "collection-source"
+      "tests": [
+        "test/differential/vector-list/generated/Main.hx",
+        "test/differential/vector-list/run.py"
+      ],
+      "notes": "The unchanged pinned List source lowers for closed Int and collector-managed class elements. It keeps exact typed node layouts, direct method calls, source-level traversal without iterator runtime machinery, and collector tracing; open or dynamically dispatched owner shapes remain unsupported.",
+      "ruleId": "linked-list-source"
     },
     {
       "id": "hxc-stdlib-api-v1:2220af32d8ee1082ff67eadec093a5008a20f6380a003fe14f40f5234e323cc4",
@@ -33061,26 +33148,32 @@
       "signature": "() -> Null<haxe.ds.List.T>",
       "isStatic": false,
       "owner": "direct-compiler-lowering",
-      "runtimeFeatures": [],
+      "runtimeFeatures": [
+        "alloc",
+        "gc",
+        "object",
+        "string"
+      ],
       "profiles": [
         "portable",
         "metal"
       ],
       "environments": [
-        "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "hosted"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T03",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
-        "planned-unsupported"
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Pure Haxe algorithms and iterator shapes should lower and inline through typed collection representations without an iterator runtime by default.",
-      "ruleId": "collection-source"
+      "tests": [
+        "test/differential/vector-list/generated/Main.hx",
+        "test/differential/vector-list/run.py"
+      ],
+      "notes": "The unchanged pinned List source lowers for closed Int and collector-managed class elements. It keeps exact typed node layouts, direct method calls, source-level traversal without iterator runtime machinery, and collector tracing; open or dynamically dispatched owner shapes remain unsupported.",
+      "ruleId": "linked-list-source"
     },
     {
       "id": "hxc-stdlib-api-v1:2590357507f4ba7c5bbcebb754843a79480fc8a8d5b43f6c9dbc98de3e0b34e4",
@@ -33094,26 +33187,32 @@
       "signature": "() -> Bool",
       "isStatic": false,
       "owner": "direct-compiler-lowering",
-      "runtimeFeatures": [],
+      "runtimeFeatures": [
+        "alloc",
+        "gc",
+        "object",
+        "string"
+      ],
       "profiles": [
         "portable",
         "metal"
       ],
       "environments": [
-        "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "hosted"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T03",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
-        "planned-unsupported"
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Pure Haxe algorithms and iterator shapes should lower and inline through typed collection representations without an iterator runtime by default.",
-      "ruleId": "collection-source"
+      "tests": [
+        "test/differential/vector-list/generated/Main.hx",
+        "test/differential/vector-list/run.py"
+      ],
+      "notes": "The unchanged pinned List source lowers for closed Int and collector-managed class elements. It keeps exact typed node layouts, direct method calls, source-level traversal without iterator runtime machinery, and collector tracing; open or dynamically dispatched owner shapes remain unsupported.",
+      "ruleId": "linked-list-source"
     },
     {
       "id": "hxc-stdlib-api-v1:b7c39775dca848fec09ad3a20f984c60bdf4fc210048a161029cfa1d40bdd7d9",
@@ -33127,26 +33226,32 @@
       "signature": "() -> haxe.ds._List.ListIterator<haxe.ds.List.T>",
       "isStatic": false,
       "owner": "direct-compiler-lowering",
-      "runtimeFeatures": [],
+      "runtimeFeatures": [
+        "alloc",
+        "gc",
+        "object",
+        "string"
+      ],
       "profiles": [
         "portable",
         "metal"
       ],
       "environments": [
-        "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "hosted"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T03",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
-        "planned-unsupported"
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Pure Haxe algorithms and iterator shapes should lower and inline through typed collection representations without an iterator runtime by default.",
-      "ruleId": "collection-source"
+      "tests": [
+        "test/differential/vector-list/generated/Main.hx",
+        "test/differential/vector-list/run.py"
+      ],
+      "notes": "The unchanged pinned List source lowers for closed Int and collector-managed class elements. It keeps exact typed node layouts, direct method calls, source-level traversal without iterator runtime machinery, and collector tracing; open or dynamically dispatched owner shapes remain unsupported.",
+      "ruleId": "linked-list-source"
     },
     {
       "id": "hxc-stdlib-api-v1:ea1d87e4f1e7f579044b1d20f6bc4913326a8060ce0b5ae4fbd8eb50937aca44",
@@ -33160,26 +33265,32 @@
       "signature": "(sep : String) -> String",
       "isStatic": false,
       "owner": "direct-compiler-lowering",
-      "runtimeFeatures": [],
+      "runtimeFeatures": [
+        "alloc",
+        "gc",
+        "object",
+        "string"
+      ],
       "profiles": [
         "portable",
         "metal"
       ],
       "environments": [
-        "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "hosted"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T03",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
-        "planned-unsupported"
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Pure Haxe algorithms and iterator shapes should lower and inline through typed collection representations without an iterator runtime by default.",
-      "ruleId": "collection-source"
+      "tests": [
+        "test/differential/vector-list/generated/Main.hx",
+        "test/differential/vector-list/run.py"
+      ],
+      "notes": "The unchanged pinned List source lowers for closed Int and collector-managed class elements. It keeps exact typed node layouts, direct method calls, source-level traversal without iterator runtime machinery, and collector tracing; open or dynamically dispatched owner shapes remain unsupported.",
+      "ruleId": "linked-list-source"
     },
     {
       "id": "hxc-stdlib-api-v1:84e8c6fce6b628c89dc9c73a45ec4692b23e8db82f55d322dc1b8a02e5ef935a",
@@ -33193,26 +33304,32 @@
       "signature": "() -> haxe.ds._List.ListKeyValueIterator<haxe.ds.List.T>",
       "isStatic": false,
       "owner": "direct-compiler-lowering",
-      "runtimeFeatures": [],
+      "runtimeFeatures": [
+        "alloc",
+        "gc",
+        "object",
+        "string"
+      ],
       "profiles": [
         "portable",
         "metal"
       ],
       "environments": [
-        "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "hosted"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T03",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
-        "planned-unsupported"
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Pure Haxe algorithms and iterator shapes should lower and inline through typed collection representations without an iterator runtime by default.",
-      "ruleId": "collection-source"
+      "tests": [
+        "test/differential/vector-list/generated/Main.hx",
+        "test/differential/vector-list/run.py"
+      ],
+      "notes": "The unchanged pinned List source lowers for closed Int and collector-managed class elements. It keeps exact typed node layouts, direct method calls, source-level traversal without iterator runtime machinery, and collector tracing; open or dynamically dispatched owner shapes remain unsupported.",
+      "ruleId": "linked-list-source"
     },
     {
       "id": "hxc-stdlib-api-v1:b20236e12640e15bd217aa06badcaacf3073e63e93dfdd4e23c7daf3e1cd9c9b",
@@ -33226,26 +33343,32 @@
       "signature": "() -> Null<haxe.ds.List.T>",
       "isStatic": false,
       "owner": "direct-compiler-lowering",
-      "runtimeFeatures": [],
+      "runtimeFeatures": [
+        "alloc",
+        "gc",
+        "object",
+        "string"
+      ],
       "profiles": [
         "portable",
         "metal"
       ],
       "environments": [
-        "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "hosted"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T03",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
-        "planned-unsupported"
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Pure Haxe algorithms and iterator shapes should lower and inline through typed collection representations without an iterator runtime by default.",
-      "ruleId": "collection-source"
+      "tests": [
+        "test/differential/vector-list/generated/Main.hx",
+        "test/differential/vector-list/run.py"
+      ],
+      "notes": "The unchanged pinned List source lowers for closed Int and collector-managed class elements. It keeps exact typed node layouts, direct method calls, source-level traversal without iterator runtime machinery, and collector tracing; open or dynamically dispatched owner shapes remain unsupported.",
+      "ruleId": "linked-list-source"
     },
     {
       "id": "hxc-stdlib-api-v1:4b72fe061ae1e68949981b4f4a5f79a3ae0e677c3d60d62581f730ca7299c063",
@@ -33259,26 +33382,32 @@
       "signature": "Int",
       "isStatic": false,
       "owner": "direct-compiler-lowering",
-      "runtimeFeatures": [],
+      "runtimeFeatures": [
+        "alloc",
+        "gc",
+        "object",
+        "string"
+      ],
       "profiles": [
         "portable",
         "metal"
       ],
       "environments": [
-        "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "hosted"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T03",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
-        "planned-unsupported"
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Pure Haxe algorithms and iterator shapes should lower and inline through typed collection representations without an iterator runtime by default.",
-      "ruleId": "collection-source"
+      "tests": [
+        "test/differential/vector-list/generated/Main.hx",
+        "test/differential/vector-list/run.py"
+      ],
+      "notes": "The unchanged pinned List source lowers for closed Int and collector-managed class elements. It keeps exact typed node layouts, direct method calls, source-level traversal without iterator runtime machinery, and collector tracing; open or dynamically dispatched owner shapes remain unsupported.",
+      "ruleId": "linked-list-source"
     },
     {
       "id": "hxc-stdlib-api-v1:77169a22cf49931698e69cc6bbab30d62df30590fe0c983780e2f7eb40007af6",
@@ -33292,26 +33421,32 @@
       "signature": "(f : (haxe.ds.List.T -> map.X)) -> haxe.ds.List<map.X>",
       "isStatic": false,
       "owner": "direct-compiler-lowering",
-      "runtimeFeatures": [],
+      "runtimeFeatures": [
+        "alloc",
+        "gc",
+        "object",
+        "string"
+      ],
       "profiles": [
         "portable",
         "metal"
       ],
       "environments": [
-        "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "hosted"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T03",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
-        "planned-unsupported"
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Pure Haxe algorithms and iterator shapes should lower and inline through typed collection representations without an iterator runtime by default.",
-      "ruleId": "collection-source"
+      "tests": [
+        "test/differential/vector-list/generated/Main.hx",
+        "test/differential/vector-list/run.py"
+      ],
+      "notes": "The unchanged pinned List source lowers for closed Int and collector-managed class elements. It keeps exact typed node layouts, direct method calls, source-level traversal without iterator runtime machinery, and collector tracing; open or dynamically dispatched owner shapes remain unsupported.",
+      "ruleId": "linked-list-source"
     },
     {
       "id": "hxc-stdlib-api-v1:d801c34a4178a6d5e76dd7aa208dffa1ab3e8df1f1858c0c62f24b4db331d957",
@@ -33325,26 +33460,32 @@
       "signature": "() -> Void",
       "isStatic": false,
       "owner": "direct-compiler-lowering",
-      "runtimeFeatures": [],
+      "runtimeFeatures": [
+        "alloc",
+        "gc",
+        "object",
+        "string"
+      ],
       "profiles": [
         "portable",
         "metal"
       ],
       "environments": [
-        "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "hosted"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T03",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
-        "planned-unsupported"
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Pure Haxe algorithms and iterator shapes should lower and inline through typed collection representations without an iterator runtime by default.",
-      "ruleId": "collection-source"
+      "tests": [
+        "test/differential/vector-list/generated/Main.hx",
+        "test/differential/vector-list/run.py"
+      ],
+      "notes": "The unchanged pinned List source lowers for closed Int and collector-managed class elements. It keeps exact typed node layouts, direct method calls, source-level traversal without iterator runtime machinery, and collector tracing; open or dynamically dispatched owner shapes remain unsupported.",
+      "ruleId": "linked-list-source"
     },
     {
       "id": "hxc-stdlib-api-v1:80c50ae33cc96a7461baa39a2d64c5baedda5a223184e0df2730cf59c5791aac",
@@ -33358,26 +33499,32 @@
       "signature": "() -> Null<haxe.ds.List.T>",
       "isStatic": false,
       "owner": "direct-compiler-lowering",
-      "runtimeFeatures": [],
+      "runtimeFeatures": [
+        "alloc",
+        "gc",
+        "object",
+        "string"
+      ],
       "profiles": [
         "portable",
         "metal"
       ],
       "environments": [
-        "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "hosted"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T03",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
-        "planned-unsupported"
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Pure Haxe algorithms and iterator shapes should lower and inline through typed collection representations without an iterator runtime by default.",
-      "ruleId": "collection-source"
+      "tests": [
+        "test/differential/vector-list/generated/Main.hx",
+        "test/differential/vector-list/run.py"
+      ],
+      "notes": "The unchanged pinned List source lowers for closed Int and collector-managed class elements. It keeps exact typed node layouts, direct method calls, source-level traversal without iterator runtime machinery, and collector tracing; open or dynamically dispatched owner shapes remain unsupported.",
+      "ruleId": "linked-list-source"
     },
     {
       "id": "hxc-stdlib-api-v1:d192f8342189c46a1d9e79a158aa11a5cd685c2cb15002c31e89d97bb241352b",
@@ -33391,26 +33538,32 @@
       "signature": "(item : haxe.ds.List.T) -> Void",
       "isStatic": false,
       "owner": "direct-compiler-lowering",
-      "runtimeFeatures": [],
+      "runtimeFeatures": [
+        "alloc",
+        "gc",
+        "object",
+        "string"
+      ],
       "profiles": [
         "portable",
         "metal"
       ],
       "environments": [
-        "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "hosted"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T03",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
-        "planned-unsupported"
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Pure Haxe algorithms and iterator shapes should lower and inline through typed collection representations without an iterator runtime by default.",
-      "ruleId": "collection-source"
+      "tests": [
+        "test/differential/vector-list/generated/Main.hx",
+        "test/differential/vector-list/run.py"
+      ],
+      "notes": "The unchanged pinned List source lowers for closed Int and collector-managed class elements. It keeps exact typed node layouts, direct method calls, source-level traversal without iterator runtime machinery, and collector tracing; open or dynamically dispatched owner shapes remain unsupported.",
+      "ruleId": "linked-list-source"
     },
     {
       "id": "hxc-stdlib-api-v1:64093840fc478e9d6db1b7f069a91347ae5d07970d3c3d09d4b9291b05db554a",
@@ -33424,26 +33577,32 @@
       "signature": "(v : haxe.ds.List.T) -> Bool",
       "isStatic": false,
       "owner": "direct-compiler-lowering",
-      "runtimeFeatures": [],
+      "runtimeFeatures": [
+        "alloc",
+        "gc",
+        "object",
+        "string"
+      ],
       "profiles": [
         "portable",
         "metal"
       ],
       "environments": [
-        "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "hosted"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T03",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
-        "planned-unsupported"
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Pure Haxe algorithms and iterator shapes should lower and inline through typed collection representations without an iterator runtime by default.",
-      "ruleId": "collection-source"
+      "tests": [
+        "test/differential/vector-list/generated/Main.hx",
+        "test/differential/vector-list/run.py"
+      ],
+      "notes": "The unchanged pinned List source lowers for closed Int and collector-managed class elements. It keeps exact typed node layouts, direct method calls, source-level traversal without iterator runtime machinery, and collector tracing; open or dynamically dispatched owner shapes remain unsupported.",
+      "ruleId": "linked-list-source"
     },
     {
       "id": "hxc-stdlib-api-v1:868c558ec50fc7093d81aac37e652c384dccbae0896acd30955bff6e3358249e",
@@ -33457,26 +33616,32 @@
       "signature": "() -> String",
       "isStatic": false,
       "owner": "direct-compiler-lowering",
-      "runtimeFeatures": [],
+      "runtimeFeatures": [
+        "alloc",
+        "gc",
+        "object",
+        "string"
+      ],
       "profiles": [
         "portable",
         "metal"
       ],
       "environments": [
-        "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "hosted"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T03",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
-        "planned-unsupported"
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Pure Haxe algorithms and iterator shapes should lower and inline through typed collection representations without an iterator runtime by default.",
-      "ruleId": "collection-source"
+      "tests": [
+        "test/differential/vector-list/generated/Main.hx",
+        "test/differential/vector-list/run.py"
+      ],
+      "notes": "The unchanged pinned List source lowers for closed Int and collector-managed class elements. It keeps exact typed node layouts, direct method calls, source-level traversal without iterator runtime machinery, and collector tracing; open or dynamically dispatched owner shapes remain unsupported.",
+      "ruleId": "linked-list-source"
     },
     {
       "id": "hxc-stdlib-api-v1:23a897034d38561509fdaceb0844f4fef78a3e188408ea49380705e93ff47ca3",
@@ -35811,7 +35976,7 @@
       "kind": "abstract",
       "signature": "haxe.ds.Vector",
       "isStatic": true,
-      "owner": "target-source-override",
+      "owner": "direct-compiler-lowering",
       "runtimeFeatures": [
         "alloc",
         "array",
@@ -35823,21 +35988,22 @@
         "metal"
       ],
       "environments": [
-        "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "hosted"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T03",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Known element/key/value types should specialize to direct typed storage; allocation and tracing remain explicit reachability decisions.",
-      "ruleId": "collection-storage"
+      "tests": [
+        "test/differential/array-runtime/array_runtime.c",
+        "test/differential/vector-list/generated/Main.hx",
+        "test/differential/vector-list/run.py"
+      ],
+      "notes": "The unchanged pinned Vector abstract uses its typed Array carrier for closed Int and collector-managed class elements. Fixed valid-length access, overlap-safe blit, shallow copy and conversion, fill, map, and sort have executable evidence; other element and operation shapes remain unsupported.",
+      "ruleId": "vector-array-carrier"
     },
     {
       "id": "hxc-stdlib-api-v1:c0fc14cca076d481804deef2a56ae76f89ac33f07632a8a694829fff8bbc4707",
@@ -35850,7 +36016,7 @@
       "kind": "abstract-array-access",
       "signature": "(index : Int) -> haxe.ds.Vector.T",
       "isStatic": false,
-      "owner": "target-source-override",
+      "owner": "direct-compiler-lowering",
       "runtimeFeatures": [
         "alloc",
         "array",
@@ -35862,21 +36028,22 @@
         "metal"
       ],
       "environments": [
-        "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "hosted"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T03",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Known element/key/value types should specialize to direct typed storage; allocation and tracing remain explicit reachability decisions.",
-      "ruleId": "collection-storage"
+      "tests": [
+        "test/differential/array-runtime/array_runtime.c",
+        "test/differential/vector-list/generated/Main.hx",
+        "test/differential/vector-list/run.py"
+      ],
+      "notes": "The unchanged pinned Vector abstract uses its typed Array carrier for closed Int and collector-managed class elements. Fixed valid-length access, overlap-safe blit, shallow copy and conversion, fill, map, and sort have executable evidence; other element and operation shapes remain unsupported.",
+      "ruleId": "vector-array-carrier"
     },
     {
       "id": "hxc-stdlib-api-v1:78533162d5cd9d9b6c66bc95f069fdd443d7dc1c04f72faa219cb8060e86fa36",
@@ -35889,7 +36056,7 @@
       "kind": "abstract-array-access",
       "signature": "(index : Int, val : haxe.ds.Vector.T) -> haxe.ds.Vector.T",
       "isStatic": false,
-      "owner": "target-source-override",
+      "owner": "direct-compiler-lowering",
       "runtimeFeatures": [
         "alloc",
         "array",
@@ -35901,21 +36068,22 @@
         "metal"
       ],
       "environments": [
-        "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "hosted"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T03",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Known element/key/value types should specialize to direct typed storage; allocation and tracing remain explicit reachability decisions.",
-      "ruleId": "collection-storage"
+      "tests": [
+        "test/differential/array-runtime/array_runtime.c",
+        "test/differential/vector-list/generated/Main.hx",
+        "test/differential/vector-list/run.py"
+      ],
+      "notes": "The unchanged pinned Vector abstract uses its typed Array carrier for closed Int and collector-managed class elements. Fixed valid-length access, overlap-safe blit, shallow copy and conversion, fill, map, and sort have executable evidence; other element and operation shapes remain unsupported.",
+      "ruleId": "vector-array-carrier"
     },
     {
       "id": "hxc-stdlib-api-v1:eb8e0456add8eae2e5c82ab09bdba59538255639b3b22bf6f902bf0a2f6f4cbe",
@@ -35928,7 +36096,7 @@
       "kind": "method",
       "signature": "(src : haxe.ds.Vector<blit.T>, srcPos : Int, dest : haxe.ds.Vector<blit.T>, destPos : Int, len : Int) -> Void",
       "isStatic": true,
-      "owner": "target-source-override",
+      "owner": "direct-compiler-lowering",
       "runtimeFeatures": [
         "alloc",
         "array",
@@ -35940,21 +36108,22 @@
         "metal"
       ],
       "environments": [
-        "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "hosted"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T03",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Known element/key/value types should specialize to direct typed storage; allocation and tracing remain explicit reachability decisions.",
-      "ruleId": "collection-storage"
+      "tests": [
+        "test/differential/array-runtime/array_runtime.c",
+        "test/differential/vector-list/generated/Main.hx",
+        "test/differential/vector-list/run.py"
+      ],
+      "notes": "The unchanged pinned Vector abstract uses its typed Array carrier for closed Int and collector-managed class elements. Fixed valid-length access, overlap-safe blit, shallow copy and conversion, fill, map, and sort have executable evidence; other element and operation shapes remain unsupported.",
+      "ruleId": "vector-array-carrier"
     },
     {
       "id": "hxc-stdlib-api-v1:7d6cf974872fe9a8d43e9809e5dfc5a6a4130241188e490f5a241c3653a255db",
@@ -35967,7 +36136,7 @@
       "kind": "inline-method",
       "signature": "() -> haxe.ds.Vector<copy.T>",
       "isStatic": false,
-      "owner": "target-source-override",
+      "owner": "direct-compiler-lowering",
       "runtimeFeatures": [
         "alloc",
         "array",
@@ -35979,21 +36148,22 @@
         "metal"
       ],
       "environments": [
-        "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "hosted"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T03",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Known element/key/value types should specialize to direct typed storage; allocation and tracing remain explicit reachability decisions.",
-      "ruleId": "collection-storage"
+      "tests": [
+        "test/differential/array-runtime/array_runtime.c",
+        "test/differential/vector-list/generated/Main.hx",
+        "test/differential/vector-list/run.py"
+      ],
+      "notes": "The unchanged pinned Vector abstract uses its typed Array carrier for closed Int and collector-managed class elements. Fixed valid-length access, overlap-safe blit, shallow copy and conversion, fill, map, and sort have executable evidence; other element and operation shapes remain unsupported.",
+      "ruleId": "vector-array-carrier"
     },
     {
       "id": "hxc-stdlib-api-v1:35d4ec2d694d275ff0c1bb1b0ff707de960e8123da818556ae059825c1a70fdf",
@@ -36006,7 +36176,7 @@
       "kind": "inline-method",
       "signature": "(value : haxe.ds.Vector.T) -> Void",
       "isStatic": false,
-      "owner": "target-source-override",
+      "owner": "direct-compiler-lowering",
       "runtimeFeatures": [
         "alloc",
         "array",
@@ -36018,21 +36188,22 @@
         "metal"
       ],
       "environments": [
-        "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "hosted"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T03",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Known element/key/value types should specialize to direct typed storage; allocation and tracing remain explicit reachability decisions.",
-      "ruleId": "collection-storage"
+      "tests": [
+        "test/differential/array-runtime/array_runtime.c",
+        "test/differential/vector-list/generated/Main.hx",
+        "test/differential/vector-list/run.py"
+      ],
+      "notes": "The unchanged pinned Vector abstract uses its typed Array carrier for closed Int and collector-managed class elements. Fixed valid-length access, overlap-safe blit, shallow copy and conversion, fill, map, and sort have executable evidence; other element and operation shapes remain unsupported.",
+      "ruleId": "vector-array-carrier"
     },
     {
       "id": "hxc-stdlib-api-v1:f5a38fb9914ad6740da1ff9405de340e4abb1066587fba889090de5b35d56ee7",
@@ -36045,7 +36216,7 @@
       "kind": "inline-method",
       "signature": "(array : Array<fromArrayCopy.T>) -> haxe.ds.Vector<fromArrayCopy.T>",
       "isStatic": true,
-      "owner": "target-source-override",
+      "owner": "direct-compiler-lowering",
       "runtimeFeatures": [
         "alloc",
         "array",
@@ -36057,21 +36228,22 @@
         "metal"
       ],
       "environments": [
-        "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "hosted"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T03",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Known element/key/value types should specialize to direct typed storage; allocation and tracing remain explicit reachability decisions.",
-      "ruleId": "collection-storage"
+      "tests": [
+        "test/differential/array-runtime/array_runtime.c",
+        "test/differential/vector-list/generated/Main.hx",
+        "test/differential/vector-list/run.py"
+      ],
+      "notes": "The unchanged pinned Vector abstract uses its typed Array carrier for closed Int and collector-managed class elements. Fixed valid-length access, overlap-safe blit, shallow copy and conversion, fill, map, and sort have executable evidence; other element and operation shapes remain unsupported.",
+      "ruleId": "vector-array-carrier"
     },
     {
       "id": "hxc-stdlib-api-v1:bfa392c47d6a25411191046ec4a6937f762b94b91831a405f4c2ab84ae3b4ab8",
@@ -36084,7 +36256,7 @@
       "kind": "inline-method",
       "signature": "(data : haxe.ds._Vector.VectorData<fromData.T>) -> haxe.ds.Vector<fromData.T>",
       "isStatic": true,
-      "owner": "target-source-override",
+      "owner": "direct-compiler-lowering",
       "runtimeFeatures": [
         "alloc",
         "array",
@@ -36096,21 +36268,22 @@
         "metal"
       ],
       "environments": [
-        "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "hosted"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T03",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Known element/key/value types should specialize to direct typed storage; allocation and tracing remain explicit reachability decisions.",
-      "ruleId": "collection-storage"
+      "tests": [
+        "test/differential/array-runtime/array_runtime.c",
+        "test/differential/vector-list/generated/Main.hx",
+        "test/differential/vector-list/run.py"
+      ],
+      "notes": "The unchanged pinned Vector abstract uses its typed Array carrier for closed Int and collector-managed class elements. Fixed valid-length access, overlap-safe blit, shallow copy and conversion, fill, map, and sort have executable evidence; other element and operation shapes remain unsupported.",
+      "ruleId": "vector-array-carrier"
     },
     {
       "id": "hxc-stdlib-api-v1:df0134a433d317c76f6acae4889b4a8d35b2020239583bf4533630f219942b18",
@@ -36123,7 +36296,7 @@
       "kind": "inline-method",
       "signature": "(index : Int) -> haxe.ds.Vector.T",
       "isStatic": false,
-      "owner": "target-source-override",
+      "owner": "direct-compiler-lowering",
       "runtimeFeatures": [
         "alloc",
         "array",
@@ -36135,21 +36308,22 @@
         "metal"
       ],
       "environments": [
-        "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "hosted"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T03",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Known element/key/value types should specialize to direct typed storage; allocation and tracing remain explicit reachability decisions.",
-      "ruleId": "collection-storage"
+      "tests": [
+        "test/differential/array-runtime/array_runtime.c",
+        "test/differential/vector-list/generated/Main.hx",
+        "test/differential/vector-list/run.py"
+      ],
+      "notes": "The unchanged pinned Vector abstract uses its typed Array carrier for closed Int and collector-managed class elements. Fixed valid-length access, overlap-safe blit, shallow copy and conversion, fill, map, and sort have executable evidence; other element and operation shapes remain unsupported.",
+      "ruleId": "vector-array-carrier"
     },
     {
       "id": "hxc-stdlib-api-v1:e8e7c42123758713d15fd919bb24810926cd345dd1e8811e52cea78b89b46265",
@@ -36162,7 +36336,7 @@
       "kind": "inline-method",
       "signature": "(sep : String) -> String",
       "isStatic": false,
-      "owner": "target-source-override",
+      "owner": "direct-compiler-lowering",
       "runtimeFeatures": [
         "alloc",
         "array",
@@ -36174,21 +36348,22 @@
         "metal"
       ],
       "environments": [
-        "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "hosted"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T03",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Known element/key/value types should specialize to direct typed storage; allocation and tracing remain explicit reachability decisions.",
-      "ruleId": "collection-storage"
+      "tests": [
+        "test/differential/array-runtime/array_runtime.c",
+        "test/differential/vector-list/generated/Main.hx",
+        "test/differential/vector-list/run.py"
+      ],
+      "notes": "The unchanged pinned Vector abstract uses its typed Array carrier for closed Int and collector-managed class elements. Fixed valid-length access, overlap-safe blit, shallow copy and conversion, fill, map, and sort have executable evidence; other element and operation shapes remain unsupported.",
+      "ruleId": "vector-array-carrier"
     },
     {
       "id": "hxc-stdlib-api-v1:0bf53c2489b47fcf0ee049a074367f3eb01148634c7befbacf47a8a4866f4a95",
@@ -36201,7 +36376,7 @@
       "kind": "field",
       "signature": "Int",
       "isStatic": false,
-      "owner": "target-source-override",
+      "owner": "direct-compiler-lowering",
       "runtimeFeatures": [
         "alloc",
         "array",
@@ -36213,21 +36388,22 @@
         "metal"
       ],
       "environments": [
-        "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "hosted"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T03",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Known element/key/value types should specialize to direct typed storage; allocation and tracing remain explicit reachability decisions.",
-      "ruleId": "collection-storage"
+      "tests": [
+        "test/differential/array-runtime/array_runtime.c",
+        "test/differential/vector-list/generated/Main.hx",
+        "test/differential/vector-list/run.py"
+      ],
+      "notes": "The unchanged pinned Vector abstract uses its typed Array carrier for closed Int and collector-managed class elements. Fixed valid-length access, overlap-safe blit, shallow copy and conversion, fill, map, and sort have executable evidence; other element and operation shapes remain unsupported.",
+      "ruleId": "vector-array-carrier"
     },
     {
       "id": "hxc-stdlib-api-v1:1b7b2ec26b9eb93a979f0cd50b6caf0d3c0ab361604a13ddd0d84c8d74e9a78c",
@@ -36240,7 +36416,7 @@
       "kind": "inline-method",
       "signature": "(f : (haxe.ds.Vector.T -> map.S)) -> haxe.ds.Vector<map.S>",
       "isStatic": false,
-      "owner": "target-source-override",
+      "owner": "direct-compiler-lowering",
       "runtimeFeatures": [
         "alloc",
         "array",
@@ -36252,21 +36428,22 @@
         "metal"
       ],
       "environments": [
-        "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "hosted"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T03",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Known element/key/value types should specialize to direct typed storage; allocation and tracing remain explicit reachability decisions.",
-      "ruleId": "collection-storage"
+      "tests": [
+        "test/differential/array-runtime/array_runtime.c",
+        "test/differential/vector-list/generated/Main.hx",
+        "test/differential/vector-list/run.py"
+      ],
+      "notes": "The unchanged pinned Vector abstract uses its typed Array carrier for closed Int and collector-managed class elements. Fixed valid-length access, overlap-safe blit, shallow copy and conversion, fill, map, and sort have executable evidence; other element and operation shapes remain unsupported.",
+      "ruleId": "vector-array-carrier"
     },
     {
       "id": "hxc-stdlib-api-v1:069a4256ecbb1dd5f9bf252cb766e745624dfb975de193651a15299282fa50a4",
@@ -36279,7 +36456,7 @@
       "kind": "constructor",
       "signature": "(length : Int) -> haxe.ds.Vector<haxe.ds.Vector.T>",
       "isStatic": false,
-      "owner": "target-source-override",
+      "owner": "direct-compiler-lowering",
       "runtimeFeatures": [
         "alloc",
         "array",
@@ -36291,21 +36468,22 @@
         "metal"
       ],
       "environments": [
-        "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "hosted"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T03",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Known element/key/value types should specialize to direct typed storage; allocation and tracing remain explicit reachability decisions.",
-      "ruleId": "collection-storage"
+      "tests": [
+        "test/differential/array-runtime/array_runtime.c",
+        "test/differential/vector-list/generated/Main.hx",
+        "test/differential/vector-list/run.py"
+      ],
+      "notes": "The unchanged pinned Vector abstract uses its typed Array carrier for closed Int and collector-managed class elements. Fixed valid-length access, overlap-safe blit, shallow copy and conversion, fill, map, and sort have executable evidence; other element and operation shapes remain unsupported.",
+      "ruleId": "vector-array-carrier"
     },
     {
       "id": "hxc-stdlib-api-v1:a900776668f4151639fe648f225100a608cd97c13902dc2fd4b629d76bbfeee0",
@@ -36318,7 +36496,7 @@
       "kind": "constructor",
       "signature": "(length : Int, defaultValue : haxe.ds.Vector.T) -> haxe.ds.Vector<haxe.ds.Vector.T>",
       "isStatic": false,
-      "owner": "target-source-override",
+      "owner": "direct-compiler-lowering",
       "runtimeFeatures": [
         "alloc",
         "array",
@@ -36330,21 +36508,22 @@
         "metal"
       ],
       "environments": [
-        "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "hosted"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T03",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Known element/key/value types should specialize to direct typed storage; allocation and tracing remain explicit reachability decisions.",
-      "ruleId": "collection-storage"
+      "tests": [
+        "test/differential/array-runtime/array_runtime.c",
+        "test/differential/vector-list/generated/Main.hx",
+        "test/differential/vector-list/run.py"
+      ],
+      "notes": "The unchanged pinned Vector abstract uses its typed Array carrier for closed Int and collector-managed class elements. Fixed valid-length access, overlap-safe blit, shallow copy and conversion, fill, map, and sort have executable evidence; other element and operation shapes remain unsupported.",
+      "ruleId": "vector-array-carrier"
     },
     {
       "id": "hxc-stdlib-api-v1:f45e4ddbd30252431c52485f4dff74249a0fc6bed1f92c4dc3d9aa9d18b153e6",
@@ -36357,7 +36536,7 @@
       "kind": "inline-method",
       "signature": "(index : Int, val : haxe.ds.Vector.T) -> haxe.ds.Vector.T",
       "isStatic": false,
-      "owner": "target-source-override",
+      "owner": "direct-compiler-lowering",
       "runtimeFeatures": [
         "alloc",
         "array",
@@ -36369,21 +36548,22 @@
         "metal"
       ],
       "environments": [
-        "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "hosted"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T03",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Known element/key/value types should specialize to direct typed storage; allocation and tracing remain explicit reachability decisions.",
-      "ruleId": "collection-storage"
+      "tests": [
+        "test/differential/array-runtime/array_runtime.c",
+        "test/differential/vector-list/generated/Main.hx",
+        "test/differential/vector-list/run.py"
+      ],
+      "notes": "The unchanged pinned Vector abstract uses its typed Array carrier for closed Int and collector-managed class elements. Fixed valid-length access, overlap-safe blit, shallow copy and conversion, fill, map, and sort have executable evidence; other element and operation shapes remain unsupported.",
+      "ruleId": "vector-array-carrier"
     },
     {
       "id": "hxc-stdlib-api-v1:72ab3f700b68e89084619f02b90a45bad70c7e305a3360a33008e5b9915a3aaf",
@@ -36396,7 +36576,7 @@
       "kind": "inline-method",
       "signature": "(f : ((haxe.ds.Vector.T, haxe.ds.Vector.T) -> Int)) -> Void",
       "isStatic": false,
-      "owner": "target-source-override",
+      "owner": "direct-compiler-lowering",
       "runtimeFeatures": [
         "alloc",
         "array",
@@ -36408,21 +36588,22 @@
         "metal"
       ],
       "environments": [
-        "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "hosted"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T03",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Known element/key/value types should specialize to direct typed storage; allocation and tracing remain explicit reachability decisions.",
-      "ruleId": "collection-storage"
+      "tests": [
+        "test/differential/array-runtime/array_runtime.c",
+        "test/differential/vector-list/generated/Main.hx",
+        "test/differential/vector-list/run.py"
+      ],
+      "notes": "The unchanged pinned Vector abstract uses its typed Array carrier for closed Int and collector-managed class elements. Fixed valid-length access, overlap-safe blit, shallow copy and conversion, fill, map, and sort have executable evidence; other element and operation shapes remain unsupported.",
+      "ruleId": "vector-array-carrier"
     },
     {
       "id": "hxc-stdlib-api-v1:c7a5503954f3690bed6cfaa2b07247604a826c59d5b2904ff36e768af07f55fa",
@@ -36435,7 +36616,7 @@
       "kind": "method",
       "signature": "() -> Array<haxe.ds.Vector.T>",
       "isStatic": false,
-      "owner": "target-source-override",
+      "owner": "direct-compiler-lowering",
       "runtimeFeatures": [
         "alloc",
         "array",
@@ -36447,21 +36628,22 @@
         "metal"
       ],
       "environments": [
-        "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "hosted"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T03",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Known element/key/value types should specialize to direct typed storage; allocation and tracing remain explicit reachability decisions.",
-      "ruleId": "collection-storage"
+      "tests": [
+        "test/differential/array-runtime/array_runtime.c",
+        "test/differential/vector-list/generated/Main.hx",
+        "test/differential/vector-list/run.py"
+      ],
+      "notes": "The unchanged pinned Vector abstract uses its typed Array carrier for closed Int and collector-managed class elements. Fixed valid-length access, overlap-safe blit, shallow copy and conversion, fill, map, and sort have executable evidence; other element and operation shapes remain unsupported.",
+      "ruleId": "vector-array-carrier"
     },
     {
       "id": "hxc-stdlib-api-v1:4dcc810955b230a98960a9a3ab5ec837a73ef251bebadbed71e376643c9017e7",
@@ -36474,7 +36656,7 @@
       "kind": "inline-method",
       "signature": "() -> haxe.ds._Vector.VectorData<haxe.ds.Vector.T>",
       "isStatic": false,
-      "owner": "target-source-override",
+      "owner": "direct-compiler-lowering",
       "runtimeFeatures": [
         "alloc",
         "array",
@@ -36486,21 +36668,22 @@
         "metal"
       ],
       "environments": [
-        "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "hosted"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T03",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Known element/key/value types should specialize to direct typed storage; allocation and tracing remain explicit reachability decisions.",
-      "ruleId": "collection-storage"
+      "tests": [
+        "test/differential/array-runtime/array_runtime.c",
+        "test/differential/vector-list/generated/Main.hx",
+        "test/differential/vector-list/run.py"
+      ],
+      "notes": "The unchanged pinned Vector abstract uses its typed Array carrier for closed Int and collector-managed class elements. Fixed valid-length access, overlap-safe blit, shallow copy and conversion, fill, map, and sort have executable evidence; other element and operation shapes remain unsupported.",
+      "ruleId": "vector-array-carrier"
     },
     {
       "id": "hxc-stdlib-api-v1:ef62e30eb78af067469d0ecb2a7a7ad02b654e0509f5c1dca2bb0d59e45b8bed",

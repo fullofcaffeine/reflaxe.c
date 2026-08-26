@@ -760,6 +760,7 @@
         "python3",
         "test/generic_specialization/run.py"
       ],
+      "snapshotValidationTimeoutSeconds": 600,
       "types": [
         "positive",
         "negative",

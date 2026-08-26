@@ -1206,6 +1206,16 @@ def validate_catalog_contract(catalog: dict[str, Any]) -> dict[str, str]:
             raise SnapshotFailure(
                 f"managed snapshot suite {identifier} is not a catalog snapshot suite"
             )
+        validation_timeout = suite.get("snapshotValidationTimeoutSeconds")
+        if validation_timeout is not None and (
+            not isinstance(validation_timeout, int)
+            or isinstance(validation_timeout, bool)
+            or validation_timeout <= 0
+        ):
+            raise SnapshotFailure(
+                f"snapshot suite {identifier} has invalid validation timeout "
+                f"{validation_timeout!r}"
+            )
         runner = suite.get("runner")
         if not isinstance(runner, list) or not runner or not all(
             isinstance(part, str) and part for part in runner
@@ -1555,21 +1565,27 @@ def validate_updated_suites(catalog: dict[str, Any], suites: list[str]) -> None:
     raw_suites = catalog.get("suites")
     if not isinstance(raw_suites, list):
         raise SnapshotFailure("fixture catalog omitted suite runners")
-    commands = {
-        entry.get("id"): entry.get(
-            "snapshotValidationRunner", entry.get("runner")
-        )
+    entries = {
+        entry.get("id"): entry
         for entry in raw_suites
         if isinstance(entry, dict)
     }
     for suite in suites:
-        command = commands.get(suite)
+        entry = entries.get(suite)
+        if not isinstance(entry, dict):
+            raise SnapshotFailure(f"snapshot suite {suite} has no catalog entry")
+        command = entry.get("snapshotValidationRunner", entry.get("runner"))
         if not isinstance(command, list) or not all(
             isinstance(part, str) and part for part in command
         ):
             raise SnapshotFailure(f"snapshot suite {suite} has no validation runner")
+        timeout = entry.get("snapshotValidationTimeoutSeconds", 300)
+        if not isinstance(timeout, int) or isinstance(timeout, bool) or timeout <= 0:
+            raise SnapshotFailure(
+                f"snapshot suite {suite} has invalid validation timeout {timeout!r}"
+            )
         print(f"snapshot-validate: {suite}: {' '.join(command)}")
-        result = subprocess.run(command, cwd=ROOT, check=False, timeout=300)
+        result = subprocess.run(command, cwd=ROOT, check=False, timeout=timeout)
         if result.returncode != 0:
             raise SnapshotFailure(
                 f"updated snapshot suite {suite} failed validation with exit {result.returncode}"

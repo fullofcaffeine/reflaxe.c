@@ -2188,6 +2188,29 @@ construction and its ownership, lifetime, instruction, and provenance
 bookkeeping. A future optimization must attribute one of those owners rather
 than treating the two large request counts as cost by themselves.
 
+### Closed generic owner test boundary
+
+The generic-specialization suite now proves closed class and abstract owners
+across split, package, and unity output. It also proves that multiple reachable
+instance targets fail closed. These checks require six independent generated-C
+builds in addition to the existing specialization matrix.
+
+One complete local run took about 450 seconds on a shared host. This is a
+timeout-sizing observation, not a compiler performance baseline. The fixture
+catalog and central snapshot post-update validator therefore give this
+exhaustive owner 600 seconds. A run near that ceiling requires decomposition
+or optimization; it must not receive another timeout increase without new
+evidence and an owning Beads issue.
+
+Vector and List changes use
+`python3 test/differential/vector-list/run.py --toolchain clang` as their narrow
+owner. The command took about 90 seconds on the same shared host and proves the
+Eval/generated-C behavior, reports, native C, C++ header use, sanitizers,
+runtime plans, and linked symbols needed for those two standard-library types.
+Run the exhaustive generic-specialization owner once at the task boundary; do
+not repeat it merely to rediscover evidence already produced by the focused
+Vector/List owner.
+
 ### Span-lowering compiler-process reuse
 
 The measured time belongs to that feature's exhaustive **test suite**, not to a

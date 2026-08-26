@@ -4,12 +4,11 @@
   "role": "fixture",
   "type": "negative",
   "status": "active",
-  "requirements": [
-    "HXC-SEM-007",
-    "HXC-SEM-015",
-    "HXC-SEM-016"
-  ],
+  "requirements": ["HXC-SEM-007", "HXC-SEM-015", "HXC-SEM-016"],
   "sources": [
+    "scripts/test/compiler_discovery.py",
+    "test/generic_specialization/fixtures/abstract_unsupported/Main.hx",
+    "test/generic_specialization/fixtures/generic_owner_multiple_targets/Main.hx",
     "test/generic_specialization/fixtures/dynamic/Main.hx",
     "test/generic_specialization/fixtures/open/Main.hx",
     "test/generic_specialization/fixtures/budget/Main.hx",
@@ -18,22 +17,17 @@
     "test/generic_specialization/run.py"
   ],
   "runner": {
-    "command": [
-      "python3",
-      "../../generic_specialization/run.py"
-    ],
+    "command": ["python3", "../../generic_specialization/run.py"],
     "workingDirectory": "test/negative/generic-specialization",
-    "timeoutSeconds": 240,
+    "timeoutSeconds": 600,
     "network": false
   },
   "expected": {
     "exitCode": 0,
-    "diagnostics": [
-      "HXC1001"
-    ],
+    "diagnostics": ["HXC1001"],
     "stdout": {
       "mode": "regex",
-      "value": "exact dynamic/open/function-type-count/code-size HXC1001"
+      "value": "exact dynamic/open/interface-carrier/multiple-target/function/type-count/code-size HXC1001"
     }
   }
 }

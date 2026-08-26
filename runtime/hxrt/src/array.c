@@ -473,7 +473,10 @@ hxc_status hxc_array_set_copy(
   if (element == NULL || !hxc_array_is_valid(array)) {
     return HXC_STATUS_INVALID_ARGUMENT;
   }
-  if (index >= array->length) {
+  if (index == array->length) {
+    return hxc_array_push_copy(array, element);
+  }
+  if (index > array->length) {
     return HXC_STATUS_OUT_OF_RANGE;
   }
   destination = hxc_array_slot(array, index);

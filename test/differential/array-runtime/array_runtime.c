@@ -368,6 +368,7 @@ static int hxc_test_reference_array(
 ) {
   static const int after_insert[] = {1, 1, 2, 1, 2, 1};
   static const int after_assign[] = {1, 1, 1, 1, 2, 1};
+  static const int after_set_append[] = {1, 1, 1, 1, 2, 1, 1};
   static const int after_shrink[] = {1, 1, 1};
   static const int after_remove[] = {1, 1};
   static const int with_null_defaults[] = {1, 1, 0, 0};
@@ -415,6 +416,34 @@ static int hxc_test_reference_array(
   HXC_TEST_CHECK(hxc_test_expect_refs(&array, after_assign, 6u) == 0);
   HXC_TEST_CHECK(first.references == 6u && second.references == 2u);
   HXC_TEST_CHECK(hxc_array_set_copy(&array, 0u, source) == HXC_STATUS_OK);
+
+  /* Haxe assignment at exactly `length` appends through the same typed copy. */
+  length_before = array.length;
+  HXC_TEST_CHECK(
+    hxc_array_set_copy(&array, length_before, source) == HXC_STATUS_OK
+  );
+  HXC_TEST_CHECK(hxc_test_expect_refs(&array, after_set_append, 7u) == 0);
+  HXC_TEST_CHECK(first.references == 7u && second.references == 2u);
+  HXC_TEST_CHECK(
+    hxc_array_set_copy(&array, array.length + 1u, source)
+      == HXC_STATUS_OUT_OF_RANGE
+  );
+  HXC_TEST_CHECK(hxc_array_remove_at(&array, length_before) == HXC_STATUS_OK);
+  HXC_TEST_CHECK(hxc_test_expect_refs(&array, after_assign, 6u) == 0);
+  HXC_TEST_CHECK(first.references == 6u && second.references == 2u);
+  HXC_TEST_CHECK(
+    hxc_array_at_const(&array, 0u, &source) == HXC_STATUS_OK
+  );
+
+  lifecycle.copy_failure_armed = true;
+  lifecycle.copies_before_failure = 0u;
+  HXC_TEST_CHECK(
+    hxc_array_set_copy(&array, array.length, source)
+      == HXC_STATUS_OUT_OF_MEMORY
+  );
+  lifecycle.copy_failure_armed = false;
+  HXC_TEST_CHECK(hxc_test_expect_refs(&array, after_assign, 6u) == 0);
+  HXC_TEST_CHECK(first.references == 6u && second.references == 2u);
 
   lifecycle.assign_failure = true;
   HXC_TEST_CHECK(

@@ -799,15 +799,19 @@ graphs still fail closed pending tracing-collector ownership. Concrete primitive
 deterministically and now participate in the shared E3.T03 report.
 See [Haxe enum lowering](enum-lowering.md).
 
-E3.T03 extends the reachable static-function worklist with closed generic
-instances. It infers typed arguments at direct calls, expands aliases, accepts
-only already-proven primitive and enum representations, and shares equivalent
-instances by a length-prefixed full semantic key. SHA-256 is only a compact
-instance suffix; request-local registries retain the full key and reject digest
-collisions. Registering an instance before scanning its body closes recursive
-generic calls, while hard function/type-count and estimated-C-byte budgets stop
-expanding graphs with source-positioned `HXC1001` instead of silently boxing.
-The typed `hxc.specializations.json` sidecar records canonical instances,
+E3.T03 extends the reachable function worklist with closed generic instances.
+It infers typed arguments at direct calls and constructions, expands aliases,
+accepts already-proven primitive, enum, record, Array, String, abstract-carrier,
+nullable, and ordinary managed-class representations, and shares equivalent
+instances by a length-prefixed full semantic key. Owner arguments precede
+method arguments. SHA-256 is only a compact instance suffix; request-local
+registries retain the full key and reject digest collisions. Registering an
+instance before scanning its body closes recursive generic calls, while hard
+function/type-count and estimated-C-byte budgets stop expanding graphs with
+source-positioned `HXC1001` instead of silently boxing. Closed generic class
+calls are admitted only after the reachable graph proves one effective target;
+generic virtual/interface slots remain fail-closed. The typed
+`hxc.specializations.json` sidecar records canonical functions and constructors,
 source-rooted reasons, recursion, and code-size attribution. See
 [deterministic generic specialization](generic-specialization.md).
 

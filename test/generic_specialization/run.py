@@ -24,6 +24,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from scripts.test.bounded_process import run as run_bounded_process  # noqa: E402
+from scripts.test.compiler_discovery import compiler_family, resolve_compiler  # noqa: E402
 
 CASE = Path(__file__).resolve().parent
 FIXTURES = CASE / "fixtures"
@@ -266,7 +267,15 @@ def validate_argument(argument: object, expected_parameter: str | None = None) -
         or expected_parameter is not None
         and record.get("parameter") != expected_parameter
         or record.get("representation")
-        not in ("direct-primitive", "direct-enum", "direct-record")
+        not in (
+            "direct-primitive",
+            "direct-enum",
+            "managed-class",
+            "managed-array",
+            "direct-record",
+            "immutable-string",
+            "nullable-value",
+        )
     ):
         raise GenericSpecializationFailure(f"generic argument drifted: {record!r}")
     return require_text(record.get("key"), "generic argument key")
@@ -626,8 +635,8 @@ def check_expected_snapshot() -> None:
 
 NEGATIVE_EXPECTATIONS = {
     "abstract_unsupported": (
-        "Main.hx:22: characters 2-26",
-        "TCall(generic-specialization:function.Main.identity:type-argument:T).field:value.abstract-carrier:class-type-argument:UnsupportedCarrier",
+        "Main.hx:25: characters 2-26",
+        "TCall(generic-specialization:function.Main.identity:type-argument:T).field:value.abstract-carrier:class-type-argument-not-managed:UnsupportedCarrier",
     ),
     "dynamic": (
         "Main.hx:8: characters 3-25",
@@ -652,6 +661,10 @@ NEGATIVE_EXPECTATIONS = {
     "virtual_method": (
         "Main.hx:4: lines 4-6",
         "virtual-slot-generic-requires-specialization:method.GenericBase.echo",
+    ),
+    "generic_owner_multiple_targets": (
+        "Main.hx:35: characters 7-17",
+        "TCall(generic-owner-has-multiple-effective-targets:method.Box.get)",
     ),
 }
 
@@ -1020,20 +1033,6 @@ def check_nominal_abstract_record(requested_toolchain: str) -> None:
                     )
 
 
-def compiler_family(command: str) -> str | None:
-    result = run_bounded_process(
-        [command, "--version"], check=False, capture_output=True, text=True, timeout=10
-    )
-    identity = (result.stdout + result.stderr).lower()
-    if result.returncode != 0:
-        return None
-    if "clang" in identity:
-        return "clang"
-    if "gcc" in identity or "free software foundation" in identity:
-        return "gcc"
-    return None
-
-
 def native_compilers(requested_toolchain: str) -> list[tuple[str, str]]:
     found: list[tuple[str, str]] = []
     families: set[str] = set()
@@ -1043,25 +1042,18 @@ def native_compilers(requested_toolchain: str) -> list[tuple[str, str]]:
         else (requested_toolchain,)
     )
     for requested in requested_families:
-        command = shutil.which(requested)
+        command = resolve_compiler(requested)
         if command is None:
             if requested_toolchain != "auto":
                 raise GenericSpecializationFailure(
-                    f"required {requested} command is unavailable"
-                )
-            print(f"generic-specialization: SKIP optional {requested}: command unavailable")
-            continue
-        family = compiler_family(command)
-        if family != requested:
-            if requested_toolchain != "auto":
-                raise GenericSpecializationFailure(
-                    f"required {requested} command identifies as {family or 'unknown'}"
+                    f"required identity-matching {requested} command is unavailable"
                 )
             print(
                 f"generic-specialization: SKIP optional {requested}: "
-                f"command identifies as {family or 'unknown'}"
+                "identity-matching command unavailable"
             )
             continue
+        family = compiler_family(command)
         if family not in families:
             found.append((family, command))
             families.add(family)
@@ -1073,6 +1065,194 @@ def native_compilers(requested_toolchain: str) -> list[tuple[str, str]]:
     if not found:
         raise GenericSpecializationFailure("no identity-matching C11 compiler is available")
     return found
+
+
+def check_closed_owner_specialization(requested_toolchain: str) -> None:
+    """Prove closed class and abstract owners without traversal-order shortcuts."""
+
+    fixtures = ("closed_owner", "abstract_owner")
+    for fixture in fixtures:
+        result = run_bounded_process(
+            [
+                development_tool("haxe"),
+                "--cwd",
+                str(FIXTURES / fixture),
+                "build.hxml",
+                "--interp",
+            ],
+            cwd=ROOT,
+            env={**os.environ, "HAXE_NO_SERVER": "1", "LC_ALL": "C"},
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        if result.returncode != 0 or result.stdout or result.stderr:
+            raise GenericSpecializationFailure(
+                f"{fixture} Eval oracle failed\n"
+                f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
+            )
+
+    compilers = native_compilers(requested_toolchain)
+    with tempfile.TemporaryDirectory(prefix="hxc-generic-owners-") as temporary:
+        root = Path(temporary)
+        for fixture in fixtures:
+            reference_functions: list[object] | None = None
+            for layout in ("split", "package", "unity"):
+                output = root / f"{fixture}-{layout}"
+                result = compile_fixture(fixture, output, layout=layout)
+                if result.returncode != 0 or result.stdout or result.stderr:
+                    raise GenericSpecializationFailure(
+                        f"{fixture} {layout} compile failed or emitted diagnostics\n"
+                        f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
+                    )
+                report = load_json(
+                    output / "hxc.specializations.json",
+                    f"{fixture} {layout} specialization report",
+                )
+                functions = require_list(
+                    report.get("functionSpecializations"),
+                    f"{fixture} {layout} function specializations",
+                )
+                if reference_functions is None:
+                    reference_functions = functions
+                elif functions != reference_functions:
+                    raise GenericSpecializationFailure(
+                        f"{fixture} specialization identities changed in {layout} layout"
+                    )
+                validate_owner_specializations(fixture, functions, output)
+                compile_owner_project(fixture, layout, output, root, compilers)
+
+
+def validate_owner_specializations(
+    fixture: str, functions: list[object], output: Path
+) -> None:
+    """Check full report keys and the exact carrier selected by one owner fixture."""
+
+    by_base: dict[str, set[tuple[str, ...]]] = {}
+    for value in functions:
+        record = require_dict(value, f"{fixture} function specialization")
+        base = require_text(record.get("baseFunctionId"), f"{fixture} base function")
+        key = require_text(record.get("specializationKey"), f"{fixture} key")
+        digest = hashlib.sha256(key.encode("utf-8")).hexdigest()
+        prefix = "constructor" if base.startswith("constructor.") else "function"
+        if (
+            record.get("semanticDigestSha256") != digest
+            or record.get("instanceId") != f"{prefix}.specialization.{digest}"
+        ):
+            raise GenericSpecializationFailure(
+                f"{fixture} full-key specialization identity drifted for {base}"
+            )
+        argument_keys = tuple(
+            validate_argument(argument)
+            for argument in require_list(record.get("arguments"), f"{fixture} arguments")
+        )
+        by_base.setdefault(base, set()).add(argument_keys)
+
+    if fixture == "closed_owner":
+        expected_arguments = {("i32",), ("class(7:Payload0:)",)}
+        expected = {
+            "constructor.Box": expected_arguments,
+            "method.Box.get": expected_arguments,
+            "method.Box.replace": expected_arguments,
+        }
+        if by_base != expected:
+            raise GenericSpecializationFailure(
+                "closed generic class owner lost primitive/managed constructor or method closure"
+            )
+    else:
+        expected = {
+            "function._Main.FirstBox_Impl_._hx_new": {("i32",)},
+            "function._Main.FirstBox_Impl_.copyData": {("i32",)},
+            "function._Main.FirstBox_Impl_.first": {("i32",)},
+        }
+        if by_base != expected:
+            raise GenericSpecializationFailure(
+                "generic abstract implementation lost its owner argument"
+            )
+
+    payload = b"\n".join(
+        path.read_bytes()
+        for path in sorted(output.rglob("*"))
+        if path.is_file() and path.suffix in (".c", ".h")
+    )
+    if fixture == "closed_owner":
+        if (
+            len(re.findall(rb"struct hxc_Box_h[0-9a-f]+ \{", payload)) != 2
+            or b"struct hxc_Payload *hxc_value" not in payload
+            or b"int32_t hxc_value" not in payload
+            or b"HXC_TYPE_DESCRIPTOR_HAS_TRACE" not in payload
+        ):
+            raise GenericSpecializationFailure(
+                "closed generic class owner lost exact primitive/managed C layouts"
+            )
+    elif (
+        b"struct hxc_FirstBox" in payload
+        or b"struct hxc_array_ref *hxc_Main_FirstBox_Impl_hx_new" not in payload
+        or b"hxc_array_ref_get_copy" not in payload
+    ):
+        raise GenericSpecializationFailure(
+            "generic abstract owner stopped using its typed Array carrier"
+        )
+
+
+def compile_owner_project(
+    fixture: str,
+    layout: str,
+    output: Path,
+    root: Path,
+    compilers: list[tuple[str, str]],
+) -> None:
+    """Compile and execute one focused owner project under each required family."""
+
+    manifest = load_json(output / "hxc.manifest.json", f"{fixture} manifest")
+    build = require_dict(manifest.get("build"), f"{fixture} build plan")
+    sources = [
+        output / require_text(value, f"{fixture} build source")
+        for value in require_list(build.get("sources"), f"{fixture} build sources")
+    ]
+    includes = [
+        output / require_text(value, f"{fixture} include directory")
+        for value in require_list(
+            build.get("includeDirectories"), f"{fixture} include directories"
+        )
+    ]
+    for family, compiler in compilers:
+        executable = root / f"{fixture}-{layout}-{family}"
+        compiled = run_bounded_process(
+            [
+                compiler,
+                *STRICT_FLAGS,
+                "-O0",
+                *(f"-I{path}" for path in includes),
+                *(str(path) for path in sources),
+                "-o",
+                str(executable),
+            ],
+            cwd=ROOT,
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=60,
+        )
+        if compiled.returncode != 0 or compiled.stdout or compiled.stderr:
+            raise GenericSpecializationFailure(
+                f"{family} rejected {fixture} {layout} generated C\n"
+                f"stdout:\n{compiled.stdout}\nstderr:\n{compiled.stderr}"
+            )
+        executed = run_bounded_process(
+            [str(executable)],
+            cwd=ROOT,
+            check=False,
+            capture_output=True,
+            timeout=10,
+        )
+        if executed.returncode != 0 or executed.stdout or executed.stderr:
+            raise GenericSpecializationFailure(
+                f"{family} {fixture} {layout} executable drifted: "
+                f"exit={executed.returncode}, stdout={executed.stdout!r}, "
+                f"stderr={executed.stderr!r}"
+            )
 
 
 def check_native(requested_toolchain: str) -> list[str]:
@@ -1159,6 +1339,7 @@ def main(arguments: Iterable[str] = ()) -> int:
         check_expected_snapshot()
         for fixture in NEGATIVE_EXPECTATIONS:
             check_negative(fixture)
+        check_closed_owner_specialization(args.toolchain)
         check_nominal_abstract_record(args.toolchain)
         check_server_isolation()
         check_conditional_sidecar_ownership()
@@ -1176,9 +1357,9 @@ def main(arguments: Iterable[str] = ()) -> int:
         return 1
     print(
         "generic-specialization: OK: closed primitive/function/enum/Array/record identities, "
-        "nominal abstracts with admitted carriers, "
+        "closed class owners, nominal abstracts with admitted carriers, "
         "alias sharing, finite recursion, full-key collision checks, bounded code-size "
-        f"reports, ordinary-enum attribution isolation, exact dynamic/open/function/type-count/code-size HXC1001, stale ownership, profile/policy isolation, and strict "
+        f"reports, ordinary-enum attribution isolation, exact dynamic/open/interface-carrier/multiple-target/function/type-count/code-size HXC1001, stale ownership, profile/policy isolation, and strict "
         f"{'/'.join(families)} C11 O0/O2 passed"
     )
     return 0

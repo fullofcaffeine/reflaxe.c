@@ -84,6 +84,8 @@ import reflaxe.c.lowering.CBodyTypedMap.CLoweredBodyTypedMap;
 import reflaxe.c.lowering.CBodyTypedMap.CPreparedBodyTypedMap;
 import reflaxe.c.lowering.CGenericSpecialization.CGenericCallResolver;
 import reflaxe.c.lowering.CGenericSpecialization.CGenericFunctionSpecialization;
+import reflaxe.c.lowering.CGenericSpecialization.CGenericTypeCanonicalizer;
+import reflaxe.c.lowering.CGenericSpecialization.CResolvedGenericCall;
 import reflaxe.c.lowering.CBodyNullCheckCoalescing;
 import reflaxe.c.lowering.CBodyFunctionReplayCache;
 import reflaxe.c.lowering.CBodyFunctionReplayCache.CBodyFunctionReplayData;
@@ -109,6 +111,10 @@ typedef CBodyFunctionInput = {
 	final fieldType:Type;
 	final expression:TypedExpr;
 	final ?typeParameters:Array<TypeParameter>;
+
+	/** Declaring class or abstract parameters closed before method parameters. */
+	final ?ownerTypeParameters:Array<TypeParameter>;
+
 	final ?specialization:CGenericFunctionSpecialization;
 	final ?instanceOwner:Ref<ClassType>;
 }
@@ -373,9 +379,10 @@ class CBodyLowering {
 		final functionPreparationTimer = CPhaseTiming.startDetail(CDTHxcIRFunctionPreparation);
 		final inputs = inputFunctions.copy();
 		inputs.sort(compareInputs);
+		final dispatchGraph = inputDispatch == null ? CBodyDispatchGraph.empty() : inputDispatch;
 		final aggregateRegistry = new CBodyAggregateRegistry(context, typedProgram, typedContract,
 			programCreatesStrings(inputFunctions, inputGlobals, inputInitializers, inputConstructors, context.profile));
-		final mutableAggregateBorrowPlan = MutableAggregateBorrowPlanner.plan(context, inputs);
+		final mutableAggregateBorrowPlan = MutableAggregateBorrowPlanner.plan(context, inputs, dispatchGraph);
 		final prepared:Array<PreparedBodyFunction> = [];
 		final preparedById:Map<String, PreparedBodyFunction> = [];
 		for (input in inputs) {
@@ -386,8 +393,7 @@ class CBodyLowering {
 			prepared.push(fn);
 			preparedById.set(fn.irId, fn);
 		}
-		final preparedDispatch:CPreparedBodyDispatch = new CBodyDispatchPreparer(context, inputDispatch == null ? CBodyDispatchGraph.empty() : inputDispatch,
-			aggregateRegistry).prepare();
+		final preparedDispatch:CPreparedBodyDispatch = new CBodyDispatchPreparer(context, dispatchGraph, aggregateRegistry).prepare();
 		final constructorInputs = inputConstructors == null ? [] : inputConstructors.copy();
 		constructorInputs.sort((left, right) -> compareUtf8(left.id, right.id));
 		final constructorSignaturesById:Map<String, PreparedConstructorSignature> = [];
@@ -3100,7 +3106,7 @@ private typedef MutableAggregateBorrowFunctionInfo = {
 	exact synchronous call stops with a source-positioned diagnostic.
 **/
 private class MutableAggregateBorrowPlanner {
-	public static function plan(context:CompilationContext, inputs:Array<CBodyFunctionInput>):Map<String, Map<Int, Bool>> {
+	public static function plan(context:CompilationContext, inputs:Array<CBodyFunctionInput>, dispatch:CBodyDispatchGraph):Map<String, Map<Int, Bool>> {
 		final byId:Map<String, MutableAggregateBorrowFunctionInfo> = [];
 		final ordered:Array<MutableAggregateBorrowFunctionInfo> = [];
 		for (input in inputs) {
@@ -3130,7 +3136,7 @@ private class MutableAggregateBorrowPlanner {
 		for (info in ordered)
 			discoverAliases(info.body, info.aliases);
 		for (info in ordered)
-			discoverFacts(context, info, byId);
+			discoverFacts(context, info, byId, dispatch);
 
 		final reverseForwards:Map<String, Array<{info:MutableAggregateBorrowFunctionInfo, sourceId:Int}>> = [];
 		for (info in ordered)
@@ -3203,8 +3209,8 @@ private class MutableAggregateBorrowPlanner {
 	}
 
 	/** Find writes, forwarding edges, and uses that can keep one identity. */
-	static function discoverFacts(context:CompilationContext, info:MutableAggregateBorrowFunctionInfo,
-			byId:Map<String, MutableAggregateBorrowFunctionInfo>):Void {
+	static function discoverFacts(context:CompilationContext, info:MutableAggregateBorrowFunctionInfo, byId:Map<String, MutableAggregateBorrowFunctionInfo>,
+			dispatch:CBodyDispatchGraph):Void {
 		function markEscape(root:Null<Int>, expression:TypedExpr):Void
 			if (root != null && !info.escapes.exists(root))
 				info.escapes.set(root, expression);
@@ -3243,7 +3249,7 @@ private class MutableAggregateBorrowPlanner {
 				case TCall(callee, arguments):
 					final argumentRoots = arguments.map(argument -> directAliasRoot(argument, info.aliases));
 					final hasTrackedIdentity = Lambda.exists(argumentRoots, root -> root != null);
-					final target = hasTrackedIdentity ? directTarget(context, info, callee, arguments, byId) : null;
+					final target = hasTrackedIdentity ? directTarget(context, info, expression.pos, callee, arguments, byId, dispatch) : null;
 					for (index => argument in arguments) {
 						final root = argumentRoots[index];
 						if (root != null) {
@@ -3320,9 +3326,10 @@ private class MutableAggregateBorrowPlanner {
 		return found;
 	}
 
-	/** Reuse the compiler's exact static and final/private instance-call proof. */
-	static function directTarget(context:CompilationContext, caller:MutableAggregateBorrowFunctionInfo, callee:TypedExpr, arguments:Array<TypedExpr>,
-			byId:Map<String, MutableAggregateBorrowFunctionInfo>):Null<MutableAggregateBorrowFunctionInfo> {
+	/** Reuse the authoritative dispatch decision for one exact instance call. */
+	static function directTarget(context:CompilationContext, caller:MutableAggregateBorrowFunctionInfo, callPosition:Position, callee:TypedExpr,
+			arguments:Array<TypedExpr>, byId:Map<String, MutableAggregateBorrowFunctionInfo>,
+			dispatch:CBodyDispatchGraph):Null<MutableAggregateBorrowFunctionInfo> {
 		return switch callee.expr {
 			case TField(_, FStatic(classReference, fieldReference)):
 				final owner = classReference.get();
@@ -3335,7 +3342,14 @@ private class MutableAggregateBorrowPlanner {
 			case TField(receiver, FInstance(owner, _, fieldReference)):
 				final field = fieldReference.get();
 				final declaration = CBodyDispatchCatalog.declaringClass(owner, fieldReference);
-				if (CBodyDispatchCatalog.directReason(receiver, declaration, field) == null) {
+				final planned = dispatch.callFor(caller.id, HaxeSourceSpan.fromPosition(callPosition, caller.input.sourcePath));
+				if (planned != null) {
+					switch planned.kind {
+						case CBDDirect(targetFunctionId, _): byId.get(targetFunctionId);
+						case CBDVirtual(_, _) | CBDInterface(_, _): null;
+					}
+				} else if (declaration.get().params.length != 0
+					|| CBodyDispatchCatalog.directReason(receiver, declaration, field) == null) {
 					null;
 				} else {
 					final baseId = CBodyDispatchCatalog.methodIdForAccess(owner, fieldReference);
@@ -3344,7 +3358,8 @@ private class MutableAggregateBorrowPlanner {
 						.instanceId();
 					byId.get(targetId);
 				}
-			case TParenthesis(inner) | TMeta(_, inner) | TCast(inner, _): directTarget(context, caller, inner, arguments, byId);
+			case TParenthesis(inner) | TMeta(_, inner) | TCast(inner, _):
+				directTarget(context, caller, callPosition, inner, arguments, byId, dispatch);
 			case _: null;
 		};
 	}
@@ -3408,8 +3423,8 @@ private class FunctionPreparer {
 			if (mapping.irType == IRTVoid) {
 				unsupported(input.expression.pos, 'TFunction(argument:${argument.v.name}:Void)');
 			}
-			final hasExactCallbackBody = input.specialization == null
-				&& (input.instanceOwner == null || input.instanceOwner.get().isFinal);
+			final hasMethodSpecialization = input.specialization != null && input.specialization.methodArguments.length != 0;
+			final hasExactCallbackBody = !hasMethodSpecialization && (input.instanceOwner == null || input.instanceOwner.get().isFinal);
 			if (mapping.kind.match(CBVKFunction(_, _))
 				&& hasExactCallbackBody
 				&& parameterIsSynchronousCallback(functionValue.expr, argument.v.id))
@@ -3424,7 +3439,7 @@ private class FunctionPreparer {
 				if (input.instanceOwner != null && !input.instanceOwner.get().isFinal) {
 					unsupported(input.expression.pos, 'TFunction(argument:${argument.v.name}:borrowed-span-requires-static-function)');
 				}
-				if (input.specialization != null) {
+				if (hasMethodSpecialization) {
 					unsupported(input.expression.pos, 'TFunction(argument:${argument.v.name}:borrowed-span-generic-specialization-not-admitted)');
 				}
 			}
@@ -3434,7 +3449,7 @@ private class FunctionPreparer {
 			if (mutableAggregateBorrow) {
 				if (mapping.aggregateValue() == null)
 					unsupported(input.expression.pos, 'TFunction(argument:${argument.v.name}:mutable-borrow-requires-exact-record)');
-				if (input.specialization != null)
+				if (hasMethodSpecialization)
 					unsupported(input.expression.pos, 'TFunction(argument:${argument.v.name}:mutable-borrow-generic-specialization-not-admitted)');
 				if (input.instanceOwner != null && !input.instanceOwner.get().isFinal)
 					unsupported(input.expression.pos, 'TFunction(argument:${argument.v.name}:mutable-borrow-requires-static-or-final-method)');
@@ -3463,7 +3478,7 @@ private class FunctionPreparer {
 			final owner = input.instanceOwner;
 			if (owner == null || !owner.get().isFinal)
 				unsupported(input.expression.pos, "TFunction(return-type:borrowed-span-requires-final-instance-method)");
-			if (input.specialization != null)
+			if (input.specialization != null && input.specialization.methodArguments.length != 0)
 				unsupported(input.expression.pos, "TFunction(return-type:borrowed-span-generic-specialization-not-admitted)");
 			IRBSRReceiverField("parameter.self");
 		} else {
@@ -3474,9 +3489,10 @@ private class FunctionPreparer {
 		final instanceOwner = input.instanceOwner;
 		var selfParameter:Null<PreparedParameter> = null;
 		if (instanceOwner != null) {
-			if (instanceOwner.get().params.length != 0)
+			final ownerArguments = input.specialization == null ? [] : input.specialization.ownerArguments.map(argument -> argument.type);
+			if (instanceOwner.get().params.length != ownerArguments.length)
 				unsupported(input.expression.pos, 'TFunction(instance-owner-generic:${input.declarationPath})');
-			final selfType = admittedValueType(TInst(instanceOwner, []), input.expression.pos, "TFunction(instance-self-type)");
+			final selfType = admittedValueType(TInst(instanceOwner, ownerArguments), input.expression.pos, "TFunction(instance-self-type)");
 			final selfClass = selfType.classValue();
 			if (selfClass == null)
 				unsupported(input.expression.pos, "TFunction(instance-self-not-concrete-class)");
@@ -3486,7 +3502,7 @@ private class FunctionPreparer {
 				ir: {id: "parameter.self", type: selfMapping.irType, source: HaxeSourceSpan.fromPosition(input.expression.pos, input.sourcePath)},
 				mapping: selfMapping,
 				passing: PPValue,
-				borrowedReference: true,
+				borrowedReference: !selfClass.managedByCollector,
 				defaultValue: null
 			};
 		}
@@ -3957,7 +3973,7 @@ private class ConstructorPreparer {
 			case TFunction(value): value;
 			case _: unsupported(input.expression.pos, FunctionBuilder.nodeName(input.expression));
 		};
-		final declaredSignature = switch TypeTools.follow(input.fieldType) {
+		final declaredSignature = switch TypeTools.follow(input.specialization == null ? input.fieldType : input.specialization.apply(input.fieldType)) {
 			case TFun(arguments, result): {arguments: arguments, result: result};
 			case _: unsupported(input.expression.pos, "TFunction(constructor-field-type-not-function)");
 		};
@@ -3969,7 +3985,7 @@ private class ConstructorPreparer {
 		if (returnMapping.irType != IRTVoid)
 			unsupported(input.expression.pos, "TFunction(constructor-return-type-not-Void)");
 
-		final classMapping = admittedValueType(TInst(input.classReference, []), input.expression.pos, "TFunction(constructor-owner-type)");
+		final classMapping = admittedValueType(TInst(input.classReference, input.classParameters), input.expression.pos, "TFunction(constructor-owner-type)");
 		final classValue = classMapping.classValue();
 		if (classValue == null)
 			return unsupported(input.expression.pos, "TFunction(constructor-owner-not-concrete-class)");
@@ -4029,8 +4045,9 @@ private class ConstructorPreparer {
 		final overloadSignature = [constructorTypeKey(signature.selfMapping, "self")];
 		for (index in 0...signature.arguments.length)
 			overloadSignature.push(constructorTypeKey(signature.arguments[index].mapping, 'argument:$index'));
+		final specializationArguments = input.specialization == null ? [] : input.specialization.arguments.map(argument -> argument.key);
 		final functionRequest = new CSymbolRequest(CSKMethod, ["compiler", "constructor"].concat(input.declarationPath.split(".")),
-			CNSOrdinary("translation-unit"), CSVInternal, null, overloadSignature, [], input.sourceOrder);
+			CNSOrdinary("translation-unit"), CSVInternal, null, overloadSignature, specializationArguments, input.sourceOrder);
 		context.symbols.register(functionRequest);
 		final source = HaxeSourceSpan.fromPosition(input.expression.pos, input.sourcePath);
 		final self:PreparedParameter = {
@@ -4061,7 +4078,7 @@ private class ConstructorPreparer {
 			sourcePath: input.sourcePath,
 			displayName: "new",
 			fieldName: "new",
-			specialization: null,
+			specialization: input.specialization,
 			sourceExpression: input.expression,
 			bodyExpression: functionValue.expr,
 			role: PBRConstructor(signature),
@@ -6060,8 +6077,8 @@ private class FunctionBuilder {
 		final constructedPath = CBodyConstructor.classPath(construction.classReference);
 		if (constructedPath != child.haxePath)
 			return unsupported(right, 'TNew(owned-field-type-mismatch:$constructedPath->${child.haxePath})');
-		final constructorId = CBodyConstructor.id(constructedPath);
-		final signature = constructorSignaturesById.get(constructorId);
+		final signature = constructorSignatureForClass(child);
+		final constructorId = signature == null ? CBodyConstructor.id(constructedPath) : signature.input.id;
 		if (signature == null)
 			return unsupported(right, 'TNew(owned-field-constructor-unavailable:$constructorId)');
 		final argumentExpressions = completeDirectCallArguments(right, construction.arguments, signature.arguments, 0, constructorId,
@@ -6461,7 +6478,13 @@ private class FunctionBuilder {
 				// native-layout, or generic class fail at `TVar` before the established
 				// `TNew` diagnostic can explain the actual constructor boundary.
 				final constructionPath = CBodyConstructor.classPath(construction.classReference);
-				final signature = constructorSignaturesById.get(CBodyConstructor.id(constructionPath));
+				final signature = if (construction.classReference.get().params.length == 0) {
+					constructorSignaturesById.get(CBodyConstructor.id(constructionPath));
+				} else {
+					final constructionMapping = bodyValueType(initializer.t, initializer.pos, 'TNew(constructor-discovery:$constructionPath)');
+					final constructionClass = constructionMapping.classValue();
+					constructionClass == null ? null : constructorSignatureForClass(constructionClass);
+				};
 				final constructedClass = signature == null ? null : signature.classValue;
 				if (constructedClass == null || !constructedClass.managedByCollector) {
 					lowerConstructedVariable(variable, initializer, construction, position, ordinal, localId);
@@ -6797,6 +6820,19 @@ private class FunctionBuilder {
 		return aggregateRegistry.optionalValueType(direct, position, input.modulePath, input.sourcePath, rejectAggregateType, '$node.nullable-bytes-local');
 	}
 
+	/** Find the one reachable constructor owned by an exact closed class layout. */
+	function constructorSignatureForClass(classValue:CPreparedBodyClass):Null<PreparedConstructorSignature> {
+		var found:Null<PreparedConstructorSignature> = null;
+		for (signature in constructorSignaturesById) {
+			if (signature.classValue.instanceId != classValue.instanceId)
+				continue;
+			if (found != null)
+				throw new CBodyEmissionError('class `${classValue.displayName}` has multiple reachable constructor instances');
+			found = signature;
+		}
+		return found;
+	}
+
 	function lowerConstructedVariable(variable:TVar, expression:TypedExpr, construction:BodyNewExpression, position:Position, ordinal:Int,
 			localId:String):Void {
 		if (!canUseFunctionLifetimeStackStorage()) {
@@ -6804,21 +6840,20 @@ private class FunctionBuilder {
 		}
 		final classDefinition = construction.classReference.get();
 		final classPath = CBodyConstructor.classPath(construction.classReference);
-		if (construction.parameters.length != 0 || classDefinition.params.length != 0) {
-			// Preserve the established local-type boundary for unsupported generic
-			// class references. Constructor discovery must not make an unrelated
-			// program fail earlier with a less fundamental expression diagnostic.
-			bodyValueType(variable.t, position, 'TVar(${variable.name}:type)');
-			unsupported(expression, 'TNew(generic-class-constructor-requires-specialization:$classPath)');
-		}
 		if (classDefinition.isExtern || classDefinition.meta.has(":c.layout")) {
 			unsupported(expression, 'TNew(unsupported-native-layout:$classPath)');
 		}
 		if (classDefinition.isInterface) {
 			unsupported(expression, 'TNew(interface-layout:$classPath)');
 		}
-		final targetId = CBodyConstructor.id(classPath);
-		final signature = constructorSignaturesById.get(targetId);
+		final constructedMapping = bodyValueType(expression.t, expression.pos, 'TNew(constructed-type:$classPath)');
+		final constructedClass = constructedMapping.classValue();
+		if (constructedClass == null)
+			unsupported(expression, 'TNew(constructed-type-not-concrete-class:$classPath)');
+		if (constructedClass != null && constructedClass.haxePath != classPath)
+			unsupported(expression, 'TNew(constructed-class-type-mismatch:$classPath->${constructedClass.haxePath})');
+		final signature = constructedClass == null ? null : constructorSignatureForClass(constructedClass);
+		final targetId = signature == null ? CBodyConstructor.id(classPath) : signature.input.id;
 		if (signature == null)
 			unsupported(expression, 'TNew(unavailable-constructor:$targetId)');
 		final argumentExpressions = completeDirectCallArguments(expression, construction.arguments, signature.arguments, 0, targetId, "constructor-argument");
@@ -6845,9 +6880,6 @@ private class FunctionBuilder {
 		}
 
 		final source = sourceSpan(position);
-		final constructedClass = localMapping.classValue();
-		if (constructedClass == null)
-			throw new CBodyEmissionError('constructed local `${variable.name}` lost its class layout');
 		final self = lowerStackConstructedObject(expression, signature, targetId, arguments, source, variable.name, constructedClass);
 		final reference = coerce(self, localMapping, expression.pos, 'TNew(result:$targetId)');
 		locals.push({
@@ -7048,8 +7080,6 @@ private class FunctionBuilder {
 
 		final classDefinition = construction.classReference.get();
 		final classPath = CBodyConstructor.classPath(construction.classReference);
-		if (construction.parameters.length != 0 || classDefinition.params.length != 0)
-			return unsupported(expression, 'TNew(generic-class-constructor-requires-specialization:$classPath)');
 		if (classDefinition.isExtern || classDefinition.meta.has(":c.layout"))
 			return unsupported(expression, 'TNew(unsupported-native-layout:$classPath)');
 		if (classDefinition.isInterface)
@@ -7057,8 +7087,8 @@ private class FunctionBuilder {
 		if (classPath != classValue.haxePath)
 			return unsupported(expression, 'TNew(receiver-class-type-mismatch:$classPath->${classValue.haxePath})');
 
-		final targetId = CBodyConstructor.id(classPath);
-		final signature = constructorSignaturesById.get(targetId);
+		final signature = constructorSignatureForClass(classValue);
+		final targetId = signature == null ? CBodyConstructor.id(classPath) : signature.input.id;
 		if (signature == null)
 			return unsupported(expression, 'TNew(unavailable-constructor:$targetId)');
 		final argumentExpressions = completeDirectCallArguments(expression, construction.arguments, signature.arguments, 0, targetId, "constructor-argument");
@@ -7147,8 +7177,8 @@ private class FunctionBuilder {
 		final classPath = CBodyConstructor.classPath(construction.classReference);
 		if (classPath != classValue.haxePath)
 			return unsupported(expression, 'TNew(managed-class-type-mismatch:$classPath->${classValue.haxePath})');
-		final targetId = CBodyConstructor.id(classPath);
-		final signature = constructorSignaturesById.get(targetId);
+		final signature = constructorSignatureForClass(classValue);
+		final targetId = signature == null ? CBodyConstructor.id(classPath) : signature.input.id;
 		if (signature == null)
 			return unsupported(expression, 'TNew(unavailable-constructor:$targetId)');
 		final argumentExpressions = completeDirectCallArguments(expression, construction.arguments, signature.arguments, 0, targetId,
@@ -7434,8 +7464,10 @@ private class FunctionBuilder {
 				// exactly this call. Admit that one alias shape here without broadly
 				// classifying `this` as stack construction: return/storage checks then
 				// retain their more precise owned-child-borrow diagnostics.
+				final selfClass = selfValue == null ? null : selfValue.mapping.classValue();
 				referencesStackConstructedValue(receiver)
-				|| selfValue != null
+				|| selfClass != null
+				&& !selfClass.managedByCollector
 				&& isThisExpression(receiver);
 			case TParenthesis(inner) | TMeta(_, inner) | TCast(inner, _): isDirectStackConstructedAlias(inner);
 			case _: false;
@@ -10220,6 +10252,9 @@ private class FunctionBuilder {
 		final managedArrayAssignment = lowerManagedArrayAssignment(expression, left, right);
 		if (managedArrayAssignment != null)
 			return managedArrayAssignment;
+		final managedArrayLengthAssignment = lowerManagedArrayLengthAssignment(expression, left, right);
+		if (managedArrayLengthAssignment != null)
+			return managedArrayLengthAssignment;
 		final managedCarrier = switch unwrapExpression(left).expr {
 			case TLocal(variable):
 				final binding = managedFlowCarriersByCompilerId.get(variable.id);
@@ -10336,6 +10371,49 @@ private class FunctionBuilder {
 		}
 		appendInstruction(null, IRIOStore(stableTarget.place, value.id), sourceSpan(expression.pos), "store");
 		return value;
+	}
+
+	/**
+		Resize the exact Array carrier used by target-neutral fixed abstractions.
+
+		Haxe's standard `Vector<T>` fallback creates an empty `Array<T>` and writes
+		its length through a typed `untyped` field node. The front end has already
+		fixed that receiver to Array; this structural seam maps the write to the
+		existing checked default-resize operation without introducing a Vector
+		runtime or source override.
+	**/
+	function lowerManagedArrayLengthAssignment(expression:TypedExpr, left:TypedExpr, right:TypedExpr):Null<LoweredValue> {
+		final receiver = switch unwrapExpression(left).expr {
+			case TField(value, FInstance(reference, _, field)) if (CBodyArrayRecognition.isCoreArray(reference)
+				&& field.get().name == "length"):
+				value;
+			case _: return null;
+		};
+		final receiverMapping = bodyValueType(receiver.t, receiver.pos, "TField(Array.length:set-receiver-type)");
+		final array = receiverMapping.arrayValue();
+		if (array == null)
+			return null;
+		if (!arrayHasExactResizeDefault(array.element))
+			return unsupported(right, 'TField(Array.length:set-element-has-no-exact-static-default:${array.element.cSpelling})');
+		final lengthMapping = bodyValueType(right.t, right.pos, "TField(Array.length:set-value-type)");
+		if (typeKey(lengthMapping.irType) != typeKey(IRTInt(32, true)))
+			return unsupported(right, "TField(Array.length:set-value-must-be-Haxe-Int)");
+		final stableReceiver = stabilizeFreshManagedArray(coerce(lowerValue(receiver, receiverMapping), receiverMapping, receiver.pos,
+			"TField(Array.length:set-receiver)"), receiver.pos,
+			"array-length-set-receiver");
+		final length = coerce(lowerValue(right, lengthMapping), lengthMapping, right.pos, "TField(Array.length:set-value)");
+		final source = sourceSpan(expression.pos);
+		appendInstruction(null, IRIONullCheck(stableReceiver.id, IRNCPCheckedAbort(Std.string(context.profile), Std.string(context.buildMode))),
+			sourceSpan(receiver.pos), "array-length-resize-receiver-null-check");
+		appendInstruction(null, IRIOCall({
+			dispatch: IRCDRuntime("array", "resize-default"),
+			arguments: [stableReceiver.id, length.id],
+			returnType: IRTVoid,
+			failure: managedArrayFailure()
+		}), source, "array-length-resize-default");
+		runtimeRequirements.push(new CBodyRuntimeRequirement("array", "resize-default",
+			"typed Array length initialization for a fixed target-neutral carrier", source, expression.pos));
+		return {id: length.id, type: length.type, mapping: lengthMapping};
 	}
 
 	/**
@@ -14195,7 +14273,11 @@ private class FunctionBuilder {
 		final field = access.field.get();
 		final baseTargetId = CBodyDispatchCatalog.methodIdForAccess(access.owner, access.field);
 		final interfaceCall = declaration.get().isInterface;
-		final ownerMapping = bodyValueType(interfaceCall ? access.receiver.t : TInst(declaration, []), access.receiver.pos,
+		final closedOwnerArguments = access.ownerArguments.map(argument -> applyCurrentSpecialization(argument));
+		if (!interfaceCall && declaration.get().params.length != closedOwnerArguments.length)
+			return unsupported(expression,
+				'TCall(instance:$baseTargetId:owner-argument-count:${closedOwnerArguments.length}-for-${declaration.get().params.length})');
+		final ownerMapping = bodyValueType(interfaceCall ? access.receiver.t : TInst(declaration, closedOwnerArguments), access.receiver.pos,
 			'TCall(instance:$baseTargetId:receiver-type)');
 		if (!interfaceCall && ownerMapping.classValue() == null)
 			return unsupported(expression, 'TCall(instance:$baseTargetId:receiver-not-concrete-class)');
@@ -14210,11 +14292,26 @@ private class FunctionBuilder {
 		};
 		receiver = coerce(receiver, ownerMapping, access.receiver.pos, 'TCall(instance:$baseTargetId:receiver)');
 
-		final directReason = interfaceCall ? null : CBodyDispatchCatalog.directReason(access.receiver, declaration, field);
-		final targetId = directReason != null
-			&& field.params.length != 0 ? CGenericCallResolver.resolve(baseTargetId, field.type, field.params, access.calleeType,
+		final callPlan = dispatch.graph.callFor(input.irId, sourceSpan(expression.pos));
+		final plannedDirect = callPlan == null ? null : switch callPlan.kind {
+			case CBDDirect(targetFunctionId, reason): {targetFunctionId: targetFunctionId, reason: reason};
+			case CBDVirtual(_, _) | CBDInterface(_, _): null;
+		};
+		final directReason = interfaceCall ? null : plannedDirect == null ? CBodyDispatchCatalog.directReason(access.receiver, declaration,
+			field) : plannedDirect.reason;
+		final targetId = if (plannedDirect != null) {
+			plannedDirect.targetFunctionId;
+		} else if (directReason == null || declaration.get().params.length == 0 && field.params.length == 0) {
+			baseTargetId;
+		} else {
+			final canonicalizer = new CGenericTypeCanonicalizer(context.profile);
+			final ownerArguments = closedOwnerArguments.map(argument -> canonicalizer.normalize(argument, expression.pos, unsupportedAt,
+				'TCall(instance-owner-specialization:$baseTargetId)'));
+			final methodArguments = CGenericCallResolver.resolve(baseTargetId, field.type, field.params, access.calleeType,
 				argumentExpressions.map(argument -> argument.t), input.specialization, context.profile, expression.pos, unsupportedAt)
-				.instanceId() : baseTargetId;
+				.arguments;
+			new CResolvedGenericCall(baseTargetId, ownerArguments.concat(methodArguments)).instanceId();
+		};
 		final explicitMappings:Array<CBodyValueType> = [];
 		final explicitBorrowedClasses:Array<Bool> = [];
 		var returnMapping:CBodyValueType;
@@ -15704,12 +15801,24 @@ private class FunctionBuilder {
 				final owner = classReference.get();
 				final field = fieldReference.get();
 				final baseFunctionId = CBodyLowering.functionId(owner.pack.concat([owner.name]).join("."), field.name);
-				CGenericCallResolver.resolve(baseFunctionId, field.type, field.params, callee.t, arguments.map(argument -> argument.t), input.specialization,
-					context.profile, callee.pos, unsupportedAt)
+				final declaredOwnerParameters = switch owner.kind {
+					case KAbstractImpl(abstractReference): abstractReference.get().params;
+					case _: owner.params;
+				};
+				final ownerParameters = declaredOwnerParameters.filter(parameter -> !hasTypeParameterNamed(field.params, parameter.name));
+				CGenericCallResolver.resolve(baseFunctionId, field.type, ownerParameters.concat(field.params), callee.t,
+					arguments.map(argument -> argument.t), input.specialization, context.profile, callee.pos, unsupportedAt)
 					.instanceId();
 			case TParenthesis(inner) | TMeta(_, inner) | TCast(inner, _): directStaticFunctionId(inner, arguments);
 			case _: unsupported(callee, 'TCall(callee=${nodeName(callee)}:not-direct-static)');
 		};
+	}
+
+	static function hasTypeParameterNamed(parameters:Array<TypeParameter>, name:String):Bool {
+		for (parameter in parameters)
+			if (parameter.name == name)
+				return true;
+		return false;
 	}
 
 	function primitiveMapping(type:Type, position:Position, node:String):CPrimitiveTypeMapping {

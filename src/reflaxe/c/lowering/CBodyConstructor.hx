@@ -3,6 +3,7 @@ package reflaxe.c.lowering;
 #if (macro || reflaxe_runtime)
 import haxe.macro.Type;
 import reflaxe.c.ast.CAST.CIdentifier;
+import reflaxe.c.lowering.CGenericSpecialization.CGenericFunctionSpecialization;
 
 /** Stable typed-input facts for one reachable concrete Haxe constructor. */
 typedef CBodyConstructorInput = {
@@ -14,6 +15,8 @@ typedef CBodyConstructorInput = {
 	final fieldType:Type;
 	final expression:TypedExpr;
 	final classReference:Ref<ClassType>;
+	final classParameters:Array<Type>;
+	final specialization:Null<CGenericFunctionSpecialization>;
 	final baseConstructorId:Null<String>;
 	final elided:Bool;
 	final canFail:Bool;

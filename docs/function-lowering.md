@@ -249,21 +249,28 @@ are registered snapshots. A module function using a rest argument proves that
 unsupported module fields still stop at the source with `HXC1001` and leave no
 output.
 
-## Closed generic functions
+## Closed generic functions and owners
 
-E3.T03 specializes reachable direct static generic functions for closed
-primitive and admitted enum arguments. The graph worklist keys each instance by
-the base function plus a length-prefixed normalized argument sequence, merges
-aliases and repeated call reasons, and registers the instance before scanning
-its body so recursion terminates. Full keys remain authoritative when SHA-256
-supplies compact instance and C-symbol suffixes.
+E3.T03 specializes reachable direct generic functions and constructors for
+closed primitive, enum, record, Array, String, transparent-abstract, nullable,
+and ordinary managed-class arguments. The graph worklist keys each instance by
+the base function plus a length-prefixed normalized argument sequence, with
+owner arguments before method arguments. It merges aliases and repeated call
+reasons, and registers the instance before scanning its body so recursion
+terminates. Full keys remain authoritative when SHA-256 supplies compact
+instance and C-symbol suffixes.
 
-Dynamic, open, reference, class, anonymous-record, function, nullable, and
-native-pointer arguments remain exact source-positioned `HXC1001` boundaries.
-The compiler also rejects a 65th generic function or enum instance and a project
-whose conservative specialization estimate exceeds 524,288 C bytes. Successful
-generic builds emit the schema-2 `hxc.specializations.json` sidecar and remain
-runtime-free. See [deterministic generic
+Closed generic instance methods additionally require one proven effective
+target after reachable construction discovery reaches a fixed point. A
+reachable descendant override makes the call fail closed because generic
+virtual slots are not yet represented. Dynamic, open, extern/interface,
+function, unsupported nullable, and native-pointer arguments remain exact
+source-positioned `HXC1001` boundaries. The compiler also rejects a 65th
+generic function or enum instance and a project whose conservative
+specialization estimate exceeds 524,288 C bytes. Successful generic builds
+emit the schema-2 `hxc.specializations.json` sidecar. Specialization itself adds
+no runtime feature; a managed class, Array, or String argument still composes
+its already-proven runtime plan. See [deterministic generic
 specialization](generic-specialization.md).
 
 ## Calls, conversions, and C evaluation order
@@ -399,7 +406,8 @@ output roots byte for byte, validates the analyzed sidecars, and compiles/runs
 both fixture and production C under strict GCC and Clang lanes at `-O0` and
 `-O2`.
 
-Broader object/string operations, general arrays, generic classes/references,
+Broader object/string operations, general Array element shapes, generic
+virtual/interface slots, open or extern/interface owner arguments,
 descriptor-driven generic bodies, unresolved virtual/interface omission,
 escaping, nested, recursive, or self-capturing closures, callback sites without
 a proven synchronous-use contract, exceptions, escaping allocation, recursive

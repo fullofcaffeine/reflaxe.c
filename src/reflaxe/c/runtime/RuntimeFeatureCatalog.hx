@@ -675,7 +675,7 @@ class RuntimeFeatureCatalog {
 		return switch name {
 			case "abi.h": "787d82dc867999ba8e8e6987cc6933ad6f6ab5d087b415e97042934c454ccf62";
 			case "allocator.h": "6e21c0bc498eb40bcec901914a04dd1bee33b6b21e5a27f1ac5f169a8a1cc448";
-			case "array.h": "a956c23d87ab178201680d8ba3bf5ebebfe440d368b0f9034d41b12564f14056";
+			case "array.h": "32782a39200bd43c463e566b546dea0a45de4feb39e8e287f2c48351dcb9c41f";
 			case "array_join.h": "5829a159dab0bd3446b5bc418c2ee32ad2902c0fec6bcc04f82efeb66c294fea";
 			case "base.h": "cf68416ee75e41c21db28eb4a755a2bd1b060e0ab7cdcb8db1311fd04a282ba0";
 			case "bytes.h": "3f2dc89578ee5381e98051c5b3d06dcb6859e0cce10535edaba9c9bf5b38f31d";
@@ -705,7 +705,7 @@ class RuntimeFeatureCatalog {
 		return switch name {
 			case "abi.c": "3300a4498a7ca20f771b1334d7be8f2c908d2bb067ea8f2fe3c059300e680b32";
 			case "allocator.c": "13385273c7c3d4a15785caa3095dd82d97bda8a026ebd9b6d54e2f531eb3b10e";
-			case "array.c": "0a25417f171789397134d802fff42ef8b441f6a874e893eb5a61dcd23a8b9f2e";
+			case "array.c": "2f93e4b34ea5fc3574b1b8be795e65dc8dfcd025f05403110a1c22363610cf17";
 			case "array_join.c": "b158708b62c7e407f9da21c24a1b3306d4b41baa6b63f2d8019f631a98008fde";
 			case "bytes.c": "902f1a40eb6ff1d94cc58d48a8096c9c0cb60eef4e6e9b0d0469448f929bfcb8";
 			case "bytes_string.c": "0ee9604f1b4ae78baeeaf7cac8b2a35b5634f115c958a7575230c790e8aa6ca6";

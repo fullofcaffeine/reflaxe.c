@@ -280,6 +280,16 @@ logical source order. Exact existing-slot sources are supported:
   retain the replacement before releasing the prior destination; and
 - remove destroys exactly the removed element and relocates the suffix left.
 
+An indexed write has one additional pinned-Haxe boundary. An index below the
+current length assigns an existing slot. An index exactly equal to the length
+appends one element through the same checked copy path as `push`; an index above
+the length returns `HXC_STATUS_OUT_OF_RANGE`. The append is failure-atomic: a
+failed allocation or element copy leaves the old length, sequence, and element
+ownership unchanged. The unchanged generic-target implementation of
+`Vector.toArray()` depends on this rule because it creates an empty Array and
+writes each result at the next index. No Vector-specific runtime operation is
+needed.
+
 The compiler-used `pop` operation is deliberately a move, not a copy followed
 by removal. A nonempty pop byte-relocates the last live element into separate,
 correctly aligned output storage, shortens the Array, and does not call the
@@ -492,6 +502,8 @@ The fixture proves:
 - distinct primitive-copy storage, independent mutation, and the in-place copy
   used when the collector owns the destination Array container;
 - exact-slot aliasing across both relocation and suffix shifts;
+- indexed append at exactly `length`, rejection above `length`, and unchanged
+  sequence and reference counts after injected append-copy failure;
 - reference-element shallow-copy retain counts, retain-before-release
   assignment, ownership-transferring `pop` and `shift` with no lifecycle
   callbacks, and
@@ -515,6 +527,11 @@ pair of sequential value switches proves that the first joined local is
 released when the second switch returns early. The same source runs under Eval
 and generated native C, while the HxcIR shape check confirms the ownership
 decision is made before CAST and printing.
+
+The Vector/List differential reuses the same registered runtime. It proves the
+unchanged pinned `Vector.toArray()` indexed-append path, including primitive
+and collector-managed Array carriers, while the direct runtime fixture owns the
+adversarial allocation/copy rollback and reference-count checks.
 
 A pinned Haxe Eval trace covers the common observable mutation sequence. Eval
 is a dynamic target, so the oracle pushes explicit zero values instead of using

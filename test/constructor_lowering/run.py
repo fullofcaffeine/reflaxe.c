@@ -96,7 +96,7 @@ NEGATIVE_CASES = {
     ),
     "direct_argument_escape": "TNew(stack-construction-requires-direct-local)",
     "escape_alias": "TNew(stack-reference-escape:assignment)",
-    "generic": "TVar(box:type):generic-class-reference-requires-bounded-class-specialization:Box",
+    "generic": "function-type-argument-requires-E3.T08-closure-analysis",
     "instance_parameter": "function-exit:unowned-fresh-managed-enum-value",
     "recursive_enum_parameter": "function-exit:unowned-fresh-managed-enum-value",
     "interface_parameter_escape": (

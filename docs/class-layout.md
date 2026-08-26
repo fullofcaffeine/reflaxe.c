@@ -1,9 +1,10 @@
 # Concrete class instance layouts
 
-E3.T04 adds a bounded production representation for ordinary non-generic Haxe
-classes. Reachable class declarations lower through schema-23 HxcIR to private
-concrete C structs, while Haxe class values remain nullable references to that
-storage. A class proven not to escape keeps this direct, runtime-free form. The
+E3.T04 adds a bounded production representation for ordinary Haxe classes.
+Reachable non-generic declarations and exact closed generic instances lower
+through schema-23 HxcIR to private concrete C structs, while Haxe class values
+remain nullable references to that storage. A class proven not to escape keeps
+this direct, runtime-free form. The
 bounded `Array<Class>` graph path and retained-interface-field path instead
 give the same payload an exact traced representation backed by the selective
 collector. A concrete class that crosses a reachable function return uses that
@@ -18,11 +19,13 @@ see [bounded constructor lowering](constructor-lowering.md).
 
 ## Nominal storage and inheritance
 
-`CBodyClassRegistry` accepts reachable, concrete, non-extern, non-interface,
-non-generic class declarations. Each class receives a collision-checked
-semantic identity derived from its logical Haxe path. Discovery order, checkout
-location, locale, profile, and runtime policy do not participate in that
-identity.
+`CBodyClassRegistry` accepts reachable, concrete, non-extern, non-interface
+class declarations. A generic declaration must arrive as an exact closed
+specialization. Its fields and base arguments are substituted before any C
+representation is chosen. Each class instance receives a collision-checked
+semantic identity derived from its logical Haxe path and recursively normalized
+owner arguments. Discovery order, checkout location, locale, profile, and
+runtime policy do not participate in that identity.
 
 An `IRTKClass` declaration records:
 
@@ -118,9 +121,11 @@ This is deliberately a bounded graph path, not a claim of every heap-class
 shape. A retained interface is admitted only as the first initialization of
 the constructing object's own field. Managed construction, returned class
 references, virtual headers, and inline owned fields each have focused
-evidence; generic classes and other unproved escape shapes still fail with a
-source-positioned diagnostic. They must gain their own representation and
-lifetime evidence rather than inheriting this result by accident.
+evidence. A generic class still fails with a source-positioned diagnostic
+unless closed specialization proves its exact owner arguments and one
+effective method target. Generic virtual/interface slots and other unproved
+escape shapes need their own representation and lifetime evidence rather than
+inheriting this result by accident.
 
 ## Layout and ABI boundary
 
@@ -171,8 +176,11 @@ portable and metal, snapshots HxcIR/private C/finalized symbols, and verifies
 byte-identical production roots under automatic and explicit runtime-none
 policy. Required CI lanes compile and run the checked-in generated C plus its
 C++17 layout companion under identity-verified GCC/G++ and Clang/Clang++ at
-both optimization levels. Negative fixtures cover interfaces, generic classes,
-and downcasts without broadening those later-owned capabilities. Constructor
+both optimization levels. Negative fixtures cover interfaces, open generic
+classes, and downcasts without broadening those later-owned capabilities. The
+generic-specialization suite separately proves exact `Box<Int>` and
+`Box<Payload>` layouts, constructors, tracing, and methods in every project
+layout. Constructor
 and escaping-allocation boundaries live in the dedicated E3.T05 suite.
 The E3.T06 suite separately proves that a reachable hierarchy header is
 root-only and that a final direct-call class keeps the header-free layout.

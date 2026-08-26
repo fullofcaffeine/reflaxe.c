@@ -192,7 +192,7 @@ HXC_API hxc_status hxc_array_insert_copy(
   const void *element
 );
 
-/** Assign one live slot, including from another slot in the same array. */
+/** Assign one live slot, or append when `index` equals `length`. */
 HXC_API hxc_status hxc_array_set_copy(
   hxc_array *array,
   size_t index,
@@ -462,7 +462,7 @@ HXC_API hxc_status hxc_array_ref_resize_default(
   const void *default_element
 );
 
-/** Replace one trivial element after a bounds check. */
+/** Replace one element, or append when the index equals the current length. */
 HXC_API hxc_status hxc_array_ref_set_copy(
   hxc_array_ref *array,
   size_t index,

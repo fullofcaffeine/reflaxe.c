@@ -895,6 +895,7 @@ class CProjectEmitter {
 				|| specialization.reasons.length == 0
 				|| specialization.semanticDigestSha256 != Sha256.encode(specialization.specializationKey)
 				|| specialization.instanceId != 'function.specialization.${specialization.semanticDigestSha256}'
+				&& specialization.instanceId != 'constructor.specialization.${specialization.semanticDigestSha256}'
 				|| priorFunctionKey != null
 				&& compareUtf8(priorFunctionKey, specialization.specializationKey) >= 0
 				|| specialization.codeSize.metric != "strict-c11-utf8-function-definition-bytes"
@@ -1176,7 +1177,7 @@ class CProjectEmitter {
 		// canonicalizer. Project emission must not reject a representation that
 		// body lowering has already admitted and recorded structurally.
 		switch representation {
-			case "direct-primitive" | "direct-enum" | "managed-array" | "direct-record" | "immutable-string" | "nullable-value":
+			case "direct-primitive" | "direct-enum" | "managed-class" | "managed-array" | "direct-record" | "immutable-string" | "nullable-value":
 			case _:
 				fail('generic type argument `$parameter` has unknown representation `$representation`');
 		}

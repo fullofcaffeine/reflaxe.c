@@ -932,7 +932,7 @@ def check_production() -> None:
 def check_negative_cases() -> None:
     cases = {
         "interface": "TConst(TNull:requires-nullable-reference-or-direct-optional-context)",
-        "generic": "generic-class-reference-requires-bounded-class-specialization:Box",
+        "generic": "function-type-argument-requires-E3.T08-closure-analysis",
         "downcast": "function.Std.downcast",
     }
     with tempfile.TemporaryDirectory(prefix="hxc-class-layout-negative-") as temporary:

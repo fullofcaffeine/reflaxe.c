@@ -2275,10 +2275,39 @@ def validate() -> list[str]:
         errors.append(
             "generic-specialization runner must expose the required native matrix seam"
         )
-    if "compiler_family" not in generic_runner or '"--version"' not in generic_runner:
+    compiler_discovery = read_text(
+        ROOT / "scripts/test/compiler_discovery.py", errors
+    )
+    shared_generic_compiler_identity = (
+        "from scripts.test.compiler_discovery import compiler_family, resolve_compiler"
+        in generic_runner
+        and "def compiler_family" in compiler_discovery
+        and "def resolve_compiler" in compiler_discovery
+        and '"--version"' in compiler_discovery
+        and 'base = "g++" if language == "c++" else "gcc"' in compiler_discovery
+    )
+    local_generic_compiler_identity = (
+        "def compiler_family" in generic_runner and '"--version"' in generic_runner
+    )
+    if not (shared_generic_compiler_identity or local_generic_compiler_identity):
         errors.append(
             "generic-specialization runner must verify required compiler-family identity"
         )
+
+    vector_list_runner = read_text(
+        ROOT / "test/differential/vector-list/run.py", errors
+    )
+    for required_vector_list_toolchain_contract in (
+        "from scripts.test.compiler_discovery import resolve_compiler",
+        'resolve_compiler(family, "c++")',
+        'choices=("auto", *TOOLCHAINS)',
+        "toolchain.cpp_compiler",
+    ):
+        if required_vector_list_toolchain_contract not in vector_list_runner:
+            errors.append(
+                "Vector/List runner lost identity-matching C/C++ toolchain contract "
+                + required_vector_list_toolchain_contract
+            )
 
     evaluation_runner = read_text(ROOT / "test/evaluation_order/run.py", errors)
     for required_evaluation_flag in (

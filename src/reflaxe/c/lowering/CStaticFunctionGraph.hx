@@ -12,6 +12,7 @@ import reflaxe.c.lowering.CBodyLowering.CBodyFunctionInput;
 import reflaxe.c.lowering.CBodyLowering.CBodyGlobalInput;
 import reflaxe.c.lowering.CBodyLowering.CBodyInitializerInput;
 import reflaxe.c.lowering.CBodyConstructor.CBodyConstructorInput;
+import reflaxe.c.lowering.CBodyArray.CBodyArrayRecognition;
 import reflaxe.c.lowering.CBodyBytes.CBodyBytesRecognition;
 import reflaxe.c.lowering.CBodyIterator.CBodyIteratorRecognition;
 import reflaxe.c.lowering.CBodyTypedMap.CBodyTypedMapRecognition;
@@ -140,21 +141,22 @@ class CStaticFunctionGraphCollector {
 						add(target, byId, pending);
 				}
 			case TNew(classReference, _, _)
-				if (CBodyIteratorRecognition.arrayKind(classReference) != null
+				if (CBodyArrayRecognition.isCoreArray(classReference)
+					|| CBodyIteratorRecognition.arrayKind(classReference) != null
 					|| CBodyIteratorRecognition.isMapKeyValue(classReference)
 					|| CBodyTypedMapRecognition.family(classReference) != null):
 				// Array cursors have one compiler-owned shared representation. Their
 				// target-source class exists for natural Haxe typing, not ordinary
 				// construction, method reachability, or virtual-table discovery.
-			case TNew(classReference, _, _):
-				final target = constructorForGraph(classReference, availableConstructors);
+			case TNew(classReference, parameters, _):
+				final target = constructorForGraph(classReference, parameters, caller, expression.pos, availableConstructors);
 				if (target != null) {
 					addConstructor(target, constructorsById, pendingConstructors);
 				}
 				if (currentConstructor != null && target != null) {
 					addConstructorDependency(currentConstructor.id, target.id, expression.pos, constructorDependencies);
 				}
-				for (method in requireDispatchCatalog().markConstructed(classReference))
+				for (method in requireDispatchCatalog().markConstructed(classReference, parameters, caller.specialization, expression.pos, caller.sourcePath))
 					add(method, byId, pending);
 			case TCall(callee, _) if (currentConstructor != null && isSuperCall(callee)):
 				final baseId = currentConstructor.baseConstructorId;
@@ -286,11 +288,39 @@ class CStaticFunctionGraphCollector {
 		}
 	}
 
-	static function constructorForGraph(reference:Ref<ClassType>, available:Map<String, CBodyConstructorInput>):Null<CBodyConstructorInput> {
+	function constructorForGraph(reference:Ref<ClassType>, parameters:Array<Type>, caller:CBodyFunctionInput, position:haxe.macro.Expr.Position,
+			available:Map<String, CBodyConstructorInput>):Null<CBodyConstructorInput> {
 		final definition = reference.get();
-		if (definition.isExtern || definition.meta.has(":c.layout") || definition.isInterface || definition.params.length != 0)
+		if (definition.isExtern || definition.meta.has(":c.layout") || definition.isInterface)
 			return null;
-		return available.get(CBodyConstructor.id(CBodyConstructor.classPath(reference)));
+		final base = available.get(CBodyConstructor.id(CBodyConstructor.classPath(reference)));
+		if (base == null || definition.params.length == 0)
+			return base;
+		if (definition.params.length != parameters.length)
+			unsupportedAt(position, caller.sourcePath,
+				'TNew(constructor-owner-argument-count:${parameters.length}-for-${definition.params.length}:${base.id})');
+		final canonicalizer = new CGenericTypeCanonicalizer(context.profile);
+		final arguments = parameters.map(parameter ->
+			canonicalizer.normalize(caller.specialization == null ? parameter : caller.specialization.apply(parameter), position,
+			(failurePosition, node) -> unsupportedAt(failurePosition, caller.sourcePath, node), 'TNew(constructor-specialization:${base.id})'));
+		final reason = new CGenericSpecializationReason(CBodyLowering.functionInputId(caller), HaxeSourceSpan.fromPosition(position, caller.sourcePath),
+			position);
+		final specialization = requireSpecializationParts(base.id, "new", definition.params, [], arguments, reason, "constructor.specialization");
+		return {
+			id: specialization.instanceId,
+			modulePath: base.modulePath,
+			declarationPath: base.declarationPath,
+			sourcePath: base.sourcePath,
+			sourceOrder: base.sourceOrder,
+			fieldType: base.fieldType,
+			expression: base.expression,
+			classReference: base.classReference,
+			classParameters: specialization.ownerArguments.map(argument -> argument.type),
+			specialization: specialization,
+			baseConstructorId: base.baseConstructorId,
+			elided: false,
+			canFail: false
+		};
 	}
 
 	static function addConstructor(input:CBodyConstructorInput, byId:Map<String, CBodyConstructorInput>, pending:Array<CBodyConstructorInput>):Void {
@@ -325,7 +355,9 @@ class CStaticFunctionGraphCollector {
 			fieldType: input.fieldType,
 			expression: input.expression,
 			typeParameters: [],
-			specialization: null
+			ownerTypeParameters: input.classReference.get().params,
+			specialization: input.specialization,
+			instanceOwner: input.classReference
 		};
 
 	static function isSuperCall(callee:TypedExpr):Bool {
@@ -339,6 +371,12 @@ class CStaticFunctionGraphCollector {
 	function requireSpecialization(base:CBodyFunctionInput, arguments:Array<CGenericTypeArgument>,
 			reason:CGenericSpecializationReason):CGenericFunctionSpecialization {
 		final baseId = CBodyLowering.functionInputId(base);
+		return requireSpecializationParts(baseId, base.fieldName, ownerTypeParameters(base), methodTypeParameters(base), arguments, reason);
+	}
+
+	function requireSpecializationParts(baseId:String, fieldName:String, ownerParameters:Array<TypeParameter>, methodParameters:Array<TypeParameter>,
+			arguments:Array<CGenericTypeArgument>, reason:CGenericSpecializationReason,
+			instancePrefix:String = "function.specialization"):CGenericFunctionSpecialization {
 		final key = CGenericTypeCanonicalizer.functionKey(baseId, arguments);
 		final existing = specializationsByKey.get(key);
 		if (existing != null) {
@@ -351,7 +389,8 @@ class CStaticFunctionGraphCollector {
 				reason.source),
 				reason.position);
 		}
-		final specialization = new CGenericFunctionSpecialization(baseId, base.fieldName, typeParameters(base), arguments, reason);
+		final specialization = new CGenericFunctionSpecialization(baseId, fieldName, ownerParameters, arguments.slice(0, ownerParameters.length),
+			methodParameters, arguments.slice(ownerParameters.length), reason, instancePrefix);
 		final priorKey = specializationKeysByDigest.get(specialization.digest);
 		if (priorKey != null && priorKey != specialization.key) {
 			throw new CBodyEmissionError('generic specialization digest collision `${specialization.digest}` between `$priorKey` and `${specialization.key}`');
@@ -371,13 +410,20 @@ class CStaticFunctionGraphCollector {
 			sourceOrder: base.sourceOrder,
 			fieldType: base.fieldType,
 			expression: base.expression,
-			typeParameters: typeParameters(base),
+			typeParameters: methodTypeParameters(base),
+			ownerTypeParameters: ownerTypeParameters(base),
 			specialization: specialization,
 			instanceOwner: base.instanceOwner
 		};
 
-	static function typeParameters(input:CBodyFunctionInput):Array<TypeParameter>
+	static function methodTypeParameters(input:CBodyFunctionInput):Array<TypeParameter>
 		return input.typeParameters == null ? [] : input.typeParameters;
+
+	static function ownerTypeParameters(input:CBodyFunctionInput):Array<TypeParameter>
+		return input.ownerTypeParameters == null ? [] : input.ownerTypeParameters;
+
+	static function typeParameters(input:CBodyFunctionInput):Array<TypeParameter>
+		return ownerTypeParameters(input).concat(methodTypeParameters(input));
 
 	static function isCompilerIntrinsicCall(callee:TypedExpr):Bool {
 		return switch callee.expr {
@@ -401,6 +447,14 @@ class CStaticFunctionGraphCollector {
 	static function staticFunctionInputs(program:TypedProgramInput):Map<String, CBodyFunctionInput> {
 		final result:Map<String, CBodyFunctionInput> = [];
 		for (declaration in program.declarations) {
+			final declarationTypeParameters = switch declaration.raw {
+				case TClassDecl(reference):
+					switch reference.get().kind {
+						case KAbstractImpl(abstractReference): abstractReference.get().params;
+						case _: reference.get().params;
+					}
+				case _: [];
+			};
 			for (field in declaration.fields) {
 				if (declaration.isExtern || field.role != "static" || field.isExtern || field.expression == null || field.rawClassField == null) {
 					continue;
@@ -417,6 +471,7 @@ class CStaticFunctionGraphCollector {
 							fieldType: field.rawClassField.type,
 							expression: field.expression,
 							typeParameters: field.rawClassField.params,
+							ownerTypeParameters: declarationTypeParameters.filter(parameter -> !hasNamedParameter(field.rawClassField.params, parameter.name)),
 							specialization: null
 						};
 						result.set(CBodyLowering.functionId(input.declarationPath, input.fieldName), input);
@@ -456,6 +511,8 @@ class CStaticFunctionGraphCollector {
 					fieldType: field.rawClassField.type,
 					expression: field.expression,
 					classReference: classReference,
+					classParameters: [],
+					specialization: null,
 					baseConstructorId: baseConstructorId,
 					elided: false,
 					canFail: false
@@ -489,6 +546,8 @@ class CStaticFunctionGraphCollector {
 				fieldType: input.fieldType,
 				expression: input.expression,
 				classReference: input.classReference,
+				classParameters: input.classParameters,
+				specialization: input.specialization,
 				baseConstructorId: input.baseConstructorId,
 				elided: constructorIsTrivial(id, selected, trivial),
 				canFail: constructorCanFail(id, selected, dependencies, failing)
@@ -628,6 +687,14 @@ class CStaticFunctionGraphCollector {
 	**/
 	static function readableDeclarationPath(declaration:TypedAstDeclaration):Null<String>
 		return declaration.classKind == "module-fields" ? declaration.ownerModulePath : null;
+
+	/** A static method parameter with the same name shadows the abstract owner. */
+	static function hasNamedParameter(parameters:Array<TypeParameter>, name:String):Bool {
+		for (parameter in parameters)
+			if (parameter.name == name)
+				return true;
+		return false;
+	}
 
 	static function add(input:CBodyFunctionInput, byId:Map<String, CBodyFunctionInput>, pending:Array<CBodyFunctionInput>):Void {
 		final id = CBodyLowering.functionInputId(input);
