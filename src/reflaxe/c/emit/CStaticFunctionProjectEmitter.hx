@@ -216,8 +216,8 @@ class CStaticFunctionProjectEmitter {
 			throw new ProjectEmissionError("a compiler-owned initialization name requires an explicit initialization order");
 		}
 
-		final bodyEmitter = new CBodyEmitter(lowered.aggregates, lowered.enums, lowered.classes, lowered.arrays, lowered.iterators, lowered.intMaps, lowered.stringMaps,
-			lowered.bytes, lowered.optionals, lowered.dispatch, lowered.imports, lowered.managedProgram);
+		final bodyEmitter = new CBodyEmitter(lowered.aggregates, lowered.enums, lowered.classes, lowered.arrays, lowered.iterators, lowered.intMaps,
+			lowered.stringMaps, lowered.typedMaps, lowered.bytes, lowered.optionals, lowered.dispatch, lowered.imports, lowered.managedProgram);
 		final helperEmitter = new CPrimitiveHelperEmitter(lowered.helpers);
 		final nonReturningFunctionIds = nonReturningCallCycles(lowered.functions);
 		var hasNonReturningFunctions = false;

@@ -27,6 +27,42 @@ typedef hxc_status (*hxc_iterator_element_copy_fn)(
 /** Destroy one live snapshot or yielded element. */
 typedef void (*hxc_iterator_element_destroy_fn)(void *context, void *element);
 
+/** Visit one producer-defined managed child while constructing exact roots. */
+typedef void (*hxc_iterator_root_visit_fn)(
+  void *visit_context,
+  const void *object
+);
+
+/** Visit every exact collector pointer reachable from one snapshot element. */
+typedef void (*hxc_iterator_element_trace_fn)(
+  void *context,
+  const void *element,
+  hxc_iterator_root_visit_fn visit,
+  void *visit_context
+);
+
+/** Register exact snapshot roots without forcing every iterator to link GC. */
+typedef hxc_status (*hxc_iterator_roots_register_fn)(
+  void *context,
+  const void **slots,
+  size_t slot_count,
+  void **out_registration
+);
+
+/** Unregister one opaque root handle published by the matching callback. */
+typedef hxc_status (*hxc_iterator_roots_unregister_fn)(
+  void *registration
+);
+
+/** Optional root-table policy supplied only by collector-backed producers. */
+typedef struct hxc_iterator_root_ops {
+  void *context;
+  void *trace_context;
+  hxc_iterator_element_trace_fn trace_element;
+  hxc_iterator_roots_register_fn register_roots;
+  hxc_iterator_roots_unregister_fn unregister_roots;
+} hxc_iterator_root_ops;
+
 /** Complete unboxed element layout and lifetime policy for Iterator<T>. */
 typedef struct hxc_iterator_element_ops {
   size_t size;
@@ -34,6 +70,7 @@ typedef struct hxc_iterator_element_ops {
   void *context;
   hxc_iterator_element_copy_fn copy;
   hxc_iterator_element_destroy_fn destroy;
+  hxc_iterator_element_trace_fn trace;
 } hxc_iterator_element_ops;
 
 /** Fill the next uninitialized snapshot slot from one producer-owned cursor. */
@@ -59,6 +96,29 @@ HXC_API bool hxc_iterator_element_ops_is_valid(
  * until the final iterator alias is released.
  */
 HXC_API hxc_status hxc_iterator_ref_create_snapshot(
+  hxc_allocator allocator,
+  hxc_iterator_element_ops elements,
+  size_t length,
+  hxc_iterator_snapshot_fill_fn fill,
+  void *fill_context,
+  void *anchor,
+  hxc_iterator_anchor_release_fn release_anchor,
+  hxc_iterator_ref **out_iterator
+);
+
+/**
+ * Build a snapshot and register every exact managed child as a collector root.
+ *
+ * `roots.trace_element` can provide producer-owned trace context that is needed
+ * only during construction. When it is null, `elements.trace` and
+ * `elements.context` provide the trace policy. The iterator retains neither
+ * producer trace context after root registration.
+ *
+ * Registration is failure-atomic. Roots for one yielded element are cleared
+ * when `next()` transfers it to compiler-rooted caller storage.
+ */
+HXC_API hxc_status hxc_iterator_ref_create_traced_snapshot(
+  hxc_iterator_root_ops roots,
   hxc_allocator allocator,
   hxc_iterator_element_ops elements,
   size_t length,

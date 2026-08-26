@@ -553,11 +553,11 @@
         "source": {
           "file": "test/runtime/runtime-feature-graph/RuntimeFeatureGraphGolden.hx",
           "end": {
-            "line": 84,
+            "line": 87,
             "column": 2
           },
           "start": {
-            "line": 84,
+            "line": 87,
             "column": 1
           }
         }
@@ -779,11 +779,11 @@
         "source": {
           "file": "test/runtime/runtime-feature-graph/RuntimeFeatureGraphGolden.hx",
           "end": {
-            "line": 87,
+            "line": 90,
             "column": 2
           },
           "start": {
-            "line": 87,
+            "line": 90,
             "column": 1
           }
         }
@@ -907,11 +907,11 @@
         "source": {
           "file": "test/runtime/runtime-feature-graph/RuntimeFeatureGraphGolden.hx",
           "end": {
-            "line": 85,
+            "line": 88,
             "column": 2
           },
           "start": {
-            "line": 85,
+            "line": 88,
             "column": 1
           }
         }
@@ -980,11 +980,11 @@
         "source": {
           "file": "test/runtime/runtime-feature-graph/RuntimeFeatureGraphGolden.hx",
           "end": {
-            "line": 321,
+            "line": 329,
             "column": 2
           },
           "start": {
-            "line": 321,
+            "line": 329,
             "column": 1
           }
         }
@@ -1135,6 +1135,7 @@
           "hxc_iterator_ref_create_array_pairs",
           "hxc_iterator_ref_create_array_values",
           "hxc_iterator_ref_create_snapshot",
+          "hxc_iterator_ref_create_traced_snapshot",
           "hxc_iterator_ref_has_next",
           "hxc_iterator_ref_next_move",
           "hxc_iterator_ref_release",
@@ -1553,6 +1554,7 @@
       "hxc_iterator_ref_create_array_pairs",
       "hxc_iterator_ref_create_array_values",
       "hxc_iterator_ref_create_snapshot",
+      "hxc_iterator_ref_create_traced_snapshot",
       "hxc_iterator_ref_has_next",
       "hxc_iterator_ref_next_move",
       "hxc_iterator_ref_release",
@@ -1949,11 +1951,588 @@
         "source": {
           "file": "test/runtime/runtime-feature-graph/RuntimeFeatureGraphGolden.hx",
           "end": {
-            "line": 86,
+            "line": 89,
             "column": 2
           },
           "start": {
-            "line": 86,
+            "line": 89,
+            "column": 1
+          }
+        }
+      }
+    ],
+    "requestedPolicy": "auto",
+    "defines": [],
+    "planPurpose": "native-seed-fixture",
+    "algorithm": "hxc-runtime-plan-v2",
+    "policyProvenance": "fixture:explicit-policy"
+  },
+  "typedMap": {
+    "selectedFeatures": [
+      {
+        "dependencies": [],
+        "id": "runtime-base",
+        "reasonIds": [
+          "fixture.typed-map"
+        ],
+        "availability": "compiler-selectable",
+        "symbols": [],
+        "artifacts": [
+          "runtime/include/hxrt/base.h"
+        ],
+        "libraries": [],
+        "defines": [],
+        "root": false
+      },
+      {
+        "dependencies": [
+          "runtime-base"
+        ],
+        "id": "status",
+        "reasonIds": [
+          "fixture.typed-map"
+        ],
+        "availability": "compiler-selectable",
+        "symbols": [],
+        "artifacts": [
+          "runtime/include/hxrt/status.h"
+        ],
+        "libraries": [],
+        "defines": [],
+        "root": false
+      },
+      {
+        "dependencies": [
+          "status"
+        ],
+        "id": "alloc",
+        "reasonIds": [
+          "fixture.typed-map"
+        ],
+        "availability": "compiler-selectable",
+        "symbols": [
+          "hxc_alloc",
+          "hxc_allocation_allocate",
+          "hxc_allocation_dispose",
+          "hxc_allocation_is_valid",
+          "hxc_allocation_move",
+          "hxc_allocation_resize",
+          "hxc_allocator_is_valid",
+          "hxc_allocator_same_identity",
+          "hxc_default_allocator",
+          "hxc_free",
+          "hxc_realloc",
+          "hxc_size_add",
+          "hxc_size_mul"
+        ],
+        "artifacts": [
+          "runtime/include/hxrt/allocator.h",
+          "runtime/src/allocator.c"
+        ],
+        "libraries": [],
+        "defines": [],
+        "root": false
+      },
+      {
+        "dependencies": [
+          "alloc"
+        ],
+        "id": "array",
+        "reasonIds": [
+          "fixture.typed-map"
+        ],
+        "availability": "compiler-selectable",
+        "symbols": [
+          "hxc_array_at",
+          "hxc_array_at_const",
+          "hxc_array_dispose",
+          "hxc_array_element_ops_is_valid",
+          "hxc_array_init",
+          "hxc_array_insert_copy",
+          "hxc_array_is_valid",
+          "hxc_array_move",
+          "hxc_array_pop_move",
+          "hxc_array_push_copy",
+          "hxc_array_ref_copy",
+          "hxc_array_ref_copy_in_place",
+          "hxc_array_ref_create",
+          "hxc_array_ref_create_trivial",
+          "hxc_array_ref_dispose_in_place",
+          "hxc_array_ref_get_copy",
+          "hxc_array_ref_init_in_place",
+          "hxc_array_ref_insert_copy",
+          "hxc_array_ref_is_valid",
+          "hxc_array_ref_length",
+          "hxc_array_ref_pop_move",
+          "hxc_array_ref_push_copy",
+          "hxc_array_ref_release",
+          "hxc_array_ref_resize_default",
+          "hxc_array_ref_retain",
+          "hxc_array_ref_set_copy",
+          "hxc_array_ref_shift_move",
+          "hxc_array_ref_sort",
+          "hxc_array_ref_splice_copy",
+          "hxc_array_ref_splice_discard",
+          "hxc_array_ref_splice_one_copy",
+          "hxc_array_ref_splice_one_discard",
+          "hxc_array_remove_at",
+          "hxc_array_reserve",
+          "hxc_array_resize",
+          "hxc_array_set_copy",
+          "hxc_array_shift_move"
+        ],
+        "artifacts": [
+          "runtime/include/hxrt/array.h",
+          "runtime/src/array.c"
+        ],
+        "libraries": [],
+        "defines": [],
+        "root": false
+      },
+      {
+        "dependencies": [
+          "runtime-base"
+        ],
+        "id": "object",
+        "reasonIds": [
+          "fixture.typed-map"
+        ],
+        "availability": "compiler-selectable",
+        "symbols": [
+          "hxc_object_header_init",
+          "hxc_object_header_is_valid",
+          "hxc_type_descriptor_finalize",
+          "hxc_type_descriptor_is_valid",
+          "hxc_type_descriptor_trace"
+        ],
+        "artifacts": [
+          "runtime/include/hxrt/object.h",
+          "runtime/src/object.c"
+        ],
+        "libraries": [],
+        "defines": [],
+        "root": false
+      },
+      {
+        "dependencies": [
+          "alloc",
+          "object"
+        ],
+        "id": "gc",
+        "reasonIds": [
+          "fixture.typed-map"
+        ],
+        "availability": "compiler-selectable",
+        "symbols": [
+          "hxc_gc_allocate",
+          "hxc_gc_collect",
+          "hxc_gc_dispose",
+          "hxc_gc_get_stats",
+          "hxc_gc_init",
+          "hxc_gc_owns_exact",
+          "hxc_gc_pin_object",
+          "hxc_gc_root_frame_pop",
+          "hxc_gc_root_frame_push",
+          "hxc_gc_root_table_register",
+          "hxc_gc_root_table_unregister",
+          "hxc_gc_safepoint",
+          "hxc_gc_thread_register",
+          "hxc_gc_thread_unregister",
+          "hxc_gc_unpin_object"
+        ],
+        "artifacts": [
+          "runtime/include/hxrt/gc.h",
+          "runtime/src/gc.c"
+        ],
+        "libraries": [],
+        "defines": [],
+        "root": false
+      },
+      {
+        "dependencies": [
+          "alloc",
+          "array"
+        ],
+        "id": "iterator",
+        "reasonIds": [
+          "fixture.typed-map"
+        ],
+        "availability": "compiler-selectable",
+        "symbols": [
+          "hxc_iterator_element_ops_is_valid",
+          "hxc_iterator_ref_create_array_pairs",
+          "hxc_iterator_ref_create_array_values",
+          "hxc_iterator_ref_create_snapshot",
+          "hxc_iterator_ref_create_traced_snapshot",
+          "hxc_iterator_ref_has_next",
+          "hxc_iterator_ref_next_move",
+          "hxc_iterator_ref_release",
+          "hxc_iterator_ref_retain"
+        ],
+        "artifacts": [
+          "runtime/include/hxrt/iterator.h",
+          "runtime/src/iterator.c"
+        ],
+        "libraries": [],
+        "defines": [],
+        "root": false
+      },
+      {
+        "dependencies": [
+          "gc",
+          "iterator"
+        ],
+        "id": "typed-map",
+        "reasonIds": [
+          "fixture.typed-map"
+        ],
+        "availability": "compiler-selectable",
+        "symbols": [
+          "hxc_typed_map_copy_in_place",
+          "hxc_typed_map_dispose_in_place",
+          "hxc_typed_map_hash_mix",
+          "hxc_typed_map_identity_hash",
+          "hxc_typed_map_init_collector_owned",
+          "hxc_typed_map_key_ops_is_valid",
+          "hxc_typed_map_ref_clear",
+          "hxc_typed_map_ref_copy",
+          "hxc_typed_map_ref_create",
+          "hxc_typed_map_ref_exists",
+          "hxc_typed_map_ref_get_copy",
+          "hxc_typed_map_ref_key_iterator",
+          "hxc_typed_map_ref_pair_iterator",
+          "hxc_typed_map_ref_release",
+          "hxc_typed_map_ref_remove",
+          "hxc_typed_map_ref_retain",
+          "hxc_typed_map_ref_set_copy",
+          "hxc_typed_map_ref_value_iterator",
+          "hxc_typed_map_type_descriptor",
+          "hxc_typed_map_value_ops_is_valid"
+        ],
+        "artifacts": [
+          "runtime/include/hxrt/typed_map.h",
+          "runtime/src/typed_map.c"
+        ],
+        "libraries": [],
+        "defines": [],
+        "root": true
+      }
+    ],
+    "directDecisions": [
+      "direct-c-considered",
+      "program-local-specialization-considered"
+    ],
+    "profile": "portable",
+    "environment": "hosted",
+    "dependencyEdges": [
+      {
+        "featureId": "alloc",
+        "reasonIds": [
+          "fixture.typed-map"
+        ],
+        "dependencyId": "status"
+      },
+      {
+        "featureId": "array",
+        "reasonIds": [
+          "fixture.typed-map"
+        ],
+        "dependencyId": "alloc"
+      },
+      {
+        "featureId": "gc",
+        "reasonIds": [
+          "fixture.typed-map"
+        ],
+        "dependencyId": "alloc"
+      },
+      {
+        "featureId": "gc",
+        "reasonIds": [
+          "fixture.typed-map"
+        ],
+        "dependencyId": "object"
+      },
+      {
+        "featureId": "iterator",
+        "reasonIds": [
+          "fixture.typed-map"
+        ],
+        "dependencyId": "alloc"
+      },
+      {
+        "featureId": "iterator",
+        "reasonIds": [
+          "fixture.typed-map"
+        ],
+        "dependencyId": "array"
+      },
+      {
+        "featureId": "object",
+        "reasonIds": [
+          "fixture.typed-map"
+        ],
+        "dependencyId": "runtime-base"
+      },
+      {
+        "featureId": "status",
+        "reasonIds": [
+          "fixture.typed-map"
+        ],
+        "dependencyId": "runtime-base"
+      },
+      {
+        "featureId": "typed-map",
+        "reasonIds": [
+          "fixture.typed-map"
+        ],
+        "dependencyId": "gc"
+      },
+      {
+        "featureId": "typed-map",
+        "reasonIds": [
+          "fixture.typed-map"
+        ],
+        "dependencyId": "iterator"
+      }
+    ],
+    "manualOverrides": [],
+    "noRuntimeProof": null,
+    "features": [
+      "runtime-base",
+      "status",
+      "alloc",
+      "array",
+      "object",
+      "gc",
+      "iterator",
+      "typed-map"
+    ],
+    "artifactDetails": [
+      {
+        "featureId": "alloc",
+        "kind": "runtime-header",
+        "outputPath": "runtime/include/hxrt/allocator.h",
+        "sourcePath": "runtime/hxrt/include/hxrt/allocator.h"
+      },
+      {
+        "featureId": "array",
+        "kind": "runtime-header",
+        "outputPath": "runtime/include/hxrt/array.h",
+        "sourcePath": "runtime/hxrt/include/hxrt/array.h"
+      },
+      {
+        "featureId": "runtime-base",
+        "kind": "runtime-header",
+        "outputPath": "runtime/include/hxrt/base.h",
+        "sourcePath": "runtime/hxrt/include/hxrt/base.h"
+      },
+      {
+        "featureId": "gc",
+        "kind": "runtime-header",
+        "outputPath": "runtime/include/hxrt/gc.h",
+        "sourcePath": "runtime/hxrt/include/hxrt/gc.h"
+      },
+      {
+        "featureId": "iterator",
+        "kind": "runtime-header",
+        "outputPath": "runtime/include/hxrt/iterator.h",
+        "sourcePath": "runtime/hxrt/include/hxrt/iterator.h"
+      },
+      {
+        "featureId": "object",
+        "kind": "runtime-header",
+        "outputPath": "runtime/include/hxrt/object.h",
+        "sourcePath": "runtime/hxrt/include/hxrt/object.h"
+      },
+      {
+        "featureId": "status",
+        "kind": "runtime-header",
+        "outputPath": "runtime/include/hxrt/status.h",
+        "sourcePath": "runtime/hxrt/include/hxrt/status.h"
+      },
+      {
+        "featureId": "typed-map",
+        "kind": "runtime-header",
+        "outputPath": "runtime/include/hxrt/typed_map.h",
+        "sourcePath": "runtime/hxrt/include/hxrt/typed_map.h"
+      },
+      {
+        "featureId": "alloc",
+        "kind": "runtime-source",
+        "outputPath": "runtime/src/allocator.c",
+        "sourcePath": "runtime/hxrt/src/allocator.c"
+      },
+      {
+        "featureId": "array",
+        "kind": "runtime-source",
+        "outputPath": "runtime/src/array.c",
+        "sourcePath": "runtime/hxrt/src/array.c"
+      },
+      {
+        "featureId": "gc",
+        "kind": "runtime-source",
+        "outputPath": "runtime/src/gc.c",
+        "sourcePath": "runtime/hxrt/src/gc.c"
+      },
+      {
+        "featureId": "iterator",
+        "kind": "runtime-source",
+        "outputPath": "runtime/src/iterator.c",
+        "sourcePath": "runtime/hxrt/src/iterator.c"
+      },
+      {
+        "featureId": "object",
+        "kind": "runtime-source",
+        "outputPath": "runtime/src/object.c",
+        "sourcePath": "runtime/hxrt/src/object.c"
+      },
+      {
+        "featureId": "typed-map",
+        "kind": "runtime-source",
+        "outputPath": "runtime/src/typed_map.c",
+        "sourcePath": "runtime/hxrt/src/typed_map.c"
+      }
+    ],
+    "status": "analyzed-native-seed-features",
+    "schemaVersion": 2,
+    "diagnosticProvenance": "fixture:diagnostics-off",
+    "symbols": [
+      "hxc_alloc",
+      "hxc_allocation_allocate",
+      "hxc_allocation_dispose",
+      "hxc_allocation_is_valid",
+      "hxc_allocation_move",
+      "hxc_allocation_resize",
+      "hxc_allocator_is_valid",
+      "hxc_allocator_same_identity",
+      "hxc_array_at",
+      "hxc_array_at_const",
+      "hxc_array_dispose",
+      "hxc_array_element_ops_is_valid",
+      "hxc_array_init",
+      "hxc_array_insert_copy",
+      "hxc_array_is_valid",
+      "hxc_array_move",
+      "hxc_array_pop_move",
+      "hxc_array_push_copy",
+      "hxc_array_ref_copy",
+      "hxc_array_ref_copy_in_place",
+      "hxc_array_ref_create",
+      "hxc_array_ref_create_trivial",
+      "hxc_array_ref_dispose_in_place",
+      "hxc_array_ref_get_copy",
+      "hxc_array_ref_init_in_place",
+      "hxc_array_ref_insert_copy",
+      "hxc_array_ref_is_valid",
+      "hxc_array_ref_length",
+      "hxc_array_ref_pop_move",
+      "hxc_array_ref_push_copy",
+      "hxc_array_ref_release",
+      "hxc_array_ref_resize_default",
+      "hxc_array_ref_retain",
+      "hxc_array_ref_set_copy",
+      "hxc_array_ref_shift_move",
+      "hxc_array_ref_sort",
+      "hxc_array_ref_splice_copy",
+      "hxc_array_ref_splice_discard",
+      "hxc_array_ref_splice_one_copy",
+      "hxc_array_ref_splice_one_discard",
+      "hxc_array_remove_at",
+      "hxc_array_reserve",
+      "hxc_array_resize",
+      "hxc_array_set_copy",
+      "hxc_array_shift_move",
+      "hxc_default_allocator",
+      "hxc_free",
+      "hxc_gc_allocate",
+      "hxc_gc_collect",
+      "hxc_gc_dispose",
+      "hxc_gc_get_stats",
+      "hxc_gc_init",
+      "hxc_gc_owns_exact",
+      "hxc_gc_pin_object",
+      "hxc_gc_root_frame_pop",
+      "hxc_gc_root_frame_push",
+      "hxc_gc_root_table_register",
+      "hxc_gc_root_table_unregister",
+      "hxc_gc_safepoint",
+      "hxc_gc_thread_register",
+      "hxc_gc_thread_unregister",
+      "hxc_gc_unpin_object",
+      "hxc_iterator_element_ops_is_valid",
+      "hxc_iterator_ref_create_array_pairs",
+      "hxc_iterator_ref_create_array_values",
+      "hxc_iterator_ref_create_snapshot",
+      "hxc_iterator_ref_create_traced_snapshot",
+      "hxc_iterator_ref_has_next",
+      "hxc_iterator_ref_next_move",
+      "hxc_iterator_ref_release",
+      "hxc_iterator_ref_retain",
+      "hxc_object_header_init",
+      "hxc_object_header_is_valid",
+      "hxc_realloc",
+      "hxc_size_add",
+      "hxc_size_mul",
+      "hxc_type_descriptor_finalize",
+      "hxc_type_descriptor_is_valid",
+      "hxc_type_descriptor_trace",
+      "hxc_typed_map_copy_in_place",
+      "hxc_typed_map_dispose_in_place",
+      "hxc_typed_map_hash_mix",
+      "hxc_typed_map_identity_hash",
+      "hxc_typed_map_init_collector_owned",
+      "hxc_typed_map_key_ops_is_valid",
+      "hxc_typed_map_ref_clear",
+      "hxc_typed_map_ref_copy",
+      "hxc_typed_map_ref_create",
+      "hxc_typed_map_ref_exists",
+      "hxc_typed_map_ref_get_copy",
+      "hxc_typed_map_ref_key_iterator",
+      "hxc_typed_map_ref_pair_iterator",
+      "hxc_typed_map_ref_release",
+      "hxc_typed_map_ref_remove",
+      "hxc_typed_map_ref_retain",
+      "hxc_typed_map_ref_set_copy",
+      "hxc_typed_map_ref_value_iterator",
+      "hxc_typed_map_type_descriptor",
+      "hxc_typed_map_value_ops_is_valid"
+    ],
+    "diagnosticMode": "off",
+    "resolvedPolicy": "auto",
+    "artifacts": [
+      "runtime/include/hxrt/allocator.h",
+      "runtime/include/hxrt/array.h",
+      "runtime/include/hxrt/base.h",
+      "runtime/include/hxrt/gc.h",
+      "runtime/include/hxrt/iterator.h",
+      "runtime/include/hxrt/object.h",
+      "runtime/include/hxrt/status.h",
+      "runtime/include/hxrt/typed_map.h",
+      "runtime/src/allocator.c",
+      "runtime/src/array.c",
+      "runtime/src/gc.c",
+      "runtime/src/iterator.c",
+      "runtime/src/object.c",
+      "runtime/src/typed_map.c"
+    ],
+    "libraries": [],
+    "rootReasons": [
+      {
+        "featureId": "typed-map",
+        "alternative": "use a direct fixture representation when it preserves semantics",
+        "id": "fixture.typed-map",
+        "operationId": "fixture-runtime-operation",
+        "kind": "fixture-semantic-gap",
+        "surface": "fixture.RuntimeFeatureGraph",
+        "source": {
+          "file": "test/runtime/runtime-feature-graph/RuntimeFeatureGraphGolden.hx",
+          "end": {
+            "line": 80,
+            "column": 2
+          },
+          "start": {
+            "line": 80,
             "column": 1
           }
         }
@@ -2404,11 +2983,11 @@
           "source": {
             "file": "test/runtime/runtime-feature-graph/RuntimeFeatureGraphGolden.hx",
             "end": {
-              "line": 334,
+              "line": 342,
               "column": 2
             },
             "start": {
-              "line": 334,
+              "line": 342,
               "column": 1
             }
           }
@@ -2430,11 +3009,11 @@
           "source": {
             "file": "test/runtime/runtime-feature-graph/RuntimeFeatureGraphGolden.hx",
             "end": {
-              "line": 334,
+              "line": 342,
               "column": 2
             },
             "start": {
-              "line": 334,
+              "line": 342,
               "column": 1
             }
           }
@@ -2449,7 +3028,7 @@
         "string-scalar"
       ],
       "id": "HXC2000",
-      "message": "runtime policy `none` found 2 deduplicated runtime blocker(s):\n- fixture.none.a kind=fixture-semantic-gap operation=fixture-runtime-operation surface=`fixture.RuntimeFeatureGraph` source=test/runtime/runtime-feature-graph/RuntimeFeatureGraphGolden.hx:334:1-334:2 feature=string dependency-chains=[string -> alloc -> status -> runtime-base; string -> string-scalar -> status -> runtime-base; string -> string-scalar -> string-literal -> runtime-base] alternative=`use a direct fixture representation when it preserves semantics`\n- fixture.none.z kind=fixture-semantic-gap operation=fixture-runtime-operation surface=`fixture.RuntimeFeatureGraph` source=test/runtime/runtime-feature-graph/RuntimeFeatureGraphGolden.hx:334:1-334:2 feature=alloc dependency-chains=[alloc -> status -> runtime-base] alternative=`use a direct fixture representation when it preserves semantics`"
+      "message": "runtime policy `none` found 2 deduplicated runtime blocker(s):\n- fixture.none.a kind=fixture-semantic-gap operation=fixture-runtime-operation surface=`fixture.RuntimeFeatureGraph` source=test/runtime/runtime-feature-graph/RuntimeFeatureGraphGolden.hx:342:1-342:2 feature=string dependency-chains=[string -> alloc -> status -> runtime-base; string -> string-scalar -> status -> runtime-base; string -> string-scalar -> string-literal -> runtime-base] alternative=`use a direct fixture representation when it preserves semantics`\n- fixture.none.z kind=fixture-semantic-gap operation=fixture-runtime-operation surface=`fixture.RuntimeFeatureGraph` source=test/runtime/runtime-feature-graph/RuntimeFeatureGraphGolden.hx:342:1-342:2 feature=alloc dependency-chains=[alloc -> status -> runtime-base] alternative=`use a direct fixture representation when it preserves semantics`"
     }
   },
   "compilerIo": {
@@ -2628,11 +3207,11 @@
         "source": {
           "file": "test/runtime/runtime-feature-graph/RuntimeFeatureGraphGolden.hx",
           "end": {
-            "line": 292,
+            "line": 300,
             "column": 2
           },
           "start": {
-            "line": 292,
+            "line": 300,
             "column": 1
           }
         }
@@ -3057,11 +3636,11 @@
         "source": {
           "file": "test/runtime/runtime-feature-graph/RuntimeFeatureGraphGolden.hx",
           "end": {
-            "line": 81,
+            "line": 84,
             "column": 2
           },
           "start": {
-            "line": 81,
+            "line": 84,
             "column": 1
           }
         }
@@ -3449,17 +4028,617 @@
         "source": {
           "file": "test/runtime/runtime-feature-graph/RuntimeFeatureGraphGolden.hx",
           "end": {
-            "line": 97,
+            "line": 100,
             "column": 2
           },
           "start": {
-            "line": 97,
+            "line": 100,
             "column": 1
           }
         }
       }
     ],
     "requestedPolicy": "minimal",
+    "defines": [],
+    "planPurpose": "native-seed-fixture",
+    "algorithm": "hxc-runtime-plan-v2",
+    "policyProvenance": "fixture:explicit-policy"
+  },
+  "objectMap": {
+    "selectedFeatures": [
+      {
+        "dependencies": [],
+        "id": "runtime-base",
+        "reasonIds": [
+          "fixture.object-map"
+        ],
+        "availability": "compiler-selectable",
+        "symbols": [],
+        "artifacts": [
+          "runtime/include/hxrt/base.h"
+        ],
+        "libraries": [],
+        "defines": [],
+        "root": false
+      },
+      {
+        "dependencies": [
+          "runtime-base"
+        ],
+        "id": "status",
+        "reasonIds": [
+          "fixture.object-map"
+        ],
+        "availability": "compiler-selectable",
+        "symbols": [],
+        "artifacts": [
+          "runtime/include/hxrt/status.h"
+        ],
+        "libraries": [],
+        "defines": [],
+        "root": false
+      },
+      {
+        "dependencies": [
+          "status"
+        ],
+        "id": "alloc",
+        "reasonIds": [
+          "fixture.object-map"
+        ],
+        "availability": "compiler-selectable",
+        "symbols": [
+          "hxc_alloc",
+          "hxc_allocation_allocate",
+          "hxc_allocation_dispose",
+          "hxc_allocation_is_valid",
+          "hxc_allocation_move",
+          "hxc_allocation_resize",
+          "hxc_allocator_is_valid",
+          "hxc_allocator_same_identity",
+          "hxc_default_allocator",
+          "hxc_free",
+          "hxc_realloc",
+          "hxc_size_add",
+          "hxc_size_mul"
+        ],
+        "artifacts": [
+          "runtime/include/hxrt/allocator.h",
+          "runtime/src/allocator.c"
+        ],
+        "libraries": [],
+        "defines": [],
+        "root": false
+      },
+      {
+        "dependencies": [
+          "alloc"
+        ],
+        "id": "array",
+        "reasonIds": [
+          "fixture.object-map"
+        ],
+        "availability": "compiler-selectable",
+        "symbols": [
+          "hxc_array_at",
+          "hxc_array_at_const",
+          "hxc_array_dispose",
+          "hxc_array_element_ops_is_valid",
+          "hxc_array_init",
+          "hxc_array_insert_copy",
+          "hxc_array_is_valid",
+          "hxc_array_move",
+          "hxc_array_pop_move",
+          "hxc_array_push_copy",
+          "hxc_array_ref_copy",
+          "hxc_array_ref_copy_in_place",
+          "hxc_array_ref_create",
+          "hxc_array_ref_create_trivial",
+          "hxc_array_ref_dispose_in_place",
+          "hxc_array_ref_get_copy",
+          "hxc_array_ref_init_in_place",
+          "hxc_array_ref_insert_copy",
+          "hxc_array_ref_is_valid",
+          "hxc_array_ref_length",
+          "hxc_array_ref_pop_move",
+          "hxc_array_ref_push_copy",
+          "hxc_array_ref_release",
+          "hxc_array_ref_resize_default",
+          "hxc_array_ref_retain",
+          "hxc_array_ref_set_copy",
+          "hxc_array_ref_shift_move",
+          "hxc_array_ref_sort",
+          "hxc_array_ref_splice_copy",
+          "hxc_array_ref_splice_discard",
+          "hxc_array_ref_splice_one_copy",
+          "hxc_array_ref_splice_one_discard",
+          "hxc_array_remove_at",
+          "hxc_array_reserve",
+          "hxc_array_resize",
+          "hxc_array_set_copy",
+          "hxc_array_shift_move"
+        ],
+        "artifacts": [
+          "runtime/include/hxrt/array.h",
+          "runtime/src/array.c"
+        ],
+        "libraries": [],
+        "defines": [],
+        "root": false
+      },
+      {
+        "dependencies": [
+          "runtime-base"
+        ],
+        "id": "object",
+        "reasonIds": [
+          "fixture.object-map"
+        ],
+        "availability": "compiler-selectable",
+        "symbols": [
+          "hxc_object_header_init",
+          "hxc_object_header_is_valid",
+          "hxc_type_descriptor_finalize",
+          "hxc_type_descriptor_is_valid",
+          "hxc_type_descriptor_trace"
+        ],
+        "artifacts": [
+          "runtime/include/hxrt/object.h",
+          "runtime/src/object.c"
+        ],
+        "libraries": [],
+        "defines": [],
+        "root": false
+      },
+      {
+        "dependencies": [
+          "alloc",
+          "object"
+        ],
+        "id": "gc",
+        "reasonIds": [
+          "fixture.object-map"
+        ],
+        "availability": "compiler-selectable",
+        "symbols": [
+          "hxc_gc_allocate",
+          "hxc_gc_collect",
+          "hxc_gc_dispose",
+          "hxc_gc_get_stats",
+          "hxc_gc_init",
+          "hxc_gc_owns_exact",
+          "hxc_gc_pin_object",
+          "hxc_gc_root_frame_pop",
+          "hxc_gc_root_frame_push",
+          "hxc_gc_root_table_register",
+          "hxc_gc_root_table_unregister",
+          "hxc_gc_safepoint",
+          "hxc_gc_thread_register",
+          "hxc_gc_thread_unregister",
+          "hxc_gc_unpin_object"
+        ],
+        "artifacts": [
+          "runtime/include/hxrt/gc.h",
+          "runtime/src/gc.c"
+        ],
+        "libraries": [],
+        "defines": [],
+        "root": false
+      },
+      {
+        "dependencies": [
+          "alloc",
+          "array"
+        ],
+        "id": "iterator",
+        "reasonIds": [
+          "fixture.object-map"
+        ],
+        "availability": "compiler-selectable",
+        "symbols": [
+          "hxc_iterator_element_ops_is_valid",
+          "hxc_iterator_ref_create_array_pairs",
+          "hxc_iterator_ref_create_array_values",
+          "hxc_iterator_ref_create_snapshot",
+          "hxc_iterator_ref_create_traced_snapshot",
+          "hxc_iterator_ref_has_next",
+          "hxc_iterator_ref_next_move",
+          "hxc_iterator_ref_release",
+          "hxc_iterator_ref_retain"
+        ],
+        "artifacts": [
+          "runtime/include/hxrt/iterator.h",
+          "runtime/src/iterator.c"
+        ],
+        "libraries": [],
+        "defines": [],
+        "root": false
+      },
+      {
+        "dependencies": [
+          "gc",
+          "iterator"
+        ],
+        "id": "typed-map",
+        "reasonIds": [
+          "fixture.object-map"
+        ],
+        "availability": "compiler-selectable",
+        "symbols": [
+          "hxc_typed_map_copy_in_place",
+          "hxc_typed_map_dispose_in_place",
+          "hxc_typed_map_hash_mix",
+          "hxc_typed_map_identity_hash",
+          "hxc_typed_map_init_collector_owned",
+          "hxc_typed_map_key_ops_is_valid",
+          "hxc_typed_map_ref_clear",
+          "hxc_typed_map_ref_copy",
+          "hxc_typed_map_ref_create",
+          "hxc_typed_map_ref_exists",
+          "hxc_typed_map_ref_get_copy",
+          "hxc_typed_map_ref_key_iterator",
+          "hxc_typed_map_ref_pair_iterator",
+          "hxc_typed_map_ref_release",
+          "hxc_typed_map_ref_remove",
+          "hxc_typed_map_ref_retain",
+          "hxc_typed_map_ref_set_copy",
+          "hxc_typed_map_ref_value_iterator",
+          "hxc_typed_map_type_descriptor",
+          "hxc_typed_map_value_ops_is_valid"
+        ],
+        "artifacts": [
+          "runtime/include/hxrt/typed_map.h",
+          "runtime/src/typed_map.c"
+        ],
+        "libraries": [],
+        "defines": [],
+        "root": false
+      },
+      {
+        "dependencies": [
+          "typed-map"
+        ],
+        "id": "object-map",
+        "reasonIds": [
+          "fixture.object-map"
+        ],
+        "availability": "compiler-selectable",
+        "symbols": [],
+        "artifacts": [],
+        "libraries": [],
+        "defines": [],
+        "root": true
+      }
+    ],
+    "directDecisions": [
+      "direct-c-considered",
+      "program-local-specialization-considered"
+    ],
+    "profile": "portable",
+    "environment": "hosted",
+    "dependencyEdges": [
+      {
+        "featureId": "alloc",
+        "reasonIds": [
+          "fixture.object-map"
+        ],
+        "dependencyId": "status"
+      },
+      {
+        "featureId": "array",
+        "reasonIds": [
+          "fixture.object-map"
+        ],
+        "dependencyId": "alloc"
+      },
+      {
+        "featureId": "gc",
+        "reasonIds": [
+          "fixture.object-map"
+        ],
+        "dependencyId": "alloc"
+      },
+      {
+        "featureId": "gc",
+        "reasonIds": [
+          "fixture.object-map"
+        ],
+        "dependencyId": "object"
+      },
+      {
+        "featureId": "iterator",
+        "reasonIds": [
+          "fixture.object-map"
+        ],
+        "dependencyId": "alloc"
+      },
+      {
+        "featureId": "iterator",
+        "reasonIds": [
+          "fixture.object-map"
+        ],
+        "dependencyId": "array"
+      },
+      {
+        "featureId": "object",
+        "reasonIds": [
+          "fixture.object-map"
+        ],
+        "dependencyId": "runtime-base"
+      },
+      {
+        "featureId": "object-map",
+        "reasonIds": [
+          "fixture.object-map"
+        ],
+        "dependencyId": "typed-map"
+      },
+      {
+        "featureId": "status",
+        "reasonIds": [
+          "fixture.object-map"
+        ],
+        "dependencyId": "runtime-base"
+      },
+      {
+        "featureId": "typed-map",
+        "reasonIds": [
+          "fixture.object-map"
+        ],
+        "dependencyId": "gc"
+      },
+      {
+        "featureId": "typed-map",
+        "reasonIds": [
+          "fixture.object-map"
+        ],
+        "dependencyId": "iterator"
+      }
+    ],
+    "manualOverrides": [],
+    "noRuntimeProof": null,
+    "features": [
+      "runtime-base",
+      "status",
+      "alloc",
+      "array",
+      "object",
+      "gc",
+      "iterator",
+      "typed-map",
+      "object-map"
+    ],
+    "artifactDetails": [
+      {
+        "featureId": "alloc",
+        "kind": "runtime-header",
+        "outputPath": "runtime/include/hxrt/allocator.h",
+        "sourcePath": "runtime/hxrt/include/hxrt/allocator.h"
+      },
+      {
+        "featureId": "array",
+        "kind": "runtime-header",
+        "outputPath": "runtime/include/hxrt/array.h",
+        "sourcePath": "runtime/hxrt/include/hxrt/array.h"
+      },
+      {
+        "featureId": "runtime-base",
+        "kind": "runtime-header",
+        "outputPath": "runtime/include/hxrt/base.h",
+        "sourcePath": "runtime/hxrt/include/hxrt/base.h"
+      },
+      {
+        "featureId": "gc",
+        "kind": "runtime-header",
+        "outputPath": "runtime/include/hxrt/gc.h",
+        "sourcePath": "runtime/hxrt/include/hxrt/gc.h"
+      },
+      {
+        "featureId": "iterator",
+        "kind": "runtime-header",
+        "outputPath": "runtime/include/hxrt/iterator.h",
+        "sourcePath": "runtime/hxrt/include/hxrt/iterator.h"
+      },
+      {
+        "featureId": "object",
+        "kind": "runtime-header",
+        "outputPath": "runtime/include/hxrt/object.h",
+        "sourcePath": "runtime/hxrt/include/hxrt/object.h"
+      },
+      {
+        "featureId": "status",
+        "kind": "runtime-header",
+        "outputPath": "runtime/include/hxrt/status.h",
+        "sourcePath": "runtime/hxrt/include/hxrt/status.h"
+      },
+      {
+        "featureId": "typed-map",
+        "kind": "runtime-header",
+        "outputPath": "runtime/include/hxrt/typed_map.h",
+        "sourcePath": "runtime/hxrt/include/hxrt/typed_map.h"
+      },
+      {
+        "featureId": "alloc",
+        "kind": "runtime-source",
+        "outputPath": "runtime/src/allocator.c",
+        "sourcePath": "runtime/hxrt/src/allocator.c"
+      },
+      {
+        "featureId": "array",
+        "kind": "runtime-source",
+        "outputPath": "runtime/src/array.c",
+        "sourcePath": "runtime/hxrt/src/array.c"
+      },
+      {
+        "featureId": "gc",
+        "kind": "runtime-source",
+        "outputPath": "runtime/src/gc.c",
+        "sourcePath": "runtime/hxrt/src/gc.c"
+      },
+      {
+        "featureId": "iterator",
+        "kind": "runtime-source",
+        "outputPath": "runtime/src/iterator.c",
+        "sourcePath": "runtime/hxrt/src/iterator.c"
+      },
+      {
+        "featureId": "object",
+        "kind": "runtime-source",
+        "outputPath": "runtime/src/object.c",
+        "sourcePath": "runtime/hxrt/src/object.c"
+      },
+      {
+        "featureId": "typed-map",
+        "kind": "runtime-source",
+        "outputPath": "runtime/src/typed_map.c",
+        "sourcePath": "runtime/hxrt/src/typed_map.c"
+      }
+    ],
+    "status": "analyzed-native-seed-features",
+    "schemaVersion": 2,
+    "diagnosticProvenance": "fixture:diagnostics-off",
+    "symbols": [
+      "hxc_alloc",
+      "hxc_allocation_allocate",
+      "hxc_allocation_dispose",
+      "hxc_allocation_is_valid",
+      "hxc_allocation_move",
+      "hxc_allocation_resize",
+      "hxc_allocator_is_valid",
+      "hxc_allocator_same_identity",
+      "hxc_array_at",
+      "hxc_array_at_const",
+      "hxc_array_dispose",
+      "hxc_array_element_ops_is_valid",
+      "hxc_array_init",
+      "hxc_array_insert_copy",
+      "hxc_array_is_valid",
+      "hxc_array_move",
+      "hxc_array_pop_move",
+      "hxc_array_push_copy",
+      "hxc_array_ref_copy",
+      "hxc_array_ref_copy_in_place",
+      "hxc_array_ref_create",
+      "hxc_array_ref_create_trivial",
+      "hxc_array_ref_dispose_in_place",
+      "hxc_array_ref_get_copy",
+      "hxc_array_ref_init_in_place",
+      "hxc_array_ref_insert_copy",
+      "hxc_array_ref_is_valid",
+      "hxc_array_ref_length",
+      "hxc_array_ref_pop_move",
+      "hxc_array_ref_push_copy",
+      "hxc_array_ref_release",
+      "hxc_array_ref_resize_default",
+      "hxc_array_ref_retain",
+      "hxc_array_ref_set_copy",
+      "hxc_array_ref_shift_move",
+      "hxc_array_ref_sort",
+      "hxc_array_ref_splice_copy",
+      "hxc_array_ref_splice_discard",
+      "hxc_array_ref_splice_one_copy",
+      "hxc_array_ref_splice_one_discard",
+      "hxc_array_remove_at",
+      "hxc_array_reserve",
+      "hxc_array_resize",
+      "hxc_array_set_copy",
+      "hxc_array_shift_move",
+      "hxc_default_allocator",
+      "hxc_free",
+      "hxc_gc_allocate",
+      "hxc_gc_collect",
+      "hxc_gc_dispose",
+      "hxc_gc_get_stats",
+      "hxc_gc_init",
+      "hxc_gc_owns_exact",
+      "hxc_gc_pin_object",
+      "hxc_gc_root_frame_pop",
+      "hxc_gc_root_frame_push",
+      "hxc_gc_root_table_register",
+      "hxc_gc_root_table_unregister",
+      "hxc_gc_safepoint",
+      "hxc_gc_thread_register",
+      "hxc_gc_thread_unregister",
+      "hxc_gc_unpin_object",
+      "hxc_iterator_element_ops_is_valid",
+      "hxc_iterator_ref_create_array_pairs",
+      "hxc_iterator_ref_create_array_values",
+      "hxc_iterator_ref_create_snapshot",
+      "hxc_iterator_ref_create_traced_snapshot",
+      "hxc_iterator_ref_has_next",
+      "hxc_iterator_ref_next_move",
+      "hxc_iterator_ref_release",
+      "hxc_iterator_ref_retain",
+      "hxc_object_header_init",
+      "hxc_object_header_is_valid",
+      "hxc_realloc",
+      "hxc_size_add",
+      "hxc_size_mul",
+      "hxc_type_descriptor_finalize",
+      "hxc_type_descriptor_is_valid",
+      "hxc_type_descriptor_trace",
+      "hxc_typed_map_copy_in_place",
+      "hxc_typed_map_dispose_in_place",
+      "hxc_typed_map_hash_mix",
+      "hxc_typed_map_identity_hash",
+      "hxc_typed_map_init_collector_owned",
+      "hxc_typed_map_key_ops_is_valid",
+      "hxc_typed_map_ref_clear",
+      "hxc_typed_map_ref_copy",
+      "hxc_typed_map_ref_create",
+      "hxc_typed_map_ref_exists",
+      "hxc_typed_map_ref_get_copy",
+      "hxc_typed_map_ref_key_iterator",
+      "hxc_typed_map_ref_pair_iterator",
+      "hxc_typed_map_ref_release",
+      "hxc_typed_map_ref_remove",
+      "hxc_typed_map_ref_retain",
+      "hxc_typed_map_ref_set_copy",
+      "hxc_typed_map_ref_value_iterator",
+      "hxc_typed_map_type_descriptor",
+      "hxc_typed_map_value_ops_is_valid"
+    ],
+    "diagnosticMode": "off",
+    "resolvedPolicy": "auto",
+    "artifacts": [
+      "runtime/include/hxrt/allocator.h",
+      "runtime/include/hxrt/array.h",
+      "runtime/include/hxrt/base.h",
+      "runtime/include/hxrt/gc.h",
+      "runtime/include/hxrt/iterator.h",
+      "runtime/include/hxrt/object.h",
+      "runtime/include/hxrt/status.h",
+      "runtime/include/hxrt/typed_map.h",
+      "runtime/src/allocator.c",
+      "runtime/src/array.c",
+      "runtime/src/gc.c",
+      "runtime/src/iterator.c",
+      "runtime/src/object.c",
+      "runtime/src/typed_map.c"
+    ],
+    "libraries": [],
+    "rootReasons": [
+      {
+        "featureId": "object-map",
+        "alternative": "use a direct fixture representation when it preserves semantics",
+        "id": "fixture.object-map",
+        "operationId": "fixture-runtime-operation",
+        "kind": "fixture-semantic-gap",
+        "surface": "fixture.RuntimeFeatureGraph",
+        "source": {
+          "file": "test/runtime/runtime-feature-graph/RuntimeFeatureGraphGolden.hx",
+          "end": {
+            "line": 81,
+            "column": 2
+          },
+          "start": {
+            "line": 81,
+            "column": 1
+          }
+        }
+      }
+    ],
+    "requestedPolicy": "auto",
     "defines": [],
     "planPurpose": "native-seed-fixture",
     "algorithm": "hxc-runtime-plan-v2",
@@ -4001,11 +5180,11 @@
         "source": {
           "file": "test/runtime/runtime-feature-graph/RuntimeFeatureGraphGolden.hx",
           "end": {
-            "line": 82,
+            "line": 85,
             "column": 2
           },
           "start": {
-            "line": 82,
+            "line": 85,
             "column": 1
           }
         }
@@ -4568,11 +5747,11 @@
         "source": {
           "file": "test/runtime/runtime-feature-graph/RuntimeFeatureGraphGolden.hx",
           "end": {
-            "line": 89,
+            "line": 92,
             "column": 2
           },
           "start": {
-            "line": 89,
+            "line": 92,
             "column": 1
           }
         }
@@ -4587,11 +5766,11 @@
         "source": {
           "file": "test/runtime/runtime-feature-graph/RuntimeFeatureGraphGolden.hx",
           "end": {
-            "line": 88,
+            "line": 91,
             "column": 2
           },
           "start": {
-            "line": 88,
+            "line": 91,
             "column": 1
           }
         }
@@ -4872,11 +6051,611 @@
         "source": {
           "file": "test/runtime/runtime-feature-graph/RuntimeFeatureGraphGolden.hx",
           "end": {
-            "line": 83,
+            "line": 86,
             "column": 2
           },
           "start": {
-            "line": 83,
+            "line": 86,
+            "column": 1
+          }
+        }
+      }
+    ],
+    "requestedPolicy": "auto",
+    "defines": [],
+    "planPurpose": "native-seed-fixture",
+    "algorithm": "hxc-runtime-plan-v2",
+    "policyProvenance": "fixture:explicit-policy"
+  },
+  "enumValueMap": {
+    "selectedFeatures": [
+      {
+        "dependencies": [],
+        "id": "runtime-base",
+        "reasonIds": [
+          "fixture.enum-value-map"
+        ],
+        "availability": "compiler-selectable",
+        "symbols": [],
+        "artifacts": [
+          "runtime/include/hxrt/base.h"
+        ],
+        "libraries": [],
+        "defines": [],
+        "root": false
+      },
+      {
+        "dependencies": [
+          "runtime-base"
+        ],
+        "id": "status",
+        "reasonIds": [
+          "fixture.enum-value-map"
+        ],
+        "availability": "compiler-selectable",
+        "symbols": [],
+        "artifacts": [
+          "runtime/include/hxrt/status.h"
+        ],
+        "libraries": [],
+        "defines": [],
+        "root": false
+      },
+      {
+        "dependencies": [
+          "status"
+        ],
+        "id": "alloc",
+        "reasonIds": [
+          "fixture.enum-value-map"
+        ],
+        "availability": "compiler-selectable",
+        "symbols": [
+          "hxc_alloc",
+          "hxc_allocation_allocate",
+          "hxc_allocation_dispose",
+          "hxc_allocation_is_valid",
+          "hxc_allocation_move",
+          "hxc_allocation_resize",
+          "hxc_allocator_is_valid",
+          "hxc_allocator_same_identity",
+          "hxc_default_allocator",
+          "hxc_free",
+          "hxc_realloc",
+          "hxc_size_add",
+          "hxc_size_mul"
+        ],
+        "artifacts": [
+          "runtime/include/hxrt/allocator.h",
+          "runtime/src/allocator.c"
+        ],
+        "libraries": [],
+        "defines": [],
+        "root": false
+      },
+      {
+        "dependencies": [
+          "alloc"
+        ],
+        "id": "array",
+        "reasonIds": [
+          "fixture.enum-value-map"
+        ],
+        "availability": "compiler-selectable",
+        "symbols": [
+          "hxc_array_at",
+          "hxc_array_at_const",
+          "hxc_array_dispose",
+          "hxc_array_element_ops_is_valid",
+          "hxc_array_init",
+          "hxc_array_insert_copy",
+          "hxc_array_is_valid",
+          "hxc_array_move",
+          "hxc_array_pop_move",
+          "hxc_array_push_copy",
+          "hxc_array_ref_copy",
+          "hxc_array_ref_copy_in_place",
+          "hxc_array_ref_create",
+          "hxc_array_ref_create_trivial",
+          "hxc_array_ref_dispose_in_place",
+          "hxc_array_ref_get_copy",
+          "hxc_array_ref_init_in_place",
+          "hxc_array_ref_insert_copy",
+          "hxc_array_ref_is_valid",
+          "hxc_array_ref_length",
+          "hxc_array_ref_pop_move",
+          "hxc_array_ref_push_copy",
+          "hxc_array_ref_release",
+          "hxc_array_ref_resize_default",
+          "hxc_array_ref_retain",
+          "hxc_array_ref_set_copy",
+          "hxc_array_ref_shift_move",
+          "hxc_array_ref_sort",
+          "hxc_array_ref_splice_copy",
+          "hxc_array_ref_splice_discard",
+          "hxc_array_ref_splice_one_copy",
+          "hxc_array_ref_splice_one_discard",
+          "hxc_array_remove_at",
+          "hxc_array_reserve",
+          "hxc_array_resize",
+          "hxc_array_set_copy",
+          "hxc_array_shift_move"
+        ],
+        "artifacts": [
+          "runtime/include/hxrt/array.h",
+          "runtime/src/array.c"
+        ],
+        "libraries": [],
+        "defines": [],
+        "root": false
+      },
+      {
+        "dependencies": [
+          "runtime-base"
+        ],
+        "id": "object",
+        "reasonIds": [
+          "fixture.enum-value-map"
+        ],
+        "availability": "compiler-selectable",
+        "symbols": [
+          "hxc_object_header_init",
+          "hxc_object_header_is_valid",
+          "hxc_type_descriptor_finalize",
+          "hxc_type_descriptor_is_valid",
+          "hxc_type_descriptor_trace"
+        ],
+        "artifacts": [
+          "runtime/include/hxrt/object.h",
+          "runtime/src/object.c"
+        ],
+        "libraries": [],
+        "defines": [],
+        "root": false
+      },
+      {
+        "dependencies": [
+          "alloc",
+          "object"
+        ],
+        "id": "gc",
+        "reasonIds": [
+          "fixture.enum-value-map"
+        ],
+        "availability": "compiler-selectable",
+        "symbols": [
+          "hxc_gc_allocate",
+          "hxc_gc_collect",
+          "hxc_gc_dispose",
+          "hxc_gc_get_stats",
+          "hxc_gc_init",
+          "hxc_gc_owns_exact",
+          "hxc_gc_pin_object",
+          "hxc_gc_root_frame_pop",
+          "hxc_gc_root_frame_push",
+          "hxc_gc_root_table_register",
+          "hxc_gc_root_table_unregister",
+          "hxc_gc_safepoint",
+          "hxc_gc_thread_register",
+          "hxc_gc_thread_unregister",
+          "hxc_gc_unpin_object"
+        ],
+        "artifacts": [
+          "runtime/include/hxrt/gc.h",
+          "runtime/src/gc.c"
+        ],
+        "libraries": [],
+        "defines": [],
+        "root": false
+      },
+      {
+        "dependencies": [
+          "alloc",
+          "array"
+        ],
+        "id": "iterator",
+        "reasonIds": [
+          "fixture.enum-value-map"
+        ],
+        "availability": "compiler-selectable",
+        "symbols": [
+          "hxc_iterator_element_ops_is_valid",
+          "hxc_iterator_ref_create_array_pairs",
+          "hxc_iterator_ref_create_array_values",
+          "hxc_iterator_ref_create_snapshot",
+          "hxc_iterator_ref_create_traced_snapshot",
+          "hxc_iterator_ref_has_next",
+          "hxc_iterator_ref_next_move",
+          "hxc_iterator_ref_release",
+          "hxc_iterator_ref_retain"
+        ],
+        "artifacts": [
+          "runtime/include/hxrt/iterator.h",
+          "runtime/src/iterator.c"
+        ],
+        "libraries": [],
+        "defines": [],
+        "root": false
+      },
+      {
+        "dependencies": [
+          "gc",
+          "iterator"
+        ],
+        "id": "typed-map",
+        "reasonIds": [
+          "fixture.enum-value-map"
+        ],
+        "availability": "compiler-selectable",
+        "symbols": [
+          "hxc_typed_map_copy_in_place",
+          "hxc_typed_map_dispose_in_place",
+          "hxc_typed_map_hash_mix",
+          "hxc_typed_map_identity_hash",
+          "hxc_typed_map_init_collector_owned",
+          "hxc_typed_map_key_ops_is_valid",
+          "hxc_typed_map_ref_clear",
+          "hxc_typed_map_ref_copy",
+          "hxc_typed_map_ref_create",
+          "hxc_typed_map_ref_exists",
+          "hxc_typed_map_ref_get_copy",
+          "hxc_typed_map_ref_key_iterator",
+          "hxc_typed_map_ref_pair_iterator",
+          "hxc_typed_map_ref_release",
+          "hxc_typed_map_ref_remove",
+          "hxc_typed_map_ref_retain",
+          "hxc_typed_map_ref_set_copy",
+          "hxc_typed_map_ref_value_iterator",
+          "hxc_typed_map_type_descriptor",
+          "hxc_typed_map_value_ops_is_valid"
+        ],
+        "artifacts": [
+          "runtime/include/hxrt/typed_map.h",
+          "runtime/src/typed_map.c"
+        ],
+        "libraries": [],
+        "defines": [],
+        "root": false
+      },
+      {
+        "dependencies": [
+          "typed-map"
+        ],
+        "id": "enum-value-map",
+        "reasonIds": [
+          "fixture.enum-value-map"
+        ],
+        "availability": "compiler-selectable",
+        "symbols": [],
+        "artifacts": [],
+        "libraries": [],
+        "defines": [],
+        "root": true
+      }
+    ],
+    "directDecisions": [
+      "direct-c-considered",
+      "program-local-specialization-considered"
+    ],
+    "profile": "portable",
+    "environment": "hosted",
+    "dependencyEdges": [
+      {
+        "featureId": "alloc",
+        "reasonIds": [
+          "fixture.enum-value-map"
+        ],
+        "dependencyId": "status"
+      },
+      {
+        "featureId": "array",
+        "reasonIds": [
+          "fixture.enum-value-map"
+        ],
+        "dependencyId": "alloc"
+      },
+      {
+        "featureId": "enum-value-map",
+        "reasonIds": [
+          "fixture.enum-value-map"
+        ],
+        "dependencyId": "typed-map"
+      },
+      {
+        "featureId": "gc",
+        "reasonIds": [
+          "fixture.enum-value-map"
+        ],
+        "dependencyId": "alloc"
+      },
+      {
+        "featureId": "gc",
+        "reasonIds": [
+          "fixture.enum-value-map"
+        ],
+        "dependencyId": "object"
+      },
+      {
+        "featureId": "iterator",
+        "reasonIds": [
+          "fixture.enum-value-map"
+        ],
+        "dependencyId": "alloc"
+      },
+      {
+        "featureId": "iterator",
+        "reasonIds": [
+          "fixture.enum-value-map"
+        ],
+        "dependencyId": "array"
+      },
+      {
+        "featureId": "object",
+        "reasonIds": [
+          "fixture.enum-value-map"
+        ],
+        "dependencyId": "runtime-base"
+      },
+      {
+        "featureId": "status",
+        "reasonIds": [
+          "fixture.enum-value-map"
+        ],
+        "dependencyId": "runtime-base"
+      },
+      {
+        "featureId": "typed-map",
+        "reasonIds": [
+          "fixture.enum-value-map"
+        ],
+        "dependencyId": "gc"
+      },
+      {
+        "featureId": "typed-map",
+        "reasonIds": [
+          "fixture.enum-value-map"
+        ],
+        "dependencyId": "iterator"
+      }
+    ],
+    "manualOverrides": [],
+    "noRuntimeProof": null,
+    "features": [
+      "runtime-base",
+      "status",
+      "alloc",
+      "array",
+      "object",
+      "gc",
+      "iterator",
+      "typed-map",
+      "enum-value-map"
+    ],
+    "artifactDetails": [
+      {
+        "featureId": "alloc",
+        "kind": "runtime-header",
+        "outputPath": "runtime/include/hxrt/allocator.h",
+        "sourcePath": "runtime/hxrt/include/hxrt/allocator.h"
+      },
+      {
+        "featureId": "array",
+        "kind": "runtime-header",
+        "outputPath": "runtime/include/hxrt/array.h",
+        "sourcePath": "runtime/hxrt/include/hxrt/array.h"
+      },
+      {
+        "featureId": "runtime-base",
+        "kind": "runtime-header",
+        "outputPath": "runtime/include/hxrt/base.h",
+        "sourcePath": "runtime/hxrt/include/hxrt/base.h"
+      },
+      {
+        "featureId": "gc",
+        "kind": "runtime-header",
+        "outputPath": "runtime/include/hxrt/gc.h",
+        "sourcePath": "runtime/hxrt/include/hxrt/gc.h"
+      },
+      {
+        "featureId": "iterator",
+        "kind": "runtime-header",
+        "outputPath": "runtime/include/hxrt/iterator.h",
+        "sourcePath": "runtime/hxrt/include/hxrt/iterator.h"
+      },
+      {
+        "featureId": "object",
+        "kind": "runtime-header",
+        "outputPath": "runtime/include/hxrt/object.h",
+        "sourcePath": "runtime/hxrt/include/hxrt/object.h"
+      },
+      {
+        "featureId": "status",
+        "kind": "runtime-header",
+        "outputPath": "runtime/include/hxrt/status.h",
+        "sourcePath": "runtime/hxrt/include/hxrt/status.h"
+      },
+      {
+        "featureId": "typed-map",
+        "kind": "runtime-header",
+        "outputPath": "runtime/include/hxrt/typed_map.h",
+        "sourcePath": "runtime/hxrt/include/hxrt/typed_map.h"
+      },
+      {
+        "featureId": "alloc",
+        "kind": "runtime-source",
+        "outputPath": "runtime/src/allocator.c",
+        "sourcePath": "runtime/hxrt/src/allocator.c"
+      },
+      {
+        "featureId": "array",
+        "kind": "runtime-source",
+        "outputPath": "runtime/src/array.c",
+        "sourcePath": "runtime/hxrt/src/array.c"
+      },
+      {
+        "featureId": "gc",
+        "kind": "runtime-source",
+        "outputPath": "runtime/src/gc.c",
+        "sourcePath": "runtime/hxrt/src/gc.c"
+      },
+      {
+        "featureId": "iterator",
+        "kind": "runtime-source",
+        "outputPath": "runtime/src/iterator.c",
+        "sourcePath": "runtime/hxrt/src/iterator.c"
+      },
+      {
+        "featureId": "object",
+        "kind": "runtime-source",
+        "outputPath": "runtime/src/object.c",
+        "sourcePath": "runtime/hxrt/src/object.c"
+      },
+      {
+        "featureId": "typed-map",
+        "kind": "runtime-source",
+        "outputPath": "runtime/src/typed_map.c",
+        "sourcePath": "runtime/hxrt/src/typed_map.c"
+      }
+    ],
+    "status": "analyzed-native-seed-features",
+    "schemaVersion": 2,
+    "diagnosticProvenance": "fixture:diagnostics-off",
+    "symbols": [
+      "hxc_alloc",
+      "hxc_allocation_allocate",
+      "hxc_allocation_dispose",
+      "hxc_allocation_is_valid",
+      "hxc_allocation_move",
+      "hxc_allocation_resize",
+      "hxc_allocator_is_valid",
+      "hxc_allocator_same_identity",
+      "hxc_array_at",
+      "hxc_array_at_const",
+      "hxc_array_dispose",
+      "hxc_array_element_ops_is_valid",
+      "hxc_array_init",
+      "hxc_array_insert_copy",
+      "hxc_array_is_valid",
+      "hxc_array_move",
+      "hxc_array_pop_move",
+      "hxc_array_push_copy",
+      "hxc_array_ref_copy",
+      "hxc_array_ref_copy_in_place",
+      "hxc_array_ref_create",
+      "hxc_array_ref_create_trivial",
+      "hxc_array_ref_dispose_in_place",
+      "hxc_array_ref_get_copy",
+      "hxc_array_ref_init_in_place",
+      "hxc_array_ref_insert_copy",
+      "hxc_array_ref_is_valid",
+      "hxc_array_ref_length",
+      "hxc_array_ref_pop_move",
+      "hxc_array_ref_push_copy",
+      "hxc_array_ref_release",
+      "hxc_array_ref_resize_default",
+      "hxc_array_ref_retain",
+      "hxc_array_ref_set_copy",
+      "hxc_array_ref_shift_move",
+      "hxc_array_ref_sort",
+      "hxc_array_ref_splice_copy",
+      "hxc_array_ref_splice_discard",
+      "hxc_array_ref_splice_one_copy",
+      "hxc_array_ref_splice_one_discard",
+      "hxc_array_remove_at",
+      "hxc_array_reserve",
+      "hxc_array_resize",
+      "hxc_array_set_copy",
+      "hxc_array_shift_move",
+      "hxc_default_allocator",
+      "hxc_free",
+      "hxc_gc_allocate",
+      "hxc_gc_collect",
+      "hxc_gc_dispose",
+      "hxc_gc_get_stats",
+      "hxc_gc_init",
+      "hxc_gc_owns_exact",
+      "hxc_gc_pin_object",
+      "hxc_gc_root_frame_pop",
+      "hxc_gc_root_frame_push",
+      "hxc_gc_root_table_register",
+      "hxc_gc_root_table_unregister",
+      "hxc_gc_safepoint",
+      "hxc_gc_thread_register",
+      "hxc_gc_thread_unregister",
+      "hxc_gc_unpin_object",
+      "hxc_iterator_element_ops_is_valid",
+      "hxc_iterator_ref_create_array_pairs",
+      "hxc_iterator_ref_create_array_values",
+      "hxc_iterator_ref_create_snapshot",
+      "hxc_iterator_ref_create_traced_snapshot",
+      "hxc_iterator_ref_has_next",
+      "hxc_iterator_ref_next_move",
+      "hxc_iterator_ref_release",
+      "hxc_iterator_ref_retain",
+      "hxc_object_header_init",
+      "hxc_object_header_is_valid",
+      "hxc_realloc",
+      "hxc_size_add",
+      "hxc_size_mul",
+      "hxc_type_descriptor_finalize",
+      "hxc_type_descriptor_is_valid",
+      "hxc_type_descriptor_trace",
+      "hxc_typed_map_copy_in_place",
+      "hxc_typed_map_dispose_in_place",
+      "hxc_typed_map_hash_mix",
+      "hxc_typed_map_identity_hash",
+      "hxc_typed_map_init_collector_owned",
+      "hxc_typed_map_key_ops_is_valid",
+      "hxc_typed_map_ref_clear",
+      "hxc_typed_map_ref_copy",
+      "hxc_typed_map_ref_create",
+      "hxc_typed_map_ref_exists",
+      "hxc_typed_map_ref_get_copy",
+      "hxc_typed_map_ref_key_iterator",
+      "hxc_typed_map_ref_pair_iterator",
+      "hxc_typed_map_ref_release",
+      "hxc_typed_map_ref_remove",
+      "hxc_typed_map_ref_retain",
+      "hxc_typed_map_ref_set_copy",
+      "hxc_typed_map_ref_value_iterator",
+      "hxc_typed_map_type_descriptor",
+      "hxc_typed_map_value_ops_is_valid"
+    ],
+    "diagnosticMode": "off",
+    "resolvedPolicy": "auto",
+    "artifacts": [
+      "runtime/include/hxrt/allocator.h",
+      "runtime/include/hxrt/array.h",
+      "runtime/include/hxrt/base.h",
+      "runtime/include/hxrt/gc.h",
+      "runtime/include/hxrt/iterator.h",
+      "runtime/include/hxrt/object.h",
+      "runtime/include/hxrt/status.h",
+      "runtime/include/hxrt/typed_map.h",
+      "runtime/src/allocator.c",
+      "runtime/src/array.c",
+      "runtime/src/gc.c",
+      "runtime/src/iterator.c",
+      "runtime/src/object.c",
+      "runtime/src/typed_map.c"
+    ],
+    "libraries": [],
+    "rootReasons": [
+      {
+        "featureId": "enum-value-map",
+        "alternative": "use a direct fixture representation when it preserves semantics",
+        "id": "fixture.enum-value-map",
+        "operationId": "fixture-runtime-operation",
+        "kind": "fixture-semantic-gap",
+        "surface": "fixture.RuntimeFeatureGraph",
+        "source": {
+          "file": "test/runtime/runtime-feature-graph/RuntimeFeatureGraphGolden.hx",
+          "end": {
+            "line": 82,
+            "column": 2
+          },
+          "start": {
+            "line": 82,
             "column": 1
           }
         }
@@ -5025,6 +6804,7 @@
           "hxc_iterator_ref_create_array_pairs",
           "hxc_iterator_ref_create_array_values",
           "hxc_iterator_ref_create_snapshot",
+          "hxc_iterator_ref_create_traced_snapshot",
           "hxc_iterator_ref_has_next",
           "hxc_iterator_ref_next_move",
           "hxc_iterator_ref_release",
@@ -5446,6 +7226,7 @@
       "hxc_iterator_ref_create_array_pairs",
       "hxc_iterator_ref_create_array_values",
       "hxc_iterator_ref_create_snapshot",
+      "hxc_iterator_ref_create_traced_snapshot",
       "hxc_iterator_ref_has_next",
       "hxc_iterator_ref_next_move",
       "hxc_iterator_ref_release",
@@ -5958,11 +7739,11 @@
         "source": {
           "file": "test/runtime/runtime-feature-graph/RuntimeFeatureGraphGolden.hx",
           "end": {
-            "line": 80,
+            "line": 83,
             "column": 2
           },
           "start": {
-            "line": 80,
+            "line": 83,
             "column": 1
           }
         }

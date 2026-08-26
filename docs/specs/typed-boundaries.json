@@ -101,6 +101,21 @@
       ]
     },
     {
+      "path": "test/differential/object-enum-map/negative/dynamic_key/Main.hx",
+      "line": 6,
+      "column": 29,
+      "construct": "dynamic-type",
+      "boundaryKind": "negative-test",
+      "symbol": "Main.main",
+      "typedModel": "CBodyTypedMap exact ObjectMap key policy",
+      "sourceLine": "final map = new ObjectMap<Dynamic, Int>();",
+      "justification": "The negative fixture must present the real Haxe Dynamic key type to prove ObjectMap does not choose structural equality, pointer accidents, or an implicit universal box.",
+      "validation": "CBodyTypedMap rejects the key before HxcIR and artifact emission, and the object-enum-map differential requires the exact source-positioned HXC1001 diagnostic with no generated output.",
+      "testEvidence": [
+        "test/differential/object-enum-map/run.py"
+      ]
+    },
+    {
       "path": "test/generic_specialization/fixtures/dynamic/Main.hx",
       "line": 7,
       "column": 22,

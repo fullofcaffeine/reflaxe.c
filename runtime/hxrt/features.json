@@ -424,6 +424,41 @@
     },
     {
       "documentation": {
+        "referencePath": "docs/hxrt.md",
+        "selectionRoots": [
+          {
+            "description": "A reachable ordinary Haxe EnumValueMap construction, copy, lookup, insertion, removal, clear, or iterator operation.",
+            "id": "enum-value-map-operation",
+            "kind": "hxc-ir-operation"
+          }
+        ],
+        "runtimeRationale": "Mutable EnumValueMap values need shared identity and equality that follows the active constructor. Generated callbacks keep that policy typed and unboxed.",
+        "evidence": [
+          "test/differential/object-enum-map/run.py",
+          "test/runtime/runtime-feature-graph/run.py"
+        ],
+        "directAlternative": "A compiler-known immutable enum lookup can remain direct when no shared mutable map value is observable.",
+        "contract": "Compares enum constructors and payloads recursively, using identity for class payloads, while tracing occupied keys and exact values strongly.",
+        "programLocalAlternative": "A bounded program-local specialization is allowed only when recursive payload equality and class-payload identity remain exact."
+      },
+      "dependencies": [
+        "typed-map"
+      ],
+      "id": "enum-value-map",
+      "availability": "compiler-selectable",
+      "symbols": [],
+      "artifacts": [],
+      "libraries": [],
+      "minimalAllowed": true,
+      "summary": "Recursive enum-value Map keys over the shared exact typed-map runtime.",
+      "defines": [],
+      "environments": [
+        "freestanding",
+        "hosted"
+      ]
+    },
+    {
+      "documentation": {
         "referencePath": "docs/gc-runtime.md",
         "selectionRoots": [
           {
@@ -546,7 +581,7 @@
           "sourcePath": "runtime/hxrt/include/hxrt/int_map.h"
         },
         {
-          "sourceSha256": "743339e9c3dea7a1894e1c7920cfe4b717c4bc0436224837f64c837038496fcc",
+          "sourceSha256": "769ca4906fc47b0f61499e3f5ca14aea22237dbd37fef81e5f4eafbf6f71ec9e",
           "kind": "runtime-source",
           "outputPath": "runtime/src/int_map.c",
           "sourcePath": "runtime/hxrt/src/int_map.c"
@@ -673,6 +708,7 @@
         "hxc_iterator_ref_create_array_pairs",
         "hxc_iterator_ref_create_array_values",
         "hxc_iterator_ref_create_snapshot",
+        "hxc_iterator_ref_create_traced_snapshot",
         "hxc_iterator_ref_has_next",
         "hxc_iterator_ref_next_move",
         "hxc_iterator_ref_release",
@@ -680,13 +716,13 @@
       ],
       "artifacts": [
         {
-          "sourceSha256": "5bc0d5bbf8c781900cfaf55205da67b4a21589176613eca336139bc233a2d877",
+          "sourceSha256": "55e3b3f7a64bf7b62c690bfac4a0930688f3333d9d993d01fc2d6fd4f9e7d5d5",
           "kind": "runtime-header",
           "outputPath": "runtime/include/hxrt/iterator.h",
           "sourcePath": "runtime/hxrt/include/hxrt/iterator.h"
         },
         {
-          "sourceSha256": "c19d81c3f20ba6c288a216997a004ffb62062d8aa47dada946b7bacd9f6a9db0",
+          "sourceSha256": "d5eee743576672a903009144ed35cfc26168d171dffec0e2de68105831681e99",
           "kind": "runtime-source",
           "outputPath": "runtime/src/iterator.c",
           "sourcePath": "runtime/hxrt/src/iterator.c"
@@ -753,6 +789,41 @@
       "libraries": [],
       "minimalAllowed": true,
       "summary": "Selective immutable object/type descriptors with exact trace and optional finalization dispatch.",
+      "defines": [],
+      "environments": [
+        "freestanding",
+        "hosted"
+      ]
+    },
+    {
+      "documentation": {
+        "referencePath": "docs/hxrt.md",
+        "selectionRoots": [
+          {
+            "description": "A reachable ordinary Haxe ObjectMap construction, copy, lookup, insertion, removal, clear, or iterator operation.",
+            "id": "object-map-operation",
+            "kind": "hxc-ir-operation"
+          }
+        ],
+        "runtimeRationale": "Mutable ObjectMap values need shared identity and stable pointer-key equality. Exact generated callbacks keep every key and value unboxed and precisely traced.",
+        "evidence": [
+          "test/differential/object-enum-map/run.py",
+          "test/runtime/runtime-feature-graph/run.py"
+        ],
+        "directAlternative": "A compiler-known immutable identity lookup can remain direct when no shared mutable map value is observable.",
+        "contract": "Preserves stable Haxe object identity as map-key equality while tracing occupied object keys and exact values strongly.",
+        "programLocalAlternative": "A bounded program-local specialization is allowed only when distinct objects with equal fields remain distinct keys."
+      },
+      "dependencies": [
+        "typed-map"
+      ],
+      "id": "object-map",
+      "availability": "compiler-selectable",
+      "symbols": [],
+      "artifacts": [],
+      "libraries": [],
+      "minimalAllowed": true,
+      "summary": "Object-identity Map keys over the shared exact typed-map runtime.",
       "defines": [],
       "environments": [
         "freestanding",
@@ -1264,7 +1335,7 @@
           "sourcePath": "runtime/hxrt/include/hxrt/string_map.h"
         },
         {
-          "sourceSha256": "a1c2095e6b2948109ab5b7fb1771e56998e0606fdab3ec9caa0b9e1d80d632a1",
+          "sourceSha256": "41a2b4477c29b2d1692b5ad1263c09ebfed37b331788299b9a11de1a2cd76a24",
           "kind": "runtime-source",
           "outputPath": "runtime/src/string_map.c",
           "sourcePath": "runtime/hxrt/src/string_map.c"
@@ -1435,6 +1506,76 @@
         "freestanding",
         "hosted"
       ]
+    },
+    {
+      "documentation": {
+        "referencePath": "docs/hxrt.md",
+        "selectionRoots": [
+          {
+            "description": "Selected by ObjectMap or EnumValueMap after the compiler has chosen an exact key policy and unboxed value layout.",
+            "id": "dependency-only",
+            "kind": "transitive-dependency"
+          }
+        ],
+        "runtimeRationale": "The shared runtime owns table mechanics only. Generated typed callbacks retain Haxe key meaning and exact tracing, so the runtime does not box keys or values.",
+        "evidence": [
+          "test/differential/object-enum-map/run.py",
+          "test/runtime/runtime-feature-graph/run.py"
+        ],
+        "directAlternative": "A closed immutable lookup can remain direct generated data when mutable map identity is unobservable.",
+        "contract": "Owns collision handling, checked allocation, failure-atomic mutation, and rooted iterator snapshots for exact compiler-provided key and value layouts.",
+        "programLocalAlternative": "A program-local bounded table is valid only when it preserves the same equality, aliasing, mutation, and failure contracts."
+      },
+      "dependencies": [
+        "gc",
+        "iterator"
+      ],
+      "id": "typed-map",
+      "availability": "compiler-selectable",
+      "symbols": [
+        "hxc_typed_map_copy_in_place",
+        "hxc_typed_map_dispose_in_place",
+        "hxc_typed_map_hash_mix",
+        "hxc_typed_map_identity_hash",
+        "hxc_typed_map_init_collector_owned",
+        "hxc_typed_map_key_ops_is_valid",
+        "hxc_typed_map_ref_clear",
+        "hxc_typed_map_ref_copy",
+        "hxc_typed_map_ref_create",
+        "hxc_typed_map_ref_exists",
+        "hxc_typed_map_ref_get_copy",
+        "hxc_typed_map_ref_key_iterator",
+        "hxc_typed_map_ref_pair_iterator",
+        "hxc_typed_map_ref_release",
+        "hxc_typed_map_ref_remove",
+        "hxc_typed_map_ref_retain",
+        "hxc_typed_map_ref_set_copy",
+        "hxc_typed_map_ref_value_iterator",
+        "hxc_typed_map_type_descriptor",
+        "hxc_typed_map_value_ops_is_valid"
+      ],
+      "artifacts": [
+        {
+          "sourceSha256": "8e0838bbf09921bf4167fc85e55d99a762cd208b069a41008e645b5e07949f11",
+          "kind": "runtime-header",
+          "outputPath": "runtime/include/hxrt/typed_map.h",
+          "sourcePath": "runtime/hxrt/include/hxrt/typed_map.h"
+        },
+        {
+          "sourceSha256": "2a890d9f7a66a2faaffff43eee084fcf704138442f5915e8e728acbcad6fbcff",
+          "kind": "runtime-source",
+          "outputPath": "runtime/src/typed_map.c",
+          "sourcePath": "runtime/hxrt/src/typed_map.c"
+        }
+      ],
+      "libraries": [],
+      "minimalAllowed": true,
+      "summary": "Checked exact-layout hash-table mechanics shared by compiler-specialized identity and enum-value maps.",
+      "defines": [],
+      "environments": [
+        "freestanding",
+        "hosted"
+      ]
     }
   ],
   "status": "selective-compiler-packaging",
@@ -1445,11 +1586,13 @@
     "array-join",
     "bytes",
     "bytes-string",
+    "enum-value-map",
     "gc",
     "int-map",
     "io",
     "iterator",
     "object",
+    "object-map",
     "runtime-base",
     "status",
     "string",
@@ -1458,7 +1601,8 @@
     "string-lower-case",
     "string-map",
     "string-scalar",
-    "string-split"
+    "string-split",
+    "typed-map"
   ],
   "algorithm": "hxc-runtime-feature-graph-v3",
   "runtimeAbi": {
@@ -1491,6 +1635,7 @@
         "hxc_int_bool_map_ref",
         "hxc_iterator_element_ops",
         "hxc_iterator_ref",
+        "hxc_iterator_root_ops",
         "hxc_object_header",
         "hxc_owned_cstring",
         "hxc_owned_string",
@@ -1499,6 +1644,9 @@
         "hxc_string_map_ref",
         "hxc_string_map_value_ops",
         "hxc_type_descriptor",
+        "hxc_typed_map_key_ops",
+        "hxc_typed_map_ref",
+        "hxc_typed_map_value_ops",
         "hxc_utf8_step"
       ],
       "exportTypePolicy": "runtime-structs-forbidden"
@@ -1506,7 +1654,7 @@
     "releaseProvenance": {
       "runtimeCStandard": "c11",
       "sourceHashAlgorithm": "sha256",
-      "sourceSetSha256": "4629b3e95b5e310c2d1d4b6ca074eb217e2dbd0354f81126fb50366a1332636b",
+      "sourceSetSha256": "a3f0b7cba9d4cebbbb9ab7f177d0f2c1aaac3285b604ccd950ed6800ae932495",
       "publicHeaderCppStandard": "c++17"
     },
     "generatedCodeCompatibility": "same-major",

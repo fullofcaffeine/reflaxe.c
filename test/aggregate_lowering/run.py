@@ -1536,7 +1536,6 @@ def check_array_literal_flow(*, requested_toolchain: str) -> None:
             "primitiveValues": ":i32",
             "stringValues": ":managed-string-utf8",
             "choiceValues": ':instance("instance.enum.',
-            "recordValues": ':instance("instance.closed-record.',
         }
         for function_name, load_type in expected_load_types.items():
             section = named_function_section(hxcir, "Main", function_name)
@@ -1552,6 +1551,55 @@ def check_array_literal_flow(*, requested_toolchain: str) -> None:
                 raise AggregateLoweringFailure(
                     f"{function_name} did not stage and reload its exact first element"
                 )
+
+        # Haxe introduces a typed source temporary for the managed record before
+        # the custom target receives the Array literal. Verify that exact
+        # frontend boundary instead of requiring an array-owned staging label:
+        # the record-producing call must initialize one local, the final join
+        # must reload that same exact record, and Array creation must use it.
+        record = named_function_section(hxcir, "Main", "recordValues")
+        record_call = re.search(
+            r'instruction "[^"]+\.call" result="(?P<value>value\.\d+)":'
+            r'instance\("(?P<instance>instance\.closed-record\.[^"]+)"\) '
+            r'call dispatch=direct\("function\.Main\.makeRecord"\)',
+            record,
+        )
+        record_initialize = (
+            None
+            if record_call is None
+            else re.search(
+                r'instruction "[^"]+\.initialize" result=- initialize '
+                r'place=local\("(?P<local>local\.\d+)"\) value="'
+                + re.escape(record_call.group("value"))
+                + r'"',
+                record[record_call.end() :],
+            )
+        )
+        record_load = None
+        if record_call is not None and record_initialize is not None:
+            record_load = re.search(
+                r'instruction "[^"]+\.load" result="(?P<value>value\.\d+)":'
+                r'instance\("'
+                + re.escape(record_call.group("instance"))
+                + r'"\) load place=local\("'
+                + re.escape(record_initialize.group("local"))
+                + r'"\)',
+                record[record_call.end() + record_initialize.end() :],
+            )
+        record_create = next(
+            (line for line in record.splitlines() if ".array-create-literal" in line),
+            "",
+        )
+        if (
+            record_call is None
+            or record_initialize is None
+            or record_load is None
+            or ".short-circuit-result-initialize" not in record
+            or f'"{record_load.group("value")}"' not in record_create
+        ):
+            raise AggregateLoweringFailure(
+                "recordValues did not preserve its exact first record across the later join"
+            )
 
         straight = named_function_section(hxcir, "Main", "straightLine")
         if (
@@ -1576,10 +1624,16 @@ def check_array_literal_flow(*, requested_toolchain: str) -> None:
                 ),
                 "",
             )
+            terminal_abort = "target=abort" in create_line
             if (
                 cleanup_prefix not in section
-                or cleanup_prefix not in create_line
-                or "cleanup=[]" in create_line
+                or (
+                    not terminal_abort
+                    and (
+                        cleanup_prefix not in create_line
+                        or "cleanup=[]" in create_line
+                    )
+                )
             ):
                 raise AggregateLoweringFailure(
                     f"{function_name} lost the earlier managed owner on Array allocation failure"

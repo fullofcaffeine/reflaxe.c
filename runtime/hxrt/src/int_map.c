@@ -448,7 +448,7 @@ hxc_status hxc_int_bool_map_ref_value_iterator(
   hxc_iterator_ref **out_iterator
 ) {
   const hxc_iterator_element_ops elements = {
-    sizeof(bool), HXC_ALIGNOF(bool), NULL, NULL, NULL
+    sizeof(bool), HXC_ALIGNOF(bool), NULL, NULL, NULL, NULL
   };
   return hxc_int_bool_map_iterator(
     map, elements, HXC_INT_BOOL_MAP_ITERATOR_VALUE, 0u, 0u, out_iterator
@@ -460,7 +460,7 @@ hxc_status hxc_int_bool_map_ref_key_iterator(
   hxc_iterator_ref **out_iterator
 ) {
   const hxc_iterator_element_ops elements = {
-    sizeof(int32_t), HXC_ALIGNOF(int32_t), NULL, NULL, NULL
+    sizeof(int32_t), HXC_ALIGNOF(int32_t), NULL, NULL, NULL, NULL
   };
   return hxc_int_bool_map_iterator(
     map, elements, HXC_INT_BOOL_MAP_ITERATOR_KEY, 0u, 0u, out_iterator
@@ -476,7 +476,7 @@ hxc_status hxc_int_bool_map_ref_pair_iterator(
   hxc_iterator_ref **out_iterator
 ) {
   const hxc_iterator_element_ops elements = {
-    pair_size, pair_alignment, NULL, NULL, NULL
+    pair_size, pair_alignment, NULL, NULL, NULL, NULL
   };
   if (key_offset > pair_size || pair_size - key_offset < sizeof(int32_t)
     || value_offset > pair_size || pair_size - value_offset < sizeof(bool)) {

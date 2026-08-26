@@ -41,6 +41,7 @@ class RuntimeAbiContract {
 		"hxc_int_bool_map_ref",
 		"hxc_iterator_element_ops",
 		"hxc_iterator_ref",
+		"hxc_iterator_root_ops",
 		"hxc_object_header",
 		"hxc_owned_cstring",
 		"hxc_owned_string",
@@ -49,6 +50,9 @@ class RuntimeAbiContract {
 		"hxc_string_map_ref",
 		"hxc_string_map_value_ops",
 		"hxc_type_descriptor",
+		"hxc_typed_map_key_ops",
+		"hxc_typed_map_ref",
+		"hxc_typed_map_value_ops",
 		"hxc_utf8_step"
 	];
 

@@ -245,6 +245,7 @@ typedef CProfileFunctionBuildWork = {
 	final addedArrays:Int;
 	final addedIntMaps:Int;
 	final addedStringMaps:Int;
+	final addedTypedMaps:Int;
 	final addedBytes:Int;
 	final addedOptionals:Int;
 	final addedImportTypes:Int;

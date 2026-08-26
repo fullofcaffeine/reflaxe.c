@@ -48,9 +48,10 @@ adapter, memory-model, collector-root, and race evidence.
 At this snapshot the ledger contains 183 source modules and 2,311 public API
 records. Exactly the typed `Std.int(Float):Int` row is `conformant`, based on the
 existing ADR 0008 differential, strict-C, optimization, and UBSan suite.
-One hundred rows are `partial`, including bounded Array and iterator, Map,
-Bytes, String, StringTools, StringBuf, `Std.string`, output, and mathematical
-operations with executable evidence. The other 2,210 rows are `planned`. A
+One hundred fourteen rows are `partial`, including bounded Array and iterator,
+IntMap, StringMap, ObjectMap, EnumValueMap, Bytes, String, StringTools,
+StringBuf, `Std.string`, output, and mathematical operations with executable
+evidence. The other 2,196 rows are `planned`. A
 partial row means only its named operation
 shapes have executable evidence; it does not claim the entire type or
 neighboring overloads. This deliberately preserves the current narrow compiler

@@ -437,6 +437,10 @@ class CCompiler {
 			directDecisions.push("managed-haxe-string-maps");
 		if (hasRuntimeFeature(runtimeRequirements, "int-map"))
 			directDecisions.push("managed-haxe-int-maps");
+		if (hasRuntimeFeature(runtimeRequirements, "object-map"))
+			directDecisions.push("managed-haxe-object-maps");
+		if (hasRuntimeFeature(runtimeRequirements, "enum-value-map"))
+			directDecisions.push("managed-haxe-enum-value-maps");
 		if (hasRuntimeFeature(runtimeRequirements, "bytes"))
 			directDecisions.push("managed-haxe-bytes");
 		// These root features all select `string-scalar` through the catalog's

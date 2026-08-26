@@ -27,6 +27,9 @@ class RuntimeFeatureCatalog {
 		final iterator = RuntimeFeatureId.parse("iterator");
 		final intMap = RuntimeFeatureId.parse("int-map");
 		final stringMap = RuntimeFeatureId.parse("string-map");
+		final typedMap = RuntimeFeatureId.parse("typed-map");
+		final objectMap = RuntimeFeatureId.parse("object-map");
+		final enumValueMap = RuntimeFeatureId.parse("enum-value-map");
 		final bytes = RuntimeFeatureId.parse("bytes");
 		final bytesString = RuntimeFeatureId.parse("bytes-string");
 		final object = RuntimeFeatureId.parse("object");
@@ -185,6 +188,7 @@ class RuntimeFeatureCatalog {
 				CompilerSelectable, true, environments, [alloc, array], [header("iterator.h"), source("iterator.c")], [
 					"hxc_iterator_element_ops_is_valid",
 					"hxc_iterator_ref_create_snapshot",
+					"hxc_iterator_ref_create_traced_snapshot",
 					"hxc_iterator_ref_create_array_values",
 					"hxc_iterator_ref_create_array_pairs",
 					"hxc_iterator_ref_retain",
@@ -277,6 +281,71 @@ class RuntimeFeatureCatalog {
 					"A closed bounded key range can use a program-local bitset or table when the compiler can prove that range and preserve Map identity.",
 					"General run-time keys need mutable shared storage. This Bool specialization keeps values unboxed and represents missing lookup results with the compiler's typed optional carrier.",
 					"docs/hxrt.md", ["test/differential/int-map/run.py", "test/runtime/runtime-feature-graph/run.py"])),
+			new RuntimeFeatureDefinition(typedMap, "Checked exact-layout hash-table mechanics shared by compiler-specialized identity and enum-value maps.",
+				CompilerSelectable, true, environments, [gc, iterator], [header("typed_map.h"), source("typed_map.c")], [
+					"hxc_typed_map_key_ops_is_valid",
+					"hxc_typed_map_value_ops_is_valid",
+					"hxc_typed_map_identity_hash",
+					"hxc_typed_map_hash_mix",
+					"hxc_typed_map_type_descriptor",
+					"hxc_typed_map_ref_create",
+					"hxc_typed_map_init_collector_owned",
+					"hxc_typed_map_dispose_in_place",
+					"hxc_typed_map_ref_retain",
+					"hxc_typed_map_ref_release",
+					"hxc_typed_map_ref_copy",
+					"hxc_typed_map_copy_in_place",
+					"hxc_typed_map_ref_set_copy",
+					"hxc_typed_map_ref_exists",
+					"hxc_typed_map_ref_get_copy",
+					"hxc_typed_map_ref_remove",
+					"hxc_typed_map_ref_clear",
+					"hxc_typed_map_ref_value_iterator",
+					"hxc_typed_map_ref_key_iterator",
+					"hxc_typed_map_ref_pair_iterator"
+				],
+				[], [],
+				documentation("Owns collision handling, checked allocation, failure-atomic mutation, and rooted iterator snapshots for exact compiler-provided key and value layouts.",
+					[
+						dependencyRoot("Selected by ObjectMap or EnumValueMap after the compiler has chosen an exact key policy and unboxed value layout.")
+					],
+					"A closed immutable lookup can remain direct generated data when mutable map identity is unobservable.",
+					"A program-local bounded table is valid only when it preserves the same equality, aliasing, mutation, and failure contracts.",
+					"The shared runtime owns table mechanics only. Generated typed callbacks retain Haxe key meaning and exact tracing, so the runtime does not box keys or values.",
+					"docs/hxrt.md",
+					[
+						"test/differential/object-enum-map/run.py",
+						"test/runtime/runtime-feature-graph/run.py"
+					])),
+			new RuntimeFeatureDefinition(objectMap, "Object-identity Map keys over the shared exact typed-map runtime.", CompilerSelectable, true,
+				environments, [typedMap], [], [], [], [],
+				documentation("Preserves stable Haxe object identity as map-key equality while tracing occupied object keys and exact values strongly.", [
+					new RuntimeFeatureSelectionRoot("object-map-operation", RuntimeFeatureSelectionRootKind.HxcIrOperation,
+						"A reachable ordinary Haxe ObjectMap construction, copy, lookup, insertion, removal, clear, or iterator operation.")
+				],
+					"A compiler-known immutable identity lookup can remain direct when no shared mutable map value is observable.",
+					"A bounded program-local specialization is allowed only when distinct objects with equal fields remain distinct keys.",
+					"Mutable ObjectMap values need shared identity and stable pointer-key equality. Exact generated callbacks keep every key and value unboxed and precisely traced.",
+					"docs/hxrt.md",
+					[
+						"test/differential/object-enum-map/run.py",
+						"test/runtime/runtime-feature-graph/run.py"
+					])),
+			new RuntimeFeatureDefinition(enumValueMap, "Recursive enum-value Map keys over the shared exact typed-map runtime.", CompilerSelectable, true,
+				environments, [typedMap], [], [], [], [],
+				documentation("Compares enum constructors and payloads recursively, using identity for class payloads, while tracing occupied keys and exact values strongly.",
+					[
+						new RuntimeFeatureSelectionRoot("enum-value-map-operation", RuntimeFeatureSelectionRootKind.HxcIrOperation,
+							"A reachable ordinary Haxe EnumValueMap construction, copy, lookup, insertion, removal, clear, or iterator operation.")
+					],
+					"A compiler-known immutable enum lookup can remain direct when no shared mutable map value is observable.",
+					"A bounded program-local specialization is allowed only when recursive payload equality and class-payload identity remain exact.",
+					"Mutable EnumValueMap values need shared identity and equality that follows the active constructor. Generated callbacks keep that policy typed and unboxed.",
+					"docs/hxrt.md",
+					[
+						"test/differential/object-enum-map/run.py",
+						"test/runtime/runtime-feature-graph/run.py"
+					])),
 			new RuntimeFeatureDefinition(bytes, "Fixed-length mutable binary storage with checked ranges and shared Haxe identity.", CompilerSelectable, true,
 				environments, [alloc, stringLiteral], [header("bytes.h"), source("bytes.c")], [
 					"hxc_bytes_ref_create_zeroed",
@@ -614,7 +683,7 @@ class RuntimeFeatureCatalog {
 			case "gc.h": "2ca9523f1c74c62877c3f006bab9bd8a3a2a1eced93d67ad59d015a7c6ecb9de";
 			case "io.h": "4b92f03451dc4d04ea74c857ca3ce54d52fbe80d31f155b93781ee2fab946589";
 			case "int_map.h": "69dfbe45cc182cfb66fbc5e44b38c7cf3205386ff8edabd7d33bc1daabe5ef83";
-			case "iterator.h": "5bc0d5bbf8c781900cfaf55205da67b4a21589176613eca336139bc233a2d877";
+			case "iterator.h": "55e3b3f7a64bf7b62c690bfac4a0930688f3333d9d993d01fc2d6fd4f9e7d5d5";
 			case "object.h": "779b452097e4c58c7971b90743ace19a2dc6c91e381557abc84fbd5f9b30f1e5";
 			case "status.h": "6bf20f5d82594014ad0f2b79a25cb81417791bd9c07375d2fb89835e415be1c4";
 			case "status_name.h": "64bf3917787ffcf924369c8e1c0a525cf10902d004d5bb4b898f2af46a7456cc";
@@ -627,6 +696,7 @@ class RuntimeFeatureCatalog {
 			case "string_map.h": "8d5d791b4df91205d843e892e23c1da7582f05da3146b7f371a4a4a51f18ce2e";
 			case "string_scalar.h": "b400d7ef9af853410334b30627ea98a5af87d5c3a863f6aa4c770d7cc4b3d90b";
 			case "string_split.h": "a17c9cd6c31cfdb8da2cf4955b980090c144e68ee1ae4f1d0f0b543f4b6eb3eb";
+			case "typed_map.h": "8e0838bbf09921bf4167fc85e55d99a762cd208b069a41008e645b5e07949f11";
 			case _: throw 'runtime feature header `$name` has no reviewed SHA-256 provenance';
 		};
 	}
@@ -641,16 +711,17 @@ class RuntimeFeatureCatalog {
 			case "bytes_string.c": "0ee9604f1b4ae78baeeaf7cac8b2a35b5634f115c958a7575230c790e8aa6ca6";
 			case "gc.c": "96cf942d6752070aaa5005eae3bc45c7d00aca37c360dfecaeb76d8db767b4cc";
 			case "io.c": "898b3f351b60a91f25fd1ffdfe8d832e95a5a6a738ffe226ac33581f1fcb5b0f";
-			case "int_map.c": "743339e9c3dea7a1894e1c7920cfe4b717c4bc0436224837f64c837038496fcc";
-			case "iterator.c": "c19d81c3f20ba6c288a216997a004ffb62062d8aa47dada946b7bacd9f6a9db0";
+			case "int_map.c": "769ca4906fc47b0f61499e3f5ca14aea22237dbd37fef81e5f4eafbf6f71ec9e";
+			case "iterator.c": "d5eee743576672a903009144ed35cfc26168d171dffec0e2de68105831681e99";
 			case "object.c": "0e7fc6a55b562eaaf03fe63eca743dd73248f0bee1c09e21b79464917e8c89c0";
 			case "status.c": "0695ab2528db6e29d5cf29d905ad736b7c1a3a79333082347ec18faea2d4e6d8";
 			case "string.c": "9e267e14bdca44436a282b4956121b5340e71e0dffc5060306fee898c11d181a";
 			case "string_lower_case.c": "55a692cfd855f71f1a1fa4f90f311f1653ec0638797ecfb024764e23a66680c8";
 			case "string_float.c": "60e5189e7f7304ccbc1f69136b7393e4eea35760cde590853ebced414bf39267";
-			case "string_map.c": "a1c2095e6b2948109ab5b7fb1771e56998e0606fdab3ec9caa0b9e1d80d632a1";
+			case "string_map.c": "41a2b4477c29b2d1692b5ad1263c09ebfed37b331788299b9a11de1a2cd76a24";
 			case "string_scalar.c": "2c44eebc655dd34ed374b58402de9dfe731425fb4e0b54997a7c16c12e1309fb";
 			case "string_split.c": "799fc917a450169e4babd86748e879fe7222b4abfef293880c47891e671f9d1b";
+			case "typed_map.c": "2a890d9f7a66a2faaffff43eee084fcf704138442f5915e8e728acbcad6fbcff";
 			case _: throw 'runtime feature source `$name` has no reviewed SHA-256 provenance';
 		};
 	}

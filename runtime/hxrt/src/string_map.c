@@ -809,7 +809,8 @@ hxc_status hxc_string_map_ref_value_iterator(
     map->values.alignment,
     map->values.context,
     map->values.copy,
-    map->values.destroy
+    map->values.destroy,
+    NULL
   };
   fill = (hxc_string_map_value_iterator_fill){map, 0u};
   status = hxc_iterator_ref_create_snapshot(
@@ -849,7 +850,8 @@ hxc_status hxc_string_map_ref_key_iterator(
     HXC_ALIGNOF(hxc_string),
     map,
     hxc_string_map_key_copy,
-    hxc_string_map_key_destroy
+    hxc_string_map_key_destroy,
+    NULL
   };
   fill = (hxc_string_map_value_iterator_fill){map, 0u};
   status = hxc_iterator_ref_create_snapshot(
@@ -913,7 +915,8 @@ hxc_status hxc_string_map_ref_pair_iterator(
     pair_alignment,
     fill,
     hxc_string_map_pair_copy,
-    hxc_string_map_pair_destroy
+    hxc_string_map_pair_destroy,
+    NULL
   };
   status = hxc_iterator_ref_create_snapshot(
     map->allocator,

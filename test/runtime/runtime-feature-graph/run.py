@@ -34,6 +34,7 @@ ALLOC_CONSUMER = CASE / "alloc_consumer.c"
 ARRAY_CONSUMER = CASE / "array_consumer.c"
 INT_MAP_CONSUMER = ROOT / "test/differential/int-map/int_map_runtime.c"
 STRING_MAP_CONSUMER = ROOT / "test/differential/string-map/string_map_runtime.c"
+TYPED_MAP_CONSUMER = ROOT / "test/differential/object-enum-map/typed_map_runtime.c"
 BYTES_CONSUMER = CASE / "bytes_consumer.c"
 BYTES_STRING_CONSUMER = CASE / "bytes_string_consumer.c"
 OBJECT_CONSUMER = CASE / "object_consumer.c"
@@ -182,11 +183,13 @@ def validate_catalog(catalog: dict[str, object]) -> None:
         "array-join",
         "bytes",
         "bytes-string",
+        "enum-value-map",
         "gc",
         "int-map",
         "io",
         "iterator",
         "object",
+        "object-map",
         "runtime-base",
         "status",
         "string",
@@ -196,6 +199,7 @@ def validate_catalog(catalog: dict[str, object]) -> None:
         "string-map",
         "string-scalar",
         "string-split",
+        "typed-map",
     ]:
         raise RuntimeFeatureFailure("catalog compiler-selectable feature inventory drifted")
     runtime_abi = record(catalog.get("runtimeAbi"), "runtime ABI contract")
@@ -244,6 +248,9 @@ def validate_catalog(catalog: dict[str, object]) -> None:
         "int-map",
         "iterator",
         "string-map",
+        "typed-map",
+        "object-map",
+        "enum-value-map",
         "string-lower-case",
         "string-float",
         "string-split",
@@ -268,6 +275,9 @@ def validate_catalog(catalog: dict[str, object]) -> None:
         "int-map": ["alloc", "iterator", "string"],
         "iterator": ["alloc", "array"],
         "string-map": ["alloc", "iterator", "string", "string-literal"],
+        "typed-map": ["gc", "iterator"],
+        "object-map": ["typed-map"],
+        "enum-value-map": ["typed-map"],
         "string-lower-case": ["string"],
         "string-float": ["string"],
         "string-split": ["array", "string"],
@@ -291,6 +301,9 @@ def validate_catalog(catalog: dict[str, object]) -> None:
         "int-map": "compiler-selectable",
         "iterator": "compiler-selectable",
         "string-map": "compiler-selectable",
+        "typed-map": "compiler-selectable",
+        "object-map": "compiler-selectable",
+        "enum-value-map": "compiler-selectable",
         "string-lower-case": "compiler-selectable",
         "string-float": "compiler-selectable",
         "string-split": "compiler-selectable",
@@ -534,6 +547,9 @@ def validate_plans(plans: dict[str, object]) -> None:
     array = record(plans.get("array"), "array plan")
     int_map = record(plans.get("intMap"), "IntMap plan")
     string_map = record(plans.get("stringMap"), "StringMap plan")
+    typed_map = record(plans.get("typedMap"), "typed-map plan")
+    object_map = record(plans.get("objectMap"), "ObjectMap plan")
+    enum_value_map = record(plans.get("enumValueMap"), "EnumValueMap plan")
     string_lower_case = record(plans.get("stringLowerCase"), "String lower case plan")
     string_float = record(plans.get("stringFloat"), "Float String plan")
     string_split = record(plans.get("stringSplit"), "String split plan")
@@ -566,6 +582,22 @@ def validate_plans(plans: dict[str, object]) -> None:
         "string-map",
     ]:
         raise RuntimeFeatureFailure("StringMap closure is incomplete or nondeterministic")
+    typed_map_closure = [
+        "runtime-base",
+        "status",
+        "alloc",
+        "array",
+        "object",
+        "gc",
+        "iterator",
+        "typed-map",
+    ]
+    if typed_map.get("features") != typed_map_closure:
+        raise RuntimeFeatureFailure("typed-map closure is incomplete or nondeterministic")
+    if object_map.get("features") != [*typed_map_closure, "object-map"]:
+        raise RuntimeFeatureFailure("ObjectMap closure is incomplete or nondeterministic")
+    if enum_value_map.get("features") != [*typed_map_closure, "enum-value-map"]:
+        raise RuntimeFeatureFailure("EnumValueMap closure is incomplete or nondeterministic")
     if string_float.get("features") != [
         "runtime-base",
         "status",
@@ -634,6 +666,9 @@ def validate_plans(plans: dict[str, object]) -> None:
     validate_selected_reasons(array, "array")
     validate_selected_reasons(int_map, "IntMap")
     validate_selected_reasons(string_map, "StringMap")
+    validate_selected_reasons(typed_map, "typed-map")
+    validate_selected_reasons(object_map, "ObjectMap")
+    validate_selected_reasons(enum_value_map, "EnumValueMap")
     validate_selected_reasons(string_lower_case, "String lower case")
     validate_selected_reasons(string_split, "String.split")
     validate_selected_reasons(bytes_plan, "Bytes")
@@ -680,6 +715,14 @@ def validate_plans(plans: dict[str, object]) -> None:
         string_map.get("artifacts"), "StringMap artifacts"
     ):
         raise RuntimeFeatureFailure("StringMap build plan omitted its selected source")
+    if "runtime/src/typed_map.c" not in text_list(
+        typed_map.get("artifacts"), "typed-map artifacts"
+    ):
+        raise RuntimeFeatureFailure("typed-map build plan omitted its selected source")
+    if "hxc_typed_map_ref_set_copy" not in text_list(
+        typed_map.get("symbols"), "typed-map symbols"
+    ):
+        raise RuntimeFeatureFailure("typed-map build plan omitted its selected mutation symbol")
     if "runtime/src/bytes.c" not in text_list(bytes_plan.get("artifacts"), "Bytes artifacts"):
         raise RuntimeFeatureFailure("Bytes build plan omitted its selected source")
     if "runtime/src/bytes_string.c" not in text_list(
@@ -782,6 +825,7 @@ def validate_package(package: dict[str, object], plans: dict[str, object]) -> No
         "array",
         "intMap",
         "stringMap",
+        "typedMap",
         "stringLowerCase",
         "stringSplit",
         "bytes",
@@ -995,6 +1039,7 @@ def package_from_snapshots(
         "array",
         "intMap",
         "stringMap",
+        "typedMap",
         "stringLowerCase",
         "stringSplit",
         "bytes",
@@ -1100,6 +1145,7 @@ def run_native(package: dict[str, object], toolchains: list[Toolchain]) -> None:
     array = records(package.get("array"), "array package")
     int_map = records(package.get("intMap"), "IntMap package")
     string_map = records(package.get("stringMap"), "StringMap package")
+    typed_map = records(package.get("typedMap"), "typed-map package")
     bytes_package = records(package.get("bytes"), "Bytes package")
     bytes_string_package = records(package.get("bytesString"), "Bytes-to-String package")
     object_package = records(package.get("object"), "object package")
@@ -1116,6 +1162,7 @@ def run_native(package: dict[str, object], toolchains: list[Toolchain]) -> None:
             run_native_case(toolchain, "array", array, ARRAY_CONSUMER, "runtime-feature-array: OK\n", family_root)
             run_native_case(toolchain, "int-map", int_map, INT_MAP_CONSUMER, "", family_root)
             run_native_case(toolchain, "string-map", string_map, STRING_MAP_CONSUMER, "", family_root)
+            run_native_case(toolchain, "typed-map", typed_map, TYPED_MAP_CONSUMER, "", family_root)
             run_native_case(toolchain, "bytes", bytes_package, BYTES_CONSUMER, "runtime-feature-bytes: OK\n", family_root)
             run_native_case(
                 toolchain,

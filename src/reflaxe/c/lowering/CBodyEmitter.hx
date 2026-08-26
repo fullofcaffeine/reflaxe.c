@@ -26,6 +26,8 @@ import reflaxe.c.lowering.CBodyIntMap.CPreparedBodyIntMap;
 import reflaxe.c.lowering.CBodyIterator.CPreparedBodyIterator;
 import reflaxe.c.lowering.CBodyOptional.CLoweredBodyOptional;
 import reflaxe.c.lowering.CBodyStringMap.CLoweredBodyStringMap;
+import reflaxe.c.lowering.CBodyTypedMap.CBodyTypedMapFamily;
+import reflaxe.c.lowering.CBodyTypedMap.CLoweredBodyTypedMap;
 import reflaxe.c.lowering.CBodyControlFlow.CBodyControlFlowCompletion;
 import reflaxe.c.lowering.CBodyControlFlow.CBodyControlFlowNode;
 import reflaxe.c.lowering.CBodyControlFlow.CBodyControlFlowPlan;
@@ -209,6 +211,8 @@ class CBodyEmitter {
 	final intMapInstanceIds:Map<String, Bool> = [];
 	final stringMapValueTypes:Map<String, HxcIRTypeRef> = [];
 	final stringMapsByInstance:Map<String, CLoweredBodyStringMap> = [];
+	final typedMapsByInstance:Map<String, CLoweredBodyTypedMap> = [];
+	final collectorManagedInstanceIds:Map<String, Bool> = [];
 	final arrayElementCleanups:Map<String, CBodyEmitterArrayElementCleanup> = [];
 	final bytesInstanceIds:Map<String, Bool> = [];
 	final optionalsByType:Map<String, CLoweredBodyOptional> = [];
@@ -228,8 +232,8 @@ class CBodyEmitter {
 	#if (macro || reflaxe_runtime)
 	public function new(?aggregates:Array<CLoweredBodyAggregate>, ?enums:Array<CLoweredBodyEnum>, ?classes:Array<CLoweredBodyClass>,
 			?arrays:Array<CLoweredBodyArray>, ?iterators:Array<CPreparedBodyIterator>, ?intMaps:Array<CPreparedBodyIntMap>,
-			?stringMaps:Array<CLoweredBodyStringMap>, ?bytes:Array<CPreparedBodyBytes>, ?optionals:Array<CLoweredBodyOptional>,
-			?dispatch:CLoweredBodyDispatch, ?imports:CLoweredImports, ?managedProgram:CManagedProgramNames) {
+			?stringMaps:Array<CLoweredBodyStringMap>, ?typedMaps:Array<CLoweredBodyTypedMap>, ?bytes:Array<CPreparedBodyBytes>,
+			?optionals:Array<CLoweredBodyOptional>, ?dispatch:CLoweredBodyDispatch, ?imports:CLoweredImports, ?managedProgram:CManagedProgramNames) {
 		this.imports = imports == null ? CLoweredImports.empty() : imports;
 		this.managedProgram = managedProgram;
 		if (aggregates != null) {
@@ -338,6 +342,7 @@ class CBodyEmitter {
 					if (value.descriptorName == null)
 						throw new CBodyEmissionError('managed class `$instanceId` lost its descriptor name');
 					managedDescriptorNames.set(instanceId, value.descriptorName);
+					collectorManagedInstanceIds.set(instanceId, true);
 				}
 				classTags.set(instanceId, value.cTag);
 				if (value.prepared.base != null) {
@@ -375,6 +380,7 @@ class CBodyEmitter {
 					if (value.descriptorName == null)
 						throw new CBodyEmissionError('collector-managed Array `${value.prepared.instanceId}` lost its descriptor name');
 					managedDescriptorNames.set(value.prepared.instanceId, value.descriptorName);
+					collectorManagedInstanceIds.set(value.prepared.instanceId, true);
 				}
 				final implementationId = value.prepared.destroyImplementationId();
 				if (implementationId != null) {
@@ -391,6 +397,11 @@ class CBodyEmitter {
 			for (value in stringMaps) {
 				stringMapsByInstance.set(value.prepared.instanceId, value);
 				stringMapValueTypes.set(value.prepared.instanceId, value.prepared.value.irType);
+			}
+		if (typedMaps != null)
+			for (value in typedMaps) {
+				typedMapsByInstance.set(value.prepared.instanceId, value);
+				collectorManagedInstanceIds.set(value.prepared.instanceId, true);
 			}
 		if (iterators != null)
 			for (value in iterators)
@@ -2840,6 +2851,8 @@ class CBodyEmitter {
 					throw new CBodyEmissionError('managed IntMap instance `$instanceId` requires pointer declarator context');
 				if (stringMapValueTypes.exists(instanceId))
 					throw new CBodyEmissionError('managed StringMap instance `$instanceId` requires pointer declarator context');
+				if (typedMapsByInstance.exists(instanceId))
+					throw new CBodyEmissionError('collector-managed typed map instance `$instanceId` requires pointer declarator context');
 				if (bytesInstanceIds.exists(instanceId))
 					throw new CBodyEmissionError('managed Bytes instance `$instanceId` requires pointer declarator context');
 				final imported = imports.typeByInstance(instanceId);
@@ -2888,6 +2901,8 @@ class CBodyEmitter {
 				{type: new CType(TStruct(new CIdentifier("hxc_int_bool_map_ref"))), declarator: DPointer(inner, [])};
 			case IRTInstance(instanceId) if (stringMapValueTypes.exists(instanceId)):
 				{type: new CType(TStruct(new CIdentifier("hxc_string_map_ref"))), declarator: DPointer(inner, [])};
+			case IRTInstance(instanceId) if (typedMapsByInstance.exists(instanceId)):
+				{type: new CType(TStruct(new CIdentifier("hxc_typed_map_ref"))), declarator: DPointer(inner, [])};
 			case IRTInstance(instanceId) if (bytesInstanceIds.exists(instanceId)):
 				{type: new CType(TStruct(new CIdentifier("hxc_bytes_ref"))), declarator: DPointer(inner, [])};
 			case IRTCString:
@@ -3263,6 +3278,14 @@ class CBodyEmitter {
 			result.push(arrayLifecyclePrototype(requireStringMapCallbackName(map.assignName, map, "assign"), map.assignParameterNames, false));
 			result.push(arrayLifecyclePrototype(requireStringMapCallbackName(map.destroyName, map, "destroy"), map.destroyParameterNames, true));
 		}
+		for (map in canonicalTypedMaps()) {
+			result.push(typedMapHashPrototype(map));
+			result.push(typedMapEqualPrototype(map));
+			if (map.keyTraceName != null)
+				result.push(typedMapTracePrototype(map.keyTraceName));
+			if (map.valueTraceName != null)
+				result.push(typedMapTracePrototype(map.valueTraceName));
+		}
 		return result;
 	}
 
@@ -3297,7 +3320,205 @@ class CBodyEmitter {
 			result.push(stringMapAssignDefinition(map));
 			result.push(stringMapDestroyDefinition(map));
 		}
+		for (map in canonicalTypedMaps()) {
+			result.push(typedMapHashDefinition(map));
+			result.push(typedMapEqualDefinition(map));
+			if (map.keyTraceName != null)
+				result.push(typedMapTraceDefinition(map, map.prepared.key, map.keyTraceName));
+			if (map.valueTraceName != null)
+				result.push(typedMapTraceDefinition(map, map.prepared.value, map.valueTraceName));
+		}
 		return result;
+	}
+
+	/** Declare one exact typed-map hash callback without exposing its key type. */
+	function typedMapHashPrototype(map:CLoweredBodyTypedMap):CDecl {
+		final context = derivedLifecycleName(map.hashName, "context");
+		final key = derivedLifecycleName(map.hashName, "key");
+		return DPrototype([], [], new CType(TInt(64, false)), DFunction(DName(map.hashName), FPPrototype([
+			{type: new CType(TVoid), declarator: DPointer(DName(context), []), attributes: []},
+			{type: new CType(TVoid, [QConst]), declarator: DPointer(DName(key), []), attributes: []}
+		], false)), []);
+	}
+
+	/** Declare one exact typed-map equality callback without exposing its key type. */
+	function typedMapEqualPrototype(map:CLoweredBodyTypedMap):CDecl {
+		final context = derivedLifecycleName(map.equalName, "context");
+		final left = derivedLifecycleName(map.equalName, "left");
+		final right = derivedLifecycleName(map.equalName, "right");
+		return DPrototype([], [], new CType(TBool), DFunction(DName(map.equalName), FPPrototype([
+			{type: new CType(TVoid), declarator: DPointer(DName(context), []), attributes: []},
+			{type: new CType(TVoid, [QConst]), declarator: DPointer(DName(left), []), attributes: []},
+			{type: new CType(TVoid, [QConst]), declarator: DPointer(DName(right), []), attributes: []}
+		], false)), []);
+	}
+
+	/** Declare one exact key/value root visitor used by typed-map storage. */
+	function typedMapTracePrototype(name:CIdentifier):CDecl {
+		final context = derivedLifecycleName(name, "context");
+		final value = derivedLifecycleName(name, "value");
+		final visit = derivedLifecycleName(name, "visit");
+		final visitContext = derivedLifecycleName(name, "visit_context");
+		return DPrototype([], [], new CType(TVoid), DFunction(DName(name), FPPrototype([
+			{type: new CType(TVoid), declarator: DPointer(DName(context), []), attributes: []},
+			{type: new CType(TVoid, [QConst]), declarator: DPointer(DName(value), []), attributes: []},
+			{type: new CType(TNamed(new CIdentifier("hxc_trace_visit_fn"))), declarator: DName(visit), attributes: []},
+			{type: new CType(TVoid), declarator: DPointer(DName(visitContext), []), attributes: []}
+		], false)), []);
+	}
+
+	/** Hash object identity privately and enums through their active payloads. */
+	function typedMapHashDefinition(map:CLoweredBodyTypedMap):CDecl {
+		final context = derivedLifecycleName(map.hashName, "context");
+		final keyName = derivedLifecycleName(map.hashName, "key");
+		final key = typedMapStorageValue(map.prepared.key, EIdentifier(keyName), true);
+		final hash = switch map.prepared.family {
+			case CBTMObject:
+				ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNTypedMapIdentityHash)), [key]);
+			case CBTMEnumValue:
+				final enumValue = map.prepared.key.enumValue();
+				if (enumValue == null)
+					return fail('EnumValueMap `${map.prepared.instanceId}` lost its enum key plan');
+				typedMapEnumHash(key, enumValue.instanceId);
+		};
+		return DFunction({
+			storage: [],
+			functionSpecifiers: [],
+			returnType: new CType(TInt(64, false)),
+			declarator: DFunction(DName(map.hashName), FPPrototype([
+				{type: new CType(TVoid), declarator: DPointer(DName(context), []), attributes: []},
+				{type: new CType(TVoid, [QConst]), declarator: DPointer(DName(keyName), []), attributes: []}
+			], false)),
+			body: SBlock([ignoreExpression(EIdentifier(context)), SReturn(hash)]),
+			attributes: []
+		});
+	}
+
+	/** Mix one constructor and every active admitted payload in declaration order. */
+	function typedMapEnumHash(value:CExpr, instanceId:String):CExpr {
+		final tag = enumTagExpression(value, instanceId);
+		final base = typedMapHashMix(EInt(CIntegerLiteral.decimal("0")), ECast(new CType(TInt(64, false)), DName(null), tag));
+		if (requireEnumRepresentation(instanceId) == CBECNative)
+			return base;
+		var active:CExpr = base;
+		final cases = requireEnumCaseOrder(instanceId);
+		var index = cases.length;
+		while (index != 0) {
+			index--;
+			final caseName = cases[index];
+			var payloadHash:CExpr = base;
+			for (payloadName in requireEnumPayloadNames(instanceId, caseName)) {
+				final payload = typedMapEnumPayload(value, instanceId, caseName, payloadName);
+				payloadHash = typedMapValueHash(payloadHash, payload, requireEnumPayloadFieldType(instanceId, caseName, payloadName));
+			}
+			active = EConditional(EBinary(Equal, tag, EIdentifier(requireEnumCaseDiscriminant(instanceId, caseName))), payloadHash, active);
+		}
+		return active;
+	}
+
+	function typedMapValueHash(state:CExpr, value:CExpr, type:HxcIRTypeRef):CExpr
+		return switch type {
+			case IRTBool | IRTInt(32, true): typedMapHashMix(state, ECast(new CType(TInt(64, false)), DName(null), value));
+			case IRTPointer(_, _): typedMapHashMix(state, ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNTypedMapIdentityHash)), [value]));
+			case IRTInstance(instanceId) if (enumsByInstance.exists(instanceId)): typedMapHashMix(state, typedMapEnumHash(value, instanceId));
+			case _: fail('typed-map hashing reached unsupported exact type `${typeKey(type)}`');
+		};
+
+	static function typedMapHashMix(state:CExpr, value:CExpr):CExpr
+		return ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNTypedMapHashMix)), [state, value]);
+
+	/** Compare exact ObjectMap or recursive EnumValueMap keys. */
+	function typedMapEqualDefinition(map:CLoweredBodyTypedMap):CDecl {
+		final context = derivedLifecycleName(map.equalName, "context");
+		final leftName = derivedLifecycleName(map.equalName, "left");
+		final rightName = derivedLifecycleName(map.equalName, "right");
+		final left = typedMapStorageValue(map.prepared.key, EIdentifier(leftName), true);
+		final right = typedMapStorageValue(map.prepared.key, EIdentifier(rightName), true);
+		final comparison = switch map.prepared.family {
+			case CBTMObject: EBinary(Equal, left, right);
+			case CBTMEnumValue:
+				final enumValue = map.prepared.key.enumValue();
+				if (enumValue == null)
+					return fail('EnumValueMap `${map.prepared.instanceId}` lost its enum key plan');
+				typedMapEnumEqual(left, right, enumValue.instanceId);
+		};
+		return DFunction({
+			storage: [],
+			functionSpecifiers: [],
+			returnType: new CType(TBool),
+			declarator: DFunction(DName(map.equalName), FPPrototype([
+				{type: new CType(TVoid), declarator: DPointer(DName(context), []), attributes: []},
+				{type: new CType(TVoid, [QConst]), declarator: DPointer(DName(leftName), []), attributes: []},
+				{type: new CType(TVoid, [QConst]), declarator: DPointer(DName(rightName), []), attributes: []}
+			], false)),
+			body: SBlock([ignoreExpression(EIdentifier(context)), SReturn(comparison)]),
+			attributes: []
+		});
+	}
+
+	/** Build recursive enum equality while reading only the active payload. */
+	function typedMapEnumEqual(left:CExpr, right:CExpr, instanceId:String):CExpr {
+		final leftTag = enumTagExpression(left, instanceId);
+		final rightTag = enumTagExpression(right, instanceId);
+		if (requireEnumRepresentation(instanceId) == CBECNative)
+			return EBinary(Equal, leftTag, rightTag);
+		var active:CExpr = EBool(false);
+		final cases = requireEnumCaseOrder(instanceId);
+		var index = cases.length;
+		while (index != 0) {
+			index--;
+			final caseName = cases[index];
+			var payloads:CExpr = EBool(true);
+			for (payloadName in requireEnumPayloadNames(instanceId, caseName)) {
+				final leftPayload = typedMapEnumPayload(left, instanceId, caseName, payloadName);
+				final rightPayload = typedMapEnumPayload(right, instanceId, caseName, payloadName);
+				final equal = typedMapValueEqual(leftPayload, rightPayload, requireEnumPayloadFieldType(instanceId, caseName, payloadName));
+				payloads = EBinary(LogicalAnd, payloads, equal);
+			}
+			active = EConditional(EBinary(Equal, leftTag, EIdentifier(requireEnumCaseDiscriminant(instanceId, caseName))), payloads, active);
+		}
+		return EBinary(LogicalAnd, EBinary(Equal, leftTag, rightTag), active);
+	}
+
+	function typedMapEnumPayload(value:CExpr, instanceId:String, caseName:String, payloadName:String):CExpr
+		return EMember(EMember(EMember(value, requireEnumPayloadMember(instanceId), false), requireEnumCaseUnionMember(instanceId, caseName), false),
+			requireEnumPayloadFieldName(instanceId, caseName, payloadName), false);
+
+	function typedMapValueEqual(left:CExpr, right:CExpr, type:HxcIRTypeRef):CExpr
+		return switch type {
+			case IRTBool | IRTInt(32, true) | IRTPointer(_, _): EBinary(Equal, left, right);
+			case IRTInstance(instanceId) if (enumsByInstance.exists(instanceId)): typedMapEnumEqual(left, right, instanceId);
+			case _: fail('typed-map equality reached unsupported exact type `${typeKey(type)}`');
+		};
+
+	/** Trace one exact map key or value through the shared managed-value walker. */
+	function typedMapTraceDefinition(map:CLoweredBodyTypedMap, valueType:reflaxe.c.lowering.CBodyAggregate.CBodyValueType, name:CIdentifier):CDecl {
+		final context = derivedLifecycleName(name, "context");
+		final valueName = derivedLifecycleName(name, "value");
+		final visit = derivedLifecycleName(name, "visit");
+		final visitContext = derivedLifecycleName(name, "visit_context");
+		final value = typedMapStorageValue(valueType, EIdentifier(valueName), true);
+		final statements:Array<CStmt> = [ignoreExpression(EIdentifier(context))];
+		appendManagedTraceStatements(statements, value, valueType.irType, visit, visitContext);
+		return DFunction({
+			storage: [],
+			functionSpecifiers: [],
+			returnType: new CType(TVoid),
+			declarator: DFunction(DName(name), FPPrototype([
+				{type: new CType(TVoid), declarator: DPointer(DName(context), []), attributes: []},
+				{type: new CType(TVoid, [QConst]), declarator: DPointer(DName(valueName), []), attributes: []},
+				{type: new CType(TNamed(new CIdentifier("hxc_trace_visit_fn"))), declarator: DName(visit), attributes: []},
+				{type: new CType(TVoid), declarator: DPointer(DName(visitContext), []), attributes: []}
+			], false)),
+			body: SBlock(statements),
+			attributes: []
+		});
+	}
+
+	function typedMapStorageValue(value:reflaxe.c.lowering.CBodyAggregate.CBodyValueType, rawPointer:CExpr, readOnly:Bool):CExpr {
+		final declaration = typedDeclarator(value.irType, DName(null));
+		final storage = storagePointerDeclarator(declaration, readOnly);
+		return EUnary(Dereference, ECast(storage.type, storage.declarator, rawPointer));
 	}
 
 	/** Private-header declarations for descriptors referenced by split modules. */
@@ -3413,7 +3634,7 @@ class CBodyEmitter {
 	**/
 	function appendManagedTraceStatements(statements:Array<CStmt>, value:CExpr, type:HxcIRTypeRef, visitName:CIdentifier, contextName:CIdentifier):Void {
 		final directManaged = switch type {
-			case IRTPointer(IRTInstance(target), _) | IRTInstance(target): managedDescriptorNames.exists(target);
+			case IRTPointer(IRTInstance(target), _) | IRTInstance(target): collectorManagedInstanceIds.exists(target);
 			case _: false;
 		};
 		if (directManaged) {
@@ -3551,7 +3772,7 @@ class CBodyEmitter {
 				continue;
 			}
 			final managedByCollector = switch type {
-				case IRTPointer(IRTInstance(target), _) | IRTInstance(target): managedDescriptorNames.exists(target);
+				case IRTPointer(IRTInstance(target), _) | IRTInstance(target): collectorManagedInstanceIds.exists(target);
 				case _: false;
 			};
 			final interfaceReference = switch type {
@@ -4451,6 +4672,12 @@ class CBodyEmitter {
 		return result;
 	}
 
+	function canonicalTypedMaps():Array<CLoweredBodyTypedMap> {
+		final result = [for (value in typedMapsByInstance) value];
+		result.sort((left, right) -> compareUtf8(left.prepared.digest, right.prepared.digest));
+		return result;
+	}
+
 	function canonicalManagedAggregates():Array<CLoweredBodyAggregate> {
 		final result:Array<CLoweredBodyAggregate> = [];
 		for (instanceId in aggregateInstanceOrder) {
@@ -5083,6 +5310,13 @@ class CBodyEmitter {
 					addTypeHeaders(headers, stringMapValueType, visited);
 					return;
 				}
+				final typedMap = typedMapsByInstance.get(instanceId);
+				if (typedMap != null) {
+					addUnique(headers, "hxrt/typed_map.h");
+					addTypeHeaders(headers, typedMap.prepared.key.irType, visited);
+					addTypeHeaders(headers, typedMap.prepared.value.irType, visited);
+					return;
+				}
 				if (bytesInstanceIds.exists(instanceId)) {
 					addUnique(headers, "hxrt/bytes.h");
 					return;
@@ -5349,6 +5583,9 @@ class CBodyEmitter {
 				return false;
 			case IRCDRuntime("string-map", _):
 				emitStringMapCall(statements, values, referencedValues, instruction, call, temporaryNames, lineDirectives, boundsAbortName, fn);
+				return false;
+			case IRCDRuntime("object-map", _) | IRCDRuntime("enum-value-map", _):
+				emitTypedMapCall(statements, values, referencedValues, instruction, call, temporaryNames, lineDirectives, boundsAbortName, fn);
 				return false;
 			case IRCDRuntime("iterator", _):
 				emitIteratorCall(statements, values, referencedValues, instruction, call, temporaryNames, lineDirectives, boundsAbortName, fn);
@@ -5946,6 +6183,232 @@ class CBodyEmitter {
 		if (temporary == null)
 			return fail('StringMap call `$instructionId` in `$functionId` has no finalized result temporary');
 		return temporary;
+	}
+
+	/** Emit ObjectMap and EnumValueMap calls with exact unboxed key/value storage. */
+	function emitTypedMapCall(statements:Array<CStmt>, values:Map<String, CExpr>, referencedValues:Map<String, Bool>, instruction:HxcIRInstruction,
+			call:HxcIRCall, temporaryNames:Map<String, CIdentifier>, lineDirectives:Bool, boundsAbortName:Null<CIdentifier>, fn:HxcIRFunction):Void {
+		final dispatch = switch call.dispatch {
+			case IRCDRuntime(feature, operation) if (feature == "object-map" || feature == "enum-value-map"):
+				{feature: feature, operation: operation};
+			case _: return fail('typed-map emitter received a non-map call in `${fn.id}`');
+		};
+		final operation = dispatch.operation;
+		final mapType = if (operation == "create" || operation == "copy") requireResult(instruction, fn.id).type else {
+			final receiver = valueType(fn, call.arguments[0]);
+			if (receiver == null)
+				return fail('typed-map `$operation` `${instruction.id}` lost its receiver type');
+			receiver;
+		};
+		final plan = requireTypedMapPlan(mapType, instruction.id, fn.id);
+		if (plan.prepared.featureId() != dispatch.feature)
+			return fail('typed-map `${instruction.id}` dispatched `${dispatch.feature}` through `${plan.prepared.featureId()}` policy');
+		final keyDeclaration = typedDeclarator(plan.prepared.key.irType, DName(null));
+		final valueDeclaration = typedDeclarator(plan.prepared.value.irType, DName(null));
+		final keyOps = typedMapKeyOps(plan, keyDeclaration);
+		final valueOps = typedMapValueOps(plan, valueDeclaration);
+		addLineDirective(statements, instruction.source, lineDirectives);
+		switch operation {
+			case "create" | "copy":
+				final result = requireResult(instruction, fn.id);
+				final temporary = requireTypedMapTemporary(temporaryNames, result.id, instruction.id, fn.id);
+				final declaration = typedDeclarator(result.type, DName(temporary));
+				statements.push(SDecl({
+					storage: [],
+					alignments: [],
+					type: declaration.type,
+					declarator: declaration.declarator,
+					initializer: IExpr(ENull),
+					attributes: []
+				}));
+				final program = managedProgram;
+				if (program == null)
+					return fail('collector-owned typed map `${instruction.id}` has no executable collector context');
+				emitStatusAbort(statements, ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNGcAllocate)), [
+					EUnary(AddressOf, EIdentifier(program.collector)),
+					ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNTypedMapTypeDescriptor)), []),
+					ECast(new CType(TVoid), DPointer(DPointer(DName(null), []), []), EUnary(AddressOf, EIdentifier(temporary)))
+				]), boundsAbortName, instruction.id, fn.id);
+				emitStatusAbort(statements, ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNTypedMapInitCollectorOwned)), [
+					EUnary(AddressOf, EIdentifier(program.collector)),
+					ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNDefaultAllocator)), []),
+					keyOps,
+					valueOps,
+					EIdentifier(temporary)
+				]), boundsAbortName, instruction.id, fn.id);
+				if (operation == "copy")
+					emitStatusAbort(statements,
+						ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNTypedMapCopyInPlace)),
+							[requireValue(values, call.arguments[0], fn.id), EIdentifier(temporary)]),
+						boundsAbortName, instruction.id, fn.id);
+				values.set(result.id, EIdentifier(temporary));
+			case "set":
+				if (instruction.result != null || call.returnType != IRTVoid || call.arguments.length != 3)
+					return fail('typed-map set `${instruction.id}` lost its map/key/value/Void signature');
+				emitStatusAbort(statements, ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNTypedMapSetCopy)), [
+					requireValue(values, call.arguments[0], fn.id),
+					arrayElementPointer(requireValue(values, call.arguments[1], fn.id), plan.prepared.key.irType, keyDeclaration),
+					arrayElementPointer(requireValue(values, call.arguments[2], fn.id), plan.prepared.value.irType, valueDeclaration)
+				]), boundsAbortName, instruction.id, fn.id);
+			case "clear":
+				if (instruction.result != null || call.returnType != IRTVoid || call.arguments.length != 1)
+					return fail('typed-map clear `${instruction.id}` lost its receiver/Void signature');
+				emitStatusAbort(statements,
+					ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNTypedMapClear)), [requireValue(values, call.arguments[0], fn.id)]), boundsAbortName,
+					instruction.id, fn.id);
+			case "exists" | "remove":
+				final result = requireResult(instruction, fn.id);
+				final temporary = requireTypedMapTemporary(temporaryNames, result.id, instruction.id, fn.id);
+				statements.push(SDecl({
+					storage: [],
+					alignments: [],
+					type: new CType(TBool),
+					declarator: DName(temporary),
+					initializer: null,
+					attributes: []
+				}));
+				final runtimeName = operation == "exists" ? CBRNTypedMapExists : CBRNTypedMapRemove;
+				emitStatusAbort(statements, ECall(EIdentifier(CBodyRuntimeNames.identifier(runtimeName)), [
+					requireValue(values, call.arguments[0], fn.id),
+					arrayElementPointer(requireValue(values, call.arguments[1], fn.id), plan.prepared.key.irType, keyDeclaration),
+					EUnary(AddressOf, EIdentifier(temporary))
+				]), boundsAbortName, instruction.id, fn.id);
+				values.set(result.id, EIdentifier(temporary));
+				if (!referencedValues.exists(result.id))
+					statements.push(ignoreExpression(EIdentifier(temporary)));
+			case "get":
+				final result = requireResult(instruction, fn.id);
+				final temporary = requireTypedMapTemporary(temporaryNames, result.id, instruction.id, fn.id);
+				final declaration = typedDeclarator(result.type, DName(temporary));
+				statements.push(SDecl({
+					storage: [],
+					alignments: [],
+					type: declaration.type,
+					declarator: declaration.declarator,
+					initializer: IExpr(constantExpressionForType(IRCNull, result.type)),
+					attributes: []
+				}));
+				final outputs:{value:CExpr, found:CExpr} = switch result.type {
+					case IRTPointer(_, _):
+						final foundName = derivedLifecycleName(temporary, "found");
+						statements.push(SDecl({
+							storage: [],
+							alignments: [],
+							type: new CType(TBool),
+							declarator: DName(foundName),
+							initializer: IExpr(EBool(false)),
+							attributes: []
+						}));
+						{value: EUnary(AddressOf, EIdentifier(temporary)), found: EUnary(AddressOf, EIdentifier(foundName))};
+					case IRTNullable(_, IRNTagged):
+						final optional = requireOptional(result.type);
+						{
+							value: EUnary(AddressOf, EMember(EIdentifier(temporary), optional.payloadName, false)),
+							found: EUnary(AddressOf, EMember(EIdentifier(temporary), optional.presenceName, false))
+						};
+					case _: return fail('typed-map get `${instruction.id}` has no nullable result carrier');
+				};
+				emitStatusAbort(statements, ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNTypedMapGetCopy)), [
+					requireValue(values, call.arguments[0], fn.id),
+					arrayElementPointer(requireValue(values, call.arguments[1], fn.id), plan.prepared.key.irType, keyDeclaration),
+					outputs.value,
+					outputs.found
+				]), boundsAbortName, instruction.id, fn.id);
+				values.set(result.id, EIdentifier(temporary));
+			case "iterator" | "keys" | "key-value-iterator":
+				final result = requireResult(instruction, fn.id);
+				final temporary = requireTypedMapTemporary(temporaryNames, result.id, instruction.id, fn.id);
+				final declaration = typedDeclarator(result.type, DName(temporary));
+				statements.push(SDecl({
+					storage: [],
+					alignments: [],
+					type: declaration.type,
+					declarator: declaration.declarator,
+					initializer: IExpr(ENull),
+					attributes: []
+				}));
+				final elementType = switch result.type {
+					case IRTInstance(iteratorId): iteratorElementTypes.get(iteratorId);
+					case _: null;
+				};
+				if (elementType == null)
+					return fail('typed-map iterator `${instruction.id}` lost its exact element specialization');
+				final elementDeclaration = typedDeclarator(elementType, DName(null));
+				final elementOps = typedMapIteratorElementOps(elementDeclaration);
+				final runtimeCall = if (operation == "iterator") ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNTypedMapValueIterator)),
+					[
+						requireValue(values, call.arguments[0], fn.id),
+						elementOps,
+						EUnary(AddressOf, EIdentifier(temporary))
+					]) else if (operation == "keys") ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNTypedMapKeyIterator)), [
+						requireValue(values, call.arguments[0], fn.id),
+						elementOps,
+						EUnary(AddressOf, EIdentifier(temporary))
+				]) else {
+						final pairId = switch elementType {
+							case IRTInstance(instanceId): instanceId;
+							case _: return fail('typed-map keyValueIterator `${instruction.id}` lost its pair aggregate');
+						};
+						final pairType = new CType(TStruct(requireAggregateTag(pairId)));
+						ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNTypedMapPairIterator)), [
+							requireValue(values, call.arguments[0], fn.id),
+							elementOps,
+							EOffsetOf(pairType, DName(null), requireAggregateFieldName(pairId, "key", instruction.id, fn.id)),
+							EOffsetOf(pairType, DName(null), requireAggregateFieldName(pairId, "value", instruction.id, fn.id)),
+							EUnary(AddressOf, EIdentifier(temporary))
+						]);
+				};
+				emitStatusAbort(statements, runtimeCall, boundsAbortName, instruction.id, fn.id);
+				values.set(result.id, EIdentifier(temporary));
+			case _:
+				fail('typed-map call `${instruction.id}` in `${fn.id}` names unsupported operation `$operation`');
+		}
+	}
+
+	function typedMapKeyOps(plan:CLoweredBodyTypedMap, declaration:CTypedDeclarator):CExpr
+		return ECompoundLiteral(new CType(TNamed(CBodyRuntimeNames.identifier(CBRNTypedMapKeyOpsType))), DName(null), IList([
+			{designators: [], value: IExpr(ESizeOfType(declaration.type, declaration.declarator))},
+			{designators: [], value: IExpr(EAlignOfType(declaration.type, declaration.declarator))},
+			{designators: [], value: IExpr(ENull)},
+			{designators: [], value: IExpr(ENull)},
+			{designators: [], value: IExpr(ENull)},
+			{designators: [], value: IExpr(plan.keyTraceName == null ? ENull : EIdentifier(plan.keyTraceName))},
+			{designators: [], value: IExpr(EIdentifier(plan.hashName))},
+			{designators: [], value: IExpr(EIdentifier(plan.equalName))}
+		]));
+
+	function typedMapValueOps(plan:CLoweredBodyTypedMap, declaration:CTypedDeclarator):CExpr
+		return ECompoundLiteral(new CType(TNamed(CBodyRuntimeNames.identifier(CBRNTypedMapValueOpsType))), DName(null), IList([
+			{designators: [], value: IExpr(ESizeOfType(declaration.type, declaration.declarator))},
+			{designators: [], value: IExpr(EAlignOfType(declaration.type, declaration.declarator))},
+			{designators: [], value: IExpr(ENull)},
+			{designators: [], value: IExpr(ENull)},
+			{designators: [], value: IExpr(ENull)},
+			{designators: [], value: IExpr(plan.valueTraceName == null ? ENull : EIdentifier(plan.valueTraceName))}
+		]));
+
+	function typedMapIteratorElementOps(declaration:CTypedDeclarator):CExpr
+		return ECompoundLiteral(new CType(TNamed(CBodyRuntimeNames.identifier(CBRNIteratorElementOpsType))), DName(null), IList([
+			{designators: [], value: IExpr(ESizeOfType(declaration.type, declaration.declarator))},
+			{designators: [], value: IExpr(EAlignOfType(declaration.type, declaration.declarator))},
+			{designators: [], value: IExpr(ENull)},
+			{designators: [], value: IExpr(ENull)},
+			{designators: [], value: IExpr(ENull)},
+			{designators: [], value: IExpr(ENull)}
+		]));
+
+	function requireTypedMapPlan(type:HxcIRTypeRef, instructionId:String, functionId:String):CLoweredBodyTypedMap {
+		final instanceId = switch type {
+			case IRTInstance(value): value;
+			case _: return fail('typed-map operation `$instructionId` in `$functionId` lost its specialized instance type');
+		};
+		final plan = typedMapsByInstance.get(instanceId);
+		return plan == null ? fail('typed-map operation `$instructionId` in `$functionId` has unknown specialization `$instanceId`') : plan;
+	}
+
+	static function requireTypedMapTemporary(temporaryNames:Map<String, CIdentifier>, resultId:String, instructionId:String, functionId:String):CIdentifier {
+		final temporary = temporaryNames.get(resultId);
+		return temporary == null ? fail('typed-map call `$instructionId` in `$functionId` has no finalized result temporary') : temporary;
 	}
 
 	/** Emit one validator-approved managed Array operation through checked hxrt calls. */

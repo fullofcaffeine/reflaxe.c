@@ -400,6 +400,69 @@ failure at the private ABI; the ordinary-Haxe fixture separately compares Eval
 with generated strict C, so the runtime and compiler are not merely checking
 matching assumptions.
 
+<!-- hxrt-feature:typed-map -->
+### `typed-map`
+
+Compiler-selectable table mechanics for exact ObjectMap and EnumValueMap
+specializations. The runtime owns checked open addressing, collision chains,
+tombstones, growth, copying, and failure-atomic replacement. Generated C owns
+each key's Haxe equality and hash rules. It also owns the exact key and value
+size, alignment, copy, destroy, and trace rules. Keys and values stay unboxed.
+
+The compiler allocates each ordinary map as one collector object. The table
+traces only occupied keys and values that contain collector references. A copy
+has a new outer table. Aliases to the original map still share one table.
+
+Insertion and replacement prepare every fallible copy before publication. If a
+copy or allocation fails, the old entry remains visible. When equal keys have
+different stored representations, a successful replacement publishes both the
+new key and the new value. It then destroys the old pair exactly once.
+
+Value, key, and key/value iterators copy the current entries into independent
+snapshots. The iterator registers exact roots for collector references inside
+those snapshots. Later map mutation cannot change the snapshot, and the source
+map can become unreachable without invalidating it.
+
+The runtime is private infrastructure. A program selects it only through an
+admitted typed map family. Generated application C does not use a universal
+boxed map, dynamic comparison, reflection, or a generic pointer key contract.
+
+<!-- hxrt-feature:object-map -->
+### `object-map`
+
+Compiler-selectable `haxe.ds.ObjectMap<K, V>` support for admitted class keys.
+Two keys are equal only when they are the same Haxe object. Equal fields do not
+make distinct objects equal. The private hash uses that stable identity, and
+collision resolution always confirms equality before it accepts a match.
+
+The current value slice admits `Bool`, `Int`, and collector-managed class
+references. It supports construction, `set`, `exists`, `get`, `remove`,
+`clear`, `copy`, `iterator`, `keys`, and `keyValueIterator`. Exact tracing keeps
+live class keys and values reachable without boxing them.
+
+Interface keys, `Dynamic` keys, and other open or erased key shapes fail with a
+source-positioned diagnostic. Other value families remain unsupported until
+they have complete copy, failure, and trace contracts.
+
+<!-- hxrt-feature:enum-value-map -->
+### `enum-value-map`
+
+Compiler-selectable `haxe.ds.EnumValueMap<K, V>` support for finite admitted
+enum keys. Equality first compares the active constructor. It then compares
+active `Bool` and `Int` payloads by value, nested enum payloads recursively,
+and class payloads by object identity. The hash follows the same active path.
+
+The current value slice admits `Bool`, `Int`, and collector-managed class
+references. It supports construction, `set`, `exists`, `get`, `remove`,
+`clear`, `copy`, `iterator`, and `keys`. Standard-library forwarding may build
+a key/value traversal from those admitted operations without changing map
+equality.
+
+Float payloads, recursive enums, interfaces, `Dynamic`, and other open key
+shapes fail before C emission. The diagnostic names the first unsupported key
+path. This bounded rule prevents plausible C from silently using the wrong
+equality.
+
 <!-- hxrt-feature:iterator -->
 ### `iterator`
 
@@ -417,6 +480,11 @@ The producer fills the complete snapshot before the runtime publishes the
 iterator. If a fill operation fails, the runtime destroys the completed prefix.
 It also frees the unpublished storage. The caller still owns the producer
 anchor after this error.
+
+Collector-backed typed maps add exact snapshot roots during construction. The
+iterator keeps the root-table registration, not a pointer to the temporary
+trace callback context. Final release unregisters those roots after it destroys
+all remaining snapshot elements.
 
 An iterator can keep a producer anchor alive. StringMap iterators use this
 anchor for the map's value callback policy. Array iterators instead retain the
@@ -701,6 +769,7 @@ them.
 | `include/hxrt/int_map.h`, `src/int_map.c` | Compiler-selectable Int-keyed shared `Map<Int, Bool>` storage with exact unboxed keys, values, and membership. |
 | `include/hxrt/iterator.h`, `src/iterator.c` | Compiler-selectable typed map snapshots and live Array cursors with one position shared by all standard Haxe Iterator aliases. |
 | `include/hxrt/string_map.h`, `src/string_map.c` | Compiler-selectable String-keyed shared map storage with copied keys and exact unboxed values. |
+| `include/hxrt/typed_map.h`, `src/typed_map.c` | Compiler-selectable exact-layout storage shared by ObjectMap identity and EnumValueMap recursive-value specializations. |
 | `include/hxrt/bytes.h`, `src/bytes.c` | Compiler-selectable fixed-length mutable byte storage, shared identity, checked ranges, and overlap-safe copying. |
 | `include/hxrt/bytes_string.h`, `src/bytes_string.c` | Compiler-selectable checked UTF-8 decoding from mutable Bytes into a separately owned String. |
 | `include/hxrt/gc.h`, `src/gc.c` | Compiler-selectable precise non-moving collector, exact roots/pins, pressure policy, and observable reports. |

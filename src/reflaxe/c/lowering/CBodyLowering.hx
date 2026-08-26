@@ -79,6 +79,9 @@ import reflaxe.c.lowering.CBodyOptional.CPreparedBodyOptional;
 import reflaxe.c.lowering.CBodyStringMap.CBodyStringMapRecognition;
 import reflaxe.c.lowering.CBodyStringMap.CLoweredBodyStringMap;
 import reflaxe.c.lowering.CBodyStringMap.CPreparedBodyStringMap;
+import reflaxe.c.lowering.CBodyTypedMap.CBodyTypedMapRecognition;
+import reflaxe.c.lowering.CBodyTypedMap.CLoweredBodyTypedMap;
+import reflaxe.c.lowering.CBodyTypedMap.CPreparedBodyTypedMap;
 import reflaxe.c.lowering.CGenericSpecialization.CGenericCallResolver;
 import reflaxe.c.lowering.CGenericSpecialization.CGenericFunctionSpecialization;
 import reflaxe.c.lowering.CBodyNullCheckCoalescing;
@@ -301,6 +304,7 @@ class CBodyLoweringResult {
 	public final iterators:Array<CPreparedBodyIterator>;
 	public final intMaps:Array<CPreparedBodyIntMap>;
 	public final stringMaps:Array<CLoweredBodyStringMap>;
+	public final typedMaps:Array<CLoweredBodyTypedMap>;
 	public final bytes:Array<CPreparedBodyBytes>;
 	public final optionals:Array<CLoweredBodyOptional>;
 	public final constructors:Array<CLoweredBodyConstructor>;
@@ -317,10 +321,10 @@ class CBodyLoweringResult {
 	public function new(program:HxcIRProgram, functions:Array<CLoweredBodyFunction>, globals:Array<CLoweredBodyGlobal>,
 			aggregates:Array<CLoweredBodyAggregate>, enums:Array<CLoweredBodyEnum>, classes:Array<CLoweredBodyClass>, arrays:Array<CLoweredBodyArray>,
 			iterators:Array<CPreparedBodyIterator>, intMaps:Array<CPreparedBodyIntMap>, stringMaps:Array<CLoweredBodyStringMap>,
-			bytes:Array<CPreparedBodyBytes>, optionals:Array<CLoweredBodyOptional>, constructors:Array<CLoweredBodyConstructor>,
-			dispatch:CLoweredBodyDispatch, imports:CLoweredImports, helpers:Array<CPrimitiveHelperPlan>, buildFacts:Array<TypedCBuildFact>,
-			symbolTable:CSymbolTableSnapshot, boundsAbortName:Null<CIdentifier>, runtimeRequirements:Array<CBodyRuntimeRequirement>,
-			managedProgram:Null<CManagedProgramNames>, ?hxcirDump:String) {
+			typedMaps:Array<CLoweredBodyTypedMap>, bytes:Array<CPreparedBodyBytes>, optionals:Array<CLoweredBodyOptional>,
+			constructors:Array<CLoweredBodyConstructor>, dispatch:CLoweredBodyDispatch, imports:CLoweredImports, helpers:Array<CPrimitiveHelperPlan>,
+			buildFacts:Array<TypedCBuildFact>, symbolTable:CSymbolTableSnapshot, boundsAbortName:Null<CIdentifier>,
+			runtimeRequirements:Array<CBodyRuntimeRequirement>, managedProgram:Null<CManagedProgramNames>, ?hxcirDump:String) {
 		this.program = program;
 		this.functions = functions.copy();
 		this.globals = globals.copy();
@@ -331,6 +335,7 @@ class CBodyLoweringResult {
 		this.iterators = iterators.copy();
 		this.intMaps = intMaps.copy();
 		this.stringMaps = stringMaps.copy();
+		this.typedMaps = typedMaps.copy();
 		this.bytes = bytes.copy();
 		this.optionals = optionals.copy();
 		this.constructors = constructors.copy();
@@ -505,10 +510,11 @@ class CBodyLowering {
 		final preparedIterators = aggregateRegistry.canonicalIterators();
 		final preparedIntMaps = aggregateRegistry.canonicalIntMaps();
 		final preparedStringMaps = aggregateRegistry.canonicalStringMaps();
+		final preparedTypedMaps = aggregateRegistry.canonicalTypedMaps();
 		final preparedBytes = aggregateRegistry.canonicalBytes();
 		final preparedImports = aggregateRegistry.canonicalImports();
 		final sharedProgram = buildProgram([], preparedGlobals, preparedAggregates, preparedEnums, preparedClasses, preparedInterfaces, preparedArrays,
-			preparedIterators, preparedIntMaps, preparedStringMaps, preparedBytes, preparedImports, preparedDispatch);
+			preparedIterators, preparedIntMaps, preparedStringMaps, preparedTypedMaps, preparedBytes, preparedImports, preparedDispatch);
 		CBodyFunctionReplayCache.settleProgramRevision(functionReplayProgramRevision(sharedProgram, preparedById, constructorSignaturesById));
 		CPhaseTiming.stopDetail(representationTimer);
 		final settledFunctionBuildContributions = functionContributionSnapshot(aggregateRegistry, enumConstructorAdapters, functionLiterals);
@@ -549,7 +555,7 @@ class CBodyLowering {
 		CPhaseTiming.stopDetail(functionConstructionTimer);
 		final programAssemblyTimer = CPhaseTiming.startDetail(CDTHxcIRProgramAssembly);
 		final program = buildProgram(built, preparedGlobals, preparedAggregates, preparedEnums, preparedClasses, preparedInterfaces, preparedArrays,
-			preparedIterators, preparedIntMaps, preparedStringMaps, preparedBytes, preparedImports, preparedDispatch);
+			preparedIterators, preparedIntMaps, preparedStringMaps, preparedTypedMaps, preparedBytes, preparedImports, preparedDispatch);
 		CPhaseTiming.stopDetail(programAssemblyTimer);
 		final managedRootTimer = CPhaseTiming.startDetail(CDTHxcIRManagedRootPlanning);
 		new HxcIRManagedRootPlanner().run(program);
@@ -597,6 +603,7 @@ class CBodyLowering {
 		final loweredClasses = aggregateRegistry.finalizeClasses(context.symbols);
 		final loweredArrays = aggregateRegistry.finalizeArrays(context.symbols);
 		final loweredStringMaps = aggregateRegistry.finalizeStringMaps(context.symbols);
+		final loweredTypedMaps = aggregateRegistry.finalizeTypedMaps(context.symbols);
 		final loweredOptionals = aggregateRegistry.finalizeOptionals(context.symbols);
 		final loweredDispatch = preparedDispatch.finalize(context.symbols);
 		final loweredImports = aggregateRegistry.finalizeImports(context.symbols);
@@ -634,7 +641,7 @@ class CBodyLowering {
 		CPhaseTiming.stop(analysisTimer);
 		final castBodyTimer = CPhaseTiming.start(CPCASTBodyConstruction);
 		final emitter = new CBodyEmitter(loweredAggregates, loweredEnums, loweredClasses, loweredArrays, preparedIterators, preparedIntMaps,
-			loweredStringMaps, preparedBytes, loweredOptionals, loweredDispatch, loweredImports, managedProgram);
+			loweredStringMaps, loweredTypedMaps, preparedBytes, loweredOptionals, loweredDispatch, loweredImports, managedProgram);
 		final lowered:Array<CLoweredBodyFunction> = [];
 		for (item in built) {
 			final controlFlow = CBodyEmitter.resolveControlFlow(item.ir, canonicalFunctions.get(item.ir.id));
@@ -699,6 +706,14 @@ class CBodyLowering {
 		for (map in preparedIntMaps)
 			runtimeRequirements.push(new CBodyRuntimeRequirement("int-map", "managed-type-representation",
 				"ordinary Haxe Map<Int, Bool> shared membership-table representation", map.source, map.position));
+		for (map in preparedTypedMaps) {
+			runtimeRequirements.push(new CBodyRuntimeRequirement("gc", "managed-type-representation",
+				'ordinary Haxe ${map.featureId()} exact typed table object', map.source, map.position));
+			collectDeclarationTypeRuntimeRequirements(runtimeRequirements, map.key.irType, map.source, map.position,
+				'ordinary Haxe ${map.featureId()} key carrier');
+			collectDeclarationTypeRuntimeRequirements(runtimeRequirements, map.value.irType, map.source, map.position,
+				'ordinary Haxe ${map.featureId()} value carrier');
+		}
 		for (value in preparedClasses) {
 			if (!value.managedByCollector)
 				continue;
@@ -720,8 +735,8 @@ class CBodyLowering {
 		runtimeRequirements.sort(compareRuntimeRequirements);
 		CPhaseTiming.setCounter(CPCounterRuntimeRequirements, runtimeRequirements.length);
 		return new CBodyLoweringResult(program, lowered, loweredGlobals, loweredAggregates, loweredEnums, loweredClasses, loweredArrays, preparedIterators,
-			preparedIntMaps, loweredStringMaps, preparedBytes, loweredOptionals, loweredConstructors, loweredDispatch, loweredImports, helpers,
-			helperSelection.buildFacts().concat(loweredImports.buildFacts), symbolTable, boundsAbortName, runtimeRequirements, managedProgram,
+			preparedIntMaps, loweredStringMaps, loweredTypedMaps, preparedBytes, loweredOptionals, loweredConstructors, loweredDispatch, loweredImports,
+			helpers, helperSelection.buildFacts().concat(loweredImports.buildFacts), symbolTable, boundsAbortName, runtimeRequirements, managedProgram,
 			completeHxcIRDump);
 	}
 
@@ -946,6 +961,7 @@ class CBodyLowering {
 			addedArrays: contributionDelta("arrays", before.program.arrays, after.program.arrays),
 			addedIntMaps: contributionDelta("IntMap representations", before.program.intMaps, after.program.intMaps),
 			addedStringMaps: contributionDelta("StringMap representations", before.program.stringMaps, after.program.stringMaps),
+			addedTypedMaps: contributionDelta("typed Map representations", before.program.typedMaps, after.program.typedMaps),
 			addedBytes: contributionDelta("Bytes representations", before.program.bytes, after.program.bytes),
 			addedOptionals: contributionDelta("optional representations", before.program.optionals, after.program.optionals),
 			addedImportTypes: contributionDelta("import types", before.program.importTypes, after.program.importTypes),
@@ -1016,6 +1032,7 @@ class CBodyLowering {
 		changed("Iterator representations", before.program.iterators, after.program.iterators);
 		changed("IntMap representations", before.program.intMaps, after.program.intMaps);
 		changed("StringMap representations", before.program.stringMaps, after.program.stringMaps);
+		changed("typed Map representations", before.program.typedMaps, after.program.typedMaps);
 		changed("Bytes representations", before.program.bytes, after.program.bytes);
 		changed("optional representations", before.program.optionals, after.program.optionals);
 		changed("import types", before.program.importTypes, after.program.importTypes);
@@ -1163,8 +1180,8 @@ class CBodyLowering {
 	static function buildProgram(functions:Array<BuiltBodyFunction>, globals:Array<PreparedBodyGlobal>, aggregates:Array<CPreparedBodyAggregate>,
 			enums:Array<CPreparedBodyEnumInstance>, classes:Array<CPreparedBodyClass>, interfaces:Array<CPreparedBodyInterface>,
 			arrays:Array<CPreparedBodyArray>, iterators:Array<CPreparedBodyIterator>, intMaps:Array<CPreparedBodyIntMap>,
-			stringMaps:Array<CPreparedBodyStringMap>, bytes:Array<CPreparedBodyBytes>, imports:Array<CPreparedImportType>,
-			dispatch:CPreparedBodyDispatch):HxcIRProgram {
+			stringMaps:Array<CPreparedBodyStringMap>, typedMaps:Array<CPreparedBodyTypedMap>, bytes:Array<CPreparedBodyBytes>,
+			imports:Array<CPreparedImportType>, dispatch:CPreparedBodyDispatch):HxcIRProgram {
 		final byModule:Map<String, Array<BuiltBodyFunction>> = [];
 		for (fn in functions) {
 			var moduleFunctions = byModule.get(fn.prepared.modulePath);
@@ -1255,6 +1272,15 @@ class CBodyLowering {
 			}
 			moduleMaps.push(value);
 		}
+		final typedMapsByModule:Map<String, Array<CPreparedBodyTypedMap>> = [];
+		for (value in typedMaps) {
+			var moduleMaps = typedMapsByModule.get(value.ownerModule);
+			if (moduleMaps == null) {
+				moduleMaps = [];
+				typedMapsByModule.set(value.ownerModule, moduleMaps);
+			}
+			moduleMaps.push(value);
+		}
 		final bytesByModule:Map<String, Array<CPreparedBodyBytes>> = [];
 		for (value in bytes) {
 			var moduleBytes = bytesByModule.get(value.ownerModule);
@@ -1301,6 +1327,8 @@ class CBodyLowering {
 			moduleIdSet.set(moduleId, true);
 		for (moduleId in intMapsByModule.keys())
 			moduleIdSet.set(moduleId, true);
+		for (moduleId in typedMapsByModule.keys())
+			moduleIdSet.set(moduleId, true);
 		for (moduleId in bytesByModule.keys())
 			moduleIdSet.set(moduleId, true);
 		for (moduleId in importsByModule.keys()) {
@@ -1340,6 +1368,9 @@ class CBodyLowering {
 			final intMapEntries = intMapsByModule.get(moduleId);
 			final moduleIntMaps = intMapEntries == null ? [] : intMapEntries;
 			moduleIntMaps.sort((left, right) -> compareUtf8(left.declarationId, right.declarationId));
+			final typedMapEntries = typedMapsByModule.get(moduleId);
+			final moduleTypedMaps = typedMapEntries == null ? [] : typedMapEntries;
+			moduleTypedMaps.sort((left, right) -> compareUtf8(left.declarationId, right.declarationId));
 			final bytesEntries = bytesByModule.get(moduleId);
 			final moduleBytes = bytesEntries == null ? [] : bytesEntries;
 			final importEntries = importsByModule.get(moduleId);
@@ -1355,6 +1386,7 @@ class CBodyLowering {
 				.concat(moduleIterators.map(value -> value.source))
 				.concat(moduleIntMaps.map(value -> value.source))
 				.concat(moduleStringMaps.map(value -> value.source))
+				.concat(moduleTypedMaps.map(value -> value.source))
 				.concat(moduleBytes.map(value -> value.source))
 				.concat(moduleImports.map(value -> value.source));
 			if (spans.length == 0) {
@@ -1370,6 +1402,7 @@ class CBodyLowering {
 					.concat(moduleIterators.map(value -> value.declaration()))
 					.concat(moduleIntMaps.map(value -> value.declaration()))
 					.concat(moduleStringMaps.map(value -> value.declaration()))
+					.concat(moduleTypedMaps.map(value -> value.declaration()))
 					.concat(moduleBytes.map(value -> value.declaration()))
 					.concat(moduleImports.map(value -> value.declaration())),
 				typeInstances: moduleAggregates.map(aggregate -> aggregate.instance())
@@ -1380,6 +1413,7 @@ class CBodyLowering {
 					.concat(moduleIterators.map(value -> value.instance()))
 					.concat(moduleIntMaps.map(value -> value.instance()))
 					.concat(moduleStringMaps.map(value -> value.instance()))
+					.concat(moduleTypedMaps.map(value -> value.instance()))
 					.concat(moduleBytes.map(value -> value.instance()))
 					.concat(moduleImports.map(value -> value.instance())),
 				globals: moduleGlobals.map(global -> global.ir),
@@ -6417,8 +6451,10 @@ private class FunctionBuilder {
 			if (construction != null
 				&& !CBodyArrayRecognition.isCoreArray(construction.classReference)
 				&& CBodyIteratorRecognition.arrayKind(construction.classReference) == null
+				&& !CBodyIteratorRecognition.isMapKeyValue(construction.classReference)
 				&& !CBodyIntMapRecognition.isIntMap(construction.classReference)
-				&& !CBodyStringMapRecognition.isStringMap(construction.classReference)) {
+				&& !CBodyStringMapRecognition.isStringMap(construction.classReference)
+				&& CBodyTypedMapRecognition.family(construction.classReference) == null) {
 				// Constructor preparation already owns the admitted nominal class. Use
 				// that plan to choose stack or collector storage instead of typing the
 				// local a second time here. Re-typing would make an unsupported extern,
@@ -6437,12 +6473,18 @@ private class FunctionBuilder {
 				unsupported(initializer, 'TNew(stack-reference-escape:local-alias:${variable.name})');
 			}
 		}
+		final typedMapInterfaceAlias = initializer != null
+			&& CBodyTypedMapRecognition.isIMapType(variable.t) ? typedMapInitializerMapping(initializer,
+				'TVar(${variable.name}:typed-map-interface-initializer)') : null;
+		if (typedMapInterfaceAlias != null && typedMapInterfaceAlias.typedMapValue() == null)
+			return unsupportedAt(position, 'TVar(${variable.name}:typed-map-interface-initializer-not-admitted-map)');
 		final collectionType = bodyCollectionType(variable.t, position, 'TVar(${variable.name}:type)');
 		if (collectionType != null) {
 			lowerCollectionVariable(variable, initializer, position, ordinal, localId, collectionType);
 			return;
 		}
-		final localMapping = localStorageValueType(variable, initializer, position, 'TVar(${variable.name}:type)');
+		final localMapping = typedMapInterfaceAlias == null ? localStorageValueType(variable, initializer, position,
+			'TVar(${variable.name}:type)') : typedMapInterfaceAlias;
 		if (localMapping.irType == IRTVoid) {
 			unsupportedAt(position, 'TVar(${variable.name}:Void)');
 		}
@@ -6727,6 +6769,17 @@ private class FunctionBuilder {
 		}
 		if (stackReferenceAlias)
 			stackConstructedCompilerIds.set(variable.id, true);
+	}
+
+	/** Recover the exact map plan through compiler-inlined IMap alias locals. */
+	function typedMapInitializerMapping(expression:TypedExpr, node:String):CBodyValueType {
+		final local = switch unwrapExpression(expression).expr {
+			case TLocal(variable): localTypesByCompilerId.get(variable.id);
+			case _: null;
+		};
+		if (local != null && local.typedMapValue() != null)
+			return local;
+		return bodyValueType(expression.t, expression.pos, node);
 	}
 
 	/**
@@ -8078,10 +8131,12 @@ private class FunctionBuilder {
 			case TParenthesis(inner): lowerValue(inner, expectedMapping);
 			case TMeta(_, inner): lowerValue(inner, expectedMapping);
 			case TBlock(expressions): lowerValueBlock(expression, expressions, expectedMapping);
-			case TCast(inner, _) if (CBodyIntMapRecognition.isIMapType(expression.t)
-				|| CBodyStringMapRecognition.isIMapType(expression.t)):
+			case TCast(inner, _)
+				if (CBodyIntMapRecognition.isIMapType(expression.t)
+					|| CBodyStringMapRecognition.isIMapType(expression.t)
+					|| CBodyTypedMapRecognition.isIMapType(expression.t)):
 				final innerMapping = bodyValueType(inner.t, inner.pos, "TCast(Map-interface-view:inner-type)");
-				if (innerMapping.intMapValue() == null && innerMapping.stringMapValue() == null)
+				if (innerMapping.intMapValue() == null && innerMapping.stringMapValue() == null && innerMapping.typedMapValue() == null)
 					unsupported(expression, "TCast(Map-interface-view:inner-not-admitted-map)");
 				lowerValue(inner, expectedMapping == null ? innerMapping : expectedMapping);
 			case TCast(inner, _):
@@ -8111,8 +8166,8 @@ private class FunctionBuilder {
 						// still reach `coerce`'s fail-closed runtime-proof diagnostic.
 						coerce(lowerValue(inner), target, expression.pos, "TCast(interface)");
 					case CBVKStaticString(_) | CBVKManagedString(_) | CBVKSpan(_, _) | CBVKCString | CBVKCStringRef | CBVKImport(_) | CBVKAggregate(_) |
-						CBVKEnum(_) | CBVKClass(_, _) | CBVKArray(_) | CBVKIterator(_) | CBVKIntMap(_) | CBVKStringMap(_) | CBVKBytes(_) | CBVKOptional(_) |
-						CBVKFunction(_, _) | CBVKClosureCapturePointer(_) | CBVKNativeRef(_) | CBVKCStringBufferRef | CBVKClosureContext |
+						CBVKEnum(_) | CBVKClass(_, _) | CBVKArray(_) | CBVKIterator(_) | CBVKIntMap(_) | CBVKStringMap(_) | CBVKTypedMap(_) | CBVKBytes(_) |
+						CBVKOptional(_) | CBVKFunction(_, _) | CBVKClosureCapturePointer(_) | CBVKNativeRef(_) | CBVKCStringBufferRef | CBVKClosureContext |
 						CBVKStackClosure(_, _, _):
 						coerce(lowerValue(inner, target), target, expression.pos, "TCast(record-alias)");
 				}
@@ -8144,6 +8199,8 @@ private class FunctionBuilder {
 				lowerIntMapConstruction(expression, arguments, expectedMapping);
 			case TNew(classReference, _, arguments) if (CBodyStringMapRecognition.isStringMap(classReference)):
 				lowerStringMapConstruction(expression, arguments, expectedMapping);
+			case TNew(classReference, _, arguments) if (CBodyTypedMapRecognition.family(classReference) != null):
+				lowerTypedMapConstruction(expression, arguments, expectedMapping);
 			case TNew(classReference, _, arguments) if (CBodyArrayRecognition.isCoreArray(classReference)):
 				if (arguments.length != 0)
 					unsupported(expression, 'TNew(Array:argument-count=${arguments.length})');
@@ -8153,6 +8210,8 @@ private class FunctionBuilder {
 				lowerManagedArrayLiteral(expression, [], expectedMapping);
 			case TNew(classReference, _, arguments) if (CBodyIteratorRecognition.arrayKind(classReference) != null):
 				lowerArrayIteratorConstruction(expression, classReference, arguments, expectedMapping);
+			case TNew(classReference, _, arguments) if (CBodyIteratorRecognition.isMapKeyValue(classReference)):
+				lowerMapKeyValueIteratorConstruction(expression, arguments, expectedMapping);
 			case TNew(_, _, _):
 				final construction = newExpression(expression);
 				if (construction == null)
@@ -11884,6 +11943,9 @@ private class FunctionBuilder {
 			case _: null;
 		};
 		if (iteratorAccess != null) {
+			final knownTypedMap = knownTypedMapExpressionMapping(iteratorAccess.receiver);
+			if (knownTypedMap != null)
+				return lowerTypedMapOperation(expression, iteratorAccess.receiver, iteratorAccess.method, call.arguments, materializeResult);
 			final receiverMapping = bodyValueType(iteratorAccess.receiver.t, iteratorAccess.receiver.pos,
 				'TCall(Iterator.${iteratorAccess.method}:receiver-type)');
 			if (receiverMapping.iteratorValue() != null)
@@ -11894,6 +11956,9 @@ private class FunctionBuilder {
 			return lowerImportCall(expression, call.arguments, imported, materializeResult);
 		final instanceAccess = CBodyDispatchCatalog.instanceAccess(call.callee);
 		if (instanceAccess != null) {
+			final knownTypedMap = knownTypedMapExpressionMapping(instanceAccess.receiver);
+			if (knownTypedMap != null)
+				return lowerTypedMapOperation(expression, instanceAccess.receiver, instanceAccess.field.get().name, call.arguments, materializeResult);
 			final concreteIteratorMapping = bodyValueType(instanceAccess.receiver.t, instanceAccess.receiver.pos,
 				'TCall(Iterator.${instanceAccess.field.get().name}:concrete-receiver-type)');
 			if (concreteIteratorMapping.iteratorValue() != null)
@@ -11902,6 +11967,7 @@ private class FunctionBuilder {
 				case CBIRArray: lowerManagedArrayCall(expression, instanceAccess, call.arguments, materializeResult);
 				case CBIRIntMap: lowerIntMapCall(expression, instanceAccess, call.arguments, materializeResult);
 				case CBIRStringMap: lowerStringMapCall(expression, instanceAccess, call.arguments, materializeResult);
+				case CBIRTypedMap: lowerTypedMapCall(expression, instanceAccess, call.arguments, materializeResult);
 				case CBIRIterator: lowerIteratorCall(expression, instanceAccess.receiver, instanceAccess.field.get().name, call.arguments,
 						concreteIteratorMapping);
 				case CBIRBytes: lowerManagedBytesCall(expression, instanceAccess, call.arguments, materializeResult);
@@ -13362,6 +13428,155 @@ private class FunctionBuilder {
 			}
 		}
 		runtimeRequirements.push(new CBodyRuntimeRequirement("string-map", method, 'ordinary Haxe StringMap.$method', source, expression.pos));
+		return {id: result.id, type: result.type, mapping: resultMapping};
+	}
+
+	/** Construct one collector-owned ObjectMap or EnumValueMap without boxing. */
+	function lowerTypedMapConstruction(expression:TypedExpr, arguments:Array<TypedExpr>, expected:Null<CBodyValueType>):LoweredValue {
+		if (arguments.length != 0)
+			return unsupported(expression, 'TNew(typed-map:argument-count=${arguments.length})');
+		final mapping = expected == null ? bodyValueType(expression.t, expression.pos, "TNew(typed-map:result-type)") : expected;
+		final map = mapping.typedMapValue();
+		if (map == null)
+			return unsupported(expression, 'TNew(typed-map:expected-type=${mapping.cSpelling})');
+		final result:HxcIRResult = {id: nextValueId(), type: mapping.irType};
+		final source = sourceSpan(expression.pos);
+		appendInstruction(result, IRIOCall({
+			dispatch: IRCDRuntime(map.featureId(), "create"),
+			arguments: [],
+			returnType: mapping.irType,
+			failure: managedArrayFailure()
+		}), source, '${map.featureId()}-create');
+		registerValueTemporary(result.id, '${map.featureId()}-create-result');
+		runtimeRequirements.push(new CBodyRuntimeRequirement(map.featureId(), "create", 'ordinary Haxe ${map.featureId()} construction', source,
+			expression.pos));
+		return {id: result.id, type: result.type, mapping: mapping};
+	}
+
+	/** Lower exact ObjectMap/EnumValueMap operations through their retained key policy. */
+	function lowerTypedMapCall(expression:TypedExpr, access:reflaxe.c.lowering.CBodyDispatch.CBodyInstanceCallAccess, arguments:Array<TypedExpr>,
+			materializeResult:Bool):Null<LoweredValue> {
+		return lowerTypedMapOperation(expression, access.receiver, access.field.get().name, arguments, materializeResult);
+	}
+
+	/** Shared lowering for nominal map methods and compiler-inlined IMap fields. */
+	function lowerTypedMapOperation(expression:TypedExpr, receiverExpression:TypedExpr, method:String, arguments:Array<TypedExpr>,
+			materializeResult:Bool):Null<LoweredValue> {
+		final receiver = lowerValue(receiverExpression);
+		final map = receiver.mapping.typedMapValue();
+		if (map == null)
+			return unsupported(receiverExpression, "TCall(typed-map:receiver-identity-lost)");
+		final runtimeMethod = method == "keyValueIterator" ? "key-value-iterator" : method;
+		final iteratorMethod = method == "iterator" || method == "keys" || method == "keyValueIterator";
+		final expectedArguments = method == "clear" || method == "copy" || iteratorMethod ? 0 : method == "set" ? 2 : 1;
+		if (method != "set" && method != "exists" && method != "get" && method != "remove" && method != "clear" && method != "copy" && !iteratorMethod)
+			return unsupported(expression, 'TCall(${map.featureId()}.$method:not-yet-admitted)');
+		if (arguments.length != expectedArguments)
+			return unsupported(expression, 'TCall(${map.featureId()}.$method:argument-count=${arguments.length},expected=$expectedArguments)');
+		final loweredArguments:Array<String> = [receiver.id];
+		if (arguments.length > 0) {
+			final actualKey = bodyValueType(arguments[0].t, arguments[0].pos, 'TCall(${map.featureId()}.$method:key-type)');
+			if (typeKey(actualKey.irType) != typeKey(map.key.irType))
+				return unsupported(arguments[0], 'TCall(${map.featureId()}.$method:key-type-mismatch)');
+			loweredArguments.push(coerce(lowerValue(arguments[0], map.key), map.key, arguments[0].pos, 'TCall(${map.featureId()}.$method:key)').id);
+		}
+		if (method == "set")
+			loweredArguments.push(coerce(lowerValue(arguments[1], map.value), map.value, arguments[1].pos, 'TCall(${map.featureId()}.set:value)').id);
+		final source = sourceSpan(expression.pos);
+		if (iteratorMethod) {
+			final resultMapping = bodyValueType(expression.t, expression.pos, 'TCall(${map.featureId()}.$method:result-type)');
+			final iterator = resultMapping.iteratorValue();
+			if (iterator == null)
+				return unsupported(expression, 'TCall(${map.featureId()}.$method:result-not-Iterator)');
+			final elementMatches = method == "iterator" ? typeKey(iterator.element.irType) == typeKey(map.value.irType) : method == "keys" ? typeKey(iterator.element.irType) == typeKey(map.key.irType) : true;
+			if (!elementMatches)
+				return unsupported(expression, 'TCall(${map.featureId()}.$method:element-type-mismatch)');
+			final result:HxcIRResult = {id: nextValueId(), type: resultMapping.irType};
+			appendInstruction(result, IRIOCall({
+				dispatch: IRCDRuntime(map.featureId(), runtimeMethod),
+				arguments: loweredArguments,
+				returnType: result.type,
+				failure: managedArrayFailure()
+			}), source, '${map.featureId()}-$method');
+			registerValueTemporary(result.id, '${map.featureId()}-$method-result');
+			freshManagedIteratorValueIds.set(result.id, true);
+			runtimeRequirements.push(new CBodyRuntimeRequirement(map.featureId(), runtimeMethod, 'ordinary Haxe ${map.featureId()}.$method snapshot', source,
+				expression.pos));
+			return {id: result.id, type: result.type, mapping: resultMapping};
+		}
+		if (method == "copy") {
+			final result:HxcIRResult = {id: nextValueId(), type: receiver.type};
+			appendInstruction(result, IRIOCall({
+				dispatch: IRCDRuntime(map.featureId(), "copy"),
+				arguments: loweredArguments,
+				returnType: result.type,
+				failure: managedArrayFailure()
+			}), source, '${map.featureId()}-copy');
+			registerValueTemporary(result.id, '${map.featureId()}-copy-result');
+			runtimeRequirements.push(new CBodyRuntimeRequirement(map.featureId(), "copy", 'ordinary Haxe ${map.featureId()}.copy', source, expression.pos));
+			return {id: result.id, type: result.type, mapping: receiver.mapping};
+		}
+		if (method == "set" || method == "clear") {
+			appendInstruction(null, IRIOCall({
+				dispatch: IRCDRuntime(map.featureId(), method),
+				arguments: loweredArguments,
+				returnType: IRTVoid,
+				failure: managedArrayFailure()
+			}), source, '${map.featureId()}-$method');
+			runtimeRequirements.push(new CBodyRuntimeRequirement(map.featureId(), method, 'ordinary Haxe ${map.featureId()}.$method', source, expression.pos));
+			return null;
+		}
+		final resultMapping = bodyValueType(expression.t, expression.pos, 'TCall(${map.featureId()}.$method:result-type)');
+		final result:HxcIRResult = {id: nextValueId(), type: resultMapping.irType};
+		appendInstruction(result, IRIOCall({
+			dispatch: IRCDRuntime(map.featureId(), method),
+			arguments: loweredArguments,
+			returnType: result.type,
+			failure: managedArrayFailure()
+		}), source, '${map.featureId()}-$method');
+		registerValueTemporary(result.id, '${map.featureId()}-$method-result');
+		runtimeRequirements.push(new CBodyRuntimeRequirement(map.featureId(), method, 'ordinary Haxe ${map.featureId()}.$method', source, expression.pos));
+		return {id: result.id, type: result.type, mapping: resultMapping};
+	}
+
+	/** Return a prepared typed map only when one already-lowered local proves it. */
+	function knownTypedMapExpressionMapping(expression:TypedExpr):Null<CBodyValueType> {
+		final mapping = switch unwrapExpression(expression).expr {
+			case TLocal(variable):
+				final local = localTypesByCompilerId.get(variable.id);
+				if (local != null) local else parameterValuesByCompilerId.get(variable.id)?.mapping;
+			case _: null;
+		};
+		return mapping != null && mapping.typedMapValue() != null ? mapping : null;
+	}
+
+	/** Replace EnumValueMap's inlined standard cursor with one complete snapshot. */
+	function lowerMapKeyValueIteratorConstruction(expression:TypedExpr, arguments:Array<TypedExpr>, expected:Null<CBodyValueType>):LoweredValue {
+		if (arguments.length != 1)
+			return unsupported(expression, 'TNew(MapKeyValueIterator:argument-count=${arguments.length},expected=1)');
+		final mapMapping = bodyValueType(arguments[0].t, arguments[0].pos, "TNew(MapKeyValueIterator:map-type)");
+		final map = mapMapping.typedMapValue();
+		if (map == null)
+			return unsupported(arguments[0], "TNew(MapKeyValueIterator:map-not-admitted-typed-map)");
+		final receiver = coerce(lowerValue(arguments[0], mapMapping), mapMapping, arguments[0].pos, "TNew(MapKeyValueIterator:map)");
+		final resultMapping = bodyValueType(expression.t, expression.pos, "TNew(MapKeyValueIterator:result-type)");
+		final iterator = resultMapping.iteratorValue();
+		if (iterator == null)
+			return unsupported(expression, "TNew(MapKeyValueIterator:result-not-standard-Iterator)");
+		if (expected != null && typeKey(expected.irType) != typeKey(resultMapping.irType))
+			return unsupported(expression, 'TNew(MapKeyValueIterator:expected-type-mismatch:${expected.cSpelling})');
+		final result:HxcIRResult = {id: nextValueId(), type: resultMapping.irType};
+		final source = sourceSpan(expression.pos);
+		appendInstruction(result, IRIOCall({
+			dispatch: IRCDRuntime(map.featureId(), "key-value-iterator"),
+			arguments: [receiver.id],
+			returnType: result.type,
+			failure: managedArrayFailure()
+		}), source, '${map.featureId()}-key-value-iterator');
+		registerValueTemporary(result.id, '${map.featureId()}-key-value-iterator-result');
+		freshManagedIteratorValueIds.set(result.id, true);
+		runtimeRequirements.push(new CBodyRuntimeRequirement(map.featureId(), "key-value-iterator",
+			'ordinary Haxe ${map.featureId()}.keyValueIterator snapshot', source, expression.pos));
 		return {id: result.id, type: result.type, mapping: resultMapping};
 	}
 
@@ -15550,7 +15765,7 @@ private class FunctionBuilder {
 			case CBVKAggregate(_):
 				profileRecordTypeClassifications++;
 				profileRecordTypeCpuSeconds += cpuSeconds;
-			case CBVKArray(_) | CBVKIterator(_) | CBVKIntMap(_) | CBVKStringMap(_) | CBVKBytes(_):
+			case CBVKArray(_) | CBVKIterator(_) | CBVKIntMap(_) | CBVKStringMap(_) | CBVKTypedMap(_) | CBVKBytes(_):
 				profileCollectionTypeClassifications++;
 				profileCollectionTypeCpuSeconds += cpuSeconds;
 			case CBVKImport(_) | CBVKEnum(_) | CBVKOwnedClass(_) | CBVKClass(_, _) | CBVKInterface(_):

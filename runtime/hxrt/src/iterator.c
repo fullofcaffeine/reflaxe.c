@@ -26,6 +26,10 @@ struct hxc_iterator_ref {
   hxc_iterator_element_ops elements;
   hxc_allocator allocator;
   hxc_allocation storage;
+  hxc_allocation root_slots;
+  hxc_allocation root_offsets;
+  void *root_registration;
+  hxc_iterator_root_ops roots;
   void *anchor;
   hxc_iterator_anchor_release_fn release_anchor;
 
@@ -38,6 +42,15 @@ struct hxc_iterator_ref {
 
 static bool hxc_iterator_power_of_two(size_t value) {
   return value != 0u && (value & (value - 1u)) == 0u;
+}
+
+static bool hxc_iterator_root_ops_is_valid(
+  const hxc_iterator_root_ops *roots
+) {
+  return roots != NULL
+    && ((roots->register_roots == NULL && roots->unregister_roots == NULL)
+      || (roots->register_roots != NULL && roots->unregister_roots != NULL))
+    && (roots->trace_element == NULL || roots->register_roots != NULL);
 }
 
 /** True when two already-bounds-checked pair members occupy separate bytes. */
@@ -62,10 +75,19 @@ static bool hxc_iterator_is_valid(const hxc_iterator_ref *iterator) {
     return false;
   }
   if (iterator->kind == HXC_ITERATOR_SNAPSHOT) {
+    const bool roots_registered = iterator->root_registration != NULL;
+    const bool roots_absent = !roots_registered
+      && iterator->root_slots.memory == NULL
+      && iterator->root_offsets.memory == NULL;
+    const bool roots_present = roots_registered
+      && hxc_allocation_is_valid(&iterator->root_slots)
+      && hxc_allocation_is_valid(&iterator->root_offsets)
+      && iterator->roots.unregister_roots != NULL;
     return iterator->cursor <= iterator->length
       && iterator->array == NULL
       && hxc_iterator_element_ops_is_valid(&iterator->elements)
       && hxc_allocation_is_valid(&iterator->storage)
+      && (roots_absent || roots_present)
       && ((iterator->anchor == NULL && iterator->release_anchor == NULL)
         || (iterator->anchor != NULL && iterator->release_anchor != NULL));
   }
@@ -75,7 +97,12 @@ static bool hxc_iterator_is_valid(const hxc_iterator_ref *iterator) {
     || iterator->anchor != NULL
     || iterator->release_anchor != NULL
     || iterator->storage.memory != NULL
-    || iterator->storage.size != 0u) {
+    || iterator->storage.size != 0u
+    || iterator->root_slots.memory != NULL
+    || iterator->root_offsets.memory != NULL
+    || iterator->root_registration != NULL
+    || iterator->roots.register_roots != NULL
+    || iterator->roots.unregister_roots != NULL) {
     return false;
   }
   if (iterator->kind == HXC_ITERATOR_ARRAY_VALUES) {
@@ -151,6 +178,8 @@ static hxc_status hxc_iterator_ref_create_array(
   iterator->kind = kind;
   iterator->allocator = array->allocator;
   iterator->storage = (hxc_allocation)HXC_ALLOCATION_INITIALIZER;
+  iterator->root_slots = (hxc_allocation)HXC_ALLOCATION_INITIALIZER;
+  iterator->root_offsets = (hxc_allocation)HXC_ALLOCATION_INITIALIZER;
   iterator->array = array;
   iterator->pair_size = pair_size;
   iterator->pair_alignment = pair_alignment;
@@ -182,7 +211,152 @@ bool hxc_iterator_element_ops_is_valid(
     || (elements->copy != NULL && elements->destroy != NULL);
 }
 
-hxc_status hxc_iterator_ref_create_snapshot(
+typedef struct hxc_iterator_trace_count {
+  size_t count;
+  bool overflow;
+} hxc_iterator_trace_count;
+
+typedef struct hxc_iterator_trace_fill {
+  const void **slots;
+  size_t count;
+  size_t capacity;
+} hxc_iterator_trace_fill;
+
+static void hxc_iterator_count_root(void *context, const void *object) {
+  hxc_iterator_trace_count *count = context;
+  if (object == NULL || count->overflow) {
+    return;
+  }
+  if (count->count == SIZE_MAX) {
+    count->overflow = true;
+  } else {
+    count->count++;
+  }
+}
+
+static void hxc_iterator_fill_root(void *context, const void *object) {
+  hxc_iterator_trace_fill *fill = context;
+  if (object != NULL && fill->count < fill->capacity) {
+    fill->slots[fill->count++] = object;
+  }
+}
+
+static void hxc_iterator_destroy_constructed(
+  hxc_iterator_ref *iterator,
+  size_t constructed
+) {
+  while (constructed != 0u) {
+    constructed--;
+    if (iterator->elements.destroy != NULL) {
+      iterator->elements.destroy(
+        iterator->elements.context,
+        hxc_iterator_slot(iterator, constructed)
+      );
+    }
+  }
+}
+
+static hxc_status hxc_iterator_register_snapshot_roots(
+  hxc_iterator_ref *iterator,
+  hxc_iterator_root_ops roots
+) {
+  hxc_iterator_trace_count count = {0u, false};
+  hxc_iterator_trace_fill fill;
+  hxc_iterator_element_trace_fn trace;
+  void *trace_context;
+  size_t *offsets;
+  size_t index;
+  hxc_status status;
+  if (!hxc_iterator_root_ops_is_valid(&roots)
+    || roots.register_roots == NULL
+    || iterator->length == SIZE_MAX) {
+    return HXC_STATUS_INVALID_ARGUMENT;
+  }
+  trace = roots.trace_element == NULL
+    ? iterator->elements.trace
+    : roots.trace_element;
+  trace_context = roots.trace_element == NULL
+    ? iterator->elements.context
+    : roots.trace_context;
+  if (trace == NULL) {
+    return HXC_STATUS_INVALID_ARGUMENT;
+  }
+  status = hxc_allocation_allocate(
+    &iterator->allocator,
+    iterator->length + 1u,
+    sizeof(size_t),
+    HXC_ALIGNOF(size_t),
+    &iterator->root_offsets
+  );
+  if (status != HXC_STATUS_OK) {
+    return status;
+  }
+  offsets = iterator->root_offsets.memory;
+  for (index = 0u; index < iterator->length; index++) {
+    offsets[index] = count.count;
+    trace(
+      trace_context,
+      hxc_iterator_slot(iterator, index),
+      hxc_iterator_count_root,
+      &count
+    );
+    if (count.overflow) {
+      return HXC_STATUS_SIZE_OVERFLOW;
+    }
+  }
+  offsets[iterator->length] = count.count;
+  if (count.count == 0u) {
+    return hxc_allocation_dispose(&iterator->root_offsets);
+  }
+  status = hxc_allocation_allocate(
+    &iterator->allocator,
+    count.count,
+    sizeof(void *),
+    HXC_ALIGNOF(void *),
+    &iterator->root_slots
+  );
+  if (status != HXC_STATUS_OK) {
+    return status;
+  }
+  fill = (hxc_iterator_trace_fill){
+    iterator->root_slots.memory,
+    0u,
+    count.count
+  };
+  for (index = 0u; index < iterator->length; index++) {
+    trace(
+      trace_context,
+      hxc_iterator_slot(iterator, index),
+      hxc_iterator_fill_root,
+      &fill
+    );
+  }
+  if (fill.count != count.count) {
+    return HXC_STATUS_INTERNAL_ERROR;
+  }
+  status = roots.register_roots(
+    roots.context,
+    iterator->root_slots.memory,
+    count.count,
+    &iterator->root_registration
+  );
+  if (status != HXC_STATUS_OK && iterator->root_registration != NULL) {
+    (void)roots.unregister_roots(iterator->root_registration);
+    iterator->root_registration = NULL;
+  } else if (status == HXC_STATUS_OK && iterator->root_registration == NULL) {
+    status = HXC_STATUS_INTERNAL_ERROR;
+  } else if (status == HXC_STATUS_OK) {
+    iterator->roots = roots;
+    iterator->roots.context = NULL;
+    iterator->roots.trace_context = NULL;
+    iterator->roots.trace_element = NULL;
+    iterator->roots.register_roots = NULL;
+  }
+  return status;
+}
+
+static hxc_status hxc_iterator_ref_create_snapshot_internal(
+  hxc_iterator_root_ops roots,
   hxc_allocator allocator,
   hxc_iterator_element_ops elements,
   size_t length,
@@ -200,7 +374,11 @@ hxc_status hxc_iterator_ref_create_snapshot(
     || fill == NULL
     || !hxc_allocator_is_valid(&allocator)
     || !hxc_iterator_element_ops_is_valid(&elements)
-    || ((anchor == NULL) != (release_anchor == NULL))) {
+    || !hxc_iterator_root_ops_is_valid(&roots)
+    || ((anchor == NULL) != (release_anchor == NULL))
+    || (roots.register_roots == NULL
+      ? elements.trace != NULL
+      : roots.trace_element == NULL && elements.trace == NULL)) {
     return HXC_STATUS_INVALID_ARGUMENT;
   }
   status = hxc_alloc(
@@ -219,6 +397,8 @@ hxc_status hxc_iterator_ref_create_snapshot(
   iterator->elements = elements;
   iterator->allocator = allocator;
   iterator->storage = (hxc_allocation)HXC_ALLOCATION_INITIALIZER;
+  iterator->root_slots = (hxc_allocation)HXC_ALLOCATION_INITIALIZER;
+  iterator->root_offsets = (hxc_allocation)HXC_ALLOCATION_INITIALIZER;
   iterator->anchor = anchor;
   iterator->release_anchor = release_anchor;
   status = hxc_allocation_allocate(
@@ -234,13 +414,16 @@ hxc_status hxc_iterator_ref_create_snapshot(
       constructed++;
     }
   }
+  if (status == HXC_STATUS_OK && roots.register_roots != NULL) {
+    status = hxc_iterator_register_snapshot_roots(iterator, roots);
+  }
   if (status != HXC_STATUS_OK) {
-    while (constructed != 0u) {
-      constructed--;
-      if (elements.destroy != NULL) {
-        elements.destroy(elements.context, hxc_iterator_slot(iterator, constructed));
-      }
+    if (iterator->root_registration != NULL) {
+      (void)iterator->roots.unregister_roots(iterator->root_registration);
     }
+    (void)hxc_allocation_dispose(&iterator->root_slots);
+    (void)hxc_allocation_dispose(&iterator->root_offsets);
+    hxc_iterator_destroy_constructed(iterator, constructed);
     (void)hxc_allocation_dispose(&iterator->storage);
     (void)hxc_free(
       &allocator,
@@ -252,6 +435,53 @@ hxc_status hxc_iterator_ref_create_snapshot(
   }
   *out_iterator = iterator;
   return HXC_STATUS_OK;
+}
+
+hxc_status hxc_iterator_ref_create_snapshot(
+  hxc_allocator allocator,
+  hxc_iterator_element_ops elements,
+  size_t length,
+  hxc_iterator_snapshot_fill_fn fill,
+  void *fill_context,
+  void *anchor,
+  hxc_iterator_anchor_release_fn release_anchor,
+  hxc_iterator_ref **out_iterator
+) {
+  return hxc_iterator_ref_create_snapshot_internal(
+    (hxc_iterator_root_ops){0},
+    allocator,
+    elements,
+    length,
+    fill,
+    fill_context,
+    anchor,
+    release_anchor,
+    out_iterator
+  );
+}
+
+hxc_status hxc_iterator_ref_create_traced_snapshot(
+  hxc_iterator_root_ops roots,
+  hxc_allocator allocator,
+  hxc_iterator_element_ops elements,
+  size_t length,
+  hxc_iterator_snapshot_fill_fn fill,
+  void *fill_context,
+  void *anchor,
+  hxc_iterator_anchor_release_fn release_anchor,
+  hxc_iterator_ref **out_iterator
+) {
+  return hxc_iterator_ref_create_snapshot_internal(
+    roots,
+    allocator,
+    elements,
+    length,
+    fill,
+    fill_context,
+    anchor,
+    release_anchor,
+    out_iterator
+  );
 }
 
 hxc_status hxc_iterator_ref_create_array_values(
@@ -334,6 +564,20 @@ hxc_status hxc_iterator_ref_release(hxc_iterator_ref *iterator) {
         hxc_iterator_slot(iterator, index)
       );
     }
+  }
+  if (iterator->root_registration != NULL) {
+    status = iterator->roots.unregister_roots(iterator->root_registration);
+    if (status != HXC_STATUS_OK) {
+      return status;
+    }
+  }
+  status = hxc_allocation_dispose(&iterator->root_slots);
+  if (status != HXC_STATUS_OK) {
+    return status;
+  }
+  status = hxc_allocation_dispose(&iterator->root_offsets);
+  if (status != HXC_STATUS_OK) {
+    return status;
   }
   status = hxc_allocation_dispose(&iterator->storage);
   if (status != HXC_STATUS_OK) {
@@ -418,6 +662,14 @@ hxc_status hxc_iterator_ref_next_move(
     hxc_iterator_slot(iterator, iterator->cursor),
     iterator->elements.size
   );
+  if (iterator->root_offsets.memory != NULL) {
+    const size_t *offsets = iterator->root_offsets.memory;
+    const void **roots = iterator->root_slots.memory;
+    size_t root = offsets[iterator->cursor];
+    while (root < offsets[iterator->cursor + 1u]) {
+      roots[root++] = NULL;
+    }
+  }
   iterator->cursor++;
   return HXC_STATUS_OK;
 }

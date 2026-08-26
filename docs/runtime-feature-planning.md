@@ -33,6 +33,10 @@ precise non-moving `gc` backend and its exact root/pin contract; ordinary-Haxe
 class integration remains fail-closed until its HxcIR representation selects
 that backend.
 
+Admitted ordinary classes now select those exact object and collector
+contracts. ObjectMap and EnumValueMap select them through the private typed-map
+dependency. Other managed shapes remain fail-closed.
+
 ## Typed graph contract
 
 `RuntimeFeatureCatalog` supplies a fresh `RuntimeFeatureRegistry` for each
@@ -60,6 +64,12 @@ array -> alloc                   (compiler selectable, bounded Haxe Array)
 bytes -> alloc + string-literal  (compiler selectable, bounded haxe.io.Bytes)
 object -> runtime-base           (compiler selectable, managed descriptors)
 gc -> alloc + object             (compiler selectable, precise collection)
+iterator -> alloc + array        (compiler selectable, exact shared cursors)
+int-map -> alloc + iterator + string
+string-map -> alloc + iterator + string + string-literal
+typed-map -> gc + iterator       (compiler selectable, exact typed tables)
+object-map -> typed-map          (compiler selectable, identity keys)
+enum-value-map -> typed-map      (compiler selectable, recursive enum keys)
 string -> alloc + string-literal (native seed only)
 status-name -> status            (native seed only)
 ```

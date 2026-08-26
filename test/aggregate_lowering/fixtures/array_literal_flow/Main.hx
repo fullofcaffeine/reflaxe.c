@@ -20,6 +20,10 @@ typedef ManagedRecord = {
 
 /** Runs the Array-literal flow-staging contract as one generated executable. */
 class Main {
+	/** Build one managed record at the exact source point used by an Array literal. */
+	static function makeRecord(code:Int, count:Int):ManagedRecord
+		return {name: String.fromCharCode(code), count: count};
+
 	/** Keep a straight-line literal as the no-staging representation control. */
 	static function straightLine():Array<Int>
 		return [1, 2, 3];
@@ -90,7 +94,7 @@ class Main {
 		final values:Array<ManagedRecord> = [
 			{
 				order = order * 10 + 1;
-				{name: String.fromCharCode(code), count: 1};
+				makeRecord(code, 1);
 			},
 			{
 				order = order * 10 + 2;

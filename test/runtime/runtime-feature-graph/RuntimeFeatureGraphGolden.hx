@@ -77,6 +77,9 @@ class RuntimeFeatureGraphGolden {
 		final array = planner.plan(featureRequest(CRuntimePolicy.Auto, [reason("fixture.array", "array")], []));
 		final intMap = planner.plan(featureRequest(CRuntimePolicy.Auto, [reason("fixture.int-map", "int-map")], []));
 		final stringMap = planner.plan(featureRequest(CRuntimePolicy.Auto, [reason("fixture.string-map", "string-map")], []));
+		final typedMap = planner.plan(featureRequest(CRuntimePolicy.Auto, [reason("fixture.typed-map", "typed-map")], []));
+		final objectMap = planner.plan(featureRequest(CRuntimePolicy.Auto, [reason("fixture.object-map", "object-map")], []));
+		final enumValueMap = planner.plan(featureRequest(CRuntimePolicy.Auto, [reason("fixture.enum-value-map", "enum-value-map")], []));
 		final stringLowerCase = planner.plan(featureRequest(CRuntimePolicy.Auto, [reason("fixture.string-lower-case", "string-lower-case")], []));
 		final stringFloat = planner.plan(featureRequest(CRuntimePolicy.Auto, [reason("fixture.string-float", "string-float")], []));
 		final stringSplit = planner.plan(featureRequest(CRuntimePolicy.Auto, [reason("fixture.string-split", "string-split")], []));
@@ -106,6 +109,7 @@ class RuntimeFeatureGraphGolden {
 		final arrayFiles = packager.packageFiles(array, repositorySource);
 		final intMapFiles = packager.packageFiles(intMap, repositorySource);
 		final stringMapFiles = packager.packageFiles(stringMap, repositorySource);
+		final typedMapFiles = packager.packageFiles(typedMap, repositorySource);
 		final stringLowerCaseFiles = packager.packageFiles(stringLowerCase, repositorySource);
 		final stringSplitFiles = packager.packageFiles(stringSplit, repositorySource);
 		final bytesFiles = packager.packageFiles(bytes, repositorySource);
@@ -159,6 +163,9 @@ class RuntimeFeatureGraphGolden {
 			array: array,
 			intMap: intMap,
 			stringMap: stringMap,
+			typedMap: typedMap,
+			objectMap: objectMap,
+			enumValueMap: enumValueMap,
 			stringLowerCase: stringLowerCase,
 			stringFloat: stringFloat,
 			stringSplit: stringSplit,
@@ -211,6 +218,7 @@ class RuntimeFeatureGraphGolden {
 			array: packageRecords(arrayFiles),
 			intMap: packageRecords(intMapFiles),
 			stringMap: packageRecords(stringMapFiles),
+			typedMap: packageRecords(typedMapFiles),
 			stringLowerCase: packageRecords(stringLowerCaseFiles),
 			stringSplit: packageRecords(stringSplitFiles),
 			bytes: packageRecords(bytesFiles),

@@ -647,7 +647,7 @@ NEGATIVE_EXPECTATIONS = {
     ),
     "code_size": (
         "Main.hx:6: lines 6-8",
-        "generic-specialization-code-size-budget:68-over-1",
+        "generic-specialization-code-size-budget:72-over-1",
     ),
     "virtual_method": (
         "Main.hx:4: lines 4-6",

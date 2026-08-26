@@ -49,6 +49,12 @@ class CBodyIteratorRecognition {
 			case _: null;
 		};
 	}
+
+	/** Recognize the pinned generic map key/value cursor implementation. */
+	public static function isMapKeyValue(reference:Ref<ClassType>):Bool {
+		final definition = reference.get();
+		return definition.pack.join(".") == "haxe.iterators" && definition.name == "MapKeyValueIterator";
+	}
 }
 
 /** Maps one iterator element through the normal typed body-value boundary. */
@@ -165,12 +171,28 @@ class CBodyIteratorRegistry {
 						case null: null;
 					};
 				}
+			case TInst(reference, parameters) if (CBodyIteratorRecognition.isMapKeyValue(reference)):
+				parameters.length == 2 ? mapKeyValueElement(reference.get(), parameters) : null;
 			case TMono(reference):
 				final resolved = reference.get();
 				resolved == null ? null : iteratorElementType(resolved);
 			case TLazy(resolve): iteratorElementType(resolve());
 			case _: null;
 		};
+
+	/** Read the pinned map cursor's applied `next()` pair result. */
+	static function mapKeyValueElement(definition:ClassType, parameters:Array<Type>):Null<Type> {
+		for (field in definition.fields.get()) {
+			if (field.name != "next")
+				continue;
+			final applied = TypeTools.applyTypeParameters(field.type, definition.params, parameters);
+			return switch applied {
+				case TFun(_, result): result;
+				case _: null;
+			};
+		}
+		return null;
+	}
 
 	/** Read the pinned key/value iterator's applied `next()` result type. */
 	static function arrayKeyValueElement(definition:ClassType, parameters:Array<Type>):Null<Type> {

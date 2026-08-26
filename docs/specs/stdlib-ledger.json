@@ -393,7 +393,6 @@
         "Map",
         "haxe.ds.HashMap",
         "haxe.ds.IntMap",
-        "haxe.ds.ObjectMap",
         "haxe.ds.StringMap",
         "haxe.ds.Vector",
         "haxe.ds.WeakMap"
@@ -434,7 +433,6 @@
         "haxe.ds.ArraySort",
         "haxe.ds.BalancedTree",
         "haxe.ds.Either",
-        "haxe.ds.EnumValueMap",
         "haxe.ds.GenericStack",
         "haxe.ds.List",
         "haxe.ds.ListSort",
@@ -470,6 +468,64 @@
       ],
       "tests": [],
       "notes": "Pure Haxe algorithms and iterator shapes should lower and inline through typed collection representations without an iterator runtime by default."
+    },
+    {
+      "id": "object-map-bounded",
+      "modulePatterns": [
+        "haxe.ds.ObjectMap"
+      ],
+      "owner": "runtime-slice",
+      "runtimeFeatures": [
+        "object-map"
+      ],
+      "profiles": [
+        "portable"
+      ],
+      "environments": [
+        "hosted"
+      ],
+      "status": "partial",
+      "ownerBeads": "E5.T03",
+      "testOwnerBeads": "E5.T12",
+      "diagnosticPolicies": [
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
+      ],
+      "tests": [
+        "test/differential/object-enum-map/generated/Main.hx",
+        "test/differential/object-enum-map/run.py",
+        "test/differential/object-enum-map/typed_map_runtime.c"
+      ],
+      "notes": "Admitted class keys compare by stable Haxe object identity. Bool, Int, and collector-managed class values stay exact and unboxed; open key shapes and other values remain unsupported."
+    },
+    {
+      "id": "enum-value-map-bounded",
+      "modulePatterns": [
+        "haxe.ds.EnumValueMap"
+      ],
+      "owner": "runtime-slice",
+      "runtimeFeatures": [
+        "enum-value-map"
+      ],
+      "profiles": [
+        "portable"
+      ],
+      "environments": [
+        "hosted"
+      ],
+      "status": "partial",
+      "ownerBeads": "E5.T03",
+      "testOwnerBeads": "E5.T12",
+      "diagnosticPolicies": [
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
+      ],
+      "tests": [
+        "test/differential/object-enum-map/generated/Main.hx",
+        "test/differential/object-enum-map/run.py",
+        "test/differential/object-enum-map/typed_map_runtime.c"
+      ],
+      "notes": "Admitted finite enum keys compare active constructors and payloads recursively, with class payload identity. Float payloads, recursion, open keys, and other values remain unsupported."
     },
     {
       "id": "binary-and-stream-storage",
@@ -1796,6 +1852,33 @@
         "test/differential/string-map/run.py"
       ],
       "notes": "Bool and Int values use Eval-compatible punctuation and scalar spelling in map iteration order; managed value formatting remains unsupported."
+    },
+    {
+      "id": "object-map-to-string-planned",
+      "selector": {
+        "module": "haxe.ds.ObjectMap",
+        "member": "toString"
+      },
+      "owner": "runtime-slice",
+      "runtimeFeatures": [
+        "object-map",
+        "string"
+      ],
+      "profiles": [
+        "portable"
+      ],
+      "environments": [
+        "hosted"
+      ],
+      "status": "planned",
+      "ownerBeads": "E5.T03",
+      "testOwnerBeads": "E5.T12",
+      "diagnosticPolicies": [
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
+      ],
+      "tests": [],
+      "notes": "Object identity maps are admitted, but text conversion still needs exact value formatting and Eval-compatible punctuation before it can select the String runtime."
     },
     {
       "id": "array-type-partial",
@@ -31407,27 +31490,30 @@
       "kind": "class",
       "signature": "haxe.ds.EnumValueMap",
       "isStatic": true,
-      "owner": "direct-compiler-lowering",
-      "runtimeFeatures": [],
+      "owner": "runtime-slice",
+      "runtimeFeatures": [
+        "enum-value-map"
+      ],
       "profiles": [
-        "portable",
-        "metal"
+        "portable"
       ],
       "environments": [
-        "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "hosted"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T03",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
-        "planned-unsupported"
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Pure Haxe algorithms and iterator shapes should lower and inline through typed collection representations without an iterator runtime by default.",
-      "ruleId": "collection-source"
+      "tests": [
+        "test/differential/object-enum-map/generated/Main.hx",
+        "test/differential/object-enum-map/run.py",
+        "test/differential/object-enum-map/typed_map_runtime.c"
+      ],
+      "notes": "Admitted finite enum keys compare active constructors and payloads recursively, with class payload identity. Float payloads, recursion, open keys, and other values remain unsupported.",
+      "ruleId": "enum-value-map-bounded"
     },
     {
       "id": "hxc-stdlib-api-v1:352d1686af6ec23dc5c26ae7b0c4baf25f503c467768f046b6e2f3105c7facfa",
@@ -31440,27 +31526,30 @@
       "kind": "method",
       "signature": "() -> haxe.ds.EnumValueMap<haxe.ds.EnumValueMap.K, haxe.ds.EnumValueMap.V>",
       "isStatic": false,
-      "owner": "direct-compiler-lowering",
-      "runtimeFeatures": [],
+      "owner": "runtime-slice",
+      "runtimeFeatures": [
+        "enum-value-map"
+      ],
       "profiles": [
-        "portable",
-        "metal"
+        "portable"
       ],
       "environments": [
-        "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "hosted"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T03",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
-        "planned-unsupported"
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Pure Haxe algorithms and iterator shapes should lower and inline through typed collection representations without an iterator runtime by default.",
-      "ruleId": "collection-source"
+      "tests": [
+        "test/differential/object-enum-map/generated/Main.hx",
+        "test/differential/object-enum-map/run.py",
+        "test/differential/object-enum-map/typed_map_runtime.c"
+      ],
+      "notes": "Admitted finite enum keys compare active constructors and payloads recursively, with class payload identity. Float payloads, recursion, open keys, and other values remain unsupported.",
+      "ruleId": "enum-value-map-bounded"
     },
     {
       "id": "hxc-stdlib-api-v1:59a01a33b8da534cd89445b19dbdf66350bcf142df579ade5c64a8abdb4ce1a8",
@@ -31473,27 +31562,30 @@
       "kind": "constructor",
       "signature": "() -> Void",
       "isStatic": false,
-      "owner": "direct-compiler-lowering",
-      "runtimeFeatures": [],
+      "owner": "runtime-slice",
+      "runtimeFeatures": [
+        "enum-value-map"
+      ],
       "profiles": [
-        "portable",
-        "metal"
+        "portable"
       ],
       "environments": [
-        "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "hosted"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T03",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
-        "planned-unsupported"
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Pure Haxe algorithms and iterator shapes should lower and inline through typed collection representations without an iterator runtime by default.",
-      "ruleId": "collection-source"
+      "tests": [
+        "test/differential/object-enum-map/generated/Main.hx",
+        "test/differential/object-enum-map/run.py",
+        "test/differential/object-enum-map/typed_map_runtime.c"
+      ],
+      "notes": "Admitted finite enum keys compare active constructors and payloads recursively, with class payload identity. Float payloads, recursion, open keys, and other values remain unsupported.",
+      "ruleId": "enum-value-map-bounded"
     },
     {
       "id": "hxc-stdlib-api-v1:273444551d46dda8d006bcad3217aa57895702471edd3f951144ac50ccd8e78b",
@@ -34189,33 +34281,30 @@
       "kind": "class",
       "signature": "haxe.ds.ObjectMap",
       "isStatic": true,
-      "owner": "target-source-override",
+      "owner": "runtime-slice",
       "runtimeFeatures": [
-        "alloc",
-        "array",
-        "gc",
-        "object"
+        "object-map"
       ],
       "profiles": [
-        "portable",
-        "metal"
+        "portable"
       ],
       "environments": [
-        "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "hosted"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T03",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Known element/key/value types should specialize to direct typed storage; allocation and tracing remain explicit reachability decisions.",
-      "ruleId": "collection-storage"
+      "tests": [
+        "test/differential/object-enum-map/generated/Main.hx",
+        "test/differential/object-enum-map/run.py",
+        "test/differential/object-enum-map/typed_map_runtime.c"
+      ],
+      "notes": "Admitted class keys compare by stable Haxe object identity. Bool, Int, and collector-managed class values stay exact and unboxed; open key shapes and other values remain unsupported.",
+      "ruleId": "object-map-bounded"
     },
     {
       "id": "hxc-stdlib-api-v1:7745cfd37430f187a0a52374d73a6111dfeb41f1b036309956a181b03e8fc5b8",
@@ -34228,33 +34317,30 @@
       "kind": "method",
       "signature": "() -> Void",
       "isStatic": false,
-      "owner": "target-source-override",
+      "owner": "runtime-slice",
       "runtimeFeatures": [
-        "alloc",
-        "array",
-        "gc",
-        "object"
+        "object-map"
       ],
       "profiles": [
-        "portable",
-        "metal"
+        "portable"
       ],
       "environments": [
-        "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "hosted"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T03",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Known element/key/value types should specialize to direct typed storage; allocation and tracing remain explicit reachability decisions.",
-      "ruleId": "collection-storage"
+      "tests": [
+        "test/differential/object-enum-map/generated/Main.hx",
+        "test/differential/object-enum-map/run.py",
+        "test/differential/object-enum-map/typed_map_runtime.c"
+      ],
+      "notes": "Admitted class keys compare by stable Haxe object identity. Bool, Int, and collector-managed class values stay exact and unboxed; open key shapes and other values remain unsupported.",
+      "ruleId": "object-map-bounded"
     },
     {
       "id": "hxc-stdlib-api-v1:d8f8078482fac3a4acdc785202d0053e184a10dbff746943afcb03c49613d44e",
@@ -34267,33 +34353,30 @@
       "kind": "method",
       "signature": "() -> haxe.ds.ObjectMap<haxe.ds.ObjectMap.K, haxe.ds.ObjectMap.V>",
       "isStatic": false,
-      "owner": "target-source-override",
+      "owner": "runtime-slice",
       "runtimeFeatures": [
-        "alloc",
-        "array",
-        "gc",
-        "object"
+        "object-map"
       ],
       "profiles": [
-        "portable",
-        "metal"
+        "portable"
       ],
       "environments": [
-        "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "hosted"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T03",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Known element/key/value types should specialize to direct typed storage; allocation and tracing remain explicit reachability decisions.",
-      "ruleId": "collection-storage"
+      "tests": [
+        "test/differential/object-enum-map/generated/Main.hx",
+        "test/differential/object-enum-map/run.py",
+        "test/differential/object-enum-map/typed_map_runtime.c"
+      ],
+      "notes": "Admitted class keys compare by stable Haxe object identity. Bool, Int, and collector-managed class values stay exact and unboxed; open key shapes and other values remain unsupported.",
+      "ruleId": "object-map-bounded"
     },
     {
       "id": "hxc-stdlib-api-v1:9d25ecce0adfe2a4c5b54036ad57dedcae1d62c3bf3638027dc91742220c16db",
@@ -34306,33 +34389,30 @@
       "kind": "method",
       "signature": "(key : haxe.ds.ObjectMap.K) -> Bool",
       "isStatic": false,
-      "owner": "target-source-override",
+      "owner": "runtime-slice",
       "runtimeFeatures": [
-        "alloc",
-        "array",
-        "gc",
-        "object"
+        "object-map"
       ],
       "profiles": [
-        "portable",
-        "metal"
+        "portable"
       ],
       "environments": [
-        "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "hosted"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T03",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Known element/key/value types should specialize to direct typed storage; allocation and tracing remain explicit reachability decisions.",
-      "ruleId": "collection-storage"
+      "tests": [
+        "test/differential/object-enum-map/generated/Main.hx",
+        "test/differential/object-enum-map/run.py",
+        "test/differential/object-enum-map/typed_map_runtime.c"
+      ],
+      "notes": "Admitted class keys compare by stable Haxe object identity. Bool, Int, and collector-managed class values stay exact and unboxed; open key shapes and other values remain unsupported.",
+      "ruleId": "object-map-bounded"
     },
     {
       "id": "hxc-stdlib-api-v1:0f74e3eec85fff22afc648e60d21bab6c1fb71b5a342670e31a723ec8fe942ee",
@@ -34345,33 +34425,30 @@
       "kind": "method",
       "signature": "(key : haxe.ds.ObjectMap.K) -> Null<haxe.ds.ObjectMap.V>",
       "isStatic": false,
-      "owner": "target-source-override",
+      "owner": "runtime-slice",
       "runtimeFeatures": [
-        "alloc",
-        "array",
-        "gc",
-        "object"
+        "object-map"
       ],
       "profiles": [
-        "portable",
-        "metal"
+        "portable"
       ],
       "environments": [
-        "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "hosted"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T03",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Known element/key/value types should specialize to direct typed storage; allocation and tracing remain explicit reachability decisions.",
-      "ruleId": "collection-storage"
+      "tests": [
+        "test/differential/object-enum-map/generated/Main.hx",
+        "test/differential/object-enum-map/run.py",
+        "test/differential/object-enum-map/typed_map_runtime.c"
+      ],
+      "notes": "Admitted class keys compare by stable Haxe object identity. Bool, Int, and collector-managed class values stay exact and unboxed; open key shapes and other values remain unsupported.",
+      "ruleId": "object-map-bounded"
     },
     {
       "id": "hxc-stdlib-api-v1:1749a285bdd3fa121e7abc56483512881a79ed66526e9e22afcdb3862b23c882",
@@ -34384,33 +34461,30 @@
       "kind": "method",
       "signature": "() -> Iterator<haxe.ds.ObjectMap.V>",
       "isStatic": false,
-      "owner": "target-source-override",
+      "owner": "runtime-slice",
       "runtimeFeatures": [
-        "alloc",
-        "array",
-        "gc",
-        "object"
+        "object-map"
       ],
       "profiles": [
-        "portable",
-        "metal"
+        "portable"
       ],
       "environments": [
-        "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "hosted"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T03",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Known element/key/value types should specialize to direct typed storage; allocation and tracing remain explicit reachability decisions.",
-      "ruleId": "collection-storage"
+      "tests": [
+        "test/differential/object-enum-map/generated/Main.hx",
+        "test/differential/object-enum-map/run.py",
+        "test/differential/object-enum-map/typed_map_runtime.c"
+      ],
+      "notes": "Admitted class keys compare by stable Haxe object identity. Bool, Int, and collector-managed class values stay exact and unboxed; open key shapes and other values remain unsupported.",
+      "ruleId": "object-map-bounded"
     },
     {
       "id": "hxc-stdlib-api-v1:375eb6e18da069339407680c966b03b1d1830d1c2c7da21ed11e63fe625a6a85",
@@ -34423,33 +34497,30 @@
       "kind": "method",
       "signature": "() -> KeyValueIterator<haxe.ds.ObjectMap.K, haxe.ds.ObjectMap.V>",
       "isStatic": false,
-      "owner": "target-source-override",
+      "owner": "runtime-slice",
       "runtimeFeatures": [
-        "alloc",
-        "array",
-        "gc",
-        "object"
+        "object-map"
       ],
       "profiles": [
-        "portable",
-        "metal"
+        "portable"
       ],
       "environments": [
-        "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "hosted"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T03",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Known element/key/value types should specialize to direct typed storage; allocation and tracing remain explicit reachability decisions.",
-      "ruleId": "collection-storage"
+      "tests": [
+        "test/differential/object-enum-map/generated/Main.hx",
+        "test/differential/object-enum-map/run.py",
+        "test/differential/object-enum-map/typed_map_runtime.c"
+      ],
+      "notes": "Admitted class keys compare by stable Haxe object identity. Bool, Int, and collector-managed class values stay exact and unboxed; open key shapes and other values remain unsupported.",
+      "ruleId": "object-map-bounded"
     },
     {
       "id": "hxc-stdlib-api-v1:d71eb8f6cadc18b93213c3fed65847ebe17d989e7e7a219a0eb623a991e846b0",
@@ -34462,33 +34533,30 @@
       "kind": "method",
       "signature": "() -> Iterator<haxe.ds.ObjectMap.K>",
       "isStatic": false,
-      "owner": "target-source-override",
+      "owner": "runtime-slice",
       "runtimeFeatures": [
-        "alloc",
-        "array",
-        "gc",
-        "object"
+        "object-map"
       ],
       "profiles": [
-        "portable",
-        "metal"
+        "portable"
       ],
       "environments": [
-        "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "hosted"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T03",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Known element/key/value types should specialize to direct typed storage; allocation and tracing remain explicit reachability decisions.",
-      "ruleId": "collection-storage"
+      "tests": [
+        "test/differential/object-enum-map/generated/Main.hx",
+        "test/differential/object-enum-map/run.py",
+        "test/differential/object-enum-map/typed_map_runtime.c"
+      ],
+      "notes": "Admitted class keys compare by stable Haxe object identity. Bool, Int, and collector-managed class values stay exact and unboxed; open key shapes and other values remain unsupported.",
+      "ruleId": "object-map-bounded"
     },
     {
       "id": "hxc-stdlib-api-v1:21c3b69131df90615b872b0d9fb0aceaeb724929f4c9596ec2372a05c1233bff",
@@ -34501,33 +34569,30 @@
       "kind": "constructor",
       "signature": "() -> Void",
       "isStatic": false,
-      "owner": "target-source-override",
+      "owner": "runtime-slice",
       "runtimeFeatures": [
-        "alloc",
-        "array",
-        "gc",
-        "object"
+        "object-map"
       ],
       "profiles": [
-        "portable",
-        "metal"
+        "portable"
       ],
       "environments": [
-        "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "hosted"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T03",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Known element/key/value types should specialize to direct typed storage; allocation and tracing remain explicit reachability decisions.",
-      "ruleId": "collection-storage"
+      "tests": [
+        "test/differential/object-enum-map/generated/Main.hx",
+        "test/differential/object-enum-map/run.py",
+        "test/differential/object-enum-map/typed_map_runtime.c"
+      ],
+      "notes": "Admitted class keys compare by stable Haxe object identity. Bool, Int, and collector-managed class values stay exact and unboxed; open key shapes and other values remain unsupported.",
+      "ruleId": "object-map-bounded"
     },
     {
       "id": "hxc-stdlib-api-v1:f6bd31844f447394a64ad587c4e8cf7c761112ad505d6692a87dbc05e8b8217a",
@@ -34540,33 +34605,30 @@
       "kind": "method",
       "signature": "(key : haxe.ds.ObjectMap.K) -> Bool",
       "isStatic": false,
-      "owner": "target-source-override",
+      "owner": "runtime-slice",
       "runtimeFeatures": [
-        "alloc",
-        "array",
-        "gc",
-        "object"
+        "object-map"
       ],
       "profiles": [
-        "portable",
-        "metal"
+        "portable"
       ],
       "environments": [
-        "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "hosted"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T03",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Known element/key/value types should specialize to direct typed storage; allocation and tracing remain explicit reachability decisions.",
-      "ruleId": "collection-storage"
+      "tests": [
+        "test/differential/object-enum-map/generated/Main.hx",
+        "test/differential/object-enum-map/run.py",
+        "test/differential/object-enum-map/typed_map_runtime.c"
+      ],
+      "notes": "Admitted class keys compare by stable Haxe object identity. Bool, Int, and collector-managed class values stay exact and unboxed; open key shapes and other values remain unsupported.",
+      "ruleId": "object-map-bounded"
     },
     {
       "id": "hxc-stdlib-api-v1:11abb3e57ffc18cf1d9908a55745a4a3106d3e20f5652723fe89f10c550e5d11",
@@ -34579,33 +34641,30 @@
       "kind": "method",
       "signature": "(key : haxe.ds.ObjectMap.K, value : haxe.ds.ObjectMap.V) -> Void",
       "isStatic": false,
-      "owner": "target-source-override",
+      "owner": "runtime-slice",
       "runtimeFeatures": [
-        "alloc",
-        "array",
-        "gc",
-        "object"
+        "object-map"
       ],
       "profiles": [
-        "portable",
-        "metal"
+        "portable"
       ],
       "environments": [
-        "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "hosted"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T03",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Known element/key/value types should specialize to direct typed storage; allocation and tracing remain explicit reachability decisions.",
-      "ruleId": "collection-storage"
+      "tests": [
+        "test/differential/object-enum-map/generated/Main.hx",
+        "test/differential/object-enum-map/run.py",
+        "test/differential/object-enum-map/typed_map_runtime.c"
+      ],
+      "notes": "Admitted class keys compare by stable Haxe object identity. Bool, Int, and collector-managed class values stay exact and unboxed; open key shapes and other values remain unsupported.",
+      "ruleId": "object-map-bounded"
     },
     {
       "id": "hxc-stdlib-api-v1:3950a302b5341fe47f78f02088c0bb51d25c4e5662f02680caf2f59e082256ab",
@@ -34618,22 +34677,16 @@
       "kind": "method",
       "signature": "() -> String",
       "isStatic": false,
-      "owner": "target-source-override",
+      "owner": "runtime-slice",
       "runtimeFeatures": [
-        "alloc",
-        "array",
-        "gc",
-        "object"
+        "object-map",
+        "string"
       ],
       "profiles": [
-        "portable",
-        "metal"
+        "portable"
       ],
       "environments": [
-        "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "hosted"
       ],
       "status": "planned",
       "ownerBeads": "E5.T03",
@@ -34643,8 +34696,8 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Known element/key/value types should specialize to direct typed storage; allocation and tracing remain explicit reachability decisions.",
-      "ruleId": "collection-storage"
+      "notes": "Object identity maps are admitted, but text conversion still needs exact value formatting and Eval-compatible punctuation before it can select the String runtime.",
+      "ruleId": "object-map-to-string-planned"
     },
     {
       "id": "hxc-stdlib-api-v1:e18ed22da5bf57ab3ba8ec76018e848bb59e2618c0ed83fa64f9770d3bee787a",
