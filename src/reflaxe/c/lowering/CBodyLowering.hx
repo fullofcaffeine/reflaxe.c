@@ -6582,7 +6582,8 @@ private class FunctionBuilder {
 			&& borrowedReferenceValueIds.exists(value.id)
 			&& localMapping.aggregateValue() != null
 			&& localMapping.containsInterfaceReference();
-		if (value != null && !stackReferenceAlias && !borrowedInterfaceRecordAlias)
+		final borrowedClassAlias = value != null && borrowedReferenceValueIds.exists(value.id) && localMapping.classValue() != null;
+		if (value != null && !stackReferenceAlias && !borrowedClassAlias && !borrowedInterfaceRecordAlias)
 			rejectOwnedClassBorrow(value, position, 'TVar(${variable.name}:owned-class-borrow-escape)');
 		final borrowedStackAlias = value != null && stackReferenceAlias && borrowedReferenceValueIds.exists(value.id);
 		locals.push({
@@ -6782,7 +6783,7 @@ private class FunctionBuilder {
 				mapping: localMapping,
 				managedEnum: managedFlowCarrierEnum
 			});
-		if (borrowedStackAlias || borrowedInterfaceRecordAlias) {
+		if (borrowedStackAlias || borrowedClassAlias || borrowedInterfaceRecordAlias) {
 			// Haxe introduces locals such as `_this = parent.child` while inlining.
 			// A source record that contains an interface also stores only a borrowed
 			// object/table pair. These locals can be reloaded during the same function,
