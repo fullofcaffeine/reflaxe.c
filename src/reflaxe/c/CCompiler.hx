@@ -444,6 +444,7 @@ class CCompiler {
 		// closure until runtime planning owns this derivation in one place.
 		if (hasRuntimeFeature(runtimeRequirements, "string-scalar")
 			|| hasRuntimeFeature(runtimeRequirements, "string")
+			|| hasRuntimeFeature(runtimeRequirements, "string-lower-case")
 			|| hasRuntimeFeature(runtimeRequirements, "string-split")
 			|| hasRuntimeFeature(runtimeRequirements, "array-join")
 			|| hasRuntimeFeature(runtimeRequirements, "bytes-string"))
@@ -549,7 +550,7 @@ class CCompiler {
 			final module = switch requirement.featureId {
 				case "array": "Array";
 				case "bytes" | "bytes-string": "haxe.io.Bytes";
-				case "string-literal" | "string-scalar" | "string-split": "String";
+				case "string-lower-case" | "string-literal" | "string-scalar" | "string-split": "String";
 				case "io" if (requirement.operationId == "trace-literal"): "haxe.Log";
 				case "io": "Sys";
 				case _: requirement.featureId;

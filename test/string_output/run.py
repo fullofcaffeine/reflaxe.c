@@ -681,14 +681,18 @@ def compile_native(toolchain: NativeToolchain, rendered: RenderedProject, optimi
     return executable
 
 
-def project_with_runtime_macro(rendered: RenderedProject, output: Path, macro: str, old: str, new: str) -> RenderedProject:
+def project_with_runtime_macro(rendered: RenderedProject, output: Path, macro: str, new: str) -> RenderedProject:
     shutil.copytree(rendered.output, output)
     base_header = output / "runtime/include/hxrt/base.h"
     contents = base_header.read_text(encoding="utf-8")
-    before = f"#define {macro} {old}"
+    prefix = f"#define {macro} "
+    matches = [line for line in contents.splitlines() if line.startswith(prefix)]
+    if len(matches) != 1:
+        raise StringOutputFailure(
+            f"runtime compatibility fixture found {len(matches)} definitions for {macro}"
+        )
+    before = matches[0]
     after = f"#define {macro} {new}"
-    if contents.count(before) != 1:
-        raise StringOutputFailure(f"runtime compatibility fixture could not locate {before!r}")
     base_header.write_text(contents.replace(before, after), encoding="utf-8", newline="\n")
     return RenderedProject(
         output,
@@ -747,14 +751,14 @@ def run_native(toolchains: list[NativeToolchain], projects: list[RenderedProject
 
         compatibility_root = build / f"{toolchain.family}-runtime-compatibility"
         compatibility_root.mkdir()
-        compatible = project_with_runtime_macro(projects[0], compatibility_root / "compatible-minor", "HXC_RUNTIME_ABI_MINOR", "16u", "999u")
+        compatible = project_with_runtime_macro(projects[0], compatibility_root / "compatible-minor", "HXC_RUNTIME_ABI_MINOR", "999u")
         compatible_build = compatibility_root / "compatible-build"
         compatible_build.mkdir()
         compatible_executable = compile_native(toolchain, compatible, "O0", compatible_build)
         compatible_result = run_bounded_process([str(compatible_executable)], cwd=build, check=False, capture_output=True, timeout=30)
         if compatible_result.returncode != 0 or compatible_result.stdout != EXPECTED_STDOUT or compatible_result.stderr:
             raise StringOutputFailure(f"{toolchain.family} rejected a same-major compatible runtime")
-        incompatible = project_with_runtime_macro(projects[0], compatibility_root / "incompatible-major", "HXC_RUNTIME_ABI_MAJOR", "0u", "1u")
+        incompatible = project_with_runtime_macro(projects[0], compatibility_root / "incompatible-major", "HXC_RUNTIME_ABI_MAJOR", "1u")
         reject_incompatible_runtime(toolchain, incompatible, compatibility_root)
 
         def close_standard_output() -> None:

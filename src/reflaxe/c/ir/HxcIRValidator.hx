@@ -3366,6 +3366,10 @@ private class HxcIRValidationState {
 					validateBytesStringCall(call, argumentTypes, path, source);
 				} else if (featureId == "string") {
 					validateManagedStringCall(call, argumentTypes, path, source);
+				} else if (featureId == "string-lower-case") {
+					validateManagedStringCaseCall(call, argumentTypes, path, source);
+					if (call.arguments.length > 0 && !nullProofs.exists(call.arguments[0]))
+						add(path, "String.toLowerCase requires a preceding dominating receiver null check", source);
 				} else if (featureId == "string-float") {
 					validateManagedStringFloatCall(call, argumentTypes, path, source);
 				} else if (featureId == "string-scalar") {
@@ -4043,6 +4047,20 @@ private class HxcIRValidationState {
 				add(path, 'string runtime call names unsupported operation `$operationId`', source);
 		}
 		validateCleanupFreeStatusAbort(call.failure, path, source, "managed String operation");
+	}
+
+	/** Validate locale-independent lowercase conversion before C symbol selection. **/
+	function validateManagedStringCaseCall(call:HxcIRCall, argumentTypes:Array<Null<HxcIRTypeRef>>, path:String, source:HxcSourceSpan):Void {
+		final operationId = switch call.dispatch {
+			case IRCDRuntime("string-lower-case", value): value;
+			case _: return;
+		};
+		final receiver = argumentTypes.length == 1 ? argumentTypes[0] : null;
+		if (operationId != "to-lower-case")
+			add(path, 'string-lower-case runtime call names unsupported operation `$operationId`', source);
+		if ((receiver != IRTString && receiver != IRTManagedString) || call.returnType != IRTManagedString)
+			add(path, "String.toLowerCase requires one String receiver and returns one fresh managed String", source);
+		validateCleanupFreeStatusAbort(call.failure, path, source, "String lowercase operation");
 	}
 
 	/** Validate the hosted Float-to-String operation before C symbol selection. */

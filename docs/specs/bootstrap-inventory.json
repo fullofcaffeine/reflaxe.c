@@ -1056,7 +1056,7 @@
       "status": "implemented",
       "disposition": "available",
       "summary": "A typed deterministic feature graph resolves exact runtime closure under a versioned, provenance-locked internal ABI contract.",
-      "scope": "The schema-3 catalog pins per-feature semantic rationale, roots, documentation/evidence, internal ABI 0.17.0, same-major generated-C checks, forbidden application-export runtime types, source hashes, and strict C/C++ build baselines; schema-2 plans prove runtime-free programs or select exactly the justified closure.",
+      "scope": "The schema-3 catalog pins per-feature semantic rationale, roots, documentation/evidence, internal ABI 0.18.0, same-major generated-C checks, forbidden application-export runtime types, source hashes, and strict C/C++ build baselines; schema-2 plans prove runtime-free programs or select exactly the justified closure.",
       "evidence": [
         "docs/adr/0001-direct-c-and-selective-runtime.md",
         "docs/hxrt.md",
@@ -1085,8 +1085,8 @@
         "E4.T11"
       ],
       "limitations": [
-        "Only the bounded literal-output, managed Array, and haxe.io.Bytes ordinary-source edges currently select hxrt; object and gc plans are registered for the following managed-class HxcIR integration, and unsupported neighboring Haxe semantics still fail during lowering rather than being guessed as runtime blockers.",
-        "Runtime ABI 0.17.0 is an internal same-major contract; it does not expose or stabilize a generated application public ABI and does not establish a supported release."
+        "Only bounded literal output, managed Array, haxe.io.Bytes, and managed String operations currently select hxrt from ordinary Haxe source. Object and gc plans remain registered for later managed-class HxcIR integration. Unsupported neighboring Haxe semantics still fail during lowering instead of becoming guessed runtime blockers.",
+        "Runtime ABI 0.18.0 is an internal same-major contract; it does not expose or stabilize a generated application public ABI and does not establish a supported release."
       ]
     },
     {

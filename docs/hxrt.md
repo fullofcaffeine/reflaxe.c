@@ -245,7 +245,7 @@ strategy is selected, as required by
 
 ### ABI and versioning
 
-The runtime ABI is internal and versioned, currently 0.17.0. Generated
+The runtime ABI is internal and versioned, currently 0.18.0. Generated
 runtime-using C emits a structural C11 `_Static_assert` for the required major.
 Minor and patch changes within the same major are compatible by current policy;
 a major mismatch fails native compilation. Runtime-free output contains no
@@ -615,10 +615,18 @@ is selected by the `from-int` HxcIR root used for `Std.string(Int)` and integer
 interpolation; it preserves the existing allocator, failure-atomic output, and
 owned String lifetime contracts. Literal emission, `Std.string(Bool)`,
 `Std.string(String)`, and allocation-free scalar operations do not select it.
-The String-to-String case reuses its input carrier and existing ownership plan;
-it is a compiler identity operation, not an `hxrt` call. See
+`Std.string` with a String input reuses the input carrier and its ownership
+plan. This operation is an identity, not an `hxrt` call. See
 [string runtime](string-runtime.md) and
 [ADR 0004](adr/0004-utf8-scalar-string-contract.md).
+
+### `string-lower-case`
+
+Compiler-selectable, locale-independent `String.toLowerCase()` conversion. It
+depends on `string`, publishes a fresh managed String, and keeps its generated
+Haxe Eval mapping table out of programs that do not convert case. It preserves
+embedded NUL and changes only one scalar into one scalar. See
+[lowercase conversion](string-runtime.md#lowercase-conversion).
 
 <!-- hxrt-feature:string-float -->
 ### `string-float`

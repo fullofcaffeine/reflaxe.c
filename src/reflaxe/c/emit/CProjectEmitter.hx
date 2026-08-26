@@ -781,6 +781,7 @@ class CProjectEmitter {
 		}
 		if (directRuntimeFeatures.exists("string-scalar")
 			|| directRuntimeFeatures.exists("string")
+			|| directRuntimeFeatures.exists("string-lower-case")
 			|| directRuntimeFeatures.exists("string-split")
 			|| directRuntimeFeatures.exists("array-join")
 			|| directRuntimeFeatures.exists("bytes-string"))
@@ -829,6 +830,7 @@ class CProjectEmitter {
 					case "borrow-cstring" | "cleanup-release" | "concat" | "from-int" | "from-scalar" | "retain": true;
 					case _: false;
 				}) || (reason.kind == "runtime-representation" && reason.operationId == "type-carrier")):
+				case "string-lower-case" if (reason.kind == "runtime-operation" && reason.operationId == "to-lower-case"):
 				case "string-float" if (reason.kind == "runtime-operation" && reason.operationId == "from-float"):
 				case "string-split" if (reason.kind == "runtime-operation" && reason.operationId == "split"):
 				case "array-join" if (reason.kind == "runtime-operation" && reason.operationId == "join"):

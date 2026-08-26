@@ -77,6 +77,7 @@ class RuntimeFeatureGraphGolden {
 		final array = planner.plan(featureRequest(CRuntimePolicy.Auto, [reason("fixture.array", "array")], []));
 		final intMap = planner.plan(featureRequest(CRuntimePolicy.Auto, [reason("fixture.int-map", "int-map")], []));
 		final stringMap = planner.plan(featureRequest(CRuntimePolicy.Auto, [reason("fixture.string-map", "string-map")], []));
+		final stringLowerCase = planner.plan(featureRequest(CRuntimePolicy.Auto, [reason("fixture.string-lower-case", "string-lower-case")], []));
 		final stringFloat = planner.plan(featureRequest(CRuntimePolicy.Auto, [reason("fixture.string-float", "string-float")], []));
 		final stringSplit = planner.plan(featureRequest(CRuntimePolicy.Auto, [reason("fixture.string-split", "string-split")], []));
 		final bytes = planner.plan(featureRequest(CRuntimePolicy.Auto, [reason("fixture.bytes", "bytes")], []));
@@ -105,6 +106,7 @@ class RuntimeFeatureGraphGolden {
 		final arrayFiles = packager.packageFiles(array, repositorySource);
 		final intMapFiles = packager.packageFiles(intMap, repositorySource);
 		final stringMapFiles = packager.packageFiles(stringMap, repositorySource);
+		final stringLowerCaseFiles = packager.packageFiles(stringLowerCase, repositorySource);
 		final stringSplitFiles = packager.packageFiles(stringSplit, repositorySource);
 		final bytesFiles = packager.packageFiles(bytes, repositorySource);
 		final bytesStringFiles = packager.packageFiles(bytesString, repositorySource);
@@ -157,6 +159,7 @@ class RuntimeFeatureGraphGolden {
 			array: array,
 			intMap: intMap,
 			stringMap: stringMap,
+			stringLowerCase: stringLowerCase,
 			stringFloat: stringFloat,
 			stringSplit: stringSplit,
 			bytes: bytes,
@@ -208,6 +211,7 @@ class RuntimeFeatureGraphGolden {
 			array: packageRecords(arrayFiles),
 			intMap: packageRecords(intMapFiles),
 			stringMap: packageRecords(stringMapFiles),
+			stringLowerCase: packageRecords(stringLowerCaseFiles),
 			stringSplit: packageRecords(stringSplitFiles),
 			bytes: packageRecords(bytesFiles),
 			bytesString: packageRecords(bytesStringFiles),

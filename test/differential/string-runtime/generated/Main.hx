@@ -14,6 +14,8 @@ final class Main {
 
 	static var floatEvaluations:Int = 0;
 
+	static var lowerCaseEvaluations:Int = 0;
+
 	/** Return one observable Boolean while recording that its source ran once. */
 	static function observedBool(value:Bool):Bool {
 		boolEvaluations += 1;
@@ -30,6 +32,12 @@ final class Main {
 	static function observedFloat(value:Float):Float {
 		floatEvaluations += 1;
 		return value;
+	}
+
+	/** Build one managed lowercase receiver while recording exact evaluation. **/
+	static function observedLowerCaseSource():String {
+		lowerCaseEvaluations += 1;
+		return fromCode(0x00C4) + "BC";
 	}
 
 	/** Keep an Int parameter and converted String return visible across a call. */
@@ -118,6 +126,28 @@ final class Main {
 	/** Exercise both runtime branches of conditional String compound assignment. */
 	static function conditionalCompoundContractHolds():Bool
 		return appendConditionalScalar(97, true) == "prefix:a" && appendConditionalScalar(97, false) == "prefix:A";
+
+	/**
+		Exercise Eval-compatible simple lowercase mapping and fresh result ownership.
+
+		Eval maps every listed scalar to exactly one scalar and leaves unlisted values
+		unchanged. The side-effecting runtime-created receiver proves one evaluation,
+		call-bounded borrowing, and a distinct managed result owner.
+	**/
+	static function lowerCaseContractHolds():Bool {
+		lowerCaseEvaluations = 0;
+		final runtimeResult = observedLowerCaseSource().toLowerCase();
+		return "".toLowerCase() == ""
+			&& "AZaz09".toLowerCase() == "azaz09"
+			&& "ÄÉÑÖÜẞß".toLowerCase() == "äéñöüßß"
+			&& "ΣΟΣ".toLowerCase() == "σοσ"
+			&& "İIıi".toLowerCase() == "iiıi"
+			&& "Ａ｀".toLowerCase() == "ａ｀"
+			&& "𐐀𐐨".toLowerCase() == "𐐀𐐨"
+			&& "A\x00Z".toLowerCase() == "a\x00z"
+			&& runtimeResult == "äbc"
+			&& lowerCaseEvaluations == 1;
+	}
 
 	/**
 		Exercise the statically typed Boolean slice of Haxe's general conversion.
@@ -462,6 +492,7 @@ final class Main {
 			&& stringIdentityContractHolds()
 			&& conditionalViewContractHolds()
 			&& conditionalCompoundContractHolds()
+			&& lowerCaseContractHolds()
 			&& splitContractHolds()
 			&& extendedStringToolsContractHolds(selected)
 			&& copiedAggregateAliasesHold()

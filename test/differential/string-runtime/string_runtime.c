@@ -1,3 +1,4 @@
+#include "hxrt/string_lower_case.h"
 #include "hxrt/string_split.h"
 
 #include <inttypes.h>
@@ -106,6 +107,13 @@ static bool hxc_bytes_equal(
     }
   }
   return true;
+}
+
+static bool hxc_test_string_slot_is_empty(hxc_string value) {
+  return value.data == NULL
+    && value.byte_length == 0u
+    && !value.has_trailing_nul
+    && value.owner == NULL;
 }
 
 static hxc_status hxc_test_string_copy(
@@ -857,6 +865,114 @@ static int hxc_test_builder(
   return 0;
 }
 
+static int hxc_test_lower_case(
+  hxc_test_arena *arena,
+  hxc_allocator allocator
+) {
+  static const uint8_t invalid_bytes[] = { UINT8_C(0xC0) };
+  const hxc_string source = HXC_STRING_LITERAL(
+    "AZ\0\xC3\x84\xC4\xB0\xE1\xBA\x9E\xF0\x90\x90\x80"
+    "\xEF\xBC\xA1\xEF\xBD\x80"
+  );
+  const hxc_string expected = HXC_STRING_LITERAL(
+    "az\0\xC3\xA4i\xC3\x9F\xF0\x90\x90\x80"
+    "\xEF\xBD\x81\xEF\xBD\x80"
+  );
+  const hxc_string empty = HXC_STRING_LITERAL("");
+  const hxc_string unchanged = HXC_STRING_LITERAL("already");
+  const hxc_string long_source = HXC_STRING_LITERAL(
+    "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+  );
+  const hxc_string runtime_prefix = HXC_STRING_LITERAL("\xC3\x84");
+  const hxc_string runtime_suffix = HXC_STRING_LITERAL("BC");
+  const hxc_string runtime_expected = HXC_STRING_LITERAL("\xC3\xA4" "bc");
+  hxc_string invalid = HXC_STRING_INITIALIZER;
+  hxc_string lowered = HXC_STRING_INITIALIZER;
+  hxc_string empty_result = HXC_STRING_INITIALIZER;
+  hxc_string unchanged_result = HXC_STRING_INITIALIZER;
+  hxc_string runtime_source = HXC_STRING_INITIALIZER;
+  hxc_string runtime_result = HXC_STRING_INITIALIZER;
+  hxc_string failed = HXC_STRING_INITIALIZER;
+  size_t allowed_allocations;
+  size_t allocations = arena->allocation_count;
+  size_t releases = arena->release_count;
+
+  HXC_TEST_CHECK(
+    hxc_string_to_lower_case(source, allocator, &lowered) == HXC_STATUS_OK
+  );
+  HXC_TEST_CHECK(hxc_test_string_equals(lowered, expected));
+  HXC_TEST_CHECK(lowered.owner != NULL && lowered.data != source.data);
+  HXC_TEST_CHECK(hxc_string_release(&lowered) == HXC_STATUS_OK);
+  HXC_TEST_CHECK(
+    arena->release_count - releases == arena->allocation_count - allocations
+  );
+
+  HXC_TEST_CHECK(
+    hxc_string_to_lower_case(empty, allocator, &empty_result) == HXC_STATUS_OK
+  );
+  HXC_TEST_CHECK(empty_result.byte_length == 0u && empty_result.owner != NULL);
+  HXC_TEST_CHECK(hxc_string_release(&empty_result) == HXC_STATUS_OK);
+
+  HXC_TEST_CHECK(
+    hxc_string_to_lower_case(unchanged, allocator, &unchanged_result)
+      == HXC_STATUS_OK
+  );
+  HXC_TEST_CHECK(hxc_test_string_equals(unchanged_result, unchanged));
+  HXC_TEST_CHECK(
+    unchanged_result.owner != NULL && unchanged_result.data != unchanged.data
+  );
+  HXC_TEST_CHECK(hxc_string_release(&unchanged_result) == HXC_STATUS_OK);
+
+  HXC_TEST_CHECK(
+    hxc_string_concat_ref(
+      runtime_prefix,
+      runtime_suffix,
+      allocator,
+      &runtime_source
+    ) == HXC_STATUS_OK
+  );
+  HXC_TEST_CHECK(
+    hxc_string_to_lower_case(runtime_source, allocator, &runtime_result)
+      == HXC_STATUS_OK
+  );
+  HXC_TEST_CHECK(hxc_string_release(&runtime_source) == HXC_STATUS_OK);
+  HXC_TEST_CHECK(hxc_test_string_equals(runtime_result, runtime_expected));
+  HXC_TEST_CHECK(hxc_string_release(&runtime_result) == HXC_STATUS_OK);
+
+  invalid.data = invalid_bytes;
+  invalid.byte_length = sizeof(invalid_bytes);
+  invalid.has_trailing_nul = false;
+  invalid.owner = NULL;
+  HXC_TEST_CHECK(
+    hxc_string_to_lower_case(invalid, allocator, &failed)
+      == HXC_STATUS_INVALID_UTF8
+  );
+  HXC_TEST_CHECK(hxc_test_string_slot_is_empty(failed));
+
+  /*
+   * The long input uses three payload allocations (16, 32, then 64 bytes)
+   * before finish_ref allocates its owner. Fail each point in turn. Every
+   * successful temporary allocation must be released exactly once.
+   */
+  for (allowed_allocations = 0u;
+    allowed_allocations < 4u;
+    allowed_allocations++) {
+    releases = arena->release_count;
+    arena->bounded_failure = true;
+    arena->allocations_before_failure = allowed_allocations;
+    HXC_TEST_CHECK(
+      hxc_string_to_lower_case(long_source, allocator, &failed)
+        == HXC_STATUS_OUT_OF_MEMORY
+    );
+    arena->bounded_failure = false;
+    HXC_TEST_CHECK(hxc_test_string_slot_is_empty(failed));
+    HXC_TEST_CHECK(
+      arena->release_count == releases + allowed_allocations
+    );
+  }
+  return 0;
+}
+
 static int hxc_test_cstrings(
   hxc_test_arena *arena,
   const hxc_allocator *allocator
@@ -924,6 +1040,7 @@ int main(void) {
   HXC_TEST_CHECK(hxc_test_reference_owned_strings(&arena, allocator) == 0);
   HXC_TEST_CHECK(hxc_test_split(&arena, allocator) == 0);
   HXC_TEST_CHECK(hxc_test_builder(&arena, &allocator) == 0);
+  HXC_TEST_CHECK(hxc_test_lower_case(&arena, allocator) == 0);
   HXC_TEST_CHECK(hxc_test_cstrings(&arena, &allocator) == 0);
   HXC_TEST_CHECK(
     hxc_string_scalar_length(emoji, &emoji_length) == HXC_STATUS_OK

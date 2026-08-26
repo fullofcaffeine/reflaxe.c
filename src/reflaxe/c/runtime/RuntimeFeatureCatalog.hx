@@ -34,6 +34,7 @@ class RuntimeFeatureCatalog {
 		final stringLiteral = RuntimeFeatureId.parse("string-literal");
 		final stringScalar = RuntimeFeatureId.parse("string-scalar");
 		final string = RuntimeFeatureId.parse("string");
+		final stringLowerCase = RuntimeFeatureId.parse("string-lower-case");
 		final stringFloat = RuntimeFeatureId.parse("string-float");
 		final stringSplit = RuntimeFeatureId.parse("string-split");
 		final arrayJoin = RuntimeFeatureId.parse("array-join");
@@ -481,6 +482,27 @@ class RuntimeFeatureCatalog {
 						"test/differential/string-runtime/run.py",
 						"test/runtime/runtime-feature-graph/run.py"
 					])),
+			new RuntimeFeatureDefinition(stringLowerCase, "Locale-independent Haxe Eval simple lowercase conversion into a fresh managed String.",
+				CompilerSelectable, true, environments, [string], [
+					header("string_lower_case.h"),
+					header("string_lower_case_data.h"),
+					source("string_lower_case.c")
+				],
+				["hxc_string_to_lower_case"], [], [],
+				documentation("Maps each valid UTF-8 scalar through the pinned Haxe Eval lowercase table and publishes one fresh managed String owner.", [
+					new RuntimeFeatureSelectionRoot("to-lower-case", RuntimeFeatureSelectionRootKind.HxcIrOperation,
+						"A reachable ordinary Haxe String.toLowerCase depends on run-time source bytes."),
+					dependencyRoot("Selected only by a broader feature that requires Eval-compatible lowercase conversion.")
+				],
+					"A compiler-known literal may fold only when compile-time mapping uses the same generated table and preserves the same fresh-value semantics where observable.",
+					"A closed ASCII-only protocol may use a smaller program-local normalizer when its admitted alphabet is statically proven and is not exposed as ordinary Haxe String.toLowerCase.",
+					"General String values need one locale-independent mapping table, checked UTF-8 decoding, size-changing encoding, failure-atomic allocation, and exact result ownership. A separate feature keeps that table out of unrelated String programs.",
+					"docs/string-runtime.md",
+					[
+						"test/differential/string-runtime/GenerateLowercaseData.hx",
+						"test/differential/string-runtime/run.py",
+						"test/runtime/runtime-feature-graph/run.py"
+					])),
 			new RuntimeFeatureDefinition(stringFloat, "Hosted Haxe-compatible Float formatting into an owned String.", CompilerSelectable, true,
 				[CEnvironment.Hosted], [string], [header("string_float.h"), source("string_float.c")], ["hxc_string_from_float64"], [], [],
 				documentation("Formats one binary64 Haxe Float with the first 12-, 15-, or 18-digit decimal spelling that round-trips exactly, including Haxe's non-finite spellings.",
@@ -586,7 +608,7 @@ class RuntimeFeatureCatalog {
 			case "allocator.h": "6e21c0bc498eb40bcec901914a04dd1bee33b6b21e5a27f1ac5f169a8a1cc448";
 			case "array.h": "a956c23d87ab178201680d8ba3bf5ebebfe440d368b0f9034d41b12564f14056";
 			case "array_join.h": "5829a159dab0bd3446b5bc418c2ee32ad2902c0fec6bcc04f82efeb66c294fea";
-			case "base.h": "9df654b0fae47eefcd799187258e64df12c969a41d5d7f3654f0ea67de65f276";
+			case "base.h": "cf68416ee75e41c21db28eb4a755a2bd1b060e0ab7cdcb8db1311fd04a282ba0";
 			case "bytes.h": "3f2dc89578ee5381e98051c5b3d06dcb6859e0cce10535edaba9c9bf5b38f31d";
 			case "bytes_string.h": "9d944e38a748696628076b0c5fd56339668e48953a220d51c8da1630fbdf9c40";
 			case "gc.h": "2ca9523f1c74c62877c3f006bab9bd8a3a2a1eced93d67ad59d015a7c6ecb9de";
@@ -597,6 +619,8 @@ class RuntimeFeatureCatalog {
 			case "status.h": "6bf20f5d82594014ad0f2b79a25cb81417791bd9c07375d2fb89835e415be1c4";
 			case "status_name.h": "64bf3917787ffcf924369c8e1c0a525cf10902d004d5bb4b898f2af46a7456cc";
 			case "string.h": "60c745b0e4e0b35d1f285f913ed7b2a284438130b8ebd44c3751247ffeb9cae7";
+			case "string_lower_case.h": "c2fb77f0f59ba1b8804e308ca769c75fac2fde81a6faf52056424c8f6c7e490a";
+			case "string_lower_case_data.h": "b069c988dec0cd7f7cfc5b116ec0c534136f022d80c71684efd9294290ea9961";
 			case "string_decode.h": "aa93ea7f132aff625adfdcc7498532b139f621196deab4c0e9ecb5de2934fd48";
 			case "string_float.h": "8747a86c3cabae9bf54a4125305f043d6c70d7c97bc9f6f90174ba6185e3ecc1";
 			case "string_literal.h": "ac6b5ad9fa13004c62e3b33b9b28a935bfb8a22287cd4595ce6e6eb81490e283";
@@ -622,6 +646,7 @@ class RuntimeFeatureCatalog {
 			case "object.c": "0e7fc6a55b562eaaf03fe63eca743dd73248f0bee1c09e21b79464917e8c89c0";
 			case "status.c": "0695ab2528db6e29d5cf29d905ad736b7c1a3a79333082347ec18faea2d4e6d8";
 			case "string.c": "9e267e14bdca44436a282b4956121b5340e71e0dffc5060306fee898c11d181a";
+			case "string_lower_case.c": "55a692cfd855f71f1a1fa4f90f311f1653ec0638797ecfb024764e23a66680c8";
 			case "string_float.c": "60e5189e7f7304ccbc1f69136b7393e4eea35760cde590853ebced414bf39267";
 			case "string_map.c": "a1c2095e6b2948109ab5b7fb1771e56998e0606fdab3ec9caa0b9e1d80d632a1";
 			case "string_scalar.c": "2c44eebc655dd34ed374b58402de9dfe731425fb4e0b54997a7c16c12e1309fb";

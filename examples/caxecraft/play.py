@@ -196,6 +196,7 @@ EXPECTED_PLAY_RUNTIME_FEATURES = (
     "int-map",
     "io",
     "string-float",
+    "string-lower-case",
     "string-map",
     "string-split",
 )

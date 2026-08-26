@@ -1506,6 +1506,7 @@ class CBodyLowering {
 			final creates = switch expression.expr {
 				case TCall(callee, arguments):
 					isStringFromCharCode(callee)
+					|| isStringToLowerCaseCall(callee)
 					|| isArrayJoinCall(callee)
 					|| isBytesStringCall(callee)
 					|| isStringBufferToStringCall(callee)
@@ -1604,6 +1605,18 @@ class CBodyLowering {
 					.name == "fromCharCode";
 			case TParenthesis(inner) | TMeta(_, inner) | TCast(inner, _):
 				isStringFromCharCode(inner);
+			case _:
+				false;
+		};
+	}
+
+	/** Recognize the pinned core instance method that publishes a fresh String. **/
+	static function isStringToLowerCaseCall(expression:TypedExpr):Bool {
+		return switch expression.expr {
+			case TField(_, FInstance(reference, _, field)): final owner = reference.get(); owner.pack.length == 0 && owner.name == "String" && field.get()
+					.name == "toLowerCase";
+			case TParenthesis(inner) | TMeta(_, inner) | TCast(inner, _):
+				isStringToLowerCaseCall(inner);
 			case _:
 				false;
 		};
@@ -13450,7 +13463,7 @@ private class FunctionBuilder {
 	}
 
 	/**
-		Lower the admitted allocation-free ordinary Haxe String operations.
+		Lower the admitted ordinary Haxe String operations.
 
 		`charAt`, `substr`, and `substring` return views into the receiver's
 		immutable UTF-8 bytes instead of copying them. A view is a borrowed value:
@@ -13467,15 +13480,19 @@ private class FunctionBuilder {
 		or caller-owned receivers remain simple borrows and add no retain.
 		`toString` is the checked identity of the same immutable receiver, so it
 		adds no conversion, allocation, or ownership operation.
+		`toLowerCase` instead delegates to the selected locale-independent case
+		runtime and returns a fresh owner; it cannot share bytes because a mapping
+		may change both their contents and their UTF-8 length.
 	**/
 	function lowerStringCall(expression:TypedExpr, access:reflaxe.c.lowering.CBodyDispatch.CBodyInstanceCallAccess, arguments:Array<TypedExpr>):LoweredValue {
 		final method = access.field.get().name;
 		if (method != "charAt" && method != "charCodeAt" && method != "indexOf" && method != "lastIndexOf" && method != "split" && method != "substr"
-			&& method != "substring" && method != "toString")
+			&& method != "substring" && method != "toLowerCase" && method != "toString")
 			return unsupported(expression, 'TCall(String.$method:not-yet-admitted)');
 		final takesOptionalSecondArgument = method == "indexOf" || method == "lastIndexOf" || method == "substr" || method == "substring";
-		final expectedArgumentCount = method == "toString" ? "0" : takesOptionalSecondArgument ? "1-or-2" : "1";
-		final validArgumentCount = if (method == "toString") arguments.length == 0 else if (takesOptionalSecondArgument) arguments.length >= 1
+		final takesNoArguments = method == "toLowerCase" || method == "toString";
+		final expectedArgumentCount = takesNoArguments ? "0" : takesOptionalSecondArgument ? "1-or-2" : "1";
+		final validArgumentCount = if (takesNoArguments) arguments.length == 0 else if (takesOptionalSecondArgument) arguments.length >= 1
 			&& arguments.length <= 2 else arguments.length == 1;
 		if (!validArgumentCount)
 			return unsupported(expression, 'TCall(String.$method:argument-count=${arguments.length},expected=$expectedArgumentCount)');
@@ -13488,6 +13505,8 @@ private class FunctionBuilder {
 			sourceSpan(access.receiver.pos), 'string-$method-receiver-null-check');
 		if (method == "toString")
 			return receiver;
+		if (method == "toLowerCase")
+			return lowerStringToLowerCase(expression, receiver);
 		if (method == "indexOf" || method == "lastIndexOf")
 			return lowerStringSearch(expression, receiver, arguments, method);
 		if (method == "split")
@@ -13538,6 +13557,27 @@ private class FunctionBuilder {
 		return method == "charAt"
 			|| method == "substr"
 			|| method == "substring" ? ownBorrowedStringResult(lowered, expression.pos, 'string-$operation') : lowered;
+	}
+
+	/** Convert one immutable receiver into a fresh Eval-compatible lowercase String. **/
+	function lowerStringToLowerCase(expression:TypedExpr, receiver:LoweredValue):LoweredValue {
+		final resultMapping = bodyValueType(expression.t, expression.pos, "TCall(String.toLowerCase:result-type)");
+		if (resultMapping.irType != IRTManagedString)
+			return unsupported(expression, "TCall(String.toLowerCase:requires-managed-String-plan)");
+		final source = sourceSpan(expression.pos);
+		final result:HxcIRResult = {id: nextValueId(), type: IRTManagedString};
+		appendInstruction(result, IRIOCall({
+			dispatch: IRCDRuntime("string-lower-case", "to-lower-case"),
+			arguments: [receiver.id],
+			returnType: IRTManagedString,
+			failure: managedArrayFailure()
+		}), source, "string-to-lower-case");
+		registerValueTemporary(result.id, "string-to-lower-case-result");
+		freshManagedStringValueIds.set(result.id, true);
+		freshManagedStringValueRoles.set(result.id, "String.toLowerCase");
+		runtimeRequirements.push(new CBodyRuntimeRequirement("string-lower-case", "to-lower-case",
+			"ordinary Haxe String.toLowerCase with pinned Eval scalar mapping", source, expression.pos));
+		return {id: result.id, type: result.type, mapping: resultMapping};
 	}
 
 	/**

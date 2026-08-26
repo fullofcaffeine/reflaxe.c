@@ -26,6 +26,7 @@ enum CBodyRuntimeName {
 	CBRNStringFromInt;
 	CBRNStringFromFloat;
 	CBRNStringConcat;
+	CBRNStringToLowerCase;
 	CBRNBorrowedCStringType;
 	CBRNBorrowedCStringInitializer;
 	CBRNStringBorrowCString;
@@ -145,6 +146,7 @@ class CBodyRuntimeNames {
 			case CBRNStringFromInt: "hxc_string_from_int32";
 			case CBRNStringFromFloat: "hxc_string_from_float64";
 			case CBRNStringConcat: "hxc_string_concat_ref";
+			case CBRNStringToLowerCase: "hxc_string_to_lower_case";
 			case CBRNBorrowedCStringType: "hxc_borrowed_cstring";
 			case CBRNBorrowedCStringInitializer: "HXC_BORROWED_CSTRING_INITIALIZER";
 			case CBRNStringBorrowCString: "hxc_string_borrow_cstring";

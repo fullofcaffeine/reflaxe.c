@@ -17,6 +17,7 @@
     "docs/specs/runtime-features.schema.json",
     "docs/gc-runtime.md",
     "docs/hxrt.md",
+    "docs/string-runtime.md",
     "runtime/hxrt/features.json",
     "runtime/hxrt/include/hxrt/abi.h",
     "runtime/hxrt/include/hxrt/allocator.h",
@@ -30,6 +31,8 @@
     "runtime/hxrt/include/hxrt/status.h",
     "runtime/hxrt/include/hxrt/status_name.h",
     "runtime/hxrt/include/hxrt/string.h",
+    "runtime/hxrt/include/hxrt/string_lower_case.h",
+    "runtime/hxrt/include/hxrt/string_lower_case_data.h",
     "runtime/hxrt/include/hxrt/string_decode.h",
     "runtime/hxrt/include/hxrt/string_literal.h",
     "runtime/hxrt/include/hxrt/string_scalar.h",
@@ -43,6 +46,7 @@
     "runtime/hxrt/src/object.c",
     "runtime/hxrt/src/status.c",
     "runtime/hxrt/src/string.c",
+    "runtime/hxrt/src/string_lower_case.c",
     "runtime/hxrt/src/string_scalar.c",
     "src/reflaxe/c/runtime/RuntimeAbiContract.hx",
     "test/runtime/runtime-feature-graph/RuntimeFeatureGraphGolden.hx",
@@ -56,6 +60,7 @@
     "test/runtime/runtime-feature-graph/run.py",
     "test/runtime/runtime-feature-graph/runtime_feature_graph.hxml",
     "test/runtime/runtime-feature-graph/string_consumer.c",
+    "test/runtime/runtime-feature-graph/string_lower_case_consumer.c",
     "test/runtime/runtime-feature-graph/string_scalar_consumer.c"
   ],
   "runner": {

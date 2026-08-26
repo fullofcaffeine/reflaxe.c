@@ -22,11 +22,11 @@ target-specific replacements. The ordinary `StringBuf` String specialization
 supports append, scalar substring append, length, and clear through the same
 managed String field.
 
-This is still a bounded parity slice. Unicode case conversion remains planned
-because Haxe changes non-ASCII letters as well as ASCII, so an ASCII-only
-implementation would be incorrect. `UnicodeString`, URL/HTML codecs, generic
-non-String `StringBuf.add` values, and the remaining `StringTools` APIs also
-remain explicit planned rows in the generated standard-library ledger.
+This is still a bounded parity slice. Ordinary `String.toLowerCase()` now uses
+the pinned Eval-compatible Unicode mapping described below. `toUpperCase`,
+`UnicodeString`, URL/HTML codecs, generic non-String `StringBuf.add` values, and
+the remaining `StringTools` APIs remain explicit planned rows in the generated
+standard-library ledger.
 E4.T11 established the internal same-major runtime contract, and E7 owns any
 future public ABI.
 
@@ -40,7 +40,8 @@ String identity without changing the three-field layout advanced the internal
 semantic contract to 0.9.0. Adding the optional owner pointer needed by
 runtime-created ordinary Haxe values changes that private carrier and advances
 the marker to 0.10.0. That marker does not stabilize the private string layout
-or application ABI.
+or application ABI. Later additive runtime APIs advanced the marker through
+0.17.0; the separate lowercase conversion entry point advances it to 0.18.0.
 
 ## Representation and invariants
 
@@ -227,6 +228,29 @@ The `string` feature is compiler-selectable and depends on `alloc` plus
 operation or lifetime action: `from-scalar`, `concat`, `retain`, or
 `cleanup-release`. It has no object, tracing collector, dynamic, reflection,
 exception, thread, or Unicode-table dependency.
+
+<!-- hxrt-feature:string-lower-case -->
+### Lowercase conversion
+
+Ordinary `String.toLowerCase()` selects the separate `string-lower-case` feature.
+It depends on `string` for checked allocation and result ownership. Keeping the
+case table separate means programs that only inspect, concatenate, or build
+Strings do not package approximately nine kilobytes of compiled mapping data.
+
+The mapping is generated from the pinned Haxe Eval target. It is independent of
+the host locale and maps one Unicode scalar to at most one scalar. Eval maps the
+Basic Multilingual Plane values in its table and leaves later supplementary
+values unchanged. This is simple lowercase conversion, not Unicode case folding:
+it does not normalize text, expand one scalar into several scalars, or apply a
+word-sensitive final-sigma rule.
+
+The runtime decodes by explicit UTF-8 byte length, so embedded NUL remains
+ordinary content. It builds a new managed String because a mapped scalar can use
+a different number of UTF-8 bytes. Allocation or validation failure destroys the
+partial builder and leaves the caller's output unchanged. The generated-data
+check compares the complete 1,110-entry table with Eval, while the differential
+fixture covers empty, ASCII, Latin, Greek, Turkish, supplementary, embedded-NUL,
+and runtime-created inputs through strict generated C and sanitizers.
 
 <!-- hxrt-feature:string-split -->
 ### Split composition

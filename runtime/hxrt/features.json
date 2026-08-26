@@ -835,7 +835,7 @@
       "symbols": [],
       "artifacts": [
         {
-          "sourceSha256": "9df654b0fae47eefcd799187258e64df12c969a41d5d7f3654f0ea67de65f276",
+          "sourceSha256": "cf68416ee75e41c21db28eb4a755a2bd1b060e0ab7cdcb8db1311fd04a282ba0",
           "kind": "runtime-header",
           "outputPath": "runtime/include/hxrt/base.h",
           "sourcePath": "runtime/hxrt/include/hxrt/base.h"
@@ -1147,6 +1147,68 @@
     },
     {
       "documentation": {
+        "referencePath": "docs/string-runtime.md",
+        "selectionRoots": [
+          {
+            "description": "Selected only by a broader feature that requires Eval-compatible lowercase conversion.",
+            "id": "dependency-only",
+            "kind": "transitive-dependency"
+          },
+          {
+            "description": "A reachable ordinary Haxe String.toLowerCase depends on run-time source bytes.",
+            "id": "to-lower-case",
+            "kind": "hxc-ir-operation"
+          }
+        ],
+        "runtimeRationale": "General String values need one locale-independent mapping table, checked UTF-8 decoding, size-changing encoding, failure-atomic allocation, and exact result ownership. A separate feature keeps that table out of unrelated String programs.",
+        "evidence": [
+          "test/differential/string-runtime/GenerateLowercaseData.hx",
+          "test/differential/string-runtime/run.py",
+          "test/runtime/runtime-feature-graph/run.py"
+        ],
+        "directAlternative": "A compiler-known literal may fold only when compile-time mapping uses the same generated table and preserves the same fresh-value semantics where observable.",
+        "contract": "Maps each valid UTF-8 scalar through the pinned Haxe Eval lowercase table and publishes one fresh managed String owner.",
+        "programLocalAlternative": "A closed ASCII-only protocol may use a smaller program-local normalizer when its admitted alphabet is statically proven and is not exposed as ordinary Haxe String.toLowerCase."
+      },
+      "dependencies": [
+        "string"
+      ],
+      "id": "string-lower-case",
+      "availability": "compiler-selectable",
+      "symbols": [
+        "hxc_string_to_lower_case"
+      ],
+      "artifacts": [
+        {
+          "sourceSha256": "c2fb77f0f59ba1b8804e308ca769c75fac2fde81a6faf52056424c8f6c7e490a",
+          "kind": "runtime-header",
+          "outputPath": "runtime/include/hxrt/string_lower_case.h",
+          "sourcePath": "runtime/hxrt/include/hxrt/string_lower_case.h"
+        },
+        {
+          "sourceSha256": "b069c988dec0cd7f7cfc5b116ec0c534136f022d80c71684efd9294290ea9961",
+          "kind": "runtime-header",
+          "outputPath": "runtime/include/hxrt/string_lower_case_data.h",
+          "sourcePath": "runtime/hxrt/include/hxrt/string_lower_case_data.h"
+        },
+        {
+          "sourceSha256": "55a692cfd855f71f1a1fa4f90f311f1653ec0638797ecfb024764e23a66680c8",
+          "kind": "runtime-source",
+          "outputPath": "runtime/src/string_lower_case.c",
+          "sourcePath": "runtime/hxrt/src/string_lower_case.c"
+        }
+      ],
+      "libraries": [],
+      "minimalAllowed": true,
+      "summary": "Locale-independent Haxe Eval simple lowercase conversion into a fresh managed String.",
+      "defines": [],
+      "environments": [
+        "freestanding",
+        "hosted"
+      ]
+    },
+    {
+      "documentation": {
         "referencePath": "docs/hxrt.md",
         "selectionRoots": [
           {
@@ -1393,6 +1455,7 @@
     "string",
     "string-float",
     "string-literal",
+    "string-lower-case",
     "string-map",
     "string-scalar",
     "string-split"
@@ -1404,7 +1467,7 @@
     "version": {
       "major": 0,
       "patch": 0,
-      "minor": 17
+      "minor": 18
     },
     "publicBoundary": {
       "applicationAbiStatus": "unsupported",
@@ -1443,7 +1506,7 @@
     "releaseProvenance": {
       "runtimeCStandard": "c11",
       "sourceHashAlgorithm": "sha256",
-      "sourceSetSha256": "9c1088d331b91903227af0531aaf8e3bf8e70ea8d519be68ee3b3639f31db5bb",
+      "sourceSetSha256": "4629b3e95b5e310c2d1d4b6ca074eb217e2dbd0354f81126fb50366a1332636b",
       "publicHeaderCppStandard": "c++17"
     },
     "generatedCodeCompatibility": "same-major",

@@ -42,6 +42,7 @@ SOURCES = (
     ROOT / "runtime/hxrt/src/allocator.c",
     ROOT / "runtime/hxrt/src/array.c",
     ROOT / "runtime/hxrt/src/string.c",
+    ROOT / "runtime/hxrt/src/string_lower_case.c",
     ROOT / "runtime/hxrt/src/string_scalar.c",
     ROOT / "runtime/hxrt/src/string_split.c",
 )
@@ -73,6 +74,7 @@ EXPECTED_GENERATED_FEATURES = [
     "array-join",
     "io",
     "string-float",
+    "string-lower-case",
     "string-split",
 ]
 EXPECTED_GENERATED_ARTIFACTS = [
@@ -86,6 +88,8 @@ EXPECTED_GENERATED_ARTIFACTS = [
     "runtime/include/hxrt/string_decode.h",
     "runtime/include/hxrt/string_float.h",
     "runtime/include/hxrt/string_literal.h",
+    "runtime/include/hxrt/string_lower_case.h",
+    "runtime/include/hxrt/string_lower_case_data.h",
     "runtime/include/hxrt/string_scalar.h",
     "runtime/include/hxrt/string_split.h",
     "runtime/src/allocator.c",
@@ -94,6 +98,7 @@ EXPECTED_GENERATED_ARTIFACTS = [
     "runtime/src/io.c",
     "runtime/src/string.c",
     "runtime/src/string_float.c",
+    "runtime/src/string_lower_case.c",
     "runtime/src/string_scalar.c",
     "runtime/src/string_split.c",
 ]
@@ -387,6 +392,36 @@ def run_generated_eval() -> None:
     if observations != [expected, expected]:
         raise StringRuntimeFailure(
             f"ordinary-Haxe managed String Eval oracle drifted: {observations!r}"
+        )
+
+
+def validate_lowercase_data() -> None:
+    """Prove the packaged scalar table is byte-exact pinned Eval output."""
+    result = run_bounded_process(
+        [
+            development_tool("haxe"),
+            "-cp",
+            str(CASE),
+            "--run",
+            "GenerateLowercaseData",
+            "--check",
+        ],
+        cwd=ROOT,
+        env=haxe_environment(),
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    expected = (
+        "lowercase-data: OK: "
+        "runtime/hxrt/include/hxrt/string_lower_case_data.h matches pinned Eval\n"
+    )
+    if result.returncode != 0 or result.stdout != expected or result.stderr:
+        raise StringRuntimeFailure(
+            "generated lowercase data drifted from pinned Eval: "
+            f"exit={result.returncode} stdout={result.stdout!r} "
+            f"stderr={result.stderr!r}"
         )
 
 
@@ -686,12 +721,145 @@ def validate_projected_enum_payload_ownership(hxcir: str) -> None:
         )
 
 
+def validate_lower_case_ownership(hxcir: str) -> None:
+    """Prove lowercase conversion evaluates once and returns fresh owners."""
+    function = hxcir_function(hxcir, "Main.lowerCaseContractHolds")
+    direct_calls = [
+        line
+        for line in function.splitlines()
+        if 'dispatch=direct("function.Main.observedLowerCaseSource")' in line
+    ]
+    lower_calls = [
+        line
+        for line in function.splitlines()
+        if 'runtime(feature="string-lower-case",operation="to-lower-case")'
+        in line
+    ]
+    if len(direct_calls) != 1 or len(lower_calls) != 9:
+        raise StringRuntimeFailure(
+            "String.toLowerCase must evaluate its observed receiver once and "
+            "emit nine exact runtime calls"
+        )
+
+    direct_result = re.search(r'result="([^"]+)":', direct_calls[0])
+    receiver_owners = [
+        line
+        for line in function.splitlines()
+        if "string-toLowerCase-receiver-owner-initialize" in line
+    ]
+    if direct_result is None or len(receiver_owners) != 1:
+        raise StringRuntimeFailure(
+            "the runtime-created lowercase receiver lost its one temporary owner"
+        )
+    owner = re.search(
+        r'place=local\("([^"]+)"\) value="([^"]+)"', receiver_owners[0]
+    )
+    if owner is None or owner.group(2) != direct_result.group(1):
+        raise StringRuntimeFailure(
+            "the lowercase receiver owner did not consume the observed call result"
+        )
+    receiver_owner = owner.group(1)
+    receiver_borrows = [
+        line
+        for line in function.splitlines()
+        if "string-toLowerCase-receiver-borrow" in line
+    ]
+    if len(receiver_borrows) != 1:
+        raise StringRuntimeFailure(
+            "the lowercase runtime call lost its one receiver borrow"
+        )
+    borrowed = re.search(
+        rf'result="([^"]+)":.*load place=local\("{re.escape(receiver_owner)}"\)',
+        receiver_borrows[0],
+    )
+    if borrowed is None:
+        raise StringRuntimeFailure(
+            "the lowercase receiver borrow did not come from its temporary owner"
+        )
+    borrowed_value = borrowed.group(1)
+    receiver_null_checks = [
+        line
+        for line in function.splitlines()
+        if "string-toLowerCase-receiver-null-check" in line
+        and f'null-check value="{borrowed_value}"' in line
+    ]
+    ordered_events = [
+        function.index(direct_calls[0]),
+        function.index(receiver_owners[0]),
+        function.index(receiver_borrows[0]),
+        function.index(receiver_null_checks[0])
+        if len(receiver_null_checks) == 1
+        else -1,
+        function.index(lower_calls[0]),
+    ]
+    if (
+        len(receiver_null_checks) != 1
+        or f'arguments=["{borrowed_value}"]' not in lower_calls[0]
+        or any(position < 0 for position in ordered_events)
+        or ordered_events != sorted(ordered_events)
+    ):
+        raise StringRuntimeFailure(
+            "lowercase receiver evaluation, ownership, null checking, and call "
+            "are not in source order"
+        )
+    receiver_cleanup = (
+        f'action "string-temporary.{receiver_owner}.release" '
+        f'idempotence=exactly-once release place=local("{receiver_owner}") '
+        'implementation=runtime("string")'
+    )
+    if function.count(receiver_cleanup) != 1:
+        raise StringRuntimeFailure(
+            "the runtime-created lowercase receiver lost exact-once cleanup"
+        )
+
+    for call in lower_calls:
+        result = re.search(r'result="([^"]+)":managed-string', call)
+        if result is None or "target=abort" not in call:
+            raise StringRuntimeFailure(
+                "String.toLowerCase lost its fresh managed result or terminal "
+                "allocation-failure policy"
+            )
+        result_id = result.group(1)
+        owners = [
+            line
+            for line in function.splitlines()
+            if " initialize " in line and f'value="{result_id}"' in line
+        ]
+        if len(owners) != 1:
+            raise StringRuntimeFailure(
+                f"lowercase result {result_id} did not transfer to one owner"
+            )
+        result_owner = re.search(r'place=local\("([^"]+)"\)', owners[0])
+        if result_owner is None:
+            raise StringRuntimeFailure(
+                f"lowercase result {result_id} owner has no typed local"
+            )
+        owner_local = result_owner.group(1)
+        cleanup_actions = [
+            line
+            for line in function.splitlines()
+            if " action " in line
+            and "idempotence=exactly-once" in line
+            and f'release place=local("{owner_local}") ' in line
+            and 'implementation=runtime("string")' in line
+        ]
+        if (
+            len(cleanup_actions) != 1
+            or f'retain place=local("{owner_local}") ' in function
+            or f'acquire-managed-carrier place=local("{owner_local}") ' in function
+        ):
+            raise StringRuntimeFailure(
+                f"lowercase result {result_id} is not one fresh exact-once owner"
+            )
+
+
 def validate_generated_project(output: Path, hxcir: str) -> None:
     """Check semantic intent, exact runtime closure, and recognizable C calls."""
     for operation in (
         'runtime(feature="string",operation="from-scalar")',
         'runtime(feature="string-float",operation="from-float")',
         'runtime(feature="string",operation="concat")',
+        'runtime(feature="string-lower-case",operation="to-lower-case")',
         'runtime(feature="string-scalar",operation="char-at")',
         'runtime(feature="string-scalar",operation="char-code-at")',
         'runtime(feature="string-scalar",operation="index-of")',
@@ -715,6 +883,7 @@ def validate_generated_project(output: Path, hxcir: str) -> None:
     validate_conditional_view_ownership(hxcir)
     validate_conditional_compound_ownership(hxcir)
     validate_projected_enum_payload_ownership(hxcir)
+    validate_lower_case_ownership(hxcir)
 
     plan = json.loads((output / "hxc.runtime-plan.json").read_text(encoding="utf-8"))
     if (
@@ -758,6 +927,17 @@ def validate_generated_project(output: Path, hxcir: str) -> None:
     if float_operations != {"from-float"}:
         raise StringRuntimeFailure(
             f"Float String roots drifted: {sorted(float_operations)!r}"
+        )
+    case_operations = {
+        reason.get("operationId")
+        for reason in plan.get("rootReasons", [])
+        if isinstance(reason, dict)
+        and reason.get("featureId") == "string-lower-case"
+        and reason.get("kind") == "runtime-operation"
+    }
+    if case_operations != {"to-lower-case"}:
+        raise StringRuntimeFailure(
+            f"String lower case roots drifted: {sorted(case_operations)!r}"
         )
     scalar_operations = {
         reason.get("operationId")
@@ -835,6 +1015,7 @@ def validate_generated_project(output: Path, hxcir: str) -> None:
         "substr",
         "substring",
         "sys-println-literal",
+        "to-lower-case",
         "type-carrier",
     ]
     if stdlib.get("modules") != expected_modules or stdlib.get(
@@ -856,6 +1037,7 @@ def validate_generated_project(output: Path, hxcir: str) -> None:
         "hxc_string_from_int32(",
         "hxc_string_from_float64(",
         "hxc_string_concat_ref(",
+        "hxc_string_to_lower_case(",
         "hxc_string_retain(",
         "hxc_string_release(",
         "hxc_string_index_of(",
@@ -872,6 +1054,16 @@ def validate_generated_project(output: Path, hxcir: str) -> None:
         if forbidden in source_text:
             raise StringRuntimeFailure(
                 f"managed String fixture acquired unrelated/generated escape {forbidden!r}"
+            )
+    if source_text.count("hxc_string_to_lower_case(") != 9:
+        raise StringRuntimeFailure(
+            "generated C must contain nine exact lowercase runtime calls"
+        )
+    for forbidden in ("tolower(", "<ctype.h>", "setlocale(", "string_case"):
+        if forbidden in source_text:
+            raise StringRuntimeFailure(
+                "generated C bypassed the locale-independent lowercase runtime "
+                f"with {forbidden!r}"
             )
 
 
@@ -1052,18 +1244,19 @@ def plausible_output_exists(output: Path) -> bool:
 
 
 def validate_generated_failures(root: Path) -> None:
-    expected_cstring_failures = {
+    expected_failures = {
         "cstring_ref_escape": ("HXC1001", "TCall(c.CStringRef.to:requires-direct-import-argument)"),
         "cstring_ref_wrong_owner": ("Int should be String", "For function argument 'text'"),
         "c_import_alias_mismatch": ("HXC3000", "incompatible C ABI signature"),
+        "to_upper_case": ("HXC1001", "TCall(String.toUpperCase:not-yet-admitted)"),
     }
-    for name, (diagnostic, marker) in expected_cstring_failures.items():
+    for name, (diagnostic, marker) in expected_failures.items():
         output = root / f"negative-{name}"
         result = compile_haxe(NEGATIVE / name, output)
         if result.returncode == 0 or diagnostic not in result.stderr or marker not in result.stderr:
-            raise StringRuntimeFailure(f"negative CStringRef case {name} drifted: {result.stderr!r}")
+            raise StringRuntimeFailure(f"negative String case {name} drifted: {result.stderr!r}")
         if plausible_output_exists(output):
-            raise StringRuntimeFailure(f"negative CStringRef case {name} left plausible output")
+            raise StringRuntimeFailure(f"negative String case {name} left plausible output")
 
     none_output = root / "runtime-none"
     none = compile_haxe(
@@ -1194,6 +1387,7 @@ def inspect_generated_symbols(executable: Path, family: str) -> None:
         "hxc_array_string_join",
         "hxc_string_from_int32",
         "hxc_string_concat_ref",
+        "hxc_string_to_lower_case",
         "hxc_string_retain",
         "hxc_string_release",
         "hxc_string_index_of",
@@ -1341,6 +1535,7 @@ def main(argv: Iterable[str] = ()) -> int:
         toolchains = selected_toolchains(args.toolchain)
         run_native(toolchains, expected_trace)
         if not args.native_only:
+            validate_lowercase_data()
             run_float_oracle()
             run_generated_eval()
             with tempfile.TemporaryDirectory(
@@ -1367,7 +1562,7 @@ def main(argv: Iterable[str] = ()) -> int:
     )
     print(
         "string-runtime: OK: "
-        f"{families}; {oracle}; checked/lossy UTF-8, scalar indexing/search, "
+        f"{families}; {oracle}; checked/lossy UTF-8, scalar indexing/search/lowercase, "
         "owned aliases/fields/containers/returns, call-scoped immutable C text, "
         "split/package/unity "
         "determinism, C11/C++17, sanitizers, and selective symbols passed"

@@ -3716,6 +3716,40 @@
       "notes": "Ordinary Haxe String.substring returns a borrowed scalar-indexed view whose backing owner remains alive with the result. The hosted fixture covers omitted, reversed, negative, and out-of-range bounds together with aggregate ownership and sanitizers."
     },
     {
+      "id": "string-to-lower-case-partial",
+      "selector": {
+        "module": "String",
+        "type": "String",
+        "member": "toLowerCase",
+        "kind": "method",
+        "isStatic": false,
+        "signature": "() -> String"
+      },
+      "owner": "direct-compiler-lowering",
+      "runtimeFeatures": [
+        "string-lower-case"
+      ],
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "environments": [
+        "hosted"
+      ],
+      "status": "partial",
+      "ownerBeads": "E5.T02",
+      "testOwnerBeads": "E5.T02",
+      "diagnosticPolicies": [
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
+      ],
+      "tests": [
+        "test/differential/string-runtime/generated/Main.hx",
+        "test/differential/string-runtime/run.py"
+      ],
+      "notes": "Ordinary Haxe String.toLowerCase creates a fresh managed String with the pinned Eval target's locale-independent, context-free, one-input-scalar-to-one-output-scalar mapping. The hosted fixture covers the exhaustive generated table, embedded NUL, changed and unchanged text, the current mapping boundary, supplementary scalars, exact ownership and rollback, generated layouts, strict C11, optimization, and sanitizers. String.toUpperCase and broader Unicode case folding remain unsupported."
+    },
+    {
       "id": "string-to-string-partial",
       "selector": {
         "module": "String",
@@ -11104,32 +11138,30 @@
       "kind": "method",
       "signature": "() -> String",
       "isStatic": false,
-      "owner": "target-source-override",
+      "owner": "direct-compiler-lowering",
       "runtimeFeatures": [
-        "alloc",
-        "string",
-        "unicode"
+        "string-lower-case"
       ],
       "profiles": [
         "portable",
         "metal"
       ],
       "environments": [
-        "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "hosted"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T02",
-      "testOwnerBeads": "E5.T12",
+      "testOwnerBeads": "E5.T02",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "ADR 0004 scalar-indexed UTF-8 applies. ASCII/direct paths and compiler-built constants precede local helpers and narrow string or Unicode slices.",
-      "ruleId": "strings-and-unicode"
+      "tests": [
+        "test/differential/string-runtime/generated/Main.hx",
+        "test/differential/string-runtime/run.py"
+      ],
+      "notes": "Ordinary Haxe String.toLowerCase creates a fresh managed String with the pinned Eval target's locale-independent, context-free, one-input-scalar-to-one-output-scalar mapping. The hosted fixture covers the exhaustive generated table, embedded NUL, changed and unchanged text, the current mapping boundary, supplementary scalars, exact ownership and rollback, generated layouts, strict C11, optimization, and sanitizers. String.toUpperCase and broader Unicode case folding remain unsupported.",
+      "ruleId": "string-to-lower-case-partial"
     },
     {
       "id": "hxc-stdlib-api-v1:ad62c1c543f60597495ca3728f87ddb41d48c578fca20c785ff05e50d1a1a110",

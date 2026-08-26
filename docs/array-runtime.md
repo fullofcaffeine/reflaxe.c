@@ -32,8 +32,9 @@ Adding the ownership-transferring `pop` entry points advances it to 0.13.0, and
 the corresponding front-removing `shift` entry points advance the marker to
 0.14.0. The discarded one-element `splice` entry point advances the current
 marker to 0.15.0. Hosted Float formatting later advanced the marker to 0.16.0.
-Live Array cursors and arbitrary-range splice/resize advance the current marker
-to 0.17.0.
+Live Array cursors and arbitrary-range splice/resize advanced the marker to
+0.17.0. The separate lowercase String feature advances the current marker to
+0.18.0.
 Other intervening additions are recorded in their owning
 runtime documents. The bounded `resize(0)` lowering reuses the existing
 `hxc_array_resize` entry point, so it does not add a new ABI symbol or advance

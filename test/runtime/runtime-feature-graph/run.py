@@ -39,6 +39,7 @@ BYTES_STRING_CONSUMER = CASE / "bytes_string_consumer.c"
 OBJECT_CONSUMER = CASE / "object_consumer.c"
 GC_CONSUMER = ROOT / "runtime/hxrt/test/gc_contract.c"
 STRING_CONSUMER = CASE / "string_consumer.c"
+STRING_LOWER_CASE_CONSUMER = CASE / "string_lower_case_consumer.c"
 STRING_SCALAR_CONSUMER = CASE / "string_scalar_consumer.c"
 IO_CONSUMER = CASE / "io_consumer.c"
 CATALOG_PREFIX = "HXC_RUNTIME_FEATURE_CATALOG="
@@ -191,6 +192,7 @@ def validate_catalog(catalog: dict[str, object]) -> None:
         "string",
         "string-float",
         "string-literal",
+        "string-lower-case",
         "string-map",
         "string-scalar",
         "string-split",
@@ -202,7 +204,7 @@ def validate_catalog(catalog: dict[str, object]) -> None:
     provenance = record(runtime_abi.get("releaseProvenance"), "runtime release provenance")
     if (
         runtime_abi.get("stability") != "internal-versioned"
-        or version != {"major": 0, "minor": 17, "patch": 0}
+        or version != {"major": 0, "minor": 18, "patch": 0}
         or runtime_abi.get("generatedCodeCompatibility") != "same-major"
         or runtime_abi.get("generatedCodeCheck") != "c11-static-assert"
         or runtime_abi.get("runtimeMajorMacro") != "HXC_RUNTIME_ABI_MAJOR"
@@ -242,6 +244,7 @@ def validate_catalog(catalog: dict[str, object]) -> None:
         "int-map",
         "iterator",
         "string-map",
+        "string-lower-case",
         "string-float",
         "string-split",
         "bytes",
@@ -265,6 +268,7 @@ def validate_catalog(catalog: dict[str, object]) -> None:
         "int-map": ["alloc", "iterator", "string"],
         "iterator": ["alloc", "array"],
         "string-map": ["alloc", "iterator", "string", "string-literal"],
+        "string-lower-case": ["string"],
         "string-float": ["string"],
         "string-split": ["array", "string"],
         "bytes": ["alloc", "string-literal"],
@@ -287,6 +291,7 @@ def validate_catalog(catalog: dict[str, object]) -> None:
         "int-map": "compiler-selectable",
         "iterator": "compiler-selectable",
         "string-map": "compiler-selectable",
+        "string-lower-case": "compiler-selectable",
         "string-float": "compiler-selectable",
         "string-split": "compiler-selectable",
         "bytes": "compiler-selectable",
@@ -529,6 +534,7 @@ def validate_plans(plans: dict[str, object]) -> None:
     array = record(plans.get("array"), "array plan")
     int_map = record(plans.get("intMap"), "IntMap plan")
     string_map = record(plans.get("stringMap"), "StringMap plan")
+    string_lower_case = record(plans.get("stringLowerCase"), "String lower case plan")
     string_float = record(plans.get("stringFloat"), "Float String plan")
     string_split = record(plans.get("stringSplit"), "String split plan")
     bytes_plan = record(plans.get("bytes"), "bytes plan")
@@ -552,7 +558,7 @@ def validate_plans(plans: dict[str, object]) -> None:
         "runtime-base",
         "status",
         "alloc",
-		"array",
+        "array",
         "iterator",
         "string-literal",
         "string-scalar",
@@ -570,6 +576,16 @@ def validate_plans(plans: dict[str, object]) -> None:
         "string-float",
     ]:
         raise RuntimeFeatureFailure("Float String closure is incomplete or nondeterministic")
+    if string_lower_case.get("features") != [
+        "runtime-base",
+        "status",
+        "alloc",
+        "string-literal",
+        "string-scalar",
+        "string",
+        "string-lower-case",
+    ]:
+        raise RuntimeFeatureFailure("String lower case closure is incomplete or nondeterministic")
     if string_split.get("features") != [
         "runtime-base",
         "status",
@@ -618,6 +634,7 @@ def validate_plans(plans: dict[str, object]) -> None:
     validate_selected_reasons(array, "array")
     validate_selected_reasons(int_map, "IntMap")
     validate_selected_reasons(string_map, "StringMap")
+    validate_selected_reasons(string_lower_case, "String lower case")
     validate_selected_reasons(string_split, "String.split")
     validate_selected_reasons(bytes_plan, "Bytes")
     validate_selected_reasons(bytes_string, "Bytes-to-String")
@@ -644,6 +661,10 @@ def validate_plans(plans: dict[str, object]) -> None:
         raise RuntimeFeatureFailure("alloc build plan retained an unselected string artifact or symbol")
     if "runtime/src/string.c" not in text_list(string.get("artifacts"), "string artifacts"):
         raise RuntimeFeatureFailure("string build plan omitted its selected source")
+    if "runtime/src/string_lower_case.c" not in text_list(
+        string_lower_case.get("artifacts"), "String lower case artifacts"
+    ):
+        raise RuntimeFeatureFailure("String lower case build plan omitted its selected source")
     string_scalar_artifacts = text_list(string_scalar.get("artifacts"), "string scalar artifacts")
     if (
         "runtime/src/string_scalar.c" not in string_scalar_artifacts
@@ -673,6 +694,10 @@ def validate_plans(plans: dict[str, object]) -> None:
         raise RuntimeFeatureFailure("array build plan omitted its selected symbol")
     if "hxc_string_copy" not in text_list(string.get("symbols"), "string symbols"):
         raise RuntimeFeatureFailure("string build plan omitted its selected symbol")
+    if "hxc_string_to_lower_case" not in text_list(
+        string_lower_case.get("symbols"), "String lower case symbols"
+    ):
+        raise RuntimeFeatureFailure("String lower case build plan omitted its selected symbol")
     if "hxc_bytes_ref_get_string_utf8" not in text_list(
         bytes_string.get("symbols"), "Bytes-to-String symbols"
     ):
@@ -757,6 +782,7 @@ def validate_package(package: dict[str, object], plans: dict[str, object]) -> No
         "array",
         "intMap",
         "stringMap",
+        "stringLowerCase",
         "stringSplit",
         "bytes",
         "bytesString",
@@ -969,6 +995,7 @@ def package_from_snapshots(
         "array",
         "intMap",
         "stringMap",
+        "stringLowerCase",
         "stringSplit",
         "bytes",
         "bytesString",
@@ -1079,6 +1106,7 @@ def run_native(package: dict[str, object], toolchains: list[Toolchain]) -> None:
     gc_package = records(package.get("gc"), "gc package")
     string_scalar = records(package.get("stringScalar"), "string scalar package")
     string = records(package.get("string"), "string package")
+    string_lower_case = records(package.get("stringLowerCase"), "String lower case package")
     io = records(package.get("io"), "io package")
     with tempfile.TemporaryDirectory(prefix="reflaxe-c-runtime-feature-") as temporary:
         root = Path(temporary)
@@ -1115,6 +1143,14 @@ def run_native(package: dict[str, object], toolchains: list[Toolchain]) -> None:
                 family_root,
             )
             run_native_case(toolchain, "string", string, STRING_CONSUMER, "runtime-feature-string: OK\n", family_root)
+            run_native_case(
+                toolchain,
+                "string-lower-case",
+                string_lower_case,
+                STRING_LOWER_CASE_CONSUMER,
+                "runtime-feature-string-lower-case: OK\n",
+                family_root,
+            )
             run_native_case(toolchain, "io", io, IO_CONSUMER, "runtime-feature-io\n", family_root)
 
 
