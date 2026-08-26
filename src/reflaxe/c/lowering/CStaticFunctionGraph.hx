@@ -14,7 +14,9 @@ import reflaxe.c.lowering.CBodyLowering.CBodyInitializerInput;
 import reflaxe.c.lowering.CBodyConstructor.CBodyConstructorInput;
 import reflaxe.c.lowering.CBodyArray.CBodyArrayRecognition;
 import reflaxe.c.lowering.CBodyBytes.CBodyBytesRecognition;
+import reflaxe.c.lowering.CBodyIntMap.CBodyIntMapRecognition;
 import reflaxe.c.lowering.CBodyIterator.CBodyIteratorRecognition;
+import reflaxe.c.lowering.CBodyStringMap.CBodyStringMapRecognition;
 import reflaxe.c.lowering.CBodyTypedMap.CBodyTypedMapRecognition;
 import reflaxe.c.lowering.CBodyDispatch.CBodyDispatchCatalog;
 import reflaxe.c.lowering.CBodyDispatch.CBodyDispatchGraph;
@@ -142,11 +144,13 @@ class CStaticFunctionGraphCollector {
 				}
 			case TNew(classReference, _, _)
 				if (CBodyArrayRecognition.isCoreArray(classReference)
+					|| CBodyIntMapRecognition.isIntMap(classReference)
 					|| CBodyIteratorRecognition.arrayKind(classReference) != null
 					|| CBodyIteratorRecognition.isMapKeyValue(classReference)
+					|| CBodyStringMapRecognition.isStringMap(classReference)
 					|| CBodyTypedMapRecognition.family(classReference) != null):
-				// Array cursors have one compiler-owned shared representation. Their
-				// target-source class exists for natural Haxe typing, not ordinary
+				// These standard containers have compiler-owned shared representations.
+				// Their target-source classes exist for natural Haxe typing, not ordinary
 				// construction, method reachability, or virtual-table discovery.
 			case TNew(classReference, parameters, _):
 				final target = constructorForGraph(classReference, parameters, caller, expression.pos, availableConstructors);

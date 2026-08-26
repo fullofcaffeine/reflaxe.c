@@ -27,6 +27,7 @@ from scripts.test.bounded_process import run as run_bounded_process  # noqa: E40
 CASE = Path(__file__).resolve().parent
 GENERATED = CASE / "generated"
 DIRECT_DECISION = CASE / "direct_decision"
+DISPATCH_OWNED = CASE / "dispatch_owned"
 NEGATIVE = CASE / "negative"
 FIXTURE = CASE / "string_map_runtime.c"
 INCLUDE = ROOT / "runtime/hxrt/include"
@@ -137,6 +138,96 @@ def run_eval_oracle() -> None:
         results.append((execution.returncode, execution.stdout, execution.stderr))
     if results != [(0, "", ""), (0, "", "")]:
         raise StringMapFailure(f"pinned Eval StringMap oracle drifted: {results!r}")
+
+
+def check_dispatch_owned_map(toolchains: list[Toolchain]) -> None:
+    """Keep compiler-owned maps out of ordinary class dispatch discovery."""
+
+    for label in ("first", "second"):
+        oracle = run_bounded_process(
+            [development_tool("haxe"), "-cp", str(DISPATCH_OWNED), "-main", "Main", "--interp"],
+            cwd=ROOT,
+            env=haxe_environment(),
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        if oracle.returncode != 0 or oracle.stdout or oracle.stderr:
+            raise StringMapFailure(
+                f"{label} dispatch-owned Eval oracle failed: "
+                f"{oracle.returncode} {oracle.stdout!r} {oracle.stderr!r}"
+            )
+
+    with tempfile.TemporaryDirectory(prefix="reflaxe-c-string-map-dispatch-owned-") as temporary:
+        root = Path(temporary)
+        normal = root / "normal"
+        reverse = root / "reverse"
+        first = compile_haxe(DISPATCH_OWNED, normal, report=True)
+        second = compile_haxe(DISPATCH_OWNED, reverse, reverse=True, report=True)
+        for label, result in (("normal", first), ("reverse", second)):
+            if result.returncode != 0:
+                raise StringMapFailure(
+                    f"dispatch-owned {label} compile failed: "
+                    f"{result.stdout!r} {result.stderr!r}"
+                )
+        if generated_tree(normal) != generated_tree(reverse):
+            raise StringMapFailure("dispatch-owned output changed under reversed discovery")
+
+        hxcir = extract_hxcir(first)
+        for marker in (
+            'representation=managed("string-map")',
+            "static-haxe-string-view:_Main.ItemId",
+            'runtime(feature="string-map",operation="create")',
+            'runtime(feature="string-map",operation="set")',
+            'runtime(feature="string-map",operation="get")',
+        ):
+            if marker not in hxcir:
+                raise StringMapFailure(f"dispatch-owned HxcIR omitted {marker}")
+        if "haxe.ds.StringMap" in hxcir or "vtable.haxe.ds.StringMap" in hxcir:
+            raise StringMapFailure("dispatch-owned HxcIR retained ordinary StringMap class dispatch")
+
+        sources = sorted((normal / "runtime/src").glob("*.c")) + sorted(
+            (normal / "src").rglob("*.c")
+        )
+        source_text = "\n".join(path.read_text(encoding="utf-8") for path in sources)
+        if "haxe_ds_StringMap" in source_text or "hxc_vtable_haxe_ds_StringMap" in source_text:
+            raise StringMapFailure("dispatch-owned generated C retained an ordinary StringMap class")
+
+        rejected = compile_haxe(
+            NEGATIVE / "abstract_class_value",
+            root / "negative-abstract-class",
+        )
+        if (
+            rejected.returncode == 0
+            or "HXC1001" not in rejected.stderr
+            or "StringMap-value-not-yet-admitted:haxe-class-reference:" not in rejected.stderr
+        ):
+            raise StringMapFailure(
+                "dispatch-owned admission weakened abstract-over-class rejection: "
+                f"{rejected.stderr!r}"
+            )
+
+        include_roots = [normal / "include", normal / "runtime/include"]
+        for toolchain in toolchains:
+            build = root / toolchain.family
+            build.mkdir()
+            for optimization in ("-O0", "-O2"):
+                compile_and_run(
+                    toolchain.compiler,
+                    sources,
+                    include_roots,
+                    build / f"dispatch-owned-{optimization[1:].lower()}",
+                    (optimization,),
+                )
+            if toolchain.family == "clang":
+                compile_and_run(
+                    toolchain.compiler,
+                    sources,
+                    include_roots,
+                    build / "dispatch-owned-sanitized",
+                    SANITIZER_FLAGS,
+                )
 
 
 def compile_haxe(
@@ -801,6 +892,7 @@ def parse_args(argv: Iterable[str]) -> argparse.Namespace:
     parser.add_argument("--toolchain", choices=("auto", *TOOLCHAINS), default="auto")
     parser.add_argument("--native-only", action="store_true")
     parser.add_argument("--direct-decision-only", action="store_true")
+    parser.add_argument("--dispatch-owned-only", action="store_true")
     return parser.parse_args(list(argv))
 
 
@@ -808,6 +900,13 @@ def main(argv: Iterable[str] = ()) -> int:
     args = parse_args(argv)
     try:
         toolchains = resolve_toolchains(args.toolchain)
+        if args.dispatch_owned_only:
+            check_dispatch_owned_map(toolchains)
+            print(
+                "string-map: OK: compiler-owned map construction bypasses class "
+                "dispatch while nominal String values retain exact typed storage"
+            )
+            return 0
         if args.direct_decision_only:
             check_direct_runtime_decisions(toolchains)
             print(
