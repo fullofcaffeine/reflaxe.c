@@ -1694,6 +1694,73 @@ def validate_editor_asset_browser_screenshot(path: Path, *, platform_name: str) 
     return width, height
 
 
+def validate_editor_text_screenshot(path: Path, *, platform_name: str) -> tuple[int, int]:
+    """Prove native Text kept complete invalid source visible for repair.
+
+    Renderer-independent probes own exact source edits and atomic rejection.
+    This broad visual check requires a substantial source panel, many readable
+    row marks, CaxeFlow syntax families, and the stable invalid-state color. It
+    does not inspect localized glyph shapes or duplicate parser expectations.
+    """
+
+    width, height, pixels = decode_rgba_png(path, "editor Text workspace")
+    logical_width, logical_height = 1280, 720
+    expected_dimensions = {(logical_width, logical_height)}
+    if platform_name == "macos":
+        expected_dimensions.add((logical_width * 2, logical_height * 2))
+    if (width, height) not in expected_dimensions:
+        raise PlayFailure(
+            "Caxecraft editor Text screenshot must match its logical "
+            f"1280x720 window at an admitted pixel scale, found {width}x{height}"
+        )
+    scale = width // logical_width
+    panel_changed = 0
+    panel_colors: set[int] = set()
+    row_mark_pixels = 0
+    rule_pixels = 0
+    condition_pixels = 0
+    action_pixels = 0
+    invalid_pixels = 0
+    for row in range(24 * scale, 696 * scale):
+        row_at = row * width * 4
+        for column in range(24 * scale, 1256 * scale):
+            at = row_at + column * 4
+            red, green, blue = pixels[at : at + 3]
+            panel_colors.add((red >> 4) << 8 | (green >> 4) << 4 | (blue >> 4))
+            if abs(red - 12) + abs(green - 28) + abs(blue - 36) > 24:
+                panel_changed += 1
+            if (red, green, blue) == (100, 143, 151):
+                row_mark_pixels += 1
+            elif (red, green, blue) == (210, 105, 230):
+                rule_pixels += 1
+            elif (red, green, blue) == (84, 191, 205):
+                condition_pixels += 1
+            elif (red, green, blue) == (111, 174, 91):
+                action_pixels += 1
+            elif (red, green, blue) in ((255, 154, 112), (255, 190, 132)):
+                invalid_pixels += 1
+    minimum_changed = 180_000 * scale * scale
+    minimum_rows = 80 * scale * scale
+    minimum_syntax = 12 * scale * scale
+    minimum_invalid = 30 * scale * scale
+    if (
+        panel_changed < minimum_changed
+        or len(panel_colors) < 10
+        or row_mark_pixels < minimum_rows
+        or rule_pixels < minimum_syntax
+        or condition_pixels < minimum_syntax
+        or action_pixels < minimum_syntax
+        or invalid_pixels < minimum_invalid
+    ):
+        raise PlayFailure(
+            "Caxecraft Text workspace is blank, incomplete, or missing repair evidence "
+            f"(changed:{panel_changed}, colors:{len(panel_colors)}, rows:{row_mark_pixels}, "
+            f"rules:{rule_pixels}, conditions:{condition_pixels}, actions:{action_pixels}, "
+            f"invalid:{invalid_pixels})"
+        )
+    return width, height
+
+
 def validate_editor_flow_screenshot(path: Path, *, platform_name: str) -> tuple[int, int]:
     """Prove the native editor presented a usable CaxeFlow card library.
 
@@ -3421,6 +3488,7 @@ def run_pilot_sample(
         supporting_screenshots = (
             executable.parent / "caxecraft-pilot-editor-terrain-prompt.png",
             executable.parent / "caxecraft-pilot-editor-play.png",
+            executable.parent / "caxecraft-pilot-editor-text.png",
             executable.parent / "caxecraft-pilot-editor-assets.png",
             executable.parent / "caxecraft-pilot-editor-environment.png",
         )
@@ -3496,6 +3564,8 @@ def run_pilot_sample(
             validate_editor_environment_screenshot(supporting_screenshot, platform_name=platform_name)
         elif supporting_screenshot.name == "caxecraft-pilot-editor-assets.png":
             validate_editor_asset_browser_screenshot(supporting_screenshot, platform_name=platform_name)
+        elif supporting_screenshot.name == "caxecraft-pilot-editor-text.png":
+            validate_editor_text_screenshot(supporting_screenshot, platform_name=platform_name)
         elif supporting_screenshot.name == "caxecraft-pilot-editor-terrain-prompt.png":
             validate_editor_screenshot(supporting_screenshot, platform_name=platform_name)
         else:

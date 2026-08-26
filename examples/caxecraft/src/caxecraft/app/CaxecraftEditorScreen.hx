@@ -36,6 +36,10 @@ import caxecraft.editor.EditorTerrainRefresh.EditorTerrainRefreshRequest;
 import caxecraft.editor.EditorTerrainRefresh.forBatch as terrainRefreshForBatch;
 import caxecraft.editor.EditorTerrainRefresh.forCommand as terrainRefreshForCommand;
 import caxecraft.editor.EditorTerrainRefresh.forTerrainChange as terrainRefreshForTerrainChange;
+import caxecraft.editor.EditorTextAuthoring.EditorTextDocument;
+import caxecraft.editor.EditorTextAuthoring.EditorTextDocumentError;
+import caxecraft.editor.EditorTextAuthoring.EditorTextDocumentOpenResult;
+import caxecraft.editor.EditorTextAuthoring.EditorTextEditResult;
 import caxecraft.editor.EditorEnvironment.EditorEnvironmentControl;
 import caxecraft.editor.EditorEnvironment.EditorEnvironmentDirection;
 import caxecraft.editor.EditorEnvironment.editEnvironment;
@@ -162,6 +166,8 @@ import caxecraft.scenario.ScenarioEnvironment;
 import caxecraft.scenario.ScenarioEnvironment.ScenarioHorizonEdge;
 import caxecraft.scenario.ScenarioId;
 import caxecraft.scenario.Scenario;
+import caxecraft.scenario.ScenarioDiagnostic;
+import caxecraft.scenario.ScenarioDiagnosticText.scenarioDiagnosticMessage;
 import caxecraft.scenario.ContentId;
 import caxecraft.scenario.ScenarioObject;
 import caxecraft.scenario.ScenarioText;
@@ -197,6 +203,14 @@ private enum EditorNotice {
 	Testing;
 	Saved;
 	SaveFailed;
+}
+
+/** Visible state of the isolated advanced-text draft. */
+private enum EditorTextNotice {
+	TextClean;
+	TextDirty;
+	TextInvalid;
+	TextStale;
 }
 
 /** One editable view over the same canonical editor draft. */
@@ -287,6 +301,14 @@ final class CaxecraftEditorScreen {
 	var assetQuery:String;
 	var visibleAssets:Array<EditorAssetEntry>;
 	var selectedObjectAsset:Null<EditorAssetEntry>;
+	var textWorkspaceOpen:Bool;
+	var textDocument:Null<EditorTextDocument>;
+	var textBaseRevision:Int;
+	var textSelectedLine:Int;
+	var textScrollLine:Int;
+	var textDiagnostics:Array<ScenarioDiagnostic>;
+	var textNotice:EditorTextNotice;
+	final textLineEditor:Null<GuiTextBoxState>;
 	var detailsOpen:Bool;
 	var worldListOpen:Bool;
 	var environmentPanelOpen:Bool;
@@ -387,6 +409,14 @@ final class CaxecraftEditorScreen {
 		assetQuery = "";
 		visibleAssets = filterEditorAssets(assetEntries, assetCategory, assetQuery);
 		selectedObjectAsset = firstObjectAsset(assetEntries);
+		textWorkspaceOpen = false;
+		textDocument = null;
+		textBaseRevision = -1;
+		textSelectedLine = 0;
+		textScrollLine = 0;
+		textDiagnostics = [];
+		textNotice = TextClean;
+		textLineEditor = GuiTextBoxState.create(EditorTextDocument.MAX_LINE_BYTES + 1);
 		detailsOpen = false;
 		worldListOpen = false;
 		environmentPanelOpen = false;
@@ -421,8 +451,26 @@ final class CaxecraftEditorScreen {
 		final editedName = worldName;
 		final editedObjectName = objectName;
 		final editedAssetSearch = assetSearch;
+		final editedTextLine = textLineEditor;
 		if (!leavePromptOpen
 			&& !environmentPanelOpen
+			&& !assetBrowserOpen
+			&& !flowCardLibraryOpen()
+			&& !flowDocumentPickerOpen()
+			&& (editedName == null || !editedName.isEditing())
+			&& (editedObjectName == null || !editedObjectName.isEditing())
+			&& (editedAssetSearch == null || !editedAssetSearch.isEditing())
+			&& (editedTextLine == null || !editedTextLine.isEditing())
+			&& !shortcutModifierDown()
+			&& Raylib.IsKeyPressed(KeyboardKey.T)) {
+			if (textWorkspaceOpen)
+				closeTextWorkspace();
+			else
+				openTextWorkspace();
+		}
+		if (!leavePromptOpen
+			&& !environmentPanelOpen
+			&& !textWorkspaceOpen
 			&& !flowCardLibraryOpen()
 			&& !flowDocumentPickerOpen()
 			&& (editedName == null || !editedName.isEditing())
@@ -435,7 +483,7 @@ final class CaxecraftEditorScreen {
 			else
 				openAssetBrowser();
 		}
-		if (!assetBrowserOpen && !flowCardLibraryOpen() && !flowDocumentPickerOpen() && saveShortcutPressed())
+		if (!assetBrowserOpen && !textWorkspaceOpen && !flowCardLibraryOpen() && !flowDocumentPickerOpen() && saveShortcutPressed())
 			requestSave();
 		final keyboardNavigation = readKeyboardNavigation();
 		final navigation = externalNavigation != NavigationCommand.None ? externalNavigation : keyboardNavigation;
@@ -448,6 +496,7 @@ final class CaxecraftEditorScreen {
 		final shortcutInputAvailable = !leavePromptOpen
 			&& !environmentPanelOpen
 			&& !assetBrowserOpen
+			&& !textWorkspaceOpen
 			&& !flowCardLibraryOpen()
 			&& !flowDocumentPickerOpen()
 			&& (editedName == null || !editedName.isEditing())
@@ -469,6 +518,10 @@ final class CaxecraftEditorScreen {
 				deleteSelectedObject();
 		}
 		Raylib.ClearBackground(Color.rgba(12, 28, 36));
+		if (textWorkspaceOpen) {
+			drawTextWorkspace(locale, width, height);
+			return StayInEditor;
+		}
 		if (assetBrowserOpen) {
 			drawAssetBrowser(locale, width, height);
 			return StayInEditor;
@@ -538,18 +591,20 @@ final class CaxecraftEditorScreen {
 		if (focusedButtonSized(EditorFocusTarget.Redo, historyLeft + 96.0, toolbarTop, 88.0, 38.0, uiCatalog.text(locale, UiMessage.EditorRedo)))
 			redo();
 
-		final viewLeft = Std.int(width * 0.5) - 104.0;
-		if (focusedButtonSized(EditorFocusTarget.Build, viewLeft, toolbarTop, 100.0, 38.0, uiCatalog.text(locale, UiMessage.EditorBuild)))
+		final viewLeft = Std.int(width * 0.5) - 158.0;
+		if (focusedButtonSized(EditorFocusTarget.Build, viewLeft, toolbarTop, 96.0, 38.0, uiCatalog.text(locale, UiMessage.EditorBuild)))
 			setWorkspaceView(BuildView);
-		if (focusedButtonSized(EditorFocusTarget.Plan, viewLeft + 108.0, toolbarTop, 100.0, 38.0, uiCatalog.text(locale, UiMessage.EditorPlan)))
+		if (focusedButtonSized(EditorFocusTarget.Plan, viewLeft + 104.0, toolbarTop, 96.0, 38.0, uiCatalog.text(locale, UiMessage.EditorPlan)))
 			setWorkspaceView(PlanView);
+		if (focusedButtonSized(EditorFocusTarget.Text, viewLeft + 208.0, toolbarTop, 96.0, 38.0, uiCatalog.text(locale, UiMessage.EditorText)))
+			openTextWorkspace();
 		final toolbarCamera = camera;
 		if (toolbarCamera != null
-			&& focusedButtonSized(EditorFocusTarget.CameraMode, viewLeft + 216.0, toolbarTop, 156.0, 38.0,
+			&& focusedButtonSized(EditorFocusTarget.CameraMode, viewLeft + 312.0, toolbarTop, 142.0, 38.0,
 				cameraControlText(locale, cameraMode(toolbarCamera))))
 			cycleEditorCamera();
-		drawActiveControl(workspaceView == BuildView, Std.int(viewLeft), Std.int(toolbarTop), 100, 38);
-		drawActiveControl(workspaceView == PlanView, Std.int(viewLeft + 108.0), Std.int(toolbarTop), 100, 38);
+		drawActiveControl(workspaceView == BuildView, Std.int(viewLeft), Std.int(toolbarTop), 96, 38);
+		drawActiveControl(workspaceView == PlanView, Std.int(viewLeft + 104.0), Std.int(toolbarTop), 96, 38);
 
 		final playWidth = 136.0;
 		final playLeft = width - playWidth - 32.0;
@@ -870,6 +925,320 @@ final class CaxecraftEditorScreen {
 			uiCatalog.text(locale, UiMessage.EditorAssetClose))
 			.has(GuiResult.Pressed))
 			closeAssetBrowser();
+	}
+
+	/**
+		Draw the complete copied CAXEMAP draft without making it a second model.
+
+		Rows are read-only navigation targets. The selected row uses the same owned
+		Raygui UTF-8 buffer as other native fields. Apply is the only operation that
+		can cross into `EditorSession`, and it does so through `ApplyText`.
+	**/
+	function drawTextWorkspace(locale:LocaleCursor, width:Int, height:Int):Void {
+		final document = textDocument;
+		if (document == null) {
+			closeTextWorkspace();
+			return;
+		}
+		final panelLeft = 24;
+		final panelTop = 24;
+		final panelWidth = width - 48;
+		final panelHeight = height - 48;
+		Raygui.PanelString(Rectangle.fromFloat(panelLeft, panelTop, panelWidth, panelHeight), uiCatalog.text(locale, UiMessage.EditorTextTitle));
+		Raylib.DrawTextString(uiCatalog.text(locale, UiMessage.EditorTextHelp), panelLeft + 20, panelTop + 38, 14, Color.rgba(126, 205, 209));
+
+		final buttonTop = panelTop + 64;
+		if (Raygui.ButtonString(Rectangle.fromFloat(panelLeft + 20, buttonTop, 154, 32), uiCatalog.text(locale, UiMessage.EditorTextApply))
+			.has(GuiResult.Pressed))
+			applyTextWorkspace();
+		if (Raygui.ButtonString(Rectangle.fromFloat(panelLeft + 184, buttonTop, 154, 32), uiCatalog.text(locale, UiMessage.EditorTextReset))
+			.has(GuiResult.Pressed))
+			resetTextWorkspace();
+		if (Raygui.ButtonString(Rectangle.fromFloat(panelLeft + 348, buttonTop, 126, 32), uiCatalog.text(locale, UiMessage.EditorTextAddLine))
+			.has(GuiResult.Pressed))
+			insertTextLine();
+		if (Raygui.ButtonString(Rectangle.fromFloat(panelLeft + 484, buttonTop, 142, 32), uiCatalog.text(locale, UiMessage.EditorTextDeleteLine))
+			.has(GuiResult.Pressed))
+			removeTextLine();
+		if (Raygui.ButtonString(Rectangle.fromFloat(panelLeft + panelWidth - 126, buttonTop, 106, 32), uiCatalog.text(locale, UiMessage.EditorTextClose))
+			.has(GuiResult.Pressed))
+			closeTextWorkspace();
+		if (!textWorkspaceOpen)
+			return;
+
+		final sourceTop = panelTop + 108;
+		final editorTop = panelTop + panelHeight - 112;
+		final sourceBottom = editorTop - 12;
+		final rowHeight = 24;
+		final visibleRows = Std.int((sourceBottom - sourceTop) / rowHeight);
+		ensureTextLineVisible(visibleRows);
+		final wheel = Raylib.GetMouseWheelMove().toFloat();
+		if (wheel > 0.0)
+			textScrollLine -= 3;
+		else if (wheel < 0.0)
+			textScrollLine += 3;
+		clampTextScroll(visibleRows);
+		Raylib.BeginScissorMode(panelLeft + 16, sourceTop, panelWidth - 32, sourceBottom - sourceTop);
+		final last = textScrollLine + visibleRows < document.lineCount() ? textScrollLine + visibleRows : document.lineCount();
+		for (lineIndex in textScrollLine...last) {
+			final rowTop = sourceTop + (lineIndex - textScrollLine) * rowHeight;
+			final diagnostic = textLineHasDiagnostic(lineIndex);
+			if (lineIndex == textSelectedLine)
+				Raylib.DrawRectangle(panelLeft + 16, rowTop, panelWidth - 32, rowHeight - 1, Color.rgba(27, 56, 65));
+			else if (diagnostic)
+				Raylib.DrawRectangle(panelLeft + 16, rowTop, panelWidth - 32, rowHeight - 1, Color.rgba(71, 35, 24));
+			if (Raygui.ButtonString(Rectangle.fromFloat(panelLeft + 16, rowTop, panelWidth - 32, rowHeight - 1), "").has(GuiResult.Pressed))
+				selectTextLine(lineIndex);
+			Raylib.DrawTextString('${lineIndex + 1}', panelLeft + 24, rowTop + 5, 13, diagnostic ? Color.rgba(255, 154, 112) : Color.rgba(100, 143, 151));
+			final line = document.lineAt(lineIndex);
+			final visible = line == null ? "" : visibleTextLine(line);
+			Raylib.DrawTextString(visible, panelLeft + 82, rowTop + 5, 13, textLineColor(visible));
+		}
+		Raylib.EndScissorMode();
+
+		final lineEditor = textLineEditor;
+		if (lineEditor != null) {
+			Raylib.DrawTextString('${textSelectedLine + 1}', panelLeft + 20, editorTop + 9, 14, Color.rgba(126, 205, 209));
+			final result = lineEditor.draw(Rectangle.fromFloat(panelLeft + 68, editorTop, panelWidth - 88, 34));
+			if (result.has(GuiResult.Pressed) && !lineEditor.isEditing())
+				commitTextLine();
+		}
+		final statusTop = editorTop + 44;
+		final statusMessage = switch textNotice {
+			case TextClean: UiMessage.EditorTextClean;
+			case TextDirty: UiMessage.EditorTextDirty;
+			case TextInvalid: UiMessage.EditorTextInvalid;
+			case TextStale: UiMessage.EditorTextStale;
+		};
+		final statusColor = textNotice == TextInvalid || textNotice == TextStale ? Color.rgba(255, 154, 112) : CaxecraftPalette.hudText();
+		Raylib.DrawTextString(uiCatalog.text(locale, statusMessage), panelLeft + 20, statusTop, 14, statusColor);
+		if (textDiagnostics.length > 0) {
+			final diagnostic = scenarioDiagnosticMessage(textDiagnostics[0]);
+			Raylib.DrawTextString(visibleTextLine(uiCatalog.format(locale, diagnostic.message, diagnostic.arguments)), panelLeft + 20, statusTop + 24, 13,
+				Color.rgba(255, 190, 132));
+		}
+	}
+
+	/** Open a retained source draft, refreshing clean source after visual edits. */
+	function openTextWorkspace():Void {
+		final current = session;
+		if (current == null)
+			return;
+		final retained = textDocument;
+		if (retained == null || (!retained.isDirty() && textBaseRevision != current.revision()))
+			resetTextWorkspace();
+		else if (textBaseRevision != current.revision())
+			textNotice = TextStale;
+		textWorkspaceOpen = textDocument != null;
+		assetBrowserOpen = false;
+		environmentPanelOpen = false;
+		flowCardLibraryTarget = NoFlowCardPanel;
+		flowDocumentPickMode = NoFlowDocumentPanel;
+		setBuildPointerState(nextPointerState(buildPointerState, false, Raylib.IsWindowFocused(), false, false));
+		focusedControl = EditorFocusTarget.Text;
+	}
+
+	/** Keep unapplied invalid source in memory while returning to visual editing. */
+	function closeTextWorkspace():Void {
+		commitTextLine();
+		final lineEditor = textLineEditor;
+		if (lineEditor != null)
+			lineEditor.setEditing(false);
+		textWorkspaceOpen = false;
+		focusedControl = EditorFocusTarget.Text;
+	}
+
+	/** Discard source-only edits and copy the current canonical visual draft. */
+	function resetTextWorkspace():Bool {
+		final current = session;
+		if (current == null)
+			return false;
+		return switch EditorTextDocument.open(current.canonicalDraft()) {
+			case TextDocumentOpenRejected(_):
+				textNotice = TextInvalid;
+				false;
+			case TextDocumentOpened(document):
+				textDocument = document;
+				textBaseRevision = current.revision();
+				textDiagnostics = [];
+				textNotice = TextClean;
+				textSelectedLine = textSelectedLine < document.lineCount() ? textSelectedLine : document.lineCount() - 1;
+				if (textSelectedLine < 0)
+					textSelectedLine = 0;
+				textScrollLine = 0;
+				syncTextLineEditor();
+				true;
+		}
+	}
+
+	/** Publish valid source as one canonical whole-document session mutation. */
+	function applyTextWorkspace():Bool {
+		final current = session;
+		final document = textDocument;
+		if (current == null || document == null)
+			return false;
+		commitTextLine();
+		return switch current.mutate({baseRevision: textBaseRevision, mutation: ApplyText(document.snapshot())}) {
+			case MutationApplied(_, _, _, _, _, _) | MutationUnchanged(_, _):
+				notice = Ready;
+				refreshProjection(false, RefreshAllTerrain);
+				resetTextWorkspace();
+			case MutationRejected(RevisionConflict(_, _), _):
+				textDiagnostics = [];
+				textNotice = TextStale;
+				notice = Invalid;
+				false;
+			case MutationRejected(SnapshotRejected(diagnostics), _):
+				textDiagnostics = diagnostics.copy();
+				textNotice = TextInvalid;
+				notice = Invalid;
+				if (diagnostics.length > 0)
+					selectTextLine(diagnostics[0].coordinate.line - 1);
+				false;
+			case MutationRejected(_, _):
+				textDiagnostics = [];
+				textNotice = TextInvalid;
+				notice = Invalid;
+				false;
+		}
+	}
+
+	/** Commit the selected native edit buffer into the isolated source owner. */
+	function commitTextLine():Bool {
+		final document = textDocument;
+		final lineEditor = textLineEditor;
+		if (document == null || lineEditor == null)
+			return false;
+		return switch document.replaceLine(textSelectedLine, lineEditor.text()) {
+			case TextEditApplied:
+				textDiagnostics = [];
+				textNotice = textBaseRevision == currentSessionRevision() ? TextDirty : TextStale;
+				true;
+			case TextEditUnchanged:
+				true;
+			case TextEditRejected(_):
+				textNotice = TextInvalid;
+				false;
+		}
+	}
+
+	/** Insert one blank source line and move editing focus to it. */
+	function insertTextLine():Void {
+		final document = textDocument;
+		if (document == null || !commitTextLine())
+			return;
+		switch document.insertLineAfter(textSelectedLine) {
+			case TextEditApplied:
+				textSelectedLine++;
+				textNotice = textBaseRevision == currentSessionRevision() ? TextDirty : TextStale;
+				syncTextLineEditor();
+				final editor = textLineEditor;
+				if (editor != null)
+					editor.setEditing(true);
+			case TextEditUnchanged:
+			case TextEditRejected(_):
+				textNotice = TextInvalid;
+		}
+	}
+
+	/** Remove one line and keep selection inside the remaining source. */
+	function removeTextLine():Void {
+		final document = textDocument;
+		if (document == null || !commitTextLine())
+			return;
+		switch document.removeLine(textSelectedLine) {
+			case TextEditApplied:
+				if (textSelectedLine >= document.lineCount())
+					textSelectedLine = document.lineCount() - 1;
+				textNotice = textBaseRevision == currentSessionRevision() ? TextDirty : TextStale;
+				syncTextLineEditor();
+			case TextEditUnchanged:
+			case TextEditRejected(_):
+				textNotice = TextInvalid;
+		}
+	}
+
+	/** Select one source row after preserving edits in the old row. */
+	function selectTextLine(index:Int):Void {
+		final document = textDocument;
+		if (document == null || index < 0 || index >= document.lineCount())
+			return;
+		if (index != textSelectedLine && !commitTextLine())
+			return;
+		textSelectedLine = index;
+		syncTextLineEditor();
+	}
+
+	/** Copy the selected line into the fixed native UTF-8 edit buffer. */
+	function syncTextLineEditor():Void {
+		final document = textDocument;
+		final lineEditor = textLineEditor;
+		if (document == null || lineEditor == null)
+			return;
+		final line = document.lineAt(textSelectedLine);
+		lineEditor.setEditing(false);
+		if (!lineEditor.replace(line == null ? "" : line))
+			textNotice = TextInvalid;
+	}
+
+	/** Keep the selected line inside one bounded visible source window. */
+	function ensureTextLineVisible(visibleRows:Int):Void {
+		if (textSelectedLine < textScrollLine)
+			textScrollLine = textSelectedLine;
+		else if (textSelectedLine >= textScrollLine + visibleRows)
+			textScrollLine = textSelectedLine - visibleRows + 1;
+		clampTextScroll(visibleRows);
+	}
+
+	/** Clamp wheel and selection scrolling to the copied document. */
+	function clampTextScroll(visibleRows:Int):Void {
+		final document = textDocument;
+		if (document == null) {
+			textScrollLine = 0;
+			return;
+		}
+		final maximum = document.lineCount() > visibleRows ? document.lineCount() - visibleRows : 0;
+		if (textScrollLine < 0)
+			textScrollLine = 0;
+		else if (textScrollLine > maximum)
+			textScrollLine = maximum;
+	}
+
+	/** True when any current parser or validator diagnostic points at this row. */
+	function textLineHasDiagnostic(index:Int):Bool {
+		for (diagnostic in textDiagnostics)
+			if (diagnostic.coordinate.line - 1 == index)
+				return true;
+		return false;
+	}
+
+	/** Draw a bounded preview; the full selected line remains in the edit box. */
+	static function visibleTextLine(value:String):String
+		return value.length <= 150 ? value : value.substring(0, 147) + "...";
+
+	/** Use a small stable syntax palette without maintaining a grammar duplicate. */
+	static function textLineColor(value:String):Color {
+		var index = 0;
+		while (index < value.length && value.charCodeAt(index) == 32)
+			index++;
+		final token = index < value.length ? value.substring(index) : "";
+		if (StringTools.startsWith(token, "#"))
+			return Color.rgba(100, 143, 151);
+		if (StringTools.startsWith(token, "rule ")
+			|| StringTools.startsWith(token, "sequence ")
+			|| StringTools.startsWith(token, "variable "))
+			return Color.rgba(210, 105, 230);
+		if (StringTools.startsWith(token, "when ") || StringTools.startsWith(token, "if "))
+			return Color.rgba(84, 191, 205);
+		if (StringTools.startsWith(token, "do ") || StringTools.startsWith(token, "choice "))
+			return Color.rgba(111, 174, 91);
+		return CaxecraftPalette.hudText();
+	}
+
+	/** Current revision without leaking the mutable session into text helpers. */
+	function currentSessionRevision():Int {
+		final current = session;
+		return current == null ? -1 : current.revision();
 	}
 
 	/** Give every category a stable shape and color without duplicating asset art. */
@@ -1512,6 +1881,27 @@ final class CaxecraftEditorScreen {
 	 * action in the same frame.
 	 */
 	function readKeyboardNavigation():NavigationCommand {
+		if (textWorkspaceOpen) {
+			final lineEditor = textLineEditor;
+			if (lineEditor != null && lineEditor.isEditing()) {
+				if (Raylib.IsKeyPressed(KeyboardKey.Enter)
+					|| Raylib.IsKeyPressed(KeyboardKey.Escape)
+					|| Raylib.IsKeyPressed(KeyboardKey.Tab)) {
+					lineEditor.setEditing(false);
+					commitTextLine();
+				}
+				return NavigationCommand.None;
+			}
+			if (Raylib.IsKeyPressed(KeyboardKey.Up))
+				return NavigationCommand.Up;
+			if (Raylib.IsKeyPressed(KeyboardKey.Down))
+				return NavigationCommand.Down;
+			if (Raylib.IsKeyPressed(KeyboardKey.Escape))
+				return NavigationCommand.Cancel;
+			if (Raylib.IsKeyPressed(KeyboardKey.Enter) || Raylib.IsKeyPressed(KeyboardKey.Space))
+				return NavigationCommand.Confirm;
+			return NavigationCommand.None;
+		}
 		if (assetBrowserOpen) {
 			final search = assetSearch;
 			if (search != null && search.isEditing()) {
@@ -1591,6 +1981,10 @@ final class CaxecraftEditorScreen {
 	 * Keyboard, controller, and pilot commands all enter this one handler.
 	 */
 	public function applyNavigation(command:NavigationCommand):EditorScreenAction {
+		if (textWorkspaceOpen) {
+			applyTextNavigation(command);
+			return StayInEditor;
+		}
 		if (assetBrowserOpen) {
 			applyAssetBrowserNavigation(command);
 			return StayInEditor;
@@ -1658,6 +2052,26 @@ final class CaxecraftEditorScreen {
 		return StayInEditor;
 	}
 
+	/** Route keyboard, controller, and pilot movement inside the Text workspace. */
+	function applyTextNavigation(command:NavigationCommand):Void {
+		final document = textDocument;
+		if (document == null)
+			return;
+		switch command {
+			case Up | Left:
+				selectTextLine(textSelectedLine > 0 ? textSelectedLine - 1 : document.lineCount() - 1);
+			case Down | Right:
+				selectTextLine(textSelectedLine + 1 < document.lineCount() ? textSelectedLine + 1 : 0);
+			case Confirm:
+				final editor = textLineEditor;
+				if (editor != null)
+					editor.setEditing(true);
+			case Cancel:
+				closeTextWorkspace();
+			case None:
+		}
+	}
+
 	/** Draw a two-line high-contrast ring around the current semantic target. */
 	function drawFocusRing(target:EditorFocusTarget, x:Int, y:Int, width:Int, height:Int):Void {
 		if (focusedControl != target)
@@ -1693,6 +2107,8 @@ final class CaxecraftEditorScreen {
 				setWorkspaceView(BuildView);
 			case Plan:
 				setWorkspaceView(PlanView);
+			case Text:
+				openTextWorkspace();
 			case CameraMode:
 				cycleEditorCamera();
 			case PreviousLayer:
@@ -1774,6 +2190,10 @@ final class CaxecraftEditorScreen {
 
 	/** Close the nearest presentation layer before offering to leave the draft. */
 	function cancelEditorAction():EditorScreenAction {
+		if (textWorkspaceOpen) {
+			closeTextWorkspace();
+			return StayInEditor;
+		}
 		if (assetBrowserOpen) {
 			closeAssetBrowser();
 			return StayInEditor;
@@ -1883,6 +2303,8 @@ final class CaxecraftEditorScreen {
 
 	/** Open asset discovery and release the mouse from direct world control. */
 	function openAssetBrowser():Void {
+		if (textWorkspaceOpen)
+			closeTextWorkspace();
 		setBuildPointerState(EditorBuildPointerState.Released);
 		assetBrowserOpen = true;
 		focusedControl = EditorFocusTarget.CatalogObjectTool;
@@ -2077,6 +2499,8 @@ final class CaxecraftEditorScreen {
 
 	/** Open the environment modal at its explicit enabled control. */
 	function openEnvironmentPanel():Void {
+		if (textWorkspaceOpen)
+			closeTextWorkspace();
 		setBuildPointerState(EditorBuildPointerState.Released);
 		environmentPanelOpen = true;
 		environmentControl = firstEnvironmentControl();
@@ -3599,6 +4023,70 @@ final class CaxecraftEditorScreen {
 		return commitWorldName(name.text());
 	}
 
+	/**
+	 * Exercise valid and invalid source through the production Text workspace.
+	 *
+	 * The pilot bypasses only operating-system key delivery. It selects real
+	 * source rows, writes the owned Raygui line buffer, and uses the same Apply
+	 * boundary as a creator. The valid title must publish once. The malformed
+	 * closing record must then remain visible without changing playable state.
+	 */
+	public function applyPilotTextAuthoring():Bool {
+		final current = session;
+		final lineEditor = textLineEditor;
+		if (current == null || lineEditor == null)
+			return false;
+		openTextWorkspace();
+		var document = textDocument;
+		if (document == null)
+			return false;
+		final titleLine = pilotTextLineStartingWith(document, "title ");
+		if (titleLine < 0)
+			return false;
+		selectTextLine(titleLine);
+		if (!lineEditor.replace('title literal "Pilot text workspace"'))
+			return false;
+		lineEditor.setEditing(false);
+		if (!commitTextLine() || !applyTextWorkspace())
+			return false;
+		final accepted = current.canonicalDraft();
+		if (accepted.toString().indexOf('title literal "Pilot text workspace"') < 0)
+			return false;
+
+		document = textDocument;
+		if (document == null)
+			return false;
+		final endLine = pilotTextLineStartingWith(document, "end-map");
+		if (endLine < 0)
+			return false;
+		final beforeRevision = current.revision();
+		final beforeIdentity = current.stateIdentity();
+		selectTextLine(endLine);
+		if (!lineEditor.replace("end-map broken"))
+			return false;
+		lineEditor.setEditing(false);
+		if (!commitTextLine() || applyTextWorkspace())
+			return false;
+		return textWorkspaceOpen
+			&& document.isDirty()
+			&& document.lineAt(endLine) == "end-map broken"
+			&& textNotice == TextInvalid
+			&& textDiagnostics.length > 0
+			&& current.canonicalDraft().compare(accepted) == 0
+			&& current.revision() == beforeRevision
+			&& current.stateIdentity() == beforeIdentity;
+	}
+
+	/** Find one canonical source row without duplicating CAXEMAP grammar rules. */
+	static function pilotTextLineStartingWith(document:EditorTextDocument, prefix:String):Int {
+		for (index in 0...document.lineCount()) {
+			final line = document.lineAt(index);
+			if (line != null && StringTools.startsWith(line, prefix))
+				return index;
+		}
+		return -1;
+	}
+
 	/** Publish pilot edits through the same package save action as the toolbar. */
 	public function applyPilotSave():Bool
 		return requestSave();
@@ -3608,7 +4096,7 @@ final class CaxecraftEditorScreen {
 	 *
 	 * The native pilot uses this narrow seam instead of synthesizing a mouse
 	 * click. It still runs the production layer-selection path and checks the
-	 * complete document and history observations on both sides.
+	 * canonical document, revision, undo/redo depth, and dirty state on both sides.
 	 */
 	public function applyPilotLayer(layerY:Int):Bool {
 		final current = session;
@@ -3619,8 +4107,6 @@ final class CaxecraftEditorScreen {
 		final beforeCanonical = current.canonicalDraft();
 		final beforeUndoDepth = current.undoDepth();
 		final beforeRedoDepth = current.redoDepth();
-		final beforeHistoryEntries = current.historyEntries();
-		final beforeHistoryBytes = current.historyBytes();
 		final beforeDirty = isDirty();
 		return selectEditLayer(layerY)
 			&& editLayerY == layerY
@@ -3629,8 +4115,6 @@ final class CaxecraftEditorScreen {
 			&& current.canonicalDraft().compare(beforeCanonical) == 0
 			&& current.undoDepth() == beforeUndoDepth
 			&& current.redoDepth() == beforeRedoDepth
-			&& current.historyEntries() == beforeHistoryEntries
-			&& current.historyBytes() == beforeHistoryBytes
 			&& isDirty() == beforeDirty;
 	}
 

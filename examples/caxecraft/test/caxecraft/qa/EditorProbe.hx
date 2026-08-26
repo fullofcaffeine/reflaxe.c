@@ -88,6 +88,9 @@ import caxecraft.editor.EditorTerrainRefresh.forBatch as terrainRefreshForBatch;
 import caxecraft.editor.EditorTerrainRefresh.forCommand as terrainRefreshForCommand;
 import caxecraft.editor.EditorTerrainRefresh.forTerrainChange as terrainRefreshForTerrainChange;
 import caxecraft.editor.EditorSession;
+import caxecraft.editor.EditorTextAuthoring.EditorTextDocument;
+import caxecraft.editor.EditorTextAuthoring.EditorTextDocumentOpenResult;
+import caxecraft.editor.EditorTextAuthoring.EditorTextEditResult;
 import caxecraft.editor.EditorTypes.EditorCommand;
 import caxecraft.editor.EditorTypes.EditorCommandFamily;
 import caxecraft.editor.EditorTypes.EditorChangeId;
@@ -236,6 +239,7 @@ final class EditorProbe {
 		checkLocalizedScenarioDiagnostics();
 		final activeLevelChecks = checkActiveLevelProjection();
 		checkEnvironmentTextRoundTrip();
+		final textChecks = checkAdvancedTextAuthoring();
 		checkObjectMovement();
 		checkObjectRotation();
 		checkObjectRename();
@@ -318,8 +322,183 @@ final class EditorProbe {
 		checkImmediateRejections(session);
 
 		final finalBytes = expectValid(session, "final recovered scenario");
-		final trace = hash(finalBytes) ^ (commandChecks * 65537) ^ (protocolChecks * 8191) ^ (focusChecks * 2053) ^ (navigationChecks * 1031) ^ (buildControlChecks * 521) ^ (viewportChecks * 4099) ^ (worldViewportChecks * 257) ^ (runtimeTerrainChecks * 67) ^ (activeLevelChecks * 131) ^ session.historyEntries();
-		Sys.println('caxemap-editor: $commandChecks command round trips, $protocolChecks protocol checks, $focusChecks focus checks, $navigationChecks navigation checks, $buildControlChecks Build-control checks, $viewportChecks 2D checks, $worldViewportChecks 3D checks, $runtimeTerrainChecks runtime-terrain checks, $activeLevelChecks active-level checks, ${finalBytes.length} canonical bytes; bounded history/test-play/recovery; trace=$trace');
+		final trace = hash(finalBytes) ^ (commandChecks * 65537) ^ (protocolChecks * 8191) ^ (focusChecks * 2053) ^ (navigationChecks * 1031) ^ (buildControlChecks * 521) ^ (viewportChecks * 4099) ^ (worldViewportChecks * 257) ^ (runtimeTerrainChecks * 67) ^ (activeLevelChecks * 131) ^ (textChecks * 97) ^ session.historyEntries();
+		Sys.println('caxemap-editor: $commandChecks command round trips, $protocolChecks protocol checks, $focusChecks focus checks, $navigationChecks navigation checks, $buildControlChecks Build-control checks, $viewportChecks 2D checks, $worldViewportChecks 3D checks, $runtimeTerrainChecks runtime-terrain checks, $activeLevelChecks active-level checks, $textChecks advanced-text checks, ${finalBytes.length} canonical bytes; bounded history/test-play/recovery; trace=$trace');
+	}
+
+	/**
+		Prove invalid source isolation and one lossless typed text/card round trip.
+
+		The advanced scenario deliberately includes nested predicates, variables,
+		sequences, a fixed-tick delay, a signal, and seeded choices. Text Apply must
+		preserve all of them through canonical bytes and the visual projection.
+	**/
+	static function checkAdvancedTextAuthoring():Int {
+		final seed = id("text.seed");
+		final ready = id("text.ready");
+		final sequenceId = id("text.sequence");
+		final signal = content("caxecraft:coverage-signal");
+		final base = baseScenario();
+		final extensionFeature = content("caxecraft:text-extension");
+		final optionalFeatures = base.optionalFeatures.copy();
+		optionalFeatures.push(extensionFeature);
+		final advanced:Scenario = {
+			formatVersion: base.formatVersion,
+			requiredFeatures: base.requiredFeatures,
+			optionalFeatures: optionalFeatures,
+			id: base.id,
+			assetPack: base.assetPack,
+			messages: base.messages,
+			title: Literal("Advanced source"),
+			mode: base.mode,
+			environment: base.environment,
+			world: base.world,
+			objects: base.objects,
+			story: base.story,
+			flow: {
+				variables: [
+					{id: ready, scope: Map, initial: Flag(false)},
+					{id: seed, scope: Player, initial: Counter(3)}
+				],
+				sequences: [
+					{
+						id: sequenceId,
+						parameters: [{id: id("text.enabled"), initial: Flag(true)}],
+						actions: [EmitSignal(signal)]
+					}
+				],
+				rules: [
+					{
+						id: id("text.rule"),
+						priority: 7,
+						repeat: Cooldown(2),
+						event: Interact(PLAYER),
+						predicate: All([FlagIs(ready, false), Not(ModeIs(Adventure))]),
+						actions: [
+							SetFlag(ready, true),
+							Schedule(id("text.timer"), 3, sequenceId, [Value(Flag(true))]),
+							ChooseSeeded(seed, [
+								{
+									weight: 1,
+									actions: [EmitSignal(signal)]
+								},
+								{weight: 2, actions: [SetFlag(ready, false)]}
+							])
+						]
+					}
+				]
+			},
+			extensions: [{feature: extensionFeature, id: id("text.extension"), data: "advanced=true"}]
+		};
+		final expected = ScenarioWriter.write(advanced);
+		final sourceDocument = openTextDocument(expected);
+		expectTextEdit(sourceDocument.insertLineAfter(0, "# retained until successful Apply"), "insert text comment");
+		final destination = open(defaultEditorSettings());
+		expectSelection(destination, NodeSelection(ObjectNode(PLAYER)), "select before Text Apply");
+		final revision = destination.revision();
+		final history = destination.historyEntries();
+		switch destination.mutate({baseRevision: revision, mutation: ApplyText(sourceDocument.snapshot())}) {
+			case MutationApplied(families, changes, TerrainChanged, nextRevision, undoDepth, redoDepth):
+				require(families.length == 1 && families[0] == Text, "Text Apply reported the wrong history family");
+				require(changes.length == 1, "Text Apply did not report one whole-document change");
+				switch changes[0] {
+					case ChangedDocument:
+					case _: throw "Text Apply reported a partial semantic change";
+				}
+				require(nextRevision == revision + 1 && undoDepth == 1 && redoDepth == 0, "Text Apply did not publish exactly one revision and history entry");
+			case other:
+				throw 'valid advanced Text Apply failed: $other';
+		}
+		require(destination.canonicalDraft().compare(expected) == 0, "Text Apply retained comments or changed canonical advanced source");
+		require(destination.historyEntries() == history + 1, "Text Apply recorded more than one history entry");
+		switch destination.query(InspectPresentationDetails) {
+			case PresentationDetailsObserved(_, presentation):
+				require(presentation.flowRuleCount == 1 && presentation.flowRules.length == 1, "visual cards did not reopen the text-authored rule");
+				require(presentation.flowRules[0].nestedCards.length >= 4, "visual cards hid nested text-authored predicates or choices");
+			case _:
+				throw "Text Apply returned the wrong visual projection";
+		}
+		expectHistory(destination.undo(), Text, "undo Text Apply");
+		require(destination.canonicalDraft().compare(expected) != 0, "Text undo retained the replacement document");
+		expectHistory(destination.redo(), Text, "redo Text Apply");
+		require(destination.canonicalDraft().compare(expected) == 0, "Text redo did not restore exact canonical source");
+		requireTestStarted(destination.enterTestPlay(), "text-authored Test Play");
+		require(destination.leaveTestPlay(), "text-authored Test Play did not return to the draft");
+
+		final invalid = openTextDocument(destination.canonicalDraft());
+		expectTextEdit(invalid.removeLine(invalid.lineCount() - 1), "remove end-map");
+		final beforeRejected = destination.canonicalDraft();
+		final beforeRejectedRevision = destination.revision();
+		final beforeRejectedHistory = destination.historyEntries();
+		final beforeRejectedSelection = selectionKey(destination);
+		final beforeRejectedPlayable = destination.lastPlayableSnapshot();
+		require(beforeRejectedPlayable != null, "Text rejection fixture lost its playable snapshot");
+		final beforeRejectedPlayableBytes = ScenarioWriter.write(beforeRejectedPlayable);
+		switch destination.mutate({baseRevision: beforeRejectedRevision, mutation: ApplyText(invalid.snapshot())}) {
+			case MutationRejected(SnapshotRejected(diagnostics), actual):
+				require(actual == beforeRejectedRevision && diagnostics.length > 0, "invalid Text Apply lost its source diagnostic");
+			case other:
+				throw 'incomplete Text Apply did not fail closed: $other';
+		}
+		final afterRejectedPlayable = destination.lastPlayableSnapshot();
+		require(afterRejectedPlayable != null
+			&& ScenarioWriter.write(afterRejectedPlayable).compare(beforeRejectedPlayableBytes) == 0
+			&& destination.canonicalDraft().compare(beforeRejected) == 0
+			&& destination.revision() == beforeRejectedRevision
+			&& destination.historyEntries() == beforeRejectedHistory
+			&& selectionKey(destination) == beforeRejectedSelection,
+			"invalid Text Apply changed the typed draft, history, selection, or recovery state");
+		require(invalid.isDirty() && invalid.snapshot().compare(beforeRejected) != 0, "invalid source was not retained for repair");
+
+		final malformed = Bytes.alloc(1);
+		malformed.set(0, 255);
+		switch destination.mutate({baseRevision: destination.revision(), mutation: ApplyText(malformed)}) {
+			case MutationRejected(SnapshotRejected(diagnostics), _):
+				require(diagnostics.length == 1, "malformed Text Apply returned the wrong diagnostic count");
+			case other:
+				throw 'malformed Text Apply did not fail closed: $other';
+		}
+
+		final staleSource = destination.canonicalDraft();
+		final staleRevision = destination.revision();
+		expectApplied(destination.apply(SetTitle(Literal("newer visual edit"))), DocumentMetadata, "prepare stale Text Apply");
+		switch destination.mutate({baseRevision: staleRevision, mutation: ApplyText(staleSource)}) {
+			case MutationRejected(RevisionConflict(expectedRevision, actualRevision), _):
+				require(expectedRevision == destination.revision()
+					&& actualRevision == staleRevision, "stale Text Apply reported the wrong revisions");
+			case other:
+				throw 'stale Text Apply was not rejected before parsing: $other';
+		}
+
+		final oversized = new StringBuf();
+		for (_ in 0...EditorTextDocument.MAX_LINE_BYTES + 1)
+			oversized.add("x");
+		switch invalid.replaceLine(0, oversized.toString()) {
+			case TextEditRejected(LineTooLarge(bytes, maximum)):
+				require(bytes == maximum + 1, "oversized text line reported the wrong byte bound");
+			case other:
+				throw 'oversized text line was accepted: $other';
+		}
+		return 18;
+	}
+
+	/** Open one text draft or fail the focused acceptance probe. */
+	static function openTextDocument(source:Bytes):EditorTextDocument {
+		return switch EditorTextDocument.open(source) {
+			case TextDocumentOpened(document): document;
+			case TextDocumentOpenRejected(error): throw 'text document did not open: $error';
+		};
+	}
+
+	/** Require one source-line mutation without depending on enum equality. */
+	static function expectTextEdit(result:EditorTextEditResult, label:String):Void {
+		switch result {
+			case TextEditApplied:
+			case TextEditUnchanged:
+				throw '$label changed no source';
+			case TextEditRejected(error):
+				throw '$label was rejected: $error';
+		}
 	}
 
 	/** Prove that a valid editor draft becomes the gameplay renderer's fixed layout. */
@@ -1445,6 +1624,7 @@ final class EditorProbe {
 			EditorFocusTarget.Redo,
 			EditorFocusTarget.Build,
 			EditorFocusTarget.Plan,
+			EditorFocusTarget.Text,
 			EditorFocusTarget.CameraMode,
 			EditorFocusTarget.PreviousLayer,
 			EditorFocusTarget.NextLayer,
@@ -1474,6 +1654,7 @@ final class EditorProbe {
 			EditorFocusTarget.NextLayer,
 			EditorFocusTarget.PreviousLayer,
 			EditorFocusTarget.CameraMode,
+			EditorFocusTarget.Text,
 			EditorFocusTarget.Plan,
 			EditorFocusTarget.Build,
 			EditorFocusTarget.Redo,
@@ -4251,7 +4432,7 @@ private final class Registry implements ScenarioContentRegistry {
 		return id.text() == "caxecraft:spark";
 
 	public function hasSignal(id:ContentId):Bool
-		return false;
+		return id.text() == "caxecraft:coverage-signal";
 
 	public function maximumItemQuantity(id:ContentId):Int
 		return 64;

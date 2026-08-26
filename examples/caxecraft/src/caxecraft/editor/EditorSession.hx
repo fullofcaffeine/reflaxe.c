@@ -213,8 +213,41 @@ final class EditorSession {
 		return switch request.mutation {
 			case Apply(command): mutationFromEdit(apply(command));
 			case ApplyBatch(commands): applyBatch(commands);
+			case ApplyText(source): applyText(source);
 			case Undo: mutationFromHistory(undo());
 			case Redo: mutationFromHistory(redo());
+		}
+	}
+
+	/**
+		Apply one complete advanced-text draft through the public scenario gates.
+
+		Parsing and semantic validation finish before history or session state can
+		change. The accepted typed scenario is then written canonically and recorded
+		as one whole-document edit. This keeps raw invalid text in its UI owner while
+		making successful text, card, Save, Test Play, and automation views identical.
+	**/
+	function applyText(source:Bytes):EditorMutationResult {
+		if (playState != null)
+			return MutationRejected(NotEditing, currentRevision);
+		return switch restoreScenario(source) {
+			case ImageRejected(error): MutationRejected(error, currentRevision);
+			case ImageReady(candidate):
+				switch validateImage(candidate) {
+					case ImageInvalid(diagnostics): MutationRejected(SnapshotRejected(diagnostics.copy()), currentRevision);
+					case ImageUnreadable(error): MutationRejected(error, currentRevision);
+					case ImagePlayable(scenario):
+						switch captureScenario(scenario) {
+							case ImageRejected(error): MutationRejected(error, currentRevision);
+							case ImageReady(after):
+								final result = accept(draftImage, after, Text, [ChangedDocument], {undo: TerrainChanged, redo: TerrainChanged});
+								switch result {
+									case EditApplied(_, _, _, _, _): lastPlayable = cloneScenario(after.scenario);
+									case EditUnchanged(_) | EditRejected(_):
+								}
+								mutationFromEdit(result);
+						}
+				}
 		}
 	}
 

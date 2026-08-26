@@ -1089,11 +1089,12 @@ npm run test:caxecraft-editor
 It creates a complete small map through public typed commands and proves exact
 undo/redo, bounded history and gestures, canonical in-memory reload,
 last-playable recovery, disposable test play, complete-volume projection,
-bounded Walk/Fly/Orbit camera steps, solid and empty-space ray picking, the optional
-top-down projection, direct Build capture/release rules, numbered tool slots,
-and Select/Paint/Erase/Fill translation under C and a second installed locale
-(Spanish when available). The reusable editor package imports no Raylib or C
-target API.
+bounded Walk/Fly/Orbit camera steps, solid and empty-space ray picking, the
+optional top-down projection, direct Build capture/release rules, numbered tool
+slots, and Select/Paint/Erase/Fill translation. It also proves complete Text
+round trips, invalid and stale recovery, advanced CaxeFlow data, undo/redo, and
+Test Play. The probe runs under C and a second installed locale (Spanish when
+available). The reusable editor package imports no Raylib or C target API.
 
 The title screen's Editor button opens a native Raylib/Raygui perspective
 viewport. A creator clicks the world once to enter direct Build control. Mouse
@@ -1102,9 +1103,16 @@ starts in Walk, which follows the authored surface at player eye height. The
 Camera button or C cycles through Walk, Fly, and Orbit. Fly adds Q/E movement,
 and Orbit uses the wheel to frame the selected object or the complete world. F
 refocuses the active mode. Keys 1 through 5 select the visible tool cards. Left
-click applies the selected tool. Escape releases the pointer before another
-cancel can leave the editor. Plan keeps a free pointer for precise layer and
-object work.
+click applies the selected tool. B opens Things to Add for terrain, items,
+NPCs, enemies, and mechanisms. T opens the complete CAXEMAP Text workspace.
+Escape releases the pointer before another cancel can leave the editor. Plan
+keeps a free pointer for precise layer and object work.
+
+Text edits one selected source line at a time while showing the complete
+bounded document. Apply + Format publishes valid source as one undoable change.
+Invalid or stale source remains editable and cannot replace the visual draft,
+history, selection, or last playable snapshot. Reset from Visual discards only
+the isolated Text edits.
 
 Object and environment controls use the same typed `EditorCommand` boundary as
 terrain, history, and tests. The screen caches a read-only complete-volume
@@ -1130,10 +1138,11 @@ python3 examples/caxecraft/play.py \
 
 The pilot selects the second edit layer without changing history or dirty
 state, moves the real editor camera, paints and selects one voxel, saves the
-staged package, and requires a clipped perspective frame with sky, ground
-depth, solid volume, and a selection outline. It restores the source package
-before the repeat and requires the same saved bytes, receipts, semantic report,
-and frame. It also starts two fresh ordinary-engine Test Play runs. This proof
+staged package, and exercises valid and invalid Text edits. It requires visible
+Text diagnostics plus a clipped perspective frame with sky, ground depth, solid
+volume, and a selection outline. It restores the source package before the
+repeat and requires the same saved bytes, receipts, semantic report, and
+screenshots. It also starts two fresh ordinary-engine Test Play runs. This proof
 does not claim that the complete child-friendly event/cutscene tools are
 available. Its design is explained in
 [the editor semantics guide](../../docs/caxecraft-editor.md).

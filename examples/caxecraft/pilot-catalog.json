@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "authoritySha256": "e471dd64dc964a8327feb73f6bfc3e02fa87387646084cf4750daf469dac8b48",
+  "authoritySha256": "f5782901f841f0483ca5301fb23cec6b4f1d42d39f924e98d738eb2979759f7c",
   "pilots": [
     {
       "id": "launch-smoke",
@@ -85,7 +85,7 @@
     {
       "id": "editor-shell",
       "scriptCode": 10,
-      "frameLimit": 10,
+      "frameLimit": 11,
       "haxeDefine": "caxecraft_pilot_editor_shell",
       "screenshot": "caxecraft-pilot-editor.png",
       "execution": "compiled"

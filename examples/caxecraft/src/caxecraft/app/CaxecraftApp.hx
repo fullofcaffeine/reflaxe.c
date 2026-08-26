@@ -358,7 +358,7 @@ final class CaxecraftApp {
 				horizontal: 0.0,
 				vertical: 0.0
 			};
-			for (step in 0...11) {
+			for (step in 0...12) {
 				final elapsed = if (step == 0) 0.0 else if (step == 1) NavigationRepeater.INITIAL_REPEAT_DELAY_SECONDS else
 					NavigationRepeater.REPEAT_INTERVAL_SECONDS;
 				switch editorScreen.applyNavigation(editorNavigation.advance(heldDown, elapsed)) {
@@ -395,10 +395,14 @@ final class CaxecraftApp {
 			navigationCommand = editorNavigation.advance(confirmAgain, 0.0);
 		}
 		if (pilotName == PilotScriptName.EditorShell && onEditor && frameCount == 7) {
-			if (!editorScreen.applyPilotCatalogSearch())
+			if (!editorScreen.applyPilotTextAuthoring())
 				rejectedEditCount++;
 		}
 		if (pilotName == PilotScriptName.EditorShell && onEditor && frameCount == 8) {
+			if (!editorScreen.applyPilotCatalogSearch())
+				rejectedEditCount++;
+		}
+		if (pilotName == PilotScriptName.EditorShell && onEditor && frameCount == 9) {
 			if (!editorScreen.applyPilotCatalogObject())
 				rejectedEditCount++;
 			if (!editorScreen.applyPilotSelectFirstActor())
@@ -418,7 +422,7 @@ final class CaxecraftApp {
 						rejectedEditCount++;
 				}
 		}
-		if (pilotName == PilotScriptName.EditorShell && onEditor && frameCount == 9) {
+		if (pilotName == PilotScriptName.EditorShell && onEditor && frameCount == 10) {
 			switch editorScreen.applyNavigation(NavigationCommand.Cancel) {
 				case StayInEditor:
 				case ReturnToTitle | StartTestPlay(_):
@@ -1439,10 +1443,10 @@ final class CaxecraftApp {
 			// cell also gives the framebuffer oracle a specific 3D outline.
 			// One held controller direction moves immediately, repeats after the
 			// production delay, then repeats at the production interval. The
-			// ten held moves land on Play before the south face button
+			// twelve held moves land on Play before the south face button
 			// confirms it through the same device-neutral screen handler.
 			final editorPilotFrame = applyEditorPilotFrame(pilotName, onEditor, frameCount, editorScreen);
-			if (pilotName == PilotScriptName.EditorShell && onEditor && frameCount == 7)
+			if (pilotName == PilotScriptName.EditorShell && onEditor && frameCount == 8)
 				// Earlier checkpoints retain the default locale; the final card/save
 				// frame proves the same native editor through the next validated locale.
 				locale = uiCatalog.nextLocale(locale);
@@ -2047,7 +2051,8 @@ final class CaxecraftApp {
 				|| (pilotName == PilotScriptName.ResizeLayout && frameCount == 3)
 				|| (pilotName == PilotScriptName.AquaticGear && frameCount == 146)
 				|| (pilotName == PilotScriptName.SmoothMotion && frameCount == 10)
-				|| (pilotName == PilotScriptName.EditorShell && (frameCount == 0 || frameCount == 5 || frameCount == 7 || frameCount == 8))
+				|| (pilotName == PilotScriptName.EditorShell
+					&& (frameCount == 0 || frameCount == 5 || frameCount == 7 || frameCount == 8 || frameCount == 9))
 				|| (pilotName == PilotScriptName.CampaignTravel && frameCount == 3))
 				capturePilotFrame = true;
 			#if caxecraft_pilot_runtime
@@ -2091,10 +2096,12 @@ final class CaxecraftApp {
 			if (pilotName == PilotScriptName.EditorShell && frameCount == 0)
 				capturePilotScreenshot("caxecraft-pilot-editor-terrain-prompt.png");
 			if (pilotName == PilotScriptName.EditorShell && frameCount == 7)
-				capturePilotScreenshot("caxecraft-pilot-editor-assets.png");
+				capturePilotScreenshot("caxecraft-pilot-editor-text.png");
 			if (pilotName == PilotScriptName.EditorShell && frameCount == 8)
-				reviewScreenshotObserved = capturePilotScreenshot("caxecraft-pilot-editor-environment.png");
+				capturePilotScreenshot("caxecraft-pilot-editor-assets.png");
 			if (pilotName == PilotScriptName.EditorShell && frameCount == 9)
+				reviewScreenshotObserved = capturePilotScreenshot("caxecraft-pilot-editor-environment.png");
+			if (pilotName == PilotScriptName.EditorShell && frameCount == 10)
 				capturePilotScreenshot("caxecraft-pilot-editor.png");
 			if (pilotName == PilotScriptName.CampaignTravel && frameCount == 3)
 				reviewScreenshotObserved = capturePilotScreenshot("caxecraft-pilot-campaign-travel.png");

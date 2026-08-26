@@ -12,10 +12,10 @@
       "sha256": "cc09d645a22706ddbff1c24f97739da2deac5a5cb9c606ba27bd0eac3398024f"
     },
     {
-      "byteLength": 46409,
+      "byteLength": 48396,
       "kind": "ui-catalog",
       "path": "locales/ui.json",
-      "sha256": "6a69280ac2cc729cdb014f835830d27ad12490ebf4525dd075f98c272a4cc86e"
+      "sha256": "23ffd798f2f95db1ba364c847f65134e707be0ba64d10d6e74685fced5f321af"
     },
     {
       "byteLength": 15610,
@@ -24,6 +24,6 @@
       "sha256": "465aa55527f99d2e421c186d40084687e3e851121aaf7a96296a070041e2f4ef"
     }
   ],
-  "generationSha256": "489a056ac276c18f4e3fd80979c3e3145eef218cd9c46228283f511fe92b3aa4",
+  "generationSha256": "042e6d3d3b49cea7991fc7bf4e6110fe525e2cbbecadfe454de971fc4b43d2c9",
   "schemaVersion": 1
 }

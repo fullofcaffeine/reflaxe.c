@@ -95,6 +95,10 @@ enum EditorCommand {
 /** Stable command groups used by history, UI labels, and acceptance traces. */
 enum EditorCommandFamily {
 	DocumentMetadata;
+
+	/** One complete validated CAXEMAP source replacement from Text workspace. */
+	Text;
+
 	WorldShape;
 	Voxel;
 	Fluid;
@@ -310,6 +314,15 @@ enum EditorError {
 enum EditorMutation {
 	Apply(command:EditorCommand);
 	ApplyBatch(commands:Array<EditorCommand>);
+
+	/**
+		Parse, validate, canonicalize, and replace one complete text draft.
+
+		The payload is copied before publication. Rejected source remains owned by
+		the caller and cannot change the typed scenario, history, or recovery state.
+	**/
+	ApplyText(source:Bytes);
+
 	Undo;
 	Redo;
 }

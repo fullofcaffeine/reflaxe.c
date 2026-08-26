@@ -16,6 +16,10 @@ the same command and history boundary. Tab and Shift-Tab move through one
 device-neutral focus order. Enter or Space activates the focused control. A
 high-contrast ring shows the next target.
 
+The Text button, or `T`, opens the complete canonical CAXEMAP document. Source
+edits stay separate until Apply + Format succeeds. Invalid or stale text stays
+editable and cannot replace the visual draft or its last playable snapshot.
+
 The native screen can select and edit each horizontal voxel layer. The minus
 and plus controls change only presentation state; they do not create history,
 mark the package dirty, or alter Test Play. It moves and rotates selected
@@ -235,6 +239,21 @@ Choosing terrain selects the Ground tool and adds a normal undoable map-palette
 entry only when the map does not have that material. Choosing another row
 selects the ordinary object-placement tool.
 
+The Text button opens advanced source authoring over the same scenario. Press
+`T` from Build or Plan to open or close it. Select a numbered row, edit its
+complete line, then use Apply + Format to publish valid source as one undoable
+document change. Add Line and Delete Line change only the isolated source
+draft. Reset from Visual discards those source-only edits.
+
+Apply runs the public UTF-8 decoder, lexer, parser, semantic validator, and
+canonical writer. A source-located diagnostic selects the first failing line.
+Malformed, incomplete, oversized, stale, or semantically invalid source stays
+in Text and leaves the visual model, history, selection, and Test Play snapshot
+unchanged. A successful Apply refreshes every visual view from the one typed
+scenario. Syntax colors distinguish structural records, flow events,
+conditions, and actions. Registry completion and jump-to-world references
+remain planned work.
+
 Plan is an advanced tool for hidden layers, trigger volumes, logic links, large
 selections, and fast navigation. It is not the default authoring experience.
 Build shows trigger bounds when the trigger tool is active or the creator
@@ -275,6 +294,7 @@ The current controls are:
   selected tool or leave through the normal editor flow;
 - press 1 through 5 to choose the five visible Build cards;
 - press B to open or close Things to Add;
+- press T to open or close the complete CAXEMAP Text workspace;
 - in Things to Add, use left/right to change category, up/down to choose a row,
   Enter to use it, and Tab to enter or leave search text;
 - use W/S to move forward/back, A/D to strafe, and Q/E to move vertically;
@@ -469,11 +489,12 @@ rule editor, not yet the complete child-facing card library.
 
 The same typed draft has three authoring depths. **Guided** mode uses large
 icon-and-sentence cards, templates, and world picking. **Advanced visual** mode
-reveals nested predicates, event context, variables, branches, sequences, and
-timing while preserving those cards. **Text** mode edits the exact bounded
-CaxeMap/CaxeFlow source with syntax coloring, shared-registry completion,
-formatting, source-positioned diagnostics, and jump-to-world references. It is
-especially useful for experienced creators and automation agents.
+will reveal nested predicates, event context, variables, branches, sequences,
+and timing while preserving those cards. **Text** mode now edits the exact
+bounded CaxeMap/CaxeFlow source. It provides line editing, syntax colors,
+canonical formatting, and source-positioned diagnostics. It is useful for
+experienced creators and automation agents. Shared-registry completion and
+jump-to-world references remain planned.
 
 Moving between views must parse and validate the same model. Text mode cannot
 call a mechanic unavailable to cards, and the visual views cannot flatten or
@@ -489,8 +510,8 @@ fades, choices, and persistent CaxeFlow changes. Normal and skip previews must
 reach the same required persistent state and restore camera and controls. The
 remaining visual depth is tracked under `haxe_c-xge.19.6` and cinematic
 authoring under `haxe_c-xge.20.3`. The current native trigger-card slice does not
-yet provide the complete card library, advanced visual tree, text workspace, or
-cinematic timeline.
+yet provide the complete card library, advanced visual tree, registry-backed
+text completion, jump-to-world references, or cinematic timeline.
 
 ## Executable evidence
 
@@ -507,9 +528,10 @@ every command family, canonical serialize/reload, invalid-draft recovery,
 deterministic history eviction, byte and gesture limits, two independent
 test-play sessions, the optional top-down projection, complete-volume
 projection, camera bounds, solid and empty-space ray picking, and all four tool
-translations. It runs under C and a second installed locale (Spanish when
-available) and scans the reusable editor sources for C, Raylib,
-target-condition, raw-code, and untyped-boundary leakage.
+translations. It also checks complete Text round trips, invalid and stale
+recovery, advanced CaxeFlow forms, undo/redo, and Test Play. It runs under C and
+a second installed locale (Spanish when available). It scans reusable editor
+sources for C, Raylib, target-condition, raw-code, and untyped-boundary leakage.
 
 The native graphical proof uses the real renderer in Raylib's deterministic
 in-memory configuration:
@@ -524,8 +546,9 @@ python3 examples/caxecraft/play.py \
 That pilot compiles the application through haxe.c. It enters the editor from
 the title screen and opens the active level bytes. It changes one literal
 title, selects layer 2, moves the production camera, paints the first available
-air cell, and saves the resulting package. It then selects that cell through
-`CaxecraftEditorScreen` and `EditorSession`.
+air cell, and saves the resulting package. It applies one valid Text edit, then
+keeps one invalid closing record isolated with its visible diagnostic. It then
+selects the painted cell through `CaxecraftEditorScreen` and `EditorSession`.
 
 The framebuffer check requires the toolbar, sidebar, scene list, textured
 terrain, sky, and selection outline. It requires enough terrain color variation

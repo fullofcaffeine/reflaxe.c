@@ -99,7 +99,7 @@ function pilotScriptCode(script:PilotScriptName):Int {
 function pilotFrameLimit(script:PilotScriptName):Int {
 	return switch script {
 		case LaunchSmoke | RecoveryUse: 4;
-		case EditorShell: 10;
+		case EditorShell: 11;
 		case MoveJumpEdit: 14;
 		case PauseRecapture | FullInventoryMining: 7;
 		case CombatDrop: 40;

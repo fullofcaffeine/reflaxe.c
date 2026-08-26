@@ -491,6 +491,90 @@
       }
     },
     {
+      "id": "editor_text",
+      "text": {
+        "en": "TEXT",
+        "es-MX": "TEXTO"
+      }
+    },
+    {
+      "id": "editor_text_add_line",
+      "text": {
+        "en": "ADD LINE",
+        "es-MX": "AGREGAR LÍNEA"
+      }
+    },
+    {
+      "id": "editor_text_apply",
+      "text": {
+        "en": "APPLY + FORMAT",
+        "es-MX": "APLICAR + FORMATEAR"
+      }
+    },
+    {
+      "id": "editor_text_clean",
+      "text": {
+        "en": "TEXT MATCHES THE VISUAL DRAFT",
+        "es-MX": "EL TEXTO COINCIDE CON EL BORRADOR VISUAL"
+      }
+    },
+    {
+      "id": "editor_text_close",
+      "text": {
+        "en": "CLOSE",
+        "es-MX": "CERRAR"
+      }
+    },
+    {
+      "id": "editor_text_delete_line",
+      "text": {
+        "en": "DELETE LINE",
+        "es-MX": "BORRAR LÍNEA"
+      }
+    },
+    {
+      "id": "editor_text_dirty",
+      "text": {
+        "en": "UNAPPLIED TEXT DRAFT",
+        "es-MX": "BORRADOR DE TEXTO SIN APLICAR"
+      }
+    },
+    {
+      "id": "editor_text_help",
+      "text": {
+        "en": "SELECT A LINE, EDIT IT BELOW, THEN APPLY. INVALID TEXT STAYS HERE.",
+        "es-MX": "ELIGE UNA LÍNEA, EDÍTALA ABAJO Y APLICA. EL TEXTO INVÁLIDO SE QUEDA AQUÍ."
+      }
+    },
+    {
+      "id": "editor_text_invalid",
+      "text": {
+        "en": "FIX THE MARKED SOURCE; THE VISUAL DRAFT DID NOT CHANGE",
+        "es-MX": "CORRIGE EL CÓDIGO MARCADO; EL BORRADOR VISUAL NO CAMBIÓ"
+      }
+    },
+    {
+      "id": "editor_text_reset",
+      "text": {
+        "en": "RESET FROM VISUAL",
+        "es-MX": "RESTABLECER DESDE LO VISUAL"
+      }
+    },
+    {
+      "id": "editor_text_stale",
+      "text": {
+        "en": "THE VISUAL DRAFT CHANGED; RESET OR REVIEW BEFORE APPLYING",
+        "es-MX": "EL BORRADOR VISUAL CAMBIÓ; RESTABLECE O REVISA ANTES DE APLICAR"
+      }
+    },
+    {
+      "id": "editor_text_title",
+      "text": {
+        "en": "CAXEMAP TEXT — ADVANCED",
+        "es-MX": "TEXTO CAXEMAP — AVANZADO"
+      }
+    },
+    {
       "id": "editor_title",
       "text": {
         "en": "CAXECRAFT WORLD EDITOR",

@@ -217,8 +217,8 @@
     {
       "kind": "localization",
       "path": "locales/ui.json",
-      "byteLength": 46409,
-      "sha256": "6a69280ac2cc729cdb014f835830d27ad12490ebf4525dd075f98c272a4cc86e"
+      "byteLength": 48396,
+      "sha256": "23ffd798f2f95db1ba364c847f65134e707be0ba64d10d6e74685fced5f321af"
     },
     {
       "kind": "content-pack",
@@ -230,7 +230,7 @@
       "kind": "runtime-content",
       "path": "packs/caxecraft/base/runtime-content.json",
       "byteLength": 900,
-      "sha256": "61f49280360967aaa8608c44a28c0916f8b707793ad8cb542d8958de9f239086"
+      "sha256": "41fde46042a690dcbd905750fb38cbcca8414f53fde24e3759a572f4e2a273ac"
     },
     {
       "kind": "level",

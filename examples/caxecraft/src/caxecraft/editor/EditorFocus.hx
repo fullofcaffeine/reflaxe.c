@@ -33,6 +33,7 @@ enum abstract EditorFocusTarget(Int) {
 	var NextLayer = 19;
 	var TriggerZoneTool = 20;
 	var CameraMode = 21;
+	var Text = 22;
 }
 
 /**
@@ -69,7 +70,8 @@ function moveFocus(current:EditorFocusTarget, direction:EditorFocusMove):EditorF
 				case Undo: Redo;
 				case Redo: Build;
 				case Build: Plan;
-				case Plan: CameraMode;
+				case Plan: Text;
+				case Text: CameraMode;
 				case CameraMode: PreviousLayer;
 				case PreviousLayer: NextLayer;
 				case NextLayer: Environment;
@@ -99,7 +101,8 @@ function moveFocus(current:EditorFocusTarget, direction:EditorFocusMove):EditorF
 				case Environment: NextLayer;
 				case NextLayer: PreviousLayer;
 				case PreviousLayer: CameraMode;
-				case CameraMode: Plan;
+				case CameraMode: Text;
+				case Text: Plan;
 				case SelectTool: Play;
 				case GroundTool: SelectTool;
 				case EraseTool: GroundTool;
