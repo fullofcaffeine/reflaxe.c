@@ -407,6 +407,7 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
             "Mode",
             "Option<bool>",
             "Option<i32>",
+            "RecursiveAction",
             "RuleEnvelope",
             "StrictCarrier",
             option_rule_names[0],
@@ -427,6 +428,7 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
     identity_kind = enum_by_name(report, "IdentityKind")
     identity_value = enum_by_name(report, "IdentityValue")
     rule_envelope = enum_by_name(report, "RuleEnvelope")
+    recursive_action = enum_by_name(report, "RecursiveAction")
     strict_carrier = enum_by_name(report, "StrictCarrier")
     if (
         mode.get("representation") != "native-enum"
@@ -443,6 +445,9 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
         or rule_envelope.get("representation") != "tagged-union"
         or rule_envelope.get("recursive") is not False
         or rule_envelope.get("scopedLifetime") is not False
+        or recursive_action.get("representation") != "tagged-union"
+        or recursive_action.get("recursive") is not False
+        or recursive_action.get("scopedLifetime") is not False
         or strict_carrier.get("representation") != "tagged-union"
         or strict_carrier.get("recursive") is not False
         or strict_carrier.get("scopedLifetime") is not False
@@ -508,6 +513,7 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
     constructor_value_section = function_section(hxcir, "constructorValue")
     rule_literal_section = function_section(hxcir, "ruleLiteralValue")
     envelope_literal_section = function_section(hxcir, "envelopeLiteral")
+    recursive_action_plan_section = function_section(hxcir, "recursiveActionPlan")
     option_int_instance = required_identifier(option_int, "instanceId")
     identity_call = main_section.find(
         'call dispatch=direct("function.EnumFixture.identity")'
@@ -583,6 +589,22 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
         raise EnumLoweringFailure(
             "fresh and borrowed managed-enum Array elements lost their ownership plan"
         )
+    recursive_action_plan_c = c_function_section(
+        source, "hxc_EnumFixture_recursiveActionPlan"
+    )
+    if (
+        'implementation=program-local("enum-lifecycle:'
+        not in recursive_action_plan_section
+        or 'dispatch=runtime(feature="array",operation="create-literal")'
+        not in recursive_action_plan_section
+        or "hxc_array_ref_create_trivial(" in recursive_action_plan_c
+        or "hxc_array_ref_create(" not in recursive_action_plan_c
+        or "_element_copy" not in recursive_action_plan_c
+        or "_element_destroy" not in recursive_action_plan_c
+    ):
+        raise EnumLoweringFailure(
+            "recursive managed-enum Array literal lost typed element ownership"
+        )
     if (
         f"enum {names['mode_tag']} {{" not in header
         or f"struct {names['option_int_tag']} {{" not in header
@@ -612,24 +634,34 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
         or "(void)hxc_l_context;" not in source
     ):
         raise EnumLoweringFailure("structural enum CAST emission or checks drifted")
-    record_retain_start = source.find("hxc_status hxc_record_")
-    record_destroy_start = source.find("\nvoid hxc_record_", record_retain_start)
+    record_retains: list[str] = []
+    record_cursor = 0
+    while True:
+        record_retain_start = source.find("hxc_status hxc_record_", record_cursor)
+        if record_retain_start == -1:
+            break
+        record_destroy_start = source.find("\nvoid hxc_record_", record_retain_start)
+        if record_destroy_start == -1:
+            break
+        record_retains.append(source[record_retain_start:record_destroy_start])
+        record_cursor = record_destroy_start + 1
     recursive_clone_start = source.find("_retain_recursive_clone(void *")
     recursive_destroy_start = source.find("\nvoid ", recursive_clone_start)
     if (
-        record_retain_start == -1
-        or record_destroy_start == -1
+        not record_retains
         or recursive_clone_start == -1
         or recursive_destroy_start == -1
     ):
         raise EnumLoweringFailure("managed lifecycle helper boundaries disappeared")
-    record_retain = source[record_retain_start:record_destroy_start]
     recursive_clone = source[recursive_clone_start:recursive_destroy_start]
     if (
-        record_retain.count("_retain(") < 3
-        or record_retain.count("hxc_array_ref_release(") < 2
-        or "_destroy(&" not in record_retain
-        or record_retain.count("return hxc_l_operation_status;") < 3
+        not any(
+            section.count("_retain(") >= 3
+            and section.count("hxc_array_ref_release(") >= 2
+            and "_destroy(&" in section
+            and section.count("return hxc_l_operation_status;") >= 3
+            for section in record_retains
+        )
         or "hxc_free(" not in recursive_clone
     ):
         raise EnumLoweringFailure(
@@ -1114,6 +1146,7 @@ def production_project(root: Path, *, layout: str) -> CFixtureProject:
             "managed-record-lifecycle",
             "managed-record-enum-payload",
             "recursive-owned-enum",
+            "recursive-managed-enum-array",
         ),
     )
 

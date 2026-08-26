@@ -24,9 +24,17 @@ static inline int32_t hxc_i32_add_wrapping(int32_t hxc_l_left, int32_t hxc_l_rig
   return hxc_u32_to_i32_bits((uint32_t)((uint64_t)(uint32_t)hxc_l_left + (uint64_t)(uint32_t)hxc_l_right));
 }
 
+hxc_status hxc_record_24dfdaa4_retain(void *hxc_l_value);
+
+void hxc_record_24dfdaa4_destroy(void *hxc_l_value);
+
 hxc_status hxc_record_9f230b68_retain(void *hxc_l_value);
 
 void hxc_record_9f230b68_destroy(void *hxc_l_value);
+
+hxc_status hxc_record_ae1876bc_retain(void *hxc_l_value);
+
+void hxc_record_ae1876bc_destroy(void *hxc_l_value);
 
 hxc_status hxc_enum_24936704_retain(void *hxc_l_value);
 
@@ -39,6 +47,10 @@ void hxc_enum_39285fe9_destroy(void *hxc_l_value);
 hxc_status hxc_enum_39285fe9_retain_recursive_clone(void *hxc_enum_39285fe9_retain_recursive_clone_slot);
 
 void hxc_enum_39285fe9_destroy_recursive_destroy(void *hxc_enum_39285fe9_destroy_recursive_destroy_slot);
+
+hxc_status hxc_enum_891dc52d_retain(void *hxc_l_value);
+
+void hxc_enum_891dc52d_destroy(void *hxc_l_value);
 
 hxc_status hxc_enum_d215f611_retain(void *hxc_l_value);
 
@@ -60,6 +72,18 @@ hxc_status hxc_array_84c38722_element_assign(void *hxc_l_context, void *hxc_l_de
 
 void hxc_array_84c38722_element_destroy(void *hxc_l_context, void *hxc_l_element);
 
+hxc_status hxc_array_e4791f3e_element_copy(void *hxc_l_context, void *hxc_l_destination, const void *hxc_l_source);
+
+hxc_status hxc_array_e4791f3e_element_assign(void *hxc_l_context, void *hxc_l_destination, const void *hxc_l_source);
+
+void hxc_array_e4791f3e_element_destroy(void *hxc_l_context, void *hxc_l_element);
+
+hxc_status hxc_array_eaf5e746_element_copy(void *hxc_l_context, void *hxc_l_destination, const void *hxc_l_source);
+
+hxc_status hxc_array_eaf5e746_element_assign(void *hxc_l_context, void *hxc_l_destination, const void *hxc_l_source);
+
+void hxc_array_eaf5e746_element_destroy(void *hxc_l_context, void *hxc_l_element);
+
 struct hxc_Option_ha0e4b5dcc139;
 
 struct hxc_Option_h2a07afaff02e;
@@ -68,6 +92,8 @@ struct hxc_Option_h95f1c4a28dac;
 
 struct hxc_Chain;
 
+struct hxc_RecursiveAction;
+
 struct hxc_StrictCarrier;
 
 struct hxc_Choices;
@@ -75,6 +101,11 @@ struct hxc_Choices;
 struct hxc_IdentityValue;
 
 struct hxc_RuleEnvelope;
+
+struct hxc_RecursiveActionChoice {
+  struct hxc_array_ref *hxc_actions;
+  int32_t hxc_weight;
+};
 
 enum hxc_StrictCarrier_tag {
   hxc_StrictCarrier_StrictEmpty = 0,
@@ -178,6 +209,10 @@ struct hxc_Rule {
   struct hxc_Choices hxc_choices;
 };
 
+struct hxc_RecursiveActionPlan {
+  struct hxc_array_ref *hxc_actions;
+};
+
 enum hxc_Option_tag_h4f842caea9db {
   hxc_Option_None_h00cd578bb80f = 0,
   hxc_Option_Some_h33493695ace2 = 1
@@ -217,6 +252,29 @@ struct hxc_Option_h2a07afaff02e {
 enum hxc_Mode {
   hxc_Mode_Off = 0,
   hxc_Mode_On = 1
+};
+
+enum hxc_RecursiveAction_tag {
+  hxc_RecursiveAction_LeafAction = 0,
+  hxc_RecursiveAction_ChooseAction = 1
+};
+
+struct hxc_RecursiveAction_LeafAction_payload {
+  int32_t hxc_value;
+};
+
+struct hxc_RecursiveAction_ChooseAction_payload {
+  struct hxc_array_ref *hxc_choices;
+};
+
+union hxc_RecursiveAction_payload {
+  struct hxc_RecursiveAction_LeafAction_payload hxc_LeafAction;
+  struct hxc_RecursiveAction_ChooseAction_payload hxc_ChooseAction;
+};
+
+struct hxc_RecursiveAction {
+  enum hxc_RecursiveAction_tag hxc_tag;
+  union hxc_RecursiveAction_payload hxc_payload;
 };
 
 enum hxc_IdentityKind {
@@ -312,6 +370,10 @@ int32_t hxc_EnumFixture_optionValue(struct hxc_Option_h95f1c4a28dac hxc_l_value_
 int32_t hxc_EnumFixture_optionalRuleValue(struct hxc_Option_h2a07afaff02e hxc_l_value_hffb395be3233);
 
 int32_t hxc_EnumFixture_pairedIdentityValue(enum hxc_IdentityKind hxc_l_kind, struct hxc_IdentityValue hxc_l_value_hc42edaab0080);
+
+struct hxc_RecursiveActionPlan hxc_EnumFixture_recursiveActionPlan(void);
+
+int32_t hxc_EnumFixture_recursiveActionPlanValue(struct hxc_RecursiveActionPlan hxc_l_plan);
 
 int32_t hxc_EnumFixture_recursiveLocal(void);
 

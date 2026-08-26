@@ -61,6 +61,23 @@ enum RuleEnvelope {
 	WrappedRule(rule:Rule);
 }
 
+/** One weighted branch whose actions recursively use the owning enum. */
+typedef RecursiveActionChoice = {
+	final weight:Int;
+	final actions:Array<RecursiveAction>;
+}
+
+/** A recursive managed enum reached through Array and a closed record. */
+enum RecursiveAction {
+	LeafAction(value:Int);
+	ChooseAction(choices:Array<RecursiveActionChoice>);
+}
+
+/** Record context that requires an independent copy of each action literal. */
+typedef RecursiveActionPlan = {
+	final actions:Array<RecursiveAction>;
+}
+
 class EnumFixture {
 	static function identity(value:Int):Int {
 		return value;
@@ -306,6 +323,19 @@ class EnumFixture {
 	static function envelopeLiteral(fresh:Rule, borrowed:RuleEnvelope):Array<RuleEnvelope>
 		return [WrappedRule(fresh), borrowed, MissingRule];
 
+	/** Build the recursive enum while its Array specialization is first discovered. */
+	static function recursiveActionPlan():RecursiveActionPlan
+		return {
+			actions: [ChooseAction([{weight: 1, actions: [LeafAction(17)]}])]
+		};
+
+	/** Read the nested action after every construction temporary was destroyed. */
+	static function recursiveActionPlanValue(plan:RecursiveActionPlan):Int
+		return switch plan.actions[0] {
+			case ChooseAction([{weight: 1, actions: [LeafAction(value)]}]): value;
+			case _: 0;
+		};
+
 	static function main():Void {
 		var mode = On;
 		var present:Option<Int> = Some(identity(7));
@@ -323,6 +353,7 @@ class EnumFixture {
 		var envelopes:Array<RuleEnvelope> = [];
 		envelopes.push(copiedEnvelope);
 		var literalEnvelopes = envelopeLiteral(copiedRule, copiedEnvelope);
+		var recursivePlan = recursiveActionPlan();
 		while (!(modeValue(mode) == 1
 			&& modeIsOn(mode)
 			&& modeEquality()
@@ -346,6 +377,7 @@ class EnumFixture {
 			&& ruleLiteralValue(Link(1, End(2)), ChoiceValues(choices), actions, copiedRule) == 12
 			&& envelopes.length == 1
 			&& literalEnvelopes.length == 3
+			&& recursiveActionPlanValue(recursivePlan) == 17
 			&& rules.length == 1)) {}
 	}
 }

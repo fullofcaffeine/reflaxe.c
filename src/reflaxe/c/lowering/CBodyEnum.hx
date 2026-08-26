@@ -110,6 +110,10 @@ class CPreparedBodyEnumInstance {
 	public final tagMemberRequest:Null<CSymbolRequest>;
 	public final payloadMemberRequest:Null<CSymbolRequest>;
 	public final cases:Array<CPreparedBodyEnumCase> = [];
+
+	/** True after every constructor payload has a prepared ownership shape. */
+	public var complete:Bool = false;
+
 	public var recursive:Bool = false;
 	public var scopedLifetime:Bool = false;
 
@@ -494,6 +498,7 @@ class CBodyEnumRegistry {
 			}
 			prepared.cases.push(tagCase);
 		}
+		prepared.complete = true;
 		/*
 		 * A complete inner enum can immediately tell an enclosing record that it
 		 * owns a direct managed payload. Waiting for the outermost enum to finish

@@ -394,6 +394,12 @@ class CBodyArrayRegistry {
 	static function enumLifecycle(value:reflaxe.c.lowering.CBodyEnum.CPreparedBodyEnumInstance):Null<CBodyArrayElementLifecycle> {
 		if (value.representation == CBERNativeEnum)
 			return CBAELTrivial;
+		// Seeing a tagged enum before all of its payloads are prepared means the
+		// element type reached itself through an owning reference such as Array.
+		// Treat that cycle as managed now; caching a temporary trivial Array plan
+		// would later shallow-copy the completed enum's managed payload.
+		if (!value.complete)
+			return CBAELEnum(value);
 		if (value.cases.length == 0)
 			return null;
 		return value.managedLifetime ? CBAELEnum(value) : CBAELTrivial;
