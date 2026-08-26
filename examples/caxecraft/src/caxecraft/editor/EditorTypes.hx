@@ -225,6 +225,9 @@ enum EditorError {
 	/** A pack-driven placement tool had no validated selected recipe. */
 	MissingEditorObjectRecipe;
 
+	/** An NPC recipe needs one authored dialogue before it can become playable. */
+	MissingEditorDialogue;
+
 	InvalidSetting(setting:EditorSetting, minimum:Int, maximum:Int);
 	UnsupportedFormatVersion(actual:Int, supported:Int);
 	SnapshotRejected(diagnostics:Array<ScenarioDiagnostic>);

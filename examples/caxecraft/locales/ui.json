@@ -92,6 +92,76 @@
       }
     },
     {
+      "id": "editor_asset_browser",
+      "text": {
+        "en": "THINGS TO ADD",
+        "es-MX": "COSAS PARA AGREGAR"
+      }
+    },
+    {
+      "id": "editor_asset_category_enemy",
+      "text": {
+        "en": "ENEMIES",
+        "es-MX": "ENEMIGOS"
+      }
+    },
+    {
+      "id": "editor_asset_category_item",
+      "text": {
+        "en": "ITEMS",
+        "es-MX": "OBJETOS"
+      }
+    },
+    {
+      "id": "editor_asset_category_mechanism",
+      "text": {
+        "en": "MECHANISMS",
+        "es-MX": "MECANISMOS"
+      }
+    },
+    {
+      "id": "editor_asset_category_npc",
+      "text": {
+        "en": "CHARACTERS",
+        "es-MX": "PERSONAJES"
+      }
+    },
+    {
+      "id": "editor_asset_category_terrain",
+      "text": {
+        "en": "TERRAIN",
+        "es-MX": "TERRENO"
+      }
+    },
+    {
+      "id": "editor_asset_close",
+      "text": {
+        "en": "CLOSE",
+        "es-MX": "CERRAR"
+      }
+    },
+    {
+      "id": "editor_asset_empty",
+      "text": {
+        "en": "NO MATCHES. TRY ANOTHER WORD.",
+        "es-MX": "NO HAY RESULTADOS. PRUEBA OTRA PALABRA."
+      }
+    },
+    {
+      "id": "editor_asset_search",
+      "text": {
+        "en": "SEARCH",
+        "es-MX": "BUSCAR"
+      }
+    },
+    {
+      "id": "editor_asset_shortcut",
+      "text": {
+        "en": "B: OPEN  •  TAB: SEARCH  •  ARROWS: CHOOSE  •  ENTER: USE",
+        "es-MX": "B: ABRIR  •  TAB: BUSCAR  •  FLECHAS: ELEGIR  •  ENTER: USAR"
+      }
+    },
+    {
       "id": "editor_back",
       "text": {
         "en": "BACK",
@@ -728,6 +798,223 @@
       "text": {
         "en": "take {2} of {1} from {0}",
         "es-MX": "quitar {2} de {1} a {0}"
+      }
+    },
+    {
+      "id": "editor.asset.category.enemy.help",
+      "text": {
+        "en": "Place this enemy at the aimed block.",
+        "es-MX": "Coloca este enemigo en el bloque apuntado."
+      }
+    },
+    {
+      "id": "editor.asset.category.item.help",
+      "text": {
+        "en": "Place one collectible item at the aimed block.",
+        "es-MX": "Coloca un objeto coleccionable en el bloque apuntado."
+      }
+    },
+    {
+      "id": "editor.asset.category.mechanism.help",
+      "text": {
+        "en": "Place this interactive mechanism at the aimed block.",
+        "es-MX": "Coloca este mecanismo interactivo en el bloque apuntado."
+      }
+    },
+    {
+      "id": "editor.asset.category.npc.help",
+      "text": {
+        "en": "Place this character and connect the level's first dialogue.",
+        "es-MX": "Coloca este personaje y conecta el primer diálogo del nivel."
+      }
+    },
+    {
+      "id": "editor.asset.category.terrain.help",
+      "text": {
+        "en": "Choose this material for the Ground tool.",
+        "es-MX": "Elige este material para la herramienta Terreno."
+      }
+    },
+    {
+      "id": "editor.asset.caxecraft.ash.label",
+      "text": {
+        "en": "ASH",
+        "es-MX": "CENIZA"
+      }
+    },
+    {
+      "id": "editor.asset.caxecraft.bedrock.label",
+      "text": {
+        "en": "BEDROCK",
+        "es-MX": "ROCA MADRE"
+      }
+    },
+    {
+      "id": "editor.asset.caxecraft.berries.label",
+      "text": {
+        "en": "BERRIES",
+        "es-MX": "BAYAS"
+      }
+    },
+    {
+      "id": "editor.asset.caxecraft.bread.label",
+      "text": {
+        "en": "BREAD",
+        "es-MX": "PAN"
+      }
+    },
+    {
+      "id": "editor.asset.caxecraft.browser.label",
+      "text": {
+        "en": "BROWSER",
+        "es-MX": "BROWSER"
+      }
+    },
+    {
+      "id": "editor.asset.caxecraft.ceesh.label",
+      "text": {
+        "en": "CEESH",
+        "es-MX": "CEESH"
+      }
+    },
+    {
+      "id": "editor.asset.caxecraft.copper-sword.label",
+      "text": {
+        "en": "COPPER SWORD",
+        "es-MX": "ESPADA DE COBRE"
+      }
+    },
+    {
+      "id": "editor.asset.caxecraft.dirt-block.label",
+      "text": {
+        "en": "DIRT BLOCK",
+        "es-MX": "BLOQUE DE TIERRA"
+      }
+    },
+    {
+      "id": "editor.asset.caxecraft.dirt.label",
+      "text": {
+        "en": "DIRT",
+        "es-MX": "TIERRA"
+      }
+    },
+    {
+      "id": "editor.asset.caxecraft.ember-wisp.label",
+      "text": {
+        "en": "EMBER WISP",
+        "es-MX": "FUEGO FATUO"
+      }
+    },
+    {
+      "id": "editor.asset.caxecraft.fallskeeper.label",
+      "text": {
+        "en": "FALLSKEEPER",
+        "es-MX": "GUARDIÁN DE LAS CATARATAS"
+      }
+    },
+    {
+      "id": "editor.asset.caxecraft.grass-block.label",
+      "text": {
+        "en": "GRASS BLOCK",
+        "es-MX": "BLOQUE DE CÉSPED"
+      }
+    },
+    {
+      "id": "editor.asset.caxecraft.grass.label",
+      "text": {
+        "en": "GRASS",
+        "es-MX": "CÉSPED"
+      }
+    },
+    {
+      "id": "editor.asset.caxecraft.haxeforge.label",
+      "text": {
+        "en": "HAXEFORGE",
+        "es-MX": "HAXEFORGE"
+      }
+    },
+    {
+      "id": "editor.asset.caxecraft.lantern.label",
+      "text": {
+        "en": "LANTERN",
+        "es-MX": "LINTERNA"
+      }
+    },
+    {
+      "id": "editor.asset.caxecraft.leaves.label",
+      "text": {
+        "en": "LEAVES",
+        "es-MX": "HOJAS"
+      }
+    },
+    {
+      "id": "editor.asset.caxecraft.moss.label",
+      "text": {
+        "en": "MOSS",
+        "es-MX": "MUSGO"
+      }
+    },
+    {
+      "id": "editor.asset.caxecraft.mossling.label",
+      "text": {
+        "en": "MOSSLING",
+        "es-MX": "MOSSLING"
+      }
+    },
+    {
+      "id": "editor.asset.caxecraft.nia.label",
+      "text": {
+        "en": "NIA",
+        "es-MX": "NIA"
+      }
+    },
+    {
+      "id": "editor.asset.caxecraft.sand-block.label",
+      "text": {
+        "en": "SAND BLOCK",
+        "es-MX": "BLOQUE DE ARENA"
+      }
+    },
+    {
+      "id": "editor.asset.caxecraft.sand.label",
+      "text": {
+        "en": "SAND",
+        "es-MX": "ARENA"
+      }
+    },
+    {
+      "id": "editor.asset.caxecraft.snow.label",
+      "text": {
+        "en": "SNOW",
+        "es-MX": "NIEVE"
+      }
+    },
+    {
+      "id": "editor.asset.caxecraft.stone-block.label",
+      "text": {
+        "en": "STONE BLOCK",
+        "es-MX": "BLOQUE DE PIEDRA"
+      }
+    },
+    {
+      "id": "editor.asset.caxecraft.stone.label",
+      "text": {
+        "en": "STONE",
+        "es-MX": "PIEDRA"
+      }
+    },
+    {
+      "id": "editor.asset.caxecraft.tideweave-suit.label",
+      "text": {
+        "en": "TIDEWEAVE SUIT",
+        "es-MX": "TRAJE TIDEWEAVE"
+      }
+    },
+    {
+      "id": "editor.asset.caxecraft.wood.label",
+      "text": {
+        "en": "WOOD",
+        "es-MX": "MADERA"
       }
     },
     {

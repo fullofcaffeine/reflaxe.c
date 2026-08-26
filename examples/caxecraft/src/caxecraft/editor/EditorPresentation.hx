@@ -24,8 +24,9 @@ import caxecraft.scenario.ScenarioWorld.BlockPaletteEntry;
  *
  * `EditorSession` keeps the parsed draft private because its arrays also feed
  * canonical history. This module reads that draft once and returns only fresh
- * presentation values. The screen can retain or change these arrays without
- * changing the draft, undo bytes, validation, or Test Play state.
+ * presentation values and placement references. The screen can retain or
+ * change these arrays without changing the draft, undo bytes, validation, or
+ * Test Play state.
  */
 /** Terrain facts needed for drawing and palette-local editor tools. */
 typedef EditorPresentationWorld = {
@@ -33,12 +34,13 @@ typedef EditorPresentationWorld = {
 	final palette:Array<BlockPaletteEntry>;
 }
 
-/** Copy-owned visual values that do not decode or project terrain cells. */
+/** Copy-owned visual and placement values that do not project terrain cells. */
 typedef EditorPresentationDetails = {
 	final title:ScenarioText;
 	final environment:Null<ScenarioEnvironment>;
 	final world:EditorPresentationWorld;
 	final objects:Array<ScenarioObject>;
+	final dialogueIds:Array<ScenarioId>;
 	final ruleIds:Array<ScenarioId>;
 	final flowRuleCount:Int;
 	final flowRules:Array<EditorFlowRuleProjection>;
@@ -53,6 +55,7 @@ typedef EditorPresentationSnapshot = {
 	final world:EditorPresentationWorld;
 	final projection:Null<EditorWorldProjection>;
 	final objects:Array<ScenarioObject>;
+	final dialogueIds:Array<ScenarioId>;
 	final ruleIds:Array<ScenarioId>;
 	final flowRuleCount:Int;
 	final flowRules:Array<EditorFlowRuleProjection>;
@@ -74,6 +77,7 @@ function project(scenario:Scenario):EditorPresentationSnapshot {
 		world: details.world,
 		projection: projectWorld(scenario.world),
 		objects: details.objects,
+		dialogueIds: details.dialogueIds,
 		ruleIds: details.ruleIds,
 		flowRuleCount: details.flowRuleCount,
 		flowRules: details.flowRules,
@@ -95,6 +99,7 @@ function projectDetails(scenario:Scenario):EditorPresentationDetails {
 			]
 		},
 		objects: [for (object in scenario.objects) copyObject(object)],
+		dialogueIds: [for (dialogue in scenario.story.dialogues) dialogue.id],
 		ruleIds: [for (rule in scenario.flow.rules) rule.id],
 		flowRuleCount: scenario.flow.rules.length,
 		flowRules: projectFlowRules(scenario.flow.rules),

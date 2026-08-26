@@ -258,7 +258,7 @@ function toolFromIndex(index:Int):Null<EditorTool> {
 	template. The UI never mutates a projection directly.
 **/
 function commandFor(tool:EditorTool, point:VoxelPoint, paletteCode:Int, selection:Null<VoxelBounds>, objects:Array<ScenarioObject>, ruleIds:Array<ScenarioId>,
-		recipe:Null<EditorObjectRecipe>):EditorToolCommandResult {
+		dialogueIds:Array<ScenarioId>, recipe:Null<EditorObjectRecipe>):EditorToolCommandResult {
 	return switch tool {
 		case SelectTool:
 			ToolSelectionReady({
@@ -275,7 +275,10 @@ function commandFor(tool:EditorTool, point:VoxelPoint, paletteCode:Int, selectio
 			final template = checkpointTemplate(point, objects, ruleIds);
 			ToolBatchReady(template.commands, template.objectId);
 		case CatalogObjectTool:
-			recipe == null ? ToolCommandRejected(MissingEditorObjectRecipe) : ToolCommandReady(objectRecipeCommand(recipe, point, objects));
+			if (recipe == null) ToolCommandRejected(MissingEditorObjectRecipe); else {
+				final command = objectRecipeCommand(recipe, point, objects, dialogueIds);
+				command == null ? ToolCommandRejected(MissingEditorDialogue) : ToolCommandReady(command);
+			}
 		case TriggerZoneTool:
 			ToolCommandReady(triggerZoneCommand(point, objects));
 	};

@@ -445,7 +445,7 @@
       "kind": "stateful-object",
       "label": {
         "en": "FORGE RELAY",
-        "es-MX": "RELE DE FORJA"
+        "es-MX": "RELÉ DE FORJA"
       },
       "objectType": "caxecraft:gate-relay",
       "initialState": "caxecraft:waiting"

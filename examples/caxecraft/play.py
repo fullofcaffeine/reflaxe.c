@@ -1647,6 +1647,53 @@ def validate_editor_environment_screenshot(path: Path, *, platform_name: str) ->
     return width, height
 
 
+def validate_editor_asset_browser_screenshot(path: Path, *, platform_name: str) -> tuple[int, int]:
+    """Prove the searched asset browser is visible, focused, and icon-backed."""
+
+    width, height, pixels = decode_rgba_png(path, "editor asset browser")
+    logical_width, logical_height = 1280, 720
+    expected_dimensions = {(logical_width, logical_height)}
+    if platform_name == "macos":
+        expected_dimensions.add((logical_width * 2, logical_height * 2))
+    if (width, height) not in expected_dimensions:
+        raise PlayFailure(
+            "Caxecraft editor asset-browser screenshot must match its logical "
+            f"1280x720 window at an admitted pixel scale, found {width}x{height}"
+        )
+    scale = width // logical_width
+    panel_changed = 0
+    panel_colors: set[int] = set()
+    mechanism_icon_pixels = 0
+    focus_pixels = 0
+    for row in range(50 * scale, 670 * scale):
+        row_at = row * width * 4
+        for column in range(200 * scale, 1080 * scale):
+            at = row_at + column * 4
+            red, green, blue = pixels[at : at + 3]
+            panel_colors.add((red >> 4) << 8 | (green >> 4) << 4 | (blue >> 4))
+            if abs(red - 12) + abs(green - 28) + abs(blue - 36) > 24:
+                panel_changed += 1
+            if (red, green, blue) == (210, 105, 230):
+                mechanism_icon_pixels += 1
+            if (red, green, blue) == (255, 132, 47):
+                focus_pixels += 1
+    minimum_changed = 150_000 * scale * scale
+    minimum_icon = 400 * scale * scale
+    minimum_focus = 100 * scale * scale
+    if (
+        panel_changed < minimum_changed
+        or len(panel_colors) < 8
+        or mechanism_icon_pixels < minimum_icon
+        or focus_pixels < minimum_focus
+    ):
+        raise PlayFailure(
+            "Caxecraft editor asset browser is blank, unfocused, or missing its stable mechanism icon "
+            f"(changed:{panel_changed}, colors:{len(panel_colors)}, "
+            f"icon:{mechanism_icon_pixels}, focus:{focus_pixels})"
+        )
+    return width, height
+
+
 def host_platform() -> str:
     value = PLATFORM_NAMES.get(platform.system())
     if value is None:
@@ -3309,6 +3356,7 @@ def run_pilot_sample(
         supporting_screenshots = (
             executable.parent / "caxecraft-pilot-editor-terrain-prompt.png",
             executable.parent / "caxecraft-pilot-editor-play.png",
+            executable.parent / "caxecraft-pilot-editor-assets.png",
             executable.parent / "caxecraft-pilot-editor-environment.png",
         )
     else:
@@ -3381,6 +3429,8 @@ def run_pilot_sample(
             )
         elif supporting_screenshot.name == "caxecraft-pilot-editor-environment.png":
             validate_editor_environment_screenshot(supporting_screenshot, platform_name=platform_name)
+        elif supporting_screenshot.name == "caxecraft-pilot-editor-assets.png":
+            validate_editor_asset_browser_screenshot(supporting_screenshot, platform_name=platform_name)
         elif supporting_screenshot.name == "caxecraft-pilot-editor-terrain-prompt.png":
             validate_editor_screenshot(supporting_screenshot, platform_name=platform_name)
         else:

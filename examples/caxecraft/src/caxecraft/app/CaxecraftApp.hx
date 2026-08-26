@@ -395,6 +395,10 @@ final class CaxecraftApp {
 			navigationCommand = editorNavigation.advance(confirmAgain, 0.0);
 		}
 		if (pilotName == PilotScriptName.EditorShell && onEditor && frameCount == 7) {
+			if (!editorScreen.applyPilotCatalogSearch())
+				rejectedEditCount++;
+		}
+		if (pilotName == PilotScriptName.EditorShell && onEditor && frameCount == 8) {
 			if (!editorScreen.applyPilotCatalogObject())
 				rejectedEditCount++;
 			if (!editorScreen.applyPilotSelectFirstActor())
@@ -414,7 +418,7 @@ final class CaxecraftApp {
 						rejectedEditCount++;
 				}
 		}
-		if (pilotName == PilotScriptName.EditorShell && onEditor && frameCount == 8) {
+		if (pilotName == PilotScriptName.EditorShell && onEditor && frameCount == 9) {
 			switch editorScreen.applyNavigation(NavigationCommand.Cancel) {
 				case StayInEditor:
 				case ReturnToTitle | StartTestPlay(_):
@@ -2043,7 +2047,7 @@ final class CaxecraftApp {
 				|| (pilotName == PilotScriptName.ResizeLayout && frameCount == 3)
 				|| (pilotName == PilotScriptName.AquaticGear && frameCount == 146)
 				|| (pilotName == PilotScriptName.SmoothMotion && frameCount == 10)
-				|| (pilotName == PilotScriptName.EditorShell && (frameCount == 0 || frameCount == 5))
+				|| (pilotName == PilotScriptName.EditorShell && (frameCount == 0 || frameCount == 5 || frameCount == 7 || frameCount == 8))
 				|| (pilotName == PilotScriptName.CampaignTravel && frameCount == 3))
 				capturePilotFrame = true;
 			#if caxecraft_pilot_runtime
@@ -2087,9 +2091,11 @@ final class CaxecraftApp {
 			if (pilotName == PilotScriptName.EditorShell && frameCount == 0)
 				capturePilotScreenshot("caxecraft-pilot-editor-terrain-prompt.png");
 			if (pilotName == PilotScriptName.EditorShell && frameCount == 7)
-				capturePilotScreenshot("caxecraft-pilot-editor-environment.png");
+				capturePilotScreenshot("caxecraft-pilot-editor-assets.png");
 			if (pilotName == PilotScriptName.EditorShell && frameCount == 8)
-				reviewScreenshotObserved = capturePilotScreenshot("caxecraft-pilot-editor.png");
+				reviewScreenshotObserved = capturePilotScreenshot("caxecraft-pilot-editor-environment.png");
+			if (pilotName == PilotScriptName.EditorShell && frameCount == 9)
+				capturePilotScreenshot("caxecraft-pilot-editor.png");
 			if (pilotName == PilotScriptName.CampaignTravel && frameCount == 3)
 				reviewScreenshotObserved = capturePilotScreenshot("caxecraft-pilot-campaign-travel.png");
 			#if caxecraft_pilot_runtime

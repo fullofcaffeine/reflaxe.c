@@ -41,6 +41,15 @@ import caxecraft.editor.EditorEnvironment.EditorEnvironmentDirection;
 import caxecraft.editor.EditorEnvironment.editEnvironment;
 import caxecraft.editor.EditorEnvironment.firstEnvironmentControl;
 import caxecraft.editor.EditorEnvironment.moveEnvironmentControl;
+import caxecraft.editor.EditorAssetBrowser.EditorAssetCategory;
+import caxecraft.editor.EditorAssetBrowser.EditorAssetEntry;
+import caxecraft.editor.EditorAssetBrowser.EditorAssetUse;
+import caxecraft.editor.EditorAssetBrowser.allEditorAssetCategories;
+import caxecraft.editor.EditorAssetBrowser.availableEditorAssets;
+import caxecraft.editor.EditorAssetBrowser.editorAssetHelp;
+import caxecraft.editor.EditorAssetBrowser.editorAssetLabel;
+import caxecraft.editor.EditorAssetBrowser.filterEditorAssets;
+import caxecraft.editor.EditorAssetBrowser.moveEditorAssetSelection;
 import caxecraft.editor.EditorFocus.EditorFocusTarget;
 import caxecraft.editor.EditorFocus.initialFocus;
 import caxecraft.editor.EditorFocus.moveFocus;
@@ -71,6 +80,7 @@ import caxecraft.editor.EditorObjectPresentation.visualUsesBillboard;
 import caxecraft.editor.EditorPresentation.EditorPresentationSnapshot;
 import caxecraft.editor.EditorPresentation.EditorPresentationDetails;
 import caxecraft.editor.EditorTypes.EditorMutationResult;
+import caxecraft.editor.EditorTypes.EditorCommand;
 import caxecraft.editor.EditorTypes.EditorNodeRef;
 import caxecraft.editor.EditorTypes.EditorObservation;
 import caxecraft.editor.EditorTypes.EditorQuery;
@@ -130,6 +140,7 @@ import caxecraft.scenario.CaxeFlowRuntime.FlowTraceEntry;
 import caxecraft.scenario.ScenarioEnvironment;
 import caxecraft.scenario.ScenarioEnvironment.ScenarioHorizonEdge;
 import caxecraft.scenario.ScenarioId;
+import caxecraft.scenario.ContentId;
 import caxecraft.scenario.ScenarioObject;
 import caxecraft.scenario.ScenarioText;
 import caxecraft.app.EditorObjectRenderer.drawEditorObject;
@@ -244,6 +255,15 @@ final class CaxecraftEditorScreen {
 	var editLayerY:Int;
 	var activeTool:EditorTool;
 	var groundPaletteCode:Int;
+	final assetCategories:Array<EditorAssetCategory>;
+	final assetEntries:Array<EditorAssetEntry>;
+	final assetSearch:Null<GuiTextBoxState>;
+	var assetBrowserOpen:Bool;
+	var assetCategory:EditorAssetCategory;
+	var assetSelection:Int;
+	var assetQuery:String;
+	var visibleAssets:Array<EditorAssetEntry>;
+	var selectedObjectAsset:Null<EditorAssetEntry>;
 	var detailsOpen:Bool;
 	var worldListOpen:Bool;
 	var environmentPanelOpen:Bool;
@@ -332,6 +352,15 @@ final class CaxecraftEditorScreen {
 		editLayerY = 0;
 		activeTool = SelectTool;
 		groundPaletteCode = -1;
+		assetCategories = allEditorAssetCategories();
+		assetEntries = availableEditorAssets(contentRegistry, uiCatalog);
+		assetSearch = GuiTextBoxState.create(64);
+		assetBrowserOpen = false;
+		assetCategory = EditorAssetCategory.TerrainAssets;
+		assetSelection = 0;
+		assetQuery = "";
+		visibleAssets = filterEditorAssets(assetEntries, assetCategory, assetQuery);
+		selectedObjectAsset = firstObjectAsset(assetEntries);
 		detailsOpen = false;
 		worldListOpen = false;
 		environmentPanelOpen = false;
@@ -363,7 +392,22 @@ final class CaxecraftEditorScreen {
 		final height = Raylib.GetScreenHeight();
 		if (!Raylib.IsWindowFocused())
 			setBuildPointerState(nextPointerState(buildPointerState, workspaceView == BuildView, false, false, false));
-		if (saveShortcutPressed())
+		final editedName = worldName;
+		final editedObjectName = objectName;
+		final editedAssetSearch = assetSearch;
+		if (!leavePromptOpen
+			&& !environmentPanelOpen
+			&& (editedName == null || !editedName.isEditing())
+			&& (editedObjectName == null || !editedObjectName.isEditing())
+			&& (editedAssetSearch == null || !editedAssetSearch.isEditing())
+			&& !shortcutModifierDown()
+			&& Raylib.IsKeyPressed(KeyboardKey.B)) {
+			if (assetBrowserOpen)
+				closeAssetBrowser();
+			else
+				openAssetBrowser();
+		}
+		if (!assetBrowserOpen && saveShortcutPressed())
 			requestSave();
 		final keyboardNavigation = readKeyboardNavigation();
 		final navigation = externalNavigation != NavigationCommand.None ? externalNavigation : keyboardNavigation;
@@ -373,10 +417,9 @@ final class CaxecraftEditorScreen {
 			case ReturnToTitle | StartTestPlay(_):
 				return navigationAction;
 		}
-		final editedName = worldName;
-		final editedObjectName = objectName;
 		final shortcutInputAvailable = !leavePromptOpen
 			&& !environmentPanelOpen
+			&& !assetBrowserOpen
 			&& (editedName == null || !editedName.isEditing())
 			&& (editedObjectName == null || !editedObjectName.isEditing());
 		switch objectShortcutAction({
@@ -396,6 +439,10 @@ final class CaxecraftEditorScreen {
 				deleteSelectedObject();
 		}
 		Raylib.ClearBackground(Color.rgba(12, 28, 36));
+		if (assetBrowserOpen) {
+			drawAssetBrowser(locale, width, height);
+			return StayInEditor;
+		}
 		if (environmentPanelOpen) {
 			drawEnvironmentPanel(locale, width, height);
 			return StayInEditor;
@@ -544,9 +591,7 @@ final class CaxecraftEditorScreen {
 			case SelectTool: uiCatalog.text(locale, UiMessage.EditorSelect);
 			case PaintTool | EraseTool | FillTool: groundMaterialLabel(locale);
 			case CheckpointTool: uiCatalog.text(locale, UiMessage.EditorCheckpoint);
-			case CatalogObjectTool:
-				final recipe = contentRegistry.editorObjectAt(0);
-				recipe == null ? "-" : locale == Locale0 ? recipe.labelEn : recipe.labelEsMx;
+			case CatalogObjectTool: selectedObjectAssetLabel(locale);
 			case TriggerZoneTool: uiCatalog.text(locale, UiMessage.EditorTrigger);
 		};
 	}
@@ -647,11 +692,7 @@ final class CaxecraftEditorScreen {
 		final triggerSlot = catalogSlot + 1;
 		drawToolCard(locale, EditorFocusTarget.CheckpointTool, EditorTool.CheckpointTool, checkpointSlot,
 			left + 12 + (cardWidth + cardGap) * (checkpointSlot - 1), cardTop, cardWidth, 68, UiMessage.EditorCheckpoint, Color.rgba(76, 209, 198));
-		final recipe = contentRegistry.editorObjectAt(0);
-		if (recipe != null)
-			drawToolCardText(EditorFocusTarget.CatalogObjectTool, EditorTool.CatalogObjectTool, catalogSlot,
-				left + 12 + (cardWidth + cardGap) * (catalogSlot - 1), cardTop, cardWidth, 68, locale == Locale0 ? recipe.labelEn : recipe.labelEsMx,
-				Color.rgba(226, 151, 72));
+		drawAssetBrowserCard(locale, catalogSlot, left + 12 + (cardWidth + cardGap) * (catalogSlot - 1), cardTop, cardWidth, 68);
 		drawToolCard(locale, EditorFocusTarget.TriggerZoneTool, EditorTool.TriggerZoneTool, triggerSlot,
 			left + 12 + (cardWidth + cardGap) * (triggerSlot - 1), cardTop, cardWidth, 68, UiMessage.EditorTrigger, Color.rgba(210, 105, 230));
 
@@ -696,6 +737,108 @@ final class CaxecraftEditorScreen {
 		Raylib.DrawTextString(text, left + 58, top + 23, 17, CaxecraftPalette.hudText());
 		drawFocusRing(focus, left, top, width, height);
 		drawActiveControl(activeTool == tool, left, top, width, height);
+	}
+
+	/** Open the complete content-derived browser from its visible creation card. */
+	function drawAssetBrowserCard(locale:LocaleCursor, slot:Int, left:Int, top:Int, width:Int, height:Int):Void {
+		final pressed = Raygui.ButtonString(Rectangle.fromFloat(left, top, width, height), "").has(GuiResult.Pressed);
+		if (pressed) {
+			focusedControl = EditorFocusTarget.CatalogObjectTool;
+			openAssetBrowser();
+		}
+		Raylib.DrawRectangle(left + 12, top + 14, 36, 36, Color.rgba(226, 151, 72));
+		Raylib.DrawRectangleLines(left + 12, top + 14, 36, 36, CaxecraftPalette.hudText());
+		Raylib.DrawTextString(Std.string(slot), left + 25, top + 23, 18, Color.rgba(10, 24, 30));
+		Raylib.DrawTextString(uiCatalog.text(locale, UiMessage.EditorAssetBrowser), left + 58, top + 16, 16, CaxecraftPalette.hudText());
+		Raylib.DrawTextString(selectedObjectAssetLabel(locale), left + 58, top + 39, 13, Color.rgba(126, 205, 209));
+		drawFocusRing(EditorFocusTarget.CatalogObjectTool, left, top, width, height);
+		drawActiveControl(activeTool == EditorTool.CatalogObjectTool, left, top, width, height);
+	}
+
+	/** Draw one modal list over the editor without creating a second document. */
+	function drawAssetBrowser(locale:LocaleCursor, width:Int, height:Int):Void {
+		final panelWidth = width - 64 < 880 ? width - 64 : 880;
+		final panelHeight = height - 64 < 620 ? height - 64 : 620;
+		final left = Std.int((width - panelWidth) / 2);
+		final top = Std.int((height - panelHeight) / 2);
+		Raygui.PanelString(Rectangle.fromFloat(left, top, panelWidth, panelHeight), uiCatalog.text(locale, UiMessage.EditorAssetBrowser));
+
+		final categories = assetCategories;
+		final categoryGap = 8;
+		final categoryWidth = Std.int((panelWidth - 48 - categoryGap * (categories.length - 1)) / categories.length);
+		for (index in 0...categories.length) {
+			final category = categories[index];
+			final categoryLeft = left + 24 + index * (categoryWidth + categoryGap);
+			if (Raygui.ButtonString(Rectangle.fromFloat(categoryLeft, top + 46, categoryWidth, 38), uiCatalog.text(locale, assetCategoryMessage(category)))
+				.has(GuiResult.Pressed))
+				setAssetCategory(category);
+			if (assetCategory == category)
+				drawActiveControl(true, categoryLeft, top + 46, categoryWidth, 38);
+		}
+
+		Raylib.DrawTextString(uiCatalog.text(locale, UiMessage.EditorAssetSearch), left + 24, top + 102, 15, Color.rgba(126, 205, 209));
+		final search = assetSearch;
+		if (search != null) {
+			search.draw(Rectangle.fromFloat(left + 168, top + 94, panelWidth - 192, 34));
+			final nextQuery = search.text();
+			if (nextQuery != assetQuery) {
+				assetQuery = nextQuery;
+				refreshVisibleAssets(true);
+			}
+		}
+
+		final visible = visibleAssetEntries();
+		if (assetSelection >= visible.length)
+			assetSelection = visible.length == 0 ? -1 : visible.length - 1;
+		if (assetSelection < 0 && visible.length > 0)
+			assetSelection = 0;
+		final rowHeight = 55;
+		final rowGap = 6;
+		final listTop = top + 144;
+		final availableRows = Std.int((panelHeight - 218) / (rowHeight + rowGap));
+		final rowCount = availableRows < 1 ? 1 : availableRows;
+		var firstRow = assetSelection < rowCount ? 0 : assetSelection - rowCount + 1;
+		if (firstRow + rowCount > visible.length)
+			firstRow = visible.length - rowCount < 0 ? 0 : visible.length - rowCount;
+		if (visible.length == 0)
+			Raylib.DrawTextString(uiCatalog.text(locale, UiMessage.EditorAssetEmpty), left + 28, listTop + 18, 19, CaxecraftPalette.hudText());
+		else {
+			final lastRow = firstRow + rowCount < visible.length ? firstRow + rowCount : visible.length;
+			for (index in firstRow...lastRow) {
+				final entry = visible[index];
+				final rowTop = listTop + (index - firstRow) * (rowHeight + rowGap);
+				if (Raygui.ButtonString(Rectangle.fromFloat(left + 24, rowTop, panelWidth - 48, rowHeight), "").has(GuiResult.Pressed)) {
+					assetSelection = index;
+					chooseAsset(entry);
+				}
+				drawAssetMark(entry.category, left + 36, rowTop + 10, 34);
+				Raylib.DrawTextString(editorAssetLabel(entry, locale), left + 84, rowTop + 8, 19, CaxecraftPalette.hudText());
+				Raylib.DrawTextString(editorAssetHelp(entry, locale), left + 84, rowTop + 32, 13, Color.rgba(126, 205, 209));
+				if (assetSelection == index)
+					drawActiveControl(true, left + 24, rowTop, panelWidth - 48, rowHeight);
+			}
+		}
+
+		Raylib.DrawTextString(uiCatalog.text(locale, UiMessage.EditorAssetShortcut), left + 24, top + panelHeight - 40, 14, Color.rgba(126, 205, 209));
+		if (Raygui.ButtonString(Rectangle.fromFloat(left + panelWidth - 132, top + panelHeight - 48, 108, 30),
+			uiCatalog.text(locale, UiMessage.EditorAssetClose))
+			.has(GuiResult.Pressed))
+			closeAssetBrowser();
+	}
+
+	/** Give every category a stable shape and color without duplicating asset art. */
+	static function drawAssetMark(category:EditorAssetCategory, left:Int, top:Int, size:Int):Void {
+		final color = switch category {
+			case TerrainAssets: Color.rgba(111, 174, 91);
+			case ItemAssets: Color.rgba(226, 151, 72);
+			case NpcAssets: Color.rgba(84, 191, 205);
+			case EnemyAssets: Color.rgba(218, 103, 78);
+			case MechanismAssets: Color.rgba(210, 105, 230);
+		};
+		Raylib.DrawRectangle(left, top, size, size, color);
+		Raylib.DrawRectangleLines(left, top, size, size, CaxecraftPalette.hudText());
+		final inset = 5 + categoryIndex(category) * 2;
+		Raylib.DrawRectangleLines(left + inset, top + inset, size - inset * 2, size - inset * 2, Color.rgba(10, 24, 30));
 	}
 
 	/** Show only the properties and authored records that help the current task. */
@@ -1202,6 +1345,34 @@ final class CaxecraftEditorScreen {
 	 * action in the same frame.
 	 */
 	function readKeyboardNavigation():NavigationCommand {
+		if (assetBrowserOpen) {
+			final search = assetSearch;
+			if (search != null && search.isEditing()) {
+				if (Raylib.IsKeyPressed(KeyboardKey.Enter)
+					|| Raylib.IsKeyPressed(KeyboardKey.Escape)
+					|| Raylib.IsKeyPressed(KeyboardKey.Tab))
+					search.setEditing(false);
+				return NavigationCommand.None;
+			}
+			if (Raylib.IsKeyPressed(KeyboardKey.Tab)) {
+				if (search != null)
+					search.setEditing(true);
+				return NavigationCommand.None;
+			}
+			if (Raylib.IsKeyPressed(KeyboardKey.Up))
+				return NavigationCommand.Up;
+			if (Raylib.IsKeyPressed(KeyboardKey.Down))
+				return NavigationCommand.Down;
+			if (Raylib.IsKeyPressed(KeyboardKey.Left))
+				return NavigationCommand.Left;
+			if (Raylib.IsKeyPressed(KeyboardKey.Right))
+				return NavigationCommand.Right;
+			if (Raylib.IsKeyPressed(KeyboardKey.Escape))
+				return NavigationCommand.Cancel;
+			if (Raylib.IsKeyPressed(KeyboardKey.Enter) || Raylib.IsKeyPressed(KeyboardKey.Space))
+				return NavigationCommand.Confirm;
+			return NavigationCommand.None;
+		}
 		final name = worldName;
 		if (name != null && name.isEditing())
 			return NavigationCommand.None;
@@ -1253,6 +1424,10 @@ final class CaxecraftEditorScreen {
 	 * Keyboard, controller, and pilot commands all enter this one handler.
 	 */
 	public function applyNavigation(command:NavigationCommand):EditorScreenAction {
+		if (assetBrowserOpen) {
+			applyAssetBrowserNavigation(command);
+			return StayInEditor;
+		}
 		if (command == NavigationCommand.Cancel && objectGrabActive(objectGrab)) {
 			objectGrab = NoObjectGrab;
 			return StayInEditor;
@@ -1363,7 +1538,7 @@ final class CaxecraftEditorScreen {
 			case CheckpointTool:
 				setActiveTool(EditorTool.CheckpointTool);
 			case CatalogObjectTool:
-				setActiveTool(EditorTool.CatalogObjectTool);
+				openAssetBrowser();
 			case TriggerZoneTool:
 				setActiveTool(EditorTool.TriggerZoneTool);
 			case MoreDetails:
@@ -1425,6 +1600,10 @@ final class CaxecraftEditorScreen {
 
 	/** Close the nearest presentation layer before offering to leave the draft. */
 	function cancelEditorAction():EditorScreenAction {
+		if (assetBrowserOpen) {
+			closeAssetBrowser();
+			return StayInEditor;
+		}
 		if (environmentPanelOpen) {
 			closeEnvironmentPanel();
 			return StayInEditor;
@@ -1527,6 +1706,200 @@ final class CaxecraftEditorScreen {
 		invalidatePreview();
 		return true;
 	}
+
+	/** Open asset discovery and release the mouse from direct world control. */
+	function openAssetBrowser():Void {
+		setBuildPointerState(EditorBuildPointerState.Released);
+		assetBrowserOpen = true;
+		focusedControl = EditorFocusTarget.CatalogObjectTool;
+		final search = assetSearch;
+		if (search != null)
+			search.setEditing(false);
+		normalizeAssetSelection();
+	}
+
+	/** Close asset discovery while preserving its category and query for return. */
+	function closeAssetBrowser():Void {
+		assetBrowserOpen = false;
+		final search = assetSearch;
+		if (search != null)
+			search.setEditing(false);
+		focusedControl = EditorFocusTarget.CatalogObjectTool;
+	}
+
+	/** Route keyboard, controller, and pilot commands through one modal policy. */
+	function applyAssetBrowserNavigation(command:NavigationCommand):Void {
+		switch command {
+			case Up:
+				assetSelection = moveEditorAssetSelection(assetSelection, visibleAssetEntries().length, -1);
+			case Down:
+				assetSelection = moveEditorAssetSelection(assetSelection, visibleAssetEntries().length, 1);
+			case Left:
+				moveAssetCategory(-1);
+			case Right:
+				moveAssetCategory(1);
+			case Confirm:
+				final visible = visibleAssetEntries();
+				if (assetSelection >= 0 && assetSelection < visible.length)
+					chooseAsset(visible[assetSelection]);
+			case Cancel:
+				closeAssetBrowser();
+			case None:
+		}
+	}
+
+	/** Change category once, wrapping through the visible deterministic order. */
+	function moveAssetCategory(direction:Int):Void {
+		final categories = assetCategories;
+		if (categories.length == 0)
+			return;
+		var index = categoryIndex(assetCategory);
+		index += direction < 0 ? -1 : 1;
+		if (index < 0)
+			index = categories.length - 1;
+		else if (index >= categories.length)
+			index = 0;
+		setAssetCategory(categories[index]);
+	}
+
+	/** Select one category and place its first filtered row under focus. */
+	function setAssetCategory(category:EditorAssetCategory):Void {
+		assetCategory = category;
+		refreshVisibleAssets(true);
+	}
+
+	/** Rebuild the small filtered row cache only after its inputs change. */
+	function refreshVisibleAssets(resetSelection:Bool):Void {
+		visibleAssets = filterEditorAssets(assetEntries, assetCategory, assetQuery);
+		if (resetSelection)
+			assetSelection = visibleAssets.length == 0 ? -1 : 0;
+		else
+			normalizeAssetSelection();
+	}
+
+	/** Keep modal selection valid after reopening or changing its query. */
+	function normalizeAssetSelection():Void {
+		final count = visibleAssetEntries().length;
+		if (count == 0)
+			assetSelection = -1;
+		else if (assetSelection < 0 || assetSelection >= count)
+			assetSelection = 0;
+	}
+
+	/** Return the cached read-only row list used by this private screen. */
+	function visibleAssetEntries():Array<EditorAssetEntry>
+		return visibleAssets;
+
+	/** Select one browser row through the existing terrain or object tool. */
+	function chooseAsset(entry:EditorAssetEntry):Void {
+		switch entry.use {
+			case PaintTerrainAsset(blockType):
+				if (selectTerrainAsset(blockType)) {
+					setActiveTool(EditorTool.PaintTool);
+					closeAssetBrowser();
+				}
+			case PlaceObjectAsset(_):
+				selectedObjectAsset = entry;
+				setActiveTool(EditorTool.CatalogObjectTool);
+				closeAssetBrowser();
+		}
+	}
+
+	/**
+	 * Select a terrain material, adding one draft-local palette code when needed.
+	 *
+	 * The new palette row is a normal revision-checked command. Undo, redo,
+	 * validation, Save, and reopen therefore observe the same canonical edit as
+	 * a manually authored palette change. No global content code is assumed.
+	 */
+	function selectTerrainAsset(blockType:ContentId):Bool {
+		var draft = presentationDraft;
+		final current = session;
+		if (draft == null || current == null)
+			return false;
+		var code = paletteCodeForBlock(draft.world.palette, blockType);
+		if (code < 0) {
+			code = firstFreePaletteCode(draft);
+			if (code < 0) {
+				notice = Invalid;
+				return false;
+			}
+			switch current.mutate({baseRevision: current.revision(), mutation: Apply(SetPaletteEntry(code, blockType))}) {
+				case MutationApplied(_, _, _, _, _, _):
+					refreshProjection(false, RefreshAllTerrain);
+				case MutationUnchanged(_, _):
+				case MutationRejected(_, _):
+					notice = Invalid;
+					return false;
+			}
+			draft = presentationDraft;
+			if (draft == null)
+				return false;
+			code = paletteCodeForBlock(draft.world.palette, blockType);
+		}
+		if (code < 0)
+			return false;
+		selectGroundPalette(code);
+		notice = Ready;
+		return true;
+	}
+
+	/** Find the smallest unused positive palette code in the CAXEMAP domain. */
+	static function firstFreePaletteCode(draft:EditorPresentationSnapshot):Int {
+		for (code in 1...256) {
+			var used = false;
+			for (entry in draft.world.palette)
+				if (entry.code == code)
+					used = true;
+			if (!used)
+				return code;
+		}
+		return -1;
+	}
+
+	/** Select the first mechanism recipe, or another placeable row as fallback. */
+	static function firstObjectAsset(entries:Array<EditorAssetEntry>):Null<EditorAssetEntry> {
+		for (entry in entries)
+			if (entry.category == EditorAssetCategory.MechanismAssets)
+				switch entry.use {
+					case PlaceObjectAsset(_):
+						return entry;
+					case PaintTerrainAsset(_):
+				}
+		for (entry in entries)
+			switch entry.use {
+				case PlaceObjectAsset(_):
+					return entry;
+				case PaintTerrainAsset(_):
+			}
+		return null;
+	}
+
+	/** Name the selected object recipe while the browser remains closed. */
+	function selectedObjectAssetLabel(locale:LocaleCursor):String {
+		final selected = selectedObjectAsset;
+		return selected == null ? uiCatalog.text(locale, UiMessage.EditorAssetBrowser) : editorAssetLabel(selected, locale);
+	}
+
+	/** Map a stable category to its data-owned localized heading. */
+	static function assetCategoryMessage(category:EditorAssetCategory):UiMessage
+		return switch category {
+			case TerrainAssets: UiMessage.EditorAssetCategoryTerrain;
+			case ItemAssets: UiMessage.EditorAssetCategoryItem;
+			case NpcAssets: UiMessage.EditorAssetCategoryNpc;
+			case EnemyAssets: UiMessage.EditorAssetCategoryEnemy;
+			case MechanismAssets: UiMessage.EditorAssetCategoryMechanism;
+		};
+
+	/** Return the fixed category order as an integer for navigation and marks. */
+	static function categoryIndex(category:EditorAssetCategory):Int
+		return switch category {
+			case TerrainAssets: 0;
+			case ItemAssets: 1;
+			case NpcAssets: 2;
+			case EnemyAssets: 3;
+			case MechanismAssets: 4;
+		};
 
 	/** Open the environment modal at its explicit enabled control. */
 	function openEnvironmentPanel():Void {
@@ -2362,16 +2735,26 @@ final class CaxecraftEditorScreen {
 			previewAllowed = false;
 			return;
 		}
-		previewAllowed = switch commandForTool(tool, point, paletteCode, current.selectedBounds(), draft.objects, draft.ruleIds, activeRecipeFor(tool)) {
+		previewAllowed = switch commandForTool(tool, point, paletteCode, current.selectedBounds(), draft.objects, draft.ruleIds, draft.dialogueIds,
+			activeRecipeFor(tool)) {
 			case ToolCommandRejected(_): false;
 			case ToolSelectionReady(_): true;
 			case ToolCommandReady(_) | ToolBatchReady(_, _): true;
 		};
 	}
 
-	/** Return the pack-selected recipe only for its matching creation tool. */
-	function activeRecipeFor(tool:EditorTool):Null<EditorObjectRecipe>
-		return tool == CatalogObjectTool ? contentRegistry.editorObjectAt(0) : null;
+	/** Return the browser-selected recipe only for its matching creation tool. */
+	function activeRecipeFor(tool:EditorTool):Null<EditorObjectRecipe> {
+		if (tool != CatalogObjectTool)
+			return null;
+		final selected = selectedObjectAsset;
+		if (selected == null)
+			return null;
+		return switch selected.use {
+			case PlaceObjectAsset(recipe): recipe;
+			case PaintTerrainAsset(_): null;
+		};
+	}
 
 	/** Drop the last ghost when a view, tool, or draft transition changes meaning. */
 	function invalidatePreview():Void {
@@ -2834,7 +3217,8 @@ final class CaxecraftEditorScreen {
 				return false;
 			}
 		}
-		final toolResult = commandForTool(tool, point, paletteCode, current.selectedBounds(), draft.objects, draft.ruleIds, activeRecipeFor(tool));
+		final toolResult = commandForTool(tool, point, paletteCode, current.selectedBounds(), draft.objects, draft.ruleIds, draft.dialogueIds,
+			activeRecipeFor(tool));
 		return switch toolResult {
 			case ToolCommandRejected(_):
 				notice = Invalid;
@@ -3039,6 +3423,7 @@ final class CaxecraftEditorScreen {
 			projection: retained,
 			objects: details.objects,
 			ruleIds: details.ruleIds,
+			dialogueIds: details.dialogueIds,
 			flowRuleCount: details.flowRuleCount,
 			flowRules: details.flowRules,
 			zoneRuleLinks: details.zoneRuleLinks,
@@ -3249,10 +3634,45 @@ final class CaxecraftEditorScreen {
 		return false;
 	}
 
-	/** Place the pack's first catalog recipe on a visible authored surface. */
+	/** Open and search the browser while leaving its real modal visible to the pilot. */
+	public function applyPilotCatalogSearch():Bool {
+		final search = assetSearch;
+		if (projection == null || search == null)
+			return false;
+		search.clear();
+		assetQuery = "";
+		openAssetBrowser();
+		setAssetCategory(EditorAssetCategory.TerrainAssets);
+		for (_ in 0...4)
+			applyNavigation(NavigationCommand.Right);
+		if (assetCategory != EditorAssetCategory.MechanismAssets)
+			return false;
+		final unfiltered = visibleAssetEntries();
+		if (unfiltered.length == 0)
+			return false;
+		final fullLabel = unfiltered[0].labelEn;
+		final queryLength = fullLabel.length < 3 ? fullLabel.length : 3;
+		if (queryLength == 0 || !search.replace(fullLabel.substr(0, queryLength)))
+			return false;
+		assetQuery = search.text();
+		refreshVisibleAssets(true);
+		final visible = visibleAssetEntries();
+		if (visible.length == 0)
+			return false;
+		assetSelection = 0;
+		return assetBrowserOpen && search.text().length == queryLength;
+	}
+
+	/** Choose the searched pilot row, then place its recipe on authored terrain. */
 	public function applyPilotCatalogObject():Bool {
 		final current = projection;
-		if (current == null || contentRegistry.editorObjectAt(0) == null)
+		if (current == null || !assetBrowserOpen)
+			return false;
+		final visible = visibleAssetEntries();
+		if (assetSelection < 0 || assetSelection >= visible.length)
+			return false;
+		chooseAsset(visible[assetSelection]);
+		if (assetBrowserOpen || activeRecipeFor(EditorTool.CatalogObjectTool) == null)
 			return false;
 		var z = current.depth - 1;
 		while (z >= 0) {

@@ -24,6 +24,16 @@ enum abstract UiMessage(String) {
 	var DebugTick = "debug_tick";
 	var DebugVisible = "debug_visible";
 	var EditorBack = "editor_back";
+	var EditorAssetBrowser = "editor_asset_browser";
+	var EditorAssetCategoryEnemy = "editor_asset_category_enemy";
+	var EditorAssetCategoryItem = "editor_asset_category_item";
+	var EditorAssetCategoryMechanism = "editor_asset_category_mechanism";
+	var EditorAssetCategoryNpc = "editor_asset_category_npc";
+	var EditorAssetCategoryTerrain = "editor_asset_category_terrain";
+	var EditorAssetClose = "editor_asset_close";
+	var EditorAssetEmpty = "editor_asset_empty";
+	var EditorAssetSearch = "editor_asset_search";
+	var EditorAssetShortcut = "editor_asset_shortcut";
 	var EditorCanvasHelp = "editor_canvas_help";
 	var EditorInvalid = "editor_invalid";
 	var EditorReady = "editor_ready";

@@ -217,20 +217,20 @@
     {
       "kind": "localization",
       "path": "locales/ui.json",
-      "byteLength": 29151,
-      "sha256": "04ff9aa4d7a3b08a26cb8f882ef1dd4fdddd1bc452b03c847abd0ca67d287186"
+      "byteLength": 35472,
+      "sha256": "2fd1cc2c87edd0e3fcf3e2d93105b269e162678287e89980c58cdc60855784a6"
     },
     {
       "kind": "content-pack",
       "path": "packs/caxecraft/base/content.json",
-      "byteLength": 22949,
-      "sha256": "58d45050c40c8dd618dff5cfa210fc945c9ee9a8501866dc03211d2813ec30c9"
+      "byteLength": 22950,
+      "sha256": "cc09d645a22706ddbff1c24f97739da2deac5a5cb9c606ba27bd0eac3398024f"
     },
     {
       "kind": "runtime-content",
       "path": "packs/caxecraft/base/runtime-content.json",
       "byteLength": 900,
-      "sha256": "0b05ac27d561a507cdceba4f22728cadfcfd5554b20b542a2d1f59cd4aab55d0"
+      "sha256": "ca720c82498175d2cc9f6c52385839d0b95f8df43b03f2a519fcd0aab70d76c2"
     },
     {
       "kind": "level",

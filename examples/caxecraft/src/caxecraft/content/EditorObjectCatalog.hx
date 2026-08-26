@@ -8,8 +8,17 @@ import caxecraft.scenario.ContentId;
 	The content pack owns names and initial behavior. The editor receives this
 	immutable recipe and never needs a branch for a campaign object.
 **/
-/** One admitted object recipe; later content kinds extend this closed choice. */
+/** One admitted object recipe with every payload needed by a placement command. */
 enum EditorObjectRecipeKind {
+	/** Place one inventory item with a small validated default quantity. */
+	EditorItem(itemType:ContentId, quantity:Int);
+
+	/** Place one NPC and bind it to the first authored dialogue chosen by the editor. */
+	EditorNpc(npcType:ContentId);
+
+	/** Place one ordinary hostile or ambient entity. */
+	EditorEnemy(entityType:ContentId);
+
 	/** Place one stateful object with a pack-validated initial state. */
 	EditorStatefulObject(objectType:ContentId, initialState:ContentId);
 }

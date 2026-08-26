@@ -89,7 +89,7 @@ function triggerZoneCommand(point:VoxelPoint, objects:Array<ScenarioObject>):Edi
 }
 
 /** Create one pack-defined object through the same canonical placement path. */
-function objectRecipeCommand(recipe:EditorObjectRecipe, point:VoxelPoint, objects:Array<ScenarioObject>):EditorCommand {
+function objectRecipeCommand(recipe:EditorObjectRecipe, point:VoxelPoint, objects:Array<ScenarioObject>, dialogueIds:Array<ScenarioId>):Null<EditorCommand> {
 	final id = nextRecipeId(recipe.id, objects);
 	final transform:ScenarioTransform = {
 		xMilli: point.x * 1000 + 500,
@@ -97,12 +97,18 @@ function objectRecipeCommand(recipe:EditorObjectRecipe, point:VoxelPoint, object
 		zMilli: point.z * 1000 + 500,
 		yawDegrees: 0
 	};
+	final placement = switch recipe.kind {
+		case EditorItem(itemType, quantity): Item(itemType, quantity, transform);
+		case EditorNpc(npcType): dialogueIds.length == 0 ? null : Npc(npcType, dialogueIds[0], transform);
+		case EditorEnemy(entityType): Entity(entityType, transform);
+		case EditorStatefulObject(objectType, initialState): StatefulObject(objectType, initialState, transform);
+	};
+	if (placement == null)
+		return null;
 	return PutObject({
 		id: id,
 		tags: [],
-		placement: switch recipe.kind {
-			case EditorStatefulObject(objectType, initialState): StatefulObject(objectType, initialState, transform);
-		}
+		placement: placement
 	});
 }
 

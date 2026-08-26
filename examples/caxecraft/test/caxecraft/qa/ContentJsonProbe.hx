@@ -323,7 +323,8 @@ function arrayDocument(entries:Int):String {
 function nodeCountDocument(totalNodes:Int):String {
 	final output = new StringBuf();
 	output.add("[");
-	final groupCount = 8;
+	final groupCapacity = ContentJson.MAXIMUM_COLLECTION_ENTRIES;
+	final groupCount = Std.int((totalNodes - 2 + groupCapacity) / groupCapacity);
 	var remaining = totalNodes - 1 - groupCount;
 	for (group in 0...groupCount) {
 		if (group > 0)

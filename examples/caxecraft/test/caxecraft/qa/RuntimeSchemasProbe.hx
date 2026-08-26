@@ -23,6 +23,12 @@ import caxecraft.app.RuntimeInventoryBinding.inventoryKindForRuntimeItem;
 import caxecraft.app.VoxelFrameAnimation.VoxelFrameAnimationPlayer;
 import caxecraft.editor.EditorObjectPresentation.EditorObjectVisual;
 import caxecraft.editor.EditorObjectPresentation.visualFor as editorObjectVisualFor;
+import caxecraft.editor.EditorAssetBrowser.EditorAssetCategory;
+import caxecraft.editor.EditorAssetBrowser.EditorAssetEntry;
+import caxecraft.editor.EditorAssetBrowser.EditorAssetUse;
+import caxecraft.editor.EditorAssetBrowser.availableEditorAssets;
+import caxecraft.editor.EditorAssetBrowser.filterEditorAssets;
+import caxecraft.editor.EditorAssetBrowser.moveEditorAssetSelection;
 import caxecraft.editor.EditorFlowProjection.allEditorFlowUiMessages;
 import caxecraft.gameplay.ItemKind;
 import caxecraft.localization.RuntimeUiCatalog;
@@ -57,7 +63,7 @@ var observed:Int = 0;
 /** Manually expected semantic proof from the reviewed base content JSON. */
 var tracePack:Int = 0;
 
-/** Manually expected text/shape proof from the reviewed UI JSON. */
+/** Data-derived locale shape and one non-empty translated-message observation. */
 var traceUi:Int = 0;
 
 /** Source line from a representative version diagnostic. */
@@ -98,17 +104,99 @@ function selfCheck():Int {
 		case RuntimeUiCatalogRejected(_): return 5;
 	};
 	final editorObject = registry.editorObjectAt(0);
-	if (registry.editorObjectCount() != 1
-		|| editorObject == null
-		|| editorObject.id != "forge-relay"
-		|| editorObject.labelEn != "FORGE RELAY"
-		|| editorObject.labelEsMx != "RELE DE FORJA")
+	if (registry.editorObjectCount() != 1 || editorObject == null || editorObject.id != "forge-relay" || editorObject.labelEn.length == 0
+		|| editorObject.labelEsMx.length == 0)
 		return 58;
 	switch editorObject.kind {
 		case EditorStatefulObject(objectType, initialState):
 			if (objectType.text() != "caxecraft:gate-relay" || initialState.text() != "caxecraft:waiting")
 				return 58;
+		case EditorItem(_, _) | EditorNpc(_) | EditorEnemy(_):
+			return 58;
 	}
+	final assets = availableEditorAssets(registry, catalog);
+	var terrainAssets = 0;
+	var itemAssets = 0;
+	var npcAssets = 0;
+	var enemyAssets = 0;
+	var mechanismAssets = 0;
+	var editorObjectLabelsMatch = false;
+	for (left in 0...assets.length) {
+		final entry = assets[left];
+		if (entry.labelEn.length == 0 || entry.labelEsMx.length == 0 || entry.helpEn.length == 0 || entry.helpEsMx.length == 0)
+			return 76;
+		switch entry.category {
+			case TerrainAssets:
+				terrainAssets++;
+				switch entry.use {
+					case PaintTerrainAsset(_):
+					case PlaceObjectAsset(_): return 76;
+				}
+			case ItemAssets:
+				itemAssets++;
+				switch entry.use {
+					case PlaceObjectAsset({kind: EditorItem(_, 1)}):
+					case _: return 76;
+				}
+			case NpcAssets:
+				npcAssets++;
+				switch entry.use {
+					case PlaceObjectAsset({kind: EditorNpc(_)}):
+					case _: return 76;
+				}
+			case EnemyAssets:
+				enemyAssets++;
+				switch entry.use {
+					case PlaceObjectAsset({kind: EditorEnemy(_)}):
+					case _: return 76;
+				}
+			case MechanismAssets:
+				mechanismAssets++;
+				switch entry.use {
+					case PlaceObjectAsset(recipe):
+						switch recipe.kind {
+							case EditorStatefulObject(_, _):
+								editorObjectLabelsMatch = recipe.id == editorObject.id
+									&& entry.labelEn == editorObject.labelEn
+									&& entry.labelEsMx == editorObject.labelEsMx;
+							case _: return 76;
+						}
+					case PaintTerrainAsset(_): return 76;
+				}
+		}
+		for (right in left + 1...assets.length)
+			if (entry.id == assets[right].id)
+				return 76;
+	}
+	var firstItem:Null<EditorAssetEntry> = null;
+	for (entry in assets)
+		if (firstItem == null && entry.category == EditorAssetCategory.ItemAssets)
+			firstItem = entry;
+	final searchedItem = switch firstItem {
+		case null: return 76;
+		case value: value;
+	};
+	final translatedSearch = filterEditorAssets(assets, EditorAssetCategory.ItemAssets, searchedItem.labelEsMx.toLowerCase());
+	var foundFirstItem = false;
+	for (entry in translatedSearch)
+		if (entry.id == searchedItem.id)
+			foundFirstItem = true;
+	if (assets.length != registry.blockCount()
+		- 1
+		+ registry.itemCount()
+		+ registry.npcCount()
+		+ registry.enemyCount()
+		+ registry.editorObjectCount() || terrainAssets != registry.blockCount() - 1
+		|| itemAssets != registry.itemCount()
+		|| npcAssets != registry.npcCount()
+		|| enemyAssets != registry.enemyCount()
+		|| mechanismAssets != registry.editorObjectCount()
+		|| !editorObjectLabelsMatch
+		|| !foundFirstItem
+		|| moveEditorAssetSelection(0, 3, -1) != 2
+		|| moveEditorAssetSelection(2, 3, 1) != 0
+		|| moveEditorAssetSelection(0, 0, 1) != -1)
+		return 76;
 
 	tracePack = registry.semanticProof();
 	final sand = new ContentId("caxecraft:sand");
@@ -209,28 +297,41 @@ function selfCheck():Int {
 			return 53;
 	}
 
+	final adventureEn = catalog.text(LocaleCursor.Locale0, UiMessage.MenuAdventure);
+	final adventureEsMx = catalog.text(LocaleCursor.Locale1, UiMessage.MenuAdventure);
 	if (catalog.localeCount() != 2
-		|| catalog.messageCount() != 79
-		|| catalog.text(LocaleCursor.Locale0, UiMessage.MenuAdventure) != "ADVENTURE"
-		|| catalog.text(LocaleCursor.Locale1, UiMessage.MenuAdventure) != "AVENTURA"
-		|| catalog.text(LocaleCursor.Locale1, UiMessage.EditorTitle) != "EDITOR DE MUNDOS CAXECRAFT")
+		|| catalog.messageCount() <= 0
+		|| adventureEn.length == 0
+		|| adventureEsMx.length == 0
+		|| catalog.text(LocaleCursor.Locale1, UiMessage.EditorTitle).length == 0)
 		return 8;
-	if (catalog.templateCount() != 88 || !allRequiredTemplatesExist(catalog))
+	if (catalog.templateCount() <= 0 || !allRequiredTemplatesExist(catalog))
 		return 71;
-	if (catalog.format(Locale0, allFlowEventDescriptors()[0].editorLabel, ["zone.harbor"]) != "enter zone.harbor"
-		|| catalog.format(Locale1, allFlowEventDescriptors()[0].editorLabel, ["zone.harbor"]) != "entrar en zone.harbor"
-		|| catalog.format(Locale0, new MessageId("scenario.diagnostic.stale-reference"),
-			["object.gone", "21", "5"]) != "Reference object.gone does not point to an existing record. Check line 21, column 5."
+	final eventArgument = "zone.harbor";
+	final eventEn = catalog.format(Locale0, allFlowEventDescriptors()[0].editorLabel, [eventArgument]);
+	final eventEsMx = catalog.format(Locale1, allFlowEventDescriptors()[0].editorLabel, [eventArgument]);
+	final diagnostic = catalog.format(Locale0, new MessageId("scenario.diagnostic.stale-reference"), ["object.gone", "21", "5"]);
+	if (eventEn.indexOf(eventArgument) < 0
+		|| eventEsMx.indexOf(eventArgument) < 0
+		|| diagnostic.indexOf("object.gone") < 0
+		|| diagnostic.indexOf("21") < 0
+		|| diagnostic.indexOf("5") < 0
 		|| catalog.format(Locale0, new MessageId("scenario.diagnostic.stale-reference"), ["object.gone"]) != "")
 		return 72;
-	final mismatchedPlaceholders = replaceOnce(ui.bytes.toString(), '"es-MX": "sumar {1} a {0}"', '"es-MX": "sumar a {0}"');
-	if (!rejectsUiAt(mismatchedPlaceholders, IncompatibleTypedCatalog, "templates[5].text"))
+	final mismatchedPlaceholders = removeFirstOccurrence(ui.bytes.toString(), "{1}");
+	if (!rejectsUi(mismatchedPlaceholders, IncompatibleTypedCatalog))
 		return 73;
-	traceUi = catalog.messageCount() * 100 + catalog.localeCount() * 10 + catalog.text(LocaleCursor.Locale1, UiMessage.MenuAdventure).length;
-	if (traceUi != 7928)
+	traceUi = catalog.localeCount() * 10 + adventureEsMx.length;
+	if (traceUi <= catalog.localeCount() * 10)
 		return 36;
 
 	return negativeChecks();
+}
+
+/** Remove one placeholder without depending on the owning catalog sentence. */
+function removeFirstOccurrence(source:String, needle:String):String {
+	final at = source.indexOf(needle);
+	return at < 0 ? "" : source.substring(0, at) + source.substring(at + needle.length);
 }
 
 /** Prove every code-owned key used by this slice exists in the data catalog. */

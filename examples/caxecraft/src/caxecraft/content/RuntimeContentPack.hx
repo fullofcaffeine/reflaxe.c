@@ -205,6 +205,10 @@ final class RuntimeContentRegistry implements ScenarioContentRegistry implements
 	public inline function blockCount():Int
 		return blocks.length;
 
+	/** Return one admitted terrain identity without exposing registry storage. */
+	public function blockIdAt(index:Int):Null<ContentId>
+		return index < 0 || index >= blocks.length ? null : new ContentId(blocks[index].id);
+
 	/** Return the schema-validated air ID used to initialize blank terrain. */
 	public inline function airBlockId():ContentId
 		return new ContentId(airBlock);
@@ -230,6 +234,26 @@ final class RuntimeContentRegistry implements ScenarioContentRegistry implements
 	/** Number of admitted item definitions and valid item storage codes. */
 	public inline function itemCount():Int
 		return items.length;
+
+	/** Return one admitted item identity without exposing registry storage. */
+	public function itemIdAt(index:Int):Null<ContentId>
+		return index < 0 || index >= items.length ? null : new ContentId(items[index].id);
+
+	/** Number of admitted NPC definitions available to authoring projections. */
+	public inline function npcCount():Int
+		return npcs.length;
+
+	/** Return one admitted NPC identity without exposing registry storage. */
+	public function npcIdAt(index:Int):Null<ContentId>
+		return index < 0 || index >= npcs.length ? null : new ContentId(npcs[index].id);
+
+	/** Number of admitted enemy definitions available to authoring projections. */
+	public inline function enemyCount():Int
+		return enemies.length;
+
+	/** Return one admitted enemy identity without exposing registry storage. */
+	public function enemyIdAt(index:Int):Null<ContentId>
+		return index < 0 || index >= enemies.length ? null : new ContentId(enemies[index].id);
 
 	/** Number of pack-owned object recipes shown by creator tools. */
 	public inline function editorObjectCount():Int

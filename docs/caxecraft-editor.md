@@ -227,6 +227,14 @@ Build has one Ground card because the two mouse buttons select the terrain
 operation. The left button removes terrain. The right button places terrain.
 Plan keeps separate Ground and Erase cards for precise work.
 
+The Things to Add card opens a searchable asset browser. Press `B` from either
+editor view to open or close it. The browser lists every admitted terrain
+material, item, character, enemy, and editor mechanism. Its rows come from the
+validated content pack; translated names and help come from the UI catalog.
+Choosing terrain selects the Ground tool and adds a normal undoable map-palette
+entry only when the map does not have that material. Choosing another row
+selects the ordinary object-placement tool.
+
 Plan is an advanced tool for hidden layers, trigger volumes, logic links, large
 selections, and fast navigation. It is not the default authoring experience.
 Build shows trigger bounds when the trigger tool is active or the creator
@@ -266,6 +274,9 @@ The current controls are:
 - press Escape once to release the pointer; press it again to cancel the
   selected tool or leave through the normal editor flow;
 - press 1 through 5 to choose the five visible Build cards;
+- press B to open or close Things to Add;
+- in Things to Add, use left/right to change category, up/down to choose a row,
+  Enter to use it, and Tab to enter or leave search text;
 - use W/S to move forward/back, A/D to strafe, and Q/E to move vertically;
 - use the wheel to move along the view direction;
 - press F to restore the deterministic whole-world view;

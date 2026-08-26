@@ -167,11 +167,12 @@ final class ContentJson {
 	/**
 	 * Whole-document value bound, independent of source byte length.
 	 *
-	 * This leaves several times the current pack's headroom while keeping a
-	 * limit-edge parse inside the native feedback budget. Raise it only with a
-	 * representative generated-C timing and memory measurement.
+	 * This leaves headroom above the validated UI and content catalogs while
+	 * keeping a limit-edge parse inside the native feedback budget. The 48 KiB
+	 * byte cap remains the tighter bound for ordinary text-heavy catalogs.
+	 * Changes require a representative generated-C timing and memory check.
 	 */
-	public static inline final MAXIMUM_NODES:Int = 1024;
+	public static inline final MAXIMUM_NODES:Int = 2048;
 
 	/** Per-object and per-array entry bound with room above shipped catalogs. */
 	public static inline final MAXIMUM_COLLECTION_ENTRIES:Int = 128;

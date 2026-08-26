@@ -691,7 +691,11 @@ final class EditorProbe {
 		final recipe = new EditorObjectRecipe("mechanism", "MECHANISM", "MECANISMO",
 			EditorStatefulObject(new ContentId("caxecraft:mechanism"), new ContentId("caxecraft:idle")));
 		final session = open(defaultEditorSettings());
-		final command = objectRecipeCommand(recipe, {x: 1, y: 0, z: 2}, session.draftSnapshot().objects);
+		expectApplied(session.apply(ResizeWorld({width: 4, height: 3, depth: 4})), WorldShape, "prepare browser placement world");
+		final command = switch objectRecipeCommand(recipe, {x: 1, y: 0, z: 2}, session.draftSnapshot().objects, []) {
+			case null: throw "catalog placement rejected a stateful recipe";
+			case value: value;
+		};
 		switch command {
 			case PutObject(object):
 				require(object.id.text() == "editor.mechanism.n1", "catalog placement chose the wrong independent identity");
@@ -709,7 +713,58 @@ final class EditorProbe {
 				throw "catalog placement did not use the canonical object command";
 		}
 		roundTrip(session, command, Placement);
+
+		final point:VoxelPoint = {x: 2, y: 1, z: 3};
+		final itemCommand = requiredRecipeCommand(new EditorObjectRecipe("item", "ITEM", "OBJETO", EditorItem(content("caxecraft:item"), 1)), point,
+			session.draftSnapshot().objects, []);
+		switch itemCommand {
+			case PutObject({placement: Item(itemType, 1, position)}):
+				require(itemType.text() == "caxecraft:item" && position.xMilli == 2500 && position.yMilli == 1000 && position.zMilli == 3500,
+					"item browser recipe changed its content, quantity, or snapped transform");
+			case _:
+				throw "item browser recipe emitted the wrong placement role";
+		}
+		roundTrip(session, itemCommand, Placement);
+
+		expectApplied(session.apply(PutDialogue({
+			id: DIALOGUE,
+			lines: [{speaker: null, text: Message(DIALOGUE_MESSAGE)}]
+		})), Dialogue, "prepare browser NPC dialogue");
+		final npcRecipe = new EditorObjectRecipe("npc", "NPC", "PNJ", EditorNpc(content("caxecraft:ivvy")));
+		require(objectRecipeCommand(npcRecipe, point, [], []) == null, "NPC browser recipe invented a missing dialogue reference");
+		final npcCommand = requiredRecipeCommand(npcRecipe, point, session.draftSnapshot().objects, [DIALOGUE]);
+		switch npcCommand {
+			case PutObject({placement: Npc(npcType, dialogueId, _)}):
+				require(npcType.text() == "caxecraft:ivvy" && dialogueId.text() == DIALOGUE.text(),
+					"NPC browser recipe did not bind the first authored dialogue");
+			case _:
+				throw "NPC browser recipe emitted the wrong placement role";
+		}
+		roundTrip(session, npcCommand, Placement);
+
+		final enemyCommand = requiredRecipeCommand(new EditorObjectRecipe("enemy", "ENEMY", "ENEMIGO", EditorEnemy(content("caxecraft:entity"))), point,
+			session.draftSnapshot().objects, []);
+		switch enemyCommand {
+			case PutObject({placement: Entity(entityType, _)}):
+				require(entityType.text() == "caxecraft:entity", "enemy browser recipe changed its entity type");
+			case _:
+				throw "enemy browser recipe emitted the wrong placement role";
+		}
+		roundTrip(session, enemyCommand, Placement);
+		final canonical = expectValid(session, "browser placement kinds");
+		expectCodecRoundTrip(canonical);
+		requireTestStarted(session.enterTestPlay(), "browser placement kinds");
+		require(session.leaveTestPlay(), "browser placement Test Play did not return to editing");
+		require(session.canonicalDraft().compare(canonical) == 0, "browser placement Test Play changed the editor draft");
 	}
+
+	/** Require one browser recipe to produce an ordinary canonical command. */
+	static function requiredRecipeCommand(recipe:EditorObjectRecipe, point:VoxelPoint, objects:Array<ScenarioObject>,
+			dialogueIds:Array<ScenarioId>):EditorCommand
+		return switch objectRecipeCommand(recipe, point, objects, dialogueIds) {
+			case null: throw 'browser recipe ${recipe.id} was rejected';
+			case value: value;
+		};
 
 	/** Prove one selected object becomes a distinct canonical copy with the same payload. */
 	static function checkObjectDuplication():Void {
@@ -2526,7 +2581,7 @@ final class EditorProbe {
 			"raygui tool indices drifted from the closed editor tool type");
 
 		final point:VoxelPoint = {x: 2, y: 1, z: 1};
-		switch commandForTool(SelectTool, point, 1, null, [], [], null) {
+		switch commandForTool(SelectTool, point, 1, null, [], [], [], null) {
 			case ToolSelectionReady(bounds):
 				require(bounds.origin.x == 2 && bounds.origin.y == 1 && bounds.origin.z == 1 && bounds.size.width == 1 && bounds.size.height == 1
 					&& bounds.size.depth == 1,
@@ -2534,39 +2589,39 @@ final class EditorProbe {
 			case _:
 				throw "select tool did not produce workspace bounds";
 		}
-		switch commandForTool(PaintTool, point, 1, null, [], [], null) {
+		switch commandForTool(PaintTool, point, 1, null, [], [], [], null) {
 			case ToolCommandReady(PaintVoxel(actual, 1)):
 				require(actual.x == point.x && actual.y == point.y && actual.z == point.z, "paint tool changed the pointed voxel");
 			case _:
 				throw "paint tool did not produce a PaintVoxel command";
 		}
-		switch commandForTool(EraseTool, point, 1, null, [], [], null) {
+		switch commandForTool(EraseTool, point, 1, null, [], [], [], null) {
 			case ToolCommandReady(EraseVoxel(actual)):
 				require(actual.x == point.x && actual.y == point.y && actual.z == point.z, "erase tool changed the pointed voxel");
 			case _:
 				throw "erase tool did not produce an EraseVoxel command";
 		}
-		switch commandForTool(FillTool, point, 1, null, [], [], null) {
+		switch commandForTool(FillTool, point, 1, null, [], [], [], null) {
 			case ToolCommandRejected(NoSelection):
 			case _:
 				throw "fill tool did not reject a missing selection exactly";
 		}
 		final selected:VoxelBounds = {origin: {x: 1, y: 0, z: 1}, size: {width: 2, height: 1, depth: 2}};
-		switch commandForTool(FillTool, point, 1, selected, [], [], null) {
+		switch commandForTool(FillTool, point, 1, selected, [], [], [], null) {
 			case ToolCommandReady(FillBounds(bounds, 1)):
 				require(bounds.origin.x == 1 && bounds.origin.z == 1 && bounds.size.width == 2 && bounds.size.depth == 2,
 					"fill tool changed its explicit workspace bounds");
 			case _:
 				throw "fill tool did not carry explicit typed bounds";
 		}
-		switch commandForTool(CheckpointTool, point, 1, null, [], [], null) {
+		switch commandForTool(CheckpointTool, point, 1, null, [], [], [], null) {
 			case ToolBatchReady(commands, selectedObject):
 				require(commands.length == 2 && selectedObject.text() == "editor.checkpoint.n1",
 					"checkpoint tool did not produce one selectable atomic template");
 			case _:
 				throw "checkpoint tool did not produce a canonical command batch";
 		}
-		switch commandForTool(TriggerZoneTool, point, 1, null, [], [], null) {
+		switch commandForTool(TriggerZoneTool, point, 1, null, [], [], [], null) {
 			case ToolCommandReady(PutObject(object)):
 				require(object.id.text() == "editor.trigger.n1", "trigger tool changed its deterministic object ID");
 				switch object.placement {
