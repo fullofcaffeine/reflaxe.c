@@ -4,6 +4,8 @@ import caxecraft.editor.EditorSession;
 import caxecraft.editor.EditorPresentation.EditorPresentationSnapshot;
 import caxecraft.editor.EditorPresentation.EditorPresentationDetails;
 import caxecraft.scenario.CaxeFlow.FlowRule;
+import caxecraft.scenario.CaxeFlow.FlowSequence;
+import caxecraft.scenario.CaxeFlow.FlowVariable;
 import caxecraft.scenario.ContentId;
 import caxecraft.scenario.LocaleId;
 import caxecraft.scenario.MessageId;
@@ -80,6 +82,8 @@ enum EditorCommand {
 	RemoveObjective(id:ScenarioId);
 	PutRule(rule:FlowRule);
 	RemoveRule(id:ScenarioId);
+	PutFlowVariable(variable:FlowVariable);
+	PutFlowSequence(sequence:FlowSequence);
 	SetDefaultLocale(locale:LocaleId);
 	PutLocale(locale:ScenarioLocaleCatalog);
 	RemoveLocale(locale:LocaleId);
@@ -123,6 +127,8 @@ enum EditorChangeId {
 	ChangedObject(id:ScenarioId);
 	ChangedDialogue(id:ScenarioId);
 	ChangedObjective(id:ScenarioId);
+	ChangedVariable(id:ScenarioId);
+	ChangedSequence(id:ScenarioId);
 	ChangedRule(id:ScenarioId);
 	ChangedLocalization;
 	ChangedLocale(id:LocaleId);

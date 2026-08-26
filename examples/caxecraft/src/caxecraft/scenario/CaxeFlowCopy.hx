@@ -5,6 +5,8 @@ import caxecraft.scenario.CaxeFlow.FlowArgument;
 import caxecraft.scenario.CaxeFlow.FlowChoice;
 import caxecraft.scenario.CaxeFlow.FlowPredicate;
 import caxecraft.scenario.CaxeFlow.FlowRule;
+import caxecraft.scenario.CaxeFlow.FlowSequence;
+import caxecraft.scenario.CaxeFlow.FlowVariable;
 
 /**
 	Builds copy-owned CaxeFlow values at editor and persistence boundaries.
@@ -23,6 +25,21 @@ function copyFlowRule(rule:FlowRule):FlowRule
 		event: rule.event,
 		predicate: copyFlowPredicate(rule.predicate),
 		actions: copyFlowActions(rule.actions)
+	};
+
+/** Copy one variable record at the editor command boundary. */
+function copyFlowVariable(variable:FlowVariable):FlowVariable
+	return {id: variable.id, scope: variable.scope, initial: variable.initial};
+
+/** Copy one reusable sequence, including parameter and action arrays. */
+function copyFlowSequence(sequence:FlowSequence):FlowSequence
+	return {
+		id: sequence.id,
+		parameters: [
+			for (parameter in sequence.parameters)
+				{id: parameter.id, initial: parameter.initial}
+		],
+		actions: copyFlowActions(sequence.actions)
 	};
 
 /** Recursively copy one closed condition tree without changing its meaning. */

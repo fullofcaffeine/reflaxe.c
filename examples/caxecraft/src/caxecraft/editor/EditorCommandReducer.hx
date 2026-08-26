@@ -10,6 +10,10 @@ import caxecraft.editor.EditorWorldGrid.paintMany as paintWorld;
 import caxecraft.editor.EditorWorldGrid.resize as resizeWorld;
 import caxecraft.editor.EditorObjectRename.renameScenarioObject;
 import caxecraft.scenario.CaxeFlow.FlowRule;
+import caxecraft.scenario.CaxeFlow.FlowSequence;
+import caxecraft.scenario.CaxeFlow.FlowVariable;
+import caxecraft.scenario.CaxeFlowCopy.copyFlowSequence;
+import caxecraft.scenario.CaxeFlowCopy.copyFlowVariable;
 import caxecraft.scenario.CaxeFlowCopy.copyFlowRule;
 import caxecraft.scenario.ContentId;
 import caxecraft.scenario.LocaleId;
@@ -117,6 +121,10 @@ function apply(scenario:Scenario, command:EditorCommand, settings:EditorSettings
 			ready(withRules(scenario, putRule(scenario.flow.rules, rule)), Rule);
 		case RemoveRule(id):
 			removeFlowRule(scenario, id);
+		case PutFlowVariable(variable):
+			ready(withFlowDefinitions(scenario, putFlowVariable(scenario.flow.variables, variable), scenario.flow.sequences), Rule);
+		case PutFlowSequence(sequence):
+			ready(withFlowDefinitions(scenario, scenario.flow.variables, putFlowSequence(scenario.flow.sequences, sequence)), Rule);
 		case SetDefaultLocale(locale):
 			setDefaultLocale(scenario, locale);
 		case PutLocale(locale):
@@ -615,6 +623,26 @@ private function putRule(values:Array<FlowRule>, replacement:FlowRule):Array<Flo
 	return result;
 }
 
+/** Insert or replace one copy-owned variable without changing registry order. */
+private function putFlowVariable(values:Array<FlowVariable>, replacement:FlowVariable):Array<FlowVariable> {
+	final result = [
+		for (value in values)
+			if (!same(value.id, replacement.id)) copyFlowVariable(value)
+	];
+	result.push(copyFlowVariable(replacement));
+	return result;
+}
+
+/** Insert or replace one copy-owned sequence without retaining caller arrays. */
+private function putFlowSequence(values:Array<FlowSequence>, replacement:FlowSequence):Array<FlowSequence> {
+	final result = [
+		for (value in values)
+			if (!same(value.id, replacement.id)) copyFlowSequence(value)
+	];
+	result.push(copyFlowSequence(replacement));
+	return result;
+}
+
 private function removeRule(values:Array<FlowRule>, id:ScenarioId):Array<FlowRule>
 	return [for (value in values) if (!same(value.id, id)) value];
 
@@ -698,6 +726,29 @@ private function withObjectives(scenario:Scenario, objectives:Array<ScenarioObje
 
 private function withRules(scenario:Scenario, rules:Array<FlowRule>):Scenario
 	return copy(scenario, scenario.messages, scenario.title, scenario.world, scenario.objects, scenario.story.dialogues, scenario.story.objectives, rules);
+
+/** Replace reusable flow definitions while retaining rules and all document data. */
+private function withFlowDefinitions(scenario:Scenario, variables:Array<FlowVariable>, sequences:Array<FlowSequence>):Scenario
+	return {
+		formatVersion: scenario.formatVersion,
+		requiredFeatures: scenario.requiredFeatures.copy(),
+		optionalFeatures: scenario.optionalFeatures.copy(),
+		id: scenario.id,
+		assetPack: scenario.assetPack,
+		messages: scenario.messages,
+		title: scenario.title,
+		mode: scenario.mode,
+		environment: scenario.environment,
+		world: scenario.world,
+		objects: scenario.objects,
+		story: scenario.story,
+		flow: {
+			variables: [for (variable in variables) copyFlowVariable(variable)],
+			sequences: [for (sequence in sequences) copyFlowSequence(sequence)],
+			rules: [for (rule in scenario.flow.rules) copyFlowRule(rule)]
+		},
+		extensions: scenario.extensions.copy()
+	};
 
 private function withMessages(scenario:Scenario, messages:ScenarioMessages):Scenario
 	return copy(scenario, messages, scenario.title, scenario.world, scenario.objects, scenario.story.dialogues, scenario.story.objectives, scenario.flow.rules);

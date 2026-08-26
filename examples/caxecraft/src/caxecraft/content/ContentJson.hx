@@ -174,8 +174,14 @@ final class ContentJson {
 	 */
 	public static inline final MAXIMUM_NODES:Int = 2048;
 
-	/** Per-object and per-array entry bound with room above shipped catalogs. */
-	public static inline final MAXIMUM_COLLECTION_ENTRIES:Int = 128;
+	/**
+	 * Per-object and per-array entry bound with room above shipped catalogs.
+	 *
+	 * The child-facing editor templates make the UI catalog the largest current
+	 * collection at 170 entries. The 256-entry ceiling retains useful headroom
+	 * while the byte and whole-document node budgets still bound total work.
+	 */
+	public static inline final MAXIMUM_COLLECTION_ENTRIES:Int = 256;
 
 	final scalars:Array<Int>;
 	var index:Int = 0;

@@ -34,6 +34,7 @@ import caxecraft.editor.EditorFocus.initialFocus;
 import caxecraft.editor.EditorFocus.moveFocus;
 import caxecraft.editor.EditorFlowProjection.EditorZoneRuleProjection;
 import caxecraft.editor.EditorFlowProjection.EditorFlowCard;
+import caxecraft.editor.EditorFlowProjection.EditorFlowNestedCard;
 import caxecraft.editor.EditorFlowReferences.EditorFlowReferenceRole;
 import caxecraft.editor.EditorFlowProjection.EditorFlowTraceRow;
 import caxecraft.editor.EditorFlowProjection.projectFlowRules;
@@ -45,12 +46,20 @@ import caxecraft.editor.EditorFlowAuthoring.EditorFlowAuthoringResult;
 import caxecraft.editor.EditorFlowAuthoring.EditorFlowAuthoringError;
 import caxecraft.editor.EditorFlowAuthoring.EditorFlowCardAddress;
 import caxecraft.editor.EditorFlowAuthoring.EditorFlowCardEdit;
+import caxecraft.editor.EditorFlowAuthoring.applyFlowDocumentPick;
 import caxecraft.editor.EditorFlowAuthoring.applyFlowWorldPick;
 import caxecraft.editor.EditorFlowAuthoring.connectZone;
 import caxecraft.editor.EditorFlowAuthoring.editFlowCard;
 import caxecraft.editor.EditorFlowAuthoring.isWorldPickableFlowRole;
 import caxecraft.editor.EditorFlowAuthoring.nextZoneConnectionRuleId;
 import caxecraft.editor.EditorFlowAuthoring.worldPickFor;
+import caxecraft.editor.EditorFlowCardLibrary.EditorFlowActionChoice;
+import caxecraft.editor.EditorFlowCardLibrary.EditorFlowContentChoices;
+import caxecraft.editor.EditorFlowCardLibrary.EditorFlowEventChoice;
+import caxecraft.editor.EditorFlowCardLibrary.EditorFlowPredicateChoice;
+import caxecraft.editor.EditorFlowCardLibrary.actionCardChoices;
+import caxecraft.editor.EditorFlowCardLibrary.eventCardChoices;
+import caxecraft.editor.EditorFlowCardLibrary.predicateCardChoices;
 import caxecraft.editor.EditorEnvironment.EditorEnvironmentControl;
 import caxecraft.editor.EditorEnvironment.EditorEnvironmentDirection;
 import caxecraft.editor.EditorEnvironment.editEnvironment;
@@ -138,11 +147,14 @@ import caxecraft.input.NavigationInput.NavigationCommand;
 import caxecraft.input.NavigationInput.NavigationRepeater;
 import caxecraft.input.NavigationInput.NavigationSample;
 import caxecraft.scenario.CaxeFlow.FlowAction;
+import caxecraft.scenario.CaxeFlow.FlowArgument;
 import caxecraft.scenario.CaxeFlow.FlowEvent;
 import caxecraft.scenario.CaxeFlow.FlowEventContext;
 import caxecraft.scenario.CaxeFlow.FlowPredicate;
 import caxecraft.scenario.CaxeFlow.FlowRepeatPolicy;
 import caxecraft.scenario.CaxeFlow.FlowRule;
+import caxecraft.scenario.CaxeFlow.FlowScope;
+import caxecraft.scenario.CaxeFlow.FlowValue;
 import caxecraft.scenario.CaxeFlowActionRegistry.flowActionArgumentRoles;
 import caxecraft.scenario.CaxeFlowActionRegistry.flowActionDescriptor;
 import caxecraft.scenario.CaxeFlowEventRegistry.flowEventDescriptor;
@@ -220,6 +232,7 @@ final class EditorProbe {
 		final runtimeTerrainChecks = checkRuntimeTerrainProjection() + checkTerrainHistoryFootprints();
 		checkZoneRuleProjection();
 		checkFlowAuthoring();
+		checkFlowCardLibrary();
 		checkLocalizedScenarioDiagnostics();
 		final activeLevelChecks = checkActiveLevelProjection();
 		checkEnvironmentTextRoundTrip();
@@ -3120,6 +3133,324 @@ final class EditorProbe {
 		}
 	}
 
+	/** Prove every shared descriptor has one complete or explicitly disabled card. */
+	static function checkFlowCardLibrary():Void {
+		final supportSession = open(defaultEditorSettings());
+		final supportBefore = supportSession.canonicalDraft();
+		switch supportSession.mutate({
+			baseRevision: supportSession.revision(),
+			mutation: ApplyBatch([
+				PutFlowVariable({id: id("counter.cards"), scope: Map, initial: Counter(0)}),
+				PutFlowSequence({id: id("sequence.cards"), parameters: [], actions: []})
+			])
+		}) {
+			case MutationApplied([Rule, Rule], changes, TerrainUnchanged, 1, 1, 0):
+				require(changes.length == 2, "flow-definition transaction lost its variable or sequence observation");
+			case _:
+				throw "typed flow-definition transaction did not commit atomically";
+		}
+		final supportAfter = supportSession.canonicalDraft();
+		require(supportAfter.compare(supportBefore) != 0, "flow-definition commands did not change canonical bytes");
+		expectHistory(supportSession.undo(), Transaction, "undo flow-definition transaction");
+		require(supportSession.canonicalDraft().compare(supportBefore) == 0, "flow-definition undo did not restore exact bytes");
+		expectHistory(supportSession.redo(), Transaction, "redo flow-definition transaction");
+		require(supportSession.canonicalDraft().compare(supportAfter) == 0, "flow-definition redo did not restore exact bytes");
+
+		final scenario = flowCardLibraryScenario();
+		final contentChoices:EditorFlowContentChoices = {
+			blocks: [STONE],
+			items: [content("caxecraft:item")],
+			states: [content("caxecraft:idle")],
+			effects: [content("caxecraft:spark")],
+			signals: []
+		};
+		final events = eventCardChoices(scenario, contentChoices);
+		final predicates = predicateCardChoices(scenario, EnterZone(id("zone.library")), contentChoices);
+		final actions = actionCardChoices(scenario, id("rule.library"), contentChoices);
+		final expectedEvents = [
+			"enter-zone",
+			"leave-zone",
+			"interact",
+			"block-changed",
+			"use-item",
+			"collect-item",
+			"entity-defeated",
+			"signal",
+			"timer",
+			"objective-changed",
+			"state-changed",
+			"level-entered",
+			"campaign-exit-requested"
+		];
+		final expectedPredicates = [
+			"always",
+			"all",
+			"any",
+			"not",
+			"flag",
+			"counter",
+			"state",
+			"object-state",
+			"inventory",
+			"objective",
+			"near",
+			"mode",
+			"event-actor",
+			"event-swept"
+		];
+		final expectedActions = [
+			"dialogue",
+			"journal",
+			"set-flag",
+			"set-counter",
+			"add-counter",
+			"set-state",
+			"give-item",
+			"take-item",
+			"spawn",
+			"despawn",
+			"set-object-state",
+			"checkpoint",
+			"objective",
+			"effect",
+			"campaign-exit",
+			"signal",
+			"schedule",
+			"call",
+			"choose"
+		];
+		require(events.length == expectedEvents.length, "event card library lost or duplicated a registry entry");
+		for (index in 0...events.length)
+			switch events[index] {
+				case ReadyEventChoice(descriptor, value):
+					require(descriptor.id.text() == expectedEvents[index], "event card order drifted from the shared registry");
+					checkPlayableLibraryRule(scenario, value, Always, scenario.flow.rules[0].actions, 'event ${descriptor.id.text()}');
+				case UnavailableEventChoice(descriptor, MissingSignalContent):
+					require(descriptor.id.text() == "signal" && expectedEvents[index] == "signal",
+						"only the pack-reserved signal event should be visibly unavailable");
+				case UnavailableEventChoice(descriptor, _):
+					throw 'rich event card ${descriptor.id.text()} was unexpectedly unavailable';
+			}
+		require(predicates.length == expectedPredicates.length, "predicate card library lost or duplicated a registry entry");
+		for (index in 0...predicates.length)
+			switch predicates[index] {
+				case ReadyPredicateChoice(descriptor, value):
+					require(descriptor.id.text() == expectedPredicates[index], "predicate card order drifted from the shared registry");
+					checkPlayableLibraryRule(scenario, EnterZone(id("zone.library")), value, scenario.flow.rules[0].actions,
+						'predicate ${descriptor.id.text()}');
+				case UnavailablePredicateChoice(descriptor, _):
+					throw 'rich predicate card ${descriptor.id.text()} was unexpectedly unavailable';
+			}
+		require(actions.length == expectedActions.length, "action card library lost or duplicated a registry entry");
+		for (index in 0...actions.length)
+			switch actions[index] {
+				case ReadyActionChoice(descriptor, value):
+					require(descriptor.id.text() == expectedActions[index], "action card order drifted from the shared registry");
+					final ordered = scenario.flow.rules[0].actions.copy();
+					ordered.push(value);
+					checkPlayableLibraryRule(scenario, EnterZone(id("zone.library")), Always, ordered, 'action ${descriptor.id.text()}');
+					if (descriptor.id.text() == "choose")
+						switch value {
+							case ChooseSeeded(_, choices):
+								require(choices.length == 1 && choices[0].actions.length == 1,
+									"nested choice card flattened or omitted its ordered child action");
+							case _:
+								throw "choose descriptor did not create a nested typed action";
+						}
+				case UnavailableActionChoice(descriptor, MissingSignalContent):
+					require(descriptor.id.text() == "signal" && expectedActions[index] == "signal",
+						"only the pack-reserved signal action should be visibly unavailable");
+				case UnavailableActionChoice(descriptor, _):
+					throw 'rich action card ${descriptor.id.text()} was unexpectedly unavailable';
+			}
+
+		final nestedActions = actionCardChoices(scenario, id("rule.library"), contentChoices, true);
+		switch nestedActions[nestedActions.length - 1] {
+			case UnavailableActionChoice(descriptor, _):
+				require(descriptor.id.text() == "choose", "nested action palette hid or moved the forbidden nested choice");
+			case ReadyActionChoice(_, _):
+				throw "nested action palette admitted a choice inside a choice";
+		}
+
+		final reboundSequence = authoredRule(applyFlowDocumentPick(scenario.flow.rules[0], DoCardAddress(0), 1, id("sequence.alternate"),
+			SequenceFlowReference, scenario),
+			"replace sequence document reference");
+		switch reboundSequence.actions[0] {
+			case Schedule(_, _, sequence, [Value(Flag(true)), Value(State(state))]):
+				require(sequence.text() == "sequence.alternate" && state.text() == "caxecraft:idle",
+					"sequence document pick did not use the selected schema defaults");
+			case _:
+				throw "sequence document pick retained arguments from the previous schema";
+		}
+
+		final nestedRule:FlowRule = {
+			id: id("rule.nested-library"),
+			priority: 0,
+			repeat: Once,
+			event: EnterZone(id("zone.library")),
+			predicate: All([Not(Always)]),
+			actions: [
+				ChooseSeeded(id("counter.library"), [
+					{
+						weight: 1,
+						actions: [Spawn(PLAYER)]
+					}
+				])
+			]
+		};
+		final nestedProjection = projectFlowRules([nestedRule])[0].nestedCards;
+		require(nestedProjection.length == 3, "compound cards did not expose every nested predicate and weighted action");
+		switch nestedProjection[0] {
+			case NestedIfFlowCard(path, 1, descriptor, _, _):
+				require(path.length == 1 && path[0] == 0 && descriptor.id.text() == "not", "nested predicate row lost its depth-first typed address");
+			case _:
+				throw "first nested row was not the NOT child";
+		}
+		switch nestedProjection[2] {
+			case NestedDoFlowCard(0, 0, 0, 1, descriptor, _, _):
+				require(descriptor.id.text() == "spawn", "weighted branch row lost its action descriptor");
+			case _:
+				throw "weighted action did not retain its branch and order address";
+		}
+		final nestedPredicateEdited = authoredRule(editFlowCard(nestedRule, ReplaceNestedIf([0, 0], ModeIs(Creative))), "replace nested IF card");
+		switch nestedPredicateEdited.predicate {
+			case All([Not(ModeIs(Creative))]):
+			case _:
+				throw "nested predicate edit flattened its parent cards";
+		}
+		final nestedActionEdited = authoredRule(editFlowCard(nestedPredicateEdited, ReplaceNestedChoiceDo(0, 0, 0, Despawn(PLAYER))), "replace nested DO card");
+		switch nestedActionEdited.actions[0] {
+			case ChooseSeeded(_, [{weight: 1, actions: [Despawn(id)]}]):
+				require(id.text() == PLAYER.text(), "nested action edit changed its selected object");
+			case _:
+				throw "nested action edit flattened its weighted branch";
+		}
+	}
+
+	/** Validate one card candidate through the same gate that opens playable drafts. */
+	static function checkPlayableLibraryRule(source:Scenario, event:FlowEvent, predicate:FlowPredicate, actions:Array<FlowAction>, label:String):Void {
+		final rule:FlowRule = {
+			id: id("rule.library"),
+			priority: 0,
+			repeat: Once,
+			event: event,
+			predicate: predicate,
+			actions: actions
+		};
+		final candidate = withFlowRules(source, [rule]);
+		switch EditorSession.open(candidate, new Registry(), defaultEditorSettings()) {
+			case EditorOpened(_):
+			case EditorOpenRejected(error):
+				throw '$label card did not form a playable rule: $error';
+		}
+	}
+
+	/** Build a rich synthetic document without teaching production code its facts. */
+	static function flowCardLibraryScenario():Scenario {
+		final source = baseScenario();
+		return {
+			formatVersion: source.formatVersion,
+			requiredFeatures: source.requiredFeatures,
+			optionalFeatures: source.optionalFeatures,
+			id: source.id,
+			assetPack: source.assetPack,
+			messages: source.messages,
+			title: source.title,
+			mode: source.mode,
+			environment: source.environment,
+			world: source.world,
+			objects: source.objects.concat([
+				{
+					id: id("zone.library"),
+					tags: [],
+					placement: TriggerZone({origin: {x: 0, y: 0, z: 0}, size: {width: 1, height: 1, depth: 1}})
+				},
+				{id: id("entity.library"), tags: [], placement: Entity(content("caxecraft:entity"), transform(0, 0, 0))},
+				{id: id("checkpoint.library"), tags: [], placement: Checkpoint(transform(0, 0, 0))},
+				{
+					id: id("mechanism.library"),
+					tags: [],
+					placement: StatefulObject(content("caxecraft:mechanism"), content("caxecraft:idle"), transform(0, 0, 0))
+				}
+			]),
+			story: {
+				speakerNames: [],
+				dialogues: [{id: id("dialogue.library"), lines: [{speaker: null, text: Literal("Hello")}]}],
+				journal: [
+					{id: id("journal.library"), title: Literal("Clue"), body: Literal("Look nearby")}
+				],
+				objectives: [
+					{
+						id: id("objective.library"),
+						title: Literal("Try cards"),
+						body: Literal("Open the library"),
+						initialState: Active
+					}
+				],
+				routes: []
+			},
+			flow: {
+				variables: [
+					{id: id("flag.library"), scope: Map, initial: Flag(false)},
+					{id: id("counter.library"), scope: Map, initial: Counter(0)},
+					{id: id("state.library"), scope: Map, initial: State(content("caxecraft:idle"))}
+				],
+				sequences: [
+					{
+						id: id("sequence.library"),
+						parameters: [{id: id("parameter.library"), initial: Counter(0)}],
+						actions: []
+					},
+					{
+						id: id("sequence.alternate"),
+						parameters: [
+							{id: id("parameter.alternate.flag"), initial: Flag(true)},
+							{id: id("parameter.alternate.state"), initial: State(content("caxecraft:idle"))}
+						],
+						actions: []
+					}
+				],
+				rules: [
+					{
+						id: id("rule.library"),
+						priority: 0,
+						repeat: Once,
+						event: EnterZone(id("zone.library")),
+						predicate: Always,
+						actions: [
+							Schedule(id("timer.library"), 1, id("sequence.library"), [Value(Counter(0))]),
+							RequestCampaignExit(id("exit.library"))
+						]
+					}
+				]
+			},
+			extensions: source.extensions
+		};
+	}
+
+	/** Replace only the rule array while retaining all rich document references. */
+	static function withFlowRules(source:Scenario, rules:Array<FlowRule>):Scenario
+		return {
+			formatVersion: source.formatVersion,
+			requiredFeatures: source.requiredFeatures,
+			optionalFeatures: source.optionalFeatures,
+			id: source.id,
+			assetPack: source.assetPack,
+			messages: source.messages,
+			title: source.title,
+			mode: source.mode,
+			environment: source.environment,
+			world: source.world,
+			objects: source.objects,
+			story: source.story,
+			flow: {
+				variables: source.flow.variables,
+				sequences: source.flow.sequences,
+				rules: rules
+			},
+			extensions: source.extensions
+		};
+
 	/** Keep scenario failures linked to data-owned messages and exact arguments. */
 	static function checkLocalizedScenarioDiagnostics():Void {
 		final stale = scenarioDiagnosticMessage({
@@ -3917,7 +4248,7 @@ private final class Registry implements ScenarioContentRegistry {
 		return hasStatefulObject(objectType) && hasState(state);
 
 	public function hasEffect(id:ContentId):Bool
-		return false;
+		return id.text() == "caxecraft:spark";
 
 	public function hasSignal(id:ContentId):Bool
 		return false;

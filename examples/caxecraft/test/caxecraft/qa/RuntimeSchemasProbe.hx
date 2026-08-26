@@ -346,13 +346,13 @@ function allRequiredTemplatesExist(catalog:RuntimeUiCatalog):Bool {
 		if (!catalog.hasTemplate(message.messageId()))
 			return false;
 	for (descriptor in allFlowEventDescriptors())
-		if (!catalog.hasTemplate(descriptor.editorLabel))
+		if (!catalog.hasTemplate(descriptor.editorLabel) || !catalog.hasTemplate(descriptor.editorHelp))
 			return false;
 	for (descriptor in allFlowPredicateDescriptors())
-		if (!catalog.hasTemplate(descriptor.editorLabel))
+		if (!catalog.hasTemplate(descriptor.editorLabel) || !catalog.hasTemplate(descriptor.editorHelp))
 			return false;
 	for (descriptor in allFlowActionDescriptors())
-		if (!catalog.hasTemplate(descriptor.editorLabel))
+		if (!catalog.hasTemplate(descriptor.editorLabel) || !catalog.hasTemplate(descriptor.editorHelp))
 			return false;
 	return true;
 }

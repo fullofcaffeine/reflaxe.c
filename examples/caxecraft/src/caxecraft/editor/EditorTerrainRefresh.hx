@@ -33,7 +33,8 @@ function forCommand(command:EditorCommand):EditorTerrainRefreshRequest {
 			RefreshAllTerrain;
 		case SetTitle(_) | SetEnvironment(_) | PutFluid(_) | RemoveFluid(_) | StampPrefab(_, _, _, _) | PutObject(_) | MoveObjectBy(_, _) |
 			RotateObjectBy(_, _) | ResizeTriggerTo(_, _) | RenameObject(_, _) | RemoveObject(_) | PutDialogue(_) | RemoveDialogue(_) | PutObjective(_) |
-			RemoveObjective(_) | PutRule(_) | RemoveRule(_) | SetDefaultLocale(_) | PutLocale(_) | RemoveLocale(_) | PutMessage(_, _) | RemoveMessage(_, _):
+			RemoveObjective(_) | PutRule(_) | RemoveRule(_) | PutFlowVariable(_) | PutFlowSequence(_) | SetDefaultLocale(_) | PutLocale(_) | RemoveLocale(_) |
+			PutMessage(_, _) | RemoveMessage(_, _):
 			KeepTerrain;
 	};
 }

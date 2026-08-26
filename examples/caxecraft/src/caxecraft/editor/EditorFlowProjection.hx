@@ -45,14 +45,19 @@ typedef EditorTriggerOverlap = {
 
 /** Stable catalog keys for the fixed controls around flow cards. */
 enum abstract EditorFlowUiMessage(String) {
+	var CardLibraryMessage = "editor.flow.card-library";
 	var ConnectObjectMessage = "editor.flow.connect-object";
 	var DoMessage = "editor.flow.do";
+	var DocumentPickerMessage = "editor.flow.document-picker";
+	var DoneMessage = "editor.flow.done";
+	var EditMessage = "editor.flow.edit";
 	var IfMessage = "editor.flow.if";
 	var PickObjectMessage = "editor.flow.pick-object";
 	var OverlapMessage = "editor.flow.overlap";
 	var WhenMessage = "editor.flow.when";
 	var ToggleEnterLeaveMessage = "editor.flow.toggle-enter-leave";
 	var ToggleSpawnDespawnMessage = "editor.flow.toggle-spawn-despawn";
+	var UnavailableMessage = "editor.flow.unavailable";
 
 	/** Narrow one closed editor key to the catalog boundary. */
 	public inline function messageId():MessageId
@@ -62,15 +67,32 @@ enum abstract EditorFlowUiMessage(String) {
 /** Return every fixed flow-card key required by the native editor. */
 function allEditorFlowUiMessages():Array<EditorFlowUiMessage>
 	return [
+		CardLibraryMessage,
 		ConnectObjectMessage,
 		DoMessage,
+		DocumentPickerMessage,
+		DoneMessage,
+		EditMessage,
 		IfMessage,
 		OverlapMessage,
 		PickObjectMessage,
 		ToggleEnterLeaveMessage,
 		ToggleSpawnDespawnMessage,
+		UnavailableMessage,
 		WhenMessage
 	];
+
+/** Public card text for one complete event-library value. */
+function eventFlowCardText(event:FlowEvent):EditorFlowCardText
+	return eventSummary(event);
+
+/** Public card text for one complete predicate-library value. */
+function predicateFlowCardText(predicate:FlowPredicate):EditorFlowCardText
+	return predicateSummary(predicate);
+
+/** Public card text for one complete action-library value. */
+function actionFlowCardText(action:FlowAction):EditorFlowCardText
+	return actionSummary(action);
 
 /** One data-owned sentence plus locale-independent replacement values. */
 typedef EditorFlowCardText = {
@@ -91,11 +113,19 @@ enum EditorFlowCard {
 	DoFlowCard(index:Int, descriptor:FlowActionDescriptor, text:EditorFlowCardText, references:Array<EditorFlowReference>);
 }
 
+/** One lossless child row below a compound IF or weighted DO card. */
+enum EditorFlowNestedCard {
+	NestedIfFlowCard(path:Array<Int>, depth:Int, descriptor:FlowPredicateDescriptor, text:EditorFlowCardText, references:Array<EditorFlowReference>);
+	NestedDoFlowCard(parentActionIndex:Int, choiceIndex:Int, actionIndex:Int, depth:Int, descriptor:FlowActionDescriptor, text:EditorFlowCardText,
+		references:Array<EditorFlowReference>);
+}
+
 /** Complete WHEN / IF / ordered-DO projection for one canonical rule. */
 typedef EditorFlowRuleProjection = {
 	final ruleId:ScenarioId;
 	final priority:Int;
 	final cards:Array<EditorFlowCard>;
+	final nestedCards:Array<EditorFlowNestedCard>;
 }
 
 /** Bounded rows suitable for the in-world event-flow overlay. */
@@ -172,9 +202,56 @@ function projectFlowRules(rules:Array<FlowRule>):Array<EditorFlowRuleProjection>
 			final action = rule.actions[index];
 			cards.push(DoFlowCard(index, flowActionDescriptor(action), actionSummary(action), collectActionFlowReferences(action)));
 		}
-		result.push({ruleId: rule.id, priority: rule.priority, cards: cards});
+		final nestedCards:Array<EditorFlowNestedCard> = [];
+		projectNestedPredicateChildren(rule.predicate, [], 0, nestedCards);
+		for (actionIndex in 0...rule.actions.length)
+			projectNestedChoiceActions(rule.actions[actionIndex], actionIndex, nestedCards);
+		result.push({
+			ruleId: rule.id,
+			priority: rule.priority,
+			cards: cards,
+			nestedCards: nestedCards
+		});
 	}
 	return result;
+}
+
+/** Add every predicate below the root IF in deterministic depth-first order. */
+private function projectNestedPredicateChildren(predicate:FlowPredicate, path:Array<Int>, depth:Int, result:Array<EditorFlowNestedCard>):Void {
+	switch predicate {
+		case All(children) | AnyOf(children):
+			for (index in 0...children.length) {
+				final childPath = path.copy();
+				childPath.push(index);
+				projectNestedPredicate(children[index], childPath, depth + 1, result);
+			}
+		case Not(child):
+			final childPath = path.copy();
+			childPath.push(0);
+			projectNestedPredicate(child, childPath, depth + 1, result);
+		case _:
+	}
+}
+
+/** Add one nested predicate row, then retain all descendants. */
+private function projectNestedPredicate(predicate:FlowPredicate, path:Array<Int>, depth:Int, result:Array<EditorFlowNestedCard>):Void {
+	result.push(NestedIfFlowCard(path.copy(), depth, flowPredicateDescriptor(predicate), predicateSummary(predicate),
+		collectPredicateFlowReferences(predicate)));
+	projectNestedPredicateChildren(predicate, path, depth, result);
+}
+
+/** Add every action inside one weighted choice without flattening branch order. */
+private function projectNestedChoiceActions(action:FlowAction, parentActionIndex:Int, result:Array<EditorFlowNestedCard>):Void {
+	switch action {
+		case ChooseSeeded(_, choices):
+			for (choiceIndex in 0...choices.length)
+				for (actionIndex in 0...choices[choiceIndex].actions.length) {
+					final nested = choices[choiceIndex].actions[actionIndex];
+					result.push(NestedDoFlowCard(parentActionIndex, choiceIndex, actionIndex, 1, flowActionDescriptor(nested), actionSummary(nested),
+						collectActionFlowReferences(nested)));
+				}
+		case _:
+	}
 }
 
 /** Keep at most `maximum` already-bounded runtime trace entries for an overlay. */

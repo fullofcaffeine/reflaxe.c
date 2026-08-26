@@ -1694,6 +1694,71 @@ def validate_editor_asset_browser_screenshot(path: Path, *, platform_name: str) 
     return width, height
 
 
+def validate_editor_flow_screenshot(path: Path, *, platform_name: str) -> tuple[int, int]:
+    """Prove the native editor presented a usable CaxeFlow card library.
+
+    Renderer-independent probes own exact card values and edits. This visual
+    check instead requires the large modal, both readable columns, and the
+    stable green action-family stripe on many separate rows. It deliberately
+    ignores localized glyph pixels and exact card wording.
+    """
+    width, height, pixels = decode_rgba_png(path, "editor CaxeFlow cards")
+    logical_width, logical_height = 1280, 720
+    expected_dimensions = {(logical_width, logical_height)}
+    if platform_name == "macos":
+        expected_dimensions.add((logical_width * 2, logical_height * 2))
+    if (width, height) not in expected_dimensions:
+        raise PlayFailure(
+            "Caxecraft editor CaxeFlow screenshot must match its logical "
+            f"1280x720 window at an admitted pixel scale, found {width}x{height}"
+        )
+    scale = width // logical_width
+    panel_changed = 0
+    panel_colors: set[int] = set()
+    label_evidence = 0
+    help_evidence = 0
+    stripe_rows = 0
+    for logical_row in range(19):
+        stripe_pixels = 0
+        row_top = 94 + logical_row * 29
+        for row in range(row_top * scale, (row_top + 21) * scale):
+            row_at = row * width * 4
+            for column in range(125 * scale, 129 * scale):
+                at = row_at + column * 4
+                if tuple(pixels[at : at + 3]) == (111, 174, 91):
+                    stripe_pixels += 1
+        if stripe_pixels >= 60 * scale * scale:
+            stripe_rows += 1
+    for row in range(40 * scale, 680 * scale):
+        row_at = row * width * 4
+        for column in range(110 * scale, 1170 * scale):
+            at = row_at + column * 4
+            red, green, blue = pixels[at : at + 3]
+            panel_colors.add((red >> 4) << 8 | (green >> 4) << 4 | (blue >> 4))
+            if abs(red - 12) + abs(green - 28) + abs(blue - 36) > 24:
+                panel_changed += 1
+            bright = red + green + blue > 300
+            if bright and 132 * scale <= column < 575 * scale:
+                label_evidence += 1
+            if bright and 590 * scale <= column < 1148 * scale:
+                help_evidence += 1
+    minimum_changed = 120_000 * scale * scale
+    minimum_column_evidence = 1_000 * scale * scale
+    if (
+        panel_changed < minimum_changed
+        or len(panel_colors) < 8
+        or stripe_rows < 12
+        or label_evidence < minimum_column_evidence
+        or help_evidence < minimum_column_evidence
+    ):
+        raise PlayFailure(
+            "Caxecraft CaxeFlow card library is blank, incomplete, or missing usable rows "
+            f"(changed:{panel_changed}, colors:{len(panel_colors)}, stripes:{stripe_rows}, "
+            f"labels:{label_evidence}, help:{help_evidence})"
+        )
+    return width, height
+
+
 def host_platform() -> str:
     value = PLATFORM_NAMES.get(platform.system())
     if value is None:
@@ -3447,7 +3512,7 @@ def run_pilot_sample(
             expected_logical_size=(960, 540),
         )
     elif pilot == "editor-shell":
-        width, height = validate_editor_screenshot(screenshot, platform_name=platform_name)
+        width, height = validate_editor_flow_screenshot(screenshot, platform_name=platform_name)
     else:
         width, height = validate_presented_screenshot(
             screenshot,

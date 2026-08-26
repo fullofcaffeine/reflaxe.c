@@ -282,7 +282,7 @@ final class RuntimeUiCatalog {
 
 	/** Decode canonically ordered parameterized messages without Haxe symbols. */
 	static function readTemplates(reader:RuntimeSchemaReader, node:ContentJsonNode, locales:Array<String>):Null<Array<RuntimeUiTemplateDefinition>> {
-		final values = reader.array(node, "templates", 1, 128);
+		final values = reader.array(node, "templates", 1, 256);
 		if (values == null)
 			return null;
 		final result:Array<RuntimeUiTemplateDefinition> = [];

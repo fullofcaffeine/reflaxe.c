@@ -668,10 +668,24 @@
       }
     },
     {
+      "id": "editor.action.add-counter.help",
+      "text": {
+        "en": "Add this amount to a saved number.",
+        "es-MX": "Suma esta cantidad a un número guardado."
+      }
+    },
+    {
       "id": "editor.action.add-counter.label",
       "text": {
         "en": "add {1} to {0}",
         "es-MX": "sumar {1} a {0}"
+      }
+    },
+    {
+      "id": "editor.action.call.help",
+      "text": {
+        "en": "Run a reusable sequence now with typed values.",
+        "es-MX": "Ejecuta ahora una secuencia reutilizable con valores tipados."
       }
     },
     {
@@ -682,10 +696,24 @@
       }
     },
     {
+      "id": "editor.action.campaign-exit.help",
+      "text": {
+        "en": "Ask the campaign to move through this named exit.",
+        "es-MX": "Pide a la campaña avanzar por esta salida con nombre."
+      }
+    },
+    {
       "id": "editor.action.campaign-exit.label",
       "text": {
         "en": "request exit {0}",
         "es-MX": "solicitar salida {0}"
+      }
+    },
+    {
+      "id": "editor.action.checkpoint.help",
+      "text": {
+        "en": "Make this checkpoint the player's safe return place.",
+        "es-MX": "Convierte este punto de control en el lugar seguro de regreso."
       }
     },
     {
@@ -696,10 +724,24 @@
       }
     },
     {
+      "id": "editor.action.choose.help",
+      "text": {
+        "en": "Choose one weighted action path using a saved number.",
+        "es-MX": "Elige una ruta de acciones ponderada usando un número guardado."
+      }
+    },
+    {
       "id": "editor.action.choose.label",
       "text": {
         "en": "choose one of {1} paths using {0}",
         "es-MX": "elegir una de {1} rutas usando {0}"
+      }
+    },
+    {
+      "id": "editor.action.despawn.help",
+      "text": {
+        "en": "Hide this placed world object.",
+        "es-MX": "Oculta este objeto colocado en el mundo."
       }
     },
     {
@@ -710,10 +752,24 @@
       }
     },
     {
+      "id": "editor.action.dialogue.help",
+      "text": {
+        "en": "Show this authored conversation to the player.",
+        "es-MX": "Muestra esta conversación creada al jugador."
+      }
+    },
+    {
       "id": "editor.action.dialogue.label",
       "text": {
         "en": "show dialogue {0}",
         "es-MX": "mostrar diálogo {0}"
+      }
+    },
+    {
+      "id": "editor.action.effect.help",
+      "text": {
+        "en": "Play this feedback effect, optionally at a world object.",
+        "es-MX": "Reproduce este efecto, opcionalmente en un objeto del mundo."
       }
     },
     {
@@ -724,10 +780,24 @@
       }
     },
     {
+      "id": "editor.action.give-item.help",
+      "text": {
+        "en": "Give a positive item quantity to this inventory owner.",
+        "es-MX": "Da una cantidad positiva del objeto a este dueño de inventario."
+      }
+    },
+    {
       "id": "editor.action.give-item.label",
       "text": {
         "en": "give {2} of {1} to {0}",
         "es-MX": "dar {2} de {1} a {0}"
+      }
+    },
+    {
+      "id": "editor.action.journal.help",
+      "text": {
+        "en": "Add this authored entry to the player's journal.",
+        "es-MX": "Agrega esta entrada creada al diario del jugador."
       }
     },
     {
@@ -738,10 +808,24 @@
       }
     },
     {
+      "id": "editor.action.objective.help",
+      "text": {
+        "en": "Move this objective to a new progress state.",
+        "es-MX": "Cambia este objetivo a un nuevo estado de progreso."
+      }
+    },
+    {
       "id": "editor.action.objective.label",
       "text": {
         "en": "set objective {0} to {1}",
         "es-MX": "poner objetivo {0} en {1}"
+      }
+    },
+    {
+      "id": "editor.action.schedule.help",
+      "text": {
+        "en": "Wait for a fixed number of ticks, then run a sequence.",
+        "es-MX": "Espera una cantidad fija de pasos y luego ejecuta una secuencia."
       }
     },
     {
@@ -752,10 +836,24 @@
       }
     },
     {
+      "id": "editor.action.set-counter.help",
+      "text": {
+        "en": "Replace a saved number with this exact value.",
+        "es-MX": "Reemplaza un número guardado con este valor exacto."
+      }
+    },
+    {
       "id": "editor.action.set-counter.label",
       "text": {
         "en": "set {0} to {1}",
         "es-MX": "poner {0} en {1}"
+      }
+    },
+    {
+      "id": "editor.action.set-flag.help",
+      "text": {
+        "en": "Turn a saved yes-or-no value on or off.",
+        "es-MX": "Activa o desactiva un valor guardado de sí o no."
       }
     },
     {
@@ -766,10 +864,24 @@
       }
     },
     {
+      "id": "editor.action.set-object-state.help",
+      "text": {
+        "en": "Change this interactive object to one compatible state.",
+        "es-MX": "Cambia este objeto interactivo a un estado compatible."
+      }
+    },
+    {
       "id": "editor.action.set-object-state.label",
       "text": {
         "en": "set object {0} to {1}",
         "es-MX": "poner objeto {0} en {1}"
+      }
+    },
+    {
+      "id": "editor.action.set-state.help",
+      "text": {
+        "en": "Replace a saved state with this content state.",
+        "es-MX": "Reemplaza un estado guardado con este estado de contenido."
       }
     },
     {
@@ -780,6 +892,13 @@
       }
     },
     {
+      "id": "editor.action.signal.help",
+      "text": {
+        "en": "Send this pack-defined signal to matching rules.",
+        "es-MX": "Envía esta señal definida por el paquete a las reglas correspondientes."
+      }
+    },
+    {
       "id": "editor.action.signal.label",
       "text": {
         "en": "send signal {0}",
@@ -787,10 +906,24 @@
       }
     },
     {
+      "id": "editor.action.spawn.help",
+      "text": {
+        "en": "Show this placed world object.",
+        "es-MX": "Muestra este objeto colocado en el mundo."
+      }
+    },
+    {
       "id": "editor.action.spawn.label",
       "text": {
         "en": "show {0}",
         "es-MX": "mostrar {0}"
+      }
+    },
+    {
+      "id": "editor.action.take-item.help",
+      "text": {
+        "en": "Remove a positive item quantity from this inventory owner.",
+        "es-MX": "Quita una cantidad positiva del objeto a este dueño de inventario."
       }
     },
     {
@@ -1018,10 +1151,24 @@
       }
     },
     {
+      "id": "editor.event.block-changed.help",
+      "text": {
+        "en": "Run when a block in this zone changes to this material.",
+        "es-MX": "Se ejecuta cuando un bloque de esta zona cambia a este material."
+      }
+    },
+    {
       "id": "editor.event.block-changed.label",
       "text": {
         "en": "a block in {0} changes to {1}",
         "es-MX": "un bloque en {0} cambia a {1}"
+      }
+    },
+    {
+      "id": "editor.event.campaign-exit-requested.help",
+      "text": {
+        "en": "Run when another rule requests this campaign exit.",
+        "es-MX": "Se ejecuta cuando otra regla solicita esta salida de campaña."
       }
     },
     {
@@ -1032,10 +1179,24 @@
       }
     },
     {
+      "id": "editor.event.collect-item.help",
+      "text": {
+        "en": "Run when the event actor collects this item type.",
+        "es-MX": "Se ejecuta cuando el actor del evento recoge este tipo de objeto."
+      }
+    },
+    {
       "id": "editor.event.collect-item.label",
       "text": {
         "en": "collect {0}",
         "es-MX": "recoger {0}"
+      }
+    },
+    {
+      "id": "editor.event.enter-zone.help",
+      "text": {
+        "en": "Run when an actor crosses into this trigger zone.",
+        "es-MX": "Se ejecuta cuando un actor entra en esta zona de activación."
       }
     },
     {
@@ -1046,10 +1207,24 @@
       }
     },
     {
+      "id": "editor.event.entity-defeated.help",
+      "text": {
+        "en": "Run when this placed enemy is defeated.",
+        "es-MX": "Se ejecuta cuando este enemigo colocado es derrotado."
+      }
+    },
+    {
       "id": "editor.event.entity-defeated.label",
       "text": {
         "en": "defeat {0}",
         "es-MX": "derrotar a {0}"
+      }
+    },
+    {
+      "id": "editor.event.interact.help",
+      "text": {
+        "en": "Run when an actor uses or talks to this world object.",
+        "es-MX": "Se ejecuta cuando un actor usa este objeto del mundo o habla con él."
       }
     },
     {
@@ -1060,10 +1235,24 @@
       }
     },
     {
+      "id": "editor.event.leave-zone.help",
+      "text": {
+        "en": "Run when an actor crosses out of this trigger zone.",
+        "es-MX": "Se ejecuta cuando un actor sale de esta zona de activación."
+      }
+    },
+    {
       "id": "editor.event.leave-zone.label",
       "text": {
         "en": "leave {0}",
         "es-MX": "salir de {0}"
+      }
+    },
+    {
+      "id": "editor.event.level-entered.help",
+      "text": {
+        "en": "Run when play enters this level.",
+        "es-MX": "Se ejecuta cuando el juego entra en este nivel."
       }
     },
     {
@@ -1074,10 +1263,24 @@
       }
     },
     {
+      "id": "editor.event.objective-changed.help",
+      "text": {
+        "en": "Run when this objective changes progress state.",
+        "es-MX": "Se ejecuta cuando este objetivo cambia de estado de progreso."
+      }
+    },
+    {
       "id": "editor.event.objective-changed.label",
       "text": {
         "en": "objective {0} changes",
         "es-MX": "el objetivo {0} cambia"
+      }
+    },
+    {
+      "id": "editor.event.signal.help",
+      "text": {
+        "en": "Run when the pack sends this named signal.",
+        "es-MX": "Se ejecuta cuando el paquete envía esta señal con nombre."
       }
     },
     {
@@ -1088,10 +1291,24 @@
       }
     },
     {
+      "id": "editor.event.state-changed.help",
+      "text": {
+        "en": "Run when this saved variable changes.",
+        "es-MX": "Se ejecuta cuando cambia esta variable guardada."
+      }
+    },
+    {
       "id": "editor.event.state-changed.label",
       "text": {
         "en": "state {0} changes",
         "es-MX": "el estado {0} cambia"
+      }
+    },
+    {
+      "id": "editor.event.timer.help",
+      "text": {
+        "en": "Run when this scheduled timer finishes.",
+        "es-MX": "Se ejecuta cuando termina este temporizador programado."
       }
     },
     {
@@ -1102,10 +1319,24 @@
       }
     },
     {
+      "id": "editor.event.use-item.help",
+      "text": {
+        "en": "Run when the event actor uses this item type.",
+        "es-MX": "Se ejecuta cuando el actor del evento usa este tipo de objeto."
+      }
+    },
+    {
       "id": "editor.event.use-item.label",
       "text": {
         "en": "use {0}",
         "es-MX": "usar {0}"
+      }
+    },
+    {
+      "id": "editor.flow.card-library",
+      "text": {
+        "en": "CHOOSE A WHEN, IF, OR DO CARD",
+        "es-MX": "ELIGE UNA TARJETA CUANDO, SI O HAZ"
       }
     },
     {
@@ -1120,6 +1351,27 @@
       "text": {
         "en": "DO",
         "es-MX": "HAZ"
+      }
+    },
+    {
+      "id": "editor.flow.document-picker",
+      "text": {
+        "en": "CHOOSE FROM THIS MAP",
+        "es-MX": "ELIGE DE ESTE MAPA"
+      }
+    },
+    {
+      "id": "editor.flow.done",
+      "text": {
+        "en": "DONE",
+        "es-MX": "LISTO"
+      }
+    },
+    {
+      "id": "editor.flow.edit",
+      "text": {
+        "en": "EDIT",
+        "es-MX": "EDITAR"
       }
     },
     {
@@ -1158,10 +1410,24 @@
       }
     },
     {
+      "id": "editor.flow.unavailable",
+      "text": {
+        "en": "NEEDS MORE MAP CONTENT",
+        "es-MX": "NECESITA MÁS CONTENIDO DEL MAPA"
+      }
+    },
+    {
       "id": "editor.flow.when",
       "text": {
         "en": "WHEN",
         "es-MX": "CUANDO"
+      }
+    },
+    {
+      "id": "editor.predicate.all.help",
+      "text": {
+        "en": "Continue only when every nested condition is true.",
+        "es-MX": "Continúa solo cuando todas las condiciones anidadas son verdaderas."
       }
     },
     {
@@ -1172,10 +1438,24 @@
       }
     },
     {
+      "id": "editor.predicate.always.help",
+      "text": {
+        "en": "Continue without checking another condition.",
+        "es-MX": "Continúa sin revisar otra condición."
+      }
+    },
+    {
       "id": "editor.predicate.always.label",
       "text": {
         "en": "always",
         "es-MX": "siempre"
+      }
+    },
+    {
+      "id": "editor.predicate.any.help",
+      "text": {
+        "en": "Continue when at least one nested condition is true.",
+        "es-MX": "Continúa cuando al menos una condición anidada es verdadera."
       }
     },
     {
@@ -1186,10 +1466,24 @@
       }
     },
     {
+      "id": "editor.predicate.counter.help",
+      "text": {
+        "en": "Compare a saved number with an exact value.",
+        "es-MX": "Compara un número guardado con un valor exacto."
+      }
+    },
+    {
       "id": "editor.predicate.counter.label",
       "text": {
         "en": "{0} {1} {2}",
         "es-MX": "{0} {1} {2}"
+      }
+    },
+    {
+      "id": "editor.predicate.event-actor.help",
+      "text": {
+        "en": "Continue only when this object caused the event.",
+        "es-MX": "Continúa solo cuando este objeto causó el evento."
       }
     },
     {
@@ -1200,10 +1494,24 @@
       }
     },
     {
+      "id": "editor.predicate.event-swept.help",
+      "text": {
+        "en": "Check whether fast movement crossed the whole trigger.",
+        "es-MX": "Comprueba si un movimiento rápido cruzó toda la zona."
+      }
+    },
+    {
       "id": "editor.predicate.event-swept.label",
       "text": {
         "en": "fast crossing is {0}",
         "es-MX": "el cruce rápido es {0}"
+      }
+    },
+    {
+      "id": "editor.predicate.flag.help",
+      "text": {
+        "en": "Check a saved yes-or-no value.",
+        "es-MX": "Comprueba un valor guardado de sí o no."
       }
     },
     {
@@ -1214,10 +1522,24 @@
       }
     },
     {
+      "id": "editor.predicate.inventory.help",
+      "text": {
+        "en": "Check how many of this item an inventory owner has.",
+        "es-MX": "Comprueba cuántos objetos de este tipo tiene un dueño de inventario."
+      }
+    },
+    {
       "id": "editor.predicate.inventory.label",
       "text": {
         "en": "{0} has {1} {2} of {3}",
         "es-MX": "{0} tiene {1} {2} de {3}"
+      }
+    },
+    {
+      "id": "editor.predicate.mode.help",
+      "text": {
+        "en": "Continue only in the selected play mode.",
+        "es-MX": "Continúa solo en el modo de juego seleccionado."
       }
     },
     {
@@ -1228,10 +1550,24 @@
       }
     },
     {
+      "id": "editor.predicate.near.help",
+      "text": {
+        "en": "Check whether one object is close enough to another.",
+        "es-MX": "Comprueba si un objeto está suficientemente cerca de otro."
+      }
+    },
+    {
       "id": "editor.predicate.near.label",
       "text": {
         "en": "{0} is within {1} of {2}",
         "es-MX": "{0} está a menos de {1} de {2}"
+      }
+    },
+    {
+      "id": "editor.predicate.not.help",
+      "text": {
+        "en": "Reverse the result of one nested condition.",
+        "es-MX": "Invierte el resultado de una condición anidada."
       }
     },
     {
@@ -1242,6 +1578,13 @@
       }
     },
     {
+      "id": "editor.predicate.object-state.help",
+      "text": {
+        "en": "Check one compatible state of an interactive object.",
+        "es-MX": "Comprueba un estado compatible de un objeto interactivo."
+      }
+    },
+    {
       "id": "editor.predicate.object-state.label",
       "text": {
         "en": "object {0} is {1}",
@@ -1249,10 +1592,24 @@
       }
     },
     {
+      "id": "editor.predicate.objective.help",
+      "text": {
+        "en": "Check this objective's current progress state.",
+        "es-MX": "Comprueba el estado actual de progreso de este objetivo."
+      }
+    },
+    {
       "id": "editor.predicate.objective.label",
       "text": {
         "en": "objective {0} is {1}",
         "es-MX": "el objetivo {0} está en {1}"
+      }
+    },
+    {
+      "id": "editor.predicate.state.help",
+      "text": {
+        "en": "Check whether a saved state has this content value.",
+        "es-MX": "Comprueba si un estado guardado tiene este valor de contenido."
       }
     },
     {

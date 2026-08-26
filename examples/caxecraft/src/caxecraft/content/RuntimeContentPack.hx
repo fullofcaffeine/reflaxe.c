@@ -484,6 +484,14 @@ final class RuntimeContentRegistry implements ScenarioContentRegistry implements
 		return false;
 	}
 
+	/** Number of admitted state identities available to typed authoring fields. */
+	public inline function stateCount():Int
+		return states.length;
+
+	/** Return one admitted state identity without exposing registry storage. */
+	public function stateIdAt(index:Int):Null<ContentId>
+		return index < 0 || index >= states.length ? null : new ContentId(states[index].id);
+
 	/** True only when the object definition owns the requested closed state. */
 	public function statefulObjectHasState(objectType:ContentId, state:ContentId):Bool {
 		final object = findStatefulObject(objectType.text());
@@ -533,6 +541,14 @@ final class RuntimeContentRegistry implements ScenarioContentRegistry implements
 				return true;
 		return false;
 	}
+
+	/** Number of admitted feedback effects available to typed authoring fields. */
+	public inline function effectCount():Int
+		return effects.length;
+
+	/** Return one admitted effect identity without exposing registry storage. */
+	public function effectIdAt(index:Int):Null<ContentId>
+		return index < 0 || index >= effects.length ? null : new ContentId(effects[index].id);
 
 	/** Return an item's stack bound, or zero for an unknown ID. */
 	public function maximumItemQuantity(id:ContentId):Int {

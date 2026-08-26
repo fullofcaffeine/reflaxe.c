@@ -4,6 +4,8 @@ import caxecraft.scenario.CaxeFlow.FlowAction;
 import caxecraft.scenario.CaxeFlow.FlowArgument;
 import caxecraft.scenario.CaxeFlow.FlowEvent;
 import caxecraft.scenario.CaxeFlow.FlowPredicate;
+import caxecraft.scenario.CaxeFlow.FlowValueKind;
+import caxecraft.scenario.Scenario;
 import caxecraft.scenario.ScenarioId;
 
 /**
@@ -20,9 +22,15 @@ enum EditorFlowReferenceRole {
 	ZoneFlowReference;
 	WorldObjectFlowReference;
 	ActorFlowReference;
-	VariableFlowReference;
+	EntityFlowReference;
+	StatefulObjectFlowReference;
+	CheckpointFlowReference;
+	InventoryOwnerFlowReference;
+	TypedVariableFlowReference(kind:FlowValueKind);
+	AnyVariableFlowReference;
 	ObjectiveFlowReference;
-	StoryFlowReference;
+	DialogueFlowReference;
+	JournalFlowReference;
 	SequenceFlowReference;
 	TimerFlowReference;
 	CampaignExitFlowReference;
@@ -59,21 +67,34 @@ function collectActionFlowReferences(action:FlowAction):Array<EditorFlowReferenc
 /** Replace one event reference in the same order used by card projection. */
 function replaceEventFlowReference(event:FlowEvent, target:Int, replacement:ScenarioId,
 		roles:Array<EditorFlowReferenceRole>):EditorFlowReferenceReplacement<FlowEvent> {
-	final cursor = replacementCursor(target, replacement, roles);
+	final cursor = replacementCursor(target, replacement, roles, null);
 	return replacementResult(mapEventReferences(event, cursor), cursor);
 }
 
 /** Replace one nested predicate reference in depth-first card order. */
 function replacePredicateFlowReference(predicate:FlowPredicate, target:Int, replacement:ScenarioId,
 		roles:Array<EditorFlowReferenceRole>):EditorFlowReferenceReplacement<FlowPredicate> {
-	final cursor = replacementCursor(target, replacement, roles);
+	final cursor = replacementCursor(target, replacement, roles, null);
 	return replacementResult(mapPredicateReferences(predicate, cursor), cursor);
 }
 
 /** Replace one action reference, including references in nested choices. */
 function replaceActionFlowReference(action:FlowAction, target:Int, replacement:ScenarioId,
 		roles:Array<EditorFlowReferenceRole>):EditorFlowReferenceReplacement<FlowAction> {
-	final cursor = replacementCursor(target, replacement, roles);
+	final cursor = replacementCursor(target, replacement, roles, null);
+	return replacementResult(mapActionReferences(action, cursor), cursor);
+}
+
+/**
+	Replace one action reference selected from the current document.
+
+	When the selected identity is a sequence, its arguments are rebuilt from that
+	sequence's typed parameter defaults. The editor can therefore never retain an
+	argument list that belonged to a different sequence schema.
+**/
+function replaceActionDocumentFlowReference(action:FlowAction, target:Int, replacement:ScenarioId, role:EditorFlowReferenceRole,
+		scenario:Scenario):EditorFlowReferenceReplacement<FlowAction> {
+	final cursor = replacementCursor(target, replacement, [role], scenario);
 	return replacementResult(mapActionReferences(action, cursor), cursor);
 }
 
@@ -84,10 +105,10 @@ private function mapEventReferences(event:FlowEvent, cursor:EditorFlowReferenceC
 		case LeaveZone(zone): LeaveZone(replaceOne(zone, ZoneFlowReference, cursor));
 		case Interact(objectId): Interact(replaceOne(objectId, WorldObjectFlowReference, cursor));
 		case BlockChanged(zone, blockType): BlockChanged(replaceOne(zone, ZoneFlowReference, cursor), blockType);
-		case EntityDefeated(entity): EntityDefeated(replaceOne(entity, ActorFlowReference, cursor));
+		case EntityDefeated(entity): EntityDefeated(replaceOne(entity, EntityFlowReference, cursor));
 		case TimerExpired(timer): TimerExpired(replaceOne(timer, TimerFlowReference, cursor));
 		case ObjectiveChanged(objective): ObjectiveChanged(replaceOne(objective, ObjectiveFlowReference, cursor));
-		case StateChanged(variable): StateChanged(replaceOne(variable, VariableFlowReference, cursor));
+		case StateChanged(variable): StateChanged(replaceOne(variable, AnyVariableFlowReference, cursor));
 		case LevelEntered(level): LevelEntered(replaceOne(level, LevelFlowReference, cursor));
 		case CampaignExitRequested(exit): CampaignExitRequested(replaceOne(exit, CampaignExitFlowReference, cursor));
 		case UseItem(itemType): UseItem(itemType);
@@ -102,12 +123,13 @@ private function mapPredicateReferences(predicate:FlowPredicate, cursor:EditorFl
 		case All(children): All([for (child in children) mapPredicateReferences(child, cursor)]);
 		case AnyOf(children): AnyOf([for (child in children) mapPredicateReferences(child, cursor)]);
 		case Not(child): Not(mapPredicateReferences(child, cursor));
-		case FlagIs(variable, expected): FlagIs(replaceOne(variable, VariableFlowReference, cursor), expected);
-		case CounterCompare(variable, comparison, value): CounterCompare(replaceOne(variable, VariableFlowReference, cursor), comparison, value);
-		case StateIs(variable, expected): StateIs(replaceOne(variable, VariableFlowReference, cursor), expected);
-		case ObjectStateIs(objectId, expected): ObjectStateIs(replaceOne(objectId, WorldObjectFlowReference, cursor), expected);
+		case FlagIs(variable, expected): FlagIs(replaceOne(variable, TypedVariableFlowReference(FlagValue), cursor), expected);
+		case CounterCompare(variable, comparison, value):
+			CounterCompare(replaceOne(variable, TypedVariableFlowReference(CounterValue), cursor), comparison, value);
+		case StateIs(variable, expected): StateIs(replaceOne(variable, TypedVariableFlowReference(StateValue), cursor), expected);
+		case ObjectStateIs(objectId, expected): ObjectStateIs(replaceOne(objectId, StatefulObjectFlowReference, cursor), expected);
 		case InventoryHas(owner, itemType, comparison, quantity):
-			InventoryHas(replaceOne(owner, ActorFlowReference, cursor), itemType, comparison, quantity);
+			InventoryHas(replaceOne(owner, InventoryOwnerFlowReference, cursor), itemType, comparison, quantity);
 		case ObjectiveIs(objective, expected): ObjectiveIs(replaceOne(objective, ObjectiveFlowReference, cursor), expected);
 		case NearObject(actor, objectId, maximumMilliBlocks):
 			NearObject(replaceOne(actor, ActorFlowReference, cursor), replaceOne(objectId, WorldObjectFlowReference, cursor), maximumMilliBlocks);
@@ -119,30 +141,34 @@ private function mapPredicateReferences(predicate:FlowPredicate, cursor:EditorFl
 /** Map every action reference, including sequence variables and nested choices. */
 private function mapActionReferences(action:FlowAction, cursor:EditorFlowReferenceCursor):FlowAction
 	return switch action {
-		case ShowDialogue(dialogue): ShowDialogue(replaceOne(dialogue, StoryFlowReference, cursor));
-		case AddJournal(entry): AddJournal(replaceOne(entry, StoryFlowReference, cursor));
-		case SetFlag(variable, value): SetFlag(replaceOne(variable, VariableFlowReference, cursor), value);
-		case SetCounter(variable, value): SetCounter(replaceOne(variable, VariableFlowReference, cursor), value);
-		case AddCounter(variable, delta): AddCounter(replaceOne(variable, VariableFlowReference, cursor), delta);
-		case SetState(variable, value): SetState(replaceOne(variable, VariableFlowReference, cursor), value);
-		case GiveItem(owner, itemType, quantity): GiveItem(replaceOne(owner, ActorFlowReference, cursor), itemType, quantity);
-		case TakeItem(owner, itemType, quantity): TakeItem(replaceOne(owner, ActorFlowReference, cursor), itemType, quantity);
+		case ShowDialogue(dialogue): ShowDialogue(replaceOne(dialogue, DialogueFlowReference, cursor));
+		case AddJournal(entry): AddJournal(replaceOne(entry, JournalFlowReference, cursor));
+		case SetFlag(variable, value): SetFlag(replaceOne(variable, TypedVariableFlowReference(FlagValue), cursor), value);
+		case SetCounter(variable, value): SetCounter(replaceOne(variable, TypedVariableFlowReference(CounterValue), cursor), value);
+		case AddCounter(variable, delta): AddCounter(replaceOne(variable, TypedVariableFlowReference(CounterValue), cursor), delta);
+		case SetState(variable, value): SetState(replaceOne(variable, TypedVariableFlowReference(StateValue), cursor), value);
+		case GiveItem(owner, itemType, quantity): GiveItem(replaceOne(owner, InventoryOwnerFlowReference, cursor), itemType, quantity);
+		case TakeItem(owner, itemType, quantity): TakeItem(replaceOne(owner, InventoryOwnerFlowReference, cursor), itemType, quantity);
 		case Spawn(objectId): Spawn(replaceOne(objectId, WorldObjectFlowReference, cursor));
 		case Despawn(objectId): Despawn(replaceOne(objectId, WorldObjectFlowReference, cursor));
-		case SetObjectState(objectId, value): SetObjectState(replaceOne(objectId, WorldObjectFlowReference, cursor), value);
-		case SetCheckpoint(checkpoint): SetCheckpoint(replaceOne(checkpoint, WorldObjectFlowReference, cursor));
+		case SetObjectState(objectId, value): SetObjectState(replaceOne(objectId, StatefulObjectFlowReference, cursor), value);
+		case SetCheckpoint(checkpoint): SetCheckpoint(replaceOne(checkpoint, CheckpointFlowReference, cursor));
 		case SetObjective(objective, value): SetObjective(replaceOne(objective, ObjectiveFlowReference, cursor), value);
 		case PlayEffect(effect, objectId):
 			PlayEffect(effect, objectId == null ? null : replaceOne(objectId, WorldObjectFlowReference, cursor));
 		case RequestCampaignExit(exit): RequestCampaignExit(replaceOne(exit, CampaignExitFlowReference, cursor));
 		case EmitSignal(signal): EmitSignal(signal);
 		case Schedule(timer, ticks, sequence, arguments):
-			Schedule(replaceOne(timer, TimerFlowReference, cursor), ticks, replaceOne(sequence, SequenceFlowReference, cursor),
-				mapArgumentReferences(arguments, cursor));
+			final nextTimer = replaceOne(timer, TimerFlowReference, cursor);
+			final nextSequence = replaceOne(sequence, SequenceFlowReference, cursor);
+			final nextArguments = mapArgumentReferences(arguments, cursor);
+			Schedule(nextTimer, ticks, nextSequence, rebindSequenceArguments(sequence, nextSequence, nextArguments, cursor));
 		case CallSequence(sequence, arguments):
-			CallSequence(replaceOne(sequence, SequenceFlowReference, cursor), mapArgumentReferences(arguments, cursor));
+			final nextSequence = replaceOne(sequence, SequenceFlowReference, cursor);
+			final nextArguments = mapArgumentReferences(arguments, cursor);
+			CallSequence(nextSequence, rebindSequenceArguments(sequence, nextSequence, nextArguments, cursor));
 		case ChooseSeeded(seedVariable, choices):
-			ChooseSeeded(replaceOne(seedVariable, VariableFlowReference, cursor), [
+			ChooseSeeded(replaceOne(seedVariable, TypedVariableFlowReference(CounterValue), cursor), [
 				for (choice in choices)
 					{
 						weight: choice.weight,
@@ -180,7 +206,7 @@ private function mapArgumentReferences(arguments:Array<FlowArgument>, cursor:Edi
 				case Value(value):
 					Value(value);
 				case Variable(variable):
-					Variable(replaceOne(variable, VariableFlowReference, cursor));
+					Variable(replaceOne(variable, AnyVariableFlowReference, cursor));
 			}
 	];
 
@@ -194,9 +220,10 @@ private typedef EditorFlowReferenceCursor = {
 	var accepted:Bool;
 	var changed:Bool;
 	final collected:Array<EditorFlowReference>;
+	final scenario:Null<Scenario>;
 }
 
-private function replacementCursor(target:Int, replacement:ScenarioId, roles:Array<EditorFlowReferenceRole>):EditorFlowReferenceCursor
+private function replacementCursor(target:Int, replacement:ScenarioId, roles:Array<EditorFlowReferenceRole>, scenario:Null<Scenario>):EditorFlowReferenceCursor
 	return {
 		target: target,
 		seen: 0,
@@ -205,7 +232,8 @@ private function replacementCursor(target:Int, replacement:ScenarioId, roles:Arr
 		expected: null,
 		accepted: false,
 		changed: false,
-		collected: []
+		collected: [],
+		scenario: scenario
 	};
 
 private function collectionCursor():EditorFlowReferenceCursor
@@ -217,8 +245,25 @@ private function collectionCursor():EditorFlowReferenceCursor
 		expected: null,
 		accepted: false,
 		changed: false,
-		collected: []
+		collected: [],
+		scenario: null
 	};
+
+/** Rebuild arguments only when this exact sequence field changed. */
+private function rebindSequenceArguments(original:ScenarioId, replacement:ScenarioId, mapped:Array<FlowArgument>,
+		cursor:EditorFlowReferenceCursor):Array<FlowArgument> {
+	if (original.text() == replacement.text() || cursor.scenario == null)
+		return mapped;
+	final rebound:Array<FlowArgument> = [];
+	var found = false;
+	for (sequence in cursor.scenario.flow.sequences)
+		if (sequence.id.text() == replacement.text()) {
+			found = true;
+			for (parameter in sequence.parameters)
+				rebound.push(Value(parameter.initial));
+		}
+	return found ? rebound : mapped;
+}
 
 private function replacementResult<T>(value:T, cursor:EditorFlowReferenceCursor):EditorFlowReferenceReplacement<T>
 	return {
@@ -255,8 +300,11 @@ private function supportsRole(roles:Array<EditorFlowReferenceRole>, expected:Edi
 private function sameRole(left:EditorFlowReferenceRole, right:EditorFlowReferenceRole):Bool
 	return switch [left, right] {
 		case [ZoneFlowReference, ZoneFlowReference] | [WorldObjectFlowReference, WorldObjectFlowReference] | [ActorFlowReference, ActorFlowReference] |
-			[VariableFlowReference, VariableFlowReference] | [ObjectiveFlowReference, ObjectiveFlowReference] | [StoryFlowReference, StoryFlowReference] |
-			[SequenceFlowReference, SequenceFlowReference] | [TimerFlowReference, TimerFlowReference] |
-			[CampaignExitFlowReference, CampaignExitFlowReference] | [LevelFlowReference, LevelFlowReference]: true;
+			[EntityFlowReference, EntityFlowReference] | [StatefulObjectFlowReference, StatefulObjectFlowReference] |
+			[CheckpointFlowReference, CheckpointFlowReference] | [InventoryOwnerFlowReference, InventoryOwnerFlowReference] |
+			[AnyVariableFlowReference, AnyVariableFlowReference] | [ObjectiveFlowReference, ObjectiveFlowReference] |
+			[DialogueFlowReference, DialogueFlowReference] | [JournalFlowReference, JournalFlowReference] | [SequenceFlowReference, SequenceFlowReference] |
+			[TimerFlowReference, TimerFlowReference] | [CampaignExitFlowReference, CampaignExitFlowReference] | [LevelFlowReference, LevelFlowReference]: true;
+		case [TypedVariableFlowReference(leftKind), TypedVariableFlowReference(rightKind)]: leftKind == rightKind;
 		case _: false;
 	};
