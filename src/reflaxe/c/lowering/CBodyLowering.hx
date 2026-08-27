@@ -1427,7 +1427,17 @@ class CBodyLowering {
 				source: enclosingSpan(spans)
 			});
 		}
-		return {schemaVersion: HxcIRValidator.SCHEMA_VERSION, dispatch: dispatch.ir(), modules: modules};
+		return {
+			schemaVersion: HxcIRValidator.SCHEMA_VERSION,
+			dynamicPlan: {
+				types: [],
+				members: [],
+				callShapes: [],
+				operations: []
+			},
+			dispatch: dispatch.ir(),
+			modules: modules
+		};
 	}
 
 	static function enclosingSpan(spans:Array<HxcSourceSpan>):HxcSourceSpan {

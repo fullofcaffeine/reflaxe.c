@@ -164,7 +164,7 @@ def extract_hxcir(result: subprocess.CompletedProcess[str], label: str) -> str:
 
 def validate_hxcir(hxcir: str) -> None:
     required = (
-        "hxcir schema=25",
+        "hxcir schema=26",
         'string-utf8(bytes=5,value="ASCII")',
         'string-utf8(bytes=6,value="é🙂")',
         'string-utf8(bytes=12,value="embedded\\u0000NUL")',

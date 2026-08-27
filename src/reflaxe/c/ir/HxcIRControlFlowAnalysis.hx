@@ -300,6 +300,11 @@ class HxcIRControlFlowAnalysis {
 		return switch kind {
 			case IRIOCall(call): call.failure;
 			case IRIOConvert(_, _, _, _, failure) | IRIOAllocate(_, _, _, failure): failure;
+			case IRIODynamic(operation): switch operation {
+					case IRDUnbox(_, _,
+						failure) | IRDGet(_, _, failure) | IRDSet(_, _, _, failure) | IRDCall(_, _, _, failure) | IRDInvoke(_, _, _, failure): failure;
+					case IRDBox(_, _) | IRDEqual(_, _, _): null;
+				};
 			case _: null;
 		};
 

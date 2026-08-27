@@ -21,6 +21,7 @@ from scripts.test.bounded_process import run as run_bounded_process  # noqa: E40
 
 HXML = Path(__file__).with_name("hxc_ir.hxml")
 ORACLE_HXML = Path(__file__).with_name("oracle.hxml")
+DYNAMIC_ORACLE_HXML = Path(__file__).with_name("dynamic_oracle.hxml")
 EXPECTED = Path(__file__).with_name("expected")
 REPORT_PREFIX = "HXC_IR_REPORT="
 
@@ -79,6 +80,30 @@ def check_oracle() -> None:
     if result.returncode != 0 or result.stdout != "nextIndex,produce:8\n" or result.stderr:
         raise HxcIRFailure(
             "Haxe side-effect oracle drifted\n"
+            f"exit: {result.returncode}\nstdout:\n{result.stdout}\nstderr:\n{result.stderr}"
+        )
+
+
+def check_dynamic_oracle() -> None:
+    """Record interpreter-owned Dynamic semantics before target lowering exists."""
+    environment = os.environ.copy()
+    environment["HAXE_NO_SERVER"] = "1"
+    result = run_bounded_process(
+        [development_tool("haxe"), str(DYNAMIC_ORACLE_HXML)],
+        cwd=ROOT,
+        env=environment,
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    expected = (
+        "DYNAMIC_ORACLE=cast:7;call:5;equal:true,true,true,false,true;"
+        "order:callee,left,right;ordered:3\n"
+    )
+    if result.returncode != 0 or result.stdout != expected or result.stderr:
+        raise HxcIRFailure(
+            "Haxe Dynamic semantic oracle drifted\n"
             f"exit: {result.returncode}\nstdout:\n{result.stdout}\nstderr:\n{result.stderr}"
         )
 
@@ -160,8 +185,17 @@ def check_semantics(semantic: str, coverage: str) -> None:
     ):
         if failure_shape not in coverage:
             raise HxcIRFailure(f"coverage dump lost an explicit failure shape: {failure_shape}")
-    if 'kind=box target=dynamic implementation=runtime("dynamic")' not in coverage:
-        raise HxcIRFailure("coverage dump lost explicit boxing/runtime intent")
+    for dynamic_shape in (
+        'type "dynamic.type.int" tag=1 source-type=i32 category=int storage=inline-int32',
+        'operation "dynamic.operation.box-int" box type="dynamic.type.int"',
+        'dynamic-box value="value.one" operation="dynamic.operation.box-int"',
+        'dynamic-unbox value="value.boxed" operation="dynamic.operation.unbox-int" '
+        'failure=failure(kind=result-error',
+    ):
+        if dynamic_shape not in coverage:
+            raise HxcIRFailure(
+                f"coverage dump lost an explicit Dynamic semantic shape: {dynamic_shape}"
+            )
     primitive_shapes = (
         'type=abi-int(size)',
         'type=nullable(pointer,instance("instance.object"))',
@@ -237,6 +271,7 @@ def main() -> int:
         return 1
     try:
         check_oracle()
+        check_dynamic_oracle()
         first_payload, first = render("first HxcIR render")
         second_payload, _ = render("second HxcIR render")
         if first_payload != second_payload:
@@ -251,8 +286,8 @@ def main() -> int:
 
     print(
         "hxc-ir: OK: deterministic source-aware dumps, explicit side effects/cleanup, "
-        "typed dispatch/runtime intent, Float32 conversions, switch validation, "
-        "exact warm-plan keys, and stable negative diagnostics"
+        "typed Dynamic and dispatch plans, Float32 conversions, switch validation, "
+        "reference oracles, exact warm-plan keys, and stable negative diagnostics"
     )
     return 0
 

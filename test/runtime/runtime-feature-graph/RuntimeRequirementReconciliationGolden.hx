@@ -205,6 +205,12 @@ class RuntimeRequirementReconciliationGolden {
 	static function programWith(instructions:Array<HxcIRInstruction>, source:HxcSourceSpan):HxcIRProgram {
 		return {
 			schemaVersion: HxcIRValidator.SCHEMA_VERSION,
+			dynamicPlan: {
+				types: [],
+				members: [],
+				callShapes: [],
+				operations: []
+			},
 			dispatch: {layouts: [], slots: [], tables: []},
 			modules: [
 				{

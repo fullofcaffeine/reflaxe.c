@@ -44,7 +44,7 @@ private enum HxcIRDispatchLayoutKind {
 
 /** Validates the semantic invariants required before any HxcIR reaches C AST lowering. */
 class HxcIRValidator {
-	public static inline final SCHEMA_VERSION = 25;
+	public static inline final SCHEMA_VERSION = 26;
 
 	public function new() {}
 
@@ -70,6 +70,10 @@ private class HxcIRValidationState {
 	final virtualLayouts:Map<String, HxcIRVirtualTableLayout> = [];
 	final virtualSlots:Map<String, HxcIRVirtualSlot> = [];
 	final virtualTables:Map<String, HxcIRVirtualTable> = [];
+	final dynamicTypes:Map<String, HxcIRDynamicType> = [];
+	final dynamicMembers:Map<String, HxcIRDynamicMember> = [];
+	final dynamicCallShapes:Map<String, HxcIRDynamicCallShape> = [];
+	final dynamicOperations:Map<String, HxcIRDynamicOperation> = [];
 	final managedRootPaths:HxcIRManagedRootPaths;
 
 	public function new(program:HxcIRProgram, profile:String) {
@@ -83,6 +87,7 @@ private class HxcIRValidationState {
 			add("program", 'schema version ${program.schemaVersion} is unsupported; expected ${HxcIRValidator.SCHEMA_VERSION}', programSource());
 		}
 		indexProgram();
+		validateDynamicPlan();
 		validateProgramContents();
 		validateDispatchPlan();
 		validateRetainedInterfaceGraphs();
@@ -132,6 +137,14 @@ private class HxcIRValidationState {
 		for (table in sorted(program.dispatch.tables, item -> item.id)) {
 			indexUnique(virtualTables, table.id, table, 'dispatch.table:${table.id}', table.source, "virtual table");
 		}
+		for (type in sorted(program.dynamicPlan.types, item -> item.id))
+			indexUnique(dynamicTypes, type.id, type, 'dynamic.type:${type.id}', type.source, "Dynamic type");
+		for (member in sorted(program.dynamicPlan.members, item -> item.id))
+			indexUnique(dynamicMembers, member.id, member, 'dynamic.member:${member.id}', member.source, "Dynamic member");
+		for (shape in sorted(program.dynamicPlan.callShapes, item -> item.id))
+			indexUnique(dynamicCallShapes, shape.id, shape, 'dynamic.callShape:${shape.id}', shape.source, "Dynamic call shape");
+		for (operation in sorted(program.dynamicPlan.operations, item -> item.id))
+			indexUnique(dynamicOperations, operation.id, operation, 'dynamic.operation:${operation.id}', operation.source, "Dynamic operation");
 	}
 
 	function indexUnique<T>(index:Map<String, T>, id:String, value:T, path:String, source:HxcSourceSpan, label:String):Void {
@@ -141,6 +154,206 @@ private class HxcIRValidationState {
 		} else {
 			index.set(id, value);
 		}
+	}
+
+	/** Prove that the closed Dynamic adapter plan is finite, exact, and ordered. */
+	function validateDynamicPlan():Void {
+		final source = programSource();
+		validateOrderedIds(program.dynamicPlan.types.map(value -> value.id), "dynamic.types", source);
+		validateOrderedIds(program.dynamicPlan.members.map(value -> value.id), "dynamic.members", source);
+		validateOrderedIds(program.dynamicPlan.callShapes.map(value -> value.id), "dynamic.callShapes", source);
+		validateOrderedIds(program.dynamicPlan.operations.map(value -> value.id), "dynamic.operations", source);
+
+		final numericTypeIds:Map<Int, String> = [];
+		for (type in program.dynamicPlan.types) {
+			final path = 'dynamic.type:${type.id}';
+			validateSpan(type.source, '$path.source');
+			if (type.typeId < 0)
+				add(path, "Dynamic numeric type ID must be non-negative", type.source);
+			final prior = numericTypeIds.get(type.typeId);
+			if (prior != null)
+				add(path, 'Dynamic numeric type ID ${type.typeId} is shared with `$prior`', type.source);
+			else
+				numericTypeIds.set(type.typeId, type.id);
+			if (type.sourceType != null) {
+				validateTypeRef(type.sourceType, '$path.sourceType', type.source, false);
+				switch type.sourceType {
+					case IRTDynamic | IRTVoid:
+						add(path, "a Dynamic adapter must name one exact non-Dynamic source type", type.source);
+					case _:
+				}
+			}
+			validateDynamicTypeShape(type, path);
+		}
+
+		final memberTokens:Map<String, String> = [];
+		for (member in program.dynamicPlan.members) {
+			final path = 'dynamic.member:${member.id}';
+			validateSpan(member.source, '$path.source');
+			validateText(member.sourceName, '$path.sourceName', member.source);
+			final owner = requireDynamicType(member.ownerTypeId, '$path.ownerTypeId', member.source);
+			if (owner != null && owner.category != IRDCObject)
+				add(path, "Dynamic members require an object adapter owner", member.source);
+			if (member.token < 0)
+				add(path, "Dynamic member token must be non-negative", member.source);
+			final tokenKey = member.ownerTypeId + ":" + member.token;
+			final prior = memberTokens.get(tokenKey);
+			if (prior != null)
+				add(path, 'Dynamic member token ${member.token} is shared with `$prior` on owner `${member.ownerTypeId}`', member.source);
+			else
+				memberTokens.set(tokenKey, member.id);
+			switch member.kind {
+				case IRDMField(valueTypeId, _):
+					requireDynamicType(valueTypeId, '$path.valueTypeId', member.source);
+				case IRDMMethod(callShapeIds):
+					validateOrderedIds(callShapeIds, '$path.callShapeIds', member.source);
+					for (shapeId in callShapeIds)
+						requireDynamicCallShape(shapeId, '$path.callShapeId:$shapeId', member.source);
+			}
+		}
+
+		for (shape in program.dynamicPlan.callShapes) {
+			final path = 'dynamic.callShape:${shape.id}';
+			validateSpan(shape.source, '$path.source');
+			for (index => typeId in shape.parameterTypeIds)
+				requireDynamicType(typeId, '$path.parameterTypeId:$index', shape.source);
+			if (shape.resultTypeId != null)
+				requireDynamicType(shape.resultTypeId, '$path.resultTypeId', shape.source);
+		}
+
+		for (operation in program.dynamicPlan.operations)
+			validateDynamicOperation(operation);
+	}
+
+	function validateDynamicTypeShape(type:HxcIRDynamicType, path:String):Void {
+		final sourceType = type.sourceType;
+		final valid = switch type.category {
+			case IRDCNull: sourceType == null && type.storage == IRDSInlineNull;
+			case IRDCBool: sourceType == IRTBool && type.storage == IRDSInlineBool;
+			case IRDCInt: type.storage == IRDSInlineInt32 && switch sourceType {
+					case IRTInt(32, true): true;
+					case _: false;
+				};
+			case IRDCFloat: type.storage == IRDSInlineFloat64 && switch sourceType {
+					case IRTFloat(64): true;
+					case _: false;
+				};
+			case IRDCString: (sourceType == IRTString || sourceType == IRTManagedString) && type.storage == IRDSManagedWrapper;
+			case IRDCArray: sourceType != null && isManagedArrayReference(sourceType) && type.storage == IRDSManagedWrapper;
+			case IRDCObject: sourceType != null && (type.storage == IRDSManagedReference
+					&& isCollectorManagedClassReference(sourceType)
+					|| type.storage == IRDSManagedWrapper
+					&& switch sourceType {
+						case IRTInstance(instanceId): isDirectAggregateInstance(instanceId);
+						case _: false;
+					});
+			case IRDCEnum: sourceType != null && isPayloadFreeDirectEnum(sourceType) && type.storage == IRDSManagedWrapper;
+			case IRDCFunction: type.storage == IRDSManagedWrapper && switch sourceType {
+					case IRTFunction(_, _): true;
+					case _: false;
+				};
+			case IRDCTypeValue: sourceType != null && type.storage == IRDSStaticToken;
+		};
+		if (!valid)
+			add(path, "Dynamic category, source type, and storage strategy are incompatible", type.source);
+	}
+
+	function validateDynamicOperation(operation:HxcIRDynamicOperation):Void {
+		final path = 'dynamic.operation:${operation.id}';
+		validateSpan(operation.source, '$path.source');
+		switch operation.kind {
+			case IRDOKBox(typeId):
+				requireDynamicType(typeId, '$path.typeId', operation.source);
+			case IRDOKUnbox(typeId):
+				final adapter = requireDynamicType(typeId, '$path.typeId', operation.source);
+				if (adapter != null && adapter.sourceType == null)
+					add(path, "the canonical Dynamic null adapter cannot be an unbox target", operation.source);
+			case IRDOKGet(memberId):
+				final member = requireDynamicMember(memberId, '$path.memberId', operation.source);
+				if (member != null)
+					switch member.kind {
+						case IRDMField(_, _):
+						case IRDMMethod(_): add(path, "bound Dynamic method extraction is not supported", operation.source);
+					}
+			case IRDOKSet(memberId):
+				final member = requireDynamicMember(memberId, '$path.memberId', operation.source);
+				if (member != null)
+					switch member.kind {
+						case IRDMField(_, true):
+						case IRDMField(_, false): add(path, "Dynamic assignment requires a mutable field", operation.source);
+						case IRDMMethod(_): add(path, "Dynamic assignment cannot target a method", operation.source);
+					}
+			case IRDOKCall(callableTypeId, callShapeId):
+				final callable = requireDynamicType(callableTypeId, '$path.callableTypeId', operation.source);
+				final shape = requireDynamicCallShape(callShapeId, '$path.callShapeId', operation.source);
+				if (callable != null && callable.category != IRDCFunction)
+					add(path, "Dynamic call requires a function adapter", operation.source);
+				if (callable != null && shape != null)
+					validateDynamicFunctionShape(callable, shape, path, operation.source);
+			case IRDOKInvoke(memberId, callShapeId):
+				final member = requireDynamicMember(memberId, '$path.memberId', operation.source);
+				final shape = requireDynamicCallShape(callShapeId, '$path.callShapeId', operation.source);
+				if (member != null)
+					switch member.kind {
+						case IRDMMethod(callShapeIds):
+							if (shape != null && callShapeIds.indexOf(shape.id) == -1) add(path,
+								'Dynamic method `${member.id}` does not admit call shape `${shape.id}`', operation.source);
+						case IRDMField(_, _): add(path, "Dynamic member invocation requires a method", operation.source);
+					}
+			case IRDOKEqual(leftTypeId, rightTypeId):
+				requireDynamicType(leftTypeId, '$path.leftTypeId', operation.source);
+				requireDynamicType(rightTypeId, '$path.rightTypeId', operation.source);
+		}
+	}
+
+	function validateDynamicFunctionShape(callable:HxcIRDynamicType, shape:HxcIRDynamicCallShape, path:String, source:HxcSourceSpan):Void {
+		switch callable.sourceType {
+			case IRTFunction(parameters, result):
+				if (parameters.length != shape.parameterTypeIds.length) {
+					add(path, "Dynamic call shape parameter count does not match its function adapter", source);
+				} else {
+					for (index in 0...parameters.length) {
+						final adapter = dynamicTypes.get(shape.parameterTypeIds[index]);
+						if (adapter != null && (adapter.sourceType == null || typeKey(adapter.sourceType) != typeKey(parameters[index])))
+							add(path, 'Dynamic call shape parameter $index does not match its function adapter', source);
+					}
+				}
+				if (result == IRTVoid) {
+					if (shape.resultTypeId != null)
+						add(path, "a Void Dynamic call shape must not declare a result adapter", source);
+				} else if (shape.resultTypeId == null) {
+					add(path, "a value-returning Dynamic call shape requires a result adapter", source);
+				} else {
+					final adapter = dynamicTypes.get(shape.resultTypeId);
+					if (adapter != null && (adapter.sourceType == null || typeKey(adapter.sourceType) != typeKey(result)))
+						add(path, "Dynamic call shape result does not match its function adapter", source);
+				}
+			case _:
+		}
+	}
+
+	function requireDynamicType(id:String, path:String, source:HxcSourceSpan):Null<HxcIRDynamicType> {
+		validateStableId(id, path, source);
+		final type = dynamicTypes.get(id);
+		if (type == null)
+			add(path, 'unknown Dynamic type adapter `$id`', source);
+		return type;
+	}
+
+	function requireDynamicMember(id:String, path:String, source:HxcSourceSpan):Null<HxcIRDynamicMember> {
+		validateStableId(id, path, source);
+		final member = dynamicMembers.get(id);
+		if (member == null)
+			add(path, 'unknown Dynamic member `$id`', source);
+		return member;
+	}
+
+	function requireDynamicCallShape(id:String, path:String, source:HxcSourceSpan):Null<HxcIRDynamicCallShape> {
+		validateStableId(id, path, source);
+		final shape = dynamicCallShapes.get(id);
+		if (shape == null)
+			add(path, 'unknown Dynamic call shape `$id`', source);
+		return shape;
 	}
 
 	function validateProgramContents():Void {
@@ -825,6 +1038,8 @@ private class HxcIRValidationState {
 		validateTypeRef(global.type, '$path.type', global.source, false);
 		rejectStoredSpanType(global.type, '$path.type', global.source, "global");
 		rejectStoredCallScopedCStringType(global.type, '$path.type', global.source, "global");
+		if (global.type == IRTDynamic && managedRootPaths.collect(global.type).length > 0)
+			add(path, "managed Dynamic globals require a general global-root plan and are not supported", global.source);
 		switch global.initialization {
 			case IRGIUninitialized:
 			case IRGIConstant(value):
@@ -1306,7 +1521,7 @@ private class HxcIRValidationState {
 	/**
 		Prove that every function root names one exact collector-managed value.
 
-		Block parameters are deliberately rejected in schema 25. Their value changes
+		Block parameters are deliberately rejected in schema 26. Their value changes
 		on incoming edges, so they need an edge-owned root update rather than the
 		simpler "store immediately after definition" rule used for parameters and
 		instruction results.
@@ -1314,7 +1529,7 @@ private class HxcIRValidationState {
 	function validateManagedRoots(fn:HxcIRFunction, path:String, values:Map<String, HxcIRTypeRef>, parameters:Map<String, HxcIRParameter>,
 			valueSites:Map<String, HxcIRInstructionSite>, blockParameterIds:Map<String, Bool>):Void {
 		if (fn.managedRoots == null) {
-			add('$path.managedRoots', "function has no explicit managed-root plan for schema 25", fn.source);
+			add('$path.managedRoots', "function has no explicit managed-root plan for schema 26", fn.source);
 			return;
 		}
 		final rootIds:Map<String, Bool> = [];
@@ -1480,9 +1695,20 @@ private class HxcIRValidationState {
 			case IRIOInitializeFixedArray(place, valueIds, _, _): placeValueUses(place).concat(valueIds);
 			case IRIOInitializeSpan(place, sourceArray, _, _): placeValueUses(place).concat(placeValueUses(sourceArray));
 			case IRIOBoundsCheck(collection, indexValueId, _): placeValueUses(collection).concat([indexValueId]);
+			case IRIODynamic(operation): dynamicInstructionValueUses(operation);
 			case IRIOCall(_): [];
 		};
 	}
+
+	static function dynamicInstructionValueUses(operation:HxcIRDynamicInstruction):Array<String>
+		return switch operation {
+			case IRDBox(valueId, _): [valueId];
+			case IRDUnbox(valueId, _, failure) | IRDGet(valueId, _, failure): [valueId].concat(failure.arguments);
+			case IRDSet(receiverValueId, valueId, _, failure): [receiverValueId, valueId].concat(failure.arguments);
+			case IRDCall(callableValueId, arguments, _, failure) | IRDInvoke(callableValueId, arguments, _, failure):
+				[callableValueId].concat(arguments).concat(failure.arguments);
+			case IRDEqual(leftValueId, rightValueId, _): [leftValueId, rightValueId];
+		};
 
 	static function placeValueUses(place:HxcIRPlace):Array<String> {
 		return switch place {
@@ -2056,6 +2282,14 @@ private class HxcIRValidationState {
 					if (!admitted)
 						add(path, 'borrowed span argument `$valueId` has no checked direct parameter at argument $index', instruction.source);
 				}
+			case IRIODynamic(operation):
+				switch operation {
+					case IRDBox(valueId, _): reject(valueId, "Dynamic boxing");
+					case IRDUnbox(_, _, failure) | IRDGet(_, _, failure) | IRDSet(_, _, _, failure) | IRDCall(_, _, _, failure) | IRDInvoke(_, _, _, failure):
+						for (valueId in failure.arguments)
+							reject(valueId, "a Dynamic failure edge");
+					case IRDEqual(_, _, _):
+				}
 			case IRIOSequence(_) | IRIOConstant(_) | IRIOFunctionReference(_) | IRIOLoad(_) | IRIOAddress(_) | IRIOBorrowClassField(_) | IRIOBorrowSpan(_) |
 				IRIOUnary(_, _, _) | IRIOBinary(_, _, _, _) | IRIOConvert(_, _, _, _, _) | IRIOProject(_, _) | IRIOMatchTag(_, _) |
 				IRIOProjectTag(_, _, _, _) | IRIOAllocate(_, _, _, _) | IRIODeallocate(_, _) | IRIORetain(_, _) | IRIORelease(_, _) | IRIOTrace(_, _) |
@@ -2168,6 +2402,13 @@ private class HxcIRValidationState {
 				validateBorrowedReferenceCall(call, path, instruction.source, borrowed);
 				if (call.failure != null)
 					rejectValues(call.failure.arguments, "failure-edge argument");
+			case IRIODynamic(operation):
+				switch operation {
+					case IRDBox(valueId, _): rejectValue(valueId, "Dynamic boxing");
+					case IRDUnbox(_, _, failure) | IRDGet(_, _, failure) | IRDSet(_, _, _, failure) | IRDCall(_, _, _, failure) | IRDInvoke(_, _, _, failure):
+						rejectValues(failure.arguments, "a Dynamic failure-edge argument");
+					case IRDEqual(_, _, _):
+				}
 			case IRIODeallocate(place, _) | IRIORetain(place, _) | IRIORelease(place, _) | IRIOTrace(place, _):
 				if (placeUsesBorrowedReference(place, borrowed) && !placeOwnsFieldBelowBorrowedReference(place, borrowed))
 					add(path, "borrowed reference storage cannot be deallocated, retained, or traced as owned storage", instruction.source);
@@ -2659,6 +2900,8 @@ private class HxcIRValidationState {
 				if (instruction.result != null && typeKey(instruction.result.type) != typeKey(targetType)) {
 					add(path, "conversion result type does not match its target type", instruction.source);
 				}
+			case IRIODynamic(operation):
+				validateDynamicInstruction(instruction, operation, path, available, blocks, regions);
 			case IRIOCall(call):
 				validateCall(call, path, instruction.source, available, blocks, regions, nullProofs);
 				if (instruction.result != null && typeKey(instruction.result.type) != typeKey(call.returnType)) {
@@ -3172,12 +3415,141 @@ private class HxcIRValidationState {
 		}
 	}
 
+	function validateDynamicInstruction(instruction:HxcIRInstruction, operation:HxcIRDynamicInstruction, path:String, available:Map<String, HxcIRTypeRef>,
+			blocks:Map<String, HxcIRBlock>, regions:Map<String, HxcIRCleanupRegion>):Void {
+		function requireDynamicValue(valueId:String, role:String):Void {
+			final type = requireValue(valueId, '$path.$role', instruction.source, available);
+			if (type != null && type != IRTDynamic)
+				add(path, 'Dynamic $role must have Dynamic type', instruction.source);
+		}
+		function requireDynamicResult():Void {
+			if (instruction.result != null && instruction.result.type != IRTDynamic)
+				add(path, "Dynamic operation result must have Dynamic type", instruction.source);
+		}
+		function validateDynamicFailure(failure:HxcIRFailureEdge):Void {
+			validateFailureEdge(failure, '$path.failure', instruction.source, available, blocks, regions);
+			if (failure.kind != IRFResultError)
+				add(path, "failing Dynamic operation requires a result-error edge", instruction.source);
+		}
+		switch operation {
+			case IRDBox(valueId, operationId):
+				final valueType = requireValue(valueId, '$path.value', instruction.source, available);
+				final planned = requireDynamicOperation(operationId, '$path.operationId', instruction.source);
+				if (planned != null)
+					switch planned.kind {
+						case IRDOKBox(typeId):
+							final adapter = dynamicTypes.get(typeId);
+							if (adapter != null
+								&& valueType != null
+								&& (adapter.sourceType == null
+									|| typeKey(adapter.sourceType) != typeKey(valueType))) add(path,
+									"Dynamic box operand does not match its exact adapter type", instruction.source);
+						case _:
+							add(path, 'Dynamic instruction requires a box operation, not `${planned.id}`', instruction.source);
+					}
+				requireDynamicResult();
+			case IRDUnbox(valueId, operationId, failure):
+				requireDynamicValue(valueId, "value");
+				final planned = requireDynamicOperation(operationId, '$path.operationId', instruction.source);
+				if (planned != null)
+					switch planned.kind {
+						case IRDOKUnbox(typeId):
+							final adapter = dynamicTypes.get(typeId);
+							if (adapter != null
+								&& adapter.sourceType != null
+								&& instruction.result != null
+								&& typeKey(adapter.sourceType) != typeKey(instruction.result.type)) add(path,
+									"Dynamic unbox result does not match its exact adapter type", instruction.source);
+						case _:
+							add(path, 'Dynamic instruction requires an unbox operation, not `${planned.id}`', instruction.source);
+					}
+				validateDynamicFailure(failure);
+			case IRDGet(receiverValueId, operationId, failure):
+				requireDynamicValue(receiverValueId, "receiver");
+				requireDynamicOperationKind(operationId, "get", path, instruction.source);
+				requireDynamicResult();
+				validateDynamicFailure(failure);
+			case IRDSet(receiverValueId, valueId, operationId, failure):
+				requireDynamicValue(receiverValueId, "receiver");
+				requireDynamicValue(valueId, "value");
+				requireDynamicOperationKind(operationId, "set", path, instruction.source);
+				requireDynamicResult();
+				validateDynamicFailure(failure);
+			case IRDCall(callableValueId, arguments, operationId, failure):
+				requireDynamicValue(callableValueId, "callable");
+				for (index => argument in arguments)
+					requireDynamicValue(argument, 'argument:$index');
+				final planned = requireDynamicOperationKind(operationId, "call", path, instruction.source);
+				if (planned != null)
+					switch planned.kind {
+						case IRDOKCall(_, callShapeId):
+							final shape = dynamicCallShapes.get(callShapeId);
+							if (shape != null
+								&& arguments.length != shape.parameterTypeIds.length) add(path,
+									'Dynamic call provides ${arguments.length} argument(s) for ${shape.parameterTypeIds.length} parameter(s)',
+									instruction.source);
+						case _:
+					}
+				requireDynamicResult();
+				validateDynamicFailure(failure);
+			case IRDInvoke(receiverValueId, arguments, operationId, failure):
+				requireDynamicValue(receiverValueId, "receiver");
+				for (index => argument in arguments)
+					requireDynamicValue(argument, 'argument:$index');
+				final planned = requireDynamicOperationKind(operationId, "invoke", path, instruction.source);
+				if (planned != null)
+					switch planned.kind {
+						case IRDOKInvoke(_, callShapeId):
+							final shape = dynamicCallShapes.get(callShapeId);
+							if (shape != null
+								&& arguments.length != shape.parameterTypeIds.length) add(path,
+									'Dynamic member call provides ${arguments.length} argument(s) for ${shape.parameterTypeIds.length} parameter(s)',
+									instruction.source);
+						case _:
+					}
+				requireDynamicResult();
+				validateDynamicFailure(failure);
+			case IRDEqual(leftValueId, rightValueId, operationId):
+				requireDynamicValue(leftValueId, "left");
+				requireDynamicValue(rightValueId, "right");
+				requireDynamicOperationKind(operationId, "equal", path, instruction.source);
+				if (instruction.result != null && instruction.result.type != IRTBool)
+					add(path, "Dynamic equality result must have Bool type", instruction.source);
+		}
+	}
+
+	function requireDynamicOperation(id:String, path:String, source:HxcSourceSpan):Null<HxcIRDynamicOperation> {
+		validateStableId(id, path, source);
+		final operation = dynamicOperations.get(id);
+		if (operation == null)
+			add(path, 'unknown Dynamic operation `$id`', source);
+		return operation;
+	}
+
+	function requireDynamicOperationKind(id:String, expected:String, path:String, source:HxcSourceSpan):Null<HxcIRDynamicOperation> {
+		final operation = requireDynamicOperation(id, '$path.operationId', source);
+		if (operation == null)
+			return null;
+		final actual = switch operation.kind {
+			case IRDOKBox(_): "box";
+			case IRDOKUnbox(_): "unbox";
+			case IRDOKGet(_): "get";
+			case IRDOKSet(_): "set";
+			case IRDOKCall(_, _): "call";
+			case IRDOKInvoke(_, _): "invoke";
+			case IRDOKEqual(_, _): "equal";
+		};
+		if (actual != expected)
+			add(path, 'Dynamic instruction requires a $expected operation, not `${operation.id}`', source);
+		return operation;
+	}
+
 	function instructionProducesValue(kind:HxcIRInstructionKind):Bool {
 		return switch kind {
 			case IRIOConstant(_) | IRIOFunctionReference(_) | IRIOLoad(_) | IRIOAddress(_) | IRIOBorrowClassField(_) | IRIOBorrowSpan(_) |
 				IRIOUnary(_, _, _) | IRIOBinary(_, _, _) | IRIOConvert(_, _, _, _, _) | IRIOConstructAggregate(_, _) | IRIOZeroAggregate(_) |
 				IRIOConstructInterface(_, _, _) | IRIOUpcastInterface(_, _, _, _) | IRIOProject(_, _) | IRIOConstructTag(_, _, _) | IRIOMatchTag(_, _) |
-				IRIOProjectTag(_, _, _, _) | IRIOAllocate(_, _, _, _) | IRIOMoveManagedCarrier(_):
+				IRIOProjectTag(_, _, _, _) | IRIOAllocate(_, _, _, _) | IRIOMoveManagedCarrier(_) | IRIODynamic(_):
 				true;
 			case IRIOCall(call):
 				call.returnType != IRTVoid;
@@ -5068,9 +5440,9 @@ private class HxcIRValidationState {
 			case IRIOInitializeSpan(place, sourceArray, _, _): placeContainsLocal(place, localId) || placeContainsLocal(sourceArray, localId);
 			case IRIOBorrowSpan(sourceArray): placeContainsLocal(sourceArray, localId);
 			case IRIOSequence(_) | IRIOConstant(_) | IRIOFunctionReference(_) | IRIOUnary(_, _, _) | IRIOBinary(_, _, _, _) | IRIOConvert(_, _, _, _, _) |
-				IRIOCall(_) | IRIOConstructAggregate(_, _) | IRIOZeroAggregate(_) | IRIOConstructInterface(_, _, _) | IRIOUpcastInterface(_, _, _, _) |
-				IRIOProject(_, _) | IRIOConstructTag(_, _, _) | IRIOMatchTag(_, _) | IRIOProjectTag(_, _, _, _) | IRIOAllocate(_, _, _, _) |
-				IRIONullCheck(_, _):
+				IRIODynamic(_) | IRIOCall(_) | IRIOConstructAggregate(_, _) | IRIOZeroAggregate(_) | IRIOConstructInterface(_, _, _) |
+				IRIOUpcastInterface(_, _, _, _) | IRIOProject(_, _) | IRIOConstructTag(_, _, _) | IRIOMatchTag(_, _) | IRIOProjectTag(_, _, _, _) |
+				IRIOAllocate(_, _, _, _) | IRIONullCheck(_, _):
 				false;
 		};
 
@@ -5343,6 +5715,7 @@ private class HxcIRValidationState {
 						add(path, "pointer conversion requires pointer source and target types", source);
 				}
 			case IRCBox | IRCUnbox:
+				add(path, "Dynamic boxing and unboxing require dedicated plan-owned instructions", source);
 		}
 	}
 

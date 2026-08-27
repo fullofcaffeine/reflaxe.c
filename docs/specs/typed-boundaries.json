@@ -131,6 +131,21 @@
       ]
     },
     {
+      "path": "test/hxc_ir/fixtures/DynamicSemantics.hx",
+      "line": 2,
+      "column": 36,
+      "construct": "dynamic-type",
+      "boundaryKind": "language-semantics-fixture",
+      "symbol": "ReferenceDynamic",
+      "typedModel": "HxcIRDynamicPlan and HxcIRDynamicOperation",
+      "sourceLine": "private typedef ReferenceDynamic = Dynamic;",
+      "justification": "The reference-interpreter fixture must exercise the real Haxe Dynamic type so the independent oracle measures source-language casts, calls, equality, null, and evaluation order rather than a compiler-owned imitation.",
+      "validation": "One private alias contains the only untyped spelling; values remain inside the standalone reference fixture, while the HxcIR suite models the corresponding compiler contract with closed Dynamic plan and operation records.",
+      "testEvidence": [
+        "test/hxc_ir/run.py"
+      ]
+    },
+    {
       "path": "test/hxc_ir/fixtures/IRCoverage.hx",
       "line": 24,
       "column": 42,

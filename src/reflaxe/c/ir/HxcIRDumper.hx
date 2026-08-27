@@ -30,6 +30,11 @@ class HxcIRDumper {
 	public function dumpSnapshot(program:HxcIRProgram, includeComplete:Bool):HxcIRDumpSnapshot {
 		output = ['hxcir schema=${program.schemaVersion}'];
 		functionRanges = [];
+		if (program.dynamicPlan.types.length > 0
+			|| program.dynamicPlan.members.length > 0
+			|| program.dynamicPlan.callShapes.length > 0
+			|| program.dynamicPlan.operations.length > 0)
+			dumpDynamic(program.dynamicPlan);
 		if (program.dispatch.layouts.length > 0 || program.dispatch.slots.length > 0 || program.dispatch.tables.length > 0)
 			dumpDispatch(program.dispatch);
 		for (module in sorted(program.modules, item -> item.id)) {
@@ -43,6 +48,24 @@ class HxcIRDumper {
 			});
 		}
 		return new HxcIRDumpSnapshot(includeComplete ? output.join("\n") + "\n" : null, functions);
+	}
+
+	function dumpDynamic(plan:HxcIRDynamicPlan):Void {
+		line("dynamic");
+		for (type in sorted(plan.types, item -> item.id)) {
+			final sourceType = type.sourceType == null ? "none" : typeRef(type.sourceType);
+			line('  type ${quote(type.id)} tag=${type.typeId} source-type=$sourceType category=${dynamicCategory(type.category)} storage=${dynamicStorage(type.storage)} ${source(type.source)}');
+		}
+		for (shape in sorted(plan.callShapes, item -> item.id)) {
+			final resultTypeId = shape.resultTypeId == null ? "void" : quote(shape.resultTypeId);
+			line('  call-shape ${quote(shape.id)} parameters=${strings(shape.parameterTypeIds)} result=$resultTypeId ${source(shape.source)}');
+		}
+		for (member in sorted(plan.members, item -> item.id)) {
+			line('  member ${quote(member.id)} owner=${quote(member.ownerTypeId)} token=${member.token} source-name=${quote(member.sourceName)} ${dynamicMember(member.kind)} ${source(member.source)}');
+		}
+		for (operation in sorted(plan.operations, item -> item.id))
+			line('  operation ${quote(operation.id)} ${dynamicOperation(operation.kind)} ${source(operation.source)}');
+		line("end dynamic");
 	}
 
 	function dumpDispatch(plan:HxcIRDispatchPlan):Void {
@@ -194,6 +217,7 @@ class HxcIRDumper {
 				'binary operation=${quote(operationId)} left=${quote(leftValueId)} right=${quote(rightValueId)} implementation=${implementation(selected)}';
 			case IRIOConvert(valueId, kind, targetType, selected, failure):
 				'convert value=${quote(valueId)} kind=${conversion(kind)} target=${typeRef(targetType)} implementation=${implementation(selected)} failure=${failure == null ? "none" : failureEdge(failure)}';
+			case IRIODynamic(operation): dynamicInstruction(operation);
 			case IRIOCall(call): renderCall(call);
 			case IRIOConstructAggregate(instanceId, fields):
 				'construct-aggregate instance=${quote(instanceId)} fields=[${fields.map(field -> quote(field.name) + "=" + quote(field.valueId)).join(",")}]';
@@ -242,6 +266,66 @@ class HxcIRDumper {
 				'lifetime place=${renderPlace(place)} transition=${state(from)}->${state(to)} reason=${quote(reason)}';
 		}
 	}
+
+	function dynamicInstruction(operation:HxcIRDynamicInstruction):String
+		return switch operation {
+			case IRDBox(valueId, operationId):
+				'dynamic-box value=${quote(valueId)} operation=${quote(operationId)}';
+			case IRDUnbox(valueId, operationId, failure):
+				'dynamic-unbox value=${quote(valueId)} operation=${quote(operationId)} failure=${failureEdge(failure)}';
+			case IRDGet(receiverValueId, operationId, failure):
+				'dynamic-get receiver=${quote(receiverValueId)} operation=${quote(operationId)} failure=${failureEdge(failure)}';
+			case IRDSet(receiverValueId, valueId, operationId, failure):
+				'dynamic-set receiver=${quote(receiverValueId)} value=${quote(valueId)} operation=${quote(operationId)} failure=${failureEdge(failure)}';
+			case IRDCall(callableValueId, arguments, operationId, failure):
+				'dynamic-call callable=${quote(callableValueId)} arguments=${strings(arguments)} operation=${quote(operationId)} failure=${failureEdge(failure)}';
+			case IRDInvoke(receiverValueId, arguments, operationId, failure):
+				'dynamic-invoke receiver=${quote(receiverValueId)} arguments=${strings(arguments)} operation=${quote(operationId)} failure=${failureEdge(failure)}';
+			case IRDEqual(leftValueId, rightValueId, operationId):
+				'dynamic-equal left=${quote(leftValueId)} right=${quote(rightValueId)} operation=${quote(operationId)}';
+		};
+
+	function dynamicCategory(category:HxcIRDynamicCategory):String
+		return switch category {
+			case IRDCNull: "null";
+			case IRDCBool: "bool";
+			case IRDCInt: "int";
+			case IRDCFloat: "float";
+			case IRDCString: "string";
+			case IRDCArray: "array";
+			case IRDCObject: "object";
+			case IRDCEnum: "enum";
+			case IRDCFunction: "function";
+			case IRDCTypeValue: "type-value";
+		};
+
+	function dynamicStorage(storage:HxcIRDynamicStorage):String
+		return switch storage {
+			case IRDSInlineNull: "inline-null";
+			case IRDSInlineBool: "inline-bool";
+			case IRDSInlineInt32: "inline-int32";
+			case IRDSInlineFloat64: "inline-float64";
+			case IRDSManagedReference: "managed-reference";
+			case IRDSManagedWrapper: "managed-wrapper";
+			case IRDSStaticToken: "static-token";
+		};
+
+	function dynamicMember(kind:HxcIRDynamicMemberKind):String
+		return switch kind {
+			case IRDMField(valueTypeId, mutable): 'field value-type=${quote(valueTypeId)} mutable=$mutable';
+			case IRDMMethod(callShapeIds): 'method call-shapes=${strings(callShapeIds)}';
+		};
+
+	function dynamicOperation(kind:HxcIRDynamicOperationKind):String
+		return switch kind {
+			case IRDOKBox(typeId): 'box type=${quote(typeId)}';
+			case IRDOKUnbox(typeId): 'unbox type=${quote(typeId)}';
+			case IRDOKGet(memberId): 'get member=${quote(memberId)}';
+			case IRDOKSet(memberId): 'set member=${quote(memberId)}';
+			case IRDOKCall(callableTypeId, callShapeId): 'call callable=${quote(callableTypeId)} shape=${quote(callShapeId)}';
+			case IRDOKInvoke(memberId, callShapeId): 'invoke member=${quote(memberId)} shape=${quote(callShapeId)}';
+			case IRDOKEqual(leftTypeId, rightTypeId): 'equal left=${quote(leftTypeId)} right=${quote(rightTypeId)}';
+		};
 
 	function managedCarrierAcquisition(acquisition:HxcIRManagedCarrierAcquisition):String
 		return switch acquisition {

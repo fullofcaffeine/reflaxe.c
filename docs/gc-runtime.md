@@ -179,9 +179,10 @@ correctness-first backend, not a high-performance or low-latency collector.
 
 E4.T06 owns the backend, exact root/pin contracts, pressure behavior, reports,
 and selective `runtime-base + status + alloc + object + gc` package. HxcIR
-schema 25 records exact managed parameters, instruction results, call-bounded
+schema 26 records exact managed parameters, instruction results, call-bounded
 mutable-record borrows, and typed paths to managed references in direct records,
-enums, or optionals. Generated functions emit balanced frames for normal and
+enums, optionals, or a validated Dynamic payload. Typed-only programs keep the
+Dynamic plan empty. Generated functions emit balanced frames for normal and
 early propagated returns. The project emitter owns one request-local collector and main
 execution-context chain in unity, module-split, and package-coalesced layouts.
 It initializes them before the Haxe entry function and unregisters/disposes them

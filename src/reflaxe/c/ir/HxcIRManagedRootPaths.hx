@@ -18,8 +18,13 @@ import reflaxe.c.ir.HxcIR;
 class HxcIRManagedRootPaths {
 	final declarations:Map<String, HxcIRTypeDeclaration> = [];
 	final instances:Map<String, HxcIRTypeInstance> = [];
+	final dynamicHasManagedPayload:Bool;
 
 	public function new(program:HxcIRProgram) {
+		this.dynamicHasManagedPayload = Lambda.exists(program.dynamicPlan.types, type -> switch type.storage {
+			case IRDSManagedReference | IRDSManagedWrapper: true;
+			case IRDSInlineNull | IRDSInlineBool | IRDSInlineInt32 | IRDSInlineFloat64 | IRDSStaticToken: false;
+		});
 		for (module in program.modules) {
 			for (declaration in module.types)
 				declarations.set(declaration.id, declaration);
@@ -41,6 +46,10 @@ class HxcIRManagedRootPaths {
 			return;
 		}
 		switch type {
+			case IRTDynamic if (dynamicHasManagedPayload):
+				final nested = path.copy();
+				nested.push(IRMRPDynamicPayload);
+				result.push(nested);
 			case IRTNullable(payload, IRNTagged):
 				final nested = path.copy();
 				nested.push(IRMRPNullablePayload);
@@ -105,5 +114,6 @@ class HxcIRManagedRootPaths {
 			case IRMRPAggregateField(instanceId, fieldName): 'field($instanceId,$fieldName)';
 			case IRMRPTagPayload(instanceId, tagName, payloadIndex): 'tag($instanceId,$tagName,$payloadIndex)';
 			case IRMRPNullablePayload: "nullable-payload";
+			case IRMRPDynamicPayload: "dynamic-payload";
 		};
 }

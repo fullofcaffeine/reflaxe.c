@@ -420,6 +420,8 @@ class CBodyValueCoalescingPlanner {
 			case IRIOConvert(valueId, _, _, _, failure):
 				addUse(valueId, site);
 				collectFailureUses(failure, site);
+			case IRIODynamic(operation):
+				collectDynamicUses(operation, site);
 			case IRIOCall(call):
 				collectCallUses(call, site);
 			case IRIOConstructAggregate(_, fields):
@@ -452,6 +454,30 @@ class CBodyValueCoalescingPlanner {
 				addUse(indexValueId, site);
 			case IRIONullCheck(valueId, _):
 				addUse(valueId, site);
+		}
+	}
+
+	function collectDynamicUses(operation:HxcIRDynamicInstruction, site:CBodyValueUseSite):Void {
+		function addValues(values:Array<String>):Void
+			for (valueId in values)
+				addUse(valueId, site);
+		switch operation {
+			case IRDBox(valueId, _):
+				addUse(valueId, site);
+			case IRDUnbox(valueId, _, failure) | IRDGet(valueId, _, failure):
+				addUse(valueId, site);
+				collectFailureUses(failure, site);
+			case IRDSet(receiverValueId, valueId, _, failure):
+				addUse(receiverValueId, site);
+				addUse(valueId, site);
+				collectFailureUses(failure, site);
+			case IRDCall(callableValueId, arguments, _, failure) | IRDInvoke(callableValueId, arguments, _, failure):
+				addUse(callableValueId, site);
+				addValues(arguments);
+				collectFailureUses(failure, site);
+			case IRDEqual(leftValueId, rightValueId, _):
+				addUse(leftValueId, site);
+				addUse(rightValueId, site);
 		}
 	}
 

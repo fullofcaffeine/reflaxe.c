@@ -45,6 +45,12 @@ class HxcIRGolden {
 
 		final coverage = coverageProgram();
 		validator.requireValid(coverage, PROFILE);
+		validator.requireValid(dynamicContractProgram(), PROFILE);
+		requireInvalidMarker(dynamicContractWrongOperationProgram(), "requires a box operation", "mismatched Dynamic operation");
+		requireInvalidMarker(dynamicContractMissingRootProgram(), "missing exact root path `dynamic-payload`", "unrooted Dynamic payload");
+		requireInvalidMarker(dynamicContractWrongFailureProgram(), "requires a result-error edge", "Dynamic failure kind");
+		requireInvalidMarker(dynamicContractManagedGlobalProgram(), "require a general global-root plan", "managed Dynamic global");
+		requireInvalidMarker(genericDynamicConversionProgram(), "require dedicated plan-owned instructions", "generic Dynamic conversion");
 		validator.requireValid(nativeConstantAggregateProgram(), PROFILE);
 		validator.requireValid(borrowedClassAliasProgram(), PROFILE);
 		validator.requireValid(borrowedClassOwnedFieldReleaseProgram(), PROFILE);
@@ -324,7 +330,12 @@ class HxcIRGolden {
 			mainModule.functions[0].blocks.reverse();
 			modules.reverse();
 		}
-		return {schemaVersion: HxcIRValidator.SCHEMA_VERSION, dispatch: emptyDispatch(), modules: modules};
+		return {
+			schemaVersion: HxcIRValidator.SCHEMA_VERSION,
+			dynamicPlan: emptyDynamic(),
+			dispatch: emptyDispatch(),
+			modules: modules
+		};
 	}
 
 	static function sideEffectFunction():HxcIRFunction {
@@ -572,6 +583,24 @@ class HxcIRGolden {
 		];
 		return {
 			schemaVersion: HxcIRValidator.SCHEMA_VERSION,
+			dynamicPlan: {
+				types: [
+					{
+						id: "dynamic.type.int",
+						typeId: 1,
+						sourceType: IRTInt(32, true),
+						category: IRDCInt,
+						storage: IRDSInlineInt32,
+						source: span(COVERAGE_SOURCE, 19)
+					}
+				],
+				members: [],
+				callShapes: [],
+				operations: [
+					{id: "dynamic.operation.box-int", kind: IRDOKBox("dynamic.type.int"), source: span(COVERAGE_SOURCE, 19)},
+					{id: "dynamic.operation.unbox-int", kind: IRDOKUnbox("dynamic.type.int"), source: span(COVERAGE_SOURCE, 19)}
+				]
+			},
 			dispatch: {
 				layouts: [
 					{
@@ -649,7 +678,269 @@ class HxcIRGolden {
 	}
 
 	/**
-		Exercise the schema-25 exact-root contract without involving C emission.
+		Exercise every schema-26 Dynamic operation without selecting a C carrier.
+
+		The object and function adapters use typed managed wrappers, so every
+		Dynamic value has one explicit `dynamic-payload` root. This proves that the
+		semantic plan, checked failures, value order, and collector projection agree
+		before runtime representation or C spelling exists.
+	**/
+	static function dynamicContractProgram():HxcIRProgram {
+		final source = span(COVERAGE_SOURCE, 76);
+		final objectType:HxcIRTypeDeclaration = {
+			id: "type.dynamic-object",
+			displayName: "coverage.DynamicObject",
+			kind: IRTKAggregate([
+				{
+					name: "value",
+					type: IRTInt(32, true),
+					mutable: true,
+					source: source
+				}
+			]),
+			source: source
+		};
+		final objectInstance:HxcIRTypeInstance = {
+			id: "instance.dynamic-object",
+			declarationId: objectType.id,
+			arguments: [],
+			representation: IRRDirect,
+			source: source
+		};
+		final failure:HxcIRFailureEdge = {
+			kind: IRFResultError,
+			target: IRFTBlock("result-error"),
+			arguments: [],
+			cleanup: []
+		};
+		final instructions:Array<HxcIRInstruction> = [
+			instruction("dynamic.01.box", result("value.boxed", IRTDynamic), IRIODynamic(IRDBox("value.int", "dynamic.operation.box-int")), COVERAGE_SOURCE,
+				76),
+			instruction("dynamic.02.unbox", result("value.unboxed", IRTInt(32, true)),
+				IRIODynamic(IRDUnbox("value.boxed", "dynamic.operation.unbox-int", failure)), COVERAGE_SOURCE, 76),
+			instruction("dynamic.03.get", result("value.got", IRTDynamic), IRIODynamic(IRDGet("value.receiver", "dynamic.operation.get-field", failure)),
+				COVERAGE_SOURCE, 76),
+			instruction("dynamic.04.set", result("value.set", IRTDynamic),
+				IRIODynamic(IRDSet("value.receiver", "value.member", "dynamic.operation.set-field", failure)), COVERAGE_SOURCE, 76),
+			instruction("dynamic.05.call", result("value.called", IRTDynamic),
+				IRIODynamic(IRDCall("value.callable", ["value.argument"], "dynamic.operation.call-function", failure)), COVERAGE_SOURCE, 76),
+			instruction("dynamic.06.invoke", result("value.invoked", IRTDynamic),
+				IRIODynamic(IRDInvoke("value.receiver", ["value.argument"], "dynamic.operation.invoke-method", failure)), COVERAGE_SOURCE, 76),
+			instruction("dynamic.07.equal", result("value.equal", IRTBool),
+				IRIODynamic(IRDEqual("value.boxed", "value.argument", "dynamic.operation.equal-int")), COVERAGE_SOURCE, 76)
+		];
+		final rootedValues = [
+			"value.receiver",
+			"value.member",
+			"value.callable",
+			"value.argument",
+			"value.boxed",
+			"value.got",
+			"value.set",
+			"value.called",
+			"value.invoked"
+		];
+		final roots:Array<HxcIRManagedRoot> = [];
+		for (valueId in rootedValues)
+			roots.push({
+				id: 'root.$valueId',
+				valueId: valueId,
+				projections: [IRMRPDynamicPayload],
+				source: source
+			});
+		final fn:HxcIRFunction = {
+			id: "fn.dynamic-contract",
+			displayName: "coverage.dynamicContract",
+			parameters: [
+				parameter("value.int", IRTInt(32, true), COVERAGE_SOURCE, 76),
+				parameter("value.receiver", IRTDynamic, COVERAGE_SOURCE, 76),
+				parameter("value.member", IRTDynamic, COVERAGE_SOURCE, 76),
+				parameter("value.callable", IRTDynamic, COVERAGE_SOURCE, 76),
+				parameter("value.argument", IRTDynamic, COVERAGE_SOURCE, 76)
+			],
+			borrowedClassParameterIds: [],
+			borrowedClassLocalIds: [],
+			managedRoots: roots,
+			locals: [],
+			returnType: IRTVoid,
+			failureConvention: IRFCInfallible,
+			entryBlockId: "entry",
+			blocks: [
+				{
+					id: "entry",
+					parameters: [],
+					instructions: instructions,
+					terminator: terminator(IRTReturn(null, []), COVERAGE_SOURCE, 76),
+					source: source
+				},
+				{
+					id: "result-error",
+					parameters: [],
+					instructions: [],
+					terminator: terminator(IRTReturn(null, []), COVERAGE_SOURCE, 76),
+					source: source
+				}
+			],
+			cleanupRegions: [],
+			source: source
+		};
+		return {
+			schemaVersion: HxcIRValidator.SCHEMA_VERSION,
+			dynamicPlan: {
+				types: [
+					{
+						id: "dynamic.type.function",
+						typeId: 3,
+						sourceType: IRTFunction([IRTInt(32, true)], IRTInt(32, true)),
+						category: IRDCFunction,
+						storage: IRDSManagedWrapper,
+						source: source
+					},
+					{
+						id: "dynamic.type.int",
+						typeId: 1,
+						sourceType: IRTInt(32, true),
+						category: IRDCInt,
+						storage: IRDSInlineInt32,
+						source: source
+					},
+					{
+						id: "dynamic.type.null",
+						typeId: 0,
+						category: IRDCNull,
+						storage: IRDSInlineNull,
+						source: source
+					},
+					{
+						id: "dynamic.type.object",
+						typeId: 2,
+						sourceType: IRTInstance(objectInstance.id),
+						category: IRDCObject,
+						storage: IRDSManagedWrapper,
+						source: source
+					}
+				],
+				members: [
+					{
+						id: "dynamic.member.field",
+						ownerTypeId: "dynamic.type.object",
+						token: 1,
+						sourceName: "value",
+						kind: IRDMField("dynamic.type.int", true),
+						source: source
+					},
+					{
+						id: "dynamic.member.method",
+						ownerTypeId: "dynamic.type.object",
+						token: 2,
+						sourceName: "measure",
+						kind: IRDMMethod(["dynamic.shape.int-to-int"]),
+						source: source
+					}
+				],
+				callShapes: [
+					{
+						id: "dynamic.shape.int-to-int",
+						parameterTypeIds: ["dynamic.type.int"],
+						resultTypeId: "dynamic.type.int",
+						source: source
+					}
+				],
+				operations: [
+					{id: "dynamic.operation.box-int", kind: IRDOKBox("dynamic.type.int"), source: source},
+					{
+						id: "dynamic.operation.call-function",
+						kind: IRDOKCall("dynamic.type.function", "dynamic.shape.int-to-int"),
+						source: source
+					},
+					{id: "dynamic.operation.equal-int", kind: IRDOKEqual("dynamic.type.int", "dynamic.type.int"), source: source},
+					{id: "dynamic.operation.get-field", kind: IRDOKGet("dynamic.member.field"), source: source},
+					{
+						id: "dynamic.operation.invoke-method",
+						kind: IRDOKInvoke("dynamic.member.method", "dynamic.shape.int-to-int"),
+						source: source
+					},
+					{id: "dynamic.operation.set-field", kind: IRDOKSet("dynamic.member.field"), source: source},
+					{id: "dynamic.operation.unbox-int", kind: IRDOKUnbox("dynamic.type.int"), source: source}
+				]
+			},
+			dispatch: emptyDispatch(),
+			modules: [
+				{
+					id: "coverage.DynamicContract",
+					types: [objectType],
+					typeInstances: [objectInstance],
+					globals: [],
+					functions: [fn],
+					source: source
+				}
+			]
+		};
+	}
+
+	static function dynamicContractWrongOperationProgram():HxcIRProgram {
+		final program = dynamicContractProgram();
+		final instructions = program.modules[0].functions[0].blocks[0].instructions;
+		final original = instructions[0];
+		instructions[0] = {
+			id: original.id,
+			result: original.result,
+			kind: IRIODynamic(IRDBox("value.int", "dynamic.operation.unbox-int")),
+			source: original.source
+		};
+		return program;
+	}
+
+	static function dynamicContractMissingRootProgram():HxcIRProgram {
+		final program = dynamicContractProgram();
+		final roots = program.modules[0].functions[0].managedRoots;
+		if (roots == null)
+			throw "Dynamic contract fixture lost its roots";
+		roots.pop();
+		return program;
+	}
+
+	static function dynamicContractWrongFailureProgram():HxcIRProgram {
+		final program = dynamicContractProgram();
+		final wrongFailure:HxcIRFailureEdge = {
+			kind: IRFNativeStatus,
+			target: IRFTBlock("result-error"),
+			arguments: [],
+			cleanup: []
+		};
+		final instructions = program.modules[0].functions[0].blocks[0].instructions;
+		final original = instructions[1];
+		instructions[1] = {
+			id: original.id,
+			result: original.result,
+			kind: IRIODynamic(IRDUnbox("value.boxed", "dynamic.operation.unbox-int", wrongFailure)),
+			source: original.source
+		};
+		return program;
+	}
+
+	static function dynamicContractManagedGlobalProgram():HxcIRProgram {
+		final program = dynamicContractProgram();
+		program.modules[0].globals.push({
+			id: "global.dynamic",
+			type: IRTDynamic,
+			mutable: true,
+			initialization: IRGIUninitialized,
+			source: span(COVERAGE_SOURCE, 76)
+		});
+		return program;
+	}
+
+	static function genericDynamicConversionProgram():HxcIRProgram {
+		final file = "test/negative/GenericDynamicConversion.hx";
+		return minimalProgram("invalid.GenericDynamicConversion", [
+			instruction("value.one", result("value.one", IRTInt(32, true)), IRIOConstant(IRCInt("1")), file, 2),
+			instruction("bad.box", result("value.boxed", IRTDynamic), IRIOConvert("value.one", IRCBox, IRTDynamic, IRIRuntime("dynamic"), null), file, 3)
+		], terminator(IRTReturn(null, []), file, 4), [], [], file);
+	}
+
+	/**
+		Exercise the schema-26 exact-root contract without involving C emission.
 
 		The negative variant deliberately roots an Int. A collector cannot learn
 		anything from that address-shaped mistake, so validation must reject it
@@ -703,6 +994,7 @@ class HxcIRGolden {
 		};
 		return {
 			schemaVersion: HxcIRValidator.SCHEMA_VERSION,
+			dynamicPlan: emptyDynamic(),
 			dispatch: emptyDispatch(),
 			modules: [
 				{
@@ -899,10 +1191,10 @@ class HxcIRGolden {
 							IRIOConvert("value.one", IRCNullableInject, IRTNullable(IRTInt(32, true), IRNTagged), IRIStatic, null), COVERAGE_SOURCE, 19),
 						instruction("c01.nullable-unwrap", result("value.unwrapped-one", IRTInt(32, true)),
 							IRIOConvert("value.nullable-one", IRCNullableUnwrap, IRTInt(32, true), IRIStatic, resultFailure), COVERAGE_SOURCE, 19),
-						instruction("c01.box", result("value.boxed", IRTDynamic), IRIOConvert("value.one", IRCBox, IRTDynamic, IRIRuntime("dynamic"), null),
+						instruction("c01.box", result("value.boxed", IRTDynamic), IRIODynamic(IRDBox("value.one", "dynamic.operation.box-int")),
 							COVERAGE_SOURCE, 19),
 						instruction("c01.unbox", result("value.unboxed", IRTInt(32, true)),
-							IRIOConvert("value.boxed", IRCUnbox, IRTInt(32, true), IRIRuntime("dynamic"), null), COVERAGE_SOURCE, 19),
+							IRIODynamic(IRDUnbox("value.boxed", "dynamic.operation.unbox-int", resultFailure)), COVERAGE_SOURCE, 19),
 						instruction("c02.function-reference", result("value.direct-callable", IRTFunction([], IRTVoid)),
 							IRIOFunctionReference("fn.coverage.target"), COVERAGE_SOURCE, 20),
 						instruction("c02.function-reference-call", null, IRIOCall(call(IRCDClosure("value.direct-callable"), [], IRTVoid)), COVERAGE_SOURCE,
@@ -1112,6 +1404,7 @@ class HxcIRGolden {
 		};
 		return {
 			schemaVersion: HxcIRValidator.SCHEMA_VERSION,
+			dynamicPlan: emptyDynamic(),
 			dispatch: emptyDispatch(),
 			modules: [
 				{
@@ -1179,6 +1472,7 @@ class HxcIRGolden {
 		};
 		return {
 			schemaVersion: HxcIRValidator.SCHEMA_VERSION,
+			dynamicPlan: emptyDynamic(),
 			dispatch: emptyDispatch(),
 			modules: [
 				{
@@ -3053,6 +3347,7 @@ class HxcIRGolden {
 		};
 		return {
 			schemaVersion: HxcIRValidator.SCHEMA_VERSION,
+			dynamicPlan: emptyDynamic(),
 			dispatch: emptyDispatch(),
 			modules: [
 				{
@@ -3125,6 +3420,7 @@ class HxcIRGolden {
 		};
 		return {
 			schemaVersion: HxcIRValidator.SCHEMA_VERSION,
+			dynamicPlan: emptyDynamic(),
 			dispatch: emptyDispatch(),
 			modules: [
 				{
@@ -3194,6 +3490,7 @@ class HxcIRGolden {
 		};
 		return {
 			schemaVersion: HxcIRValidator.SCHEMA_VERSION,
+			dynamicPlan: emptyDynamic(),
 			dispatch: emptyDispatch(),
 			modules: [
 				{
@@ -3280,6 +3577,7 @@ class HxcIRGolden {
 		};
 		return {
 			schemaVersion: HxcIRValidator.SCHEMA_VERSION,
+			dynamicPlan: emptyDynamic(),
 			dispatch: emptyDispatch(),
 			modules: [
 				{
@@ -3374,6 +3672,7 @@ class HxcIRGolden {
 		};
 		return {
 			schemaVersion: HxcIRValidator.SCHEMA_VERSION,
+			dynamicPlan: emptyDynamic(),
 			dispatch: emptyDispatch(),
 			modules: [
 				{
@@ -3435,6 +3734,7 @@ class HxcIRGolden {
 		};
 		return {
 			schemaVersion: HxcIRValidator.SCHEMA_VERSION,
+			dynamicPlan: emptyDynamic(),
 			dispatch: emptyDispatch(),
 			modules: [
 				{
@@ -3561,6 +3861,7 @@ class HxcIRGolden {
 		final functionFailureConvention = failureConvention == null ? IRFCInfallible : failureConvention;
 		return {
 			schemaVersion: HxcIRValidator.SCHEMA_VERSION,
+			dynamicPlan: emptyDynamic(),
 			dispatch: emptyDispatch(),
 			modules: [
 				{
@@ -3603,6 +3904,14 @@ class HxcIRGolden {
 
 	static function emptyDispatch():HxcIRDispatchPlan
 		return {layouts: [], slots: [], tables: []};
+
+	static function emptyDynamic():HxcIRDynamicPlan
+		return {
+			types: [],
+			members: [],
+			callShapes: [],
+			operations: []
+		};
 
 	static function invalidDiagnostics(program:HxcIRProgram):Array<String> {
 		final diagnostics = new HxcIRValidator().validate(program, PROFILE);

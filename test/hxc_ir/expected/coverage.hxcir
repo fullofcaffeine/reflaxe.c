@@ -1,4 +1,9 @@
-hxcir schema=25
+hxcir schema=26
+dynamic
+  type "dynamic.type.int" tag=1 source-type=i32 category=int storage=inline-int32 @"test/hxc_ir/fixtures/IRCoverage.hx":19:1-19:2
+  operation "dynamic.operation.box-int" box type="dynamic.type.int" @"test/hxc_ir/fixtures/IRCoverage.hx":19:1-19:2
+  operation "dynamic.operation.unbox-int" unbox type="dynamic.type.int" @"test/hxc_ir/fixtures/IRCoverage.hx":19:1-19:2
+end dynamic
 dispatch
   layout "itable.layout.coverage.Interface" root="instance.interface" slots=["slot.measure"] @"test/hxc_ir/fixtures/IRCoverage.hx":9:1-9:2
   layout "vtable.layout.coverage.Object" root="instance.object" slots=["slot.render"] @"test/hxc_ir/fixtures/IRCoverage.hx":8:1-8:2
@@ -69,8 +74,8 @@ module "coverage.IR" @"test/hxc_ir/fixtures/IRCoverage.hx":1:1-80:2
       instruction "c01.checked" result="value.checked-i8":i8 convert value="value.argument" kind=numeric-checked target=i8 implementation=program-local("hxc.i32.to.i8.checked") failure=failure(kind=result-error,target=block("result-error"),arguments=[],cleanup=[]) @"test/hxc_ir/fixtures/IRCoverage.hx":19:1-19:2
       instruction "c01.nullable-inject" result="value.nullable-one":nullable(tagged,i32) convert value="value.one" kind=nullable-inject target=nullable(tagged,i32) implementation=static failure=none @"test/hxc_ir/fixtures/IRCoverage.hx":19:1-19:2
       instruction "c01.nullable-unwrap" result="value.unwrapped-one":i32 convert value="value.nullable-one" kind=nullable-unwrap target=i32 implementation=static failure=failure(kind=result-error,target=block("result-error"),arguments=[],cleanup=[]) @"test/hxc_ir/fixtures/IRCoverage.hx":19:1-19:2
-      instruction "c01.box" result="value.boxed":dynamic convert value="value.one" kind=box target=dynamic implementation=runtime("dynamic") failure=none @"test/hxc_ir/fixtures/IRCoverage.hx":19:1-19:2
-      instruction "c01.unbox" result="value.unboxed":i32 convert value="value.boxed" kind=unbox target=i32 implementation=runtime("dynamic") failure=none @"test/hxc_ir/fixtures/IRCoverage.hx":19:1-19:2
+      instruction "c01.box" result="value.boxed":dynamic dynamic-box value="value.one" operation="dynamic.operation.box-int" @"test/hxc_ir/fixtures/IRCoverage.hx":19:1-19:2
+      instruction "c01.unbox" result="value.unboxed":i32 dynamic-unbox value="value.boxed" operation="dynamic.operation.unbox-int" failure=failure(kind=result-error,target=block("result-error"),arguments=[],cleanup=[]) @"test/hxc_ir/fixtures/IRCoverage.hx":19:1-19:2
       instruction "c02.function-reference" result="value.direct-callable":function()->void function-reference target="fn.coverage.target" @"test/hxc_ir/fixtures/IRCoverage.hx":20:1-20:2
       instruction "c02.function-reference-call" result=- call dispatch=closure("value.direct-callable") arguments=[] returns=void failure=none @"test/hxc_ir/fixtures/IRCoverage.hx":20:1-20:2
       instruction "c02.direct" result=- call dispatch=direct("fn.coverage.target") arguments=[] returns=void failure=none @"test/hxc_ir/fixtures/IRCoverage.hx":20:1-20:2

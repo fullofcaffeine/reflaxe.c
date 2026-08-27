@@ -7,6 +7,7 @@ import reflaxe.c.emit.CProjectLayout.CProjectLayout;
 import reflaxe.c.emit.CProjectLayout.CProjectLayoutPlanner;
 import reflaxe.c.emit.CStaticFunctionProjectEmitter;
 import reflaxe.c.ir.HxcIR;
+import reflaxe.c.ir.HxcIRValidator;
 import reflaxe.c.ir.HxcSourceSpan;
 import reflaxe.c.interop.CImportRegistry.CLoweredImports;
 import reflaxe.c.lowering.CBodyDispatch.CBodyDispatchGraph;
@@ -110,7 +111,13 @@ class GeneratedRootFrameProbe {
 		final preparedDispatch = new CPreparedBodyDispatch(CBodyDispatchGraph.empty(), [], [], [], [], [], []);
 		final dispatch = new CLoweredBodyDispatch(preparedDispatch, [], [], [], []);
 		final program:HxcIRProgram = {
-			schemaVersion: 21,
+			schemaVersion: HxcIRValidator.SCHEMA_VERSION,
+			dynamicPlan: {
+				types: [],
+				members: [],
+				callShapes: [],
+				operations: []
+			},
 			dispatch: {layouts: [], slots: [], tables: []},
 			modules: [
 				{
@@ -123,7 +130,7 @@ class GeneratedRootFrameProbe {
 				}
 			]
 		};
-		final lowered = new CBodyLoweringResult(program, [loweredRoot, loweredEntry], [], [], [], [], [], [], [], [], [], [], [], dispatch,
+		final lowered = new CBodyLoweringResult(program, [loweredRoot, loweredEntry], [], [], [], [], [], [], [], [], [], [], [], [], dispatch,
 			CLoweredImports.empty(), [], [], {
 				schemaVersion: 1,
 				algorithm: "synthetic-root-frame",

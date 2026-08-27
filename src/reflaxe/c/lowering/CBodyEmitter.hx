@@ -862,6 +862,8 @@ class CBodyEmitter {
 					guards.push(EMember(current, optional.presenceName, false));
 					current = EMember(current, optional.payloadName, false);
 					currentType = optional.prepared.payload.irType;
+				case IRMRPDynamicPayload:
+					fail('Dynamic managed root in `$functionId` reached C emission before the carrier implementation');
 			}
 		var pointer:CExpr = ECast(new CType(TVoid, [QConst]), DPointer(DName(null), []), current);
 		if (guards.length > 0) {
