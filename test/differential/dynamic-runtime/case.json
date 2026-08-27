@@ -42,7 +42,7 @@
     "exitCode": 0,
     "stdout": {
       "mode": "regex",
-      "value": "dynamic-lowering: OK: .*Eval/native parity, forced collection, exact numeric adapters, typed isolation, scalar closure, layouts, cold/warm determinism, C\\+\\+ headers, sanitizers, runtime-none, and unsupported-shape diagnostics passed$"
+      "value": "dynamic-lowering: OK: .*Eval/native parity, forced collection, exact numeric adapters, typed isolation, scalar closure, layouts, cold/warm determinism, C\\+\\+ headers, sanitizers, runtime-policy matrix, and unsupported-shape diagnostics passed$"
     },
     "artifacts": [
       {

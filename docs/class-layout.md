@@ -2,7 +2,7 @@
 
 E3.T04 adds a bounded production representation for ordinary Haxe classes.
 Reachable non-generic declarations and exact closed generic instances lower
-through schema-23 HxcIR to private concrete C structs, while Haxe class values
+through schema-27 HxcIR to private concrete C structs, while Haxe class values
 remain nullable references to that storage. A class proven not to escape keeps
 this direct, runtime-free form. The
 bounded `Array<Class>` graph path and retained-interface-field path instead

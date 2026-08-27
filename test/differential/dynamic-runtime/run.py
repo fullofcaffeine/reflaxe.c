@@ -37,6 +37,9 @@ EXPECTED = (
     "true:true:true:true\n"
 )
 LAYOUTS = ("split", "package", "unity")
+DYNAMIC_OPERATIONS = frozenset(
+    ("box", "box-null", "box-type-token", "unbox", "get", "set", "call", "invoke", "equal")
+)
 STRICT_FLAGS = (
     "-std=c11",
     "-Wall",
@@ -260,10 +263,19 @@ def validate_hxcir(hxcir: str) -> None:
         raise DynamicLoweringFailure("Dynamic HxcIR used raw syntax or leaked a local path")
 
 
+def runtime_plan(project: Path) -> dict[str, object]:
+    """Read one full compiler-owned runtime plan."""
+
+    plan = json.loads((project / "hxc.runtime-plan.json").read_text(encoding="utf-8"))
+    if not isinstance(plan, dict):
+        raise DynamicLoweringFailure("runtime plan is not a JSON object")
+    return plan
+
+
 def selected_features(project: Path) -> set[str]:
     """Read the exact packaged runtime closure."""
 
-    plan = json.loads((project / "hxc.runtime-plan.json").read_text(encoding="utf-8"))
+    plan = runtime_plan(project)
     features = plan.get("selectedFeatures")
     if not isinstance(features, list):
         raise DynamicLoweringFailure("runtime plan omitted selectedFeatures")
@@ -273,6 +285,216 @@ def selected_features(project: Path) -> set[str]:
             raise DynamicLoweringFailure("runtime plan contains an invalid feature entry")
         result.add(str(feature["id"]))
     return result
+
+
+def source_line_for_marker(marker: str) -> int:
+    """Locate one independently named carrier declaration in the fixture."""
+
+    lines = FIXTURE.joinpath("Main.hx").read_text(encoding="utf-8").splitlines()
+    matches = [index for index, line in enumerate(lines, start=1) if marker in line]
+    if len(matches) != 1:
+        raise DynamicLoweringFailure(
+            f"Dynamic fixture marker {marker!r} matched {len(matches)} lines"
+        )
+    return matches[0]
+
+
+def runtime_semantic_projection(plan: dict[str, object]) -> dict[str, object]:
+    """Remove only policy labels before comparing equivalent feature plans."""
+
+    excluded = {"requestedPolicy", "resolvedPolicy", "policyProvenance"}
+    return {key: value for key, value in plan.items() if key not in excluded}
+
+
+def validate_dynamic_runtime_plan(
+    project: Path, *, policy: str, provenance: str
+) -> dict[str, object]:
+    """Bind every admitted carrier and operation to full source evidence."""
+
+    plan = runtime_plan(project)
+    if (
+        plan.get("schemaVersion") != 2
+        or plan.get("algorithm") != "hxc-runtime-plan-v2"
+        or plan.get("status") != "analyzed-runtime-features"
+        or plan.get("planPurpose") != "compiler-program"
+        or plan.get("requestedPolicy") != policy
+        or plan.get("resolvedPolicy") != policy
+        or plan.get("policyProvenance") != provenance
+        or plan.get("diagnosticMode") != "off"
+        or plan.get("diagnosticProvenance")
+        != "direct-define:hxc_runtime_diagnostics"
+        or plan.get("noRuntimeProof") is not None
+    ):
+        raise DynamicLoweringFailure(
+            f"Dynamic runtime plan lost its full {policy} policy evidence"
+        )
+
+    root_reasons = plan.get("rootReasons")
+    if not isinstance(root_reasons, list) or not root_reasons:
+        raise DynamicLoweringFailure("Dynamic runtime plan omitted full root reasons")
+    reasons = [
+        reason
+        for reason in root_reasons
+        if isinstance(reason, dict) and reason.get("featureId") == "dynamic"
+    ]
+    operations = {reason.get("operationId") for reason in reasons}
+    if operations != DYNAMIC_OPERATIONS:
+        raise DynamicLoweringFailure(
+            f"Dynamic runtime reasons cover {sorted(str(value) for value in operations)!r}"
+        )
+
+    reason_ids: list[str] = []
+    operation_lines: set[tuple[str, int]] = set()
+    for reason in reasons:
+        reason_id = reason.get("id")
+        source = reason.get("source")
+        if (
+            not isinstance(reason_id, str)
+            or not reason_id
+            or reason_id in reason_ids
+            or reason.get("kind") != "runtime-operation"
+            or reason.get("surface") != "closed-world Haxe Dynamic operation"
+            or not isinstance(source, dict)
+        ):
+            raise DynamicLoweringFailure(
+                "Dynamic runtime reason lost its unique typed operation contract"
+            )
+        source_file = source.get("file")
+        start = source.get("start")
+        end = source.get("end")
+        if (
+            not isinstance(source_file, str)
+            or (
+                source_file != "Main.hx"
+                and not source_file.endswith("dynamic-runtime/fixtures/Main.hx")
+            )
+            or source_file.startswith("/")
+            or str(ROOT) in source_file
+            or not isinstance(start, dict)
+            or not isinstance(end, dict)
+            or not isinstance(start.get("line"), int)
+            or not isinstance(start.get("column"), int)
+            or not isinstance(end.get("line"), int)
+            or not isinstance(end.get("column"), int)
+            or int(start["line"]) < 1
+            or int(start["column"]) < 1
+            or (int(end["line"]), int(end["column"]))
+            < (int(start["line"]), int(start["column"]))
+        ):
+            raise DynamicLoweringFailure(
+                f"Dynamic runtime reason {reason_id!r} has no normalized source span"
+            )
+        reason_ids.append(reason_id)
+        operation_lines.add((str(reason["operationId"]), int(start["line"])))
+
+    carrier_markers = {
+        "final integer:ReferenceDynamic": "box",
+        "final floating:ReferenceDynamic": "box",
+        "final boolean:ReferenceDynamic": "box",
+        "final text:ReferenceDynamic": "box",
+        "final absent:ReferenceDynamic": "box-null",
+        "final point:ReferenceDynamic": "box",
+        "final counter:ReferenceDynamic": "box",
+        "final tone:ReferenceDynamic": "box",
+        "final callable:ReferenceDynamic": "box",
+        "final textCallable:ReferenceDynamic": "box",
+        "final holder:ReferenceDynamic": "box",
+        "final opaqueType:ReferenceDynamic": "box-type-token",
+    }
+    missing_carriers = [
+        marker
+        for marker, operation in carrier_markers.items()
+        if (operation, source_line_for_marker(marker)) not in operation_lines
+    ]
+    if missing_carriers:
+        raise DynamicLoweringFailure(
+            "Dynamic runtime report omitted carrier reasons "
+            f"{missing_carriers!r}; observed={sorted(operation_lines)!r}"
+        )
+    # The Array literal is immediately restored to the same exact Array<Int>
+    # before its first element is read. Whole-program lowering therefore proves
+    # that no Dynamic operation is observable and keeps its three direct values.
+    # A runtime reason here would mean selective boxing regressed.
+    elided_array_line = source_line_for_marker("final values:ReferenceDynamic")
+    if any(line == elided_array_line for _, line in operation_lines):
+        raise DynamicLoweringFailure(
+            "non-observable exact Array round-trip gained a Dynamic runtime reason"
+        )
+
+    selected = plan.get("selectedFeatures")
+    dynamic_feature = next(
+        (
+            feature
+            for feature in selected
+            if isinstance(feature, dict) and feature.get("id") == "dynamic"
+        ),
+        None,
+    ) if isinstance(selected, list) else None
+    if (
+        not isinstance(dynamic_feature, dict)
+        or dynamic_feature.get("root") is not True
+        or set(dynamic_feature.get("reasonIds", [])) != set(reason_ids)
+        or "runtime/include/hxrt/dynamic.h" not in dynamic_feature.get("artifacts", [])
+        or "runtime/src/dynamic.c" not in dynamic_feature.get("artifacts", [])
+    ):
+        raise DynamicLoweringFailure(
+            "selected Dynamic feature lost its exact reasons or packaged artifacts"
+        )
+    return plan
+
+
+def validate_typed_runtime_none(project: Path) -> None:
+    """Prove a typed neighbor succeeds with an explicit zero-runtime policy."""
+
+    plan = runtime_plan(project)
+    proof = plan.get("noRuntimeProof")
+    if (
+        plan.get("status") != "analyzed-runtime-free"
+        or plan.get("requestedPolicy") != "none"
+        or plan.get("resolvedPolicy") != "none"
+        or plan.get("policyProvenance") != "direct-define:hxc_runtime"
+        or plan.get("rootReasons") != []
+        or plan.get("selectedFeatures") != []
+        or plan.get("features") != []
+        or plan.get("artifacts") != []
+        or plan.get("symbols") != []
+        or not isinstance(proof, dict)
+        or proof.get("status") != "eligible"
+    ):
+        raise DynamicLoweringFailure(
+            "ordinary typed control flow lost its exact runtime-none proof"
+        )
+
+
+def validate_runtime_none_rejection(
+    result: subprocess.CompletedProcess[str], auto_plan: dict[str, object]
+) -> None:
+    """Require every Dynamic blocker to remain source-positioned under none."""
+
+    root_reasons = auto_plan.get("rootReasons")
+    expected_count = len(root_reasons) if isinstance(root_reasons, list) else -1
+    if (
+        result.returncode == 0
+        or f"runtime policy `none` found {expected_count} deduplicated runtime blocker(s)"
+        not in result.stderr
+        or "kind=runtime-operation" not in result.stderr
+        or (
+            "source=Main.hx:" not in result.stderr
+            and "source=test/differential/dynamic-runtime/fixtures/Main.hx:"
+            not in result.stderr
+        )
+    ):
+        raise DynamicLoweringFailure(
+            "runtime-none lost its exact source-positioned blocker summary"
+        )
+    for operation in DYNAMIC_OPERATIONS:
+        if (
+            f"operation={operation} surface=`closed-world Haxe Dynamic operation`"
+            not in result.stderr
+        ):
+            raise DynamicLoweringFailure(
+                f"runtime-none omitted the Dynamic {operation!r} blocker"
+            )
 
 
 def application_text(project: Path) -> str:
@@ -406,6 +628,9 @@ def render_projects(root: Path) -> Path:
     hxcir = extract_hxcir(cold)
     validate_hxcir(hxcir)
     validate_dynamic_project(split)
+    auto_plan = validate_dynamic_runtime_plan(
+        split, policy="auto", provenance="profile-preset:portable"
+    )
     cold_tree = generated_tree(split)
 
     port = available_port()
@@ -434,6 +659,33 @@ def render_projects(root: Path) -> Path:
             require_compile(result, f"{layout} Dynamic compile")
             if not generated_tree(output):
                 raise DynamicLoweringFailure(f"{layout} Dynamic project is empty")
+            validate_dynamic_project(output)
+            layout_plan = validate_dynamic_runtime_plan(
+                output, policy="auto", provenance="profile-preset:portable"
+            )
+            if layout_plan != auto_plan:
+                raise DynamicLoweringFailure(
+                    f"{layout} Dynamic runtime plan changed from split"
+                )
+
+        minimal = root / "dynamic-minimal"
+        minimal_result = compile_haxe(
+            FIXTURE,
+            minimal,
+            connect=endpoint,
+            defines=("hxc_runtime=minimal",),
+        )
+        require_compile(minimal_result, "minimal-policy Dynamic compile")
+        validate_dynamic_project(minimal)
+        minimal_plan = validate_dynamic_runtime_plan(
+            minimal, policy="minimal", provenance="direct-define:hxc_runtime"
+        )
+        if runtime_semantic_projection(minimal_plan) != runtime_semantic_projection(
+            auto_plan
+        ):
+            raise DynamicLoweringFailure(
+                "minimal and auto selected different Dynamic semantics or packages"
+            )
 
         scalar = root / "dynamic-scalar"
         scalar_result = compile_haxe(SCALAR, scalar, connect=endpoint)
@@ -441,9 +693,12 @@ def render_projects(root: Path) -> Path:
         validate_scalar_project(scalar)
 
         typed = root / "dynamic-typed"
-        typed_result = compile_haxe(TYPED, typed, connect=endpoint)
+        typed_result = compile_haxe(
+            TYPED, typed, connect=endpoint, defines=("hxc_runtime=none",)
+        )
         require_compile(typed_result, "typed control compile")
         validate_typed_project(typed)
+        validate_typed_runtime_none(typed)
 
         run_negative_cases(root, endpoint)
         runtime_none = root / "dynamic-runtime-none"
@@ -453,8 +708,7 @@ def render_projects(root: Path) -> Path:
             connect=endpoint,
             defines=("hxc_runtime=none",),
         )
-        if rejected.returncode == 0 or "runtime policy `none`" not in rejected.stderr:
-            raise DynamicLoweringFailure("runtime-none accepted managed Dynamic source")
+        validate_runtime_none_rejection(rejected, auto_plan)
         require_no_output(runtime_none, "Dynamic runtime-none case")
     finally:
         server.terminate()
@@ -665,7 +919,7 @@ def main() -> None:
     print(
         "dynamic-lowering: OK: Eval/native parity, forced collection, exact numeric "
         "adapters, typed isolation, scalar closure, layouts, cold/warm determinism, "
-        "C++ headers, sanitizers, runtime-none, and unsupported-shape diagnostics "
+        "C++ headers, sanitizers, runtime-policy matrix, and unsupported-shape diagnostics "
         f"passed ({families})"
     )
 

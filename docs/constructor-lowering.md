@@ -2,7 +2,7 @@
 
 E3.T05 admits constructors for concrete, non-generic Haxe classes when the
 complete object lifetime is proven. The compiler lowers the real pinned-Haxe
-`TypedExpr` through schema-23 HxcIR and structural C AST nodes. A class whose
+`TypedExpr` through schema-27 HxcIR and structural C AST nodes. A class whose
 object stays inside one function can remain allocation-free. A class reference
 that crosses a function return or is retained by another object instead selects
 the dependency-closed object and garbage-collector runtime features needed for

@@ -324,11 +324,22 @@ descriptor categories, null managed payloads, and wrong readers return
 carrier closure is exactly `runtime-base + status + dynamic`; it allocates
 nothing and does not select object descriptors or collection.
 
-This registered native carrier is a representation foundation, not proof of
-ordinary Haxe `Dynamic` lowering. E4.T07's lowering/adapters child owns the
-source-to-HxcIR operations, program-generated exact adapters, managed roots,
-and inspection reasons. Until that work passes, unsupported source operations
-continue to fail before C emission.
+The bounded E4.T07 source slice lowers exact `Dynamic` operations through
+schema-27 HxcIR and generated per-type adapters. Each surviving box, cast,
+field, call, and equality operation adds a source-positioned `dynamic` reason
+to the full `hxc.runtime-plan.json` report. `auto` and `minimal` select the same
+justified package. `none` reports every blocker and leaves no output.
+
+The compiler keeps neighboring typed code outside this carrier. It can also
+remove an exact `Dynamic` round trip when no Dynamic behavior is observable.
+For example, the differential fixture restores one `Array<Int>` immediately,
+so HxcIR keeps its direct values and records no false boxing reason.
+
+The admitted slice covers exact primitives, managed String, null, one mutable
+record, one concrete class, one fieldless enum, non-capturing functions, and
+opaque type values. Managed globals, computed names, bound methods, open
+generics, Dynamic map keys, payload-enum equality, and unresolved polymorphic
+identities still fail before C emission.
 
 <!-- hxrt-feature:alloc -->
 ### `alloc`
