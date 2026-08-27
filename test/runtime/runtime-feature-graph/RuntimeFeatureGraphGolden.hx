@@ -40,6 +40,14 @@ import reflaxe.c.runtime.RuntimeFeaturePackager.RuntimeArtifactSource;
 import reflaxe.c.runtime.RuntimeFeaturePlanner;
 import reflaxe.c.runtime.RuntimeFeatureRegistry;
 
+/**
+ * Builds the review snapshots for the selective runtime graph.
+ *
+ * The fixture starts from the typed catalog, asks the real planner for focused
+ * closures, packages those exact files, and prints canonical JSON for the
+ * Python native harness. This keeps graph, package, and native evidence under
+ * one deterministic owner.
+ */
 private typedef RuntimePackageFileRecord = {
 	final path:String;
 	final kind:GeneratedFileKind;
@@ -54,6 +62,7 @@ private typedef RuntimeFailureRecord = {
 	final blockers:Array<RuntimePolicyBlockerRecord>;
 }
 
+/** Exercises successful and malformed runtime plans before native compilation. */
 class RuntimeFeatureGraphGolden {
 	static inline final CATALOG_PREFIX = "HXC_RUNTIME_FEATURE_CATALOG=";
 	static inline final PLANS_PREFIX = "HXC_RUNTIME_FEATURE_PLANS=";
@@ -85,6 +94,7 @@ class RuntimeFeatureGraphGolden {
 		final stringSplit = planner.plan(featureRequest(CRuntimePolicy.Auto, [reason("fixture.string-split", "string-split")], []));
 		final bytes = planner.plan(featureRequest(CRuntimePolicy.Auto, [reason("fixture.bytes", "bytes")], []));
 		final bytesString = planner.plan(featureRequest(CRuntimePolicy.Auto, [reason("fixture.bytes-string", "bytes-string")], []));
+		final dynamicPlan = planner.plan(featureRequest(CRuntimePolicy.Auto, [reason("fixture.dynamic", "dynamic")], []));
 		final objectPlan = planner.plan(featureRequest(CRuntimePolicy.Auto, [reason("fixture.object", "object")], []));
 		final gc = planner.plan(featureRequest(CRuntimePolicy.Auto, [reason("fixture.gc", "gc")], []));
 		final stringScalar = planner.plan(featureRequest(CRuntimePolicy.Auto, [reason("fixture.string-scalar", "string-scalar")], []));
@@ -114,6 +124,7 @@ class RuntimeFeatureGraphGolden {
 		final stringSplitFiles = packager.packageFiles(stringSplit, repositorySource);
 		final bytesFiles = packager.packageFiles(bytes, repositorySource);
 		final bytesStringFiles = packager.packageFiles(bytesString, repositorySource);
+		final dynamicFiles = packager.packageFiles(dynamicPlan, repositorySource);
 		final objectFiles = packager.packageFiles(objectPlan, repositorySource);
 		final gcFiles = packager.packageFiles(gc, repositorySource);
 		final stringScalarFiles = packager.packageFiles(stringScalar, repositorySource);
@@ -171,6 +182,7 @@ class RuntimeFeatureGraphGolden {
 			stringSplit: stringSplit,
 			bytes: bytes,
 			bytesString: bytesString,
+			dynamicCarrier: dynamicPlan,
 			object: objectPlan,
 			gc: gc,
 			stringScalar: stringScalar,
@@ -223,6 +235,7 @@ class RuntimeFeatureGraphGolden {
 			stringSplit: packageRecords(stringSplitFiles),
 			bytes: packageRecords(bytesFiles),
 			bytesString: packageRecords(bytesStringFiles),
+			dynamicCarrier: packageRecords(dynamicFiles),
 			object: packageRecords(objectFiles),
 			gc: packageRecords(gcFiles),
 			stringScalar: packageRecords(stringScalarFiles),

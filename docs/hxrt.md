@@ -245,7 +245,7 @@ strategy is selected, as required by
 
 ### ABI and versioning
 
-The runtime ABI is internal and versioned, currently 0.18.0. Generated
+The runtime ABI is internal and versioned, currently 0.19.0. Generated
 runtime-using C emits a structural C11 `_Static_assert` for the required major.
 Minor and patch changes within the same major are compatible by current policy;
 a major mismatch fails native compilation. Runtime-free output contains no
@@ -307,6 +307,28 @@ The header stores no last-error state, allocates nothing, and has no source file
 
 Native-seed-only symbolic name lookup used by smoke diagnostics. Generated code
 branches on typed statuses directly and does not select this convenience helper.
+
+<!-- hxrt-feature:dynamic -->
+### `dynamic`
+
+Private tagged carrier for values whose source semantics require `Dynamic`.
+Null, `Bool`, `Int`, and `Float` stay inline. Every managed payload is a
+non-owning pointer to either its exact collector allocation base or a generated
+wrapper whose fields retain their precise C types. A function pointer therefore
+stays in a typed wrapper field; it never passes through `void *` or an integer.
+
+Constructors and readers validate both the immutable type descriptor and the
+active payload tag before inspecting a union member. Invalid tags, mismatched
+descriptor categories, null managed payloads, and wrong readers return
+`HXC_STATUS_INVALID_ARGUMENT` without changing the caller's output. The scalar
+carrier closure is exactly `runtime-base + status + dynamic`; it allocates
+nothing and does not select object descriptors or collection.
+
+This registered native carrier is a representation foundation, not proof of
+ordinary Haxe `Dynamic` lowering. E4.T07's lowering/adapters child owns the
+source-to-HxcIR operations, program-generated exact adapters, managed roots,
+and inspection reasons. Until that work passes, unsupported source operations
+continue to fail before C emission.
 
 <!-- hxrt-feature:alloc -->
 ### `alloc`

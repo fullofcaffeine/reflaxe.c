@@ -22,6 +22,7 @@ class RuntimeFeatureCatalog {
 		final runtimeAbi = RuntimeFeatureId.parse("runtime-abi");
 		final status = RuntimeFeatureId.parse("status");
 		final statusName = RuntimeFeatureId.parse("status-name");
+		final dynamicFeature = RuntimeFeatureId.parse("dynamic");
 		final alloc = RuntimeFeatureId.parse("alloc");
 		final array = RuntimeFeatureId.parse("array");
 		final iterator = RuntimeFeatureId.parse("iterator");
@@ -87,6 +88,42 @@ class RuntimeFeatureCatalog {
 					"A fixture could duplicate the switch, but that would stop testing the runtime's own status vocabulary.",
 					"The helper is shared native evidence, not a fallback selected for generated Haxe.", "docs/hxrt.md",
 					["scripts/ci/runtime_smoke.py", "runtime/hxrt/test/runtime_smoke.c"])),
+			new RuntimeFeatureDefinition(dynamicFeature, "Private tagged carrier for source-required closed-world Dynamic values.", CompilerSelectable, true,
+				environments, [status], [header("dynamic.h"), source("dynamic.c")], [
+					"hxc_dynamic_type_is_valid",
+					"hxc_value_init_bool",
+					"hxc_value_init_float64",
+					"hxc_value_init_int32",
+					"hxc_value_init_managed_reference",
+					"hxc_value_init_managed_wrapper",
+					"hxc_value_init_null",
+					"hxc_value_init_static_token",
+					"hxc_value_is_null",
+					"hxc_value_is_valid",
+					"hxc_value_managed_payload",
+					"hxc_value_read_bool",
+					"hxc_value_read_float64",
+					"hxc_value_read_int32",
+					"hxc_value_read_managed_reference",
+					"hxc_value_read_managed_wrapper",
+					"hxc_value_read_static_token"
+				], [],
+				[],
+				documentation("Carries one validated Dynamic type identity and active payload without routing ordinary typed values through a universal box.",
+					[
+						new RuntimeFeatureSelectionRoot("dynamic-operation", RuntimeFeatureSelectionRootKind.HxcIrOperation,
+							"A reachable validated HxcIR Dynamic box, cast, field, call, equality, or managed-payload operation.")
+					],
+					"A statically typed value or operation keeps its direct specialized C representation and omits this feature.",
+					"A closed expression may use direct or program-local specialization only when no Dynamic carrier is observable across that boundary.",
+					"Observable Dynamic values need one shared tag, type identity, checked scalar access, and managed-root projection across generated C files. The carrier itself remains allocation-free; managed adapters select object and collector support separately.",
+					"docs/hxrt.md",
+					[
+						"runtime/hxrt/test/dynamic_contract.c",
+						"runtime/hxrt/test/dynamic_header_cpp.cpp",
+						"test/runtime/dynamic/run.py",
+						"test/runtime/runtime-feature-graph/run.py"
+					])),
 			new RuntimeFeatureDefinition(alloc, "Hardened allocator ownership and failure contracts with hosted and custom native evidence.",
 				CompilerSelectable, true, environments, [status], [header("allocator.h"), source("allocator.c")], [
 					"hxc_default_allocator",
@@ -642,7 +679,6 @@ class RuntimeFeatureCatalog {
 		return [
 			reserved("closure", "E3.T08", "Escaping closure environment support after escape analysis."),
 			reserved("date-time", "E5.T08", "Date, timezone, wall-clock, and monotonic-time adapters."),
-			reserved("dynamic", "E4.T07", "Source-required tagged Haxe dynamic values and operations."),
 			reserved("exception", "E4.T09", "Contained general exception frames after result lowering is ineligible."),
 			reserved("export-error", "E7.T04", "Thread-safe exported status and error-detail boundary."),
 			reserved("filesystem", "E5.T09", "Hosted filesystem and file-resource adapters."),
@@ -677,9 +713,10 @@ class RuntimeFeatureCatalog {
 			case "allocator.h": "6e21c0bc498eb40bcec901914a04dd1bee33b6b21e5a27f1ac5f169a8a1cc448";
 			case "array.h": "32782a39200bd43c463e566b546dea0a45de4feb39e8e287f2c48351dcb9c41f";
 			case "array_join.h": "5829a159dab0bd3446b5bc418c2ee32ad2902c0fec6bcc04f82efeb66c294fea";
-			case "base.h": "cf68416ee75e41c21db28eb4a755a2bd1b060e0ab7cdcb8db1311fd04a282ba0";
+			case "base.h": "7d4f67124bf94b76bfc24d5db973426f48f3f9f37daeae975fd4948f5b1dea25";
 			case "bytes.h": "3f2dc89578ee5381e98051c5b3d06dcb6859e0cce10535edaba9c9bf5b38f31d";
 			case "bytes_string.h": "9d944e38a748696628076b0c5fd56339668e48953a220d51c8da1630fbdf9c40";
+			case "dynamic.h": "91d3ec747f6d85ab4a2be99cd52c7bbb3e4b34f288f9e209301a1c09e622b1a5";
 			case "gc.h": "2ca9523f1c74c62877c3f006bab9bd8a3a2a1eced93d67ad59d015a7c6ecb9de";
 			case "io.h": "4b92f03451dc4d04ea74c857ca3ce54d52fbe80d31f155b93781ee2fab946589";
 			case "int_map.h": "69dfbe45cc182cfb66fbc5e44b38c7cf3205386ff8edabd7d33bc1daabe5ef83";
@@ -709,6 +746,7 @@ class RuntimeFeatureCatalog {
 			case "array_join.c": "b158708b62c7e407f9da21c24a1b3306d4b41baa6b63f2d8019f631a98008fde";
 			case "bytes.c": "902f1a40eb6ff1d94cc58d48a8096c9c0cb60eef4e6e9b0d0469448f929bfcb8";
 			case "bytes_string.c": "0ee9604f1b4ae78baeeaf7cac8b2a35b5634f115c958a7575230c790e8aa6ca6";
+			case "dynamic.c": "ff9948c57cdb43bd2b0b1877c6b787c621ec84f08cbabde80f19e7c5d77e6fac";
 			case "gc.c": "96cf942d6752070aaa5005eae3bc45c7d00aca37c360dfecaeb76d8db767b4cc";
 			case "io.c": "898b3f351b60a91f25fd1ffdfe8d832e95a5a6a738ffe226ac33581f1fcb5b0f";
 			case "int_map.c": "769ca4906fc47b0f61499e3f5ca14aea22237dbd37fef81e5f4eafbf6f71ec9e";

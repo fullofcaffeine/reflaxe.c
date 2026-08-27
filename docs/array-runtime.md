@@ -34,7 +34,8 @@ the corresponding front-removing `shift` entry points advance the marker to
 marker to 0.15.0. Hosted Float formatting later advanced the marker to 0.16.0.
 Live Array cursors and arbitrary-range splice/resize advanced the marker to
 0.17.0. The separate lowercase String feature advances the current marker to
-0.18.0.
+0.18.0. The private tagged Dynamic carrier advances the current marker to
+0.19.0 without changing the Array layout.
 Other intervening additions are recorded in their owning
 runtime documents. The bounded `resize(0)` lowering reuses the existing
 `hxc_array_resize` entry point, so it does not add a new ABI symbol or advance

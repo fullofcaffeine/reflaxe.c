@@ -1056,13 +1056,15 @@
       "status": "implemented",
       "disposition": "available",
       "summary": "A typed deterministic feature graph resolves exact runtime closure under a versioned, provenance-locked internal ABI contract.",
-      "scope": "The schema-3 catalog pins per-feature semantic rationale, roots, documentation/evidence, internal ABI 0.18.0, same-major generated-C checks, forbidden application-export runtime types, source hashes, and strict C/C++ build baselines; schema-2 plans prove runtime-free programs or select exactly the justified closure.",
+      "scope": "The schema-3 catalog pins per-feature semantic rationale, roots, documentation/evidence, internal ABI 0.19.0, same-major generated-C checks, forbidden application-export runtime types, source hashes, and strict C/C++ build baselines; schema-2 plans prove runtime-free programs or select exactly the justified closure.",
       "evidence": [
         "docs/adr/0001-direct-c-and-selective-runtime.md",
         "docs/hxrt.md",
         "docs/runtime-feature-planning.md",
         "runtime/hxrt/features.json",
         "runtime/hxrt/include/hxrt/base.h",
+        "runtime/hxrt/include/hxrt/dynamic.h",
+        "runtime/hxrt/src/dynamic.c",
         "src/reflaxe/c/runtime/RuntimeAbiContract.hx",
         "src/reflaxe/c/runtime/RuntimeNoRuntimeEligibilityAnalyzer.hx",
         "src/reflaxe/c/runtime/RuntimeRequirementAnalyzer.hx",
@@ -1080,13 +1082,14 @@
         "E4.T04",
         "E4.T05",
         "E4.T06",
+        "E4.T07",
         "E5.T03",
         "E4.T10",
         "E4.T11"
       ],
       "limitations": [
-        "Only bounded literal output, managed Array, haxe.io.Bytes, and managed String operations currently select hxrt from ordinary Haxe source. Object and gc plans remain registered for later managed-class HxcIR integration. Unsupported neighboring Haxe semantics still fail during lowering instead of becoming guessed runtime blockers.",
-        "Runtime ABI 0.18.0 is an internal same-major contract; it does not expose or stabilize a generated application public ABI and does not establish a supported release."
+        "Only bounded literal output, managed Array, haxe.io.Bytes, managed String, and admitted managed-class operations currently select hxrt from ordinary Haxe source. The dynamic carrier has a registered plan and native contract, but ordinary Haxe Dynamic operations await their validated HxcIR lowering and exact generated adapters. Unsupported neighboring Haxe semantics still fail during lowering instead of becoming guessed runtime blockers.",
+        "Runtime ABI 0.19.0 is an internal same-major contract; it does not expose or stabilize a generated application public ABI and does not establish a supported release."
       ]
     },
     {
@@ -1094,8 +1097,8 @@
       "area": "runtime",
       "status": "scaffold-only",
       "disposition": "reserved",
-      "summary": "Hardened allocator, UTF-8 scalar string, typed array, Bytes, status, hosted output, object descriptor, and collector slices coexist with other provisional runtime seeds.",
-      "scope": "Allocator ownership, string semantics, typed resizable arrays, fixed-length Bytes, hosted length-delimited output, immutable object descriptors, precise cyclic collection, exact roots/pins, C/C++ header consumption, drift-checked source contracts, and exact selected packages validate only bounded split runtime slices.",
+      "summary": "Hardened allocator, UTF-8 scalar string, typed array, Bytes, status, hosted output, object descriptor, collector, and Dynamic carrier slices coexist with other provisional runtime seeds.",
+      "scope": "Allocator ownership, string semantics, typed resizable arrays, fixed-length Bytes, hosted length-delimited output, immutable object descriptors, precise cyclic collection, exact roots/pins, a UB-safe tagged Dynamic carrier, C/C++ header consumption, drift-checked source contracts, and exact selected packages validate only bounded split runtime slices.",
       "evidence": [
         "docs/allocator-abi.md",
         "docs/array-runtime.md",
@@ -1111,6 +1114,7 @@
         "runtime/hxrt/include/hxrt/base.h",
         "runtime/hxrt/include/hxrt/bytes.h",
         "runtime/hxrt/include/hxrt/bytes_string.h",
+        "runtime/hxrt/include/hxrt/dynamic.h",
         "runtime/hxrt/include/hxrt/gc.h",
         "runtime/hxrt/include/hxrt/io.h",
         "runtime/hxrt/include/hxrt/object.h",
@@ -1120,12 +1124,15 @@
         "runtime/hxrt/src/array.c",
         "runtime/hxrt/src/bytes.c",
         "runtime/hxrt/src/bytes_string.c",
+        "runtime/hxrt/src/dynamic.c",
         "runtime/hxrt/src/gc.c",
         "runtime/hxrt/src/io.c",
         "runtime/hxrt/src/object.c",
         "runtime/hxrt/src/string.c",
         "runtime/hxrt/features.json",
         "runtime/hxrt/test/allocator_contract.c",
+        "runtime/hxrt/test/dynamic_contract.c",
+        "runtime/hxrt/test/dynamic_header_cpp.cpp",
         "runtime/hxrt/test/gc_contract.c",
         "runtime/hxrt/test/gc_freestanding.c",
         "runtime/hxrt/test/public_header_cpp.cpp",
@@ -1135,6 +1142,7 @@
         "test/differential/bytes-runtime/case.json",
         "test/differential/string-runtime/case.json",
         "test/runtime/gc/run.py",
+        "test/runtime/dynamic/case.json",
         "test/runtime/string-output/case.json"
       ],
       "owners": [
@@ -1145,11 +1153,12 @@
         "E4.T04",
         "E4.T05",
         "E4.T06",
+        "E4.T07",
         "E4.T11"
       ],
       "limitations": [
-        "Only literal hosted output and the bounded managed Array and Bytes ordinary-source slices currently select dependency-closed subsets; object/collector selection awaits the managed-class HxcIR integration, and there is still no unconditional runtime core or general fallback.",
-        "The allocator, string, array, Bytes, object, and collector structs are versioned internal contracts and are explicitly forbidden from a generated application public C ABI."
+        "Only admitted ordinary-source operations select dependency-closed subsets. The Dynamic carrier has native and packaging evidence, but source lowering, generated adapters, and integrated differential behavior remain separately owned; there is still no unconditional runtime core or general fallback.",
+        "The allocator, string, array, Bytes, object, collector, and Dynamic structs are versioned internal contracts and are explicitly forbidden from a generated application public C ABI."
       ]
     },
     {

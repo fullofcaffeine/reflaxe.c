@@ -306,7 +306,7 @@ This inventory combines product capability boundaries with repository infrastruc
 | `runtime-bytes-contract` | `implemented` | A bounded ordinary-Haxe haxe.io.Bytes slice provides shared fixed-length binary storage, checked UTF-8 text snapshots, and compiler-owned lifetimes. |
 | `runtime-collector-contract` | `implemented` | A selective precise, non-moving collector backend reclaims cyclic managed graphs through exact roots and descriptors. |
 | `runtime-feature-planning` | `implemented` | A typed deterministic feature graph resolves exact runtime closure under a versioned, provenance-locked internal ABI contract. |
-| `runtime-hxrt-seed` | `scaffold-only` | Hardened allocator, UTF-8 scalar string, typed array, Bytes, status, hosted output, object descriptor, and collector slices coexist with other provisional runtime seeds. |
+| `runtime-hxrt-seed` | `scaffold-only` | Hardened allocator, UTF-8 scalar string, typed array, Bytes, status, hosted output, object descriptor, collector, and Dynamic carrier slices coexist with other provisional runtime seeds. |
 | `runtime-string-contract` | `implemented` | The bounded native string slice enforces valid UTF-8, scalar indexing, allocation-aware ownership, and explicit CString lifetimes. |
 | `standard-library` | `unsupported` | General Haxe standard-library parity is not implemented. |
 | `standard-library-ledger` | `implemented` | The exact pinned Haxe public standard-library surface has a deterministic ownership and parity ledger. |

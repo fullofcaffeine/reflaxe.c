@@ -42,6 +42,8 @@ runtime-created ordinary Haxe values changes that private carrier and advances
 the marker to 0.10.0. That marker does not stabilize the private string layout
 or application ABI. Later additive runtime APIs advanced the marker through
 0.17.0; the separate lowercase conversion entry point advances it to 0.18.0.
+The private tagged Dynamic carrier advances the current marker to 0.19.0
+without changing the String layout.
 
 ## Representation and invariants
 

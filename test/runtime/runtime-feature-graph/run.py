@@ -37,6 +37,7 @@ STRING_MAP_CONSUMER = ROOT / "test/differential/string-map/string_map_runtime.c"
 TYPED_MAP_CONSUMER = ROOT / "test/differential/object-enum-map/typed_map_runtime.c"
 BYTES_CONSUMER = CASE / "bytes_consumer.c"
 BYTES_STRING_CONSUMER = CASE / "bytes_string_consumer.c"
+DYNAMIC_CONSUMER = ROOT / "runtime/hxrt/test/dynamic_contract.c"
 OBJECT_CONSUMER = CASE / "object_consumer.c"
 GC_CONSUMER = ROOT / "runtime/hxrt/test/gc_contract.c"
 STRING_CONSUMER = CASE / "string_consumer.c"
@@ -183,6 +184,7 @@ def validate_catalog(catalog: dict[str, object]) -> None:
         "array-join",
         "bytes",
         "bytes-string",
+        "dynamic",
         "enum-value-map",
         "gc",
         "int-map",
@@ -208,7 +210,7 @@ def validate_catalog(catalog: dict[str, object]) -> None:
     provenance = record(runtime_abi.get("releaseProvenance"), "runtime release provenance")
     if (
         runtime_abi.get("stability") != "internal-versioned"
-        or version != {"major": 0, "minor": 18, "patch": 0}
+        or version != {"major": 0, "minor": 19, "patch": 0}
         or runtime_abi.get("generatedCodeCompatibility") != "same-major"
         or runtime_abi.get("generatedCodeCheck") != "c11-static-assert"
         or runtime_abi.get("runtimeMajorMacro") != "HXC_RUNTIME_ABI_MAJOR"
@@ -256,6 +258,7 @@ def validate_catalog(catalog: dict[str, object]) -> None:
         "string-split",
         "bytes",
         "bytes-string",
+        "dynamic",
         "gc",
         "object",
         "string-literal",
@@ -283,6 +286,7 @@ def validate_catalog(catalog: dict[str, object]) -> None:
         "string-split": ["array", "string"],
         "bytes": ["alloc", "string-literal"],
         "bytes-string": ["bytes", "string"],
+        "dynamic": ["status"],
         "gc": ["alloc", "object"],
         "object": ["runtime-base"],
         "string-literal": ["runtime-base"],
@@ -309,6 +313,7 @@ def validate_catalog(catalog: dict[str, object]) -> None:
         "string-split": "compiler-selectable",
         "bytes": "compiler-selectable",
         "bytes-string": "compiler-selectable",
+        "dynamic": "compiler-selectable",
         "gc": "compiler-selectable",
         "object": "compiler-selectable",
         "string-literal": "compiler-selectable",
@@ -447,11 +452,11 @@ def validate_catalog(catalog: dict[str, object]) -> None:
         str(record(value, "reserved feature").get("id"))
         for value in records(catalog.get("reservedFeatures"), "reserved features")
     }
-    for required in ("dynamic", "reflection", "exception", "thread"):
+    for required in ("reflection", "exception", "thread"):
         if required not in reserved:
             raise RuntimeFeatureFailure(f"catalog omitted reserved independent feature {required}")
-    if "io" in reserved:
-        raise RuntimeFeatureFailure("compiler-selectable io remains reserved")
+    if "dynamic" in reserved or "io" in reserved:
+        raise RuntimeFeatureFailure("a compiler-selectable feature remains reserved")
     serialized = json.dumps(catalog, sort_keys=True, ensure_ascii=False)
     if str(ROOT) in serialized or "/Users/" in serialized or "\\" in serialized:
         raise RuntimeFeatureFailure("runtime feature catalog leaked a host path")
@@ -555,6 +560,7 @@ def validate_plans(plans: dict[str, object]) -> None:
     string_split = record(plans.get("stringSplit"), "String split plan")
     bytes_plan = record(plans.get("bytes"), "bytes plan")
     bytes_string = record(plans.get("bytesString"), "Bytes-to-String plan")
+    dynamic = record(plans.get("dynamicCarrier"), "Dynamic plan")
     object_plan = record(plans.get("object"), "object plan")
     gc_plan = record(plans.get("gc"), "gc plan")
     string_scalar = record(plans.get("stringScalar"), "string scalar plan")
@@ -642,6 +648,8 @@ def validate_plans(plans: dict[str, object]) -> None:
         "bytes-string",
     ]:
         raise RuntimeFeatureFailure("Bytes-to-String closure is incomplete or nondeterministic")
+    if dynamic.get("features") != ["runtime-base", "status", "dynamic"]:
+        raise RuntimeFeatureFailure("scalar Dynamic closure is incomplete or retained managed dependencies")
     if object_plan.get("features") != ["runtime-base", "object"]:
         raise RuntimeFeatureFailure("object descriptor closure is incomplete or nondeterministic")
     if gc_plan.get("features") != ["runtime-base", "status", "alloc", "object", "gc"]:
@@ -673,6 +681,7 @@ def validate_plans(plans: dict[str, object]) -> None:
     validate_selected_reasons(string_split, "String.split")
     validate_selected_reasons(bytes_plan, "Bytes")
     validate_selected_reasons(bytes_string, "Bytes-to-String")
+    validate_selected_reasons(dynamic, "Dynamic")
     validate_selected_reasons(object_plan, "object")
     validate_selected_reasons(gc_plan, "gc")
     validate_selected_reasons(string_scalar, "string scalar")
@@ -729,6 +738,20 @@ def validate_plans(plans: dict[str, object]) -> None:
         bytes_string.get("artifacts"), "Bytes-to-String artifacts"
     ):
         raise RuntimeFeatureFailure("Bytes-to-String build plan omitted its selected source")
+    dynamic_artifacts = text_list(dynamic.get("artifacts"), "Dynamic artifacts")
+    dynamic_symbols = text_list(dynamic.get("symbols"), "Dynamic symbols")
+    if (
+        dynamic_artifacts
+        != [
+            "runtime/include/hxrt/base.h",
+            "runtime/include/hxrt/dynamic.h",
+            "runtime/include/hxrt/status.h",
+            "runtime/src/dynamic.c",
+        ]
+        or "hxc_value_managed_payload" not in dynamic_symbols
+        or any(token in "\n".join([*dynamic_artifacts, *dynamic_symbols]) for token in ("alloc", "array", "gc", "object"))
+    ):
+        raise RuntimeFeatureFailure("scalar Dynamic packaging selected allocation, object, or collector support")
     if "runtime/src/object.c" not in text_list(object_plan.get("artifacts"), "object artifacts"):
         raise RuntimeFeatureFailure("object build plan omitted its selected source")
     if "runtime/src/gc.c" not in text_list(gc_plan.get("artifacts"), "gc artifacts"):
@@ -830,6 +853,7 @@ def validate_package(package: dict[str, object], plans: dict[str, object]) -> No
         "stringSplit",
         "bytes",
         "bytesString",
+        "dynamicCarrier",
         "object",
         "gc",
         "stringScalar",
@@ -1044,6 +1068,7 @@ def package_from_snapshots(
         "stringSplit",
         "bytes",
         "bytesString",
+        "dynamicCarrier",
         "object",
         "gc",
         "stringScalar",
@@ -1148,6 +1173,7 @@ def run_native(package: dict[str, object], toolchains: list[Toolchain]) -> None:
     typed_map = records(package.get("typedMap"), "typed-map package")
     bytes_package = records(package.get("bytes"), "Bytes package")
     bytes_string_package = records(package.get("bytesString"), "Bytes-to-String package")
+    dynamic_package = records(package.get("dynamicCarrier"), "Dynamic package")
     object_package = records(package.get("object"), "object package")
     gc_package = records(package.get("gc"), "gc package")
     string_scalar = records(package.get("stringScalar"), "string scalar package")
@@ -1170,6 +1196,14 @@ def run_native(package: dict[str, object], toolchains: list[Toolchain]) -> None:
                 bytes_string_package,
                 BYTES_STRING_CONSUMER,
                 "runtime-feature-bytes-string: OK\n",
+                family_root,
+            )
+            run_native_case(
+                toolchain,
+                "dynamic",
+                dynamic_package,
+                DYNAMIC_CONSUMER,
+                "dynamic-runtime-contract: OK\n",
                 family_root,
             )
             run_native_case(toolchain, "object", object_package, OBJECT_CONSUMER, "runtime-feature-object: OK\n", family_root)
