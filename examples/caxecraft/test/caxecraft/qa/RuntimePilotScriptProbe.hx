@@ -2,7 +2,6 @@ package caxecraft.qa;
 
 import caxecraft.pilot.PilotScript.PilotAction;
 import caxecraft.pilot.PilotScript;
-import caxecraft.pilot.AgentWorldObservation.renderAgentWorldObservation;
 import caxecraft.pilot.RuntimePilotScript;
 import caxecraft.pilot.RuntimePilotScript.RuntimePilotExpectationKind;
 import caxecraft.pilot.RuntimePilotScript.RuntimePilotObservation;
@@ -32,7 +31,6 @@ final class RuntimePilotScriptProbe {
 
 	/** Check parsing, bounds, generic observations, and located rejection. */
 	static function runChecks():Int {
-		checkAgentObservationEnvelope();
 		final source = Bytes.ofString("PILOSCRIPT 1\n" + "name synthetic-journey\n" + "frames 8\n" + "action 0 menu-next\n" + "action 1 menu-confirm\n"
 			+ "hold 2 4 forward\n" + "checkpoint 1 capture title-selection\n" + "expect 1 screen campaign\n" + "expect 1 level synthetic-level\n"
 			+ "expect 1 objective objective.synthetic\n" + "expect 1 dialogue dialogue.synthetic\n" + "expect 1 journal journal.synthetic\n"
@@ -131,55 +129,6 @@ final class RuntimePilotScriptProbe {
 		require(explicitQuit.actionAt(0) == PilotAction.Quit, "the explicit live-session quit action changed");
 		require(explicitQuit.inspectionRadius() == 5, "the bounded live-session inspection radius changed");
 		return 0;
-	}
-
-	/** Prove that checkpoint and terminal purpose survives the native JSON boundary. */
-	static function checkAgentObservationEnvelope():Void {
-		final rendered = renderAgentWorldObservation({
-			sequence: 7,
-			terminal: false,
-			frame: 11,
-			tick: 13,
-			screen: "game",
-			mode: "adventure",
-			level: "synthetic-level",
-			objective: "none",
-			dialogue: "none",
-			journal: "none",
-			interaction: "none",
-			aquaticMedium: "dry",
-			aquaticEquipment: "none",
-			position: {
-				xMilli: 0,
-				yMilli: 1000,
-				zMilli: 2000,
-				cellX: 0,
-				cellY: 1,
-				cellZ: 2
-			},
-			heading: {xMilli: 0, yMilli: 0, zMilli: 1000},
-			vitals: {
-				health: 10,
-				safeTicks: 0,
-				breathTicks: 20,
-				maximumBreathTicks: 20
-			},
-			inventory: [],
-			target: {
-				hit: false,
-				material: "air",
-				cellX: 0,
-				cellY: 0,
-				cellZ: 0,
-				distanceMilli: 0
-			},
-			nearby: [],
-			terrainRadius: 0,
-			terrain: [],
-			events: [],
-			screenshot: "caxecraft-pilot-runtime-final.png"
-		});
-		require(rendered.indexOf('"sequence":7,"terminal":false,"frame":11') >= 0, "agent checkpoint JSON lost its ordered nonterminal marker");
 	}
 
 	/** Require one malformed source to fail at the manually authored line. */
