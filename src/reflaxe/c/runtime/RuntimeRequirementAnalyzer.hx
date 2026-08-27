@@ -135,7 +135,7 @@ class RuntimeRequirementAnalyzer {
 				for (block in fn.blocks) {
 					instructionCount += block.instructions.length;
 					for (instruction in block.instructions) {
-						collectInstruction(instruction, observations);
+						collectInstruction(instruction, program.dynamicPlan, observations);
 					}
 				}
 				for (region in fn.cleanupRegions) {
@@ -212,7 +212,7 @@ class RuntimeRequirementAnalyzer {
 		}
 	}
 
-	static function collectInstruction(instruction:HxcIRInstruction, observations:Array<RuntimeIntentObservation>):Void {
+	static function collectInstruction(instruction:HxcIRInstruction, dynamicPlan:HxcIRDynamicPlan, observations:Array<RuntimeIntentObservation>):Void {
 		switch instruction.kind {
 			case IRIOConstant(IRCString(_, _)):
 				// The value itself is direct data, but generated C needs the selected
@@ -248,8 +248,81 @@ class RuntimeRequirementAnalyzer {
 				collectImplementation(implementation, "cleanup-release", instruction.source, observations);
 			case IRIOTrace(_, implementation):
 				collectImplementation(implementation, "trace", instruction.source, observations);
+			case IRIODynamic(operation):
+				observations.push(new RuntimeIntentObservation("dynamic", dynamicOperationName(operation), instruction.source));
+				if (dynamicOperationAllocatesWrapper(operation, dynamicPlan))
+					observations.push(new RuntimeIntentObservation("gc", "allocation", instruction.source));
 			case _:
 		}
+	}
+
+	/** Name one dedicated Dynamic instruction using the typed source reason vocabulary. */
+	static function dynamicOperationName(operation:HxcIRDynamicInstruction):String
+		return switch operation {
+			case IRDBox(_, _): "box";
+			case IRDBoxNull(_): "box-null";
+			case IRDBoxTypeToken(_): "box-type-token";
+			case IRDUnbox(_, _, _): "unbox";
+			case IRDGet(_, _, _): "get";
+			case IRDSet(_, _, _, _): "set";
+			case IRDCall(_, _, _, _): "call";
+			case IRDInvoke(_, _, _, _): "invoke";
+			case IRDEqual(_, _, _): "equal";
+		};
+
+	/** Prove whether C emission must allocate an exact managed wrapper. */
+	static function dynamicOperationAllocatesWrapper(instruction:HxcIRDynamicInstruction, plan:HxcIRDynamicPlan):Bool {
+		final operationId = switch instruction {
+			case IRDBox(_, id) | IRDBoxNull(id) | IRDBoxTypeToken(id) | IRDUnbox(_, id, _) | IRDGet(_, id, _) | IRDSet(_, _, id, _) | IRDCall(_, _, id, _) |
+				IRDInvoke(_, _, id, _) | IRDEqual(_, _, id): id;
+		};
+		final operation = dynamicOperation(plan, operationId);
+		final allocatedTypeId:Null<String> = switch [instruction, operation.kind] {
+			case [IRDBox(_, _), IRDOKBox(typeId)]: typeId;
+			case [IRDGet(_, _, _), IRDOKGet(memberId)]:
+				final member = dynamicMember(plan, memberId);
+				switch member.kind {
+					case IRDMField(typeId, _): typeId;
+					case IRDMMethod(_): internal('validated Dynamic get operation `$operationId` names a method member');
+				}
+			case [IRDCall(_, _, _, _), IRDOKCall(_, shapeId)] | [IRDInvoke(_, _, _, _), IRDOKInvoke(_, shapeId)]:
+				dynamicCallShape(plan, shapeId).resultTypeId;
+			case [IRDBoxNull(_), IRDOKBox(_)] | [IRDBoxTypeToken(_), IRDOKBox(_)] | [IRDUnbox(_, _, _), IRDOKUnbox(_)] | [IRDSet(_, _, _, _), IRDOKSet(_)] |
+				[IRDEqual(_, _, _), IRDOKEqual(_, _)]: null;
+			case _:
+				internal('validated Dynamic instruction `${dynamicOperationName(instruction)}` and operation `$operationId` disagree');
+		};
+		if (allocatedTypeId == null)
+			return false;
+		return dynamicType(plan, allocatedTypeId).storage == IRDSManagedWrapper;
+	}
+
+	static function dynamicOperation(plan:HxcIRDynamicPlan, id:String):HxcIRDynamicOperation {
+		for (operation in plan.operations)
+			if (operation.id == id)
+				return operation;
+		return internal('validated Dynamic instruction names unknown operation `$id`');
+	}
+
+	static function dynamicType(plan:HxcIRDynamicPlan, id:String):HxcIRDynamicType {
+		for (type in plan.types)
+			if (type.id == id)
+				return type;
+		return internal('validated Dynamic operation names unknown type `$id`');
+	}
+
+	static function dynamicMember(plan:HxcIRDynamicPlan, id:String):HxcIRDynamicMember {
+		for (member in plan.members)
+			if (member.id == id)
+				return member;
+		return internal('validated Dynamic operation names unknown member `$id`');
+	}
+
+	static function dynamicCallShape(plan:HxcIRDynamicPlan, id:String):HxcIRDynamicCallShape {
+		for (shape in plan.callShapes)
+			if (shape.id == id)
+				return shape;
+		return internal('validated Dynamic operation names unknown call shape `$id`');
 	}
 
 	static function collectCleanup(action:HxcIRCleanupAction, observations:Array<RuntimeIntentObservation>):Void {

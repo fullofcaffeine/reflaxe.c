@@ -557,8 +557,8 @@ class CBodyEnumRegistry {
 				rejected(fail, position, '$node:call-scoped-immutable-c-string-escape');
 			case CBVKCStringBufferRef:
 				rejected(fail, position, '$node:call-scoped-mutable-c-string-buffer-escape');
-			case CBVKPrimitive(_) | CBVKFixedArray(_, _, _) | CBVKSpan(_, _) | CBVKImport(_) | CBVKAggregate(_) | CBVKEnum(_) | CBVKOptional(_) |
-				CBVKFunction(_, _) | CBVKClosureCapturePointer(_) | CBVKNativeRef(_) | CBVKClosureContext | CBVKStackClosure(_, _, _):
+			case CBVKDynamic | CBVKPrimitive(_) | CBVKFixedArray(_, _, _) | CBVKSpan(_, _) | CBVKImport(_) | CBVKAggregate(_) | CBVKEnum(_) |
+				CBVKOptional(_) | CBVKFunction(_, _) | CBVKClosureCapturePointer(_) | CBVKNativeRef(_) | CBVKClosureContext | CBVKStackClosure(_, _, _):
 				rejectDirectReference(sourceType, position, fail, node);
 		}
 	}

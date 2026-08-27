@@ -1,4 +1,4 @@
-hxcir schema=26
+hxcir schema=27
 dynamic
   type "dynamic.type.int" tag=1 source-type=i32 category=int storage=inline-int32 @"test/hxc_ir/fixtures/IRCoverage.hx":19:1-19:2
   operation "dynamic.operation.box-int" box type="dynamic.type.int" @"test/hxc_ir/fixtures/IRCoverage.hx":19:1-19:2

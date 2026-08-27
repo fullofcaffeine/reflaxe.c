@@ -667,6 +667,8 @@ enum HxcIRInstructionKind {
 **/
 enum HxcIRDynamicInstruction {
 	IRDBox(valueId:String, operationId:String);
+	IRDBoxNull(operationId:String);
+	IRDBoxTypeToken(operationId:String);
 	IRDUnbox(valueId:String, operationId:String, failure:HxcIRFailureEdge);
 	IRDGet(receiverValueId:String, operationId:String, failure:HxcIRFailureEdge);
 	IRDSet(receiverValueId:String, valueId:String, operationId:String, failure:HxcIRFailureEdge);
@@ -849,7 +851,7 @@ typedef HxcIRFunction = {
 		How this function may lend a read-only span across its return boundary.
 
 		The optional field preserves compatibility with older hand-built HxcIR
-		fixtures. Compiler-produced schema-26 functions always supply either the
+		fixtures. Compiler-produced schema-27 functions always supply either the
 		closed receiver-field contract or `null`.
 	**/
 	final ?borrowedSpanReturn:HxcIRBorrowedSpanReturn;

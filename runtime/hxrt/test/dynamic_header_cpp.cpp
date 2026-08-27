@@ -53,14 +53,14 @@ int main() {
   hxc_value integer = HXC_VALUE_INVALID_INITIALIZER;
   hxc_value function = HXC_VALUE_INVALID_INITIALIZER;
   std::int32_t observed = 0;
-  const void *raw_wrapper = nullptr;
-  const FixtureFunctionWrapper wrapper{add_one};
+  void *raw_wrapper = nullptr;
+  FixtureFunctionWrapper wrapper{add_one};
   if (hxc_value_init_int32(&int_type, INT32_C(41), &integer) != HXC_STATUS_OK
       || hxc_value_read_int32(&integer, &observed) != HXC_STATUS_OK
       || observed != INT32_C(41)
       || hxc_value_init_managed_wrapper(&function_type, &wrapper, &function) != HXC_STATUS_OK
       || hxc_value_read_managed_wrapper(&function, &raw_wrapper) != HXC_STATUS_OK
-      || static_cast<const FixtureFunctionWrapper *>(raw_wrapper)->function(observed) != INT32_C(42)) {
+      || static_cast<FixtureFunctionWrapper *>(raw_wrapper)->function(observed) != INT32_C(42)) {
     return 1;
   }
   (void)std::puts("dynamic-header-cpp: OK");

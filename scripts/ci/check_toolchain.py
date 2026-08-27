@@ -219,6 +219,8 @@ def validate(root: Path, *, require_tools: bool) -> list[str]:
     expected_symbol_registry_script = "python3 test/symbol_registry/run.py"
     expected_project_emitter_script = "python3 test/project_emitter/run.py"
     expected_runtime_features_script = "python3 test/runtime/runtime-feature-graph/run.py"
+    expected_dynamic_runtime_script = "python3 test/runtime/dynamic/run.py"
+    expected_dynamic_lowering_script = "python3 test/differential/dynamic-runtime/run.py"
     expected_array_runtime_script = "python3 test/differential/array-runtime/run.py"
     expected_int_map_script = "python3 test/differential/int-map/run.py"
     expected_string_map_script = "python3 test/differential/string-map/run.py"
@@ -336,7 +338,7 @@ def validate(root: Path, *, require_tools: bool) -> list[str]:
         "npm run test:hxc-config && npm run test:all-sources && npm run test:content-digest && "
         "npm run test:bootstrap && npm run test:typed-c && npm run test:c-import && npm run test:raylib-provisioning && npm run test:raygui-binding && npm run test:typed-ast && npm run test:incremental-backend && npm run test:c-ast && "
         "npm run test:declaration-plan && npm run test:symbol-registry && npm run test:project-emitter && "
-        "npm run test:runtime-features && npm run test:array-runtime && npm run test:int-map && npm run test:string-map && npm run test:string-char-at && npm run test:string-null && npm run test:bytes-runtime && npm run test:gc-runtime && npm run test:string-runtime && npm run test:string-output && npm run test:hello && npm run test:hxc-ir && npm run test:primitive-semantics && "
+        "npm run test:runtime-features && npm run test:dynamic-runtime && npm run test:dynamic-lowering && npm run test:array-runtime && npm run test:int-map && npm run test:string-map && npm run test:string-char-at && npm run test:string-null && npm run test:bytes-runtime && npm run test:gc-runtime && npm run test:string-runtime && npm run test:string-output && npm run test:hello && npm run test:hxc-ir && npm run test:primitive-semantics && "
         "npm run test:stdlib-ledger && "
         "npm run test:body-lowering && "
         "npm run test:function-lowering && npm run test:aggregate-lowering && npm run test:class-layout && npm run test:constructor-lowering && npm run test:virtual-dispatch && npm run test:enum-lowering && npm run test:generic-specialization && npm run test:evaluation-order && npm run test:static-initialization && "
@@ -408,6 +410,16 @@ def validate(root: Path, *, require_tools: bool) -> list[str]:
         or scripts.get("test:runtime-features") != expected_runtime_features_script
     ):
         errors.append("package.json must retain the selective runtime feature gate")
+    if (
+        not isinstance(scripts, dict)
+        or scripts.get("test:dynamic-runtime") != expected_dynamic_runtime_script
+    ):
+        errors.append("package.json must retain the private Dynamic runtime gate")
+    if (
+        not isinstance(scripts, dict)
+        or scripts.get("test:dynamic-lowering") != expected_dynamic_lowering_script
+    ):
+        errors.append("package.json must retain the exact Dynamic lowering gate")
     if (
         not isinstance(scripts, dict)
         or scripts.get("test:array-runtime") != expected_array_runtime_script

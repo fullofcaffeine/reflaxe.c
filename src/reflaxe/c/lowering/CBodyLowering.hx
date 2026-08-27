@@ -45,6 +45,11 @@ import reflaxe.c.lowering.CBodyAggregate.CBodyStackClosureCapture;
 import reflaxe.c.lowering.CBodyAggregate.CLoweredBodyAggregate;
 import reflaxe.c.lowering.CBodyAggregate.CPreparedBodyAggregate;
 import reflaxe.c.lowering.CBodyAggregate.CPreparedBodyAggregateField;
+import reflaxe.c.lowering.CBodyDynamic.CBodyDynamicContributionInventory;
+import reflaxe.c.lowering.CBodyDynamic.CBodyDynamicRegistry;
+import reflaxe.c.lowering.CBodyDynamic.CLoweredBodyDynamicPlan;
+import reflaxe.c.lowering.CBodyDynamic.CPreparedBodyDynamicCallShape;
+import reflaxe.c.lowering.CBodyDynamic.CPreparedBodyDynamicType;
 import reflaxe.c.lowering.CBodyArray.CPreparedBodyArray;
 import reflaxe.c.lowering.CBodyArray.CLoweredBodyArray;
 import reflaxe.c.lowering.CBodyArray.CBodyArrayRecognition;
@@ -313,6 +318,7 @@ class CBodyLoweringResult {
 	public final typedMaps:Array<CLoweredBodyTypedMap>;
 	public final bytes:Array<CPreparedBodyBytes>;
 	public final optionals:Array<CLoweredBodyOptional>;
+	public final dynamicPlan:CLoweredBodyDynamicPlan;
 	public final constructors:Array<CLoweredBodyConstructor>;
 	public final dispatch:CLoweredBodyDispatch;
 	public final imports:CLoweredImports;
@@ -328,8 +334,8 @@ class CBodyLoweringResult {
 			aggregates:Array<CLoweredBodyAggregate>, enums:Array<CLoweredBodyEnum>, classes:Array<CLoweredBodyClass>, arrays:Array<CLoweredBodyArray>,
 			iterators:Array<CPreparedBodyIterator>, intMaps:Array<CPreparedBodyIntMap>, stringMaps:Array<CLoweredBodyStringMap>,
 			typedMaps:Array<CLoweredBodyTypedMap>, bytes:Array<CPreparedBodyBytes>, optionals:Array<CLoweredBodyOptional>,
-			constructors:Array<CLoweredBodyConstructor>, dispatch:CLoweredBodyDispatch, imports:CLoweredImports, helpers:Array<CPrimitiveHelperPlan>,
-			buildFacts:Array<TypedCBuildFact>, symbolTable:CSymbolTableSnapshot, boundsAbortName:Null<CIdentifier>,
+			dynamicPlan:CLoweredBodyDynamicPlan, constructors:Array<CLoweredBodyConstructor>, dispatch:CLoweredBodyDispatch, imports:CLoweredImports,
+			helpers:Array<CPrimitiveHelperPlan>, buildFacts:Array<TypedCBuildFact>, symbolTable:CSymbolTableSnapshot, boundsAbortName:Null<CIdentifier>,
 			runtimeRequirements:Array<CBodyRuntimeRequirement>, managedProgram:Null<CManagedProgramNames>, ?hxcirDump:String) {
 		this.program = program;
 		this.functions = functions.copy();
@@ -344,6 +350,7 @@ class CBodyLoweringResult {
 		this.typedMaps = typedMaps.copy();
 		this.bytes = bytes.copy();
 		this.optionals = optionals.copy();
+		this.dynamicPlan = dynamicPlan;
 		this.constructors = constructors.copy();
 		this.dispatch = dispatch;
 		this.imports = imports;
@@ -433,6 +440,7 @@ class CBodyLowering {
 			preparedById.set(fn.irId, fn);
 		}
 		final globalRegistry = new BodyGlobalRegistry(context, inputGlobals == null ? [] : inputGlobals, deferredInitializersByGlobal);
+		final dynamicRegistry = new CBodyDynamicRegistry(context);
 		BorrowContractRefiner.refine(prepared, preparedById);
 		final functionLiterals = new FunctionLiteralRegistry(context, aggregateRegistry);
 		for (fn in prepared.copy())
@@ -465,7 +473,7 @@ class CBodyLowering {
 		}
 		final builders:Array<FunctionBuilder> = [];
 		for (fn in prepared)
-			builders.push(new FunctionBuilder(context, fn, preparedById, constructorSignaturesById, globalRegistry, aggregateRegistry,
+			builders.push(new FunctionBuilder(context, fn, preparedById, constructorSignaturesById, globalRegistry, aggregateRegistry, dynamicRegistry,
 				enumConstructorAdapters, functionLiterals, preparedDispatch));
 		CPhaseTiming.stopDetail(functionPreparationTimer);
 		// Representation is a whole-program decision. Discover the narrow
@@ -473,6 +481,8 @@ class CBodyLowering {
 		// storage merely because a later function is the first place that mentions
 		// the same class as an Array element.
 		final representationTimer = CPhaseTiming.startDetail(CDTHxcIRRepresentationPlanning);
+		for (builder in builders)
+			builder.discoverDynamicSemantics();
 		for (builder in builders)
 			builder.discoverManagedRepresentations();
 		// A returned class outlives its callee regardless of where its constructor
@@ -520,10 +530,11 @@ class CBodyLowering {
 		final preparedBytes = aggregateRegistry.canonicalBytes();
 		final preparedImports = aggregateRegistry.canonicalImports();
 		final sharedProgram = buildProgram([], preparedGlobals, preparedAggregates, preparedEnums, preparedClasses, preparedInterfaces, preparedArrays,
-			preparedIterators, preparedIntMaps, preparedStringMaps, preparedTypedMaps, preparedBytes, preparedImports, preparedDispatch);
+			preparedIterators, preparedIntMaps, preparedStringMaps, preparedTypedMaps, preparedBytes, preparedImports, preparedDispatch,
+			dynamicRegistry.plan());
 		CBodyFunctionReplayCache.settleProgramRevision(functionReplayProgramRevision(sharedProgram, preparedById, constructorSignaturesById));
 		CPhaseTiming.stopDetail(representationTimer);
-		final settledFunctionBuildContributions = functionContributionSnapshot(aggregateRegistry, enumConstructorAdapters, functionLiterals);
+		final settledFunctionBuildContributions = functionContributionSnapshot(aggregateRegistry, dynamicRegistry, enumConstructorAdapters, functionLiterals);
 		final functionConstructionTimer = CPhaseTiming.startDetail(CDTHxcIRFunctionConstruction);
 		final built:Array<BuiltBodyFunction> = [];
 		for (builder in builders) {
@@ -531,11 +542,11 @@ class CBodyLowering {
 				built.push(builder.buildWithReplay().result);
 				continue;
 			}
-			final before = functionContributionSnapshot(aggregateRegistry, enumConstructorAdapters, functionLiterals);
+			final before = functionContributionSnapshot(aggregateRegistry, dynamicRegistry, enumConstructorAdapters, functionLiterals);
 			final functionTimer = CPhaseTiming.startDetail(CDTHxcIRFunctionBuild, builder.profileId());
 			final replay = builder.buildWithReplay();
 			final result = replay.result;
-			final after = functionContributionSnapshot(aggregateRegistry, enumConstructorAdapters, functionLiterals);
+			final after = functionContributionSnapshot(aggregateRegistry, dynamicRegistry, enumConstructorAdapters, functionLiterals);
 			CPhaseTiming.setDetailWork(functionTimer, {
 				kind: "hxcir-function-build-contributions-v1",
 				controlFlow: null,
@@ -557,11 +568,12 @@ class CBodyLowering {
 			if (!preparedById.exists(adapter.irId))
 				preparedById.set(adapter.irId, adapter);
 		requireSettledFunctionBuildContributions(settledFunctionBuildContributions,
-			functionContributionSnapshot(aggregateRegistry, enumConstructorAdapters, functionLiterals));
+			functionContributionSnapshot(aggregateRegistry, dynamicRegistry, enumConstructorAdapters, functionLiterals));
 		CPhaseTiming.stopDetail(functionConstructionTimer);
 		final programAssemblyTimer = CPhaseTiming.startDetail(CDTHxcIRProgramAssembly);
 		final program = buildProgram(built, preparedGlobals, preparedAggregates, preparedEnums, preparedClasses, preparedInterfaces, preparedArrays,
-			preparedIterators, preparedIntMaps, preparedStringMaps, preparedTypedMaps, preparedBytes, preparedImports, preparedDispatch);
+			preparedIterators, preparedIntMaps, preparedStringMaps, preparedTypedMaps, preparedBytes, preparedImports, preparedDispatch,
+			dynamicRegistry.plan());
 		CPhaseTiming.stopDetail(programAssemblyTimer);
 		final managedRootTimer = CPhaseTiming.startDetail(CDTHxcIRManagedRootPlanning);
 		new HxcIRManagedRootPlanner().run(program);
@@ -611,6 +623,7 @@ class CBodyLowering {
 		final loweredStringMaps = aggregateRegistry.finalizeStringMaps(context.symbols);
 		final loweredTypedMaps = aggregateRegistry.finalizeTypedMaps(context.symbols);
 		final loweredOptionals = aggregateRegistry.finalizeOptionals(context.symbols);
+		final loweredDynamicPlan = dynamicRegistry.finalize(context.symbols);
 		final loweredDispatch = preparedDispatch.finalize(context.symbols);
 		final loweredImports = aggregateRegistry.finalizeImports(context.symbols);
 		CPhaseTiming.stopDetail(representationFinalizationTimer);
@@ -647,7 +660,7 @@ class CBodyLowering {
 		CPhaseTiming.stop(analysisTimer);
 		final castBodyTimer = CPhaseTiming.start(CPCASTBodyConstruction);
 		final emitter = new CBodyEmitter(loweredAggregates, loweredEnums, loweredClasses, loweredArrays, preparedIterators, preparedIntMaps,
-			loweredStringMaps, loweredTypedMaps, preparedBytes, loweredOptionals, loweredDispatch, loweredImports, managedProgram);
+			loweredStringMaps, loweredTypedMaps, preparedBytes, loweredOptionals, loweredDispatch, loweredImports, managedProgram, loweredDynamicPlan);
 		final lowered:Array<CLoweredBodyFunction> = [];
 		for (item in built) {
 			final controlFlow = CBodyEmitter.resolveControlFlow(item.ir, canonicalFunctions.get(item.ir.id));
@@ -741,9 +754,9 @@ class CBodyLowering {
 		runtimeRequirements.sort(compareRuntimeRequirements);
 		CPhaseTiming.setCounter(CPCounterRuntimeRequirements, runtimeRequirements.length);
 		return new CBodyLoweringResult(program, lowered, loweredGlobals, loweredAggregates, loweredEnums, loweredClasses, loweredArrays, preparedIterators,
-			preparedIntMaps, loweredStringMaps, loweredTypedMaps, preparedBytes, loweredOptionals, loweredConstructors, loweredDispatch, loweredImports,
-			helpers, helperSelection.buildFacts().concat(loweredImports.buildFacts), symbolTable, boundsAbortName, runtimeRequirements, managedProgram,
-			completeHxcIRDump);
+			preparedIntMaps, loweredStringMaps, loweredTypedMaps, preparedBytes, loweredOptionals, loweredDynamicPlan, loweredConstructors, loweredDispatch,
+			loweredImports, helpers, helperSelection.buildFacts().concat(loweredImports.buildFacts), symbolTable, boundsAbortName, runtimeRequirements,
+			managedProgram, completeHxcIRDump);
 	}
 
 	/**
@@ -936,10 +949,11 @@ class CBodyLowering {
 	static inline function replayPart(value:String):String
 		return '${value.length}:$value';
 
-	function functionContributionSnapshot(aggregateRegistry:CBodyAggregateRegistry, enumConstructorAdapters:EnumConstructorAdapterRegistry,
-			functionLiterals:FunctionLiteralRegistry):CBodyFunctionContributionSnapshot {
+	function functionContributionSnapshot(aggregateRegistry:CBodyAggregateRegistry, dynamicRegistry:CBodyDynamicRegistry,
+			enumConstructorAdapters:EnumConstructorAdapterRegistry, functionLiterals:FunctionLiteralRegistry):CBodyFunctionContributionSnapshot {
 		return {
 			program: aggregateRegistry.contributionInventory(),
+			dynamicContributions: dynamicRegistry.contributionInventory(),
 			enumConstructorAdapters: enumConstructorAdapters.preparedCount(),
 			functionLiterals: functionLiterals.preparedFunctionCount(),
 			staticFunctionAdapters: functionLiterals.preparedStaticAdapterCount(),
@@ -1045,6 +1059,16 @@ class CBodyLowering {
 		changed("import functions", before.program.importFunctions, after.program.importFunctions);
 		changed("import constants", before.program.importConstants, after.program.importConstants);
 		changed("import owners", before.program.importOwners, after.program.importOwners);
+		changed("Dynamic types", before.dynamicContributions.types, after.dynamicContributions.types);
+		changed("Dynamic members", before.dynamicContributions.members, after.dynamicContributions.members);
+		changed("Dynamic call shapes", before.dynamicContributions.callShapes, after.dynamicContributions.callShapes);
+		changed("Dynamic operations", before.dynamicContributions.operations, after.dynamicContributions.operations);
+		if (before.dynamicContributions.operationKeys != after.dynamicContributions.operationKeys) {
+			final earlier = [for (key in before.dynamicContributions.operationKeys.split("\n")) key => true];
+			final added = after.dynamicContributions.operationKeys.split("\n").filter(key -> key != "" && !earlier.exists(key));
+			if (added.length != 0)
+				changes.push('late Dynamic operation keys: ${added.join(", ")}');
+		}
 		changed("enum constructor adapters", before.enumConstructorAdapters, after.enumConstructorAdapters);
 		changed("function literals", before.functionLiterals, after.functionLiterals);
 		changed("static function adapters", before.staticFunctionAdapters, after.staticFunctionAdapters);
@@ -1154,7 +1178,10 @@ class CBodyLowering {
 					for (instruction in block.instructions) {
 						switch instruction.kind {
 							case IRIOBoundsCheck(_, _, IRBPCheckedAbort(_, _)) | IRIOProjectTag(_, _, _, IRTCPCheckedAbort(_, _)) |
-								IRIONullCheck(_, IRNCPCheckedAbort(_, _)):
+								IRIONullCheck(_, IRNCPCheckedAbort(_, _)) | IRIODynamic(_):
+								// Dynamic carriers use checked status-returning runtime entry points
+								// even in their allocation-free scalar slice. Register abort from
+								// semantic HxcIR instead of relying on a managed-root side effect.
 								final request = new CSymbolRequest(CSKMethod, ["c-standard-library", "abort"], CNSOrdinary("translation-unit"), CSVExternal,
 									"abort");
 								context.symbols.register(request);
@@ -1187,7 +1214,7 @@ class CBodyLowering {
 			enums:Array<CPreparedBodyEnumInstance>, classes:Array<CPreparedBodyClass>, interfaces:Array<CPreparedBodyInterface>,
 			arrays:Array<CPreparedBodyArray>, iterators:Array<CPreparedBodyIterator>, intMaps:Array<CPreparedBodyIntMap>,
 			stringMaps:Array<CPreparedBodyStringMap>, typedMaps:Array<CPreparedBodyTypedMap>, bytes:Array<CPreparedBodyBytes>,
-			imports:Array<CPreparedImportType>, dispatch:CPreparedBodyDispatch):HxcIRProgram {
+			imports:Array<CPreparedImportType>, dispatch:CPreparedBodyDispatch, dynamicPlan:HxcIRDynamicPlan):HxcIRProgram {
 		final byModule:Map<String, Array<BuiltBodyFunction>> = [];
 		for (fn in functions) {
 			var moduleFunctions = byModule.get(fn.prepared.modulePath);
@@ -1429,12 +1456,7 @@ class CBodyLowering {
 		}
 		return {
 			schemaVersion: HxcIRValidator.SCHEMA_VERSION,
-			dynamicPlan: {
-				types: [],
-				members: [],
-				callShapes: [],
-				operations: []
-			},
+			dynamicPlan: dynamicPlan,
 			dispatch: dispatch.ir(),
 			modules: modules
 		};
@@ -1710,6 +1732,7 @@ private typedef BuiltBodyFunctionReplayResolution = {
 **/
 private typedef CBodyFunctionContributionSnapshot = {
 	final program:CBodyProgramContributionInventory;
+	final dynamicContributions:CBodyDynamicContributionInventory;
 	final enumConstructorAdapters:Int;
 	final functionLiterals:Int;
 	final staticFunctionAdapters:Int;
@@ -1774,6 +1797,7 @@ private typedef LoweredValue = {
 	final id:String;
 	final type:HxcIRTypeRef;
 	final mapping:CBodyValueType;
+	final ?dynamicTypeId:String;
 }
 
 /**
@@ -3821,6 +3845,7 @@ private class FunctionPreparer {
 			case IRTPointer(IRTInstance(instanceId), nullable): 'class-reference:${nullable ? "nullable" : "nonnull"}:$instanceId';
 			case IRTNullable(inner, representation): 'nullable:$representation<${valueTypeKey(inner)}>';
 			case IRTFunction(parameters, result): 'function(${parameters.map(valueTypeKey).join(",")})->${valueTypeKey(result)}';
+			case IRTDynamic: "dynamic";
 			case _:
 				throw new CBodyEmissionError('function signature contains non-admitted HxcIR type `${Std.string(type)}`');
 		};
@@ -4237,6 +4262,7 @@ private class FunctionBuilder {
 	final constructorSignaturesById:Map<String, PreparedConstructorSignature>;
 	final globalRegistry:BodyGlobalRegistry;
 	final aggregateRegistry:CBodyAggregateRegistry;
+	final dynamicRegistry:CBodyDynamicRegistry;
 	final enumConstructorAdapters:EnumConstructorAdapterRegistry;
 	final functionLiterals:FunctionLiteralRegistry;
 	final dispatch:CPreparedBodyDispatch;
@@ -4245,6 +4271,7 @@ private class FunctionBuilder {
 	final capturedPlacesByCompilerId:Map<Int, CapturedPlaceBinding> = [];
 	final mutableAggregateIdentityIds:Map<Int, Bool> = [];
 	final mutableAggregateIdentitiesByCompilerId:Map<Int, MutableAggregateIdentityBinding> = [];
+	final dynamicTypesByCompilerId:Map<Int, CPreparedBodyDynamicType> = [];
 
 	/**
 		Addressable storage for a parameter whose Haxe value may change.
@@ -4383,7 +4410,8 @@ private class FunctionBuilder {
 
 	public function new(context:CompilationContext, prepared:PreparedBodyFunction, functionsById:Map<String, PreparedBodyFunction>,
 			constructorSignaturesById:Map<String, PreparedConstructorSignature>, globalRegistry:BodyGlobalRegistry, aggregateRegistry:CBodyAggregateRegistry,
-			enumConstructorAdapters:EnumConstructorAdapterRegistry, functionLiterals:FunctionLiteralRegistry, dispatch:CPreparedBodyDispatch) {
+			dynamicRegistry:CBodyDynamicRegistry, enumConstructorAdapters:EnumConstructorAdapterRegistry, functionLiterals:FunctionLiteralRegistry,
+			dispatch:CPreparedBodyDispatch) {
 		this.context = context;
 		this.prepared = prepared;
 		this.input = prepared;
@@ -4395,6 +4423,7 @@ private class FunctionBuilder {
 		this.constructorSignaturesById = constructorSignaturesById;
 		this.globalRegistry = globalRegistry;
 		this.aggregateRegistry = aggregateRegistry;
+		this.dynamicRegistry = dynamicRegistry;
 		this.enumConstructorAdapters = enumConstructorAdapters;
 		this.functionLiterals = functionLiterals;
 		this.dispatch = dispatch;
@@ -4632,6 +4661,307 @@ private class FunctionBuilder {
 				mutable: true
 			});
 		}
+	}
+
+	/**
+		Discover every explicit Dynamic boundary before representation planning freezes.
+
+		The walk keeps a narrow source-type fact for Dynamic locals initialized from
+		one exact value. That fact is enough for the first closed-world slice: field,
+		method, function-call, cast, and equality adapters remain exact and ambiguous
+		flows fail during authoritative lowering instead of growing reflection data.
+	**/
+	public function discoverDynamicSemantics():Void {
+		final localTypes:Map<Int, CPreparedBodyDynamicType> = [];
+
+		function visit(expression:TypedExpr):Void {
+			switch expression.expr {
+				case TVar(variable, initializer):
+					if (initializer != null) {
+						final adapter = discoverDynamicBoundary(initializer, variable.t, localTypes, 'TVar(${variable.name})');
+						if (adapter != null && isDynamicSourceType(variable.t))
+							localTypes.set(variable.id, adapter);
+						visit(initializer);
+					}
+				case TBinop(OpAssign, left, right):
+					switch unwrapExpression(left).expr {
+						case TField(receiver, FDynamic(name)):
+							discoverDynamicField(receiver, name, right, true, localTypes, expression.pos);
+							visit(receiver);
+							visit(right);
+						case TLocal(variable) if (isDynamicSourceType(left.t)):
+							final adapter = discoverDynamicBoundary(right, left.t, localTypes, "TBinop(OpAssign)");
+							if (adapter != null)
+								localTypes.set(variable.id, adapter);
+							visit(left);
+							visit(right);
+						case _:
+							discoverDynamicBoundary(right, left.t, localTypes, "TBinop(OpAssign)");
+							visit(left);
+							visit(right);
+					}
+				case TField(receiver, FDynamic(name)):
+					discoverDynamicField(receiver, name, null, false, localTypes, expression.pos);
+					visit(receiver);
+				case TCall(callee, arguments):
+					switch unwrapExpression(callee).expr {
+						case TField(receiver, FDynamic(name)):
+							discoverDynamicInvoke(receiver, name, arguments, localTypes, expression.pos);
+							visit(receiver);
+							for (argument in arguments)
+								visit(argument);
+						case _ if (isDynamicSourceType(callee.t)):
+							discoverDynamicCall(callee, arguments, localTypes, expression.pos);
+							visit(callee);
+							for (argument in arguments)
+								visit(argument);
+						case _:
+							TypedExprTools.iter(expression, visit);
+					}
+				case TBinop(OpEq | OpNotEq, left, right) if (isDynamicSourceType(left.t) || isDynamicSourceType(right.t)):
+					final leftAdapter = discoverDynamicOperand(left, localTypes, "Dynamic equality left");
+					final rightAdapter = discoverDynamicOperand(right, localTypes, "Dynamic equality right");
+					if (leftAdapter != null && rightAdapter != null)
+						dynamicRegistry.requireEqual(leftAdapter, rightAdapter, sourceSpan(expression.pos));
+					visit(left);
+					visit(right);
+				case TCast(inner, _):
+					discoverDynamicBoundary(inner, expression.t, localTypes, "TCast");
+					visit(inner);
+				case TReturn(value) if (value != null):
+					if (prepared.returnMapping.kind == CBVKDynamic) {
+						final adapter = dynamicAdapterForBoxSource(value, localTypes, "TReturn");
+						if (adapter != null)
+							dynamicRegistry.requireBox(adapter, sourceSpan(value.pos));
+					} else if (isDynamicSourceType(value.t)) {
+						final adapter = dynamicRegistry.requireType(prepared.returnMapping, sourceSpan(value.pos));
+						if (adapter != null)
+							dynamicRegistry.requireUnbox(adapter, sourceSpan(value.pos));
+					}
+					visit(value);
+				case _:
+					TypedExprTools.iter(expression, visit);
+			}
+		}
+
+		visit(prepared.bodyExpression);
+	}
+
+	/** Register one typed-to-Dynamic box or Dynamic-to-typed checked cast. */
+	function discoverDynamicBoundary(sourceExpression:TypedExpr, targetType:Type, locals:Map<Int, CPreparedBodyDynamicType>,
+			role:String):Null<CPreparedBodyDynamicType> {
+		final sourceDynamic = isDynamicSourceType(sourceExpression.t);
+		final targetDynamic = isDynamicSourceType(targetType);
+		if (sourceDynamic == targetDynamic)
+			return sourceDynamic ? dynamicAdapterForExpression(sourceExpression, locals, role) : null;
+		final source = sourceSpan(sourceExpression.pos);
+		if (targetDynamic) {
+			final adapter = dynamicAdapterForBoxSource(sourceExpression, locals, role);
+			if (adapter != null)
+				dynamicRegistry.requireBox(adapter, source);
+			return adapter;
+		}
+		final mapping = bodyValueType(targetType, sourceExpression.pos, '$role:Dynamic-unbox-target');
+		final adapter = dynamicRegistry.requireType(mapping, source);
+		if (adapter != null)
+			dynamicRegistry.requireUnbox(adapter, source);
+		return adapter;
+	}
+
+	/** Return the exact adapter that a source expression contributes to Dynamic. */
+	function dynamicAdapterForBoxSource(expression:TypedExpr, locals:Map<Int, CPreparedBodyDynamicType>, role:String):Null<CPreparedBodyDynamicType> {
+		return switch unwrapExpression(expression).expr {
+			case TConst(TNull): dynamicRegistry.requireNull(sourceSpan(expression.pos));
+			case TTypeExpr(moduleType): dynamicRegistry.requireTypeValue(dynamicTypeValueKey(moduleType), sourceSpan(expression.pos));
+			case TCast(inner, _) if (isDynamicSourceType(expression.t)):
+				dynamicAdapterForBoxSource(inner, locals, role);
+			case TLocal(variable) if (isDynamicSourceType(expression.t)):
+				locals.get(variable.id);
+			case _:
+				final mapping = bodyValueType(expression.t, expression.pos, '$role:Dynamic-box-source');
+				final adapter = dynamicRegistry.requireType(mapping, sourceSpan(expression.pos));
+				if (adapter != null && adapter.storage == IRDSManagedReference)
+					aggregateRegistry.requireEscapingReturnClasses(mapping);
+				adapter;
+		};
+	}
+
+	/** Resolve one Dynamic operand without widening its known source family. */
+	function dynamicAdapterForExpression(expression:TypedExpr, locals:Map<Int, CPreparedBodyDynamicType>, role:String):Null<CPreparedBodyDynamicType> {
+		return switch unwrapExpression(expression).expr {
+			case TLocal(variable): locals.get(variable.id);
+			case TConst(TNull): dynamicRegistry.requireNull(sourceSpan(expression.pos));
+			case TTypeExpr(moduleType): dynamicRegistry.requireTypeValue(dynamicTypeValueKey(moduleType), sourceSpan(expression.pos));
+			case TCall(callee, _): dynamicCallResultAdapter(callee, locals, expression.pos);
+			case TCast(inner, _) if (isDynamicSourceType(expression.t)): dynamicAdapterForBoxSource(inner, locals, role);
+			case _: isDynamicSourceType(expression.t) ? null : dynamicAdapterForBoxSource(expression, locals, role);
+		};
+	}
+
+	/** Recover the exact declared result of a direct Dynamic call expression. */
+	function dynamicCallResultAdapter(callee:TypedExpr, locals:Map<Int, CPreparedBodyDynamicType>, position:Position):Null<CPreparedBodyDynamicType> {
+		return switch unwrapExpression(callee).expr {
+			case TField(receiver, FDynamic(name)):
+				final owner = dynamicAdapterForExpression(receiver, locals, 'Dynamic method `$name` receiver');
+				if (owner == null || owner.mapping == null) {
+					null;
+				} else {
+					final method = dynamicMethod(owner.mapping, name);
+					method == null ? null : dynamicRegistry.requireType(method.result, sourceSpan(position));
+				}
+			case _:
+				final callable = dynamicAdapterForExpression(callee, locals, "Dynamic function receiver");
+				if (callable == null || callable.mapping == null) {
+					null;
+				} else {
+					final signature = callable.mapping.functionValue();
+					signature == null ? null : dynamicRegistry.requireType(signature.result, sourceSpan(position));
+				}
+		};
+	}
+
+	/** Ensure a typed equality operand is boxed before exact Dynamic comparison. */
+	function discoverDynamicOperand(expression:TypedExpr, locals:Map<Int, CPreparedBodyDynamicType>, role:String):Null<CPreparedBodyDynamicType> {
+		final adapter = isDynamicSourceType(expression.t) ? dynamicAdapterForExpression(expression, locals,
+			role) : dynamicAdapterForBoxSource(expression, locals, role);
+		final operandFreeBox = switch unwrapExpression(expression).expr {
+			case TConst(TNull) | TTypeExpr(_): true;
+			case _: false;
+		};
+		if (adapter != null && (!isDynamicSourceType(expression.t) || operandFreeBox))
+			dynamicRegistry.requireBox(adapter, sourceSpan(expression.pos));
+		return adapter;
+	}
+
+	/** Register one exact field get or set with a numeric member token. */
+	function discoverDynamicField(receiver:TypedExpr, name:String, assigned:Null<TypedExpr>, write:Bool, locals:Map<Int, CPreparedBodyDynamicType>,
+			position:Position):Void {
+		final owner = dynamicAdapterForExpression(receiver, locals, 'Dynamic field `$name` receiver');
+		if (owner == null || owner.mapping == null)
+			return;
+		final field = dynamicField(owner.mapping, name);
+		if (field == null)
+			return;
+		final valueAdapter = dynamicRegistry.requireType(field.mapping, sourceSpan(position));
+		if (valueAdapter == null)
+			return;
+		final member = dynamicRegistry.requireField(owner, name, valueAdapter, field.mutable, sourceSpan(position));
+		if (write) {
+			if (assigned != null) {
+				final assignedAdapter = discoverDynamicOperand(assigned, locals, 'Dynamic field `$name` assignment');
+				if (assignedAdapter == null)
+					return;
+			}
+			dynamicRegistry.requireSet(member, sourceSpan(position));
+		} else {
+			dynamicRegistry.requireGet(member, sourceSpan(position));
+		}
+	}
+
+	/** Register a direct Dynamic member call without creating a bound method. */
+	function discoverDynamicInvoke(receiver:TypedExpr, name:String, arguments:Array<TypedExpr>, locals:Map<Int, CPreparedBodyDynamicType>,
+			position:Position):Void {
+		final owner = dynamicAdapterForExpression(receiver, locals, 'Dynamic method `$name` receiver');
+		if (owner == null || owner.mapping == null)
+			return;
+		final method = dynamicMethod(owner.mapping, name);
+		if (method == null)
+			return;
+		final shape = dynamicRegistry.requireCallShape(method.parameters, method.result, sourceSpan(position));
+		if (shape == null || arguments.length != method.parameters.length)
+			return;
+		for (index in 0...arguments.length)
+			discoverDynamicOperand(arguments[index], locals, 'Dynamic method `$name` argument $index');
+		final member = dynamicRegistry.requireMethod(owner, name, shape, method.targetId, sourceSpan(position));
+		dynamicRegistry.requireInvoke(member, shape, sourceSpan(position));
+	}
+
+	/** Register a checked call through one exact non-capturing function adapter. */
+	function discoverDynamicCall(callee:TypedExpr, arguments:Array<TypedExpr>, locals:Map<Int, CPreparedBodyDynamicType>, position:Position):Void {
+		final callable = dynamicAdapterForExpression(callee, locals, "Dynamic function receiver");
+		if (callable == null || callable.mapping == null)
+			return;
+		final signature = callable.mapping.functionValue();
+		if (signature == null || arguments.length != signature.parameters.length)
+			return;
+		final shape = dynamicRegistry.requireCallShape(signature.parameters, signature.result, sourceSpan(position));
+		if (shape == null)
+			return;
+		for (index in 0...arguments.length)
+			discoverDynamicOperand(arguments[index], locals, 'Dynamic function argument $index');
+		dynamicRegistry.requireCall(callable, shape, sourceSpan(position));
+	}
+
+	/** Canonical identity for one opaque source type value. */
+	static function dynamicTypeValueKey(moduleType:ModuleType):String {
+		return switch moduleType {
+			case TClassDecl(reference):
+				final value = reference.get();
+				value.pack.concat([value.name]).join(".");
+			case TEnumDecl(reference):
+				final value = reference.get();
+				value.pack.concat([value.name]).join(".");
+			case TTypeDecl(reference):
+				final value = reference.get();
+				value.pack.concat([value.name]).join(".");
+			case TAbstract(reference):
+				final value = reference.get();
+				value.pack.concat([value.name]).join(".");
+		};
+	}
+
+	/** Resolve a field from the exact record or class adapter. */
+	function dynamicField(owner:CBodyValueType, name:String):Null<{mapping:CBodyValueType, mutable:Bool}> {
+		final aggregate = owner.aggregateValue();
+		if (aggregate != null)
+			for (field in aggregate.fields)
+				if (field.name == name)
+					return {mapping: field.type, mutable: field.mutable};
+		final classValue = owner.classValue();
+		if (classValue != null) {
+			final field = classValue.field(name);
+			if (field != null)
+				return {mapping: field.type, mutable: field.mutable};
+		}
+		return null;
+	}
+
+	/** Resolve one exact concrete-class method from the prepared callable index. */
+	function dynamicMethod(owner:CBodyValueType, name:String):Null<{targetId:String, parameters:Array<CBodyValueType>, result:CBodyValueType}> {
+		final ownerClass = owner.classValue();
+		if (ownerClass == null)
+			return null;
+		for (candidate in functionsById) {
+			if (candidate.fieldName != name || candidate.parameters.length == 0)
+				continue;
+			final receiver = candidate.parameters[0].mapping.classValue();
+			if (receiver == null || receiver.instanceId != ownerClass.instanceId)
+				continue;
+			return {
+				targetId: candidate.irId,
+				parameters: [
+					for (index in 1...candidate.parameters.length)
+						candidate.parameters[index].mapping
+				],
+				result: candidate.returnMapping
+			};
+		}
+		return null;
+	}
+
+	/** Recognize Dynamic through typedef aliases without classifying it as data. */
+	function isDynamicSourceType(type:Type, depth:Int = 0):Bool {
+		if (depth > 32)
+			return false;
+		return switch applyCurrentSpecialization(type) {
+			case TDynamic(_): true;
+			case TMono(reference): final resolved = reference.get(); resolved != null && isDynamicSourceType(resolved, depth + 1);
+			case TLazy(resolve): isDynamicSourceType(resolve(), depth + 1);
+			case TType(reference, parameters):
+				final definition = reference.get();
+				isDynamicSourceType(TypeTools.applyTypeParameters(definition.type, definition.params, parameters), depth + 1);
+			case _: false;
+		};
 	}
 
 	/**
@@ -6596,6 +6926,11 @@ private class FunctionBuilder {
 		if (value != null && !stackReferenceAlias && !borrowedClassAlias && !borrowedInterfaceRecordAlias)
 			rejectOwnedClassBorrow(value, position, 'TVar(${variable.name}:owned-class-borrow-escape)');
 		final borrowedStackAlias = value != null && stackReferenceAlias && borrowedReferenceValueIds.exists(value.id);
+		if (localMapping.kind == CBVKDynamic) {
+			if (value == null)
+				return unsupportedAt(position, 'TVar(${variable.name}:Dynamic-requires-exact-initializer)');
+			dynamicTypesByCompilerId.set(variable.id, requireDynamicAdapter(value, position, 'local `${variable.name}` initializer'));
+		}
 		locals.push({
 			id: localId,
 			type: localMapping.irType,
@@ -8132,6 +8467,18 @@ private class FunctionBuilder {
 	function lowerValue(expression:TypedExpr, ?expectedMapping:CBodyValueType):LoweredValue {
 		if (collectProfileWork)
 			profileValueLoweringCalls++;
+		if (expectedMapping != null) {
+			final targetDynamic = expectedMapping.kind == CBVKDynamic;
+			final sourceDynamic = isDynamicSourceType(expression.t);
+			final operandFreeDynamicBox = switch unwrapExpression(expression).expr {
+				case TConst(TNull) | TTypeExpr(_): true;
+				case _: false;
+			};
+			if (targetDynamic && (!sourceDynamic || operandFreeDynamicBox))
+				return lowerDynamicBox(expression);
+			if (!targetDynamic && sourceDynamic)
+				return lowerDynamicUnbox(expression, expectedMapping);
+		}
 		return switch expression.expr {
 			case TConst(constant): lowerConstant(expression, constant, expectedMapping);
 			case TLocal(variable): lowerLocal(expression, variable);
@@ -8151,6 +8498,7 @@ private class FunctionBuilder {
 				final imported = aggregateRegistry.importEnumConstant(enumReference, enumField, expression.pos, input.sourcePath);
 				imported == null ? lowerEnumConstructor(expression, enumReference, enumField, [],
 					expectedMapping) : lowerImportConstant(expression, imported, expectedMapping);
+			case TField(receiver, FDynamic(name)): lowerDynamicFieldGet(expression, receiver, name);
 			case TField(receiver, FAnon(fieldReference)): lowerAggregateField(expression, receiver, fieldReference.get().name);
 			case TField(receiver, FInstance(owner, _, fieldReference)) if (CBodyArrayRecognition.isCoreArray(owner)
 				&& fieldReference.get().name == "length"):
@@ -8208,10 +8556,10 @@ private class FunctionBuilder {
 						// construction as an implicit assignment; genuinely dynamic casts
 						// still reach `coerce`'s fail-closed runtime-proof diagnostic.
 						coerce(lowerValue(inner), target, expression.pos, "TCast(interface)");
-					case CBVKStaticString(_) | CBVKManagedString(_) | CBVKSpan(_, _) | CBVKCString | CBVKCStringRef | CBVKImport(_) | CBVKAggregate(_) |
-						CBVKEnum(_) | CBVKClass(_, _) | CBVKArray(_) | CBVKIterator(_) | CBVKIntMap(_) | CBVKStringMap(_) | CBVKTypedMap(_) | CBVKBytes(_) |
-						CBVKOptional(_) | CBVKFunction(_, _) | CBVKClosureCapturePointer(_) | CBVKNativeRef(_) | CBVKCStringBufferRef | CBVKClosureContext |
-						CBVKStackClosure(_, _, _):
+					case CBVKDynamic | CBVKStaticString(_) | CBVKManagedString(_) | CBVKSpan(_, _) | CBVKCString | CBVKCStringRef | CBVKImport(_) |
+						CBVKAggregate(_) | CBVKEnum(_) | CBVKClass(_, _) | CBVKArray(_) | CBVKIterator(_) | CBVKIntMap(_) | CBVKStringMap(_) |
+						CBVKTypedMap(_) | CBVKBytes(_) | CBVKOptional(_) | CBVKFunction(_, _) | CBVKClosureCapturePointer(_) | CBVKNativeRef(_) |
+						CBVKCStringBufferRef | CBVKClosureContext | CBVKStackClosure(_, _, _):
 						coerce(lowerValue(inner, target), target, expression.pos, "TCast(record-alias)");
 				}
 			case TCall(callee, arguments) if (enumConstructor(callee) != null):
@@ -8262,6 +8610,183 @@ private class FunctionBuilder {
 				lowerManagedConstructedValue(expression, construction, expectedMapping);
 			case _: unsupported(expression, nodeName(expression));
 		};
+	}
+
+	/** Box one exact typed expression without widening any ordinary typed path. */
+	function lowerDynamicBox(expression:TypedExpr):LoweredValue {
+		final source = sourceSpan(expression.pos);
+		final dynamicMapping = CBodyValueType.dynamicValue();
+		final special:Null<LoweredValue> = switch unwrapExpression(expression).expr {
+			case TConst(TNull):
+				final adapter = dynamicRegistry.requireNull(source);
+				final operation = dynamicRegistry.requireBox(adapter, source);
+				final result:HxcIRResult = {id: nextValueId(), type: IRTDynamic};
+				appendInstruction(result, IRIODynamic(IRDBoxNull(operation.id)), source, "dynamic-box-null");
+				registerValueTemporary(result.id, "dynamic-box-null-result");
+				registerDynamicRequirement("box-null", expression);
+				{
+					id: result.id,
+					type: result.type,
+					mapping: dynamicMapping,
+					dynamicTypeId: adapter.id
+				};
+			case TTypeExpr(moduleType):
+				final adapter = dynamicRegistry.requireTypeValue(dynamicTypeValueKey(moduleType), source);
+				final operation = dynamicRegistry.requireBox(adapter, source);
+				final result:HxcIRResult = {id: nextValueId(), type: IRTDynamic};
+				appendInstruction(result, IRIODynamic(IRDBoxTypeToken(operation.id)), source, "dynamic-box-type-token");
+				registerValueTemporary(result.id, "dynamic-box-type-token-result");
+				registerDynamicRequirement("box-type-token", expression);
+				{
+					id: result.id,
+					type: result.type,
+					mapping: dynamicMapping,
+					dynamicTypeId: adapter.id
+				};
+			case _: null;
+		};
+		if (special != null)
+			return special;
+		var value = lowerValue(expression);
+		final adapter = dynamicRegistry.requireType(value.mapping, source);
+		if (adapter == null)
+			return unsupported(expression, 'Dynamic(box-unsupported-exact-type:${value.mapping.cSpelling})');
+		if (adapter.storage == IRDSManagedReference)
+			rejectOwnedClassBorrow(value, expression.pos, "Dynamic(box-stack-class-reference)");
+		value = stabilizeFreshManagedString(value, expression.pos, "dynamic-box-source");
+		value = stabilizeFreshManagedArray(value, expression.pos, "dynamic-box-source");
+		value = stabilizeFreshManagedAggregate(value, expression.pos, "dynamic-box-source");
+		final operation = dynamicRegistry.requireBox(adapter, source);
+		final result:HxcIRResult = {id: nextValueId(), type: IRTDynamic};
+		appendInstruction(result, IRIODynamic(IRDBox(value.id, operation.id)), source, "dynamic-box");
+		registerValueTemporary(result.id, "dynamic-box-result");
+		registerDynamicRequirement("box", expression, adapter.storage == IRDSManagedWrapper);
+		return {
+			id: result.id,
+			type: result.type,
+			mapping: dynamicMapping,
+			dynamicTypeId: adapter.id
+		};
+	}
+
+	/** Checked Dynamic-to-typed conversion with one exact result adapter. */
+	function lowerDynamicUnbox(expression:TypedExpr, target:CBodyValueType):LoweredValue {
+		final dynamicValue = lowerValue(expression);
+		final adapter = dynamicRegistry.requireType(target, sourceSpan(expression.pos));
+		if (adapter == null)
+			return unsupported(expression, 'Dynamic(unbox-unsupported-exact-type:${target.cSpelling})');
+		final operation = dynamicRegistry.requireUnbox(adapter, sourceSpan(expression.pos));
+		final result:HxcIRResult = {id: nextValueId(), type: target.irType};
+		appendInstruction(result, IRIODynamic(IRDUnbox(dynamicValue.id, operation.id, dynamicFailure())), sourceSpan(expression.pos), "dynamic-unbox");
+		registerValueTemporary(result.id, "dynamic-unbox-result");
+		registerDynamicRequirement("unbox", expression);
+		return {id: result.id, type: result.type, mapping: target};
+	}
+
+	/** Read one statically named field through the receiver's exact adapter. */
+	function lowerDynamicFieldGet(expression:TypedExpr, receiver:TypedExpr, name:String):LoweredValue {
+		final receiverValue = requireExactDynamicValue(receiver, 'field `$name` receiver');
+		final owner = requireDynamicAdapter(receiverValue, receiver.pos, 'field `$name` receiver');
+		if (owner.mapping == null)
+			return unsupported(receiver, 'Dynamic(field `$name` owner-has-no-object-layout)');
+		final field = dynamicField(owner.mapping, name);
+		if (field == null)
+			return unsupported(expression, 'Dynamic(field `$name` is-not-statically-known)');
+		final valueAdapter = dynamicRegistry.requireType(field.mapping, sourceSpan(expression.pos));
+		if (valueAdapter == null)
+			return unsupported(expression, 'Dynamic(field `$name` has-unsupported-type:${field.mapping.cSpelling})');
+		final member = dynamicRegistry.requireField(owner, name, valueAdapter, field.mutable, sourceSpan(expression.pos));
+		final operation = dynamicRegistry.requireGet(member, sourceSpan(expression.pos));
+		final result:HxcIRResult = {id: nextValueId(), type: IRTDynamic};
+		appendInstruction(result, IRIODynamic(IRDGet(receiverValue.id, operation.id, dynamicFailure())), sourceSpan(expression.pos), "dynamic-field-get");
+		registerValueTemporary(result.id, "dynamic-field-get-result");
+		registerDynamicRequirement("get", expression, valueAdapter.storage == IRDSManagedWrapper);
+		return {
+			id: result.id,
+			type: result.type,
+			mapping: CBodyValueType.dynamicValue(),
+			dynamicTypeId: valueAdapter.id
+		};
+	}
+
+	/** Write one statically named mutable field and return the assigned Dynamic value. */
+	function lowerDynamicFieldSet(expression:TypedExpr, receiver:TypedExpr, name:String, assigned:TypedExpr):LoweredValue {
+		final receiverValue = requireExactDynamicValue(receiver, 'field `$name` receiver');
+		final owner = requireDynamicAdapter(receiverValue, receiver.pos, 'field `$name` receiver');
+		if (owner.mapping == null)
+			return unsupported(receiver, 'Dynamic(field `$name` owner-has-no-object-layout)');
+		final field = dynamicField(owner.mapping, name);
+		if (field == null || !field.mutable)
+			return unsupported(expression, 'Dynamic(field `$name` is-not-a-statically-known-mutable-field)');
+		final fieldAdapter = dynamicRegistry.requireType(field.mapping, sourceSpan(expression.pos));
+		if (fieldAdapter == null)
+			return unsupported(expression, 'Dynamic(field `$name` has-unsupported-type:${field.mapping.cSpelling})');
+		final value = lowerDynamicOperand(assigned, 'field `$name` assignment');
+		final actual = requireDynamicAdapter(value, assigned.pos, 'field `$name` assignment');
+		if (actual.id != fieldAdapter.id)
+			return unsupported(assigned, 'Dynamic(field `$name` assignment-type-mismatch:${actual.id}->${fieldAdapter.id})');
+		final member = dynamicRegistry.requireField(owner, name, fieldAdapter, true, sourceSpan(expression.pos));
+		final operation = dynamicRegistry.requireSet(member, sourceSpan(expression.pos));
+		final result:HxcIRResult = {id: nextValueId(), type: IRTDynamic};
+		appendInstruction(result, IRIODynamic(IRDSet(receiverValue.id, value.id, operation.id, dynamicFailure())), sourceSpan(expression.pos),
+			"dynamic-field-set");
+		registerValueTemporary(result.id, "dynamic-field-set-result");
+		registerDynamicRequirement("set", expression);
+		return {
+			id: result.id,
+			type: result.type,
+			mapping: CBodyValueType.dynamicValue(),
+			dynamicTypeId: fieldAdapter.id
+		};
+	}
+
+	/** Convert one typed or already-Dynamic operand to an exact Dynamic value. */
+	function lowerDynamicOperand(expression:TypedExpr, role:String):LoweredValue {
+		return switch unwrapExpression(expression).expr {
+			case TConst(TNull) | TTypeExpr(_): lowerDynamicBox(expression);
+			case _ if (isDynamicSourceType(expression.t)):
+				final value = lowerValue(expression);
+				requireDynamicAdapter(value, expression.pos, role);
+				value;
+			case _: lowerDynamicBox(expression);
+		};
+	}
+
+	/** Resolve exact metadata carried beside one HxcIR Dynamic value. */
+	function requireDynamicAdapter(value:LoweredValue, position:Position, role:String):CPreparedBodyDynamicType {
+		final id = value.dynamicTypeId;
+		if (id == null)
+			return unsupportedAt(position, 'Dynamic($role has-unresolved-polymorphic-identity)');
+		final adapter = dynamicRegistry.typeById(id);
+		return adapter == null ? unsupportedAt(position, 'Dynamic($role lost-adapter `$id`)') : adapter;
+	}
+
+	function requireExactDynamicValue(expression:TypedExpr, role:String):LoweredValue {
+		final value = lowerValue(expression);
+		if (value.mapping.kind != CBVKDynamic)
+			return unsupported(expression, 'Dynamic($role is-not-Dynamic)');
+		requireDynamicAdapter(value, expression.pos, role);
+		return value;
+	}
+
+	/** Dynamic failures are checked and terminate only after normal cleanup. */
+	function dynamicFailure():HxcIRFailureEdge
+		return {
+			kind: IRFResultError,
+			target: IRFTAbort,
+			arguments: [],
+			cleanup: normalCleanupSteps()
+		};
+
+	function registerDynamicRequirement(operation:String, expression:TypedExpr, allocatesWrapper:Bool = false):Void {
+		final source = sourceSpan(expression.pos);
+		registerDynamicRequirementAt(operation, expression.pos, source, allocatesWrapper);
+	}
+
+	function registerDynamicRequirementAt(operation:String, position:Position, source:HxcSourceSpan, allocatesWrapper:Bool = false):Void {
+		runtimeRequirements.push(new CBodyRuntimeRequirement("dynamic", operation, "closed-world Haxe Dynamic operation", source, position));
+		if (allocatesWrapper)
+			runtimeRequirements.push(new CBodyRuntimeRequirement("gc", "allocation", "exact Haxe Dynamic managed wrapper", source, position));
 	}
 
 	function lowerImportConstant(expression:TypedExpr, constant:reflaxe.c.interop.CImportRegistry.CPreparedImportConstant,
@@ -9995,7 +10520,13 @@ private class FunctionBuilder {
 		registerValueTemporary(result.id, "load-result");
 		if (isBorrowedReferenceLocal(localId))
 			borrowedReferenceValueIds.set(result.id, true);
-		return {id: result.id, type: result.type, mapping: mapping};
+		final dynamicType = mapping.kind == CBVKDynamic ? dynamicTypesByCompilerId.get(variable.id) : null;
+		return dynamicType == null ? {id: result.id, type: result.type, mapping: mapping} : {
+			id: result.id,
+			type: result.type,
+			mapping: mapping,
+			dynamicTypeId: dynamicType.id
+		};
 	}
 
 	/**
@@ -10260,6 +10791,11 @@ private class FunctionBuilder {
 	}
 
 	function lowerAssignment(expression:TypedExpr, left:TypedExpr, right:TypedExpr):LoweredValue {
+		switch unwrapExpression(left).expr {
+			case TField(receiver, FDynamic(name)):
+				return lowerDynamicFieldSet(expression, receiver, name, right);
+			case _:
+		}
 		final managedArrayAssignment = lowerManagedArrayAssignment(expression, left, right);
 		if (managedArrayAssignment != null)
 			return managedArrayAssignment;
@@ -10381,6 +10917,12 @@ private class FunctionBuilder {
 			return replacement;
 		}
 		appendInstruction(null, IRIOStore(stableTarget.place, value.id), sourceSpan(expression.pos), "store");
+		switch unwrapExpression(left).expr {
+			case TLocal(variable) if (target.mapping.kind == CBVKDynamic):
+				final adapter = requireDynamicAdapter(value, right.pos, "local assignment");
+				dynamicTypesByCompilerId.set(variable.id, adapter);
+			case _:
+		}
 		return value;
 	}
 
@@ -10695,6 +11237,8 @@ private class FunctionBuilder {
 	}
 
 	function lowerBinary(expression:TypedExpr, operation:Binop, left:TypedExpr, right:TypedExpr):LoweredValue {
+		if ((operation == OpEq || operation == OpNotEq) && (isDynamicSourceType(left.t) || isDynamicSourceType(right.t)))
+			return lowerDynamicEquality(expression, operation, left, right);
 		if (operation == OpAdd) {
 			final resultMapping = bodyValueType(expression.t, expression.pos, "TBinop(String-concat:result-type)");
 			if (resultMapping.irType == IRTManagedString)
@@ -10744,6 +11288,28 @@ private class FunctionBuilder {
 		final stableLeftValue = leftValueLocal == null ? leftValue : loadPlace({place: IRPLocal(leftValueLocal), mapping: leftValue.mapping, mutable: true},
 			left.pos, "binary-left-load");
 		return lowerBinaryValues(expression, operation, stableLeftValue, rightValue, "binary");
+	}
+
+	/** Compare exact Dynamic values without reflection or cross-family coercion. */
+	function lowerDynamicEquality(expression:TypedExpr, operation:Binop, left:TypedExpr, right:TypedExpr):LoweredValue {
+		final leftValue = lowerDynamicOperand(left, "equality left");
+		final stagedLeft = stageFlowValue(leftValue, left, expressionCreatesFlow(right), "dynamic-equality-left");
+		final rightValue = lowerDynamicOperand(right, "equality right");
+		final stableLeft = restoreStagedLoweredValue(stagedLeft, "dynamic-equality-left-load");
+		final leftAdapter = requireDynamicAdapter(stableLeft, left.pos, "equality left");
+		final rightAdapter = requireDynamicAdapter(rightValue, right.pos, "equality right");
+		final operationPlan = dynamicRegistry.requireEqual(leftAdapter, rightAdapter, sourceSpan(expression.pos));
+		final boolMapping = bodyValueType(expression.t, expression.pos, "Dynamic(equality-result)");
+		if (boolMapping.irType != IRTBool)
+			return unsupported(expression, "Dynamic(equality-result-is-not-Bool)");
+		final equal:HxcIRResult = {id: nextValueId(), type: IRTBool};
+		appendInstruction(equal, IRIODynamic(IRDEqual(stableLeft.id, rightValue.id, operationPlan.id)), sourceSpan(expression.pos), "dynamic-equality");
+		registerDynamicRequirement("equal", expression);
+		if (operation == OpEq)
+			return {id: equal.id, type: equal.type, mapping: boolMapping};
+		final result:HxcIRResult = {id: nextValueId(), type: IRTBool};
+		appendInstruction(result, IRIOUnary("haxe.bool.not", equal.id, IRIStatic), sourceSpan(expression.pos), "dynamic-not-equal");
+		return {id: result.id, type: result.type, mapping: boolMapping};
 	}
 
 	/**
@@ -11963,6 +12529,13 @@ private class FunctionBuilder {
 			case TCall(callee, arguments): {callee: callee, arguments: arguments};
 			case _: return unsupported(expression, nodeName(expression));
 		};
+		switch unwrapExpression(call.callee).expr {
+			case TField(receiver, FDynamic(name)):
+				return lowerDynamicInvoke(expression, receiver, name, call.arguments);
+			case _ if (isDynamicSourceType(call.callee.t)):
+				return lowerDynamicCall(expression, call.callee, call.arguments);
+			case _:
+		}
 		if (isSysPrintln(call.callee)) {
 			return lowerSysPrintln(expression, call.arguments);
 		}
@@ -12171,6 +12744,84 @@ private class FunctionBuilder {
 		if (returnedOptional != null && returnedOptional.managedLifetime)
 			freshManagedOptionalValueIds.set(result.id, true);
 		return {id: result.id, type: result.type, mapping: target.returnMapping};
+	}
+
+	/** Call one exact non-capturing function stored in Dynamic. */
+	function lowerDynamicCall(expression:TypedExpr, callee:TypedExpr, arguments:Array<TypedExpr>):LoweredValue {
+		final callableValue = requireExactDynamicValue(callee, "function-call receiver");
+		final callable = requireDynamicAdapter(callableValue, callee.pos, "function-call receiver");
+		if (callable.mapping == null)
+			return unsupported(callee, "Dynamic(function-call receiver-has-no-callable-layout)");
+		final signature = callable.mapping.functionValue();
+		if (signature == null || arguments.length != signature.parameters.length)
+			return unsupported(expression, 'Dynamic(function-call signature-mismatch:arguments=${arguments.length})');
+		final shape = dynamicRegistry.requireCallShape(signature.parameters, signature.result, sourceSpan(expression.pos));
+		if (shape == null)
+			return unsupported(expression, "Dynamic(function-call unsupported-exact-signature)");
+		final stagedCallable = stageFlowValue(callableValue, callee, laterExpressionCreatesFlow(arguments, -1), "dynamic-callable");
+		final stagedArguments:Array<StagedFlowValue> = [];
+		for (index in 0...arguments.length) {
+			final argument = lowerDynamicOperand(arguments[index], 'function argument $index');
+			final actual = requireDynamicAdapter(argument, arguments[index].pos, 'function argument $index');
+			if (actual.id != shape.parameterTypes[index].id)
+				return unsupported(arguments[index], 'Dynamic(function argument $index type-mismatch:${actual.id}->${shape.parameterTypes[index].id})');
+			stagedArguments.push(stageFlowValue(argument, arguments[index], laterExpressionCreatesFlow(arguments, index), 'dynamic-call-argument-$index'));
+		}
+		final stableCallable = restoreStagedLoweredValue(stagedCallable, "dynamic-callable-load");
+		final argumentIds = [
+			for (index => argument in stagedArguments)
+				restoreStagedValue(argument, 'dynamic-call-argument-$index-load')
+		];
+		final operation = dynamicRegistry.requireCall(callable, shape, sourceSpan(expression.pos));
+		return lowerDynamicCallResult(expression, IRIODynamic(IRDCall(stableCallable.id, argumentIds, operation.id, dynamicFailure())), shape, "dynamic-call");
+	}
+
+	/** Invoke one exact class member without creating a bound method value. */
+	function lowerDynamicInvoke(expression:TypedExpr, receiver:TypedExpr, name:String, arguments:Array<TypedExpr>):LoweredValue {
+		final receiverValue = requireExactDynamicValue(receiver, 'method `$name` receiver');
+		final owner = requireDynamicAdapter(receiverValue, receiver.pos, 'method `$name` receiver');
+		if (owner.mapping == null)
+			return unsupported(receiver, 'Dynamic(method `$name` receiver-has-no-class-layout)');
+		final method = dynamicMethod(owner.mapping, name);
+		if (method == null || arguments.length != method.parameters.length)
+			return unsupported(expression, 'Dynamic(method `$name` is-not-an-exact-reachable-signature)');
+		final shape = dynamicRegistry.requireCallShape(method.parameters, method.result, sourceSpan(expression.pos));
+		if (shape == null)
+			return unsupported(expression, 'Dynamic(method `$name` has-unsupported-signature)');
+		final stagedReceiver = stageFlowValue(receiverValue, receiver, laterExpressionCreatesFlow(arguments, -1), 'dynamic-method-$name-receiver');
+		final stagedArguments:Array<StagedFlowValue> = [];
+		for (index in 0...arguments.length) {
+			final argument = lowerDynamicOperand(arguments[index], 'method `$name` argument $index');
+			final actual = requireDynamicAdapter(argument, arguments[index].pos, 'method `$name` argument $index');
+			if (actual.id != shape.parameterTypes[index].id)
+				return unsupported(arguments[index], 'Dynamic(method `$name` argument $index type-mismatch:${actual.id}->${shape.parameterTypes[index].id})');
+			stagedArguments.push(stageFlowValue(argument, arguments[index], laterExpressionCreatesFlow(arguments, index),
+				'dynamic-method-$name-argument-$index'));
+		}
+		final stableReceiver = restoreStagedLoweredValue(stagedReceiver, 'dynamic-method-$name-receiver-load');
+		final argumentIds = [
+			for (index => argument in stagedArguments)
+				restoreStagedValue(argument, 'dynamic-method-$name-argument-$index-load')
+		];
+		final member = dynamicRegistry.requireMethod(owner, name, shape, method.targetId, sourceSpan(expression.pos));
+		final operation = dynamicRegistry.requireInvoke(member, shape, sourceSpan(expression.pos));
+		return lowerDynamicCallResult(expression, IRIODynamic(IRDInvoke(stableReceiver.id, argumentIds, operation.id, dynamicFailure())), shape,
+			"dynamic-invoke");
+	}
+
+	/** Emit one uniform Dynamic result and retain its exact result-family metadata. */
+	function lowerDynamicCallResult(expression:TypedExpr, instructionKind:HxcIRInstructionKind, shape:CPreparedBodyDynamicCallShape, role:String):LoweredValue {
+		final adapter = shape.resultType == null ? dynamicRegistry.requireNull(sourceSpan(expression.pos)) : shape.resultType;
+		final result:HxcIRResult = {id: nextValueId(), type: IRTDynamic};
+		appendInstruction(result, instructionKind, sourceSpan(expression.pos), role);
+		registerValueTemporary(result.id, role + "-result");
+		registerDynamicRequirement(role == "dynamic-call" ? "call" : "invoke", expression, adapter.storage == IRDSManagedWrapper);
+		return {
+			id: result.id,
+			type: result.type,
+			mapping: CBodyValueType.dynamicValue(),
+			dynamicTypeId: adapter.id
+		};
 	}
 
 	/** Call an already evaluated, exact-signature non-capturing function value. */
@@ -15350,6 +16001,37 @@ private class FunctionBuilder {
 	function coerce(value:LoweredValue, target:CBodyValueType, position:Position, node:String):LoweredValue {
 		if (collectProfileWork)
 			profileCoercionRequests++;
+		if (target.kind == CBVKDynamic && value.mapping.kind != CBVKDynamic) {
+			final source = sourceSpan(position);
+			final adapter = dynamicRegistry.requireType(value.mapping, source);
+			if (adapter == null)
+				return unsupportedAt(position, '$node:Dynamic-box-unsupported-exact-type:${value.mapping.cSpelling}');
+			if (adapter.storage == IRDSManagedReference)
+				rejectOwnedClassBorrow(value, position, '$node:Dynamic-box-stack-class-reference');
+			final operation = dynamicRegistry.requireBox(adapter, source);
+			final result:HxcIRResult = {id: nextValueId(), type: IRTDynamic};
+			appendInstruction(result, IRIODynamic(IRDBox(value.id, operation.id)), source, "dynamic-box-coercion");
+			registerValueTemporary(result.id, "dynamic-box-coercion-result");
+			registerDynamicRequirementAt("box", position, source, adapter.storage == IRDSManagedWrapper);
+			return {
+				id: result.id,
+				type: result.type,
+				mapping: target,
+				dynamicTypeId: adapter.id
+			};
+		}
+		if (value.mapping.kind == CBVKDynamic && target.kind != CBVKDynamic) {
+			final source = sourceSpan(position);
+			final adapter = dynamicRegistry.requireType(target, source);
+			if (adapter == null)
+				return unsupportedAt(position, '$node:Dynamic-unbox-unsupported-exact-type:${target.cSpelling}');
+			final operation = dynamicRegistry.requireUnbox(adapter, source);
+			final result:HxcIRResult = {id: nextValueId(), type: target.irType};
+			appendInstruction(result, IRIODynamic(IRDUnbox(value.id, operation.id, dynamicFailure())), source, "dynamic-unbox-coercion");
+			registerValueTemporary(result.id, "dynamic-unbox-coercion-result");
+			registerDynamicRequirementAt("unbox", position, source);
+			return {id: result.id, type: result.type, mapping: target};
+		}
 		final comparisonStarted = collectProfileWork ? Sys.cpuTime() : 0.0;
 		final sameType = typeKey(value.mapping.irType) == typeKey(target.irType);
 		if (collectProfileWork)
@@ -15357,7 +16039,12 @@ private class FunctionBuilder {
 		if (sameType) {
 			// The carrier is already correct, but retain the contextual Haxe identity
 			// (for example LogicalPath rather than plain String) for later diagnostics.
-			return {id: value.id, type: value.type, mapping: target};
+			return value.dynamicTypeId == null ? {id: value.id, type: value.type, mapping: target} : {
+				id: value.id,
+				type: value.type,
+				mapping: target,
+				dynamicTypeId: value.dynamicTypeId
+			};
 		}
 		final targetOptional = target.optionalValue();
 		final sourceOptional = value.mapping.optionalValue();
@@ -15677,7 +16364,12 @@ private class FunctionBuilder {
 		final restored = loadPlace({place: IRPLocal(value.localId), mapping: value.value.mapping, mutable: true}, value.position, role);
 		if (isBorrowedReferenceLocal(value.localId))
 			borrowedReferenceValueIds.set(restored.id, true);
-		return restored;
+		return value.value.dynamicTypeId == null ? restored : {
+			id: restored.id,
+			type: restored.type,
+			mapping: restored.mapping,
+			dynamicTypeId: value.value.dynamicTypeId
+		};
 	}
 
 	/** Reload one saved value ID in the final block, or reuse its still-local result. */
@@ -15894,7 +16586,7 @@ private class FunctionBuilder {
 			case CBVKOptional(_) | CBVKFunction(_, _) | CBVKStackClosure(_, _, _):
 				profileCallableOptionalTypeClassifications++;
 				profileCallableOptionalTypeCpuSeconds += cpuSeconds;
-			case CBVKPrimitive(_) | CBVKFixedArray(_, _, _) | CBVKSpan(_, _) | CBVKCString | CBVKCStringRef | CBVKClosureCapturePointer(_) |
+			case CBVKDynamic | CBVKPrimitive(_) | CBVKFixedArray(_, _, _) | CBVKSpan(_, _) | CBVKCString | CBVKCStringRef | CBVKClosureCapturePointer(_) |
 				CBVKNativeRef(_) | CBVKCStringBufferRef | CBVKClosureContext:
 				profileOtherTypeClassifications++;
 				profileOtherTypeCpuSeconds += cpuSeconds;

@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "id": "dynamic-lowering",
+  "role": "fixture",
+  "type": "differential",
+  "status": "active",
+  "requirements": [
+    "HXC-PROD-002",
+    "HXC-SEM-017",
+    "HXC-SEM-023",
+    "HXC-RT-008"
+  ],
+  "sources": [
+    "docs/hxrt.md",
+    "docs/research/dynamic-value-oracle-disposition-2026-08-26.md",
+    "runtime/hxrt/include/hxrt/dynamic.h",
+    "runtime/hxrt/src/dynamic.c",
+    "src/reflaxe/c/lowering/CBodyDynamic.hx",
+    "test/differential/dynamic-runtime/fixtures/Main.hx",
+    "test/differential/dynamic-runtime/negative/bound-method/Main.hx",
+    "test/differential/dynamic-runtime/negative/computed-name/Main.hx",
+    "test/differential/dynamic-runtime/negative/global/Main.hx",
+    "test/differential/dynamic-runtime/negative/payload-enum-equality/Main.hx",
+    "test/differential/dynamic-runtime/negative/polymorphic/Main.hx",
+    "test/differential/dynamic-runtime/scalar/Main.hx",
+    "test/differential/dynamic-runtime/typed/Main.hx",
+    "test/differential/dynamic-runtime/run.py",
+    "test/aggregate_lowering/fixtures/dynamic/Main.hx",
+    "test/differential/object-enum-map/negative/dynamic_key/Main.hx",
+    "test/generic_specialization/fixtures/dynamic/Main.hx"
+  ],
+  "runner": {
+    "command": [
+      "python3",
+      "run.py"
+    ],
+    "workingDirectory": "test/differential/dynamic-runtime",
+    "timeoutSeconds": 600,
+    "network": false
+  },
+  "expected": {
+    "exitCode": 0,
+    "stdout": {
+      "mode": "regex",
+      "value": "dynamic-lowering: OK: .*Eval/native parity, forced collection, exact numeric adapters, typed isolation, scalar closure, layouts, cold/warm determinism, C\\+\\+ headers, sanitizers, runtime-none, and unsupported-shape diagnostics passed$"
+    },
+    "artifacts": [
+      {
+        "path": "runtime/hxrt/include/hxrt/dynamic.h",
+        "format": "header",
+        "comparison": "layout"
+      }
+    ]
+  }
+}

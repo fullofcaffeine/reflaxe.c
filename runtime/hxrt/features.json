@@ -464,13 +464,13 @@
       ],
       "artifacts": [
         {
-          "sourceSha256": "91d3ec747f6d85ab4a2be99cd52c7bbb3e4b34f288f9e209301a1c09e622b1a5",
+          "sourceSha256": "a65b9cf70b392f34657d512c1eecf125c18c6e6fde57569a71383169c459012a",
           "kind": "runtime-header",
           "outputPath": "runtime/include/hxrt/dynamic.h",
           "sourcePath": "runtime/hxrt/include/hxrt/dynamic.h"
         },
         {
-          "sourceSha256": "ff9948c57cdb43bd2b0b1877c6b787c621ec84f08cbabde80f19e7c5d77e6fac",
+          "sourceSha256": "fd4b8982d36cf5abea1b1bf16edaabbb736a86b1a5bb7af9e6efc82d56c59d6d",
           "kind": "runtime-source",
           "outputPath": "runtime/src/dynamic.c",
           "sourcePath": "runtime/hxrt/src/dynamic.c"
@@ -1720,7 +1720,7 @@
     "releaseProvenance": {
       "runtimeCStandard": "c11",
       "sourceHashAlgorithm": "sha256",
-      "sourceSetSha256": "f3eef5eb0563239df83aebee9b524a2043b909b1764c09ed74856db14ef11ce7",
+      "sourceSetSha256": "e23350034c3d2d9856eeab98a087f0700ec5338ecab6316cdabd0a0f1feb6808",
       "publicHeaderCppStandard": "c++17"
     },
     "generatedCodeCompatibility": "same-major",

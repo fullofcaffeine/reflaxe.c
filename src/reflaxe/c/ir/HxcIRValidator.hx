@@ -44,7 +44,7 @@ private enum HxcIRDispatchLayoutKind {
 
 /** Validates the semantic invariants required before any HxcIR reaches C AST lowering. */
 class HxcIRValidator {
-	public static inline final SCHEMA_VERSION = 26;
+	public static inline final SCHEMA_VERSION = 27;
 
 	public function new() {}
 
@@ -252,7 +252,7 @@ private class HxcIRValidationState {
 					case IRTFunction(_, _): true;
 					case _: false;
 				};
-			case IRDCTypeValue: sourceType != null && type.storage == IRDSStaticToken;
+			case IRDCTypeValue: sourceType == null && type.storage == IRDSStaticToken;
 		};
 		if (!valid)
 			add(path, "Dynamic category, source type, and storage strategy are incompatible", type.source);
@@ -1521,7 +1521,7 @@ private class HxcIRValidationState {
 	/**
 		Prove that every function root names one exact collector-managed value.
 
-		Block parameters are deliberately rejected in schema 26. Their value changes
+		Block parameters are deliberately rejected in schema 27. Their value changes
 		on incoming edges, so they need an edge-owned root update rather than the
 		simpler "store immediately after definition" rule used for parameters and
 		instruction results.
@@ -1529,7 +1529,7 @@ private class HxcIRValidationState {
 	function validateManagedRoots(fn:HxcIRFunction, path:String, values:Map<String, HxcIRTypeRef>, parameters:Map<String, HxcIRParameter>,
 			valueSites:Map<String, HxcIRInstructionSite>, blockParameterIds:Map<String, Bool>):Void {
 		if (fn.managedRoots == null) {
-			add('$path.managedRoots', "function has no explicit managed-root plan for schema 26", fn.source);
+			add('$path.managedRoots', "function has no explicit managed-root plan for schema 27", fn.source);
 			return;
 		}
 		final rootIds:Map<String, Bool> = [];
@@ -1703,6 +1703,7 @@ private class HxcIRValidationState {
 	static function dynamicInstructionValueUses(operation:HxcIRDynamicInstruction):Array<String>
 		return switch operation {
 			case IRDBox(valueId, _): [valueId];
+			case IRDBoxNull(_) | IRDBoxTypeToken(_): [];
 			case IRDUnbox(valueId, _, failure) | IRDGet(valueId, _, failure): [valueId].concat(failure.arguments);
 			case IRDSet(receiverValueId, valueId, _, failure): [receiverValueId, valueId].concat(failure.arguments);
 			case IRDCall(callableValueId, arguments, _, failure) | IRDInvoke(callableValueId, arguments, _, failure):
@@ -2285,6 +2286,7 @@ private class HxcIRValidationState {
 			case IRIODynamic(operation):
 				switch operation {
 					case IRDBox(valueId, _): reject(valueId, "Dynamic boxing");
+					case IRDBoxNull(_) | IRDBoxTypeToken(_):
 					case IRDUnbox(_, _, failure) | IRDGet(_, _, failure) | IRDSet(_, _, _, failure) | IRDCall(_, _, _, failure) | IRDInvoke(_, _, _, failure):
 						for (valueId in failure.arguments)
 							reject(valueId, "a Dynamic failure edge");
@@ -2405,6 +2407,7 @@ private class HxcIRValidationState {
 			case IRIODynamic(operation):
 				switch operation {
 					case IRDBox(valueId, _): rejectValue(valueId, "Dynamic boxing");
+					case IRDBoxNull(_) | IRDBoxTypeToken(_):
 					case IRDUnbox(_, _, failure) | IRDGet(_, _, failure) | IRDSet(_, _, _, failure) | IRDCall(_, _, _, failure) | IRDInvoke(_, _, _, failure):
 						rejectValues(failure.arguments, "a Dynamic failure-edge argument");
 					case IRDEqual(_, _, _):
@@ -3444,6 +3447,32 @@ private class HxcIRValidationState {
 								&& (adapter.sourceType == null
 									|| typeKey(adapter.sourceType) != typeKey(valueType))) add(path,
 									"Dynamic box operand does not match its exact adapter type", instruction.source);
+						case _:
+							add(path, 'Dynamic instruction requires a box operation, not `${planned.id}`', instruction.source);
+					}
+				requireDynamicResult();
+			case IRDBoxNull(operationId):
+				final planned = requireDynamicOperation(operationId, '$path.operationId', instruction.source);
+				if (planned != null)
+					switch planned.kind {
+						case IRDOKBox(typeId):
+							final adapter = dynamicTypes.get(typeId);
+							if (adapter != null
+								&& (adapter.sourceType != null || adapter.category != IRDCNull || adapter.storage != IRDSInlineNull)) add(path,
+									"Dynamic null box requires the canonical operand-free null adapter", instruction.source);
+						case _:
+							add(path, 'Dynamic instruction requires a box operation, not `${planned.id}`', instruction.source);
+					}
+				requireDynamicResult();
+			case IRDBoxTypeToken(operationId):
+				final planned = requireDynamicOperation(operationId, '$path.operationId', instruction.source);
+				if (planned != null)
+					switch planned.kind {
+						case IRDOKBox(typeId):
+							final adapter = dynamicTypes.get(typeId);
+							if (adapter != null
+								&& (adapter.sourceType != null || adapter.category != IRDCTypeValue || adapter.storage != IRDSStaticToken)) add(path,
+									"Dynamic type-token box requires an operand-free static-token adapter", instruction.source);
 						case _:
 							add(path, 'Dynamic instruction requires a box operation, not `${planned.id}`', instruction.source);
 					}

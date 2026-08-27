@@ -716,7 +716,7 @@ class RuntimeFeatureCatalog {
 			case "base.h": "7d4f67124bf94b76bfc24d5db973426f48f3f9f37daeae975fd4948f5b1dea25";
 			case "bytes.h": "3f2dc89578ee5381e98051c5b3d06dcb6859e0cce10535edaba9c9bf5b38f31d";
 			case "bytes_string.h": "9d944e38a748696628076b0c5fd56339668e48953a220d51c8da1630fbdf9c40";
-			case "dynamic.h": "91d3ec747f6d85ab4a2be99cd52c7bbb3e4b34f288f9e209301a1c09e622b1a5";
+			case "dynamic.h": "a65b9cf70b392f34657d512c1eecf125c18c6e6fde57569a71383169c459012a";
 			case "gc.h": "2ca9523f1c74c62877c3f006bab9bd8a3a2a1eced93d67ad59d015a7c6ecb9de";
 			case "io.h": "4b92f03451dc4d04ea74c857ca3ce54d52fbe80d31f155b93781ee2fab946589";
 			case "int_map.h": "69dfbe45cc182cfb66fbc5e44b38c7cf3205386ff8edabd7d33bc1daabe5ef83";
@@ -746,7 +746,7 @@ class RuntimeFeatureCatalog {
 			case "array_join.c": "b158708b62c7e407f9da21c24a1b3306d4b41baa6b63f2d8019f631a98008fde";
 			case "bytes.c": "902f1a40eb6ff1d94cc58d48a8096c9c0cb60eef4e6e9b0d0469448f929bfcb8";
 			case "bytes_string.c": "0ee9604f1b4ae78baeeaf7cac8b2a35b5634f115c958a7575230c790e8aa6ca6";
-			case "dynamic.c": "ff9948c57cdb43bd2b0b1877c6b787c621ec84f08cbabde80f19e7c5d77e6fac";
+			case "dynamic.c": "fd4b8982d36cf5abea1b1bf16edaabbb736a86b1a5bb7af9e6efc82d56c59d6d";
 			case "gc.c": "96cf942d6752070aaa5005eae3bc45c7d00aca37c360dfecaeb76d8db767b4cc";
 			case "io.c": "898b3f351b60a91f25fd1ffdfe8d832e95a5a6a738ffe226ac33581f1fcb5b0f";
 			case "int_map.c": "769ca4906fc47b0f61499e3f5ca14aea22237dbd37fef81e5f4eafbf6f71ec9e";

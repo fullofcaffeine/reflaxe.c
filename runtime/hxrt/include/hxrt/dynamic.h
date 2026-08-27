@@ -66,8 +66,10 @@ typedef struct hxc_dynamic_type {
  * One private Dynamic value with an explicitly tracked active union member.
  *
  * Only the member named by `active_storage` may be read. All pointer-shaped
- * storage uses the single object-pointer member. That member never stores a
- * function pointer: generated function wrappers keep the exact function type.
+ * managed storage uses the mutable object member because Haxe objects and
+ * anonymous structures can be changed through Dynamic. Static type tokens use
+ * a separate const member. Neither member stores a function pointer: generated
+ * function wrappers keep the exact function type.
  */
 typedef struct hxc_value {
   const hxc_dynamic_type *type;
@@ -76,7 +78,8 @@ typedef struct hxc_value {
     bool boolean;
     int32_t int32_value;
     double float64_value;
-    const void *object;
+    void *object;
+    const void *static_token;
   } payload;
 } hxc_value;
 
@@ -125,7 +128,7 @@ HXC_API hxc_status hxc_value_init_float64(
  */
 HXC_API hxc_status hxc_value_init_managed_reference(
   const hxc_dynamic_type *type,
-  const void *managed_object,
+  void *managed_object,
   hxc_value *out_value
 );
 
@@ -137,7 +140,7 @@ HXC_API hxc_status hxc_value_init_managed_reference(
  */
 HXC_API hxc_status hxc_value_init_managed_wrapper(
   const hxc_dynamic_type *type,
-  const void *managed_wrapper,
+  void *managed_wrapper,
   hxc_value *out_value
 );
 
@@ -175,13 +178,13 @@ HXC_API hxc_status hxc_value_read_float64(
 /** Read one exact managed object base. */
 HXC_API hxc_status hxc_value_read_managed_reference(
   const hxc_value *value,
-  const void **out_managed_object
+  void **out_managed_object
 );
 
 /** Read one generated exact typed wrapper base. */
 HXC_API hxc_status hxc_value_read_managed_wrapper(
   const hxc_value *value,
-  const void **out_managed_wrapper
+  void **out_managed_wrapper
 );
 
 /** Read one immutable program-owned type token. */

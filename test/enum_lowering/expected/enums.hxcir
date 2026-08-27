@@ -1,4 +1,4 @@
-hxcir schema=26
+hxcir schema=27
 module "EnumFixture" @"test/enum_lowering/fixtures/positive/EnumFixture.hx":1:1-382:3
   type "type.closed-record.24dfdaa46b8921aabd6f1681710db08e7c1ff6ea18a542a3c5ada33d91aff617" name="RecursiveActionChoice" kind=aggregate @"test/enum_lowering/fixtures/positive/EnumFixture.hx":65:1-68:2
     field "actions" type=instance("instance.haxe-array.eaf5e746484d8e083db4dbe7f227834602df94e65db1ec592bd772f7b757bc3a") mutable=false @"test/enum_lowering/fixtures/positive/EnumFixture.hx":67:2-67:39

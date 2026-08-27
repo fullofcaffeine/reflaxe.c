@@ -133,6 +133,7 @@ private class CStaticFunctionSemanticPlan {
 	public final classTypes:Array<CTypeSemanticPlan>;
 	public final virtualDefinitions:Array<CDecl>;
 	public final virtualObjectDeclarations:Array<CDecl>;
+	public final dynamicDeclarations:Array<CDecl>;
 	public final moduleDependencies:Map<String, Array<String>>;
 	public final support:Array<CDecl>;
 	public final supportGlobalSplit:Int;
@@ -145,8 +146,8 @@ private class CStaticFunctionSemanticPlan {
 			optionalTypes:Array<CTypeSemanticPlan>, enumForwards:Array<CDecl>, commonEnumTypes:Array<CTypeSemanticPlan>, enumTypes:Array<CTypeSemanticPlan>,
 			virtualForwards:Array<CDecl>, interfaceValueDefinitions:Array<CDecl>, classForwards:Array<CDecl>, classTypes:Array<CTypeSemanticPlan>,
 			virtualDefinitions:Array<CDecl>, virtualObjectDeclarations:Array<CDecl>, moduleDependencies:Map<String, Array<String>>, support:Array<CDecl>,
-			supportGlobalSplit:Int, globalDeclarations:Array<CModuleDeclaration>, globalDefinitions:Array<CModuleDeclaration>,
-			functions:Array<CFunctionSemanticPlan>, entry:Array<CDecl>) {
+			dynamicDeclarations:Array<CDecl>, supportGlobalSplit:Int, globalDeclarations:Array<CModuleDeclaration>,
+			globalDefinitions:Array<CModuleDeclaration>, functions:Array<CFunctionSemanticPlan>, entry:Array<CDecl>) {
 		this.common = common;
 		this.aggregateForwards = aggregateForwards.copy();
 		this.aggregateTypes = aggregateTypes.copy();
@@ -161,6 +162,7 @@ private class CStaticFunctionSemanticPlan {
 		this.classTypes = classTypes.copy();
 		this.virtualDefinitions = virtualDefinitions.copy();
 		this.virtualObjectDeclarations = virtualObjectDeclarations.copy();
+		this.dynamicDeclarations = dynamicDeclarations.copy();
 		this.moduleDependencies = moduleDependencies;
 		this.support = support.copy();
 		this.supportGlobalSplit = supportGlobalSplit;
@@ -217,7 +219,8 @@ class CStaticFunctionProjectEmitter {
 		}
 
 		final bodyEmitter = new CBodyEmitter(lowered.aggregates, lowered.enums, lowered.classes, lowered.arrays, lowered.iterators, lowered.intMaps,
-			lowered.stringMaps, lowered.typedMaps, lowered.bytes, lowered.optionals, lowered.dispatch, lowered.imports, lowered.managedProgram);
+			lowered.stringMaps, lowered.typedMaps, lowered.bytes, lowered.optionals, lowered.dispatch, lowered.imports, lowered.managedProgram,
+			lowered.dynamicPlan);
 		final helperEmitter = new CPrimitiveHelperEmitter(lowered.helpers);
 		final nonReturningFunctionIds = nonReturningCallCycles(lowered.functions);
 		var hasNonReturningFunctions = false;
@@ -335,6 +338,7 @@ class CStaticFunctionProjectEmitter {
 		final classTypes = classTypePlans(lowered, bodyEmitter);
 		final virtualDefinitions = bodyEmitter.virtualTableDefinitions();
 		final virtualObjectDeclarations = bodyEmitter.virtualTableObjectDeclarations();
+		final dynamicDeclarations = bodyEmitter.dynamicWrapperDefinitions().concat(bodyEmitter.dynamicAdapterDeclarations());
 		final commonTypeIds:Map<String, Bool> = [];
 		for (plan in commonEnumTypes)
 			commonTypeIds.set(plan.instanceId, true);
@@ -371,6 +375,8 @@ class CStaticFunctionProjectEmitter {
 
 		final support:Array<CDecl> = [];
 		for (definition in managedProgramDefinitions(lowered))
+			support.push(definition);
+		for (definition in bodyEmitter.dynamicAdapterDefinitions())
 			support.push(definition);
 		for (assertion in bodyEmitter.aggregateLayoutAssertions()) {
 			support.push(assertion);
@@ -455,7 +461,7 @@ class CStaticFunctionProjectEmitter {
 		}));
 		final semantic = new CStaticFunctionSemanticPlan(headerUnit, aggregateForwards, aggregateTypes, optionalForwards, optionalTypes, enumForwards,
 			commonEnumTypes, enumTypes, virtualForwards, interfaceValueDefinitions, classForwards, classTypes, virtualDefinitions, virtualObjectDeclarations,
-			moduleDependencies, support, supportGlobalSplit, globalDeclarations, globalDefinitions, functions, entryDeclarations);
+			moduleDependencies, support, dynamicDeclarations, supportGlobalSplit, globalDeclarations, globalDefinitions, functions, entryDeclarations);
 		return switch layout.layout {
 			case Unity: assignUnity(semantic, layout, headerGuards);
 			case Split: assignSplit(semantic, layout, headerGuards);
@@ -624,6 +630,7 @@ class CStaticFunctionProjectEmitter {
 		// because its signatures can depend on generated records.
 		appendDeclarations(headerUnit, semantic.virtualDefinitions);
 		appendTypeDeclarations(headerUnit, semantic.classTypes);
+		appendDeclarations(headerUnit, semantic.dynamicDeclarations);
 		appendDeclarations(headerUnit, semantic.virtualObjectDeclarations);
 		for (global in semantic.globalDeclarations)
 			headerUnit.declarations.push(global.declaration);
@@ -715,6 +722,7 @@ class CStaticFunctionProjectEmitter {
 		for (module in dependencyOrderedModules(layout, semantic.moduleDependencies)) {
 			umbrella.includes.push({path: module.headerInclude, kind: Local});
 		}
+		appendDeclarations(umbrella, semantic.dynamicDeclarations);
 		headers.push({
 			path: HEADER_PATH,
 			unit: new CHeaderUnit(requireGuard(layout, headerGuards, HEADER_PATH), umbrella)
@@ -828,6 +836,7 @@ class CStaticFunctionProjectEmitter {
 		}
 		for (pack in dependencyOrderedPackages(layout, packageDependencies))
 			umbrella.includes.push({path: pack.headerInclude, kind: Local});
+		appendDeclarations(umbrella, semantic.dynamicDeclarations);
 		headers.push({
 			path: HEADER_PATH,
 			unit: new CHeaderUnit(requireGuard(layout, headerGuards, HEADER_PATH), umbrella)

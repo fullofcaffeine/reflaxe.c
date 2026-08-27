@@ -1921,7 +1921,7 @@ def check_mutable_record_matrix(*, requested_toolchain: str) -> None:
 def check_negative_cases() -> None:
     cases = {
         "identity_equality": "TBinop(OpEq:left-type):closed-record-not-admitted-in-primitive-operation",
-        "dynamic": "TFunction(argument:record):the dynamic source semantic type cannot stand in for a primitive",
+        "dynamic": "Dynamic(field `value` receiver has-unresolved-polymorphic-identity)",
         "void_field": "TFunction(return-type).field:value:Void-not-an-object-type",
         "interface_reference_escape": "TReturn(owned-class-borrow-escape)",
     }

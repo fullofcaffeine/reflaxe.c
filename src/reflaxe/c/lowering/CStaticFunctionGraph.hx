@@ -128,8 +128,18 @@ class CStaticFunctionGraphCollector {
 	function collectExpression(expression:TypedExpr, caller:CBodyFunctionInput, currentConstructor:Null<CBodyConstructorInput>,
 			available:Map<String, CBodyFunctionInput>, availableConstructors:Map<String, CBodyConstructorInput>, byId:Map<String, CBodyFunctionInput>,
 			pending:Array<CBodyFunctionInput>, constructorsById:Map<String, CBodyConstructorInput>, pendingConstructors:Array<CBodyConstructorInput>,
-			constructorDependencies:Map<String, Array<CConstructorDependency>>):Void {
+			constructorDependencies:Map<String, Array<CConstructorDependency>>, ?dynamicClasses:Map<Int, Ref<ClassType>>):Void {
+		final exactDynamicClasses:Map<Int, Ref<ClassType>> = dynamicClasses == null ? [] : dynamicClasses;
 		switch expression.expr {
+			case TVar(variable, initializer) if (isDynamicType(variable.t)):
+				if (initializer != null)
+					setExactDynamicClass(exactDynamicClasses, variable.id, exactDynamicClass(initializer, exactDynamicClasses));
+			case TBinop(OpAssign, left, right):
+				switch unwrapExpression(left).expr {
+					case TLocal(variable) if (isDynamicType(left.t)):
+						setExactDynamicClass(exactDynamicClasses, variable.id, exactDynamicClass(right, exactDynamicClasses));
+					case _:
+				}
 			case TField(_, FStatic(classReference, fieldReference)) if (isFunctionType(expression.t)):
 				final owner = classReference.get();
 				final field = fieldReference.get();
@@ -181,6 +191,16 @@ class CStaticFunctionGraphCollector {
 				if (!isCompilerIntrinsicCall(callee)
 					&& !isBytesIntrinsicCall(callee)
 					&& !CBodyFixedArray.isZeroCall(callee, arguments.length)):
+				switch unwrapExpression(callee).expr {
+					case TField(receiver, FDynamic(name)):
+						final exactClass = exactDynamicClass(receiver, exactDynamicClasses);
+						if (exactClass != null) {
+							final method = requireDispatchCatalog().exactDynamicMethod(exactClass, name);
+							if (method != null)
+								add(method, byId, pending);
+						}
+					case _:
+				}
 				final baseTargetId = directStaticFunctionId(callee);
 				final target = baseTargetId == null ? null : available.get(baseTargetId);
 				if (target != null && baseTargetId != null) {
@@ -210,7 +230,7 @@ class CStaticFunctionGraphCollector {
 				// walking it for reachable calls and function values.
 				if (arguments.length > 0)
 					collectExpression(arguments[0], caller, currentConstructor, available, availableConstructors, byId, pending, constructorsById,
-						pendingConstructors, constructorDependencies);
+						pendingConstructors, constructorDependencies, exactDynamicClasses);
 			case TCall(callee, arguments):
 				// A direct static callee is owned by the TCall case above. Visiting its
 				// field node again would misclassify every ordinary direct call as a
@@ -219,15 +239,56 @@ class CStaticFunctionGraphCollector {
 				// function passed as an argument is still discovered.
 				if (directStaticFunctionId(callee) == null)
 					collectExpression(callee, caller, currentConstructor, available, availableConstructors, byId, pending, constructorsById,
-						pendingConstructors, constructorDependencies);
+						pendingConstructors, constructorDependencies, exactDynamicClasses);
 				for (argument in arguments)
 					collectExpression(argument, caller, currentConstructor, available, availableConstructors, byId, pending, constructorsById,
-						pendingConstructors, constructorDependencies);
+						pendingConstructors, constructorDependencies, exactDynamicClasses);
 			case _:
 				TypedExprTools.iter(expression,
 					child -> collectExpression(child, caller, currentConstructor, available, availableConstructors, byId, pending, constructorsById,
-						pendingConstructors, constructorDependencies));
+						pendingConstructors, constructorDependencies, exactDynamicClasses));
 		}
+	}
+
+	/** Remember one exact class for a Dynamic local, or invalidate an ambiguous flow. */
+	static function setExactDynamicClass(classes:Map<Int, Ref<ClassType>>, compilerId:Int, value:Null<Ref<ClassType>>):Void {
+		if (value == null)
+			classes.remove(compilerId);
+		else
+			classes.set(compilerId, value);
+	}
+
+	/** Recover only source-proven class identity; no name or hierarchy search widens it. */
+	static function exactDynamicClass(expression:TypedExpr, classes:Map<Int, Ref<ClassType>>):Null<Ref<ClassType>> {
+		return switch expression.expr {
+			case TNew(reference, _, _): reference;
+			case TLocal(variable) if (isDynamicType(expression.t)): classes.get(variable.id);
+			case TParenthesis(inner) | TMeta(_, inner) | TCast(inner, _): exactDynamicClass(inner, classes);
+			case _: null;
+		};
+	}
+
+	/** Recognize Dynamic through aliases without turning other broad types into it. */
+	static function isDynamicType(type:Type, depth:Int = 0):Bool {
+		if (depth > 32)
+			return false;
+		return switch type {
+			case TDynamic(_): true;
+			case TMono(reference): final resolved = reference.get(); resolved != null && isDynamicType(resolved, depth + 1);
+			case TLazy(resolve): isDynamicType(resolve(), depth + 1);
+			case TType(reference, parameters):
+				final definition = reference.get();
+				isDynamicType(TypeTools.applyTypeParameters(definition.type, definition.params, parameters), depth + 1);
+			case _: false;
+		};
+	}
+
+	/** Remove syntax wrappers while preserving the typed expression's exact origin. */
+	static function unwrapExpression(expression:TypedExpr):TypedExpr {
+		return switch expression.expr {
+			case TParenthesis(inner) | TMeta(_, inner) | TCast(inner, _): unwrapExpression(inner);
+			case _: expression;
+		};
 	}
 
 	static function isFunctionType(type:Type):Bool {

@@ -176,7 +176,8 @@ static int check_reference_contract(void) {
   hxc_value object_value = HXC_VALUE_INVALID_INITIALIZER;
   hxc_value function_value = HXC_VALUE_INVALID_INITIALIZER;
   hxc_value token_value = HXC_VALUE_INVALID_INITIALIZER;
-  const void *payload = NULL;
+  void *payload = NULL;
+  const void *read_only_payload = NULL;
 
   if (hxc_value_init_managed_reference(&object_type, &object, &object_value) != HXC_STATUS_OK
       || hxc_value_init_managed_wrapper(&function_type, &wrapper, &function_value) != HXC_STATUS_OK
@@ -188,8 +189,8 @@ static int check_reference_contract(void) {
       || ((const fixture_object *)payload)->value != INT32_C(41)) {
     return 0;
   }
-  if (hxc_value_managed_payload(&object_value, &payload) != HXC_STATUS_OK
-      || payload != &object) {
+  if (hxc_value_managed_payload(&object_value, &read_only_payload) != HXC_STATUS_OK
+      || read_only_payload != &object) {
     return 0;
   }
   if (hxc_value_read_managed_wrapper(&function_value, &payload) != HXC_STATUS_OK
@@ -197,17 +198,17 @@ static int check_reference_contract(void) {
       || ((const fixture_function_wrapper *)payload)->function(INT32_C(41)) != INT32_C(42)) {
     return 0;
   }
-  if (hxc_value_managed_payload(&function_value, &payload) != HXC_STATUS_OK
-      || payload != &wrapper) {
+  if (hxc_value_managed_payload(&function_value, &read_only_payload) != HXC_STATUS_OK
+      || read_only_payload != &wrapper) {
     return 0;
   }
-  if (hxc_value_read_static_token(&token_value, &payload) != HXC_STATUS_OK
-      || payload != &type_token
-      || *(const uint32_t *)payload != UINT32_C(0xCAFE)) {
+  if (hxc_value_read_static_token(&token_value, &read_only_payload) != HXC_STATUS_OK
+      || read_only_payload != &type_token
+      || *(const uint32_t *)read_only_payload != UINT32_C(0xCAFE)) {
     return 0;
   }
-  if (hxc_value_managed_payload(&token_value, &payload) != HXC_STATUS_OK
-      || payload != NULL) {
+  if (hxc_value_managed_payload(&token_value, &read_only_payload) != HXC_STATUS_OK
+      || read_only_payload != NULL) {
     return 0;
   }
   return 1;

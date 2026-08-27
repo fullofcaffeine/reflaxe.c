@@ -136,6 +136,7 @@ class ToolchainShardTests(unittest.TestCase):
                 "test:hello",
                 "snapshots:catalog",
                 "test:body-lowering",
+                "test:dynamic-lowering",
                 "test:runtime-features",
                 "test:span-lowering",
                 "test:caxecraft-domain",
@@ -795,7 +796,7 @@ class ToolchainShardTests(unittest.TestCase):
     def test_actual_partition_and_local_isolation_are_exact(self) -> None:
         scripts = self.runner.load_scripts()
         canonical = self.runner.validate_partition(scripts)
-        self.assertEqual(len(canonical), 76)
+        self.assertEqual(len(canonical), 78)
         self.assertEqual(tuple(self.runner.SHARDS), self.runner.SHARD_ORDER)
         self.assertEqual(
             tuple(self.runner.LOCAL_PARALLEL_ISOLATION), self.runner.SHARD_ORDER

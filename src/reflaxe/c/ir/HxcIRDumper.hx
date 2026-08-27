@@ -271,6 +271,10 @@ class HxcIRDumper {
 		return switch operation {
 			case IRDBox(valueId, operationId):
 				'dynamic-box value=${quote(valueId)} operation=${quote(operationId)}';
+			case IRDBoxNull(operationId):
+				'dynamic-box-null operation=${quote(operationId)}';
+			case IRDBoxTypeToken(operationId):
+				'dynamic-box-type-token operation=${quote(operationId)}';
 			case IRDUnbox(valueId, operationId, failure):
 				'dynamic-unbox value=${quote(valueId)} operation=${quote(operationId)} failure=${failureEdge(failure)}';
 			case IRDGet(receiverValueId, operationId, failure):

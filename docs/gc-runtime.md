@@ -179,7 +179,7 @@ correctness-first backend, not a high-performance or low-latency collector.
 
 E4.T06 owns the backend, exact root/pin contracts, pressure behavior, reports,
 and selective `runtime-base + status + alloc + object + gc` package. HxcIR
-schema 26 records exact managed parameters, instruction results, call-bounded
+schema 27 records exact managed parameters, instruction results, call-bounded
 mutable-record borrows, and typed paths to managed references in direct records,
 enums, optionals, or a validated Dynamic payload. Typed-only programs keep the
 Dynamic plan empty. Generated functions emit balanced frames for normal and

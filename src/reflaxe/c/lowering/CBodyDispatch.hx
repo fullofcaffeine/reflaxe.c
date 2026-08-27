@@ -290,6 +290,30 @@ class CBodyDispatchCatalog {
 		return selectedImplementations();
 	}
 
+	/**
+		Select the one implementation owned by a source-proven Dynamic class.
+
+		This is graph discovery only: it makes the exact callable available to HxcIR
+		lowering. It does not create a virtual slot, runtime member-name table, or
+		fallback search, so an unresolved receiver remains unsupported.
+	**/
+	public function exactDynamicMethod(reference:Ref<ClassType>, name:String):Null<CBodyFunctionInput> {
+		var current:Null<Ref<ClassType>> = reference;
+		while (current != null) {
+			final definition = current.get();
+			for (field in definition.fields.get()) {
+				if (field.name != name)
+					continue;
+				return switch field.kind {
+					case FMethod(MethNormal) | FMethod(MethInline): methodsById.get(CBodyLowering.methodId(classPath(definition), field.name));
+					case FMethod(MethDynamic) | FMethod(MethMacro) | FVar(_, _): null;
+				};
+			}
+			current = definition.superClass == null ? null : definition.superClass.t;
+		}
+		return null;
+	}
+
 	public function finish():CBodyDispatchGraph {
 		validateClosedGenericCalls();
 		selectedImplementations();

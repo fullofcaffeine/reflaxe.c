@@ -124,6 +124,13 @@ REQUIRED_GATE_FILES = (
     "test/differential/array-runtime/case.json",
     "test/differential/array-runtime/oracle.hxml",
     "test/differential/array-runtime/run.py",
+    "test/differential/dynamic-runtime/case.json",
+    "test/differential/dynamic-runtime/fixtures/Main.hx",
+    "test/differential/dynamic-runtime/scalar/Main.hx",
+    "test/differential/dynamic-runtime/typed/Main.hx",
+    "test/differential/dynamic-runtime/run.py",
+    "test/runtime/dynamic/case.json",
+    "test/runtime/dynamic/run.py",
     "test/differential/int-map/case.json",
     "test/differential/int-map/generated/Main.hx",
     "test/differential/int-map/generated/oracle.hxml",
@@ -1121,6 +1128,10 @@ def validate() -> list[str]:
         )
     if scripts.get("test:runtime-features") != "python3 test/runtime/runtime-feature-graph/run.py":
         errors.append("package.json must retain the test:runtime-features entry point")
+    if scripts.get("test:dynamic-runtime") != "python3 test/runtime/dynamic/run.py":
+        errors.append("package.json must retain the test:dynamic-runtime entry point")
+    if scripts.get("test:dynamic-lowering") != "python3 test/differential/dynamic-runtime/run.py":
+        errors.append("package.json must retain the test:dynamic-lowering entry point")
     if scripts.get("test:array-runtime") != "python3 test/differential/array-runtime/run.py":
         errors.append("package.json must retain the test:array-runtime entry point")
     if scripts.get("test:int-map") != "python3 test/differential/int-map/run.py":
@@ -1342,6 +1353,10 @@ def validate() -> list[str]:
         errors.append("package.json test:toolchain must execute test:project-emitter")
     if "npm run test:runtime-features" not in str(scripts.get("test:toolchain", "")):
         errors.append("package.json test:toolchain must execute test:runtime-features")
+    if "npm run test:dynamic-runtime" not in str(scripts.get("test:toolchain", "")):
+        errors.append("package.json test:toolchain must execute test:dynamic-runtime")
+    if "npm run test:dynamic-lowering" not in str(scripts.get("test:toolchain", "")):
+        errors.append("package.json test:toolchain must execute test:dynamic-lowering")
     if "npm run test:array-runtime" not in str(scripts.get("test:toolchain", "")):
         errors.append("package.json test:toolchain must execute test:array-runtime")
     if "npm run test:int-map" not in str(scripts.get("test:toolchain", "")):

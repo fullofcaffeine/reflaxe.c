@@ -85,6 +85,9 @@ typedef CBodyProgramContributionInventory = {
 
 /** A closed body value category; aggregate values never enter primitive semantics. */
 enum CBodyValueKind {
+	/** The private tagged carrier used only at an explicit Haxe Dynamic boundary. */
+	CBVKDynamic;
+
 	CBVKPrimitive(mapping:CPrimitiveTypeMapping);
 
 	/**
@@ -168,6 +171,9 @@ class CBodyValueType {
 	public function new(kind:CBodyValueKind) {
 		this.kind = kind;
 		switch kind {
+			case CBVKDynamic:
+				this.irType = IRTDynamic;
+				this.cSpelling = "haxe-dynamic";
 			case CBVKPrimitive(mapping):
 				this.irType = mapping.irType;
 				this.cSpelling = mapping.cSpelling;
@@ -252,6 +258,10 @@ class CBodyValueType {
 	public static function primitive(mapping:CPrimitiveTypeMapping):CBodyValueType
 		return new CBodyValueType(CBVKPrimitive(mapping));
 
+	/** Select the private carrier without changing any ordinary typed value. */
+	public static function dynamicValue():CBodyValueType
+		return new CBodyValueType(CBVKDynamic);
+
 	/** Preserve the Haxe/abstract identity while selecting the shared C view. */
 	public static function staticString(sourceIdentity:String):CBodyValueType
 		return new CBodyValueType(CBVKStaticString(sourceIdentity));
@@ -332,10 +342,10 @@ class CBodyValueType {
 	public function primitiveMapping():Null<CPrimitiveTypeMapping> {
 		return switch kind {
 			case CBVKPrimitive(mapping): mapping;
-			case CBVKStaticString(_) | CBVKManagedString(_) | CBVKFixedArray(_, _, _) | CBVKSpan(_, _) | CBVKCString | CBVKImport(_) | CBVKAggregate(_) |
-				CBVKEnum(_) | CBVKOwnedClass(_) | CBVKClass(_, _) | CBVKInterface(_) | CBVKArray(_) | CBVKIterator(_) | CBVKIntMap(_) | CBVKStringMap(_) |
-				CBVKTypedMap(_) | CBVKBytes(_) | CBVKOptional(_) | CBVKFunction(_, _) | CBVKClosureCapturePointer(_) | CBVKNativeRef(_) | CBVKCStringRef |
-				CBVKCStringBufferRef | CBVKClosureContext | CBVKStackClosure(_, _, _): null;
+			case CBVKDynamic | CBVKStaticString(_) | CBVKManagedString(_) | CBVKFixedArray(_, _, _) | CBVKSpan(_, _) | CBVKCString | CBVKImport(_) |
+				CBVKAggregate(_) | CBVKEnum(_) | CBVKOwnedClass(_) | CBVKClass(_, _) | CBVKInterface(_) | CBVKArray(_) | CBVKIterator(_) | CBVKIntMap(_) |
+				CBVKStringMap(_) | CBVKTypedMap(_) | CBVKBytes(_) | CBVKOptional(_) | CBVKFunction(_, _) | CBVKClosureCapturePointer(_) | CBVKNativeRef(_) |
+				CBVKCStringRef | CBVKCStringBufferRef | CBVKClosureContext | CBVKStackClosure(_, _, _): null;
 		};
 	}
 
@@ -393,10 +403,10 @@ class CBodyValueType {
 
 	public function aggregateValue():Null<CPreparedBodyAggregate> {
 		return switch kind {
-			case CBVKPrimitive(_) | CBVKStaticString(_) | CBVKManagedString(_) | CBVKFixedArray(_, _, _) | CBVKSpan(_, _) | CBVKCString | CBVKImport(_) |
-				CBVKOwnedClass(_) | CBVKInterface(_) | CBVKArray(_) | CBVKIterator(_) | CBVKIntMap(_) | CBVKStringMap(_) | CBVKTypedMap(_) | CBVKBytes(_) |
-				CBVKOptional(_) | CBVKFunction(_, _) | CBVKClosureCapturePointer(_) | CBVKNativeRef(_) | CBVKCStringRef | CBVKCStringBufferRef |
-				CBVKClosureContext | CBVKStackClosure(_, _, _): null;
+			case CBVKDynamic | CBVKPrimitive(_) | CBVKStaticString(_) | CBVKManagedString(_) | CBVKFixedArray(_, _, _) | CBVKSpan(_, _) | CBVKCString |
+				CBVKImport(_) | CBVKOwnedClass(_) | CBVKInterface(_) | CBVKArray(_) | CBVKIterator(_) | CBVKIntMap(_) | CBVKStringMap(_) | CBVKTypedMap(_) |
+				CBVKBytes(_) | CBVKOptional(_) | CBVKFunction(_, _) | CBVKClosureCapturePointer(_) | CBVKNativeRef(_) | CBVKCStringRef |
+				CBVKCStringBufferRef | CBVKClosureContext | CBVKStackClosure(_, _, _): null;
 			case CBVKAggregate(aggregate): aggregate;
 			case CBVKEnum(_) | CBVKClass(_, _): null;
 		};
@@ -404,8 +414,8 @@ class CBodyValueType {
 
 	public function enumValue():Null<CPreparedBodyEnumInstance> {
 		return switch kind {
-			case CBVKPrimitive(_) | CBVKStaticString(_) | CBVKManagedString(_) | CBVKFixedArray(_, _, _) | CBVKSpan(_, _) | CBVKCString | CBVKImport(_) |
-				CBVKAggregate(_) | CBVKOwnedClass(_) | CBVKClass(_, _) | CBVKInterface(_) | CBVKArray(_) | CBVKIterator(_) | CBVKIntMap(_) |
+			case CBVKDynamic | CBVKPrimitive(_) | CBVKStaticString(_) | CBVKManagedString(_) | CBVKFixedArray(_, _, _) | CBVKSpan(_, _) | CBVKCString |
+				CBVKImport(_) | CBVKAggregate(_) | CBVKOwnedClass(_) | CBVKClass(_, _) | CBVKInterface(_) | CBVKArray(_) | CBVKIterator(_) | CBVKIntMap(_) |
 				CBVKStringMap(_) | CBVKTypedMap(_) | CBVKBytes(_) | CBVKOptional(_) | CBVKFunction(_, _) | CBVKClosureCapturePointer(_) | CBVKNativeRef(_) |
 				CBVKCStringRef | CBVKCStringBufferRef | CBVKClosureContext | CBVKStackClosure(_, _, _): null;
 			case CBVKEnum(value): value;
@@ -414,9 +424,9 @@ class CBodyValueType {
 
 	public function classValue():Null<CPreparedBodyClass> {
 		return switch kind {
-			case CBVKPrimitive(_) | CBVKStaticString(_) | CBVKManagedString(_) | CBVKFixedArray(_, _, _) | CBVKSpan(_, _) | CBVKCString | CBVKImport(_) |
-				CBVKAggregate(_) | CBVKEnum(_) | CBVKInterface(_) | CBVKArray(_) | CBVKIterator(_) | CBVKIntMap(_) | CBVKStringMap(_) | CBVKTypedMap(_) |
-				CBVKBytes(_) | CBVKOptional(_) | CBVKFunction(_, _) | CBVKClosureCapturePointer(_) | CBVKNativeRef(_) | CBVKCStringRef |
+			case CBVKDynamic | CBVKPrimitive(_) | CBVKStaticString(_) | CBVKManagedString(_) | CBVKFixedArray(_, _, _) | CBVKSpan(_, _) | CBVKCString |
+				CBVKImport(_) | CBVKAggregate(_) | CBVKEnum(_) | CBVKInterface(_) | CBVKArray(_) | CBVKIterator(_) | CBVKIntMap(_) | CBVKStringMap(_) |
+				CBVKTypedMap(_) | CBVKBytes(_) | CBVKOptional(_) | CBVKFunction(_, _) | CBVKClosureCapturePointer(_) | CBVKNativeRef(_) | CBVKCStringRef |
 				CBVKCStringBufferRef | CBVKClosureContext | CBVKStackClosure(_, _, _): null;
 			case CBVKOwnedClass(value) | CBVKClass(value, _): value;
 		};
@@ -504,9 +514,9 @@ class CBodyValueType {
 		return switch kind {
 			case CBVKOwnedClass(_): false;
 			case CBVKClass(_, nullable): nullable;
-			case CBVKPrimitive(_) | CBVKStaticString(_) | CBVKManagedString(_) | CBVKFixedArray(_, _, _) | CBVKSpan(_, _) | CBVKCString | CBVKImport(_) |
-				CBVKAggregate(_) | CBVKEnum(_) | CBVKInterface(_) | CBVKArray(_) | CBVKIterator(_) | CBVKIntMap(_) | CBVKStringMap(_) | CBVKTypedMap(_) |
-				CBVKBytes(_) | CBVKOptional(_) | CBVKFunction(_, _) | CBVKClosureCapturePointer(_) | CBVKNativeRef(_) | CBVKCStringRef |
+			case CBVKDynamic | CBVKPrimitive(_) | CBVKStaticString(_) | CBVKManagedString(_) | CBVKFixedArray(_, _, _) | CBVKSpan(_, _) | CBVKCString |
+				CBVKImport(_) | CBVKAggregate(_) | CBVKEnum(_) | CBVKInterface(_) | CBVKArray(_) | CBVKIterator(_) | CBVKIntMap(_) | CBVKStringMap(_) |
+				CBVKTypedMap(_) | CBVKBytes(_) | CBVKOptional(_) | CBVKFunction(_, _) | CBVKClosureCapturePointer(_) | CBVKNativeRef(_) | CBVKCStringRef |
 				CBVKCStringBufferRef | CBVKClosureContext | CBVKStackClosure(_, _, _): null;
 		};
 	}
@@ -522,6 +532,7 @@ class CBodyValueType {
 	**/
 	public function containsCollectorManagedReference():Bool {
 		return switch kind {
+			case CBVKDynamic: true;
 			case CBVKClass(value, _): value.managedByCollector;
 			case CBVKAggregate(value):
 				var found = false;
@@ -552,6 +563,7 @@ class CBodyValueType {
 	**/
 	public function containsInterfaceReference():Bool {
 		return switch kind {
+			case CBVKDynamic: false;
 			case CBVKInterface(_): true;
 			case CBVKAggregate(value):
 				var found = false;
@@ -581,8 +593,8 @@ class CBodyValueType {
 	**/
 	public function hasExactNullCarrier():Bool
 		return switch kind {
-			case CBVKStaticString(_) | CBVKManagedString(_) | CBVKClass(_, true) | CBVKArray(_) | CBVKIterator(_) | CBVKIntMap(_) | CBVKStringMap(_) |
-				CBVKTypedMap(_): true;
+			case CBVKDynamic | CBVKStaticString(_) | CBVKManagedString(_) | CBVKClass(_, true) | CBVKArray(_) | CBVKIterator(_) | CBVKIntMap(_) |
+				CBVKStringMap(_) | CBVKTypedMap(_): true;
 			case _: false;
 		};
 }
@@ -899,6 +911,8 @@ class CBodyAggregateRegistry {
 		if (primitive != null)
 			return CBodyValueType.primitive(primitive);
 		return switch resolved {
+			case TDynamic(_):
+				CBodyValueType.dynamicValue();
 			case TAbstract(reference, parameters) if (isSpan(reference.get(), parameters)):
 				final span = reference.get();
 				final element = admittedSpanElement(parameters[0], position, fail, node);

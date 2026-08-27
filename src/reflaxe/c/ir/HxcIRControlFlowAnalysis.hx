@@ -303,7 +303,7 @@ class HxcIRControlFlowAnalysis {
 			case IRIODynamic(operation): switch operation {
 					case IRDUnbox(_, _,
 						failure) | IRDGet(_, _, failure) | IRDSet(_, _, _, failure) | IRDCall(_, _, _, failure) | IRDInvoke(_, _, _, failure): failure;
-					case IRDBox(_, _) | IRDEqual(_, _, _): null;
+					case IRDBox(_, _) | IRDBoxNull(_) | IRDBoxTypeToken(_) | IRDEqual(_, _, _): null;
 				};
 			case _: null;
 		};

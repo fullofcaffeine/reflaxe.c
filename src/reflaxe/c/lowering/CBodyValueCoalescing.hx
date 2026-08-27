@@ -464,6 +464,7 @@ class CBodyValueCoalescingPlanner {
 		switch operation {
 			case IRDBox(valueId, _):
 				addUse(valueId, site);
+			case IRDBoxNull(_) | IRDBoxTypeToken(_):
 			case IRDUnbox(valueId, _, failure) | IRDGet(valueId, _, failure):
 				addUse(valueId, site);
 				collectFailureUses(failure, site);

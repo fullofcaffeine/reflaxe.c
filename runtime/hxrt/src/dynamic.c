@@ -36,16 +36,10 @@ static bool hxc_dynamic_category_storage_matches(
   }
 }
 
-static bool hxc_dynamic_storage_is_pointer(hxc_dynamic_storage storage) {
-  return storage == HXC_DYNAMIC_STORAGE_MANAGED_REFERENCE
-    || storage == HXC_DYNAMIC_STORAGE_MANAGED_WRAPPER
-    || storage == HXC_DYNAMIC_STORAGE_STATIC_TOKEN;
-}
-
 static hxc_status hxc_value_init_pointer(
   const hxc_dynamic_type *type,
   hxc_dynamic_storage expected_storage,
-  const void *payload,
+  void *payload,
   hxc_value *out_value
 ) {
   hxc_value value = HXC_VALUE_INVALID_INITIALIZER;
@@ -65,7 +59,7 @@ static hxc_status hxc_value_init_pointer(
 static hxc_status hxc_value_read_pointer(
   const hxc_value *value,
   hxc_dynamic_storage expected_storage,
-  const void **out_payload
+  void **out_payload
 ) {
   if (out_payload == NULL
       || !hxc_value_is_valid(value)
@@ -88,15 +82,17 @@ bool hxc_value_is_valid(const hxc_value *value) {
       || value->active_storage != value->type->storage) {
     return false;
   }
-  if (hxc_dynamic_storage_is_pointer(value->active_storage)) {
-    return value->payload.object != NULL;
-  }
   switch (value->active_storage) {
     case HXC_DYNAMIC_STORAGE_INLINE_NULL:
     case HXC_DYNAMIC_STORAGE_INLINE_BOOL:
     case HXC_DYNAMIC_STORAGE_INLINE_INT32:
     case HXC_DYNAMIC_STORAGE_INLINE_FLOAT64:
       return true;
+    case HXC_DYNAMIC_STORAGE_MANAGED_REFERENCE:
+    case HXC_DYNAMIC_STORAGE_MANAGED_WRAPPER:
+      return value->payload.object != NULL;
+    case HXC_DYNAMIC_STORAGE_STATIC_TOKEN:
+      return value->payload.static_token != NULL;
     default:
       return false;
   }
@@ -173,7 +169,7 @@ hxc_status hxc_value_init_float64(
 
 hxc_status hxc_value_init_managed_reference(
   const hxc_dynamic_type *type,
-  const void *managed_object,
+  void *managed_object,
   hxc_value *out_value
 ) {
   return hxc_value_init_pointer(
@@ -186,7 +182,7 @@ hxc_status hxc_value_init_managed_reference(
 
 hxc_status hxc_value_init_managed_wrapper(
   const hxc_dynamic_type *type,
-  const void *managed_wrapper,
+  void *managed_wrapper,
   hxc_value *out_value
 ) {
   return hxc_value_init_pointer(
@@ -202,12 +198,18 @@ hxc_status hxc_value_init_static_token(
   const void *static_token,
   hxc_value *out_value
 ) {
-  return hxc_value_init_pointer(
-    type,
-    HXC_DYNAMIC_STORAGE_STATIC_TOKEN,
-    static_token,
-    out_value
-  );
+  hxc_value value = HXC_VALUE_INVALID_INITIALIZER;
+  if (out_value == NULL
+      || static_token == NULL
+      || !hxc_dynamic_type_is_valid(type)
+      || type->storage != HXC_DYNAMIC_STORAGE_STATIC_TOKEN) {
+    return HXC_STATUS_INVALID_ARGUMENT;
+  }
+  value.type = type;
+  value.active_storage = HXC_DYNAMIC_STORAGE_STATIC_TOKEN;
+  value.payload.static_token = static_token;
+  *out_value = value;
+  return HXC_STATUS_OK;
 }
 
 hxc_status hxc_value_is_null(
@@ -262,7 +264,7 @@ hxc_status hxc_value_read_float64(
 
 hxc_status hxc_value_read_managed_reference(
   const hxc_value *value,
-  const void **out_managed_object
+  void **out_managed_object
 ) {
   return hxc_value_read_pointer(
     value,
@@ -273,7 +275,7 @@ hxc_status hxc_value_read_managed_reference(
 
 hxc_status hxc_value_read_managed_wrapper(
   const hxc_value *value,
-  const void **out_managed_wrapper
+  void **out_managed_wrapper
 ) {
   return hxc_value_read_pointer(
     value,
@@ -286,11 +288,13 @@ hxc_status hxc_value_read_static_token(
   const hxc_value *value,
   const void **out_static_token
 ) {
-  return hxc_value_read_pointer(
-    value,
-    HXC_DYNAMIC_STORAGE_STATIC_TOKEN,
-    out_static_token
-  );
+  if (out_static_token == NULL
+      || !hxc_value_is_valid(value)
+      || value->active_storage != HXC_DYNAMIC_STORAGE_STATIC_TOKEN) {
+    return HXC_STATUS_INVALID_ARGUMENT;
+  }
+  *out_static_token = value->payload.static_token;
+  return HXC_STATUS_OK;
 }
 
 hxc_status hxc_value_managed_payload(

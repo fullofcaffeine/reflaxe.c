@@ -56,6 +56,8 @@ SHARDS: dict[str, tuple[str, ...]] = {
         "test:symbol-registry",
         "test:project-emitter",
         "test:runtime-features",
+        "test:dynamic-runtime",
+        "test:dynamic-lowering",
         "test:array-runtime",
         "test:int-map",
         "test:string-map",

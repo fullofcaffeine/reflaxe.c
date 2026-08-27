@@ -678,7 +678,7 @@ class HxcIRGolden {
 	}
 
 	/**
-		Exercise every schema-26 Dynamic operation without selecting a C carrier.
+		Exercise every schema-27 Dynamic operation without selecting a C carrier.
 
 		The object and function adapters use typed managed wrappers, so every
 		Dynamic value has one explicit `dynamic-payload` root. This proves that the
@@ -940,7 +940,7 @@ class HxcIRGolden {
 	}
 
 	/**
-		Exercise the schema-26 exact-root contract without involving C emission.
+		Exercise the schema-27 exact-root contract without involving C emission.
 
 		The negative variant deliberately roots an Int. A collector cannot learn
 		anything from that address-shaped mistake, so validation must reject it

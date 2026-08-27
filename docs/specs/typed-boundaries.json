@@ -101,6 +101,201 @@
       ]
     },
     {
+      "path": "test/differential/dynamic-runtime/fixtures/Main.hx",
+      "line": 2,
+      "column": 36,
+      "construct": "dynamic-type",
+      "boundaryKind": "language-semantics-fixture",
+      "symbol": "ReferenceDynamic",
+      "typedModel": "HxcIRDynamicPlan, HxcIRDynamicOperation, and generated hxrt_value adapters",
+      "sourceLine": "private typedef ReferenceDynamic = Dynamic;",
+      "justification": "The differential fixture must use the real Haxe Dynamic type so Eval and generated C exercise the same boxes, casts, member operations, calls, equality, null, and type-value behavior.",
+      "validation": "One private alias contains the untyped spelling; the Dynamic differential compares Eval with strict native C, checks forced-collection ownership, verifies closed numeric adapters, and rejects unsupported shapes without output.",
+      "testEvidence": [
+        "test/differential/dynamic-runtime/run.py"
+      ]
+    },
+    {
+      "path": "test/differential/dynamic-runtime/negative/bound-method/Main.hx",
+      "line": 15,
+      "column": 17,
+      "construct": "dynamic-type",
+      "boundaryKind": "negative-test",
+      "symbol": "Main.main.counter",
+      "typedModel": "closed generated Dynamic adapters without capturing closures",
+      "sourceLine": "final counter:Dynamic = new Counter();",
+      "justification": "The fixture needs a real Dynamic receiver before it can prove that extracting one of its methods does not silently create an unsupported capturing closure.",
+      "validation": "The Dynamic differential requires exact HXC1001 rejection at the bound-method boundary and verifies that no generated artifact remains.",
+      "testEvidence": [
+        "test/differential/dynamic-runtime/run.py"
+      ]
+    },
+    {
+      "path": "test/differential/dynamic-runtime/negative/bound-method/Main.hx",
+      "line": 16,
+      "column": 15,
+      "construct": "dynamic-type",
+      "boundaryKind": "negative-test",
+      "symbol": "Main.main.bound",
+      "typedModel": "closed generated Dynamic adapters without capturing closures",
+      "sourceLine": "final bound:Dynamic = counter.bump;",
+      "justification": "The negative fixture must request the natural Haxe bound-method value so the compiler proves it will not lower that value as a bare function pointer with lost receiver identity.",
+      "validation": "The Dynamic differential requires exact HXC1001 rejection at the bound-method boundary and verifies that no generated artifact remains.",
+      "testEvidence": [
+        "test/differential/dynamic-runtime/run.py"
+      ]
+    },
+    {
+      "path": "test/differential/dynamic-runtime/negative/computed-name/Main.hx",
+      "line": 5,
+      "column": 15,
+      "construct": "dynamic-type",
+      "boundaryKind": "negative-test",
+      "symbol": "Main.main.value",
+      "typedModel": "closed numeric Dynamic member tokens",
+      "sourceLine": "final value:Dynamic = ({answer: 42} : {answer:Int});",
+      "justification": "The fixture needs a real Dynamic record before it can prove that a runtime member name does not bypass the compiler's closed numeric member-token plan.",
+      "validation": "The Dynamic differential requires exact HXC1001 rejection for the computed lookup and verifies that no generated artifact remains.",
+      "testEvidence": [
+        "test/differential/dynamic-runtime/run.py"
+      ]
+    },
+    {
+      "path": "test/differential/dynamic-runtime/negative/computed-name/Main.hx",
+      "line": 7,
+      "column": 22,
+      "construct": "reflect-api",
+      "boundaryKind": "negative-test",
+      "symbol": "Main.main.answer",
+      "typedModel": "closed numeric Dynamic member tokens",
+      "sourceLine": "final answer:Int = Reflect.field(value, name);",
+      "justification": "The negative fixture must call the real reflection API with a runtime String to prove that computed member names remain outside the admitted closed-world Dynamic slice.",
+      "validation": "The Dynamic differential requires exact HXC1001 rejection for the computed lookup and verifies that no generated artifact remains.",
+      "testEvidence": [
+        "test/differential/dynamic-runtime/run.py"
+      ]
+    },
+    {
+      "path": "test/differential/dynamic-runtime/negative/global/Main.hx",
+      "line": 4,
+      "column": 20,
+      "construct": "dynamic-type",
+      "boundaryKind": "negative-test",
+      "symbol": "Main.stored",
+      "typedModel": "HxcIR managed-root publication for local Dynamic values",
+      "sourceLine": "static var stored:Dynamic = 7;",
+      "justification": "The negative fixture must declare a real Dynamic global to prove the current local-value ownership contract does not silently publish an unplanned global root.",
+      "validation": "The Dynamic differential requires exact HXC1001 rejection for the global carrier and verifies that no generated artifact remains.",
+      "testEvidence": [
+        "test/differential/dynamic-runtime/run.py"
+      ]
+    },
+    {
+      "path": "test/differential/dynamic-runtime/negative/payload-enum-equality/Main.hx",
+      "line": 10,
+      "column": 14,
+      "construct": "dynamic-type",
+      "boundaryKind": "negative-test",
+      "symbol": "Main.main.left",
+      "typedModel": "exact Dynamic equality plans for admitted source types",
+      "sourceLine": "final left:Dynamic = PayloadTone.Amount(7);",
+      "justification": "The fixture needs a real Dynamic payload-enum operand to prove the compiler does not substitute tag-only equality for recursive typed payload semantics.",
+      "validation": "The Dynamic differential requires exact HXC1001 rejection before payload-enum boxing and verifies that no generated artifact remains.",
+      "testEvidence": [
+        "test/differential/dynamic-runtime/run.py"
+      ]
+    },
+    {
+      "path": "test/differential/dynamic-runtime/negative/payload-enum-equality/Main.hx",
+      "line": 11,
+      "column": 15,
+      "construct": "dynamic-type",
+      "boundaryKind": "negative-test",
+      "symbol": "Main.main.right",
+      "typedModel": "exact Dynamic equality plans for admitted source types",
+      "sourceLine": "final right:Dynamic = PayloadTone.Amount(7);",
+      "justification": "The second real Dynamic operand keeps the requested payload-enum equality shape explicit instead of testing a weaker mixed typed comparison.",
+      "validation": "The Dynamic differential requires exact HXC1001 rejection before payload-enum boxing and verifies that no generated artifact remains.",
+      "testEvidence": [
+        "test/differential/dynamic-runtime/run.py"
+      ]
+    },
+    {
+      "path": "test/differential/dynamic-runtime/negative/polymorphic/Main.hx",
+      "line": 24,
+      "column": 15,
+      "construct": "dynamic-type",
+      "boundaryKind": "negative-test",
+      "symbol": "Main.main.value",
+      "typedModel": "closed Dynamic plans with exact source-type identity",
+      "sourceLine": "final value:Dynamic = source;",
+      "justification": "The negative fixture must box a real interface-typed value to prove that unresolved polymorphic identity never becomes an implicit universal Dynamic adapter.",
+      "validation": "The Dynamic differential requires exact HXC1001 rejection for unresolved polymorphic identity and verifies that no generated artifact remains.",
+      "testEvidence": [
+        "test/differential/dynamic-runtime/run.py"
+      ]
+    },
+    {
+      "path": "test/differential/dynamic-runtime/scalar/Main.hx",
+      "line": 11,
+      "column": 17,
+      "construct": "dynamic-type",
+      "boundaryKind": "language-semantics-fixture",
+      "symbol": "Main.main.integer",
+      "typedModel": "allocation-free hxrt_value scalar carrier",
+      "sourceLine": "final integer:Dynamic = 7;",
+      "justification": "The scalar fixture must use the real Dynamic type to prove an Int box, cast, and equality need the carrier runtime but no managed allocation or collector.",
+      "validation": "The Dynamic differential inspects the exact runtime plan and generated source, then compiles strict native C while rejecting allocation, object, and collector features.",
+      "testEvidence": [
+        "test/differential/dynamic-runtime/run.py"
+      ]
+    },
+    {
+      "path": "test/differential/dynamic-runtime/scalar/Main.hx",
+      "line": 12,
+      "column": 18,
+      "construct": "dynamic-type",
+      "boundaryKind": "language-semantics-fixture",
+      "symbol": "Main.main.floating",
+      "typedModel": "allocation-free hxrt_value scalar carrier",
+      "sourceLine": "final floating:Dynamic = 2.5;",
+      "justification": "The scalar fixture must use the real Dynamic type to prove a Float box and cast need the carrier runtime but no managed allocation or collector.",
+      "validation": "The Dynamic differential inspects the exact runtime plan and generated source, then compiles strict native C while rejecting allocation, object, and collector features.",
+      "testEvidence": [
+        "test/differential/dynamic-runtime/run.py"
+      ]
+    },
+    {
+      "path": "test/differential/dynamic-runtime/scalar/Main.hx",
+      "line": 13,
+      "column": 17,
+      "construct": "dynamic-type",
+      "boundaryKind": "language-semantics-fixture",
+      "symbol": "Main.main.boolean",
+      "typedModel": "allocation-free hxrt_value scalar carrier",
+      "sourceLine": "final boolean:Dynamic = true;",
+      "justification": "The scalar fixture must use the real Dynamic type to prove a Bool box and cast need the carrier runtime but no managed allocation or collector.",
+      "validation": "The Dynamic differential inspects the exact runtime plan and generated source, then compiles strict native C while rejecting allocation, object, and collector features.",
+      "testEvidence": [
+        "test/differential/dynamic-runtime/run.py"
+      ]
+    },
+    {
+      "path": "test/differential/dynamic-runtime/scalar/Main.hx",
+      "line": 14,
+      "column": 16,
+      "construct": "dynamic-type",
+      "boundaryKind": "language-semantics-fixture",
+      "symbol": "Main.main.absent",
+      "typedModel": "allocation-free hxrt_value scalar carrier",
+      "sourceLine": "final absent:Dynamic = null;",
+      "justification": "The scalar fixture must use the real Dynamic type to prove null boxing and equality need the carrier runtime but no managed allocation or collector.",
+      "validation": "The Dynamic differential inspects the exact runtime plan and generated source, then compiles strict native C while rejecting allocation, object, and collector features.",
+      "testEvidence": [
+        "test/differential/dynamic-runtime/run.py"
+      ]
+    },
+    {
       "path": "test/differential/object-enum-map/negative/dynamic_key/Main.hx",
       "line": 6,
       "column": 29,

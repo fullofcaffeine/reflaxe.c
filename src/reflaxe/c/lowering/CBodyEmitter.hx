@@ -22,6 +22,11 @@ import reflaxe.c.lowering.CBodyClass.CLoweredBodyClass;
 import reflaxe.c.lowering.CBodyDispatch.CLoweredBodyDispatch;
 import reflaxe.c.lowering.CBodyEnum.CBodyEnumRepresentation;
 import reflaxe.c.lowering.CBodyEnum.CLoweredBodyEnum;
+import reflaxe.c.lowering.CBodyDynamic.CLoweredBodyDynamicPlan;
+import reflaxe.c.lowering.CBodyDynamic.CLoweredBodyDynamicType;
+import reflaxe.c.lowering.CBodyDynamic.CPreparedBodyDynamicCallShape;
+import reflaxe.c.lowering.CBodyDynamic.CPreparedBodyDynamicMember;
+import reflaxe.c.lowering.CBodyDynamic.CPreparedBodyDynamicOperation;
 import reflaxe.c.lowering.CBodyIntMap.CPreparedBodyIntMap;
 import reflaxe.c.lowering.CBodyIterator.CPreparedBodyIterator;
 import reflaxe.c.lowering.CBodyOptional.CLoweredBodyOptional;
@@ -134,6 +139,14 @@ private typedef CBodyEmitterManagedRootSlot = {
 	final root:HxcIRManagedRoot;
 }
 
+/** One checked walk from an HxcIR value to its collector-visible payload. */
+private typedef CBodyEmitterManagedRootProjection = {
+	final value:CExpr;
+	final type:HxcIRTypeRef;
+	final guards:Array<CExpr>;
+	final dynamicPayload:Bool;
+}
+
 /** Request-local mutable emission facts shared by structural region recursion. */
 private typedef CBodyEmissionState = {
 	final values:Map<String, CExpr>;
@@ -228,14 +241,17 @@ class CBodyEmitter {
 	final virtualThunks:Array<CBodyEmitterVirtualThunk> = [];
 	final imports:CLoweredImports;
 	final managedProgram:Null<CManagedProgramNames>;
+	final dynamicPlan:Null<CLoweredBodyDynamicPlan>;
 
 	#if (macro || reflaxe_runtime)
 	public function new(?aggregates:Array<CLoweredBodyAggregate>, ?enums:Array<CLoweredBodyEnum>, ?classes:Array<CLoweredBodyClass>,
 			?arrays:Array<CLoweredBodyArray>, ?iterators:Array<CPreparedBodyIterator>, ?intMaps:Array<CPreparedBodyIntMap>,
 			?stringMaps:Array<CLoweredBodyStringMap>, ?typedMaps:Array<CLoweredBodyTypedMap>, ?bytes:Array<CPreparedBodyBytes>,
-			?optionals:Array<CLoweredBodyOptional>, ?dispatch:CLoweredBodyDispatch, ?imports:CLoweredImports, ?managedProgram:CManagedProgramNames) {
+			?optionals:Array<CLoweredBodyOptional>, ?dispatch:CLoweredBodyDispatch, ?imports:CLoweredImports, ?managedProgram:CManagedProgramNames,
+			?dynamicPlan:CLoweredBodyDynamicPlan) {
 		this.imports = imports == null ? CLoweredImports.empty() : imports;
 		this.managedProgram = managedProgram;
+		this.dynamicPlan = dynamicPlan;
 		if (aggregates != null) {
 			for (aggregate in aggregates) {
 				final instanceId = aggregate.prepared.instanceId;
@@ -769,12 +785,7 @@ class CBodyEmitter {
 				state.managedRootSlots.set(root.valueId, slots);
 			}
 			slots.push({index: index, root: root});
-			var initial:CExpr = ENull;
-			for (parameter in fn.parameters)
-				if (parameter.id == root.valueId)
-					initial = managedRootPointer(EIdentifier(requireParameterName(state.parameterNames, parameter.id, fn.id)), parameter.type,
-						root.projections, fn.id);
-			initializers.push({designators: [], value: IExpr(initial)});
+			initializers.push({designators: [], value: IExpr(ENull)});
 		}
 		statements.push(SDecl({
 			storage: [],
@@ -784,6 +795,15 @@ class CBodyEmitter {
 			initializer: IList(initializers),
 			attributes: []
 		}));
+		// Initialize parameter-owned roots only after every slot contains null. A
+		// Dynamic projection calls its validating runtime accessor with the slot as
+		// the output location, so malformed carriers cannot expose inactive union
+		// bytes to the collector.
+		for (index => root in roots)
+			for (parameter in fn.parameters)
+				if (parameter.id == root.valueId)
+					emitManagedRootSlotUpdate(statements, state, index, root, EIdentifier(requireParameterName(state.parameterNames, parameter.id, fn.id)),
+						parameter.type, fn.id);
 		statements.push(SDecl({
 			storage: [],
 			alignments: [],
@@ -813,8 +833,7 @@ class CBodyEmitter {
 		if (type == null)
 			fail('managed value `$valueId` in `$functionId` lost its HxcIR type');
 		for (slot in slots)
-			statements.push(SExpr(EBinary(Assign, EIndex(EIdentifier(rootArray), EInt(CIntegerLiteral.decimal(Std.string(slot.index)))),
-				managedRootPointer(requireValue(state.values, valueId, functionId), type, slot.root.projections, functionId))));
+			emitManagedRootSlotUpdate(statements, state, slot.index, slot.root, requireValue(state.values, valueId, functionId), type, functionId);
 	}
 
 	/** Unlink a function frame after semantic cleanup and before returning. */
@@ -830,11 +849,41 @@ class CBodyEmitter {
 			boundsAbortName, 'managed-root-frame-pop', fn.id);
 	}
 
-	function managedRootPointer(value:CExpr, type:HxcIRTypeRef, projections:Array<HxcIRManagedRootProjection>, functionId:String):CExpr {
+	/** Publish one root path without reading an inactive Dynamic union member. */
+	function emitManagedRootSlotUpdate(statements:Array<CStmt>, state:CBodyEmissionState, index:Int, root:HxcIRManagedRoot, value:CExpr, type:HxcIRTypeRef,
+			functionId:String):Void {
+		final rootArray = state.managedRootArray;
+		if (rootArray == null)
+			fail('managed root `${root.id}` in `$functionId` has no root array');
+		final slot = EIndex(EIdentifier(rootArray), EInt(CIntegerLiteral.decimal(Std.string(index))));
+		final projected = projectManagedRoot(value, type, root.projections, functionId);
+		if (projected.dynamicPayload) {
+			final update:Array<CStmt> = [];
+			emitStatusAbort(update,
+				ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNDynamicManagedPayload)), [EUnary(AddressOf, projected.value), EUnary(AddressOf, slot)]),
+				state.boundsAbortName, 'managed-root-${root.id}', functionId);
+			if (projected.guards.length == 0) {
+				for (statement in update)
+					statements.push(statement);
+			} else {
+				statements.push(SIf(managedRootGuard(projected.guards), SBlock(update), SExpr(EBinary(Assign, slot, ENull))));
+			}
+			return;
+		}
+		var pointer:CExpr = ECast(new CType(TVoid, [QConst]), DPointer(DName(null), []), projected.value);
+		if (projected.guards.length > 0)
+			pointer = EConditional(managedRootGuard(projected.guards), pointer, ENull);
+		statements.push(SExpr(EBinary(Assign, slot, pointer)));
+	}
+
+	/** Walk one validated semantic projection and retain every enclosing guard. */
+	function projectManagedRoot(value:CExpr, type:HxcIRTypeRef, projections:Array<HxcIRManagedRootProjection>,
+			functionId:String):CBodyEmitterManagedRootProjection {
 		var current = value;
 		var currentType = type;
 		final guards:Array<CExpr> = [];
-		for (projection in projections)
+		var dynamicPayload = false;
+		for (index => projection in projections)
 			switch projection {
 				case IRMRPAggregateField(instanceId, fieldName):
 					switch currentType {
@@ -863,16 +912,28 @@ class CBodyEmitter {
 					current = EMember(current, optional.payloadName, false);
 					currentType = optional.prepared.payload.irType;
 				case IRMRPDynamicPayload:
-					fail('Dynamic managed root in `$functionId` reached C emission before the carrier implementation');
+					if (currentType != IRTDynamic)
+						fail('managed root in `$functionId` applies Dynamic payload projection to `${typeKey(currentType)}`');
+					if (index + 1 != projections.length)
+						fail('managed root in `$functionId` continues after its Dynamic payload projection');
+					dynamicPayload = true;
 			}
-		var pointer:CExpr = ECast(new CType(TVoid, [QConst]), DPointer(DName(null), []), current);
-		if (guards.length > 0) {
-			var condition = guards[0];
-			for (index in 1...guards.length)
-				condition = EBinary(LogicalAnd, condition, guards[index]);
-			pointer = EConditional(condition, pointer, ENull);
-		}
-		return pointer;
+		return {
+			value: current,
+			type: currentType,
+			guards: guards,
+			dynamicPayload: dynamicPayload
+		};
+	}
+
+	/** Combine the tag and presence checks that protect one projected root. */
+	static function managedRootGuard(guards:Array<CExpr>):CExpr {
+		if (guards.length == 0)
+			throw new CBodyEmissionError("managed-root guard requires at least one condition");
+		var condition = guards[0];
+		for (index in 1...guards.length)
+			condition = EBinary(LogicalAnd, condition, guards[index]);
+		return condition;
 	}
 
 	/** The legacy graph form is retained only for a planner-proven irreducible CFG. */
@@ -1356,6 +1417,8 @@ class CBodyEmitter {
 							state.temporaryNames, state.functionNames, state.localNames, state.globalNames, state.spanLengthNames, state.lineDirectives,
 							state.nonReturningFunctionIds, state.boundsAbortName, fn);
 					}
+				case IRIODynamic(operation):
+					emitDynamicInstruction(statements, state, instruction, operation, fn);
 				case IRIOAllocate(type, IRAOwned, IRIRuntime("alloc"), {target: IRFTAbort}):
 					emitOwnedAllocation(statements, state.values, state.referencedValues, instruction, type, state.temporaryNames, state.lineDirectives,
 						state.boundsAbortName, fn);
@@ -1752,6 +1815,582 @@ class CBodyEmitter {
 		values.set(result.id, EIdentifier(temporary));
 		if (!referencedValues.exists(result.id))
 			return fail('collector allocation `${instruction.id}` in `${fn.id}` produced an unreferenced managed value');
+	}
+
+	/** Emit one exact closed-world Dynamic instruction through the private hxrt ABI. */
+	function emitDynamicInstruction(statements:Array<CStmt>, state:CBodyEmissionState, instruction:HxcIRInstruction, operation:HxcIRDynamicInstruction,
+			fn:HxcIRFunction):Void {
+		switch operation {
+			case IRDBox(valueId, operationId):
+				final adapter = dynamicOperationType(operationId, "box", fn.id);
+				final source = requireValue(state.values, valueId, fn.id);
+				final resultName = declareDynamicResult(statements, state, instruction, fn.id);
+				final call = switch adapter.prepared.storage {
+					case IRDSInlineBool:
+						dynamicInitCall(CBRNDynamicInitBool, adapter, [source], resultName);
+					case IRDSInlineInt32:
+						dynamicInitCall(CBRNDynamicInitInt32, adapter, [source], resultName);
+					case IRDSInlineFloat64:
+						dynamicInitCall(CBRNDynamicInitFloat64, adapter, [source], resultName);
+					case IRDSManagedReference:
+						dynamicInitCall(CBRNDynamicInitManagedReference, adapter, [castVoidPointer(source)], resultName);
+					case IRDSManagedWrapper:
+						emitDynamicWrapperBox(statements, state, instruction, source, adapter, resultName, fn);
+					case IRDSInlineNull | IRDSStaticToken:
+						return fail('operand Dynamic box `${instruction.id}` in `${fn.id}` selected operand-free storage');
+				};
+				addLineDirective(statements, instruction.source, state.lineDirectives);
+				emitStatusAbort(statements, call, state.boundsAbortName, instruction.id, fn.id);
+			case IRDBoxNull(operationId):
+				final adapter = dynamicOperationType(operationId, "box", fn.id);
+				if (adapter.prepared.storage != IRDSInlineNull)
+					return fail('Dynamic null box `${instruction.id}` in `${fn.id}` selected a non-null adapter');
+				final resultName = declareDynamicResult(statements, state, instruction, fn.id);
+				addLineDirective(statements, instruction.source, state.lineDirectives);
+				emitStatusAbort(statements, dynamicInitCall(CBRNDynamicInitNull, adapter, [], resultName), state.boundsAbortName, instruction.id, fn.id);
+			case IRDBoxTypeToken(operationId):
+				final adapter = dynamicOperationType(operationId, "box", fn.id);
+				final token = adapter.typeTokenName;
+				if (adapter.prepared.storage != IRDSStaticToken || token == null)
+					return fail('Dynamic type-token box `${instruction.id}` in `${fn.id}` lost its immutable token');
+				final resultName = declareDynamicResult(statements, state, instruction, fn.id);
+				addLineDirective(statements, instruction.source, state.lineDirectives);
+				emitStatusAbort(statements,
+					dynamicInitCall(CBRNDynamicInitStaticToken, adapter, [castConstVoidPointer(EUnary(AddressOf, EIdentifier(token)))], resultName),
+					state.boundsAbortName, instruction.id, fn.id);
+			case IRDUnbox(valueId, operationId, failure):
+				final adapter = dynamicOperationType(operationId, "unbox", fn.id);
+				emitDynamicUnbox(statements, state, instruction, requireValue(state.values, valueId, fn.id), adapter, failure, fn);
+			case IRDEqual(leftValueId, rightValueId, operationId):
+				final operationPlan = requireDynamicOperation(operationId, fn.id);
+				final adapters = switch operationPlan.kind {
+					case IRDOKEqual(leftTypeId, rightTypeId):
+						{left: requireDynamicType(leftTypeId, fn.id), right: requireDynamicType(rightTypeId, fn.id)};
+					case _:
+						return fail('Dynamic equality `${instruction.id}` in `${fn.id}` selected a non-equality operation');
+				};
+				final result = requireResult(instruction, fn.id);
+				final expression = dynamicEqualityExpression(requireValue(state.values, leftValueId, fn.id), requireValue(state.values, rightValueId, fn.id),
+					adapters.left, adapters.right, instruction.id, fn.id);
+				recordPureResult(statements, state.values, state.referencedValues, instruction, result, expression, state.lineDirectives, fn.id);
+			case IRDGet(receiverValueId, operationId, failure):
+				emitDynamicGet(statements, state, instruction, requireValue(state.values, receiverValueId, fn.id), operationId, failure, fn);
+			case IRDSet(receiverValueId, valueId, operationId, failure):
+				emitDynamicSet(statements, state, instruction, requireValue(state.values, receiverValueId, fn.id), requireValue(state.values, valueId, fn.id),
+					operationId, failure, fn);
+			case IRDCall(callableValueId, arguments, operationId, failure):
+				emitDynamicCall(statements, state, instruction, requireValue(state.values, callableValueId, fn.id), arguments, operationId, failure, fn);
+			case IRDInvoke(receiverValueId, arguments, operationId, failure):
+				emitDynamicInvoke(statements, state, instruction, requireValue(state.values, receiverValueId, fn.id), arguments, operationId, failure, fn);
+		}
+	}
+
+	/** Declare the stable carrier that an hxrt output parameter initializes. */
+	function declareDynamicResult(statements:Array<CStmt>, state:CBodyEmissionState, instruction:HxcIRInstruction, functionId:String):CIdentifier {
+		final result = requireResult(instruction, functionId);
+		if (result.type != IRTDynamic)
+			return fail('Dynamic instruction `${instruction.id}` in `$functionId` has a non-Dynamic carrier result');
+		final name = state.temporaryNames.get(result.id);
+		if (name == null)
+			return fail('Dynamic result `${result.id}` in `$functionId` has no finalized temporary');
+		statements.push(SDecl({
+			storage: [],
+			alignments: [],
+			type: cType(IRTDynamic),
+			declarator: DName(name),
+			initializer: IExpr(EIdentifier(CBodyRuntimeNames.identifier(CBRNDynamicInvalidInitializer))),
+			attributes: []
+		}));
+		state.values.set(result.id, EIdentifier(name));
+		if (!state.referencedValues.exists(result.id))
+			statements.push(ignoreExpression(EIdentifier(name)));
+		return name;
+	}
+
+	/** Read one exact scalar or managed-reference payload with its HxcIR failure edge. */
+	function emitDynamicUnbox(statements:Array<CStmt>, state:CBodyEmissionState, instruction:HxcIRInstruction, carrier:CExpr, adapter:CLoweredBodyDynamicType,
+			failure:HxcIRFailureEdge, fn:HxcIRFunction):Void {
+		final result = requireResult(instruction, fn.id);
+		final name = state.temporaryNames.get(result.id);
+		if (name == null)
+			return fail('Dynamic unbox result `${result.id}` in `${fn.id}` has no finalized temporary');
+		final declaration = typedDeclarator(result.type, DName(name));
+		statements.push(SDecl({
+			storage: [],
+			alignments: [],
+			type: declaration.type,
+			declarator: declaration.declarator,
+			initializer: IList([{designators: [], value: IExpr(EInt(CIntegerLiteral.decimal("0")))}]),
+			attributes: []
+		}));
+		emitDynamicExactTypeCheck(statements, carrier, adapter, failure, state, instruction.id, fn);
+		final call:CExpr = switch adapter.prepared.storage {
+			case IRDSInlineBool: dynamicReadCall(CBRNDynamicReadBool, carrier, EUnary(AddressOf, EIdentifier(name)));
+			case IRDSInlineInt32: dynamicReadCall(CBRNDynamicReadInt32, carrier, EUnary(AddressOf, EIdentifier(name)));
+			case IRDSInlineFloat64: dynamicReadCall(CBRNDynamicReadFloat64, carrier, EUnary(AddressOf, EIdentifier(name)));
+			case IRDSManagedReference:
+				final raw = new CIdentifier(name.value + "_managed");
+				statements.push(voidPointerDeclaration(raw));
+				final read = dynamicReadCall(CBRNDynamicReadManagedReference, carrier, EUnary(AddressOf, EIdentifier(raw)));
+				emitDynamicFailureCheck(statements, read, failure, state, instruction.id, fn);
+				final target = typedDeclarator(result.type, DName(null));
+				statements.push(SExpr(EBinary(Assign, EIdentifier(name), ECast(target.type, target.declarator, EIdentifier(raw)))));
+				null;
+			case IRDSManagedWrapper:
+				final raw = new CIdentifier(name.value + "_wrapper_raw");
+				final typed = new CIdentifier(name.value + "_wrapper");
+				final tag = adapter.wrapperTag;
+				final fieldName = adapter.wrapperFieldName;
+				if (tag == null || fieldName == null)
+					return fail('Dynamic wrapper unbox `${instruction.id}` in `${fn.id}` lost its wrapper layout');
+				statements.push(voidPointerDeclaration(raw));
+				final read = dynamicReadCall(CBRNDynamicReadManagedWrapper, carrier, EUnary(AddressOf, EIdentifier(raw)));
+				emitDynamicFailureCheck(statements, read, failure, state, instruction.id, fn);
+				statements.push(SDecl({
+					storage: [],
+					alignments: [],
+					type: new CType(TStruct(tag), [QConst]),
+					declarator: DPointer(DName(typed), []),
+					initializer: IExpr(ECast(new CType(TStruct(tag), [QConst]), DPointer(DName(null), []), EIdentifier(raw))),
+					attributes: []
+				}));
+				statements.push(SExpr(EBinary(Assign, EIdentifier(name), EMember(EIdentifier(typed), fieldName, true))));
+				null;
+			case IRDSInlineNull | IRDSStaticToken:
+				return fail('Dynamic unbox `${instruction.id}` in `${fn.id}` selected a non-value adapter');
+		};
+		if (call != null)
+			emitDynamicFailureCheck(statements, call, failure, state, instruction.id, fn);
+		state.values.set(result.id, EIdentifier(name));
+		if (!state.referencedValues.exists(result.id))
+			statements.push(ignoreExpression(EIdentifier(name)));
+	}
+
+	/** Allocate and initialize one exact typed wrapper before publishing its carrier. */
+	function emitDynamicWrapperBox(statements:Array<CStmt>, state:CBodyEmissionState, instruction:HxcIRInstruction, source:CExpr,
+			adapter:CLoweredBodyDynamicType, resultName:CIdentifier, fn:HxcIRFunction):CExpr {
+		final mapping = adapter.prepared.mapping;
+		final tag = adapter.wrapperTag;
+		final fieldName = adapter.wrapperFieldName;
+		final descriptor = adapter.wrapperDescriptorName;
+		final program = managedProgram;
+		if (mapping == null || tag == null || fieldName == null || descriptor == null || program == null)
+			return fail('Dynamic wrapper box `${instruction.id}` in `${fn.id}` lost its collector-owned layout');
+		final wrapper = new CIdentifier(resultName.value + "_wrapper");
+		statements.push(SDecl({
+			storage: [],
+			alignments: [],
+			type: new CType(TStruct(tag)),
+			declarator: DPointer(DName(wrapper), []),
+			initializer: IExpr(ENull),
+			attributes: []
+		}));
+		addLineDirective(statements, instruction.source, state.lineDirectives);
+		emitStatusAbort(statements, ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNGcAllocate)), [
+			EUnary(AddressOf, EIdentifier(program.collector)),
+			EUnary(AddressOf, EIdentifier(descriptor)),
+			ECast(new CType(TVoid), DPointer(DPointer(DName(null), []), []), EUnary(AddressOf, EIdentifier(wrapper)))
+		]), state.boundsAbortName, instruction.id + "-wrapper-allocation", fn.id);
+		for (managed in managedValueOperations(source, mapping.irType))
+			emitStatusAbort(statements, managed.retain, state.boundsAbortName, instruction.id + "-wrapper-retain", fn.id);
+		statements.push(SExpr(EBinary(Assign, EMember(EIdentifier(wrapper), fieldName, true), source)));
+		return dynamicInitCall(CBRNDynamicInitManagedWrapper, adapter, [castVoidPointer(EIdentifier(wrapper))], resultName);
+	}
+
+	/** Read one statically selected field and box its exact typed value. */
+	function emitDynamicGet(statements:Array<CStmt>, state:CBodyEmissionState, instruction:HxcIRInstruction, receiver:CExpr, operationId:String,
+			failure:HxcIRFailureEdge, fn:HxcIRFunction):Void {
+		final operation = requireDynamicOperation(operationId, fn.id);
+		final member = switch operation.kind {
+			case IRDOKGet(memberId): requireDynamicMember(memberId, fn.id);
+			case _: return fail('Dynamic get `${instruction.id}` in `${fn.id}` selected a non-get operation');
+		};
+		final valueTypeId = switch member.kind {
+			case IRDMField(typeId, _): typeId;
+			case IRDMMethod(_): return fail('Dynamic get `${instruction.id}` in `${fn.id}` selected a method member');
+		};
+		final resultName = declareDynamicResult(statements, state, instruction, fn.id);
+		final owner = emitDynamicTypedRead(statements, state, receiver, requireDynamicType(member.owner.id, fn.id), failure,
+			new CIdentifier(resultName.value + "_owner"), instruction.id, fn);
+		final field = dynamicMemberField(owner, member, instruction.id, fn.id);
+		emitDynamicBoxInto(statements, state, instruction, field, requireDynamicType(valueTypeId, fn.id), resultName, fn);
+	}
+
+	/** Replace one exact mutable field and return the assigned Dynamic carrier. */
+	function emitDynamicSet(statements:Array<CStmt>, state:CBodyEmissionState, instruction:HxcIRInstruction, receiver:CExpr, assigned:CExpr,
+			operationId:String, failure:HxcIRFailureEdge, fn:HxcIRFunction):Void {
+		final operation = requireDynamicOperation(operationId, fn.id);
+		final member = switch operation.kind {
+			case IRDOKSet(memberId): requireDynamicMember(memberId, fn.id);
+			case _: return fail('Dynamic set `${instruction.id}` in `${fn.id}` selected a non-set operation');
+		};
+		final valueTypeId = switch member.kind {
+			case IRDMField(typeId, true): typeId;
+			case IRDMField(_, false): return fail('Dynamic set `${instruction.id}` in `${fn.id}` selected an immutable field');
+			case IRDMMethod(_): return fail('Dynamic set `${instruction.id}` in `${fn.id}` selected a method member');
+		};
+		final resultName = declareDynamicResult(statements, state, instruction, fn.id);
+		final owner = emitDynamicTypedRead(statements, state, receiver, requireDynamicType(member.owner.id, fn.id), failure,
+			new CIdentifier(resultName.value + "_owner"), instruction.id, fn);
+		final valueAdapter = requireDynamicType(valueTypeId, fn.id);
+		final value = emitDynamicTypedRead(statements, state, assigned, valueAdapter, failure, new CIdentifier(resultName.value + "_assigned"),
+			instruction.id, fn);
+		final field = dynamicMemberField(owner, member, instruction.id, fn.id);
+		final mapping = valueAdapter.prepared.mapping;
+		if (mapping == null)
+			return fail('Dynamic set `${instruction.id}` in `${fn.id}` lost its field type');
+		final retained = managedValueOperations(value, mapping.irType);
+		for (index => managed in retained)
+			emitDynamicRetainCheck(statements, managed.retain, retained, index, failure, state, instruction.id, fn);
+		appendManagedReleases(statements, managedValueOperations(field, mapping.irType));
+		statements.push(SExpr(EBinary(Assign, field, value)));
+		statements.push(SExpr(EBinary(Assign, EIdentifier(resultName), assigned)));
+	}
+
+	/** Call one exact non-capturing function wrapper. */
+	function emitDynamicCall(statements:Array<CStmt>, state:CBodyEmissionState, instruction:HxcIRInstruction, carrier:CExpr, argumentIds:Array<String>,
+			operationId:String, failure:HxcIRFailureEdge, fn:HxcIRFunction):Void {
+		final operation = requireDynamicOperation(operationId, fn.id);
+		final selected = switch operation.kind {
+			case IRDOKCall(typeId, shapeId): {adapter: requireDynamicType(typeId, fn.id), shape: requireDynamicShape(shapeId, fn.id)};
+			case _: return fail('Dynamic call `${instruction.id}` in `${fn.id}` selected a non-call operation');
+		};
+		final resultName = declareDynamicResult(statements, state, instruction, fn.id);
+		final callable = emitDynamicTypedRead(statements, state, carrier, selected.adapter, failure, new CIdentifier(resultName.value + "_callable"),
+			instruction.id, fn);
+		final arguments = emitDynamicArguments(statements, state, argumentIds, selected.shape, failure, resultName, instruction.id, fn);
+		emitDynamicCallResult(statements, state, instruction, ECall(callable, arguments), selected.shape, resultName, fn);
+	}
+
+	/** Invoke one exact reachable method while preserving its source receiver. */
+	function emitDynamicInvoke(statements:Array<CStmt>, state:CBodyEmissionState, instruction:HxcIRInstruction, receiver:CExpr, argumentIds:Array<String>,
+			operationId:String, failure:HxcIRFailureEdge, fn:HxcIRFunction):Void {
+		final operation = requireDynamicOperation(operationId, fn.id);
+		final selected = switch operation.kind {
+			case IRDOKInvoke(memberId, shapeId): {member: requireDynamicMember(memberId, fn.id), shape: requireDynamicShape(shapeId, fn.id)};
+			case _: return fail('Dynamic invoke `${instruction.id}` in `${fn.id}` selected a non-invoke operation');
+		};
+		final targetId = selected.member.targetFunctionId;
+		if (targetId == null)
+			return fail('Dynamic invoke `${instruction.id}` in `${fn.id}` lost its direct method target');
+		final resultName = declareDynamicResult(statements, state, instruction, fn.id);
+		final owner = emitDynamicTypedRead(statements, state, receiver, requireDynamicType(selected.member.owner.id, fn.id), failure,
+			new CIdentifier(resultName.value + "_owner"), instruction.id, fn);
+		final arguments:Array<CExpr> = [owner];
+		for (argument in emitDynamicArguments(statements, state, argumentIds, selected.shape, failure, resultName, instruction.id, fn))
+			arguments.push(argument);
+		final call = ECall(EIdentifier(requireFunctionName(state.functionNames, targetId, fn.id)), arguments);
+		emitDynamicCallResult(statements, state, instruction, call, selected.shape, resultName, fn);
+	}
+
+	/** Read exact Dynamic arguments in source order for one validated call shape. */
+	function emitDynamicArguments(statements:Array<CStmt>, state:CBodyEmissionState, argumentIds:Array<String>, shape:CPreparedBodyDynamicCallShape,
+			failure:HxcIRFailureEdge, resultName:CIdentifier, instructionId:String, fn:HxcIRFunction):Array<CExpr> {
+		if (argumentIds.length != shape.parameterTypes.length)
+			return fail('Dynamic call `$instructionId` in `${fn.id}` lost its exact argument count');
+		final result:Array<CExpr> = [];
+		for (index in 0...argumentIds.length)
+			result.push(emitDynamicTypedRead(statements, state, requireValue(state.values, argumentIds[index], fn.id),
+				requireDynamicType(shape.parameterTypes[index].id, fn.id), failure, new CIdentifier(resultName.value + '_argument_$index'), instructionId, fn));
+		return result;
+	}
+
+	/** Materialize a typed call result once, then box it through the exact result adapter. */
+	function emitDynamicCallResult(statements:Array<CStmt>, state:CBodyEmissionState, instruction:HxcIRInstruction, call:CExpr,
+			shape:CPreparedBodyDynamicCallShape, resultName:CIdentifier, fn:HxcIRFunction):Void {
+		final resultAdapter = shape.resultType;
+		if (resultAdapter == null) {
+			statements.push(SExpr(call));
+			var nullAdapter:Null<CLoweredBodyDynamicType> = null;
+			final dynamicPlanValue = dynamicPlan;
+			if (dynamicPlanValue != null)
+				for (candidate in dynamicPlanValue.types)
+					if (candidate.prepared.category == IRDCNull) {
+						nullAdapter = candidate;
+						break;
+					}
+			if (nullAdapter == null)
+				return fail('Void Dynamic call `${instruction.id}` in `${fn.id}` lost the canonical null adapter');
+			emitStatusAbort(statements, dynamicInitCall(CBRNDynamicInitNull, nullAdapter, [], resultName), state.boundsAbortName, instruction.id, fn.id);
+			return;
+		}
+		final loweredAdapter = requireDynamicType(resultAdapter.id, fn.id);
+		final mapping = loweredAdapter.prepared.mapping;
+		if (mapping == null)
+			return fail('Dynamic call `${instruction.id}` in `${fn.id}` lost its exact result type');
+		final typedName = new CIdentifier(resultName.value + "_typed_result");
+		final declaration = typedDeclarator(mapping.irType, DName(typedName));
+		statements.push(SDecl({
+			storage: [],
+			alignments: [],
+			type: declaration.type,
+			declarator: declaration.declarator,
+			initializer: IExpr(call),
+			attributes: []
+		}));
+		emitDynamicBoxInto(statements, state, instruction, EIdentifier(typedName), loweredAdapter, resultName, fn);
+	}
+
+	/** Box an already-evaluated typed expression into an existing result carrier. */
+	function emitDynamicBoxInto(statements:Array<CStmt>, state:CBodyEmissionState, instruction:HxcIRInstruction, source:CExpr,
+			adapter:CLoweredBodyDynamicType, resultName:CIdentifier, fn:HxcIRFunction):Void {
+		final call = switch adapter.prepared.storage {
+			case IRDSInlineBool: dynamicInitCall(CBRNDynamicInitBool, adapter, [source], resultName);
+			case IRDSInlineInt32: dynamicInitCall(CBRNDynamicInitInt32, adapter, [source], resultName);
+			case IRDSInlineFloat64: dynamicInitCall(CBRNDynamicInitFloat64, adapter, [source], resultName);
+			case IRDSManagedReference: dynamicInitCall(CBRNDynamicInitManagedReference, adapter, [castVoidPointer(source)], resultName);
+			case IRDSManagedWrapper: emitDynamicWrapperBox(statements, state, instruction, source, adapter, resultName, fn);
+			case IRDSInlineNull: dynamicInitCall(CBRNDynamicInitNull, adapter, [], resultName);
+			case IRDSStaticToken: return fail('typed Dynamic box `${instruction.id}` in `${fn.id}` selected a static token');
+		};
+		emitStatusAbort(statements, call, state.boundsAbortName, instruction.id, fn.id);
+	}
+
+	/** Project one exact source value from a checked carrier. */
+	function emitDynamicTypedRead(statements:Array<CStmt>, state:CBodyEmissionState, carrier:CExpr, adapter:CLoweredBodyDynamicType, failure:HxcIRFailureEdge,
+			name:CIdentifier, instructionId:String, fn:HxcIRFunction):CExpr {
+		final mapping = adapter.prepared.mapping;
+		if (mapping == null)
+			return fail('Dynamic read `$instructionId` in `${fn.id}` selected an operand-free adapter');
+		emitDynamicExactTypeCheck(statements, carrier, adapter, failure, state, instructionId, fn);
+		return switch adapter.prepared.storage {
+			case IRDSInlineBool | IRDSInlineInt32 | IRDSInlineFloat64:
+				final declaration = typedDeclarator(mapping.irType, DName(name));
+				statements.push(SDecl({
+					storage: [],
+					alignments: [],
+					type: declaration.type,
+					declarator: declaration.declarator,
+					initializer: IList([{designators: [], value: IExpr(EInt(CIntegerLiteral.decimal("0")))}]),
+					attributes: []
+				}));
+				final reader = switch adapter.prepared.storage {
+					case IRDSInlineBool: CBRNDynamicReadBool;
+					case IRDSInlineInt32: CBRNDynamicReadInt32;
+					case IRDSInlineFloat64: CBRNDynamicReadFloat64;
+					case _: return fail('Dynamic scalar read `$instructionId` lost its scalar storage');
+				};
+				emitDynamicFailureCheck(statements, dynamicReadCall(reader, carrier, EUnary(AddressOf, EIdentifier(name))), failure, state, instructionId, fn);
+				EIdentifier(name);
+			case IRDSManagedReference:
+				final raw = new CIdentifier(name.value + "_raw");
+				statements.push(voidPointerDeclaration(raw));
+				emitDynamicFailureCheck(statements, dynamicReadCall(CBRNDynamicReadManagedReference, carrier, EUnary(AddressOf, EIdentifier(raw))), failure,
+					state, instructionId, fn);
+				final declaration = typedDeclarator(mapping.irType, DName(name));
+				final target = typedDeclarator(mapping.irType, DName(null));
+				statements.push(SDecl({
+					storage: [],
+					alignments: [],
+					type: declaration.type,
+					declarator: declaration.declarator,
+					initializer: IExpr(ECast(target.type, target.declarator, EIdentifier(raw))),
+					attributes: []
+				}));
+				EIdentifier(name);
+			case IRDSManagedWrapper:
+				final raw = new CIdentifier(name.value + "_raw");
+				final tag = adapter.wrapperTag;
+				final fieldName = adapter.wrapperFieldName;
+				if (tag == null || fieldName == null)
+					return fail('Dynamic wrapper read `$instructionId` in `${fn.id}` lost its wrapper layout');
+				statements.push(voidPointerDeclaration(raw));
+				emitDynamicFailureCheck(statements, dynamicReadCall(CBRNDynamicReadManagedWrapper, carrier, EUnary(AddressOf, EIdentifier(raw))), failure,
+					state, instructionId, fn);
+				final wrapper = new CIdentifier(name.value + "_wrapper");
+				statements.push(SDecl({
+					storage: [],
+					alignments: [],
+					type: new CType(TStruct(tag)),
+					declarator: DPointer(DName(wrapper), []),
+					initializer: IExpr(ECast(new CType(TStruct(tag)), DPointer(DName(null), []), EIdentifier(raw))),
+					attributes: []
+				}));
+				EMember(EIdentifier(wrapper), fieldName, true);
+			case IRDSInlineNull | IRDSStaticToken:
+				fail('Dynamic typed read `$instructionId` in `${fn.id}` selected operand-free storage');
+		};
+	}
+
+	/** Resolve a field to its finalized C member without emitting its source name. */
+	function dynamicMemberField(owner:CExpr, member:CPreparedBodyDynamicMember, instructionId:String, functionId:String):CExpr {
+		final mapping = member.owner.mapping;
+		if (mapping == null)
+			return fail('Dynamic member `$instructionId` in `$functionId` lost its owner layout');
+		final aggregate = mapping.aggregateValue();
+		if (aggregate != null)
+			return EMember(owner, requireAggregateFieldName(aggregate.instanceId, member.sourceName, instructionId, functionId), false);
+		final classValue = mapping.classValue();
+		if (classValue != null)
+			return classFieldExpression(EUnary(Dereference, owner), classValue.instanceId, member.sourceName, instructionId, functionId);
+		return fail('Dynamic member `$instructionId` in `$functionId` has no record or class owner');
+	}
+
+	/** Roll back prior retains before following the Dynamic failure edge. */
+	function emitDynamicRetainCheck(statements:Array<CStmt>, call:CExpr, operations:Array<CBodyEmitterManagedOperation>, index:Int, failure:HxcIRFailureEdge,
+			state:CBodyEmissionState, instructionId:String, fn:HxcIRFunction):Void {
+		final failed:Array<CStmt> = [];
+		var prior = index;
+		while (prior > 0) {
+			prior--;
+			failed.push(ignoreExpression(operations[prior].release));
+		}
+		emitCleanupSteps(failed, failure.cleanup, fn, state.values, state.localNames, state.globalNames, state.spanLengthNames, state.boundsAbortName);
+		emitManagedRootFramePop(failed, fn, state.boundsAbortName);
+		emitFailureTarget(failed, failure, fn, state.boundsAbortName, 'Dynamic assignment `$instructionId` retain');
+		statements.push(SIf(EBinary(NotEqual, call, EIdentifier(CBodyRuntimeNames.identifier(CBRNStatusOk))), SBlock(failed), null));
+	}
+
+	/** Reject a valid carrier whose exact program-local descriptor does not match. */
+	function emitDynamicExactTypeCheck(statements:Array<CStmt>, carrier:CExpr, adapter:CLoweredBodyDynamicType, failure:HxcIRFailureEdge,
+			state:CBodyEmissionState, instructionId:String, fn:HxcIRFunction):Void {
+		final failed:Array<CStmt> = [];
+		emitCleanupSteps(failed, failure.cleanup, fn, state.values, state.localNames, state.globalNames, state.spanLengthNames, state.boundsAbortName);
+		emitManagedRootFramePop(failed, fn, state.boundsAbortName);
+		emitFailureTarget(failed, failure, fn, state.boundsAbortName, 'Dynamic instruction `$instructionId` exact type check');
+		statements.push(SIf(EUnary(LogicalNot, dynamicHasType(carrier, adapter)), SBlock(failed), null));
+	}
+
+	/** Route one checked Dynamic status through semantic cleanup and failure policy. */
+	function emitDynamicFailureCheck(statements:Array<CStmt>, call:CExpr, failure:HxcIRFailureEdge, state:CBodyEmissionState, instructionId:String,
+			fn:HxcIRFunction):Void {
+		final failed:Array<CStmt> = [];
+		emitCleanupSteps(failed, failure.cleanup, fn, state.values, state.localNames, state.globalNames, state.spanLengthNames, state.boundsAbortName);
+		emitManagedRootFramePop(failed, fn, state.boundsAbortName);
+		emitFailureTarget(failed, failure, fn, state.boundsAbortName, 'Dynamic instruction `$instructionId`');
+		statements.push(SIf(EBinary(NotEqual, call, EIdentifier(CBodyRuntimeNames.identifier(CBRNStatusOk))), SBlock(failed), null));
+	}
+
+	function dynamicInitCall(name:CBodyRuntimeName, adapter:CLoweredBodyDynamicType, payload:Array<CExpr>, result:CIdentifier):CExpr {
+		final arguments = [EUnary(AddressOf, EIdentifier(adapter.descriptorName))];
+		for (value in payload)
+			arguments.push(value);
+		arguments.push(EUnary(AddressOf, EIdentifier(result)));
+		return ECall(EIdentifier(CBodyRuntimeNames.identifier(name)), arguments);
+	}
+
+	static function dynamicReadCall(name:CBodyRuntimeName, carrier:CExpr, output:CExpr):CExpr
+		return ECall(EIdentifier(CBodyRuntimeNames.identifier(name)), [EUnary(AddressOf, carrier), output]);
+
+	static function voidPointerDeclaration(name:CIdentifier):CStmt
+		return SDecl({
+			storage: [],
+			alignments: [],
+			type: new CType(TVoid),
+			declarator: DPointer(DName(name), []),
+			initializer: IExpr(ENull),
+			attributes: []
+		});
+
+	static function castConstVoidPointer(value:CExpr):CExpr
+		return ECast(new CType(TVoid, [QConst]), DPointer(DName(null), []), value);
+
+	static function castVoidPointer(value:CExpr):CExpr
+		return ECast(new CType(TVoid), DPointer(DName(null), []), value);
+
+	/** Compare exact carriers without any cross-family numeric coercion. */
+	function dynamicEqualityExpression(left:CExpr, right:CExpr, leftAdapter:CLoweredBodyDynamicType, rightAdapter:CLoweredBodyDynamicType,
+			instructionId:String, functionId:String):CExpr {
+		if (leftAdapter.prepared.id != rightAdapter.prepared.id)
+			return EBool(false);
+		final exact = EBinary(LogicalAnd, dynamicHasType(left, leftAdapter), dynamicHasType(right, rightAdapter));
+		final payloadEqual:CExpr = switch leftAdapter.prepared.storage {
+			case IRDSInlineNull | IRDSStaticToken: EBool(true);
+			case IRDSInlineBool:
+				EBinary(Equal, dynamicPayload(left, CBRNDynamicPayloadBoolField), dynamicPayload(right, CBRNDynamicPayloadBoolField));
+			case IRDSInlineInt32:
+				EBinary(Equal, dynamicPayload(left, CBRNDynamicPayloadInt32Field), dynamicPayload(right, CBRNDynamicPayloadInt32Field));
+			case IRDSInlineFloat64:
+				EBinary(Equal, dynamicPayload(left, CBRNDynamicPayloadFloat64Field), dynamicPayload(right, CBRNDynamicPayloadFloat64Field));
+			case IRDSManagedReference:
+				EBinary(Equal, dynamicPayload(left, CBRNDynamicPayloadObjectField), dynamicPayload(right, CBRNDynamicPayloadObjectField));
+			case IRDSManagedWrapper:
+				final leftValue = dynamicWrapperValue(left, leftAdapter, instructionId, functionId);
+				final rightValue = dynamicWrapperValue(right, rightAdapter, instructionId, functionId);
+				switch leftAdapter.prepared.category {
+					case IRDCString:
+						stringViewEqualExpression(leftValue, rightValue, true, true);
+					case IRDCArray | IRDCFunction:
+						EBinary(Equal, leftValue, rightValue);
+					case IRDCObject:
+						EBinary(Equal, dynamicPayload(left, CBRNDynamicPayloadObjectField), dynamicPayload(right, CBRNDynamicPayloadObjectField));
+					case IRDCEnum:
+						final mapping = leftAdapter.prepared.mapping;
+						final enumValue = mapping == null ? null : mapping.enumValue();
+						if (enumValue == null)
+							return fail('Dynamic enum equality `$instructionId` in `$functionId` lost its exact enum layout');
+						EBinary(Equal, enumTagExpression(leftValue, enumValue.instanceId), enumTagExpression(rightValue, enumValue.instanceId));
+					case _:
+						return fail('Dynamic wrapper equality `$instructionId` in `$functionId` selected a non-wrapper category');
+				}
+		};
+		return EBinary(LogicalAnd, exact, payloadEqual);
+	}
+
+	/** Read one exact typed value from a descriptor-guarded wrapper payload. */
+	function dynamicWrapperValue(carrier:CExpr, adapter:CLoweredBodyDynamicType, instructionId:String, functionId:String):CExpr {
+		final tag = adapter.wrapperTag;
+		final fieldName = adapter.wrapperFieldName;
+		if (tag == null || fieldName == null)
+			return fail('Dynamic wrapper equality `$instructionId` in `$functionId` lost its exact wrapper layout');
+		final pointer = ECast(new CType(TStruct(tag), [QConst]), DPointer(DName(null), []), dynamicPayload(carrier, CBRNDynamicPayloadObjectField));
+		return EMember(pointer, fieldName, true);
+	}
+
+	static function dynamicHasType(value:CExpr, adapter:CLoweredBodyDynamicType):CExpr
+		return EBinary(Equal, EMember(value, CBodyRuntimeNames.identifier(CBRNDynamicTypeField), false),
+			EUnary(AddressOf, EIdentifier(adapter.descriptorName)));
+
+	static function dynamicPayload(value:CExpr, field:CBodyRuntimeName):CExpr
+		return EMember(EMember(value, CBodyRuntimeNames.identifier(CBRNDynamicPayloadField), false), CBodyRuntimeNames.identifier(field), false);
+
+	function dynamicOperationType(operationId:String, expected:String, functionId:String):CLoweredBodyDynamicType {
+		final operation = requireDynamicOperation(operationId, functionId);
+		final typeId = switch [expected, operation.kind] {
+			case ["box", IRDOKBox(id)] | ["unbox", IRDOKUnbox(id)]: id;
+			case _: return fail('Dynamic operation `${operation.id}` in `$functionId` is not an exact $expected operation');
+		};
+		return requireDynamicType(typeId, functionId);
+	}
+
+	function requireDynamicOperation(id:String, functionId:String):CPreparedBodyDynamicOperation {
+		final plan = dynamicPlan;
+		if (plan == null)
+			return fail('Dynamic instruction in `$functionId` has no finalized plan');
+		for (operation in plan.operations)
+			if (operation.id == id)
+				return operation;
+		return fail('Dynamic instruction in `$functionId` names unknown operation `$id`');
+	}
+
+	function requireDynamicType(id:String, functionId:String):CLoweredBodyDynamicType {
+		final plan = dynamicPlan;
+		if (plan == null)
+			return fail('Dynamic instruction in `$functionId` has no finalized plan');
+		for (type in plan.types)
+			if (type.prepared.id == id)
+				return type;
+		return fail('Dynamic instruction in `$functionId` names unknown adapter `$id`');
+	}
+
+	function requireDynamicMember(id:String, functionId:String):CPreparedBodyDynamicMember {
+		final plan = dynamicPlan;
+		if (plan == null)
+			return fail('Dynamic instruction in `$functionId` has no finalized plan');
+		for (member in plan.members)
+			if (member.id == id)
+				return member;
+		return fail('Dynamic instruction in `$functionId` names unknown member `$id`');
+	}
+
+	function requireDynamicShape(id:String, functionId:String):CPreparedBodyDynamicCallShape {
+		final plan = dynamicPlan;
+		if (plan == null)
+			return fail('Dynamic instruction in `$functionId` has no finalized plan');
+		for (shape in plan.callShapes)
+			if (shape.id == id)
+				return shape;
+		return fail('Dynamic instruction in `$functionId` names unknown call shape `$id`');
 	}
 
 	function emitSpanLoad(statements:Array<CStmt>, values:Map<String, CExpr>, spanValueLengths:Map<String, CExpr>, referencedValues:Map<String, Bool>,
@@ -2843,6 +3482,7 @@ class CBodyEmitter {
 			case IRTFloat(32): new CType(TFloat);
 			case IRTFloat(64): new CType(TDouble);
 			case IRTString | IRTManagedString: new CType(TNamed(CBodyRuntimeNames.identifier(CBRNStringType)));
+			case IRTDynamic: new CType(TNamed(CBodyRuntimeNames.identifier(CBRNDynamicValueType)));
 			case IRTNullable(_, IRNTagged): new CType(TStruct(requireOptional(type).cTag));
 			case IRTInstance(instanceId):
 				if (arrayElementTypes.exists(instanceId))
@@ -3015,6 +3655,19 @@ class CBodyEmitter {
 					case IRIOAllocate(_, _, IRIRuntime("alloc"), _):
 						addUnique(headers, "hxrt/allocator.h");
 						addUnique(headers, "stdlib.h");
+					case IRIODynamic(operation):
+						addUnique(headers, "hxrt/dynamic.h");
+						addUnique(headers, "stdlib.h");
+						switch operation {
+							case IRDEqual(_, _, operationId):
+								final planned = requireDynamicOperation(operationId, fn.id);
+								switch planned.kind {
+									case IRDOKEqual(leftTypeId, _):
+										if (requireDynamicType(leftTypeId, fn.id).prepared.category == IRDCString) addUnique(headers, "string.h");
+									case _:
+								}
+							case _:
+						}
 					case _:
 				}
 			}
@@ -3064,6 +3717,125 @@ class CBodyEmitter {
 		}
 		return result;
 	}
+
+	/** Define exact managed wrapper layouts after all source-owned value types. */
+	public function dynamicWrapperDefinitions():Array<CDecl> {
+		final plan = dynamicPlan;
+		if (plan == null)
+			return [];
+		final result:Array<CDecl> = [];
+		for (adapter in plan.types) {
+			if (adapter.prepared.storage != IRDSManagedWrapper)
+				continue;
+			final mapping = adapter.prepared.mapping;
+			final tag = adapter.wrapperTag;
+			final fieldName = adapter.wrapperFieldName;
+			if (mapping == null || tag == null || fieldName == null)
+				return fail('managed Dynamic adapter `${adapter.prepared.id}` lost its exact wrapper layout');
+			final field = typedDeclarator(mapping.irType, DName(fieldName));
+			result.push(DStruct(tag, [
+				{
+					type: field.type,
+					declarator: field.declarator,
+					bitWidth: null,
+					alignments: [],
+					attributes: []
+				}
+			], []));
+		}
+		return result;
+	}
+
+	/** Declare cross-unit Dynamic descriptors and immutable type-value tokens. */
+	public function dynamicAdapterDeclarations():Array<CDecl> {
+		final plan = dynamicPlan;
+		if (plan == null)
+			return [];
+		final result:Array<CDecl> = [];
+		for (adapter in plan.types) {
+			result.push(DVariable({
+				storage: [SExtern],
+				alignments: [],
+				type: new CType(TNamed(CBodyRuntimeNames.identifier(CBRNDynamicTypeDescriptorType)), [QConst]),
+				declarator: DName(adapter.descriptorName),
+				initializer: null,
+				attributes: []
+			}));
+			if (adapter.typeTokenName != null)
+				result.push(DVariable({
+					storage: [SExtern],
+					alignments: [],
+					type: new CType(TChar(null), [QConst]),
+					declarator: DName(adapter.typeTokenName),
+					initializer: null,
+					attributes: []
+				}));
+		}
+		return result;
+	}
+
+	/** Define immutable program-local Dynamic identities without reflection names. */
+	public function dynamicAdapterDefinitions():Array<CDecl> {
+		final plan = dynamicPlan;
+		if (plan == null)
+			return [];
+		final result:Array<CDecl> = [];
+		for (index => adapter in plan.types) {
+			result.push(DVariable({
+				storage: [],
+				alignments: [],
+				type: new CType(TNamed(CBodyRuntimeNames.identifier(CBRNDynamicTypeDescriptorType)), [QConst]),
+				declarator: DName(adapter.descriptorName),
+				initializer: IList([
+					dynamicFieldInitializer(CBRNDynamicDescriptorAbiVersionField, EIdentifier(CBodyRuntimeNames.identifier(CBRNDynamicTypeAbiVersion))),
+					dynamicFieldInitializer(CBRNDynamicDescriptorTypeIdField, EInt(CIntegerLiteral.decimal(Std.string(index), ISUnsigned))),
+					dynamicFieldInitializer(CBRNDynamicDescriptorCategoryField,
+						EIdentifier(CBodyRuntimeNames.identifier(dynamicCategoryName(adapter.prepared.category)))),
+					dynamicFieldInitializer(CBRNDynamicDescriptorStorageField,
+						EIdentifier(CBodyRuntimeNames.identifier(dynamicStorageName(adapter.prepared.storage))))
+				]),
+				attributes: []
+			}));
+			if (adapter.typeTokenName != null)
+				result.push(DVariable({
+					storage: [],
+					alignments: [],
+					type: new CType(TChar(null), [QConst]),
+					declarator: DName(adapter.typeTokenName),
+					initializer: IExpr(EInt(CIntegerLiteral.decimal("0"))),
+					attributes: []
+				}));
+		}
+		return result;
+	}
+
+	static function dynamicFieldInitializer(field:CBodyRuntimeName, value:CExpr):CInitializerItem
+		return {designators: [DField(CBodyRuntimeNames.identifier(field))], value: IExpr(value)};
+
+	static function dynamicCategoryName(category:HxcIRDynamicCategory):CBodyRuntimeName
+		return switch category {
+			case IRDCNull: CBRNDynamicCategoryNull;
+			case IRDCBool: CBRNDynamicCategoryBool;
+			case IRDCInt: CBRNDynamicCategoryInt;
+			case IRDCFloat: CBRNDynamicCategoryFloat;
+			case IRDCString: CBRNDynamicCategoryString;
+			case IRDCArray: CBRNDynamicCategoryArray;
+			case IRDCObject: CBRNDynamicCategoryObject;
+			case IRDCEnum: CBRNDynamicCategoryEnum;
+			case IRDCFunction: CBRNDynamicCategoryFunction;
+			case IRDCTypeValue: CBRNDynamicCategoryTypeValue;
+		};
+
+	static function dynamicStorageName(storage:HxcIRDynamicStorage):CBodyRuntimeName
+		return switch storage {
+			case IRDSInlineNull: CBRNDynamicStorageInlineNull;
+			case IRDSInlineBool: CBRNDynamicStorageInlineBool;
+			case IRDSInlineInt32: CBRNDynamicStorageInlineInt32;
+			case IRDSInlineFloat64: CBRNDynamicStorageInlineFloat64;
+			case IRDSManagedReference: CBRNDynamicStorageManagedReference;
+			case IRDSManagedWrapper: CBRNDynamicStorageManagedWrapper;
+			case IRDSStaticToken: CBRNDynamicStorageStaticToken;
+		};
 
 	public function aggregateDefinitions():Array<CDecl> {
 		final result:Array<CDecl> = [];
@@ -3536,6 +4308,13 @@ class CBodyEmitter {
 	**/
 	public function managedObjectDefinitions():Array<CDecl> {
 		final result:Array<CDecl> = [];
+		final dynamicPlanValue = dynamicPlan;
+		if (dynamicPlanValue != null)
+			for (adapter in dynamicPlanValue.types)
+				if (adapter.prepared.storage == IRDSManagedWrapper) {
+					result.push(dynamicWrapperTraceDefinition(adapter));
+					result.push(dynamicWrapperFinalizerDefinition(adapter));
+				}
 		for (instanceId in classInstanceOrder) {
 			final value = classesByInstance.get(instanceId);
 			if (value != null && value.prepared.managedByCollector) {
@@ -3558,6 +4337,19 @@ class CBodyEmitter {
 
 	function managedObjectDescriptorSpecs():Array<CObjectDescriptorSpec> {
 		final result:Array<CObjectDescriptorSpec> = [];
+		final dynamicPlanValue = dynamicPlan;
+		if (dynamicPlanValue != null)
+			for (adapter in dynamicPlanValue.types)
+				if (adapter.prepared.storage == IRDSManagedWrapper) {
+					final tag = adapter.wrapperTag;
+					final descriptor = adapter.wrapperDescriptorName;
+					final trace = adapter.wrapperTraceName;
+					final finalizer = adapter.wrapperFinalizerName;
+					if (tag == null || descriptor == null || trace == null || finalizer == null)
+						throw new CBodyEmissionError('managed Dynamic adapter `${adapter.prepared.id}` lost descriptor callback names');
+					result.push(new CObjectDescriptorSpec('wrapper.${adapter.prepared.id}', descriptor,
+						{type: new CType(TStruct(tag)), declarator: DName(null)}, trace, finalizer, true));
+				}
 		for (instanceId in classInstanceOrder) {
 			final value = classesByInstance.get(instanceId);
 			if (value == null || !value.prepared.managedByCollector)
@@ -3576,6 +4368,82 @@ class CBodyEmitter {
 				{type: new CType(TStruct(new CIdentifier("hxc_array_ref"))), declarator: DName(null)}, array.traceName, array.finalizerName, true));
 		}
 		return result;
+	}
+
+	/** Trace exact collector references nested in one generated Dynamic wrapper. */
+	function dynamicWrapperTraceDefinition(adapter:CLoweredBodyDynamicType):CDecl {
+		final mapping = adapter.prepared.mapping;
+		final tag = adapter.wrapperTag;
+		final fieldName = adapter.wrapperFieldName;
+		final traceName = adapter.wrapperTraceName;
+		if (mapping == null || tag == null || fieldName == null || traceName == null)
+			return fail('managed Dynamic adapter `${adapter.prepared.id}` lost its trace layout');
+		final objectName = new CIdentifier(traceName.value + "_object");
+		final visitName = new CIdentifier(traceName.value + "_visit");
+		final contextName = new CIdentifier(traceName.value + "_context");
+		final typedName = new CIdentifier(traceName.value + "_typed");
+		final statements:Array<CStmt> = [
+			SDecl({
+				storage: [],
+				alignments: [],
+				type: new CType(TStruct(tag), [QConst]),
+				declarator: DPointer(DName(typedName), []),
+				initializer: IExpr(ECast(new CType(TStruct(tag), [QConst]), DPointer(DName(null), []), EIdentifier(objectName))),
+				attributes: []
+			})
+		];
+		// Some exact wrappers contain no collector-managed child. Keep the shared
+		// callback signature warning-clean without inventing a special descriptor.
+		statements.push(ignoreExpression(EIdentifier(typedName)));
+		statements.push(ignoreExpression(EIdentifier(visitName)));
+		statements.push(ignoreExpression(EIdentifier(contextName)));
+		appendManagedTraceStatements(statements, EMember(EIdentifier(typedName), fieldName, true), mapping.irType, visitName, contextName);
+		return DFunction({
+			storage: [SStatic],
+			functionSpecifiers: [],
+			returnType: new CType(TVoid),
+			declarator: DFunction(DName(traceName), FPPrototype([
+				{type: new CType(TVoid, [QConst]), declarator: DPointer(DName(objectName), []), attributes: []},
+				{type: new CType(TNamed(new CIdentifier("hxc_trace_visit_fn"))), declarator: DName(visitName), attributes: []},
+				{type: new CType(TVoid), declarator: DPointer(DName(contextName), []), attributes: []}
+			], false)),
+			body: SBlock(statements),
+			attributes: []
+		});
+	}
+
+	/** Release ref-counted values owned by one generated Dynamic wrapper. */
+	function dynamicWrapperFinalizerDefinition(adapter:CLoweredBodyDynamicType):CDecl {
+		final mapping = adapter.prepared.mapping;
+		final tag = adapter.wrapperTag;
+		final fieldName = adapter.wrapperFieldName;
+		final finalizerName = adapter.wrapperFinalizerName;
+		if (mapping == null || tag == null || fieldName == null || finalizerName == null)
+			return fail('managed Dynamic adapter `${adapter.prepared.id}` lost its finalizer layout');
+		final objectName = new CIdentifier(finalizerName.value + "_object");
+		final typedName = new CIdentifier(finalizerName.value + "_typed");
+		final statements:Array<CStmt> = [
+			SDecl({
+				storage: [],
+				alignments: [],
+				type: new CType(TStruct(tag)),
+				declarator: DPointer(DName(typedName), []),
+				initializer: IExpr(ECast(new CType(TStruct(tag)), DPointer(DName(null), []), EIdentifier(objectName))),
+				attributes: []
+			})
+		];
+		statements.push(ignoreExpression(EIdentifier(typedName)));
+		appendManagedReleases(statements, managedValueOperations(EMember(EIdentifier(typedName), fieldName, true), mapping.irType));
+		return DFunction({
+			storage: [SStatic],
+			functionSpecifiers: [],
+			returnType: new CType(TVoid),
+			declarator: DFunction(DName(finalizerName), FPPrototype([
+				{type: new CType(TVoid), declarator: DPointer(DName(objectName), []), attributes: []}
+			], false)),
+			body: SBlock(statements),
+			attributes: []
+		});
 	}
 
 	function classTraceDefinition(value:CLoweredBodyClass):CDecl {
@@ -4528,8 +5396,8 @@ class CBodyEmitter {
 					}
 				];
 			case IRTInstance(instanceId) if (interfaceLayoutsByInstance.exists(instanceId)): [];
-			case IRTBool | IRTInt(_,
-				_) | IRTAbiInteger(_) | IRTFloat(_) | IRTString | IRTCString | IRTPointer(_, _) | IRTFixedArray(_, _, _) | IRTSpan(_, _): [];
+			case IRTBool | IRTInt(_, _) | IRTAbiInteger(_) | IRTFloat(_) | IRTString | IRTCString | IRTPointer(_, _) | IRTFunction(_, _) |
+				IRTFixedArray(_, _, _) | IRTSpan(_, _): [];
 			case _:
 				throw new CBodyEmissionError('managed Array element lifecycle reached unsupported nested type `${typeKey(type)}`');
 		};
@@ -5376,6 +6244,8 @@ class CBodyEmitter {
 				for (parameter in parameters)
 					addTypeHeaders(headers, parameter, visited);
 				addTypeHeaders(headers, result, visited);
+			case IRTDynamic:
+				addUnique(headers, "hxrt/dynamic.h");
 			case IRTVoid | IRTFloat(32) | IRTFloat(64) | IRTMutableCStringBuffer:
 			case _:
 				throw new CBodyEmissionError('HxcIR type `${typeKey(type)}` has no admitted strict-C direct-value header mapping');
