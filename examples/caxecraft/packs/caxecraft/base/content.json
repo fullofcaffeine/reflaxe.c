@@ -441,6 +441,36 @@
   ],
   "editorObjects": [
     {
+      "id": "boundary-boulder",
+      "kind": "stateful-object",
+      "label": {
+        "en": "MOSSY BOUNDARY BOULDER",
+        "es-MX": "ROCA MUSGOSA DE LÍMITE"
+      },
+      "objectType": "caxecraft:boundary-boulder",
+      "initialState": "caxecraft:waiting"
+    },
+    {
+      "id": "boundary-root",
+      "kind": "stateful-object",
+      "label": {
+        "en": "TANGLED BOUNDARY ROOT",
+        "es-MX": "RAÍZ ENREDADA DE LÍMITE"
+      },
+      "objectType": "caxecraft:boundary-root",
+      "initialState": "caxecraft:waiting"
+    },
+    {
+      "id": "boundary-thicket",
+      "kind": "stateful-object",
+      "label": {
+        "en": "DENSE BOUNDARY THICKET",
+        "es-MX": "MATORRAL DENSO DE LÍMITE"
+      },
+      "objectType": "caxecraft:boundary-thicket",
+      "initialState": "caxecraft:waiting"
+    },
+    {
       "id": "forge-relay",
       "kind": "stateful-object",
       "label": {
@@ -453,6 +483,69 @@
   ],
   "prefabs": [],
   "statefulObjects": [
+    {
+      "id": "caxecraft:boundary-boulder",
+      "interaction": "none",
+      "interactionRadiusMilli": 0,
+      "bounds": { "widthMilli": 3200, "heightMilli": 3000, "depthMilli": 2800 },
+      "states": [
+        {
+          "id": "caxecraft:waiting",
+          "collision": "solid",
+          "render": "visible",
+          "presentation": {
+            "asset": "terrain",
+            "cell": "slate-stone",
+            "model": {
+              "path": "assets/models/boundary-boulder.vox",
+              "cellsPerAxis": 32
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "caxecraft:boundary-root",
+      "interaction": "none",
+      "interactionRadiusMilli": 0,
+      "bounds": { "widthMilli": 4200, "heightMilli": 2400, "depthMilli": 3200 },
+      "states": [
+        {
+          "id": "caxecraft:waiting",
+          "collision": "solid",
+          "render": "visible",
+          "presentation": {
+            "asset": "terrain",
+            "cell": "bark-side",
+            "model": {
+              "path": "assets/models/boundary-root.vox",
+              "cellsPerAxis": 32
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "caxecraft:boundary-thicket",
+      "interaction": "none",
+      "interactionRadiusMilli": 0,
+      "bounds": { "widthMilli": 5000, "heightMilli": 4200, "depthMilli": 3000 },
+      "states": [
+        {
+          "id": "caxecraft:waiting",
+          "collision": "solid",
+          "render": "visible",
+          "presentation": {
+            "asset": "terrain",
+            "cell": "leafy-canopy",
+            "model": {
+              "path": "assets/models/boundary-thicket.vox",
+              "cellsPerAxis": 32
+            }
+          }
+        }
+      ]
+    },
     {
       "id": "caxecraft:castle-portcullis",
       "interaction": "none",

@@ -72,6 +72,150 @@ class CaxecraftVoxels {
 			writeOrCheck('$modelDirectory/vault-glyph-${glyphNames[index]}-lighting.vox', encode(lightingGlyph, false), checkOnly);
 			Sys.println('vault-glyph-${glyphNames[index]}.vox: ${waitingGlyph.length} waiting, ${lightingGlyph.length} lighting, ${enteredGlyph.length} active voxels');
 		}
+
+		final boundaryThicket:Array<Voxel> = [];
+		addBoundaryThicket(boundaryThicket);
+		writeOrCheck('$modelDirectory/boundary-thicket.vox', encode(boundaryThicket, false), checkOnly);
+		Sys.println('boundary-thicket.vox: ${boundaryThicket.length} voxels');
+
+		final boundaryRoot:Array<Voxel> = [];
+		addBoundaryRoot(boundaryRoot);
+		writeOrCheck('$modelDirectory/boundary-root.vox', encode(boundaryRoot, false), checkOnly);
+		Sys.println('boundary-root.vox: ${boundaryRoot.length} voxels');
+
+		final boundaryBoulder:Array<Voxel> = [];
+		addBoundaryBoulder(boundaryBoulder);
+		writeOrCheck('$modelDirectory/boundary-boulder.vox', encode(boundaryBoulder, false), checkOnly);
+		Sys.println('boundary-boulder.vox: ${boundaryBoulder.length} voxels');
+	}
+
+	/**
+	 * Build a deep, tangled thicket that reads as vegetation from every side.
+	 *
+	 * Overlapping leaf masses hide the finite-map edge, while visible trunks,
+	 * roots, and small gaps keep the solid collision volume understandable.
+	 */
+	static function addBoundaryThicket(voxels:Array<Voxel>):Void {
+		for (trunk in [
+			{
+				x: 7,
+				y: 11,
+				leanX: 1,
+				leanY: 0,
+				height: 23
+			},
+			{
+				x: 18,
+				y: 8,
+				leanX: -1,
+				leanY: 1,
+				height: 28
+			},
+			{
+				x: 24,
+				y: 20,
+				leanX: 0,
+				leanY: -1,
+				height: 25
+			}
+		])
+			for (z in 0...trunk.height) {
+				final x = trunk.x + Std.int(z / 9) * trunk.leanX;
+				final y = trunk.y + Std.int(z / 10) * trunk.leanY;
+				fill(voxels, x - 1, x + 1, y - 1, y + 1, z, z, z % 5 == 0 ? 15 : 14);
+			}
+
+		for (step in 0...12) {
+			fill(voxels, 3 + step, 5 + step, 3 + step, 5 + step, Std.int(step / 3), Std.int(step / 3) + 1, step % 4 == 0 ? 13 : 14);
+			fill(voxels, 27 - step, 29 - step, 4 + step, 6 + step, Std.int(step / 4), Std.int(step / 4) + 1, step % 3 == 0 ? 15 : 13);
+		}
+
+		addLeafMass(voxels, 8, 10, 18, 8, 8, 10);
+		addLeafMass(voxels, 18, 9, 22, 10, 8, 9);
+		addLeafMass(voxels, 23, 20, 19, 8, 10, 9);
+		addLeafMass(voxels, 12, 23, 22, 9, 8, 8);
+		addLeafMass(voxels, 18, 17, 27, 11, 10, 5);
+	}
+
+	/** Add one irregular ellipsoid of layered teal leaves with bounded openings. */
+	static function addLeafMass(voxels:Array<Voxel>, centerX:Int, centerY:Int, centerZ:Int, radiusX:Int, radiusY:Int, radiusZ:Int):Void {
+		for (x in centerX - radiusX...centerX + radiusX + 1)
+			for (y in centerY - radiusY...centerY + radiusY + 1)
+				for (z in centerZ - radiusZ...centerZ + radiusZ + 1) {
+					if (x < 0 || x >= SIZE || y < 0 || y >= SIZE || z < 0 || z >= SIZE)
+						continue;
+					final dx = x - centerX;
+					final dy = y - centerY;
+					final dz = z - centerZ;
+					final inside = dx * dx * radiusY * radiusY * radiusZ * radiusZ
+						+ dy * dy * radiusX * radiusX * radiusZ * radiusZ
+						+ dz * dz * radiusX * radiusX * radiusY * radiusY <= radiusX * radiusX * radiusY * radiusY * radiusZ * radiusZ;
+					if (inside && ((x * 3 + y * 5 + z * 7) % 29 != 0 || z < centerZ)) {
+						final shade = (x + 2 * y + z) % 11;
+						put(voxels, x, y, z, shade < 3 ? 8 : shade < 8 ? 9 : shade < 10 ? 10 : 11);
+					}
+				}
+	}
+
+	/**
+	 * Build a grounded root fan with crossing arms and an asymmetric stump.
+	 *
+	 * The broad roots explain the solid footprint from play height. Copper and
+	 * teal surface patches distinguish bark, cut wood, and moss without a sprite.
+	 */
+	static function addBoundaryRoot(voxels:Array<Voxel>):Void {
+		for (z in 0...22) {
+			final radius = z < 7 ? 7 : z < 15 ? 5 : 3;
+			for (x in 16 - radius...17 + radius)
+				for (y in 15 - radius...16 + radius)
+					if (absolute(x - 16) + absolute(y - 15) <= radius + 2)
+						put(voxels, x, y, z, (x + y + z) % 7 == 0 ? 15 : (x < 16 ? 13 : 14));
+		}
+		for (step in 0...13) {
+			final height = 6 - Std.int(step / 3);
+			fill(voxels, 13 - step, 18 - step, 12 - Std.int(step / 3), 17 - Std.int(step / 3), 0, height, step % 4 == 0 ? 15 : 13);
+			fill(voxels, 14 + step, 19 + step, 14 + Std.int(step / 4), 19 + Std.int(step / 4), 0, height, step % 5 == 0 ? 15 : 14);
+		}
+		for (step in 0...12) {
+			final height = 5 - Std.int(step / 3);
+			fill(voxels, 13 - Std.int(step / 3), 18 - Std.int(step / 3), 12 + step, 17 + step, 0, height, step % 3 == 0 ? 15 : 14);
+			fill(voxels, 16 + Std.int(step / 4), 21 + Std.int(step / 4), 12 - step, 17 - step, 0, height, step % 4 == 0 ? 15 : 13);
+		}
+		for (point in [
+			 {x: 5, y: 8, z: 4},  {x: 25, y: 20, z: 3}, {x: 12, y: 25, z: 4},
+			{x: 20, y: 8, z: 5}, {x: 13, y: 14, z: 18}, {x: 18, y: 17, z: 20}
+		]) {
+			fill(voxels, point.x, point.x + 2, point.y, point.y + 2, point.z, point.z + 1, 8);
+			put(voxels, point.x + 1, point.y + 1, point.z + 2, 9);
+		}
+	}
+
+	/**
+	 * Build an irregular two-part boulder with chamfered faces and moss patches.
+	 *
+	 * Its layered outline gives the renderer a different silhouette from every
+	 * quarter turn, while the broad base keeps collision visually predictable.
+	 */
+	static function addBoundaryBoulder(voxels:Array<Voxel>):Void {
+		for (z in 0...20) {
+			final inset = z < 3 ? 2 : z < 12 ? 0 : Std.int((z - 10) / 2);
+			fillChamferedLayer(voxels, 2 + inset, 29 - inset, 4 + inset, 27 - inset, z, 4, z % 6 == 0 ? 4 : z % 3 == 0 ? 3 : 2);
+		}
+		for (z in 15...30) {
+			final distance = absolute(z - 22);
+			final inset = Std.int(distance / 2);
+			fillChamferedLayer(voxels, 12 + inset, 29 - inset, 7 + inset, 24 - inset, z, 3, (z + inset) % 4 == 0 ? 4 : 3);
+		}
+		for (point in [
+			{x: 5, y: 7, z: 15},
+			{x: 8, y: 22, z: 17},
+			{x: 17, y: 7, z: 25},
+			{x: 23, y: 12, z: 27},
+			{x: 25, y: 22, z: 18}
+		]) {
+			fill(voxels, point.x, point.x + 3, point.y, point.y + 2, point.z, point.z + 1, 8);
+			fill(voxels, point.x + 1, point.x + 4, point.y + 1, point.y + 3, point.z + 2, point.z + 2, 9);
+		}
 	}
 
 	/** Add one grounded carved stone whose raised mark stays readable from play height. */

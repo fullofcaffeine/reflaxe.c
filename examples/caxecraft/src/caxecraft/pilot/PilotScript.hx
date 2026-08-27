@@ -66,6 +66,7 @@ enum abstract PilotAction(Int) to Int {
 	var RightJump = 35;
 	var LeftDescend = 36;
 	var RightRise = 37;
+	var ToggleCamera = 38;
 }
 
 /**
@@ -213,6 +214,10 @@ final class PilotScript {
 
 	public static inline function capturePressed(action:PilotAction):Bool
 		return action == Capture;
+
+	/** Request the same first-/third-person camera transition as interactive F5. */
+	public static inline function cameraTogglePressed(action:PilotAction):Bool
+		return action == ToggleCamera;
 
 	public static inline function quitPressed(action:PilotAction):Bool
 		return action == Quit;

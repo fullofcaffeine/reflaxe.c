@@ -17,6 +17,7 @@ import caxecraft.content.RuntimeContentPack.RuntimeContentPackResult;
 import caxecraft.content.RuntimeContentPack.RuntimeItemUseProfile;
 import caxecraft.content.RuntimeContentPack.RuntimeModelPresentation;
 import caxecraft.content.EditorObjectCatalog.EditorObjectRecipeKind;
+import caxecraft.content.EditorObjectCatalog.EditorObjectRecipe;
 import caxecraft.content.RuntimeSchema.RuntimeSchemaDiagnostic;
 import caxecraft.content.RuntimeSchema.RuntimeSchemaErrorKind;
 import caxecraft.app.RuntimeInventoryBinding.inventoryKindForRuntimeItem;
@@ -111,24 +112,32 @@ function selfCheck():Int {
 		case RuntimeUiCatalogReady(value): value;
 		case RuntimeUiCatalogRejected(_): return 5;
 	};
-	final editorObject = registry.editorObjectAt(0);
-	if (registry.editorObjectCount() != 1 || editorObject == null || editorObject.id != "forge-relay" || editorObject.labelEn.length == 0
-		|| editorObject.labelEsMx.length == 0)
-		return 58;
-	switch editorObject.kind {
-		case EditorStatefulObject(objectType, initialState):
-			if (objectType.text() != "caxecraft:gate-relay" || initialState.text() != "caxecraft:waiting")
-				return 58;
-		case EditorItem(_, _) | EditorNpc(_) | EditorEnemy(_):
+	var foundBoundaryBoulder = false;
+	var foundBoundaryRoot = false;
+	var foundBoundaryThicket = false;
+	for (index in 0...registry.editorObjectCount()) {
+		final recipe = registry.editorObjectAt(index);
+		if (recipe == null)
 			return 58;
+		switch recipe.id {
+			case "boundary-boulder":
+				foundBoundaryBoulder = matchesStatefulEditorRecipe(recipe, "caxecraft:boundary-boulder");
+			case "boundary-root":
+				foundBoundaryRoot = matchesStatefulEditorRecipe(recipe, "caxecraft:boundary-root");
+			case "boundary-thicket":
+				foundBoundaryThicket = matchesStatefulEditorRecipe(recipe, "caxecraft:boundary-thicket");
+			case _:
+		}
 	}
+	if (!foundBoundaryBoulder || !foundBoundaryRoot || !foundBoundaryThicket)
+		return 58;
 	final assets = availableEditorAssets(registry, catalog);
 	var terrainAssets = 0;
 	var itemAssets = 0;
 	var npcAssets = 0;
 	var enemyAssets = 0;
 	var mechanismAssets = 0;
-	var editorObjectLabelsMatch = false;
+	var editorObjectLabelsMatch = true;
 	for (left in 0...assets.length) {
 		final entry = assets[left];
 		if (entry.labelEn.length == 0 || entry.labelEsMx.length == 0 || entry.helpEn.length == 0 || entry.helpEsMx.length == 0)
@@ -164,9 +173,7 @@ function selfCheck():Int {
 					case PlaceObjectAsset(recipe):
 						switch recipe.kind {
 							case EditorStatefulObject(_, _):
-								editorObjectLabelsMatch = recipe.id == editorObject.id
-									&& entry.labelEn == editorObject.labelEn
-									&& entry.labelEsMx == editorObject.labelEsMx;
+								if (entry.labelEn != recipe.labelEn || entry.labelEsMx != recipe.labelEsMx) editorObjectLabelsMatch = false;
 							case _: return 76;
 						}
 					case PaintTerrainAsset(_): return 76;
@@ -347,6 +354,16 @@ function selfCheck():Int {
 		return 36;
 
 	return negativeChecks();
+}
+
+/** Verify one feature-owned recipe without mirroring the complete data catalog. */
+function matchesStatefulEditorRecipe(recipe:EditorObjectRecipe, expectedObjectType:String):Bool {
+	if (recipe.labelEn.length == 0 || recipe.labelEsMx.length == 0)
+		return false;
+	return switch recipe.kind {
+		case EditorStatefulObject(objectType, initialState): objectType.text() == expectedObjectType && initialState.text() == "caxecraft:waiting";
+		case EditorItem(_, _) | EditorNpc(_) | EditorEnemy(_): false;
+	};
 }
 
 /** Remove one placeholder without depending on the owning catalog sentence. */

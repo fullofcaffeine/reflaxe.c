@@ -950,7 +950,7 @@ final class CaxecraftApp {
 			final menuNextPressed = PilotScript.menuNextPressed(pilotAction);
 			final menuConfirmPressed = PilotScript.menuConfirmPressed(pilotAction);
 			final descendHeld = PilotScript.descendHeld(pilotAction);
-			final cameraTogglePressed = false;
+			final cameraTogglePressed = PilotScript.cameraTogglePressed(pilotAction);
 			final promptDevice = ControlPromptDevice.KeyboardMouse;
 			#else
 			final focused = Raylib.IsWindowFocused();
