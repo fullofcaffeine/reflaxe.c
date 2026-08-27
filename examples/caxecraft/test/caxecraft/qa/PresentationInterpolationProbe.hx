@@ -30,6 +30,10 @@ import caxecraft.app.StatefulObjectVisual.StatefulObjectVisualKind;
 import caxecraft.app.StatefulObjectVisual.statefulObjectVisual;
 import caxecraft.domain.CharacterBody;
 import caxecraft.gameplay.Inventory;
+import caxecraft.input.GamepadInput.GamepadInputSnapshot;
+import caxecraft.input.GamepadInput.gamepadInput;
+import caxecraft.input.GamepadInput.mergeGameInput;
+import caxecraft.pilot.GameInputFrame.GameInputFrames;
 
 /**
 	Cross-target specification for fixed-step presentation interpolation.
@@ -39,6 +43,19 @@ import caxecraft.gameplay.Inventory;
 	that physics, interactions, saves, and deterministic pilots observe.
 **/
 var observed:Int = 0;
+
+/** Named physical-button fixture changes for one focused mapping assertion. */
+typedef GamepadButtonFixture = {
+	final bottomPressed:Bool;
+	final bottomHeld:Bool;
+	final rightHeld:Bool;
+	final leftPressed:Bool;
+	final rightTriggerPressed:Bool;
+	final leftTriggerPressed:Bool;
+	final leftBumperPressed:Bool;
+	final rightBumperPressed:Bool;
+	final startPressed:Bool;
+}
 
 function main():Void {
 	#if c
@@ -193,8 +210,164 @@ function selfCheck():Int {
 		|| hudBreathGlyph(1, 1) != HudBreathGlyph.DepletedBreath
 		|| hudBreathGlyph(-1, 1) != HudBreathGlyph.DepletedBreath)
 		return 212;
+	final gamepadFailure = gamepadInputFailure();
+	if (gamepadFailure != 0)
+		return 220 + gamepadFailure;
 	return 0;
 }
+
+/** Return zero, or the first broken device-neutral gamepad mapping rule. */
+function gamepadInputFailure():Int {
+	final active = activeGamepadSnapshot();
+	final frame = gamepadInput(active);
+	if (!near(frame.moveForward, 1.0) || !near(frame.moveRight, 0.5))
+		return 1;
+	if (!near(frame.lookYaw, -0.22) || !near(frame.lookPitch, 0.11))
+		return 2;
+	if (!frame.jumpPressed || !frame.riseHeld || !frame.descendHeld || !frame.primaryPressed || !frame.secondaryPressed || !frame.interactPressed)
+		return 3;
+	if (!frame.menuNextPressed || !frame.menuConfirmPressed || !frame.pausePressed || frame.capturePressed || frame.quitPressed)
+		return 4;
+	if (frame.hotbarSelection != -1 || frame.hotbarCycle != 1 || frame.travelPressed)
+		return 5;
+
+	final jumpOnly = gamepadInput(withButtons(active, {
+		bottomPressed: true,
+		bottomHeld: true,
+		rightHeld: false,
+		leftPressed: false,
+		rightTriggerPressed: false,
+		leftTriggerPressed: false,
+		leftBumperPressed: false,
+		rightBumperPressed: false,
+		startPressed: false
+	}));
+	if (!jumpOnly.jumpPressed || !jumpOnly.riseHeld || jumpOnly.interactPressed || jumpOnly.descendHeld)
+		return 6;
+	final paused = gamepadInput(withContext(active, true, false, true));
+	if (paused.moveForward != 0.0 || paused.moveRight != 0.0 || paused.lookYaw != 0.0 || paused.lookPitch != 0.0 || paused.jumpPressed
+		|| paused.primaryPressed || paused.secondaryPressed || paused.interactPressed || paused.hotbarCycle != 0)
+		return 7;
+	if (!paused.capturePressed || !paused.menuConfirmPressed || !paused.pausePressed)
+		return 8;
+	final unfocused = gamepadInput(withContext(active, false, true, false));
+	if (!GameInputFrames.same(unfocused, GameInputFrames.idle()))
+		return 9;
+
+	final keyboard = GameInputFrames.make(-0.75, -0.75, 0.02, -0.03, false, false, false, false, false, false, false, false, 4, -1);
+	final merged = mergeGameInput(keyboard, frame);
+	if (!near(merged.moveForward, 0.25)
+		|| !near(merged.moveRight, -0.25)
+		|| merged.hotbarSelection != 4
+		|| merged.hotbarCycle != 0)
+		return 10;
+	if (!merged.jumpPressed || !merged.interactPressed || !near(merged.lookYaw, -0.20) || !near(merged.lookPitch, 0.08))
+		return 11;
+
+	var conversation = beginConversation();
+	conversation = switch advanceConversation(conversation, 6, 2, 0, frame.interactPressed, false) {
+		case ConversationContinues(next): next;
+		case ConversationCloses: return 14;
+	};
+	if (conversation.visibleCharacters != 6 || conversation.lineIndex != 0)
+		return 15;
+	final heldSkip = gamepadInput(withButtons(active, {
+		bottomPressed: false,
+		bottomHeld: true,
+		rightHeld: false,
+		leftPressed: false,
+		rightTriggerPressed: false,
+		leftTriggerPressed: false,
+		leftBumperPressed: false,
+		rightBumperPressed: false,
+		startPressed: false
+	}));
+	conversation = switch advanceConversation(conversation, 6, 2, 300, heldSkip.interactPressed, heldSkip.riseHeld) {
+		case ConversationContinues(next): next;
+		case ConversationCloses: return 16;
+	};
+	switch advanceConversation(conversation, 6, 2, 300, heldSkip.interactPressed, heldSkip.riseHeld) {
+		case ConversationContinues(_):
+			return 17;
+		case ConversationCloses:
+	};
+	return 0;
+}
+
+/** Build one active snapshot with every mapped controller family represented. */
+function activeGamepadSnapshot():GamepadInputSnapshot
+	return {
+		connected: true,
+		focused: true,
+		captured: true,
+		paused: false,
+		frameSeconds: 0.1,
+		leftX: 0.6,
+		leftY: -1.0,
+		rightX: 1.0,
+		rightY: -0.6,
+		bottomPressed: true,
+		bottomHeld: true,
+		rightHeld: true,
+		leftPressed: true,
+		rightTriggerPressed: true,
+		leftTriggerPressed: true,
+		leftBumperPressed: false,
+		rightBumperPressed: true,
+		dpadUpPressed: true,
+		dpadDownPressed: false,
+		startPressed: true
+	};
+
+/** Copy physical input while changing only application focus and pause context. */
+function withContext(source:GamepadInputSnapshot, focused:Bool, captured:Bool, paused:Bool):GamepadInputSnapshot
+	return {
+		connected: source.connected,
+		focused: focused,
+		captured: captured,
+		paused: paused,
+		frameSeconds: source.frameSeconds,
+		leftX: source.leftX,
+		leftY: source.leftY,
+		rightX: source.rightX,
+		rightY: source.rightY,
+		bottomPressed: source.bottomPressed,
+		bottomHeld: source.bottomHeld,
+		rightHeld: source.rightHeld,
+		leftPressed: source.leftPressed,
+		rightTriggerPressed: source.rightTriggerPressed,
+		leftTriggerPressed: source.leftTriggerPressed,
+		leftBumperPressed: source.leftBumperPressed,
+		rightBumperPressed: source.rightBumperPressed,
+		dpadUpPressed: source.dpadUpPressed,
+		dpadDownPressed: source.dpadDownPressed,
+		startPressed: source.startPressed
+	};
+
+/** Copy one snapshot while selecting the independently tested action buttons. */
+function withButtons(source:GamepadInputSnapshot, buttons:GamepadButtonFixture):GamepadInputSnapshot
+	return {
+		connected: source.connected,
+		focused: source.focused,
+		captured: source.captured,
+		paused: source.paused,
+		frameSeconds: source.frameSeconds,
+		leftX: source.leftX,
+		leftY: source.leftY,
+		rightX: source.rightX,
+		rightY: source.rightY,
+		bottomPressed: buttons.bottomPressed,
+		bottomHeld: buttons.bottomHeld,
+		rightHeld: buttons.rightHeld,
+		leftPressed: buttons.leftPressed,
+		rightTriggerPressed: buttons.rightTriggerPressed,
+		leftTriggerPressed: buttons.leftTriggerPressed,
+		leftBumperPressed: buttons.leftBumperPressed,
+		rightBumperPressed: buttons.rightBumperPressed,
+		dpadUpPressed: source.dpadUpPressed,
+		dpadDownPressed: source.dpadDownPressed,
+		startPressed: buttons.startPressed
+	};
 
 /** Return zero, or the first broken fit or separation rule for one viewport. */
 function hudViewportFailure(width:Int, height:Int, compact:Bool):Int {

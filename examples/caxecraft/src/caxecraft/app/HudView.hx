@@ -9,6 +9,7 @@ import caxecraft.gameplay.InventoryFullReason;
 import caxecraft.gameplay.InventoryState;
 import caxecraft.gameplay.RecoveryDecision;
 import caxecraft.localization.UiTypes.LocaleCursor;
+import caxecraft.input.ControlPrompts.ControlPromptDevice;
 import caxecraft.scenario.ScenarioId;
 import caxecraft.app.InteractionPrompt.InteractionPrompt;
 import caxecraft.app.ConversationFlow.ConversationState;
@@ -47,6 +48,9 @@ typedef HudView = {
 
 	/** True when the current application screen owns relative mouse input. */
 	final pointerCaptured:Bool;
+
+	/** Available local device whose localized control hints should be shown. */
+	final promptDevice:ControlPromptDevice;
 
 	/** Last committed block-selection result. */
 	final hit:RaycastHit;

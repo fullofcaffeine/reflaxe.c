@@ -19,6 +19,9 @@ enum abstract LocaleCursor(Int) {
 enum abstract UiMessage(String) {
 	var AquaticGearEquipped = "aquatic_gear_equipped";
 	var CapturePrompt = "capture_prompt";
+	var CapturePromptGamepad = "capture_prompt_gamepad";
+	var Controls = "controls";
+	var ControlsGamepad = "controls_gamepad";
 	var DebugDraws = "debug_draws";
 	var DebugFrame = "debug_frame";
 	var DebugTick = "debug_tick";
@@ -56,12 +59,15 @@ enum abstract UiMessage(String) {
 	var EditorUndo = "editor_undo";
 	var EditorValid = "editor_valid";
 	var HealthFull = "health_full";
+	var InteractionControlGamepad = "interaction_control_gamepad";
 	var MenuAdventure = "menu_adventure";
 	var MenuCreative = "menu_creative";
 	var MenuEditor = "menu_editor";
 	var MenuInstructions = "menu_instructions";
+	var MenuInstructionsGamepad = "menu_instructions_gamepad";
 	var NoBlockInReach = "no_block_in_reach";
 	var PauseHelp = "pause_help";
+	var PauseHelpGamepad = "pause_help_gamepad";
 	var PauseTitle = "pause_title";
 	var PlaceBlocked = "place_blocked";
 	var TitleFallback = "title_fallback";
@@ -101,8 +107,10 @@ enum abstract UiMessage(String) {
 	var EditorLayer = "editor_layer";
 	var EditorTrigger = "editor_trigger";
 	var ConversationHelp = "conversation_help";
+	var ConversationHelpGamepad = "conversation_help_gamepad";
 	var ConversationNarrator = "conversation_narrator";
 	var ReturnPrompt = "return_prompt";
+	var ReturnPromptGamepad = "return_prompt_gamepad";
 	var PlayerFallen = "player_fallen";
 	var EditorCamera = "editor_camera";
 	var EditorCameraWalk = "editor_camera_walk";

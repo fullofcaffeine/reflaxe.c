@@ -247,6 +247,14 @@ EVAL_CASES = {
                     r"GetGamepadAxisMovement\([^,]+,\s*[0-9]",
                 ),
             ),
+            SourceAudit(
+                "src/caxecraft/app/RaylibGameInput.hx",
+                (
+                    r"raylib\.raw\.",
+                    r"IsGamepadButton(?:Down|Pressed)\([^,]+,\s*[0-9]",
+                    r"GetGamepadAxisMovement\([^,]+,\s*[0-9]",
+                ),
+            ),
             SourceAudit("src/caxecraft/app/CaxecraftEditorScreen.hx", (r"Gamepad", r"Controller")),
         ),
         alternate_locale=True,
@@ -476,6 +484,16 @@ CASES = {
         forbidden_source_markers=("goto ",),
         output_line_count=1,
         success_line="0",
+        split_source_checks=(
+            GeneratedSourceCheck(
+                path="src/modules/caxecraft/input/GamepadInput.c",
+                required_markers=(
+                    "GamepadInput_gamepadInput",
+                    "GamepadInput_mergeGameInput",
+                ),
+                forbidden_markers=("raylib", "Dynamic", "Reflect", "goto "),
+            ),
+        ),
     ),
     "player-camera": HaxeCTestCase(
         case_id="player-camera",

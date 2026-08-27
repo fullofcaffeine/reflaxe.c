@@ -142,9 +142,20 @@ import caxecraft.app.GameplayMessage.gameplayMessageId;
 import caxecraft.localization.RuntimeUiCatalog;
 import caxecraft.localization.UiTypes.LocaleCursor;
 import caxecraft.localization.UiTypes.UiMessage;
+import caxecraft.input.ControlPrompts.ControlPromptDevice;
+import caxecraft.input.ControlPrompts.capturePromptMessage;
+import caxecraft.input.ControlPrompts.conversationHelpMessage;
+import caxecraft.input.ControlPrompts.gamepadInteractionPrompt;
+import caxecraft.input.ControlPrompts.pauseHelpMessage;
+import caxecraft.input.ControlPrompts.returnPromptMessage;
 import caxecraft.input.NavigationInput.NavigationCommand;
 import caxecraft.input.NavigationInput.NavigationRepeater;
 import caxecraft.input.NavigationInput.NavigationSample;
+import caxecraft.app.RaylibGameInput.cameraTogglePressed as cameraToggleFromDevices;
+#if caxecraft_devmode
+import caxecraft.app.RaylibGameInput.debugHudTogglePressed;
+#end
+import caxecraft.app.RaylibGameInput.sampleGameInput;
 import caxecraft.app.RaylibNavigationInput.samplePrimaryGamepad;
 #if caxecraft_pilot
 import caxecraft.app.PilotTelemetry.drawPilotTelemetry;
@@ -940,11 +951,14 @@ final class CaxecraftApp {
 			final menuConfirmPressed = PilotScript.menuConfirmPressed(pilotAction);
 			final descendHeld = PilotScript.descendHeld(pilotAction);
 			final cameraTogglePressed = false;
+			final promptDevice = ControlPromptDevice.KeyboardMouse;
 			#else
 			final focused = Raylib.IsWindowFocused();
-			final frameInput:GameInputFrame = RaylibGameInput.sample(screenCapturesPointer(screen), screenPausesSimulation(screen));
+			final realInput = sampleGameInput(screenCapturesPointer(screen), screenPausesSimulation(screen), focused, frameSeconds);
+			final frameInput:GameInputFrame = realInput.frame;
+			final promptDevice = realInput.promptDevice;
 			#if caxecraft_devmode
-			if (RaylibGameInput.debugHudTogglePressed())
+			if (debugHudTogglePressed())
 				debugHudVisible = !debugHudVisible;
 			#end
 			// Project the direct record immediately. Only scalar values stay live
@@ -967,7 +981,7 @@ final class CaxecraftApp {
 			final menuNextPressed = frameInput.menuNextPressed;
 			final menuConfirmPressed = frameInput.menuConfirmPressed;
 			final descendHeld = frameInput.descendHeld;
-			final cameraTogglePressed = RaylibGameInput.cameraTogglePressed(screenCapturesPointer(screen));
+			final cameraTogglePressed = cameraToggleFromDevices(screenCapturesPointer(screen));
 			#end
 			// Escape and focus loss are a stop barrier. Dispose the test owner and
 			// restore the exact ordinary shell before any campaign, tick, or input
@@ -1866,14 +1880,15 @@ final class CaxecraftApp {
 			Raylib.BeginDrawing();
 			if (onTitle) {
 				TitleMenu.draw(titleTexture, titleTextureReady, wordmarkTexture, wordmarkTextureReady, selectedMode, locale, uiCatalog,
-					levelView.adventureTagline(scenarioLocale(locale)));
+					levelView.adventureTagline(scenarioLocale(locale)), promptDevice);
 			} else if (onCampaignSelect) {
 				final selectedCampaign = campaign;
 				if (selectedCampaign == null)
 					screen = closeCampaignSelection(screen);
 				else
 					CampaignMenu.draw(titleTexture, titleTextureReady, wordmarkTexture, wordmarkTextureReady, selectedCampaign, locale, uiCatalog,
-						selectedCampaignLevelIndex, levelView.scenarioTitle(scenarioLocale(locale)), levelView.adventureTagline(scenarioLocale(locale)));
+						selectedCampaignLevelIndex, levelView.scenarioTitle(scenarioLocale(locale)), levelView.adventureTagline(scenarioLocale(locale)),
+						promptDevice);
 			} else if (onLoading) {
 				drawCampaignLoading(pendingCampaignLabel, locale, uiCatalog);
 			} else if (onEditor) {
@@ -1994,6 +2009,7 @@ final class CaxecraftApp {
 					},
 					paused: paused,
 					pointerCaptured: captured,
+					promptDevice: promptDevice,
 					hit: hit,
 					mode: selectedMode,
 					locale: locale,
@@ -2736,7 +2752,7 @@ final class CaxecraftApp {
 		Raylib.DrawRectangle(panel.x, panel.y, panel.width, panel.height, CaxecraftPalette.hudPanel());
 		Raylib.DrawRectangleLines(panel.x, panel.y, panel.width, panel.height, CaxecraftPalette.damage());
 		drawUiText(uiCatalog, view.locale, UiMessage.PlayerFallen, panel.x + 28, panel.y + 32, 24, color);
-		drawUiText(uiCatalog, view.locale, UiMessage.ReturnPrompt, panel.x + 28, panel.y + 84, 18, CaxecraftPalette.selection());
+		drawUiText(uiCatalog, view.locale, returnPromptMessage(view.promptDevice), panel.x + 28, panel.y + 84, 18, CaxecraftPalette.selection());
 	}
 
 	/** Draw pause or journal content as one replacement state. */
@@ -2750,7 +2766,7 @@ final class CaxecraftApp {
 			Raylib.DrawTextString(view.journalTitle, panel.x + 30, panel.y + 68, 18, CaxecraftPalette.selection());
 			drawWrappedText(view.journalBody, panel.x + 30, panel.y + 104, 16, Std.int((panel.width - 60) / 8), 22, 3, color);
 		}
-		drawUiText(uiCatalog, view.locale, UiMessage.PauseHelp, panel.x + 30, panel.y + panel.height - 34, 16, color);
+		drawUiText(uiCatalog, view.locale, pauseHelpMessage(view.promptDevice), panel.x + 30, panel.y + panel.height - 34, 16, color);
 	}
 
 	/** Draw the reviewed crosshair cell, or a line fallback when the atlas is unavailable. */
@@ -2814,7 +2830,7 @@ final class CaxecraftApp {
 		var noticeColor = color;
 		final feedback = view.feedback;
 		if (!view.pointerCaptured)
-			value = uiCatalog.text(locale, UiMessage.CapturePrompt);
+			value = uiCatalog.text(locale, capturePromptMessage(view.promptDevice));
 		else if (feedback.enemyAttacked) {
 			value = view.presentation.message(gameplayMessageId(GameplayMessage.EnemyHitWarning), scenarioLocale(locale));
 			noticeColor = CaxecraftPalette.damage();
@@ -2845,6 +2861,8 @@ final class CaxecraftApp {
 		else if (view.interactionPrompt != InteractionPrompt.NoInteractionPrompt) {
 			final message = view.interactionPrompt == InteractionPrompt.TalkInteractionPrompt ? GameplayMessage.GuideTalk : GameplayMessage.ObjectUse;
 			value = view.presentation.message(gameplayMessageId(message), scenarioLocale(locale));
+			if (view.promptDevice == ControlPromptDevice.Gamepad)
+				value = gamepadInteractionPrompt(value, uiCatalog.text(locale, UiMessage.InteractionControlGamepad));
 		}
 		if (value.length > 0)
 			drawNoticePanel(layout.action, value, layout.compact ? 13 : 15, noticeColor, CaxecraftPalette.selection(), layout.compact ? 31 : 38);
@@ -2925,7 +2943,7 @@ final class CaxecraftApp {
 		HudDigits.drawNumber(conversation.lineIndex + 1, panel.x + panel.width - 76, panel.y + 17, 1, color);
 		Raylib.DrawTextString("/", panel.x + panel.width - 52, panel.y + 18, 14, color);
 		HudDigits.drawNumber(lineCount, panel.x + panel.width - 34, panel.y + 17, 1, color);
-		drawUiText(uiCatalog, locale, UiMessage.ConversationHelp, help.x, help.y, 14, color);
+		drawUiText(uiCatalog, locale, conversationHelpMessage(view.promptDevice), help.x, help.y, 14, color);
 	}
 
 	/** Turn one authored speaker ID into a readable fallback without campaign mappings. */

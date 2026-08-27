@@ -5,6 +5,8 @@ import caxecraft.content.CampaignManifest.CampaignManifest;
 import caxecraft.localization.RuntimeUiCatalog;
 import caxecraft.localization.UiTypes.LocaleCursor;
 import caxecraft.localization.UiTypes.UiMessage;
+import caxecraft.input.ControlPrompts.ControlPromptDevice;
+import caxecraft.input.ControlPrompts.menuInstructionsMessage;
 import raylib.Color;
 import raylib.Raylib;
 import raylib.Texture2D;
@@ -63,7 +65,7 @@ final class CampaignMenu {
 
 	/** Draw one validated campaign card with runtime-loaded title and summary text. */
 	public static function draw(title:Texture2D, titleReady:Bool, wordmark:Texture2D, wordmarkReady:Bool, campaign:CampaignManifest, locale:LocaleCursor,
-			catalog:RuntimeUiCatalog, selectedLevelIndex:Int, scenarioTitle:String, adventureTagline:String):Void {
+			catalog:RuntimeUiCatalog, selectedLevelIndex:Int, scenarioTitle:String, adventureTagline:String, promptDevice:ControlPromptDevice):Void {
 		final width = Raylib.GetScreenWidth();
 		final height = Raylib.GetScreenHeight();
 		if (titleReady)
@@ -104,6 +106,7 @@ final class CampaignMenu {
 		final buttonTop = layout.buttonTop;
 		drawButton(panelLeft + 42, buttonTop, UiMessage.MenuAdventure, locale, catalog, true);
 		drawButton(panelLeft + PANEL_WIDTH - 42 - BUTTON_WIDTH, buttonTop, UiMessage.EditorBack, locale, catalog, false);
+		drawUiText(catalog, locale, menuInstructionsMessage(promptDevice), Std.int(width / 2) - 330, height - 36, 16, Color.rgba(229, 241, 235));
 	}
 
 	/**

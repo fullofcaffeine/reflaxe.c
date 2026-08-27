@@ -31,6 +31,14 @@ import caxecraft.editor.EditorAssetBrowser.filterEditorAssets;
 import caxecraft.editor.EditorAssetBrowser.moveEditorAssetSelection;
 import caxecraft.editor.EditorFlowProjection.allEditorFlowUiMessages;
 import caxecraft.gameplay.ItemKind;
+import caxecraft.input.ControlPrompts.ControlPromptDevice;
+import caxecraft.input.ControlPrompts.capturePromptMessage;
+import caxecraft.input.ControlPrompts.controlsMessage;
+import caxecraft.input.ControlPrompts.conversationHelpMessage;
+import caxecraft.input.ControlPrompts.gamepadInteractionPrompt;
+import caxecraft.input.ControlPrompts.menuInstructionsMessage;
+import caxecraft.input.ControlPrompts.pauseHelpMessage;
+import caxecraft.input.ControlPrompts.returnPromptMessage;
 import caxecraft.localization.RuntimeUiCatalog;
 import caxecraft.localization.RuntimeUiCatalog.RuntimeUiCatalogResult;
 import caxecraft.localization.UiTypes.LocaleCursor;
@@ -305,6 +313,19 @@ function selfCheck():Int {
 		|| adventureEsMx.length == 0
 		|| catalog.text(LocaleCursor.Locale1, UiMessage.EditorTitle).length == 0)
 		return 8;
+	if (controlsMessage(ControlPromptDevice.KeyboardMouse) != UiMessage.Controls
+		|| controlsMessage(ControlPromptDevice.Gamepad) != UiMessage.ControlsGamepad
+		|| menuInstructionsMessage(ControlPromptDevice.Gamepad) != UiMessage.MenuInstructionsGamepad
+		|| capturePromptMessage(ControlPromptDevice.Gamepad) != UiMessage.CapturePromptGamepad
+		|| pauseHelpMessage(ControlPromptDevice.Gamepad) != UiMessage.PauseHelpGamepad
+		|| returnPromptMessage(ControlPromptDevice.Gamepad) != UiMessage.ReturnPromptGamepad
+		|| conversationHelpMessage(ControlPromptDevice.Gamepad) != UiMessage.ConversationHelpGamepad
+		|| catalog.text(LocaleCursor.Locale0, UiMessage.ControlsGamepad).length == 0
+		|| catalog.text(LocaleCursor.Locale1, UiMessage.ConversationHelpGamepad).length == 0
+		|| catalog.text(LocaleCursor.Locale1, UiMessage.InteractionControlGamepad).length == 0)
+		return 77;
+	if (gamepadInteractionPrompt("KEY  ACTION", "PAD") != "PAD  ACTION" || gamepadInteractionPrompt("ACTION", "PAD") != "PAD  ACTION")
+		return 77;
 	if (catalog.templateCount() <= 0 || !allRequiredTemplatesExist(catalog))
 		return 71;
 	final eventArgument = "zone.harbor";

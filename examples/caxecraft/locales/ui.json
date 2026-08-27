@@ -29,6 +29,13 @@
       }
     },
     {
+      "id": "capture_prompt_gamepad",
+      "text": {
+        "en": "BOTTOM BUTTON TO RESUME",
+        "es-MX": "BOTÓN INFERIOR PARA SEGUIR"
+      }
+    },
+    {
       "id": "controls",
       "text": {
         "en": "WASD MOVE  1-9 ITEMS  SPACE JUMP/RISE  SHIFT DIVE  E INTERACT  LMB MINE  RMB USE",
@@ -36,10 +43,24 @@
       }
     },
     {
+      "id": "controls_gamepad",
+      "text": {
+        "en": "LEFT STICK MOVE  RIGHT STICK LOOK  BOTTOM JUMP/RISE  RIGHT DIVE  LEFT INTERACT  RT ATTACK  LT USE  LB/RB ITEMS",
+        "es-MX": "PALANCA IZQ MOVER  PALANCA DER MIRAR  ABAJO SALTAR/SUBIR  DERECHA BUCEAR  IZQUIERDA INTERACTUAR  RT ATACAR  LT USAR  LB/RB OBJETOS"
+      }
+    },
+    {
       "id": "conversation_help",
       "text": {
         "en": "E: COMPLETE / CONTINUE   HOLD SPACE: SKIP",
         "es-MX": "E: COMPLETAR / SEGUIR   MANTÉN ESPACIO: OMITIR"
+      }
+    },
+    {
+      "id": "conversation_help_gamepad",
+      "text": {
+        "en": "LEFT FACE: COMPLETE / CONTINUE   HOLD BOTTOM: SKIP",
+        "es-MX": "FRONTAL IZQ: COMPLETAR / SEGUIR   MANTÉN ABAJO: OMITIR"
       }
     },
     {
@@ -638,6 +659,13 @@
       }
     },
     {
+      "id": "interaction_control_gamepad",
+      "text": {
+        "en": "LEFT FACE",
+        "es-MX": "FRONTAL IZQ"
+      }
+    },
+    {
       "id": "menu_adventure",
       "text": {
         "en": "ADVENTURE",
@@ -666,6 +694,13 @@
       }
     },
     {
+      "id": "menu_instructions_gamepad",
+      "text": {
+        "en": "D-PAD CHOOSE   BOTTOM PLAY   START BACK",
+        "es-MX": "CRUCETA ELEGIR   ABAJO JUGAR   START VOLVER"
+      }
+    },
+    {
       "id": "no_block_in_reach",
       "text": {
         "en": "NO BLOCK IN REACH",
@@ -677,6 +712,13 @@
       "text": {
         "en": "CLICK TO CAPTURE  //  Q TO QUIT",
         "es-MX": "CLIC PARA CAPTURAR  //  Q PARA SALIR"
+      }
+    },
+    {
+      "id": "pause_help_gamepad",
+      "text": {
+        "en": "BOTTOM TO RESUME  //  START UNPAUSE",
+        "es-MX": "ABAJO PARA SEGUIR  //  START QUITA PAUSA"
       }
     },
     {
@@ -705,6 +747,13 @@
       "text": {
         "en": "E  RETURN TO THE MEADOW",
         "es-MX": "E  VOLVER AL PRADO"
+      }
+    },
+    {
+      "id": "return_prompt_gamepad",
+      "text": {
+        "en": "LEFT FACE  RETURN TO THE MEADOW",
+        "es-MX": "FRONTAL IZQ  VOLVER AL PRADO"
       }
     },
     {

@@ -154,12 +154,12 @@ final class ContentJson {
 	/**
 	 * Largest JSON source admitted by this bounded content schema.
 	 *
-	 * Forty-eight KiB admits the reviewed runtime UI catalog, including its
-	 * data-owned diagnostic and editor templates, while keeping untrusted syntax
-	 * and allocation work bounded. The focused content-JSON and runtime-schema
-	 * tracers supply generated-C timing and sanitizer evidence for this limit.
+	 * Sixty-four KiB admits the reviewed runtime UI catalog as creator and input
+	 * help grows, while keeping untrusted syntax and allocation work bounded. The
+	 * focused content-JSON and runtime-schema tracers supply generated-C timing,
+	 * exact limit-edge, and sanitizer evidence for this limit.
 	 */
-	public static inline final MAXIMUM_BYTES:Int = 48 * 1024;
+	public static inline final MAXIMUM_BYTES:Int = 64 * 1024;
 
 	/** Deep enough for the current schemas while bounding recursive work. */
 	public static inline final MAXIMUM_DEPTH:Int = 24;
@@ -168,7 +168,7 @@ final class ContentJson {
 	 * Whole-document value bound, independent of source byte length.
 	 *
 	 * This leaves headroom above the validated UI and content catalogs while
-	 * keeping a limit-edge parse inside the native feedback budget. The 48 KiB
+	 * keeping a limit-edge parse inside the native feedback budget. The 64 KiB
 	 * byte cap remains the tighter bound for ordinary text-heavy catalogs.
 	 * Changes require a representative generated-C timing and memory check.
 	 */

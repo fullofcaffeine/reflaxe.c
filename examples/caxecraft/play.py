@@ -2853,8 +2853,8 @@ def validate_generated_playable(
     # in-process input provider. Requiring GetMouseDelta there would reject the
     # exact dead-code removal that makes the two providers a clean compile-time
     # choice. Normal playable builds must still prove the real input path.
-    if pilot is None and "GetMouseDelta(" not in app:
-        raise PlayFailure("generated Caxecraft app omitted direct Raylib call GetMouseDelta(")
+    if pilot is None and "GetMouseDelta(" not in combined:
+        raise PlayFailure("generated Caxecraft output omitted direct Raylib call GetMouseDelta(")
     if pilot == "resize-layout" and "SetWindowSize(" not in app:
         raise PlayFailure("generated Caxecraft resize pilot omitted direct Raylib call SetWindowSize(")
     if pilot == "secondary-locale" and "UiCatalog_nextLocale(" not in app:
