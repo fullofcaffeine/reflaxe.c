@@ -16,6 +16,7 @@ import caxecraft.content.RuntimeContentGeneration.rebuildRuntimeContentForPublic
 import caxecraft.content.RuntimeContentGeneration.loadRuntimeContentForTesting;
 #end
 import caxecraft.content.RuntimeContentDigest.runtimeSha256;
+import caxecraft.content.RuntimeContentDigest.runtimeSha256Hex;
 import caxecraft.content.RuntimeContentReceiptWriter.runtimeGenerationSha256;
 import caxecraft.domain.EntityId;
 import caxecraft.domain.Vitals.MAX_HEALTH;
@@ -312,7 +313,10 @@ function missingRejected(receipt:Bytes, content:Bytes, ui:Bytes, map:Bytes, miss
 
 /** Compare digest bytes with an independently authored lowercase expectation. */
 function digestMatches(input:String, expected:String):Bool {
-	final digest = runtimeSha256(Bytes.ofString(input));
+	final inputBytes = Bytes.ofString(input);
+	if (runtimeSha256Hex(inputBytes) != expected)
+		return false;
+	final digest = runtimeSha256(inputBytes);
 	if (digest.length != 32 || expected.length != 64)
 		return false;
 	for (index in 0...digest.length) {

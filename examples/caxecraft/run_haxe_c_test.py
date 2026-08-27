@@ -819,6 +819,7 @@ CASES = {
             "bytes-string",
             "object",
             "gc",
+            "iterator",
             "int-map",
             "string-map",
             "string-split",

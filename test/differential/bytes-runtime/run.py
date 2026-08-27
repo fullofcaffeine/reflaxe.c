@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -347,6 +348,55 @@ def validate_bytes_flow_carrier(hxcir: str, function_id: str) -> None:
         )
 
 
+def validate_lowercase_hex_path(hxcir: str) -> None:
+    """Prove digest bytes become one owned lowercase String through typed calls."""
+    function = hxcir_function(hxcir, "function.Main.lowercaseHex")
+    expected_counts = {
+        'runtime(feature="bytes",operation="get")': 1,
+        'runtime(feature="string-scalar",operation="char-code-at")': 2,
+        'runtime(feature="string",operation="from-scalar")': 2,
+        'runtime(feature="string",operation="concat")': 2,
+    }
+    for marker, expected in expected_counts.items():
+        actual = function.count(marker)
+        if actual != expected:
+            raise BytesRuntimeFailure(
+                "lowercase hexadecimal reduction has "
+                f"{actual} {marker!r} operation(s); expected {expected}"
+            )
+    if (
+        "returns=managed-string-utf8" not in function
+        or "terminator return value=" not in function
+        or 'implementation=runtime("string")' not in function
+    ):
+        raise BytesRuntimeFailure(
+            "lowercase hexadecimal reduction lost its owned String return"
+        )
+
+    main = hxcir_function(hxcir, "function.Main.main")
+    ordered_markers = (
+        'dispatch=direct("function.Main.lowercaseHex")',
+        "string-equality-left-owner-initialize",
+        "string-equality-left-borrow",
+        'operation="haxe.string.not-equal.right-non-null"',
+        "string-equality-result-initialize",
+        'string-equality-result" result=',
+        "release-branch-local-owner",
+    )
+    cursor = 0
+    for marker in ordered_markers:
+        position = main.find(marker, cursor)
+        if position < 0:
+            raise BytesRuntimeFailure(
+                f"direct lowercase hexadecimal comparison omitted {marker!r}"
+            )
+        cursor = position + len(marker)
+    if main.count('dispatch=direct("function.Main.lowercaseHex")') != 1:
+        raise BytesRuntimeFailure(
+            "direct lowercase hexadecimal comparison must evaluate its producer once"
+        )
+
+
 def validate_optional_bytes_lifecycle(hxcir: str) -> None:
     """Prove absence, payload ownership, replacement, and cleanup stay distinct."""
     function = hxcir_function(hxcir, "function.Main.inspectOptionalBytes")
@@ -496,30 +546,40 @@ def validate_generated_project(output: Path, hxcir: str) -> None:
     validate_fresh_string_copy_ownership(
         hxcir, "function.Main.copyJoinedLines", expected_string_temporaries=2
     )
+    validate_lowercase_hex_path(hxcir)
     validate_bytes_flow_carrier(hxcir, "function.Main.inspectChoice")
     validate_bytes_flow_carrier(hxcir, "function.Main.returnChoice")
     validate_optional_bytes_lifecycle(hxcir)
     validate_optional_bytes_fallback(hxcir)
 
     main = hxcir_function(hxcir, "function.Main.main")
-    owner_actions = [
+    declared_owner_actions = [
         line.split('"', 2)[1]
         for line in main.splitlines()
         if " action " in line and '"bytes-temporary.' in line
+    ]
+    return_lines = [
+        line for line in main.splitlines() if "terminator return" in line
+    ]
+    final_return = max(
+        return_lines,
+        key=lambda line: sum(
+            f'"{action}"' in line for action in declared_owner_actions
+        ),
+        default="",
+    )
+    owner_actions = [
+        action
+        for action in declared_owner_actions
+        if f'"{action}"' in final_return
     ]
     if len(owner_actions) < 5:
         raise BytesRuntimeFailure(
             "nested fresh Bytes calls did not create their exact caller owners"
         )
-    return_lines = [
-        line
-        for line in main.splitlines()
-        if "terminator return" in line
-        and all(f'"{action}"' in line for action in owner_actions)
-    ]
-    if not return_lines or any(
-        return_lines[0].index(f'"{later}"')
-        >= return_lines[0].index(f'"{earlier}"')
+    if any(
+        final_return.index(f'"{later}"')
+        >= final_return.index(f'"{earlier}"')
         for earlier, later in zip(owner_actions, owner_actions[1:])
     ):
         raise BytesRuntimeFailure(
@@ -577,7 +637,7 @@ def validate_generated_project(output: Path, hxcir: str) -> None:
         },
         "array-join": {"join"},
         "bytes-string": {"get-string-utf8"},
-        "string": {"cleanup-release", "concat", "retain"},
+        "string": {"cleanup-release", "concat", "from-scalar", "retain"},
     }:
         raise BytesRuntimeFailure(
             "fresh String-to-Bytes fixture selected the wrong neighboring operations: "
@@ -596,20 +656,32 @@ def validate_generated_project(output: Path, hxcir: str) -> None:
         "hxc_bytes_ref_get_string_utf8",
         "hxc_array_string_join",
         "hxc_string_concat_ref",
+        "hxc_string_from_scalar",
         "hxc_string_release",
     ):
         if marker not in sources:
             raise BytesRuntimeFailure(f"generated C omitted {marker}")
-    for marker in (
-        ".hxc_has_value = false",
-        ".hxc_has_value = true",
-        "hxc_bytes_ref_retain((*(struct hxc_optional_value *)",
-        "hxc_bytes_ref_release((*(struct hxc_optional_value *)",
-    ):
+    for marker in (".hxc_has_value = false", ".hxc_has_value = true"):
         if marker not in sources:
             raise BytesRuntimeFailure(
                 f"structural nullable Bytes C omitted {marker}"
             )
+    optional_retain = re.search(
+        r"hxc_bytes_ref_retain\(\(\*\(struct (hxc_optional_value(?:_h[0-9a-f]+)?) \*\)",
+        sources,
+    )
+    optional_release = re.search(
+        r"hxc_bytes_ref_release\(\(\*\(struct (hxc_optional_value(?:_h[0-9a-f]+)?) \*\)",
+        sources,
+    )
+    if (
+        optional_retain is None
+        or optional_release is None
+        or optional_retain.group(1) != optional_release.group(1)
+    ):
+        raise BytesRuntimeFailure(
+            "structural nullable Bytes C lost one shared typed retain/release carrier"
+        )
     if "goto " in sources:
         raise BytesRuntimeFailure("the structured Bytes fixture unexpectedly emitted goto")
 

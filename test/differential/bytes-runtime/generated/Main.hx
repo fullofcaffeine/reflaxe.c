@@ -73,6 +73,32 @@ final class Main {
 		return Bytes.ofString(lines.join("\n") + "\n");
 	}
 
+	/**
+		Render digest-sized bytes through the ordinary lowercase hexadecimal path.
+
+		The fresh `StringBuf` result is compared with a borrowed literal after this
+		call returns. This keeps byte reads, indexed digit lookup, repeated
+		`addChar`, returned String ownership, and equality in one reduced contract.
+	**/
+	static function lowercaseHex(value:Bytes):String {
+		final digits = "0123456789abcdef";
+		final output = new StringBuf();
+		for (index in 0...value.length) {
+			final byte = value.get(index);
+			output.addChar(digits.charCodeAt(byte >>> 4));
+			output.addChar(digits.charCodeAt(byte & 15));
+		}
+		return output.toString();
+	}
+
+	/** Build a deterministic 32-byte stand-in for a binary SHA-256 result. */
+	static function knownDigestBytes():Bytes {
+		final result = Bytes.alloc(32);
+		for (index in 0...result.length)
+			result.set(index, (index & 15) * 17);
+		return result;
+	}
+
 	/** Return one input while making its left-to-right source order observable. */
 	static function orderedText(expected:Int, value:String):String {
 		if (stringSourceEvaluations != expected)
@@ -275,6 +301,7 @@ final class Main {
 			|| explicitUtf8 != "prefix:hé🙂"
 			|| decodedWhole != "prefix:hé🙂"
 			|| decodedEmpty != ""
+			|| lowercaseHex(knownDigestBytes()) != "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff"
 			|| decodedBytes.get(7) != "X".code) {}
 	}
 }
