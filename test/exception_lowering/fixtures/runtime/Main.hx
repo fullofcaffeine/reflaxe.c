@@ -1,3 +1,6 @@
+/** The real Haxe exception carrier used only by this language-semantics fixture. */
+private typedef ExceptionPayload = Dynamic;
+
 /** One collector-owned identity transported through a Dynamic exception. */
 private final class Counter {
 	/** Value observed after the exception crosses the generated call boundary. */
@@ -17,7 +20,7 @@ private final class Counter {
  */
 class Main {
 	/** Transfer one Dynamic value to the nearest caller-owned exception frame. */
-	static function raiseFromCallee(value:Dynamic):Void {
+	static function raiseFromCallee(value:ExceptionPayload):Void {
 		throw value;
 	}
 
@@ -28,10 +31,10 @@ class Main {
 				final values = [value, value + 1];
 				values.push(value + 2);
 				raiseFromCallee(values[0]);
-			} catch (payload:Dynamic) {
+			} catch (payload:ExceptionPayload) {
 				throw payload;
 			}
-		} catch (payload:Dynamic) {
+		} catch (payload:ExceptionPayload) {
 			return cast payload;
 		}
 		return -1;
@@ -40,9 +43,9 @@ class Main {
 	/** Keep one managed Dynamic payload rooted while its callee frame unwinds. */
 	static function catchManagedAcrossCall(value:Int):Int {
 		try {
-			final payload:Dynamic = new Counter(value);
+			final payload:ExceptionPayload = new Counter(value);
 			raiseFromCallee(payload);
-		} catch (payload:Dynamic) {
+		} catch (payload:ExceptionPayload) {
 			final counter:Counter = cast payload;
 			return counter.value;
 		}
@@ -55,7 +58,7 @@ class Main {
 			final text = Std.string(value);
 			raiseFromCallee(value);
 			return text.length;
-		} catch (payload:Dynamic) {
+		} catch (payload:ExceptionPayload) {
 			return cast payload;
 		}
 	}
@@ -66,7 +69,7 @@ class Main {
 			final values = [value];
 			values.push(value + 1);
 			return values[0];
-		} catch (_:Dynamic) {
+		} catch (_:ExceptionPayload) {
 			return -1;
 		}
 	}
@@ -77,7 +80,7 @@ class Main {
 			final values = [value];
 			values.push(value + 1);
 			return values;
-		} catch (_:Dynamic) {
+		} catch (_:ExceptionPayload) {
 			return [];
 		}
 	}
