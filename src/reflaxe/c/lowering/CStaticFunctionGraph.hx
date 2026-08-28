@@ -14,6 +14,7 @@ import reflaxe.c.lowering.CBodyLowering.CBodyInitializerInput;
 import reflaxe.c.lowering.CBodyConstructor.CBodyConstructorInput;
 import reflaxe.c.lowering.CBodyArray.CBodyArrayRecognition;
 import reflaxe.c.lowering.CBodyBytes.CBodyBytesRecognition;
+import reflaxe.c.lowering.CBodyDate.CBodyDateRecognition;
 import reflaxe.c.lowering.CBodyIntMap.CBodyIntMapRecognition;
 import reflaxe.c.lowering.CBodyIterator.CBodyIteratorRecognition;
 import reflaxe.c.lowering.CBodyStringMap.CBodyStringMapRecognition;
@@ -191,6 +192,9 @@ class CStaticFunctionGraphCollector {
 				if (!isCompilerIntrinsicCall(callee)
 					&& !isStructInitIntrinsicCall(callee)
 					&& !isBytesIntrinsicCall(callee)
+					&& !isDateIntrinsicCall(callee)
+					&& !isDateHostIntrinsicCall(callee)
+					&& !isTimerStampIntrinsicCall(callee)
 					&& !CBodyFixedArray.isZeroCall(callee, arguments.length)):
 				switch unwrapExpression(callee).expr {
 					case TField(receiver, FDynamic(name)):
@@ -324,6 +328,39 @@ class CStaticFunctionGraphCollector {
 			case TField(_, FStatic(classReference, _)): CBodyBytesRecognition.isCoreBytes(classReference);
 			case TField(_, FInstance(classReference, _, _)): CBodyBytesRecognition.isCoreBytes(classReference);
 			case TParenthesis(inner) | TMeta(_, inner) | TCast(inner, _): isBytesIntrinsicCall(inner);
+			case _: false;
+		};
+
+	/** Keep the compiler-owned Date surface out of ordinary function reachability. */
+	static function isDateIntrinsicCall(callee:TypedExpr):Bool
+		return switch callee.expr {
+			case TField(_, FStatic(classReference, fieldReference)) if (CBodyDateRecognition.isCoreDate(classReference)):
+				switch fieldReference.get().name {
+					case "fromTime" | "fromString": true;
+					case _: false;
+				}
+			case TParenthesis(inner) | TMeta(_, inner) | TCast(inner, _): isDateIntrinsicCall(inner);
+			case _: false;
+		};
+
+	/** Keep the private Date host-service declarations out of extern reachability. */
+	static function isDateHostIntrinsicCall(callee:TypedExpr):Bool
+		return switch callee.expr {
+			case TField(_, FStatic(classReference, fieldReference)) if (CBodyDateRecognition.isDateHost(classReference)):
+				switch fieldReference.get().name {
+					case "localToMilliseconds" | "timezoneOffsetAt" | "wallMilliseconds": true;
+					case _: false;
+				}
+			case TParenthesis(inner) | TMeta(_, inner) | TCast(inner, _): isDateHostIntrinsicCall(inner);
+			case _: false;
+		};
+
+	/** Keep the exact monotonic Timer.stamp service out of extern reachability. */
+	static function isTimerStampIntrinsicCall(callee:TypedExpr):Bool
+		return switch callee.expr {
+			case TField(_, FStatic(classReference, fieldReference)): CBodyDateRecognition.isCoreTimer(classReference) && fieldReference.get()
+					.name == "stamp";
+			case TParenthesis(inner) | TMeta(_, inner) | TCast(inner, _): isTimerStampIntrinsicCall(inner);
 			case _: false;
 		};
 

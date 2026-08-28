@@ -883,6 +883,10 @@ class CProjectEmitter {
 				case "object-map" if (reason.kind == "runtime-operation"):
 				case "enum-value-map" if (reason.kind == "runtime-operation"):
 				case "bytes" if (reason.kind == "runtime-operation"):
+				case "date-time" if (reason.kind == "runtime-operation" && switch reason.operationId {
+						case "wall-milliseconds" | "monotonic-seconds" | "local-to-milliseconds" | "timezone-offset": true;
+						case _: false;
+					}):
 				case "dynamic" if (reason.kind == "runtime-operation" && switch reason.operationId {
 						case "box" | "box-null" | "box-type-token" | "unbox" | "get" | "set" | "call" | "invoke" | "equal": true;
 						case _: false;

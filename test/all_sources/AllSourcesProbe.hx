@@ -9,6 +9,7 @@ import reflaxe.c.ProfileResolver;
 import reflaxe.c.TargetPlatform;
 import reflaxe.c.ast.CAST.CTranslationUnit;
 import reflaxe.c.ast.CASTPrinter;
+import haxe.Timer;
 
 /** Exercises target-context implementations while the HXML includes every owned module. */
 class AllSourcesProbe {
@@ -31,6 +32,10 @@ class AllSourcesProbe {
 		}
 		if (!TargetPlatform.environmentSupportsSys("hosted") || TargetPlatform.environmentSupportsSys("freestanding")) {
 			throw "the shared environment capability predicate drifted";
+		}
+		final timerTypeProbe:Null<Timer> = null;
+		if (timerTypeProbe != null) {
+			throw "the target-owned Timer override must remain type-visible";
 		}
 
 		final context = new CompilationContext(CProfile.Portable);

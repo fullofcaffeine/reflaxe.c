@@ -6,11 +6,6 @@
       "ownerTask": "E3.T08"
     },
     {
-      "id": "date-time",
-      "summary": "Date, timezone, wall-clock, and monotonic-time adapters.",
-      "ownerTask": "E5.T08"
-    },
-    {
       "id": "export-error",
       "summary": "Thread-safe exported status and error-detail boundary.",
       "ownerTask": "E7.T04"
@@ -411,6 +406,73 @@
       "defines": [],
       "environments": [
         "freestanding",
+        "hosted"
+      ]
+    },
+    {
+      "documentation": {
+        "referencePath": "docs/date-time.md",
+        "selectionRoots": [
+          {
+            "description": "A reachable Date constructor needs host timezone and daylight-saving normalization.",
+            "id": "local-calendar",
+            "kind": "hxc-ir-operation"
+          },
+          {
+            "description": "A reachable Timer.stamp call needs elapsed time that cannot move backwards with wall-clock adjustments.",
+            "id": "monotonic-clock",
+            "kind": "hxc-ir-operation"
+          },
+          {
+            "description": "A reachable local Date projection needs the host offset at that exact timestamp.",
+            "id": "timezone-offset",
+            "kind": "hxc-ir-operation"
+          },
+          {
+            "description": "A reachable Date.now call needs the host's adjustable Unix-epoch clock.",
+            "id": "wall-clock",
+            "kind": "hxc-ir-operation"
+          }
+        ],
+        "runtimeRationale": "Timezone databases, daylight-saving normalization, and clocks are host services. One narrow status/out boundary keeps those effects separate from portable Date arithmetic.",
+        "evidence": [
+          "runtime/hxrt/test/date_time_contract.c",
+          "test/date_time/run.py"
+        ],
+        "directAlternative": "UTC Date projection remains deterministic program-local Gregorian arithmetic and Date.fromTime needs only ordinary object allocation.",
+        "contract": "Reads wall and monotonic clocks separately, converts local civil fields through host timezone rules, and reports Haxe-sign timezone offsets with checked time_t range conversion.",
+        "programLocalAlternative": "A platform with a closed embedded calendar can replace these calls with a program-local adapter that preserves the same status and clock-kind contracts."
+      },
+      "dependencies": [
+        "status"
+      ],
+      "id": "date-time",
+      "availability": "compiler-selectable",
+      "symbols": [
+        "hxc_date_time_local_to_milliseconds",
+        "hxc_date_time_monotonic_seconds",
+        "hxc_date_time_timezone_offset",
+        "hxc_date_time_wall_milliseconds"
+      ],
+      "artifacts": [
+        {
+          "sourceSha256": "07086c9185ea03a13dc6bf39d02f00f99b7cbd8151ba0bdf90d7e457c07880d4",
+          "kind": "runtime-header",
+          "outputPath": "runtime/include/hxrt/date_time.h",
+          "sourcePath": "runtime/hxrt/include/hxrt/date_time.h"
+        },
+        {
+          "sourceSha256": "546e3f244d3187993254aca85dd4acfd64bd3c259b1531d736c950ce9de51b24",
+          "kind": "runtime-source",
+          "outputPath": "runtime/src/date_time.c",
+          "sourcePath": "runtime/hxrt/src/date_time.c"
+        }
+      ],
+      "libraries": [],
+      "minimalAllowed": true,
+      "summary": "Hosted wall-clock, monotonic-clock, local-calendar, and timezone adapters.",
+      "defines": [],
+      "environments": [
         "hosted"
       ]
     },
@@ -1711,6 +1773,7 @@
     "array-join",
     "bytes",
     "bytes-string",
+    "date-time",
     "dynamic",
     "enum-value-map",
     "exception",
@@ -1785,7 +1848,7 @@
     "releaseProvenance": {
       "runtimeCStandard": "c11",
       "sourceHashAlgorithm": "sha256",
-      "sourceSetSha256": "0480ef0b58f315b51d263f1e2e38fd8a450efdde137e1b0c64ff1c7f1c21a191",
+      "sourceSetSha256": "c5bc6a8c867e4421e6b507d3d4497c5a5cdd098ac24ef24e03c53b2c91c27c38",
       "publicHeaderCppStandard": "c++17"
     },
     "generatedCodeCompatibility": "same-major",

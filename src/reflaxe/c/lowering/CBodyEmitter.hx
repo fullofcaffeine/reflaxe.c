@@ -3778,6 +3778,8 @@ class CBodyEmitter {
 					case IRIOCall(call) if (isHostedOutputDispatch(call.dispatch)):
 						addUnique(headers, "hxrt/io.h");
 						addUnique(headers, "stdlib.h");
+					case IRIOCall({dispatch: IRCDRuntime("date-time", _)}):
+						addUnique(headers, "hxrt/date_time.h");
 					case IRIOCall({dispatch: IRCDRuntime("string-scalar", _)}):
 						addUnique(headers, "hxrt/string_scalar.h");
 					case IRIOCall({dispatch: IRCDRuntime("string-lower-case", "to-lower-case")}):
@@ -6604,6 +6606,9 @@ class CBodyEmitter {
 			case dispatch if (isHostedOutputDispatch(dispatch)):
 				emitHostedPrintln(statements, values, instruction, call, lineDirectives, fn, localNames, globalNames, spanLengthNames, boundsAbortName);
 				return false;
+			case IRCDRuntime("date-time", _):
+				emitDateTimeCall(statements, values, referencedValues, instruction, call, temporaryNames, lineDirectives, boundsAbortName, fn);
+				return false;
 			case IRCDRuntime("array", _):
 				emitManagedArrayCall(statements, values, referencedValues, instruction, call, temporaryNames, lineDirectives, boundsAbortName, fn);
 				return false;
@@ -8333,6 +8338,42 @@ class CBodyEmitter {
 			case IRCDRuntime("io", operationId): operationId == "sys-println-literal" || operationId == "sys-println-string" || operationId == "trace-literal";
 			case _: false;
 		};
+	}
+
+	/** Emit one validated date-time status/out call without exposing raw C names. */
+	function emitDateTimeCall(statements:Array<CStmt>, values:Map<String, CExpr>, referencedValues:Map<String, Bool>, instruction:HxcIRInstruction,
+			call:HxcIRCall, temporaryNames:Map<String, CIdentifier>, lineDirectives:Bool, boundsAbortName:Null<CIdentifier>, fn:HxcIRFunction):Void {
+		final operation = switch call.dispatch {
+			case IRCDRuntime("date-time", value): value;
+			case _: return fail('date-time call `${instruction.id}` in `${fn.id}` lost its runtime dispatch');
+		};
+		final runtimeName = switch operation {
+			case "wall-milliseconds": CBRNDateTimeWallMilliseconds;
+			case "monotonic-seconds": CBRNDateTimeMonotonicSeconds;
+			case "local-to-milliseconds": CBRNDateTimeLocalToMilliseconds;
+			case "timezone-offset": CBRNDateTimeTimezoneOffset;
+			case _: return fail('date-time call `${instruction.id}` in `${fn.id}` names unsupported operation `$operation`');
+		};
+		final result = requireResult(instruction, fn.id);
+		final temporary = temporaryNames.get(result.id);
+		if (temporary == null)
+			return fail('date-time call `${instruction.id}` in `${fn.id}` has no finalized result temporary');
+		final declaration = typedDeclarator(result.type, DName(temporary));
+		statements.push(SDecl({
+			storage: [],
+			alignments: [],
+			type: declaration.type,
+			declarator: declaration.declarator,
+			initializer: null,
+			attributes: []
+		}));
+		final arguments = call.arguments.map(valueId -> requireValue(values, valueId, fn.id));
+		arguments.push(EUnary(AddressOf, EIdentifier(temporary)));
+		addLineDirective(statements, instruction.source, lineDirectives);
+		emitStatusAbort(statements, ECall(EIdentifier(CBodyRuntimeNames.identifier(runtimeName)), arguments), boundsAbortName, instruction.id, fn.id);
+		values.set(result.id, EIdentifier(temporary));
+		if (!referencedValues.exists(result.id))
+			statements.push(SExpr(ECast(new CType(TVoid), DName(null), EIdentifier(temporary))));
 	}
 
 	function emitHostedPrintln(statements:Array<CStmt>, values:Map<String, CExpr>, instruction:HxcIRInstruction, call:HxcIRCall, lineDirectives:Bool,

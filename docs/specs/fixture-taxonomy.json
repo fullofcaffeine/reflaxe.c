@@ -52,6 +52,7 @@
         "span-lowering",
         "project-layout",
         "runtime-feature-graph",
+        "date-time",
         "string-output",
         "hello",
         "caxecraft-domain"
@@ -93,6 +94,7 @@
         "span-lowering",
         "project-layout",
         "runtime-feature-graph",
+        "date-time",
         "string-output"
       ]
     },
@@ -197,6 +199,7 @@
         "string-map",
         "bytes-runtime",
         "string-runtime",
+        "date-time",
         "string-output",
         "hello",
         "caxecraft-domain"
@@ -223,6 +226,7 @@
         "string-map",
         "bytes-runtime",
         "string-runtime",
+        "date-time",
         "string-output",
         "hello",
         "project-layout",
@@ -247,7 +251,8 @@
         "string-map",
         "bytes-runtime",
         "gc-runtime",
-        "string-runtime"
+        "string-runtime",
+        "date-time"
       ]
     },
     {
@@ -1090,6 +1095,29 @@
         "literal, slice, compare, and hash paths allocate nothing; owned decode, concat, builder growth, and CString copies retain exact allocator identity and failure atomicity",
         "borrowed CString conversion requires stable trailing-NUL storage and an owner-tied lifetime, while both borrowed and owned paths reject embedded NUL without truncation",
         "strict GCC and Clang O0/O2/sanitizer lanes match the pinned Haxe scalar oracle and link no object, GC, reflection, or dynamic symbol family"
+      ]
+    },
+    {
+      "id": "date-time",
+      "directory": "test/date_time",
+      "runner": [
+        "python3",
+        "test/date_time/run.py"
+      ],
+      "types": [
+        "positive",
+        "negative",
+        "runtime",
+        "differential",
+        "abi"
+      ],
+      "status": "active",
+      "assertions": [
+        "ordinary Date values preserve Float milliseconds, fresh object identity, deterministic Gregorian UTC fields, and Eval-compatible fractional projection without selecting hosted calendar services",
+        "hosted local constructors, timezone offsets, wall-clock milliseconds, and monotonic seconds use four distinct checked status/out operations with exact generated-C and runtime-plan evidence",
+        "three process-owned POSIX timezone rules cover UTC, a fractional positive offset, daylight transitions, missing local time, repeated local time, and one documented Eval offset inconsistency",
+        "strict C11, C++17 headers, and address plus undefined-behavior sanitizers cover the generated program and the allocation-free native adapter",
+        "time_t overflow, unsupported Date.fromString, freestanding, and WASI fail before plausible C output with exact source or runtime-policy diagnostics"
       ]
     },
     {

@@ -76,7 +76,7 @@
     "applicableSourceCount": 183,
     "applicableSourceSha256": "be53a7994b9d58654465038f02792ebc70f5c2d283854ad19d755e4af780aa8a",
     "apiCount": 2311,
-    "apiSurfaceSha256": "05c93d83268fe1836ac6245d5325c33eb9e7a070f29e5dc44879f6a421d44a9a"
+    "apiSurfaceSha256": "313344638c1a5771a3a6734490de6e48a6f40524d2d3ee11f4cf398aaede125e"
   },
   "applicability": {
     "publicSurface": "non-private typed declarations and fields visible to the pinned compiler; @:noCompletion declarations are excluded",
@@ -684,18 +684,21 @@
       ],
       "environments": [
         "hosted",
+        "freestanding",
         "wasi",
         "emscripten"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T08",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Wall clock, local time, timezone, precision, and range require explicit adapter capabilities; freestanding has no implicit clock."
+      "tests": [
+        "test/date_time/run.py"
+      ],
+      "notes": "Exact API overrides admit Date identity, timestamps, UTC projection, and hosted local or clock operations. Date.fromString remains source-positioned unsupported, and non-hosted clock limits remain explicit."
     },
     {
       "id": "date-source",
@@ -743,15 +746,17 @@
         "wasi",
         "emscripten"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T08",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Single-thread and host-loop specializations run first; thread or timing support is selected only for reachable scheduling behavior."
+      "tests": [
+        "test/date_time/run.py"
+      ],
+      "notes": "The exact haxe.Timer.stamp override admits hosted monotonic seconds. Timer construction, delay, measurement helpers, event-loop integration, and scheduling remain source-positioned unsupported."
     },
     {
       "id": "regular-expressions",
@@ -1158,6 +1163,631 @@
     }
   ],
   "apiOverrides": [
+    {
+      "id": "date-from-time-conformant",
+      "selector": {
+        "module": "Date",
+        "type": "Date",
+        "member": "fromTime",
+        "kind": "method",
+        "isStatic": true,
+        "signature": "(t : Float) -> Date"
+      },
+      "owner": "direct-compiler-lowering",
+      "runtimeFeatures": [
+        "gc"
+      ],
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "environments": [
+        "hosted",
+        "freestanding"
+      ],
+      "status": "conformant",
+      "ownerBeads": "E5.T08",
+      "testOwnerBeads": "E5.T08",
+      "diagnosticPolicies": [],
+      "tests": [
+        "test/date_time/run.py"
+      ],
+      "notes": "Date.fromTime preserves Float milliseconds and creates one fresh managed Date. Identity, aliases, generated layout, strict C, and sanitizer evidence are owned by the focused Date/time runner."
+    },
+    {
+      "id": "date-get-time-conformant",
+      "selector": {
+        "module": "Date",
+        "type": "Date",
+        "member": "getTime",
+        "kind": "method",
+        "isStatic": false,
+        "signature": "() -> Float"
+      },
+      "owner": "target-source-override",
+      "runtimeFeatures": [],
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "environments": [
+        "hosted",
+        "freestanding"
+      ],
+      "status": "conformant",
+      "ownerBeads": "E5.T08",
+      "testOwnerBeads": "E5.T08",
+      "diagnosticPolicies": [],
+      "tests": [
+        "test/date_time/run.py"
+      ],
+      "notes": "Date.getTime returns the canonical Float millisecond value without host calendar work. Fractional, negative, alias, strict C, and sanitizer cases are covered by the focused runner."
+    },
+    {
+      "id": "date-get-utc-date-conformant",
+      "selector": {
+        "module": "Date",
+        "type": "Date",
+        "member": "getUTCDate",
+        "kind": "method",
+        "isStatic": false,
+        "signature": "() -> Int"
+      },
+      "owner": "target-source-override",
+      "runtimeFeatures": [],
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "environments": [
+        "hosted",
+        "freestanding"
+      ],
+      "status": "conformant",
+      "ownerBeads": "E5.T08",
+      "testOwnerBeads": "E5.T08",
+      "diagnosticPolicies": [],
+      "tests": [
+        "test/date_time/run.py"
+      ],
+      "notes": "getUTCDate uses portable Gregorian arithmetic over the stored Float timestamp. Epoch, leap-day, negative, fractional, strict C, and sanitizer evidence are covered by the focused runner."
+    },
+    {
+      "id": "date-get-utc-day-conformant",
+      "selector": {
+        "module": "Date",
+        "type": "Date",
+        "member": "getUTCDay",
+        "kind": "method",
+        "isStatic": false,
+        "signature": "() -> Int"
+      },
+      "owner": "target-source-override",
+      "runtimeFeatures": [],
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "environments": [
+        "hosted",
+        "freestanding"
+      ],
+      "status": "conformant",
+      "ownerBeads": "E5.T08",
+      "testOwnerBeads": "E5.T08",
+      "diagnosticPolicies": [],
+      "tests": [
+        "test/date_time/run.py"
+      ],
+      "notes": "getUTCDay uses portable Gregorian arithmetic over the stored Float timestamp. Epoch, leap-day, negative, fractional, strict C, and sanitizer evidence are covered by the focused runner."
+    },
+    {
+      "id": "date-get-utc-full-year-conformant",
+      "selector": {
+        "module": "Date",
+        "type": "Date",
+        "member": "getUTCFullYear",
+        "kind": "method",
+        "isStatic": false,
+        "signature": "() -> Int"
+      },
+      "owner": "target-source-override",
+      "runtimeFeatures": [],
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "environments": [
+        "hosted",
+        "freestanding"
+      ],
+      "status": "conformant",
+      "ownerBeads": "E5.T08",
+      "testOwnerBeads": "E5.T08",
+      "diagnosticPolicies": [],
+      "tests": [
+        "test/date_time/run.py"
+      ],
+      "notes": "getUTCFullYear uses portable Gregorian arithmetic over the stored Float timestamp. Epoch, leap-day, negative, fractional, strict C, and sanitizer evidence are covered by the focused runner."
+    },
+    {
+      "id": "date-get-utc-hours-conformant",
+      "selector": {
+        "module": "Date",
+        "type": "Date",
+        "member": "getUTCHours",
+        "kind": "method",
+        "isStatic": false,
+        "signature": "() -> Int"
+      },
+      "owner": "target-source-override",
+      "runtimeFeatures": [],
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "environments": [
+        "hosted",
+        "freestanding"
+      ],
+      "status": "conformant",
+      "ownerBeads": "E5.T08",
+      "testOwnerBeads": "E5.T08",
+      "diagnosticPolicies": [],
+      "tests": [
+        "test/date_time/run.py"
+      ],
+      "notes": "getUTCHours uses portable Gregorian arithmetic over the stored Float timestamp. Epoch, leap-day, negative, fractional, strict C, and sanitizer evidence are covered by the focused runner."
+    },
+    {
+      "id": "date-get-utc-minutes-conformant",
+      "selector": {
+        "module": "Date",
+        "type": "Date",
+        "member": "getUTCMinutes",
+        "kind": "method",
+        "isStatic": false,
+        "signature": "() -> Int"
+      },
+      "owner": "target-source-override",
+      "runtimeFeatures": [],
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "environments": [
+        "hosted",
+        "freestanding"
+      ],
+      "status": "conformant",
+      "ownerBeads": "E5.T08",
+      "testOwnerBeads": "E5.T08",
+      "diagnosticPolicies": [],
+      "tests": [
+        "test/date_time/run.py"
+      ],
+      "notes": "getUTCMinutes uses portable Gregorian arithmetic over the stored Float timestamp. Epoch, leap-day, negative, fractional, strict C, and sanitizer evidence are covered by the focused runner."
+    },
+    {
+      "id": "date-get-utc-month-conformant",
+      "selector": {
+        "module": "Date",
+        "type": "Date",
+        "member": "getUTCMonth",
+        "kind": "method",
+        "isStatic": false,
+        "signature": "() -> Int"
+      },
+      "owner": "target-source-override",
+      "runtimeFeatures": [],
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "environments": [
+        "hosted",
+        "freestanding"
+      ],
+      "status": "conformant",
+      "ownerBeads": "E5.T08",
+      "testOwnerBeads": "E5.T08",
+      "diagnosticPolicies": [],
+      "tests": [
+        "test/date_time/run.py"
+      ],
+      "notes": "getUTCMonth uses portable Gregorian arithmetic over the stored Float timestamp. Epoch, leap-day, negative, fractional, strict C, and sanitizer evidence are covered by the focused runner."
+    },
+    {
+      "id": "date-get-utc-seconds-conformant",
+      "selector": {
+        "module": "Date",
+        "type": "Date",
+        "member": "getUTCSeconds",
+        "kind": "method",
+        "isStatic": false,
+        "signature": "() -> Int"
+      },
+      "owner": "target-source-override",
+      "runtimeFeatures": [],
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "environments": [
+        "hosted",
+        "freestanding"
+      ],
+      "status": "conformant",
+      "ownerBeads": "E5.T08",
+      "testOwnerBeads": "E5.T08",
+      "diagnosticPolicies": [],
+      "tests": [
+        "test/date_time/run.py"
+      ],
+      "notes": "getUTCSeconds uses portable Gregorian arithmetic over the stored Float timestamp. Epoch, leap-day, negative, fractional, strict C, and sanitizer evidence are covered by the focused runner."
+    },
+    {
+      "id": "date-get-local-date-hosted",
+      "selector": {
+        "module": "Date",
+        "type": "Date",
+        "member": "getDate",
+        "kind": "method",
+        "isStatic": false,
+        "signature": "() -> Int"
+      },
+      "owner": "target-source-override",
+      "runtimeFeatures": [
+        "date-time"
+      ],
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "environments": [
+        "hosted"
+      ],
+      "status": "conformant",
+      "ownerBeads": "E5.T08",
+      "testOwnerBeads": "E5.T08",
+      "diagnosticPolicies": [],
+      "tests": [
+        "test/date_time/run.py"
+      ],
+      "notes": "getDate applies the host offset for the exact timestamp, then uses portable calendar arithmetic. Controlled timezone, daylight transition, strict C, and sanitizer evidence are covered by the focused runner."
+    },
+    {
+      "id": "date-get-local-day-hosted",
+      "selector": {
+        "module": "Date",
+        "type": "Date",
+        "member": "getDay",
+        "kind": "method",
+        "isStatic": false,
+        "signature": "() -> Int"
+      },
+      "owner": "target-source-override",
+      "runtimeFeatures": [
+        "date-time"
+      ],
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "environments": [
+        "hosted"
+      ],
+      "status": "conformant",
+      "ownerBeads": "E5.T08",
+      "testOwnerBeads": "E5.T08",
+      "diagnosticPolicies": [],
+      "tests": [
+        "test/date_time/run.py"
+      ],
+      "notes": "getDay applies the host offset for the exact timestamp, then uses portable calendar arithmetic. Controlled timezone, daylight transition, strict C, and sanitizer evidence are covered by the focused runner."
+    },
+    {
+      "id": "date-get-local-full-year-hosted",
+      "selector": {
+        "module": "Date",
+        "type": "Date",
+        "member": "getFullYear",
+        "kind": "method",
+        "isStatic": false,
+        "signature": "() -> Int"
+      },
+      "owner": "target-source-override",
+      "runtimeFeatures": [
+        "date-time"
+      ],
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "environments": [
+        "hosted"
+      ],
+      "status": "conformant",
+      "ownerBeads": "E5.T08",
+      "testOwnerBeads": "E5.T08",
+      "diagnosticPolicies": [],
+      "tests": [
+        "test/date_time/run.py"
+      ],
+      "notes": "getFullYear applies the host offset for the exact timestamp, then uses portable calendar arithmetic. Controlled timezone, daylight transition, strict C, and sanitizer evidence are covered by the focused runner."
+    },
+    {
+      "id": "date-get-local-hours-hosted",
+      "selector": {
+        "module": "Date",
+        "type": "Date",
+        "member": "getHours",
+        "kind": "method",
+        "isStatic": false,
+        "signature": "() -> Int"
+      },
+      "owner": "target-source-override",
+      "runtimeFeatures": [
+        "date-time"
+      ],
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "environments": [
+        "hosted"
+      ],
+      "status": "conformant",
+      "ownerBeads": "E5.T08",
+      "testOwnerBeads": "E5.T08",
+      "diagnosticPolicies": [],
+      "tests": [
+        "test/date_time/run.py"
+      ],
+      "notes": "getHours applies the host offset for the exact timestamp, then uses portable calendar arithmetic. Controlled timezone, daylight transition, strict C, and sanitizer evidence are covered by the focused runner."
+    },
+    {
+      "id": "date-get-local-minutes-hosted",
+      "selector": {
+        "module": "Date",
+        "type": "Date",
+        "member": "getMinutes",
+        "kind": "method",
+        "isStatic": false,
+        "signature": "() -> Int"
+      },
+      "owner": "target-source-override",
+      "runtimeFeatures": [
+        "date-time"
+      ],
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "environments": [
+        "hosted"
+      ],
+      "status": "conformant",
+      "ownerBeads": "E5.T08",
+      "testOwnerBeads": "E5.T08",
+      "diagnosticPolicies": [],
+      "tests": [
+        "test/date_time/run.py"
+      ],
+      "notes": "getMinutes applies the host offset for the exact timestamp, then uses portable calendar arithmetic. Controlled timezone, daylight transition, strict C, and sanitizer evidence are covered by the focused runner."
+    },
+    {
+      "id": "date-get-local-month-hosted",
+      "selector": {
+        "module": "Date",
+        "type": "Date",
+        "member": "getMonth",
+        "kind": "method",
+        "isStatic": false,
+        "signature": "() -> Int"
+      },
+      "owner": "target-source-override",
+      "runtimeFeatures": [
+        "date-time"
+      ],
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "environments": [
+        "hosted"
+      ],
+      "status": "conformant",
+      "ownerBeads": "E5.T08",
+      "testOwnerBeads": "E5.T08",
+      "diagnosticPolicies": [],
+      "tests": [
+        "test/date_time/run.py"
+      ],
+      "notes": "getMonth applies the host offset for the exact timestamp, then uses portable calendar arithmetic. Controlled timezone, daylight transition, strict C, and sanitizer evidence are covered by the focused runner."
+    },
+    {
+      "id": "date-get-local-seconds-hosted",
+      "selector": {
+        "module": "Date",
+        "type": "Date",
+        "member": "getSeconds",
+        "kind": "method",
+        "isStatic": false,
+        "signature": "() -> Int"
+      },
+      "owner": "target-source-override",
+      "runtimeFeatures": [
+        "date-time"
+      ],
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "environments": [
+        "hosted"
+      ],
+      "status": "conformant",
+      "ownerBeads": "E5.T08",
+      "testOwnerBeads": "E5.T08",
+      "diagnosticPolicies": [],
+      "tests": [
+        "test/date_time/run.py"
+      ],
+      "notes": "getSeconds applies the host offset for the exact timestamp, then uses portable calendar arithmetic. Controlled timezone, daylight transition, strict C, and sanitizer evidence are covered by the focused runner."
+    },
+    {
+      "id": "date-timezone-offset-hosted",
+      "selector": {
+        "module": "Date",
+        "type": "Date",
+        "member": "getTimezoneOffset",
+        "kind": "method",
+        "isStatic": false,
+        "signature": "() -> Int"
+      },
+      "owner": "target-source-override",
+      "runtimeFeatures": [
+        "date-time"
+      ],
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "environments": [
+        "hosted"
+      ],
+      "status": "conformant",
+      "ownerBeads": "E5.T08",
+      "testOwnerBeads": "E5.T08",
+      "diagnosticPolicies": [],
+      "tests": [
+        "test/date_time/run.py"
+      ],
+      "notes": "Date.getTimezoneOffset returns UTC minus local time in whole minutes for the exact instant. Controlled positive, negative, and daylight offsets include one documented correction to contradictory Eval behavior."
+    },
+    {
+      "id": "date-constructor-hosted",
+      "selector": {
+        "module": "Date",
+        "type": "Date",
+        "member": "new",
+        "kind": "constructor",
+        "isStatic": false,
+        "signature": "(year : Int, month : Int, day : Int, hour : Int, min : Int, sec : Int) -> Void"
+      },
+      "owner": "target-source-override",
+      "runtimeFeatures": [
+        "date-time",
+        "gc"
+      ],
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "environments": [
+        "hosted"
+      ],
+      "status": "conformant",
+      "ownerBeads": "E5.T08",
+      "testOwnerBeads": "E5.T08",
+      "diagnosticPolicies": [],
+      "tests": [
+        "test/date_time/run.py"
+      ],
+      "notes": "The Date constructor creates one managed object and converts local civil fields through host normalization. Deterministic spring-gap and repeated-time cases use an explicit process timezone."
+    },
+    {
+      "id": "date-now-hosted",
+      "selector": {
+        "module": "Date",
+        "type": "Date",
+        "member": "now",
+        "kind": "method",
+        "isStatic": true,
+        "signature": "() -> Date"
+      },
+      "owner": "target-source-override",
+      "runtimeFeatures": [
+        "date-time",
+        "gc"
+      ],
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "environments": [
+        "hosted"
+      ],
+      "status": "conformant",
+      "ownerBeads": "E5.T08",
+      "testOwnerBeads": "E5.T08",
+      "diagnosticPolicies": [],
+      "tests": [
+        "test/date_time/run.py"
+      ],
+      "notes": "Date.now reads adjustable Unix-epoch wall-clock milliseconds and creates one fresh Date. The focused runner keeps this clock distinct from monotonic elapsed time."
+    },
+    {
+      "id": "date-to-string-hosted",
+      "selector": {
+        "module": "Date",
+        "type": "Date",
+        "member": "toString",
+        "kind": "method",
+        "isStatic": false,
+        "signature": "() -> String"
+      },
+      "owner": "target-source-override",
+      "runtimeFeatures": [
+        "date-time",
+        "string"
+      ],
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "environments": [
+        "hosted"
+      ],
+      "status": "conformant",
+      "ownerBeads": "E5.T08",
+      "testOwnerBeads": "E5.T08",
+      "diagnosticPolicies": [],
+      "tests": [
+        "test/date_time/run.py"
+      ],
+      "notes": "Date.toString formats host-local fields as YYYY-MM-DD HH:MM:SS. Controlled timezone, daylight transition, generated String ownership, strict C, and sanitizer evidence are covered by the focused runner."
+    },
+    {
+      "id": "timer-stamp-hosted",
+      "selector": {
+        "module": "haxe.Timer",
+        "type": "haxe.Timer",
+        "member": "stamp",
+        "isStatic": true,
+        "signature": "() -> Float"
+      },
+      "owner": "direct-compiler-lowering",
+      "runtimeFeatures": [
+        "date-time"
+      ],
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "environments": [
+        "hosted"
+      ],
+      "status": "conformant",
+      "ownerBeads": "E5.T08",
+      "testOwnerBeads": "E5.T08",
+      "diagnosticPolicies": [],
+      "tests": [
+        "test/date_time/run.py"
+      ],
+      "notes": "haxe.Timer.stamp returns monotonic seconds from an unspecified host epoch. The runtime contract checks non-decrease and keeps this operation distinct from Date.now wall time."
+    },
     {
       "id": "int-map-clear-bool-partial",
       "selector": {
@@ -5776,18 +6406,21 @@
       ],
       "environments": [
         "hosted",
+        "freestanding",
         "wasi",
         "emscripten"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T08",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Wall clock, local time, timezone, precision, and range require explicit adapter capabilities; freestanding has no implicit clock.",
+      "tests": [
+        "test/date_time/run.py"
+      ],
+      "notes": "Exact API overrides admit Date identity, timestamps, UTC projection, and hosted local or clock operations. Date.fromString remains source-positioned unsupported, and non-hosted clock limits remain explicit.",
       "ruleId": "date-platform"
     },
     {
@@ -5812,18 +6445,21 @@
       ],
       "environments": [
         "hosted",
+        "freestanding",
         "wasi",
         "emscripten"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T08",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Wall clock, local time, timezone, precision, and range require explicit adapter capabilities; freestanding has no implicit clock.",
+      "tests": [
+        "test/date_time/run.py"
+      ],
+      "notes": "Exact API overrides admit Date identity, timestamps, UTC projection, and hosted local or clock operations. Date.fromString remains source-positioned unsupported, and non-hosted clock limits remain explicit.",
       "ruleId": "date-platform"
     },
     {
@@ -5837,10 +6473,9 @@
       "kind": "method",
       "signature": "(t : Float) -> Date",
       "isStatic": true,
-      "owner": "platform-adapter",
+      "owner": "direct-compiler-lowering",
       "runtimeFeatures": [
-        "date-time",
-        "string"
+        "gc"
       ],
       "profiles": [
         "portable",
@@ -5848,19 +6483,17 @@
       ],
       "environments": [
         "hosted",
-        "wasi",
-        "emscripten"
+        "freestanding"
       ],
-      "status": "planned",
+      "status": "conformant",
       "ownerBeads": "E5.T08",
-      "testOwnerBeads": "E5.T12",
-      "diagnosticPolicies": [
-        "planned-unsupported",
-        "runtime-policy-after-implementation"
+      "testOwnerBeads": "E5.T08",
+      "diagnosticPolicies": [],
+      "tests": [
+        "test/date_time/run.py"
       ],
-      "tests": [],
-      "notes": "Wall clock, local time, timezone, precision, and range require explicit adapter capabilities; freestanding has no implicit clock.",
-      "ruleId": "date-platform"
+      "notes": "Date.fromTime preserves Float milliseconds and creates one fresh managed Date. Identity, aliases, generated layout, strict C, and sanitizer evidence are owned by the focused Date/time runner.",
+      "ruleId": "date-from-time-conformant"
     },
     {
       "id": "hxc-stdlib-api-v1:41e6d95856dd53fb71b5fd7503884bdb1452830b3de6f80bed68a00913f06aaa",
@@ -5873,30 +6506,26 @@
       "kind": "method",
       "signature": "() -> Int",
       "isStatic": false,
-      "owner": "platform-adapter",
+      "owner": "target-source-override",
       "runtimeFeatures": [
-        "date-time",
-        "string"
+        "date-time"
       ],
       "profiles": [
         "portable",
         "metal"
       ],
       "environments": [
-        "hosted",
-        "wasi",
-        "emscripten"
+        "hosted"
       ],
-      "status": "planned",
+      "status": "conformant",
       "ownerBeads": "E5.T08",
-      "testOwnerBeads": "E5.T12",
-      "diagnosticPolicies": [
-        "planned-unsupported",
-        "runtime-policy-after-implementation"
+      "testOwnerBeads": "E5.T08",
+      "diagnosticPolicies": [],
+      "tests": [
+        "test/date_time/run.py"
       ],
-      "tests": [],
-      "notes": "Wall clock, local time, timezone, precision, and range require explicit adapter capabilities; freestanding has no implicit clock.",
-      "ruleId": "date-platform"
+      "notes": "getDate applies the host offset for the exact timestamp, then uses portable calendar arithmetic. Controlled timezone, daylight transition, strict C, and sanitizer evidence are covered by the focused runner.",
+      "ruleId": "date-get-local-date-hosted"
     },
     {
       "id": "hxc-stdlib-api-v1:7d04f646da272c19c8a4cb7a5d4b5077fcd79593537f9e71aa3dfa30007c92ca",
@@ -5909,30 +6538,26 @@
       "kind": "method",
       "signature": "() -> Int",
       "isStatic": false,
-      "owner": "platform-adapter",
+      "owner": "target-source-override",
       "runtimeFeatures": [
-        "date-time",
-        "string"
+        "date-time"
       ],
       "profiles": [
         "portable",
         "metal"
       ],
       "environments": [
-        "hosted",
-        "wasi",
-        "emscripten"
+        "hosted"
       ],
-      "status": "planned",
+      "status": "conformant",
       "ownerBeads": "E5.T08",
-      "testOwnerBeads": "E5.T12",
-      "diagnosticPolicies": [
-        "planned-unsupported",
-        "runtime-policy-after-implementation"
+      "testOwnerBeads": "E5.T08",
+      "diagnosticPolicies": [],
+      "tests": [
+        "test/date_time/run.py"
       ],
-      "tests": [],
-      "notes": "Wall clock, local time, timezone, precision, and range require explicit adapter capabilities; freestanding has no implicit clock.",
-      "ruleId": "date-platform"
+      "notes": "getDay applies the host offset for the exact timestamp, then uses portable calendar arithmetic. Controlled timezone, daylight transition, strict C, and sanitizer evidence are covered by the focused runner.",
+      "ruleId": "date-get-local-day-hosted"
     },
     {
       "id": "hxc-stdlib-api-v1:677daae2fcd424d28d55bf8bbaf121cca65e0685dd8b74653d6012165d7c77ab",
@@ -5945,30 +6570,26 @@
       "kind": "method",
       "signature": "() -> Int",
       "isStatic": false,
-      "owner": "platform-adapter",
+      "owner": "target-source-override",
       "runtimeFeatures": [
-        "date-time",
-        "string"
+        "date-time"
       ],
       "profiles": [
         "portable",
         "metal"
       ],
       "environments": [
-        "hosted",
-        "wasi",
-        "emscripten"
+        "hosted"
       ],
-      "status": "planned",
+      "status": "conformant",
       "ownerBeads": "E5.T08",
-      "testOwnerBeads": "E5.T12",
-      "diagnosticPolicies": [
-        "planned-unsupported",
-        "runtime-policy-after-implementation"
+      "testOwnerBeads": "E5.T08",
+      "diagnosticPolicies": [],
+      "tests": [
+        "test/date_time/run.py"
       ],
-      "tests": [],
-      "notes": "Wall clock, local time, timezone, precision, and range require explicit adapter capabilities; freestanding has no implicit clock.",
-      "ruleId": "date-platform"
+      "notes": "getFullYear applies the host offset for the exact timestamp, then uses portable calendar arithmetic. Controlled timezone, daylight transition, strict C, and sanitizer evidence are covered by the focused runner.",
+      "ruleId": "date-get-local-full-year-hosted"
     },
     {
       "id": "hxc-stdlib-api-v1:1b0faaa2b000de38efce2af4010b6512163036592295643945e9df5e64bb2fb5",
@@ -5981,30 +6602,26 @@
       "kind": "method",
       "signature": "() -> Int",
       "isStatic": false,
-      "owner": "platform-adapter",
+      "owner": "target-source-override",
       "runtimeFeatures": [
-        "date-time",
-        "string"
+        "date-time"
       ],
       "profiles": [
         "portable",
         "metal"
       ],
       "environments": [
-        "hosted",
-        "wasi",
-        "emscripten"
+        "hosted"
       ],
-      "status": "planned",
+      "status": "conformant",
       "ownerBeads": "E5.T08",
-      "testOwnerBeads": "E5.T12",
-      "diagnosticPolicies": [
-        "planned-unsupported",
-        "runtime-policy-after-implementation"
+      "testOwnerBeads": "E5.T08",
+      "diagnosticPolicies": [],
+      "tests": [
+        "test/date_time/run.py"
       ],
-      "tests": [],
-      "notes": "Wall clock, local time, timezone, precision, and range require explicit adapter capabilities; freestanding has no implicit clock.",
-      "ruleId": "date-platform"
+      "notes": "getHours applies the host offset for the exact timestamp, then uses portable calendar arithmetic. Controlled timezone, daylight transition, strict C, and sanitizer evidence are covered by the focused runner.",
+      "ruleId": "date-get-local-hours-hosted"
     },
     {
       "id": "hxc-stdlib-api-v1:29d1ed530f22ee3f904dd0f309ad51d4e17b7de09ea304de7a3f2cd8a3551bfd",
@@ -6017,30 +6634,26 @@
       "kind": "method",
       "signature": "() -> Int",
       "isStatic": false,
-      "owner": "platform-adapter",
+      "owner": "target-source-override",
       "runtimeFeatures": [
-        "date-time",
-        "string"
+        "date-time"
       ],
       "profiles": [
         "portable",
         "metal"
       ],
       "environments": [
-        "hosted",
-        "wasi",
-        "emscripten"
+        "hosted"
       ],
-      "status": "planned",
+      "status": "conformant",
       "ownerBeads": "E5.T08",
-      "testOwnerBeads": "E5.T12",
-      "diagnosticPolicies": [
-        "planned-unsupported",
-        "runtime-policy-after-implementation"
+      "testOwnerBeads": "E5.T08",
+      "diagnosticPolicies": [],
+      "tests": [
+        "test/date_time/run.py"
       ],
-      "tests": [],
-      "notes": "Wall clock, local time, timezone, precision, and range require explicit adapter capabilities; freestanding has no implicit clock.",
-      "ruleId": "date-platform"
+      "notes": "getMinutes applies the host offset for the exact timestamp, then uses portable calendar arithmetic. Controlled timezone, daylight transition, strict C, and sanitizer evidence are covered by the focused runner.",
+      "ruleId": "date-get-local-minutes-hosted"
     },
     {
       "id": "hxc-stdlib-api-v1:3afa883ff8903cc654c6c581e4ddd09f777c3a41a8560aa2ac1d255ffb37c4a1",
@@ -6053,30 +6666,26 @@
       "kind": "method",
       "signature": "() -> Int",
       "isStatic": false,
-      "owner": "platform-adapter",
+      "owner": "target-source-override",
       "runtimeFeatures": [
-        "date-time",
-        "string"
+        "date-time"
       ],
       "profiles": [
         "portable",
         "metal"
       ],
       "environments": [
-        "hosted",
-        "wasi",
-        "emscripten"
+        "hosted"
       ],
-      "status": "planned",
+      "status": "conformant",
       "ownerBeads": "E5.T08",
-      "testOwnerBeads": "E5.T12",
-      "diagnosticPolicies": [
-        "planned-unsupported",
-        "runtime-policy-after-implementation"
+      "testOwnerBeads": "E5.T08",
+      "diagnosticPolicies": [],
+      "tests": [
+        "test/date_time/run.py"
       ],
-      "tests": [],
-      "notes": "Wall clock, local time, timezone, precision, and range require explicit adapter capabilities; freestanding has no implicit clock.",
-      "ruleId": "date-platform"
+      "notes": "getMonth applies the host offset for the exact timestamp, then uses portable calendar arithmetic. Controlled timezone, daylight transition, strict C, and sanitizer evidence are covered by the focused runner.",
+      "ruleId": "date-get-local-month-hosted"
     },
     {
       "id": "hxc-stdlib-api-v1:b368391542bb5ac37bce9a177df9f86568853d1aae0ac228ba8fa9a437e4f9af",
@@ -6089,30 +6698,26 @@
       "kind": "method",
       "signature": "() -> Int",
       "isStatic": false,
-      "owner": "platform-adapter",
+      "owner": "target-source-override",
       "runtimeFeatures": [
-        "date-time",
-        "string"
+        "date-time"
       ],
       "profiles": [
         "portable",
         "metal"
       ],
       "environments": [
-        "hosted",
-        "wasi",
-        "emscripten"
+        "hosted"
       ],
-      "status": "planned",
+      "status": "conformant",
       "ownerBeads": "E5.T08",
-      "testOwnerBeads": "E5.T12",
-      "diagnosticPolicies": [
-        "planned-unsupported",
-        "runtime-policy-after-implementation"
+      "testOwnerBeads": "E5.T08",
+      "diagnosticPolicies": [],
+      "tests": [
+        "test/date_time/run.py"
       ],
-      "tests": [],
-      "notes": "Wall clock, local time, timezone, precision, and range require explicit adapter capabilities; freestanding has no implicit clock.",
-      "ruleId": "date-platform"
+      "notes": "getSeconds applies the host offset for the exact timestamp, then uses portable calendar arithmetic. Controlled timezone, daylight transition, strict C, and sanitizer evidence are covered by the focused runner.",
+      "ruleId": "date-get-local-seconds-hosted"
     },
     {
       "id": "hxc-stdlib-api-v1:9ec48527dc53ad33e97fa06ec9441484dc1c65574fff4e441130aec5ed280406",
@@ -6125,30 +6730,25 @@
       "kind": "method",
       "signature": "() -> Float",
       "isStatic": false,
-      "owner": "platform-adapter",
-      "runtimeFeatures": [
-        "date-time",
-        "string"
-      ],
+      "owner": "target-source-override",
+      "runtimeFeatures": [],
       "profiles": [
         "portable",
         "metal"
       ],
       "environments": [
         "hosted",
-        "wasi",
-        "emscripten"
+        "freestanding"
       ],
-      "status": "planned",
+      "status": "conformant",
       "ownerBeads": "E5.T08",
-      "testOwnerBeads": "E5.T12",
-      "diagnosticPolicies": [
-        "planned-unsupported",
-        "runtime-policy-after-implementation"
+      "testOwnerBeads": "E5.T08",
+      "diagnosticPolicies": [],
+      "tests": [
+        "test/date_time/run.py"
       ],
-      "tests": [],
-      "notes": "Wall clock, local time, timezone, precision, and range require explicit adapter capabilities; freestanding has no implicit clock.",
-      "ruleId": "date-platform"
+      "notes": "Date.getTime returns the canonical Float millisecond value without host calendar work. Fractional, negative, alias, strict C, and sanitizer cases are covered by the focused runner.",
+      "ruleId": "date-get-time-conformant"
     },
     {
       "id": "hxc-stdlib-api-v1:9793df6ba5f1acbb627a84a203c0eed78b24b61b82847065608047d5fd125bd5",
@@ -6161,30 +6761,26 @@
       "kind": "method",
       "signature": "() -> Int",
       "isStatic": false,
-      "owner": "platform-adapter",
+      "owner": "target-source-override",
       "runtimeFeatures": [
-        "date-time",
-        "string"
+        "date-time"
       ],
       "profiles": [
         "portable",
         "metal"
       ],
       "environments": [
-        "hosted",
-        "wasi",
-        "emscripten"
+        "hosted"
       ],
-      "status": "planned",
+      "status": "conformant",
       "ownerBeads": "E5.T08",
-      "testOwnerBeads": "E5.T12",
-      "diagnosticPolicies": [
-        "planned-unsupported",
-        "runtime-policy-after-implementation"
+      "testOwnerBeads": "E5.T08",
+      "diagnosticPolicies": [],
+      "tests": [
+        "test/date_time/run.py"
       ],
-      "tests": [],
-      "notes": "Wall clock, local time, timezone, precision, and range require explicit adapter capabilities; freestanding has no implicit clock.",
-      "ruleId": "date-platform"
+      "notes": "Date.getTimezoneOffset returns UTC minus local time in whole minutes for the exact instant. Controlled positive, negative, and daylight offsets include one documented correction to contradictory Eval behavior.",
+      "ruleId": "date-timezone-offset-hosted"
     },
     {
       "id": "hxc-stdlib-api-v1:f55666143dea35417b2313b66d5872ff95c39bd36ca5c36b75f812390b64c380",
@@ -6197,30 +6793,25 @@
       "kind": "method",
       "signature": "() -> Int",
       "isStatic": false,
-      "owner": "platform-adapter",
-      "runtimeFeatures": [
-        "date-time",
-        "string"
-      ],
+      "owner": "target-source-override",
+      "runtimeFeatures": [],
       "profiles": [
         "portable",
         "metal"
       ],
       "environments": [
         "hosted",
-        "wasi",
-        "emscripten"
+        "freestanding"
       ],
-      "status": "planned",
+      "status": "conformant",
       "ownerBeads": "E5.T08",
-      "testOwnerBeads": "E5.T12",
-      "diagnosticPolicies": [
-        "planned-unsupported",
-        "runtime-policy-after-implementation"
+      "testOwnerBeads": "E5.T08",
+      "diagnosticPolicies": [],
+      "tests": [
+        "test/date_time/run.py"
       ],
-      "tests": [],
-      "notes": "Wall clock, local time, timezone, precision, and range require explicit adapter capabilities; freestanding has no implicit clock.",
-      "ruleId": "date-platform"
+      "notes": "getUTCDate uses portable Gregorian arithmetic over the stored Float timestamp. Epoch, leap-day, negative, fractional, strict C, and sanitizer evidence are covered by the focused runner.",
+      "ruleId": "date-get-utc-date-conformant"
     },
     {
       "id": "hxc-stdlib-api-v1:54becaf7e39be4ac08b21558dcb105da1f1409066f9fbc95644fc77adbbd59b2",
@@ -6233,30 +6824,25 @@
       "kind": "method",
       "signature": "() -> Int",
       "isStatic": false,
-      "owner": "platform-adapter",
-      "runtimeFeatures": [
-        "date-time",
-        "string"
-      ],
+      "owner": "target-source-override",
+      "runtimeFeatures": [],
       "profiles": [
         "portable",
         "metal"
       ],
       "environments": [
         "hosted",
-        "wasi",
-        "emscripten"
+        "freestanding"
       ],
-      "status": "planned",
+      "status": "conformant",
       "ownerBeads": "E5.T08",
-      "testOwnerBeads": "E5.T12",
-      "diagnosticPolicies": [
-        "planned-unsupported",
-        "runtime-policy-after-implementation"
+      "testOwnerBeads": "E5.T08",
+      "diagnosticPolicies": [],
+      "tests": [
+        "test/date_time/run.py"
       ],
-      "tests": [],
-      "notes": "Wall clock, local time, timezone, precision, and range require explicit adapter capabilities; freestanding has no implicit clock.",
-      "ruleId": "date-platform"
+      "notes": "getUTCDay uses portable Gregorian arithmetic over the stored Float timestamp. Epoch, leap-day, negative, fractional, strict C, and sanitizer evidence are covered by the focused runner.",
+      "ruleId": "date-get-utc-day-conformant"
     },
     {
       "id": "hxc-stdlib-api-v1:c8594a45b9d4e6097071c69f33eaf292dd8b281b8f3554b1571257d96e11cefc",
@@ -6269,30 +6855,25 @@
       "kind": "method",
       "signature": "() -> Int",
       "isStatic": false,
-      "owner": "platform-adapter",
-      "runtimeFeatures": [
-        "date-time",
-        "string"
-      ],
+      "owner": "target-source-override",
+      "runtimeFeatures": [],
       "profiles": [
         "portable",
         "metal"
       ],
       "environments": [
         "hosted",
-        "wasi",
-        "emscripten"
+        "freestanding"
       ],
-      "status": "planned",
+      "status": "conformant",
       "ownerBeads": "E5.T08",
-      "testOwnerBeads": "E5.T12",
-      "diagnosticPolicies": [
-        "planned-unsupported",
-        "runtime-policy-after-implementation"
+      "testOwnerBeads": "E5.T08",
+      "diagnosticPolicies": [],
+      "tests": [
+        "test/date_time/run.py"
       ],
-      "tests": [],
-      "notes": "Wall clock, local time, timezone, precision, and range require explicit adapter capabilities; freestanding has no implicit clock.",
-      "ruleId": "date-platform"
+      "notes": "getUTCFullYear uses portable Gregorian arithmetic over the stored Float timestamp. Epoch, leap-day, negative, fractional, strict C, and sanitizer evidence are covered by the focused runner.",
+      "ruleId": "date-get-utc-full-year-conformant"
     },
     {
       "id": "hxc-stdlib-api-v1:e66e959ac9f23ef7bf0bb249eb306f4993245ac4a75dcd5d9e32ca99a87087e6",
@@ -6305,30 +6886,25 @@
       "kind": "method",
       "signature": "() -> Int",
       "isStatic": false,
-      "owner": "platform-adapter",
-      "runtimeFeatures": [
-        "date-time",
-        "string"
-      ],
+      "owner": "target-source-override",
+      "runtimeFeatures": [],
       "profiles": [
         "portable",
         "metal"
       ],
       "environments": [
         "hosted",
-        "wasi",
-        "emscripten"
+        "freestanding"
       ],
-      "status": "planned",
+      "status": "conformant",
       "ownerBeads": "E5.T08",
-      "testOwnerBeads": "E5.T12",
-      "diagnosticPolicies": [
-        "planned-unsupported",
-        "runtime-policy-after-implementation"
+      "testOwnerBeads": "E5.T08",
+      "diagnosticPolicies": [],
+      "tests": [
+        "test/date_time/run.py"
       ],
-      "tests": [],
-      "notes": "Wall clock, local time, timezone, precision, and range require explicit adapter capabilities; freestanding has no implicit clock.",
-      "ruleId": "date-platform"
+      "notes": "getUTCHours uses portable Gregorian arithmetic over the stored Float timestamp. Epoch, leap-day, negative, fractional, strict C, and sanitizer evidence are covered by the focused runner.",
+      "ruleId": "date-get-utc-hours-conformant"
     },
     {
       "id": "hxc-stdlib-api-v1:81621eb45c8d08b78b8b94b7582adf43c40b42f21e4d580b25ee7138a5ef71ea",
@@ -6341,30 +6917,25 @@
       "kind": "method",
       "signature": "() -> Int",
       "isStatic": false,
-      "owner": "platform-adapter",
-      "runtimeFeatures": [
-        "date-time",
-        "string"
-      ],
+      "owner": "target-source-override",
+      "runtimeFeatures": [],
       "profiles": [
         "portable",
         "metal"
       ],
       "environments": [
         "hosted",
-        "wasi",
-        "emscripten"
+        "freestanding"
       ],
-      "status": "planned",
+      "status": "conformant",
       "ownerBeads": "E5.T08",
-      "testOwnerBeads": "E5.T12",
-      "diagnosticPolicies": [
-        "planned-unsupported",
-        "runtime-policy-after-implementation"
+      "testOwnerBeads": "E5.T08",
+      "diagnosticPolicies": [],
+      "tests": [
+        "test/date_time/run.py"
       ],
-      "tests": [],
-      "notes": "Wall clock, local time, timezone, precision, and range require explicit adapter capabilities; freestanding has no implicit clock.",
-      "ruleId": "date-platform"
+      "notes": "getUTCMinutes uses portable Gregorian arithmetic over the stored Float timestamp. Epoch, leap-day, negative, fractional, strict C, and sanitizer evidence are covered by the focused runner.",
+      "ruleId": "date-get-utc-minutes-conformant"
     },
     {
       "id": "hxc-stdlib-api-v1:09c7236c3cd00ea3c2c08dea41ce40f0b36c0feb4f91ffa08a5a6bcd06cf25c1",
@@ -6377,30 +6948,25 @@
       "kind": "method",
       "signature": "() -> Int",
       "isStatic": false,
-      "owner": "platform-adapter",
-      "runtimeFeatures": [
-        "date-time",
-        "string"
-      ],
+      "owner": "target-source-override",
+      "runtimeFeatures": [],
       "profiles": [
         "portable",
         "metal"
       ],
       "environments": [
         "hosted",
-        "wasi",
-        "emscripten"
+        "freestanding"
       ],
-      "status": "planned",
+      "status": "conformant",
       "ownerBeads": "E5.T08",
-      "testOwnerBeads": "E5.T12",
-      "diagnosticPolicies": [
-        "planned-unsupported",
-        "runtime-policy-after-implementation"
+      "testOwnerBeads": "E5.T08",
+      "diagnosticPolicies": [],
+      "tests": [
+        "test/date_time/run.py"
       ],
-      "tests": [],
-      "notes": "Wall clock, local time, timezone, precision, and range require explicit adapter capabilities; freestanding has no implicit clock.",
-      "ruleId": "date-platform"
+      "notes": "getUTCMonth uses portable Gregorian arithmetic over the stored Float timestamp. Epoch, leap-day, negative, fractional, strict C, and sanitizer evidence are covered by the focused runner.",
+      "ruleId": "date-get-utc-month-conformant"
     },
     {
       "id": "hxc-stdlib-api-v1:fb2c0181bb8046c6af116833cb5d7d7e538a2fd4134c5c12e7b6ee5441a44586",
@@ -6413,30 +6979,25 @@
       "kind": "method",
       "signature": "() -> Int",
       "isStatic": false,
-      "owner": "platform-adapter",
-      "runtimeFeatures": [
-        "date-time",
-        "string"
-      ],
+      "owner": "target-source-override",
+      "runtimeFeatures": [],
       "profiles": [
         "portable",
         "metal"
       ],
       "environments": [
         "hosted",
-        "wasi",
-        "emscripten"
+        "freestanding"
       ],
-      "status": "planned",
+      "status": "conformant",
       "ownerBeads": "E5.T08",
-      "testOwnerBeads": "E5.T12",
-      "diagnosticPolicies": [
-        "planned-unsupported",
-        "runtime-policy-after-implementation"
+      "testOwnerBeads": "E5.T08",
+      "diagnosticPolicies": [],
+      "tests": [
+        "test/date_time/run.py"
       ],
-      "tests": [],
-      "notes": "Wall clock, local time, timezone, precision, and range require explicit adapter capabilities; freestanding has no implicit clock.",
-      "ruleId": "date-platform"
+      "notes": "getUTCSeconds uses portable Gregorian arithmetic over the stored Float timestamp. Epoch, leap-day, negative, fractional, strict C, and sanitizer evidence are covered by the focused runner.",
+      "ruleId": "date-get-utc-seconds-conformant"
     },
     {
       "id": "hxc-stdlib-api-v1:5f4d24cecdc2cc1d605200620b2ae8c393bb47c01b54ddcc967127d292e67dd6",
@@ -6449,30 +7010,27 @@
       "kind": "constructor",
       "signature": "(year : Int, month : Int, day : Int, hour : Int, min : Int, sec : Int) -> Void",
       "isStatic": false,
-      "owner": "platform-adapter",
+      "owner": "target-source-override",
       "runtimeFeatures": [
         "date-time",
-        "string"
+        "gc"
       ],
       "profiles": [
         "portable",
         "metal"
       ],
       "environments": [
-        "hosted",
-        "wasi",
-        "emscripten"
+        "hosted"
       ],
-      "status": "planned",
+      "status": "conformant",
       "ownerBeads": "E5.T08",
-      "testOwnerBeads": "E5.T12",
-      "diagnosticPolicies": [
-        "planned-unsupported",
-        "runtime-policy-after-implementation"
+      "testOwnerBeads": "E5.T08",
+      "diagnosticPolicies": [],
+      "tests": [
+        "test/date_time/run.py"
       ],
-      "tests": [],
-      "notes": "Wall clock, local time, timezone, precision, and range require explicit adapter capabilities; freestanding has no implicit clock.",
-      "ruleId": "date-platform"
+      "notes": "The Date constructor creates one managed object and converts local civil fields through host normalization. Deterministic spring-gap and repeated-time cases use an explicit process timezone.",
+      "ruleId": "date-constructor-hosted"
     },
     {
       "id": "hxc-stdlib-api-v1:c3f52ba5f4575a3e7143bc5dd1517cf4494f9867d1dc316bfb5ee335c67c5779",
@@ -6485,30 +7043,27 @@
       "kind": "method",
       "signature": "() -> Date",
       "isStatic": true,
-      "owner": "platform-adapter",
+      "owner": "target-source-override",
       "runtimeFeatures": [
         "date-time",
-        "string"
+        "gc"
       ],
       "profiles": [
         "portable",
         "metal"
       ],
       "environments": [
-        "hosted",
-        "wasi",
-        "emscripten"
+        "hosted"
       ],
-      "status": "planned",
+      "status": "conformant",
       "ownerBeads": "E5.T08",
-      "testOwnerBeads": "E5.T12",
-      "diagnosticPolicies": [
-        "planned-unsupported",
-        "runtime-policy-after-implementation"
+      "testOwnerBeads": "E5.T08",
+      "diagnosticPolicies": [],
+      "tests": [
+        "test/date_time/run.py"
       ],
-      "tests": [],
-      "notes": "Wall clock, local time, timezone, precision, and range require explicit adapter capabilities; freestanding has no implicit clock.",
-      "ruleId": "date-platform"
+      "notes": "Date.now reads adjustable Unix-epoch wall-clock milliseconds and creates one fresh Date. The focused runner keeps this clock distinct from monotonic elapsed time.",
+      "ruleId": "date-now-hosted"
     },
     {
       "id": "hxc-stdlib-api-v1:84ccc782874bbe8e37d31d223dbc31e6159db3f5d22ac95d02d2443430932aac",
@@ -6521,7 +7076,7 @@
       "kind": "method",
       "signature": "() -> String",
       "isStatic": false,
-      "owner": "platform-adapter",
+      "owner": "target-source-override",
       "runtimeFeatures": [
         "date-time",
         "string"
@@ -6531,20 +7086,17 @@
         "metal"
       ],
       "environments": [
-        "hosted",
-        "wasi",
-        "emscripten"
+        "hosted"
       ],
-      "status": "planned",
+      "status": "conformant",
       "ownerBeads": "E5.T08",
-      "testOwnerBeads": "E5.T12",
-      "diagnosticPolicies": [
-        "planned-unsupported",
-        "runtime-policy-after-implementation"
+      "testOwnerBeads": "E5.T08",
+      "diagnosticPolicies": [],
+      "tests": [
+        "test/date_time/run.py"
       ],
-      "tests": [],
-      "notes": "Wall clock, local time, timezone, precision, and range require explicit adapter capabilities; freestanding has no implicit clock.",
-      "ruleId": "date-platform"
+      "notes": "Date.toString formats host-local fields as YYYY-MM-DD HH:MM:SS. Controlled timezone, daylight transition, generated String ownership, strict C, and sanitizer evidence are covered by the focused runner.",
+      "ruleId": "date-to-string-hosted"
     },
     {
       "id": "hxc-stdlib-api-v1:eadf1b120bd3fe8821c0dd66ea46974cda7341cff6f50c45c9d686ff7f1828a4",
@@ -18527,15 +19079,17 @@
         "wasi",
         "emscripten"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T08",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Single-thread and host-loop specializations run first; thread or timing support is selected only for reachable scheduling behavior.",
+      "tests": [
+        "test/date_time/run.py"
+      ],
+      "notes": "The exact haxe.Timer.stamp override admits hosted monotonic seconds. Timer construction, delay, measurement helpers, event-loop integration, and scheduling remain source-positioned unsupported.",
       "ruleId": "event-loop-and-timers"
     },
     {
@@ -18563,15 +19117,17 @@
         "wasi",
         "emscripten"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T08",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Single-thread and host-loop specializations run first; thread or timing support is selected only for reachable scheduling behavior.",
+      "tests": [
+        "test/date_time/run.py"
+      ],
+      "notes": "The exact haxe.Timer.stamp override admits hosted monotonic seconds. Timer construction, delay, measurement helpers, event-loop integration, and scheduling remain source-positioned unsupported.",
       "ruleId": "event-loop-and-timers"
     },
     {
@@ -18599,15 +19155,17 @@
         "wasi",
         "emscripten"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T08",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Single-thread and host-loop specializations run first; thread or timing support is selected only for reachable scheduling behavior.",
+      "tests": [
+        "test/date_time/run.py"
+      ],
+      "notes": "The exact haxe.Timer.stamp override admits hosted monotonic seconds. Timer construction, delay, measurement helpers, event-loop integration, and scheduling remain source-positioned unsupported.",
       "ruleId": "event-loop-and-timers"
     },
     {
@@ -18635,15 +19193,17 @@
         "wasi",
         "emscripten"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T08",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Single-thread and host-loop specializations run first; thread or timing support is selected only for reachable scheduling behavior.",
+      "tests": [
+        "test/date_time/run.py"
+      ],
+      "notes": "The exact haxe.Timer.stamp override admits hosted monotonic seconds. Timer construction, delay, measurement helpers, event-loop integration, and scheduling remain source-positioned unsupported.",
       "ruleId": "event-loop-and-timers"
     },
     {
@@ -18671,15 +19231,17 @@
         "wasi",
         "emscripten"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T08",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Single-thread and host-loop specializations run first; thread or timing support is selected only for reachable scheduling behavior.",
+      "tests": [
+        "test/date_time/run.py"
+      ],
+      "notes": "The exact haxe.Timer.stamp override admits hosted monotonic seconds. Timer construction, delay, measurement helpers, event-loop integration, and scheduling remain source-positioned unsupported.",
       "ruleId": "event-loop-and-timers"
     },
     {
@@ -18707,15 +19269,17 @@
         "wasi",
         "emscripten"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T08",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Single-thread and host-loop specializations run first; thread or timing support is selected only for reachable scheduling behavior.",
+      "tests": [
+        "test/date_time/run.py"
+      ],
+      "notes": "The exact haxe.Timer.stamp override admits hosted monotonic seconds. Timer construction, delay, measurement helpers, event-loop integration, and scheduling remain source-positioned unsupported.",
       "ruleId": "event-loop-and-timers"
     },
     {
@@ -25116,15 +25680,17 @@
         "wasi",
         "emscripten"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T08",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Single-thread and host-loop specializations run first; thread or timing support is selected only for reachable scheduling behavior.",
+      "tests": [
+        "test/date_time/run.py"
+      ],
+      "notes": "The exact haxe.Timer.stamp override admits hosted monotonic seconds. Timer construction, delay, measurement helpers, event-loop integration, and scheduling remain source-positioned unsupported.",
       "ruleId": "event-loop-and-timers"
     },
     {
@@ -25152,15 +25718,17 @@
         "wasi",
         "emscripten"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T08",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Single-thread and host-loop specializations run first; thread or timing support is selected only for reachable scheduling behavior.",
+      "tests": [
+        "test/date_time/run.py"
+      ],
+      "notes": "The exact haxe.Timer.stamp override admits hosted monotonic seconds. Timer construction, delay, measurement helpers, event-loop integration, and scheduling remain source-positioned unsupported.",
       "ruleId": "event-loop-and-timers"
     },
     {
@@ -25188,15 +25756,17 @@
         "wasi",
         "emscripten"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T08",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Single-thread and host-loop specializations run first; thread or timing support is selected only for reachable scheduling behavior.",
+      "tests": [
+        "test/date_time/run.py"
+      ],
+      "notes": "The exact haxe.Timer.stamp override admits hosted monotonic seconds. Timer construction, delay, measurement helpers, event-loop integration, and scheduling remain source-positioned unsupported.",
       "ruleId": "event-loop-and-timers"
     },
     {
@@ -25224,15 +25794,17 @@
         "wasi",
         "emscripten"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T08",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Single-thread and host-loop specializations run first; thread or timing support is selected only for reachable scheduling behavior.",
+      "tests": [
+        "test/date_time/run.py"
+      ],
+      "notes": "The exact haxe.Timer.stamp override admits hosted monotonic seconds. Timer construction, delay, measurement helpers, event-loop integration, and scheduling remain source-positioned unsupported.",
       "ruleId": "event-loop-and-timers"
     },
     {
@@ -25260,15 +25832,17 @@
         "wasi",
         "emscripten"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T08",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Single-thread and host-loop specializations run first; thread or timing support is selected only for reachable scheduling behavior.",
+      "tests": [
+        "test/date_time/run.py"
+      ],
+      "notes": "The exact haxe.Timer.stamp override admits hosted monotonic seconds. Timer construction, delay, measurement helpers, event-loop integration, and scheduling remain source-positioned unsupported.",
       "ruleId": "event-loop-and-timers"
     },
     {
@@ -25296,15 +25870,17 @@
         "wasi",
         "emscripten"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T08",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Single-thread and host-loop specializations run first; thread or timing support is selected only for reachable scheduling behavior.",
+      "tests": [
+        "test/date_time/run.py"
+      ],
+      "notes": "The exact haxe.Timer.stamp override admits hosted monotonic seconds. Timer construction, delay, measurement helpers, event-loop integration, and scheduling remain source-positioned unsupported.",
       "ruleId": "event-loop-and-timers"
     },
     {
@@ -25332,15 +25908,17 @@
         "wasi",
         "emscripten"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T08",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Single-thread and host-loop specializations run first; thread or timing support is selected only for reachable scheduling behavior.",
+      "tests": [
+        "test/date_time/run.py"
+      ],
+      "notes": "The exact haxe.Timer.stamp override admits hosted monotonic seconds. Timer construction, delay, measurement helpers, event-loop integration, and scheduling remain source-positioned unsupported.",
       "ruleId": "event-loop-and-timers"
     },
     {
@@ -25368,15 +25946,17 @@
         "wasi",
         "emscripten"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T08",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Single-thread and host-loop specializations run first; thread or timing support is selected only for reachable scheduling behavior.",
+      "tests": [
+        "test/date_time/run.py"
+      ],
+      "notes": "The exact haxe.Timer.stamp override admits hosted monotonic seconds. Timer construction, delay, measurement helpers, event-loop integration, and scheduling remain source-positioned unsupported.",
       "ruleId": "event-loop-and-timers"
     },
     {
@@ -25404,15 +25984,17 @@
         "wasi",
         "emscripten"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T08",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Single-thread and host-loop specializations run first; thread or timing support is selected only for reachable scheduling behavior.",
+      "tests": [
+        "test/date_time/run.py"
+      ],
+      "notes": "The exact haxe.Timer.stamp override admits hosted monotonic seconds. Timer construction, delay, measurement helpers, event-loop integration, and scheduling remain source-positioned unsupported.",
       "ruleId": "event-loop-and-timers"
     },
     {
@@ -25440,15 +26022,17 @@
         "wasi",
         "emscripten"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T08",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Single-thread and host-loop specializations run first; thread or timing support is selected only for reachable scheduling behavior.",
+      "tests": [
+        "test/date_time/run.py"
+      ],
+      "notes": "The exact haxe.Timer.stamp override admits hosted monotonic seconds. Timer construction, delay, measurement helpers, event-loop integration, and scheduling remain source-positioned unsupported.",
       "ruleId": "event-loop-and-timers"
     },
     {
@@ -25476,15 +26060,17 @@
         "wasi",
         "emscripten"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T08",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Single-thread and host-loop specializations run first; thread or timing support is selected only for reachable scheduling behavior.",
+      "tests": [
+        "test/date_time/run.py"
+      ],
+      "notes": "The exact haxe.Timer.stamp override admits hosted monotonic seconds. Timer construction, delay, measurement helpers, event-loop integration, and scheduling remain source-positioned unsupported.",
       "ruleId": "event-loop-and-timers"
     },
     {
@@ -25512,15 +26098,17 @@
         "wasi",
         "emscripten"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T08",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Single-thread and host-loop specializations run first; thread or timing support is selected only for reachable scheduling behavior.",
+      "tests": [
+        "test/date_time/run.py"
+      ],
+      "notes": "The exact haxe.Timer.stamp override admits hosted monotonic seconds. Timer construction, delay, measurement helpers, event-loop integration, and scheduling remain source-positioned unsupported.",
       "ruleId": "event-loop-and-timers"
     },
     {
@@ -25548,15 +26136,17 @@
         "wasi",
         "emscripten"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T08",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Single-thread and host-loop specializations run first; thread or timing support is selected only for reachable scheduling behavior.",
+      "tests": [
+        "test/date_time/run.py"
+      ],
+      "notes": "The exact haxe.Timer.stamp override admits hosted monotonic seconds. Timer construction, delay, measurement helpers, event-loop integration, and scheduling remain source-positioned unsupported.",
       "ruleId": "event-loop-and-timers"
     },
     {
@@ -26986,15 +27576,17 @@
         "wasi",
         "emscripten"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T08",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Single-thread and host-loop specializations run first; thread or timing support is selected only for reachable scheduling behavior.",
+      "tests": [
+        "test/date_time/run.py"
+      ],
+      "notes": "The exact haxe.Timer.stamp override admits hosted monotonic seconds. Timer construction, delay, measurement helpers, event-loop integration, and scheduling remain source-positioned unsupported.",
       "ruleId": "event-loop-and-timers"
     },
     {
@@ -27022,15 +27614,17 @@
         "wasi",
         "emscripten"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T08",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Single-thread and host-loop specializations run first; thread or timing support is selected only for reachable scheduling behavior.",
+      "tests": [
+        "test/date_time/run.py"
+      ],
+      "notes": "The exact haxe.Timer.stamp override admits hosted monotonic seconds. Timer construction, delay, measurement helpers, event-loop integration, and scheduling remain source-positioned unsupported.",
       "ruleId": "event-loop-and-timers"
     },
     {
@@ -27058,26 +27652,28 @@
         "wasi",
         "emscripten"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T08",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Single-thread and host-loop specializations run first; thread or timing support is selected only for reachable scheduling behavior.",
+      "tests": [
+        "test/date_time/run.py"
+      ],
+      "notes": "The exact haxe.Timer.stamp override admits hosted monotonic seconds. Timer construction, delay, measurement helpers, event-loop integration, and scheduling remain source-positioned unsupported.",
       "ruleId": "event-loop-and-timers"
     },
     {
-      "id": "hxc-stdlib-api-v1:b89e2a6e4fe699edb02f7a431b2bf9a0e80089a4778dfeacf2c636fed5518764",
+      "id": "hxc-stdlib-api-v1:f7df0aa8b1d11e560585e4d77bc4a19d55b0489bd96a2263a528c96bb5273658",
       "module": "haxe.Timer",
       "source": "haxe/Timer.hx",
       "sourceSha256": "d6738282883c73878ee123f7edea104a4aef34399bb0dc1b7bbc303d3b0c2957",
       "probeScope": "c-common",
       "type": "haxe.Timer",
       "member": "milliseconds",
-      "kind": "inline-method",
+      "kind": "method",
       "signature": "() -> haxe.Int64",
       "isStatic": true,
       "owner": "platform-adapter",
@@ -27094,15 +27690,17 @@
         "wasi",
         "emscripten"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T08",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Single-thread and host-loop specializations run first; thread or timing support is selected only for reachable scheduling behavior.",
+      "tests": [
+        "test/date_time/run.py"
+      ],
+      "notes": "The exact haxe.Timer.stamp override admits hosted monotonic seconds. Timer construction, delay, measurement helpers, event-loop integration, and scheduling remain source-positioned unsupported.",
       "ruleId": "event-loop-and-timers"
     },
     {
@@ -27130,15 +27728,17 @@
         "wasi",
         "emscripten"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T08",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Single-thread and host-loop specializations run first; thread or timing support is selected only for reachable scheduling behavior.",
+      "tests": [
+        "test/date_time/run.py"
+      ],
+      "notes": "The exact haxe.Timer.stamp override admits hosted monotonic seconds. Timer construction, delay, measurement helpers, event-loop integration, and scheduling remain source-positioned unsupported.",
       "ruleId": "event-loop-and-timers"
     },
     {
@@ -27166,52 +27766,50 @@
         "wasi",
         "emscripten"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T08",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Single-thread and host-loop specializations run first; thread or timing support is selected only for reachable scheduling behavior.",
+      "tests": [
+        "test/date_time/run.py"
+      ],
+      "notes": "The exact haxe.Timer.stamp override admits hosted monotonic seconds. Timer construction, delay, measurement helpers, event-loop integration, and scheduling remain source-positioned unsupported.",
       "ruleId": "event-loop-and-timers"
     },
     {
-      "id": "hxc-stdlib-api-v1:c35ca9ca002400472b0eef94cda129746ec476a93b2a73e6acf24e576fbe27ad",
+      "id": "hxc-stdlib-api-v1:d421ea32d0c2585a6f5948fea8a08d955622f391e33082065ec78412158e4705",
       "module": "haxe.Timer",
       "source": "haxe/Timer.hx",
       "sourceSha256": "d6738282883c73878ee123f7edea104a4aef34399bb0dc1b7bbc303d3b0c2957",
       "probeScope": "c-common",
       "type": "haxe.Timer",
       "member": "stamp",
-      "kind": "inline-method",
+      "kind": "method",
       "signature": "() -> Float",
       "isStatic": true,
-      "owner": "platform-adapter",
+      "owner": "direct-compiler-lowering",
       "runtimeFeatures": [
-        "date-time",
-        "thread"
+        "date-time"
       ],
       "profiles": [
         "portable",
         "metal"
       ],
       "environments": [
-        "hosted",
-        "wasi",
-        "emscripten"
+        "hosted"
       ],
-      "status": "planned",
+      "status": "conformant",
       "ownerBeads": "E5.T08",
-      "testOwnerBeads": "E5.T12",
-      "diagnosticPolicies": [
-        "planned-unsupported",
-        "runtime-policy-after-implementation"
+      "testOwnerBeads": "E5.T08",
+      "diagnosticPolicies": [],
+      "tests": [
+        "test/date_time/run.py"
       ],
-      "tests": [],
-      "notes": "Single-thread and host-loop specializations run first; thread or timing support is selected only for reachable scheduling behavior.",
-      "ruleId": "event-loop-and-timers"
+      "notes": "haxe.Timer.stamp returns monotonic seconds from an unspecified host epoch. The runtime contract checks non-decrease and keeps this operation distinct from Date.now wall time.",
+      "ruleId": "timer-stamp-hosted"
     },
     {
       "id": "hxc-stdlib-api-v1:c5cd5d0ae8bc23d4c6457adbbee3cf98f2368685cc2905f809466dc4bb5412a8",
@@ -27238,15 +27836,17 @@
         "wasi",
         "emscripten"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T08",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Single-thread and host-loop specializations run first; thread or timing support is selected only for reachable scheduling behavior.",
+      "tests": [
+        "test/date_time/run.py"
+      ],
+      "notes": "The exact haxe.Timer.stamp override admits hosted monotonic seconds. Timer construction, delay, measurement helpers, event-loop integration, and scheduling remain source-positioned unsupported.",
       "ruleId": "event-loop-and-timers"
     },
     {

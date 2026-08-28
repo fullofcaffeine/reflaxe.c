@@ -3990,6 +3990,8 @@ private class HxcIRValidationState {
 					validateArrayJoinCall(call, argumentTypes, path, source);
 					if (call.arguments.length > 1 && !nullProofs.exists(call.arguments[1]))
 						add(path, "Array.join requires a preceding dominating separator null check", source);
+				} else if (featureId == "date-time") {
+					validateDateTimeCall(call, argumentTypes, path, source);
 				}
 			case IRCDIntrinsic(intrinsicId):
 				validateStableId(intrinsicId, '$path.intrinsic', source);
@@ -4823,6 +4825,37 @@ private class HxcIRValidationState {
 			case _:
 				add(path, 'io runtime call names unsupported operation `$operationId`', source);
 		}
+	}
+
+	/** Validate hosted Date services before their status/out C ABI is selected. */
+	function validateDateTimeCall(call:HxcIRCall, argumentTypes:Array<Null<HxcIRTypeRef>>, path:String, source:HxcSourceSpan):Void {
+		final operationId = switch call.dispatch {
+			case IRCDRuntime("date-time", value): value;
+			case _: return;
+		};
+		final float64 = IRTFloat(64);
+		final int32 = IRTInt(32, true);
+		switch operationId {
+			case "wall-milliseconds" | "monotonic-seconds":
+				if (argumentTypes.length != 0 || typeKey(call.returnType) != typeKey(float64))
+					add(path, '$operationId requires no arguments and returns a Haxe Float clock value in operation-defined units', source);
+			case "timezone-offset":
+				if (argumentTypes.length != 1
+					|| argumentTypes[0] == null
+					|| typeKey(argumentTypes[0]) != typeKey(float64)
+					|| typeKey(call.returnType) != typeKey(int32))
+					add(path, "timezone-offset requires Float milliseconds and returns Haxe Int minutes", source);
+			case "local-to-milliseconds":
+				var valid = argumentTypes.length == 6 && typeKey(call.returnType) == typeKey(float64);
+				for (argument in argumentTypes)
+					if (argument == null || typeKey(argument) != typeKey(int32))
+						valid = false;
+				if (!valid)
+					add(path, "local-to-milliseconds requires six Haxe Int fields and returns Haxe Float milliseconds", source);
+			case _:
+				add(path, 'date-time runtime call names unsupported operation `$operationId`', source);
+		}
+		validateCleanupFreeStatusAbort(call.failure, path, source, "date-time operation");
 	}
 
 	function validateKnownCallSignature(call:HxcIRCall, argumentTypes:Array<Null<HxcIRTypeRef>>, parameters:Array<HxcIRParameter>, returnType:HxcIRTypeRef,

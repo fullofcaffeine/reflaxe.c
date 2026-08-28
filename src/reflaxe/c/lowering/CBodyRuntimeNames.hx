@@ -33,6 +33,10 @@ enum CBodyRuntimeName {
 	CBRNStringBorrowCString;
 	CBRNBorrowedCStringData;
 	CBRNPrintln;
+	CBRNDateTimeWallMilliseconds;
+	CBRNDateTimeMonotonicSeconds;
+	CBRNDateTimeLocalToMilliseconds;
+	CBRNDateTimeTimezoneOffset;
 	CBRNStatusType;
 	CBRNStatusOk;
 	CBRNAbort;
@@ -236,6 +240,10 @@ class CBodyRuntimeNames {
 			case CBRNStringBorrowCString: "hxc_string_borrow_cstring";
 			case CBRNBorrowedCStringData: "data";
 			case CBRNPrintln: "hxc_io_println";
+			case CBRNDateTimeWallMilliseconds: "hxc_date_time_wall_milliseconds";
+			case CBRNDateTimeMonotonicSeconds: "hxc_date_time_monotonic_seconds";
+			case CBRNDateTimeLocalToMilliseconds: "hxc_date_time_local_to_milliseconds";
+			case CBRNDateTimeTimezoneOffset: "hxc_date_time_timezone_offset";
 			case CBRNStatusType: "hxc_status";
 			case CBRNStatusOk: "HXC_STATUS_OK";
 			case CBRNAbort: "abort";

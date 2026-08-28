@@ -44,6 +44,7 @@ class RuntimeFeatureCatalog {
 		final stringSplit = RuntimeFeatureId.parse("string-split");
 		final arrayJoin = RuntimeFeatureId.parse("array-join");
 		final io = RuntimeFeatureId.parse("io");
+		final dateTime = RuntimeFeatureId.parse("date-time");
 		return [
 			new RuntimeFeatureDefinition(runtimeBase, "Shared C types, internal ABI version, and visibility/alignment macros for selected runtime slices.",
 				CompilerSelectable, true, environments, [], [header("base.h")], [], [], [],
@@ -689,6 +690,29 @@ class RuntimeFeatureCatalog {
 						"test/differential/array-runtime/run.py",
 						"test/runtime/runtime-feature-graph/run.py"
 					])),
+			new RuntimeFeatureDefinition(dateTime, "Hosted wall-clock, monotonic-clock, local-calendar, and timezone adapters.", CompilerSelectable, true,
+				[CEnvironment.Hosted], [status], [header("date_time.h"), source("date_time.c")], [
+					"hxc_date_time_wall_milliseconds",
+					"hxc_date_time_monotonic_seconds",
+					"hxc_date_time_local_to_milliseconds",
+					"hxc_date_time_timezone_offset"
+				],
+				[], [],
+				documentation("Reads wall and monotonic clocks separately, converts local civil fields through host timezone rules, and reports Haxe-sign timezone offsets with checked time_t range conversion.",
+					[
+						new RuntimeFeatureSelectionRoot("wall-clock", RuntimeFeatureSelectionRootKind.HxcIrOperation,
+							"A reachable Date.now call needs the host's adjustable Unix-epoch clock."),
+						new RuntimeFeatureSelectionRoot("monotonic-clock", RuntimeFeatureSelectionRootKind.HxcIrOperation,
+							"A reachable Timer.stamp call needs elapsed time that cannot move backwards with wall-clock adjustments."),
+						new RuntimeFeatureSelectionRoot("local-calendar", RuntimeFeatureSelectionRootKind.HxcIrOperation,
+							"A reachable Date constructor needs host timezone and daylight-saving normalization."),
+						new RuntimeFeatureSelectionRoot("timezone-offset", RuntimeFeatureSelectionRootKind.HxcIrOperation,
+							"A reachable local Date projection needs the host offset at that exact timestamp.")
+					],
+					"UTC Date projection remains deterministic program-local Gregorian arithmetic and Date.fromTime needs only ordinary object allocation.",
+					"A platform with a closed embedded calendar can replace these calls with a program-local adapter that preserves the same status and clock-kind contracts.",
+					"Timezone databases, daylight-saving normalization, and clocks are host services. One narrow status/out boundary keeps those effects separate from portable Date arithmetic.",
+					"docs/date-time.md", ["test/date_time/run.py", "runtime/hxrt/test/date_time_contract.c"])),
 			new RuntimeFeatureDefinition(io, "Minimal hosted length-delimited String output with explicit write and flush failure status.",
 				CompilerSelectable, true, [CEnvironment.Hosted], [status, stringLiteral], [header("io.h"), source("io.c")], ["hxc_io_println"], [], [],
 				documentation("Writes one valid length-delimited Haxe String value plus a newline to hosted stdout and reports write or flush failure explicitly.",
@@ -714,7 +738,6 @@ class RuntimeFeatureCatalog {
 	public static function reservations():Array<RuntimeFeatureReservation> {
 		return [
 			reserved("closure", "E3.T08", "Escaping closure environment support after escape analysis."),
-			reserved("date-time", "E5.T08", "Date, timezone, wall-clock, and monotonic-time adapters."),
 			reserved("export-error", "E7.T04", "Thread-safe exported status and error-detail boundary."),
 			reserved("filesystem", "E5.T09", "Hosted filesystem and file-resource adapters."),
 			reserved("process", "E5.T09", "Hosted environment and process adapters."),
@@ -751,6 +774,7 @@ class RuntimeFeatureCatalog {
 			case "base.h": "7d4f67124bf94b76bfc24d5db973426f48f3f9f37daeae975fd4948f5b1dea25";
 			case "bytes.h": "dc9f59ab163486e2fc06f988cd931065eda3f480dfadae6917ee08ab60e9a4f5";
 			case "bytes_string.h": "9d944e38a748696628076b0c5fd56339668e48953a220d51c8da1630fbdf9c40";
+			case "date_time.h": "07086c9185ea03a13dc6bf39d02f00f99b7cbd8151ba0bdf90d7e457c07880d4";
 			case "dynamic.h": "6acbca9069ce4670988e682c5c214a32968fadee892ea4490d0844674c2e24b2";
 			case "exception.h": "af147c885d31d9408b27b0777a3021bb6d1631b580b237fed75aa21459bad529";
 			case "gc.h": "d99575a5bad765d45822a1d6221f7bc1b620d59dd6111e0c8ec8a2d45db36159";
@@ -782,6 +806,7 @@ class RuntimeFeatureCatalog {
 			case "array_join.c": "b158708b62c7e407f9da21c24a1b3306d4b41baa6b63f2d8019f631a98008fde";
 			case "bytes.c": "10a4c6c17d1cedc31562fef6708fd54351e094ec4be631848d6348bb82ced46c";
 			case "bytes_string.c": "0ee9604f1b4ae78baeeaf7cac8b2a35b5634f115c958a7575230c790e8aa6ca6";
+			case "date_time.c": "546e3f244d3187993254aca85dd4acfd64bd3c259b1531d736c950ce9de51b24";
 			case "dynamic.c": "804371b7eb2bfa6dbcb6598ff729754b312a2ba7b24a94a615915c30dee68503";
 			case "exception.c": "e6660d0b55b56be3cd436af8f0c16a7668b70f7e82031687a5a149e029c12741";
 			case "gc.c": "a79c93c94db215b3bc303ea4c761de627637d0eb881faeeaf10c07f9bed4c502";

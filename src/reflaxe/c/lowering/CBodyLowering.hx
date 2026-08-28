@@ -55,6 +55,7 @@ import reflaxe.c.lowering.CBodyArray.CLoweredBodyArray;
 import reflaxe.c.lowering.CBodyArray.CBodyArrayRecognition;
 import reflaxe.c.lowering.CBodyBytes.CPreparedBodyBytes;
 import reflaxe.c.lowering.CBodyBytes.CBodyBytesRecognition;
+import reflaxe.c.lowering.CBodyDate.CBodyDateRecognition;
 import reflaxe.c.lowering.CBodyClass.CLoweredBodyClass;
 import reflaxe.c.lowering.CBodyClass.CBodyInterfaceImplementation;
 import reflaxe.c.lowering.CBodyClass.CPreparedBodyClass;
@@ -5265,7 +5266,8 @@ private class FunctionBuilder {
 				// Concrete standard Array cursors are runtime Iterator carriers, not
 				// ordinary generic classes. Discover each element specialization before
 				// replay freezes so authoritative lowering cannot change the plan.
-				CBodyIteratorRecognition.arrayKind(reference) != null
+				CBodyDateRecognition.isCoreDate(reference)
+				|| CBodyIteratorRecognition.arrayKind(reference) != null
 				|| value.meta.has(":c.layout")
 				|| (packageName == "haxe.ds"
 					&& (value.name == "IntMap" || value.name == "StringMap")) // A local may be the program's first and only Bytes owner. Register
@@ -5357,11 +5359,19 @@ private class FunctionBuilder {
 		}
 		if (CBodyArrayRecognition.isCoreArrayType(expressionType))
 			bodyValueType(expressionType, expression.pos, "managed-representation-discovery:Array");
+		if (CBodyDateRecognition.isCoreDateType(expressionType)) {
+			final dateType = bodyValueType(expressionType, expression.pos, "managed-representation-discovery:Date");
+			aggregateRegistry.requireEscapingReturnClasses(dateType);
+		}
 		switch expression.expr {
 			case TVar(variable, _):
 				final variableType = applyCurrentSpecialization(variable.t);
 				if (CBodyArrayRecognition.isCoreArrayType(variableType))
 					bodyValueType(variableType, expression.pos, 'managed-representation-discovery:local:${variable.name}');
+				if (CBodyDateRecognition.isCoreDateType(variableType)) {
+					final dateType = bodyValueType(variableType, expression.pos, 'managed-representation-discovery:Date-local:${variable.name}');
+					aggregateRegistry.requireEscapingReturnClasses(dateType);
+				}
 			case _:
 		}
 		TypedExprTools.iter(expression, discoverManagedExpression);
@@ -12990,6 +13000,14 @@ private class FunctionBuilder {
 		final bytesStaticMethod = coreBytesStaticMethod(call.callee);
 		if (bytesStaticMethod != null)
 			return lowerManagedBytesStaticCall(expression, bytesStaticMethod, call.arguments);
+		final dateStaticMethod = coreDateStaticMethod(call.callee);
+		if (dateStaticMethod != null)
+			return lowerDateStaticCall(expression, dateStaticMethod, call.arguments);
+		final dateHostMethod = dateHostStaticMethod(call.callee);
+		if (dateHostMethod != null)
+			return lowerDateTimeRuntimeCall(expression, dateHostMethod, call.arguments);
+		if (isCoreTimerStamp(call.callee))
+			return lowerDateTimeRuntimeCall(expression, "timerStamp", call.arguments);
 		if (CBodyLowering.isStringFromCharCode(call.callee))
 			return lowerStringFromCharCode(expression, call.arguments);
 		if (isStdInt(call.callee)) {
@@ -15116,6 +15134,96 @@ private class FunctionBuilder {
 	}
 
 	/**
+		Construct one fresh Date from its canonical Float millisecond timestamp.
+
+		The allocation uses the ordinary exact-root collector path. The private Haxe
+		field remains outside the public API. Calendar and host-clock operations build
+		on this same carrier without changing Date identity or exporting its layout.
+	**/
+	function lowerDateStaticCall(expression:TypedExpr, method:String, arguments:Array<TypedExpr>):LoweredValue {
+		if (method != "fromTime")
+			return lowerDateTimeRuntimeCall(expression, method, arguments);
+		if (arguments.length != 1)
+			return unsupported(expression, 'TCall(Date.fromTime:argument-count=${arguments.length},expected=1)');
+		final resultMapping = bodyValueType(expression.t, expression.pos, "TCall(Date.fromTime:result-type)");
+		final classValue = resultMapping.classValue();
+		if (classValue == null || classValue.haxePath != "Date" || !classValue.managedByCollector)
+			return unsupported(expression, "TCall(Date.fromTime:result-not-managed-Date)");
+		final field = classValue.field("milliseconds");
+		if (field == null)
+			throw new CBodyEmissionError("compiler-owned Date layout lost its millisecond field");
+		final timestamp = coerce(lowerValue(arguments[0], field.type), field.type, arguments[0].pos, "TCall(Date.fromTime:milliseconds)");
+		final source = sourceSpan(expression.pos);
+		final nonNullMapping = CBodyValueType.classReference(classValue, false);
+		final allocated:HxcIRResult = {id: nextValueId(), type: nonNullMapping.irType};
+		appendInstruction(allocated, IRIOAllocate(IRTInstance(classValue.instanceId), IRAShared, IRIRuntime("gc"), {
+			kind: IRFAllocationFailure,
+			target: IRFTAbort,
+			arguments: [],
+			cleanup: normalCleanupSteps()
+		}), source, "date-allocate");
+		runtimeRequirements.push(new CBodyRuntimeRequirement("gc", "allocation", "Date.fromTime fresh Date allocation", source, expression.pos));
+		registerValueTemporary(allocated.id, "date-result");
+		appendInstruction(null, IRIOStore(IRPField(IRPDereference(allocated.id), "milliseconds"), timestamp.id), source, "date-timestamp-store");
+		return coerce({id: allocated.id, type: allocated.type, mapping: nonNullMapping}, resultMapping, expression.pos, "TCall(Date.fromTime:result)");
+	}
+
+	/** Lower four hosted clock and calendar services through one checked status/out ABI. */
+	function lowerDateTimeRuntimeCall(expression:TypedExpr, method:String, arguments:Array<TypedExpr>):LoweredValue {
+		final operation = switch method {
+			case "timerStamp":
+				if (arguments.length != 0)
+					return unsupported(expression, 'TCall(haxe.Timer.stamp:argument-count=${arguments.length},expected=0)');
+				"monotonic-seconds";
+			case "wallMilliseconds":
+				if (arguments.length != 0)
+					return unsupported(expression, 'TCall(Date.wallMilliseconds:argument-count=${arguments.length},expected=0)');
+				"wall-milliseconds";
+			case "timezoneOffsetAt":
+				if (arguments.length != 1)
+					return unsupported(expression, 'TCall(Date.timezoneOffsetAt:argument-count=${arguments.length},expected=1)');
+				"timezone-offset";
+			case "localToMilliseconds":
+				if (arguments.length != 6)
+					return unsupported(expression, 'TCall(Date.localToMilliseconds:argument-count=${arguments.length},expected=6)');
+				"local-to-milliseconds";
+			case "fromString":
+				return unsupported(expression, "TCall(Date.fromString:not-yet-admitted)");
+			case _:
+				return unsupported(expression, 'TCall(Date.$method:not-admitted)');
+		};
+		final argumentIds:Array<String> = [];
+		for (index => argument in arguments) {
+			final mapping = bodyValueType(argument.t, argument.pos, 'TCall(Date.$method:argument:$index)');
+			final expected = operation == "timezone-offset" ? IRTFloat(64) : IRTInt(32, true);
+			if (typeKey(mapping.irType) != typeKey(expected))
+				return unsupported(argument, 'TCall(Date.$method:argument:$index:type=${mapping.cSpelling})');
+			argumentIds.push(coerce(lowerValue(argument, mapping), mapping, argument.pos, 'TCall(Date.$method:argument:$index)').id);
+		}
+		final resultMapping = bodyValueType(expression.t, expression.pos, 'TCall(Date.$method:result-type)');
+		final expectedResult = operation == "timezone-offset" ? IRTInt(32, true) : IRTFloat(64);
+		if (typeKey(resultMapping.irType) != typeKey(expectedResult))
+			return unsupported(expression, 'TCall(Date.$method:result-type=${resultMapping.cSpelling})');
+		final source = sourceSpan(expression.pos);
+		final result:HxcIRResult = {id: nextValueId(), type: resultMapping.irType};
+		appendInstruction(result, IRIOCall({
+			dispatch: IRCDRuntime("date-time", operation),
+			arguments: argumentIds,
+			returnType: resultMapping.irType,
+			failure: {
+				kind: IRFNativeStatus,
+				target: IRFTAbort,
+				arguments: [],
+				cleanup: []
+			}
+		}), source, 'date-time-$operation');
+		registerValueTemporary(result.id, 'date-time-$operation-result');
+		final requirementDescription = method == "timerStamp" ? "haxe.Timer.stamp monotonic service" : 'Date.$method hosted service';
+		runtimeRequirements.push(new CBodyRuntimeRequirement("date-time", operation, requirementDescription, source, expression.pos));
+		return {id: result.id, type: result.type, mapping: resultMapping};
+	}
+
+	/**
 		Lower admitted `Bytes` constructors without entering class dispatch.
 
 		`Bytes.ofString` copies a length-delimited UTF-8 view immediately; the new
@@ -15799,6 +15907,41 @@ private class FunctionBuilder {
 			case TField(_, FStatic(classReference, fieldReference)) if (CBodyBytesRecognition.isCoreBytes(classReference)):
 				fieldReference.get().name;
 			case _: null;
+		};
+	}
+
+	/** Recover the exact static Date operation selected by Haxe typing. */
+	static function coreDateStaticMethod(callee:TypedExpr):Null<String> {
+		return switch unwrapExpression(callee).expr {
+			case TField(_, FStatic(classReference, fieldReference)) if (CBodyDateRecognition.isCoreDate(classReference)):
+				final name = fieldReference.get().name;
+				switch name {
+					case "fromTime" | "fromString": name;
+					case _: null;
+				}
+			case _: null;
+		};
+	}
+
+	/** Recover one exact private Date host-service operation. */
+	static function dateHostStaticMethod(callee:TypedExpr):Null<String> {
+		return switch unwrapExpression(callee).expr {
+			case TField(_, FStatic(classReference, fieldReference)) if (CBodyDateRecognition.isDateHost(classReference)):
+				final name = fieldReference.get().name;
+				switch name {
+					case "localToMilliseconds" | "timezoneOffsetAt" | "wallMilliseconds": name;
+					case _: null;
+				}
+			case _: null;
+		};
+	}
+
+	/** Recognize the one admitted haxe.Timer operation by exact owner identity. */
+	static function isCoreTimerStamp(callee:TypedExpr):Bool {
+		return switch unwrapExpression(callee).expr {
+			case TField(_, FStatic(classReference, fieldReference)): CBodyDateRecognition.isCoreTimer(classReference) && fieldReference.get()
+					.name == "stamp";
+			case _: false;
 		};
 	}
 

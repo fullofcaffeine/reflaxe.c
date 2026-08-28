@@ -617,6 +617,8 @@ class CCompiler {
 				case "string-lower-case" | "string-literal" | "string-scalar" | "string-split": "String";
 				case "io" if (requirement.operationId == "trace-literal"): "haxe.Log";
 				case "io": "Sys";
+				case "date-time" if (requirement.operationId == "monotonic-seconds"): "haxe.Timer";
+				case "date-time": "Date";
 				case _: requirement.featureId;
 			};
 			if (modules.indexOf(module) == -1) {

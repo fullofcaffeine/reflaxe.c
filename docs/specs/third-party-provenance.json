@@ -219,6 +219,30 @@
 		  ]
 		},
 		{
+		  "path": "std/c/_std/Date.hx",
+		  "sha256": "081a79c0aefb0210d4ee7c3bd83ee4cef9cf93674bbcff3347b538dd16cffc85",
+		  "classification": "upstream-derived",
+		  "upstreamComponent": "haxe-standard-library",
+		  "upstreamPath": "std/Date.hx",
+		  "upstreamRevision": "2c1e544e0a2c7524ef4c8e103f1b0580362ea538",
+		  "licenseExpression": "MIT",
+		  "noticeFiles": [
+			"LICENSES/HAXE-STDLIB-MIT.txt"
+		  ]
+		},
+		{
+		  "path": "std/c/_std/haxe/Timer.hx",
+		  "sha256": "aeb70571b090720cef5e82711918efd4cc12b65ef8cd7a1b46b7726f5da8ecbd",
+		  "classification": "upstream-derived",
+		  "upstreamComponent": "haxe-standard-library",
+		  "upstreamPath": "std/haxe/Timer.hx",
+		  "upstreamRevision": "2c1e544e0a2c7524ef4c8e103f1b0580362ea538",
+		  "licenseExpression": "MIT",
+		  "noticeFiles": [
+			"LICENSES/HAXE-STDLIB-MIT.txt"
+		  ]
+		},
+		{
 		  "path": "std/c/_std/haxe/iterators/ArrayIterator.hx",
 		  "sha256": "32bbb6a753df523c961da8a81ea5e8bc8a0316dc5a7228a9db24c25aa08b1134",
 		  "classification": "upstream-derived",
