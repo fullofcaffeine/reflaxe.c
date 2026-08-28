@@ -577,19 +577,23 @@
     {
       "id": "hxc-cli",
       "area": "cli",
-      "status": "unsupported",
-      "disposition": "not-exposed",
-      "summary": "No Run.hx, hxc command router, project schema, template, or packaged executable exists.",
-      "scope": "Direct Haxe/HXML remains the only user-program compiler invocation; E8 owns the optional orchestration layer.",
+      "status": "implemented",
+      "disposition": "available",
+      "summary": "The Eval bootstrap exposes stable command routing, help/version behavior, exit categories, and schema-1 JSON framing.",
+      "scope": "The router recognizes the planned command vocabulary and delegates through one typed executor seam. Direct Haxe/HXML remains the authoritative compiler path.",
       "evidence": [
-        "docs/PRD.md",
-        "docs/specs/beads-plan.json"
+        "src/Run.hx",
+        "src/hxc/cli/HxcCli.hx",
+        "docs/hxc-cli.md",
+        "schemas/hxc-cli-response.schema.json",
+        "test/hxc_cli/run.py"
       ],
       "owners": [
         "E8.T02"
       ],
       "limitations": [
-        "Repository Python validation scripts are developer tooling and are not hxc commands."
+        "Build, run, test, clean, doctor, inspect, bindgen, export, templates, and a packaged native executable remain owned by later E8 and E6 tasks; recognized unfinished commands fail with the unavailable exit category.",
+        "Repository Python validation scripts are developer tooling and are not hxc command implementations."
       ]
     },
     {

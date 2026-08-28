@@ -42,6 +42,7 @@ SHARDS: dict[str, tuple[str, ...]] = {
         "test:beads-plan",
         "test:diagnostics",
         "test:hxc-config",
+        "test:hxc-cli",
         "test:all-sources",
         "test:content-digest",
         "test:bootstrap",

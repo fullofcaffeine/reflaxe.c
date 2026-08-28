@@ -229,17 +229,36 @@ class CapabilityManifestTests(unittest.TestCase):
             self.assertNotEqual(result.returncode, 0)
             self.assertIn("README.md contains premature claim", result.stderr)
 
-    def test_absent_doctor_contract_rejects_cli_source(self) -> None:
+    def test_unsupported_cli_contract_rejects_cli_source(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             self.make_policy_root(root)
+            document = json_object(root / MANIFEST)
+            capabilities = object_list(document, "capabilities")
+            cli = next(item for item in capabilities if item.get("id") == "hxc-cli")
+            cli["status"] = "unsupported"
+            cli["disposition"] = "not-exposed"
+            document["capabilities"] = capabilities
+            self.write_manifest(root, document)
             cli = root / "src/Run.hx"
             cli.parent.mkdir(parents=True, exist_ok=True)
             cli.write_text("class Run {}\n", encoding="utf-8")
             result = self.run_policy(root)
             self.assertNotEqual(result.returncode, 0)
             self.assertIn(
-                "src/Run.hx exists while the manifest still says hxc doctor is absent",
+                "src/Run.hx and the implemented hxc-cli capability must exist together",
+                result.stderr,
+            )
+
+    def test_implemented_cli_contract_requires_cli_source(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            self.make_policy_root(root)
+            (root / "src/Run.hx").unlink()
+            result = self.run_policy(root)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn(
+                "src/Run.hx and the implemented hxc-cli capability must exist together",
                 result.stderr,
             )
 
