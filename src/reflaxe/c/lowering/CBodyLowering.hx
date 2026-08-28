@@ -3400,6 +3400,8 @@ private class MutableAggregateBorrowPlanner {
 				final owner = classReference.get();
 				final field = fieldReference.get();
 				final baseId = CBodyLowering.functionId(owner.pack.concat([owner.name]).join("."), field.name);
+				if (!hasReachableFunctionBase(byId, baseId))
+					return null;
 				final targetId = CGenericCallResolver.resolve(baseId, field.type, field.params, callee.t, arguments.map(argument -> argument.t),
 					caller.input.specialization, context.profile, callee.pos, (position, node) -> rejectAt(context, caller.input, position, node))
 					.instanceId();
@@ -3427,6 +3429,18 @@ private class MutableAggregateBorrowPlanner {
 				directTarget(context, caller, callPosition, inner, arguments, byId, dispatch);
 			case _: null;
 		};
+	}
+
+	/** Resolve only functions selected by the authoritative reachable graph. */
+	static function hasReachableFunctionBase(byId:Map<String, MutableAggregateBorrowFunctionInfo>, baseId:String):Bool {
+		if (byId.exists(baseId))
+			return true;
+		for (candidate in byId) {
+			final specialization = candidate.input.specialization;
+			if (specialization != null && specialization.baseFunctionId == baseId)
+				return true;
+		}
+		return false;
 	}
 
 	/** Report one unsupported identity lifetime at its authored source position. */
@@ -4711,6 +4725,24 @@ private class FunctionBuilder {
 	**/
 	public function discoverDynamicSemantics():Void {
 		final localTypes:Map<Int, CPreparedBodyDynamicType> = [];
+		function hasReachableStaticTarget(callee:TypedExpr):Bool {
+			final baseId = switch unwrapExpression(callee).expr {
+				case TField(_, FStatic(classReference, fieldReference)):
+					final owner = classReference.get();
+					CBodyLowering.functionId(owner.pack.concat([owner.name]).join("."), fieldReference.get().name);
+				case _: null;
+			};
+			if (baseId == null)
+				return false;
+			if (functionsById.exists(baseId))
+				return true;
+			for (target in functionsById) {
+				final specialization = target.specialization;
+				if (specialization != null && specialization.baseFunctionId == baseId)
+					return true;
+			}
+			return false;
+		}
 
 		function visit(expression:TypedExpr):Void {
 			switch expression.expr {
@@ -4754,7 +4786,7 @@ private class FunctionBuilder {
 							for (argument in arguments)
 								visit(argument);
 						case _:
-							if (isDirectStaticFunctionExpression(callee)) {
+							if (isDirectStaticFunctionExpression(callee) && hasReachableStaticTarget(callee)) {
 								final targetId = directStaticFunctionId(callee, arguments);
 								final target = functionsById.get(targetId);
 								if (target != null)

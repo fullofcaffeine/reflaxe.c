@@ -189,6 +189,7 @@ class CStaticFunctionGraphCollector {
 					add(method, byId, pending);
 			case TCall(callee, arguments)
 				if (!isCompilerIntrinsicCall(callee)
+					&& !isStructInitIntrinsicCall(callee)
 					&& !isBytesIntrinsicCall(callee)
 					&& !CBodyFixedArray.isZeroCall(callee, arguments.length)):
 				switch unwrapExpression(callee).expr {
@@ -323,6 +324,28 @@ class CStaticFunctionGraphCollector {
 			case TField(_, FStatic(classReference, _)): CBodyBytesRecognition.isCoreBytes(classReference);
 			case TField(_, FInstance(classReference, _, _)): CBodyBytesRecognition.isCoreBytes(classReference);
 			case TParenthesis(inner) | TMeta(_, inner) | TCast(inner, _): isBytesIntrinsicCall(inner);
+			case _: false;
+		};
+
+	/**
+	 * Keep typed imported-struct initializers out of generic reachability.
+	 *
+	 * `c.StructInit.make` and `zero` are compiler intrinsics: body lowering
+	 * validates their imported result layout and emits structural HxcIR. Their
+	 * extern abstract implementation is not an ordinary generic Haxe function.
+	 * The caller still walks every argument below the call, so nested user calls
+	 * remain reachable without specializing the intrinsic implementation.
+	 */
+	static function isStructInitIntrinsicCall(callee:TypedExpr):Bool
+		return switch callee.expr {
+			case TField(_, FStatic(classReference, fieldReference)): final method = fieldReference.get()
+					.name; final implementation = classReference.get(); final semanticOwner = switch implementation.kind {
+					case KAbstractImpl(abstractReference): final owner = abstractReference.get(); owner.pack.join(".") == "c" && owner.name == "StructInit";
+					case _: false;
+				}; final implementationPath = implementation.pack.concat([implementation.name])
+					.join("."); (semanticOwner
+					|| implementationPath == "c._StructInit.StructInit_Impl_") && (method == "make" || method == "zero");
+			case TParenthesis(inner) | TMeta(_, inner) | TCast(inner, _): isStructInitIntrinsicCall(inner);
 			case _: false;
 		};
 
