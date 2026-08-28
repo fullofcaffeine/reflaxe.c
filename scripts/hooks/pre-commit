@@ -169,6 +169,7 @@ fi
 if printf '%s\n' "$STAGED_FILES" | grep -Eq '^(src/reflaxe/c/ast/|test/c_ast/|test/ast/c-ast-roundtrip/|scripts/test/c_fixture_harness\.py|haxe_libraries/reflaxe\.c\.hxml|package\.json)'; then
   echo "[pre-commit] Running structural C11 AST golden probes..."
   python3 "$ROOT_DIR/test/c_ast/run.py"
+  python3 "$ROOT_DIR/test/c_ast/run_fuzz.py"
 fi
 
 if printf '%s\n' "$STAGED_FILES" | grep -Eq '^(src/reflaxe/c/(ast|contract|plan)/|test/declaration_plan/|haxe_libraries/reflaxe\.c\.hxml|package\.json)'; then

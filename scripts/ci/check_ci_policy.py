@@ -176,6 +176,7 @@ REQUIRED_GATE_FILES = (
     "scripts/test/c_fixture_harness.py",
     "test/c_ast/ASTFixtureCompiler.hx",
     "test/c_ast/ASTFixtureCompilerProbe.hx",
+    "test/c_ast/CASTFuzzCompiler.hx",
     "test/c_ast/CASTGolden.hx",
     "test/c_ast/ExpressionGolden.hx",
     "test/c_ast/c_ast.hxml",
@@ -188,6 +189,11 @@ REQUIRED_GATE_FILES = (
     "test/c_ast/expected/src/ast_fixture.c",
     "test/c_ast/expected/src/main.c",
     "test/c_ast/run.py",
+    "test/c_ast/run_fuzz.py",
+    "test/c_ast/fuzz/README.md",
+    "test/c_ast/fuzz/seeds.tsv",
+    "test/c_ast/fuzz/dictionary.tsv",
+    "test/c_ast/fuzz/regressions/minimizer.json",
     "test/ast/c-ast-roundtrip/case.json",
     "test/declaration_plan/DeclarationPlanGolden.hx",
     "test/declaration_plan/declaration_plan.hxml",
@@ -1099,6 +1105,8 @@ def validate() -> list[str]:
         errors.append("package.json must retain the test:diagnostics entry point")
     if scripts.get("test:c-ast") != "python3 test/c_ast/run.py":
         errors.append("package.json must retain the test:c-ast entry point")
+    if scripts.get("test:c-ast-fuzz") != "python3 test/c_ast/run_fuzz.py":
+        errors.append("package.json must retain the test:c-ast-fuzz entry point")
     if scripts.get("test:c-import") != "python3 test/c_import/run.py":
         errors.append("package.json must retain the test:c-import entry point")
     if (
@@ -1345,6 +1353,8 @@ def validate() -> list[str]:
         errors.append("package.json must retain the bounded parallel toolchain runner")
     if "npm run test:c-ast" not in str(scripts.get("test:toolchain", "")):
         errors.append("package.json test:toolchain must execute test:c-ast")
+    if "npm run test:c-ast-fuzz" not in str(scripts.get("test:toolchain", "")):
+        errors.append("package.json test:toolchain must execute test:c-ast-fuzz")
     if "npm run test:diagnostics" not in str(scripts.get("test:toolchain", "")):
         errors.append("package.json test:toolchain must execute test:diagnostics")
     if "npm run test:declaration-plan" not in str(scripts.get("test:toolchain", "")):

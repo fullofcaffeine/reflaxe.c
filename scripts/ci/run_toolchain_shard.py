@@ -52,6 +52,7 @@ SHARDS: dict[str, tuple[str, ...]] = {
         "test:typed-ast",
         "test:incremental-backend",
         "test:c-ast",
+        "test:c-ast-fuzz",
         "test:declaration-plan",
         "test:symbol-registry",
         "test:project-emitter",

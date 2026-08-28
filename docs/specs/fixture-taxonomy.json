@@ -108,6 +108,7 @@
       ],
       "suiteIds": [
         "c-ast",
+        "c-ast-fuzz",
         "declaration-plan",
         "project-emitter",
         "hxc-ir",
@@ -172,6 +173,7 @@
         "c-import",
         "raylib-provisioning",
         "c-ast",
+        "c-ast-fuzz",
         "body-lowering",
         "exception-lowering",
         "function-lowering",
@@ -447,6 +449,24 @@
         "the direct AST corpus covers declarations, precedence, initializers, control flow, typed GNU attributes, and a structurally guarded header/source split",
         "the reusable argument-array harness records compiler family and version, normalized compile/link/run commands, source hashes, exit codes, stdout, and stderr without host paths",
         "required GCC and Clang native-smoke lanes compile, link, and run every corpus project without hxrt"
+      ]
+    },
+    {
+      "id": "c-ast-fuzz",
+      "directory": "test/c_ast/fuzz",
+      "runner": [
+        "python3",
+        "test/c_ast/run_fuzz.py"
+      ],
+      "types": [
+        "ast",
+        "runtime"
+      ],
+      "status": "active",
+      "assertions": [
+        "checked-in seeds and adversarial text produce prefix-stable structural C AST programs within explicit case, byte, process, and time limits",
+        "two Reflaxe-owned renders are byte-identical and a lexical observer rejects unterminated comments, strings, characters, or injected directives",
+        "identity-verified strict C11 compilers build and run every seed while a checked-in synthetic regression protects failure-prefix minimization"
       ]
     },
     {
