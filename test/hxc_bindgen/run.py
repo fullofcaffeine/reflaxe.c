@@ -98,6 +98,12 @@ def write_fixture(root: Path, *, broken: bool = False, warning: bool = False) ->
     header.write_text(
         ("#warning bindgen-warning\n" if warning else "")
         + '#include "detail.h"\n'
+        "#define WIDGET_LIMIT (1u << 5)\n"
+        "typedef const volatile unsigned long widget_word;\n"
+        "typedef const int * restrict widget_read_ptr;\n"
+        "typedef enum { WIDGET_MODE_NEGATIVE = -1, WIDGET_MODE_READY = 7 } widget_mode;\n"
+        "enum { WIDGET_ANONYMOUS = 9 };\n"
+        "enum WidgetState { WIDGET_STATE_IDLE = 0 };\n"
         "typedef struct Widget { widget_id id; int count; } Widget;\n"
         "#if HXC_WIDGET_FEATURE\n"
         + ("int widget_sum(Widget value {\n" if broken else "int widget_sum(Widget value);\n")
@@ -169,13 +175,15 @@ def check_schema_and_semantics(temporary: Path) -> None:
         "inputSetSha256",
         "semanticModel",
         "semanticSha256",
+        "primitiveAbiModel",
+        "primitiveAbiSha256",
     }
     require(schema.get("additionalProperties") is False and set(schema.get("required", ())) == required, "binding-lock schema drifted")
 
     source = temporary / "source-a"
     header = write_fixture(source)
     lock, text = machine_lock(header, temporary / "output-a")
-    require(lock.get("schemaVersion") == 2 and lock.get("authority") == "clang-ast-json", "Clang authority is absent")
+    require(lock.get("schemaVersion") == 3 and lock.get("authority") == "clang-ast-json", "Clang authority is absent")
     toolchain = lock.get("toolchain")
     configuration = lock.get("configuration")
     require(isinstance(configuration, dict), "effective bindgen configuration is absent")
@@ -201,6 +209,7 @@ def check_schema_and_semantics(temporary: Path) -> None:
     diagnostic_arguments = invocation.get("diagnosticArguments")
     arguments = invocation.get("semanticArguments")
     dependency_arguments = invocation.get("dependencyArguments")
+    abi_arguments = invocation.get("abiArguments")
     require(
         isinstance(arguments, list)
         and "-DHXC_WIDGET_FEATURE=1" in arguments
@@ -209,7 +218,9 @@ def check_schema_and_semantics(temporary: Path) -> None:
         and isinstance(diagnostic_arguments, list)
         and diagnostic_arguments[-1:] == ["-fsyntax-only"]
         and isinstance(dependency_arguments, list)
-        and dependency_arguments[-3:] == ["-M", "-MT", "hxc-bindgen-input"],
+        and dependency_arguments[-3:] == ["-M", "-MT", "hxc-bindgen-input"]
+        and isinstance(abi_arguments, list)
+        and abi_arguments[-5:] == ["-w", "-fsyntax-only", "-Xclang", "-ast-dump=json", "-"],
         "exact semantic invocation is not inspectable",
     )
     inputs = lock.get("inputs")
@@ -226,6 +237,101 @@ def check_schema_and_semantics(temporary: Path) -> None:
     require(not has_object_key(model.get("translationUnit"), "id"), "ephemeral Clang node identities leaked into the lock")
     require(str(source) not in text, "absolute source-root path leaked into the lock")
 
+    abi = lock.get("primitiveAbiModel")
+    require(isinstance(abi, dict) and abi.get("schemaVersion") == 1, "primitive ABI model is absent")
+    scalars = {item.get("id"): item for item in abi.get("scalars", ()) if isinstance(item, dict)}
+    require(
+        scalars.get("signed-long", {}).get("haxeType") in {"c.Int32", "c.Int64"}
+        and scalars.get("unsigned-short", {}).get("haxeType") == "c.UInt16"
+        and scalars.get("binary32", {}).get("haxeType") == "c.Float32"
+        and scalars.get("binary64", {}).get("haxeType") == "Float",
+        "target-measured scalar carriers are incomplete",
+    )
+    typedefs = {item.get("nativeName"): item for item in abi.get("typedefs", ()) if isinstance(item, dict)}
+    word = typedefs.get("widget_word", {}).get("representation")
+    pointer = typedefs.get("widget_read_ptr", {}).get("representation")
+    require(
+        isinstance(word, dict)
+        and word.get("kind") == "qualified"
+        and word.get("qualifiers") == ["const", "volatile"]
+        and isinstance(word.get("inner"), dict)
+        and word["inner"].get("haxeType") in {"c.UInt32", "c.UInt64"},
+        "qualified scalar typedef identity was not preserved",
+    )
+    require(
+        isinstance(pointer, dict)
+        and pointer.get("kind") == "qualified"
+        and pointer.get("qualifiers") == ["restrict"]
+        and isinstance(pointer.get("inner"), dict)
+        and pointer["inner"].get("kind") == "pointer",
+        "pointer-level restrict qualifier was not preserved",
+    )
+    enums = abi.get("enums")
+    require(
+        isinstance(enums, list)
+        and any(
+            isinstance(item, dict)
+            and item.get("stableName") == "widget_mode"
+            and item.get("nativeTypedef") == "widget_mode"
+            and item.get("storageBitWidth") in {8, 16, 32, 64}
+            and item.get("haxeType") in {"c.Int8", "c.UInt8", "c.Int16", "c.UInt16", "c.Int32", "c.UInt32", "c.Int64", "c.UInt64"}
+            and {constant.get("nativeName"): constant.get("value") for constant in item.get("constants", ()) if isinstance(constant, dict)}
+            == {"WIDGET_MODE_NEGATIVE": "-1", "WIDGET_MODE_READY": "7"}
+            for item in enums
+        ),
+        "typedef-owned anonymous enum identity or evaluated values are unstable",
+    )
+    require(
+        any(
+            isinstance(item, dict)
+            and str(item.get("stableName", "")).startswith("anonymous-enum-")
+            and any(
+                isinstance(constant, dict)
+                and constant.get("nativeName") == "WIDGET_ANONYMOUS"
+                and constant.get("value") == "9"
+                for constant in item.get("constants", ())
+            )
+            for item in enums
+        ),
+        "unaliased anonymous enum name is not deterministic",
+    )
+    require(
+        any(
+            isinstance(item, dict)
+            and item.get("stableName") == "WidgetState"
+            and item.get("nativeTag") == "WidgetState"
+            and item.get("storageBitWidth") in {8, 16, 32, 64}
+            for item in enums
+        ),
+        "named enum identity or measured storage is absent",
+    )
+    macros = {item.get("nativeName"): item for item in abi.get("macroConstants", ()) if isinstance(item, dict)}
+    require(
+        macros.get("WIDGET_LIMIT", {}).get("value") == "32"
+        and macros.get("WIDGET_LIMIT", {}).get("haxeType") == "c.UInt32",
+        "Clang-evaluated integer macro constant is absent",
+    )
+    check_compiled_primitive_probe(source, scalars, macros)
+
+    windows_lock, _ = machine_lock(
+        header,
+        temporary / "output-windows-target",
+        "--target",
+        "x86_64-pc-windows-msvc",
+    )
+    windows_abi = windows_lock.get("primitiveAbiModel")
+    require(isinstance(windows_abi, dict), "Windows target primitive ABI model is absent")
+    windows_scalars = {
+        item.get("id"): item
+        for item in windows_abi.get("scalars", ())
+        if isinstance(item, dict)
+    }
+    require(
+        windows_scalars.get("signed-long", {}).get("bitWidth") == 32
+        and windows_scalars.get("signed-long", {}).get("haxeType") == "c.Int32",
+        "selected Windows target did not use Clang's LLP64 long mapping",
+    )
+
     explicit_target = toolchain.get("dumpMachine")
     require(isinstance(explicit_target, str), "Clang target identity has the wrong type")
     explicit_lock, explicit_text = machine_lock(header, temporary / "output-explicit-target", "--target", explicit_target)
@@ -238,6 +344,46 @@ def check_schema_and_semantics(temporary: Path) -> None:
         "an explicit equivalent target changed effective configuration identity or lost provenance",
     )
     require(explicit_text != text, "configuration provenance did not distinguish an explicit target")
+
+
+def check_compiled_primitive_probe(
+    source: Path,
+    scalars: dict[object, dict[str, object]],
+    macros: dict[object, dict[str, object]],
+) -> None:
+    probe = source / "primitive-probe.c"
+    probe.write_text(
+        '#include <limits.h>\n#include <stdio.h>\n#include "widget.h"\n'
+        'int main(void) { printf("%zu %zu %d %u\\n", sizeof(long) * CHAR_BIT, '
+        'sizeof(unsigned short) * CHAR_BIT, WIDGET_MODE_NEGATIVE, WIDGET_LIMIT); return 0; }\n',
+        encoding="utf-8",
+    )
+    for compiler in ("clang", "gcc"):
+        executable = shutil.which(compiler)
+        if executable is None:
+            continue
+        output = source / f"primitive-probe-{compiler}"
+        compiled = run_bounded_process(
+            [executable, "-std=c11", "-Wall", "-Wextra", "-Werror", "-I", str(source), str(probe), "-o", str(output)],
+            cwd=ROOT,
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        require(compiled.returncode == 0, f"{compiler} rejected primitive ABI probe: {compiled.stderr}")
+        observed = run_bounded_process(
+            [str(output)], cwd=ROOT, check=False, capture_output=True, text=True, timeout=10
+        )
+        require(observed.returncode == 0, f"{compiler} primitive ABI probe did not run")
+        long_bits, short_bits, enum_value, macro_value = (int(value) for value in observed.stdout.split())
+        require(
+            scalars.get("signed-long", {}).get("bitWidth") == long_bits
+            and scalars.get("unsigned-short", {}).get("bitWidth") == short_bits
+            and enum_value == -1
+            and str(macros.get("WIDGET_LIMIT", {}).get("value")) == str(macro_value),
+            f"{compiler} primitive ABI observations differ from the lock",
+        )
 
 
 def check_configuration_and_reachability(temporary: Path) -> None:
@@ -376,8 +522,8 @@ def check_diagnostics_and_input_drift(temporary: Path) -> None:
     result = invoke(str(broken), "--include-dir", str(broken_root), "--define", "HXC_WIDGET_FEATURE=1", "--dry-run", "--json")
     require(result.returncode == 1, "invalid header did not preserve Clang failure")
     envelope = json.loads(result.stdout)
-    require(envelope.get("exitCategory") == "command" and "widget.h:4:" in str(envelope.get("stderr")), "source file and line were lost")
-    require("widget.h:4:" in result.stderr and "HXC-CLI-0803" in result.stderr, "human diagnostic stream lost Clang context")
+    require(envelope.get("exitCategory") == "command" and "widget.h:10:" in str(envelope.get("stderr")), "source file and line were lost")
+    require("widget.h:10:" in result.stderr and "HXC-CLI-0803" in result.stderr, "human diagnostic stream lost Clang context")
 
     warning_root = temporary / "warning"
     warning = write_fixture(warning_root, warning=True)
@@ -406,7 +552,10 @@ def main() -> int:
         check_language_sysroot_and_conflicts(root)
         check_relocation_and_dry_run(root)
         check_diagnostics_and_input_drift(root)
-    print("hxc-bindgen: OK: Clang authority, entry-set reachability, normalized configuration/provenance, conflicts, exact inputs, and diagnostics passed")
+    print(
+        "hxc-bindgen: OK: Clang authority, target-measured scalar/typedef/qualifier/enum/macro ABI facts, "
+        "compiled probes, reachability, configuration, exact inputs, and diagnostics passed"
+    )
     return 0
 
 

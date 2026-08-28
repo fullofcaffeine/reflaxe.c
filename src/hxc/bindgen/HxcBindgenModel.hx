@@ -57,7 +57,16 @@ typedef HxcBindgenLockRequest = {
 	final diagnosticArguments:Array<String>;
 	final semanticArguments:Array<String>;
 	final dependencyArguments:Array<String>;
+	final abiArguments:Array<String>;
+	final macroBaselineArguments:Array<String>;
+	final macroInventoryArguments:Array<String>;
+	final macroTypeArguments:Array<String>;
+	final macroValueArguments:Array<String>;
+	final primitiveProbe:String;
+	final macroTypeProbe:String;
+	final macroValueProbe:String;
 	final dependencies:Array<String>;
+	final primitiveAbiModel:HxcJsonNode;
 	final language:HxcBindgenLanguage;
 	final languageExplicit:Bool;
 	final targetExplicit:Bool;
@@ -65,7 +74,7 @@ typedef HxcBindgenLockRequest = {
 	final defines:Array<HxcBindgenDefine>;
 }
 
-/** Build the schema-2 lock from one canonical AST and its complete configured input set. */
+/** Build the schema-3 lock from one canonical AST and its complete configured input set. */
 function buildBindingLock(request:HxcBindgenLockRequest):HxcJsonNode {
 	final ast = request.ast;
 	final paths = request.paths;
@@ -79,6 +88,7 @@ function buildBindingLock(request:HxcBindgenLockRequest):HxcJsonNode {
 		case _: 0;
 	};
 	final semanticText = renderJson(ast);
+	final primitiveAbiText = renderJson(request.primitiveAbiModel);
 	final inputs = dependencyInputs(paths, request.dependencies);
 	final inputDigestMaterial = new StringBuf();
 	for (input in inputs) {
@@ -110,11 +120,11 @@ function buildBindingLock(request:HxcBindgenLockRequest):HxcJsonNode {
 		]))
 	]);
 	return jsonObject([
-		jsonField("schemaVersion", jsonInt(2)),
+		jsonField("schemaVersion", jsonInt(3)),
 		jsonField("authority", jsonString("clang-ast-json")),
 		jsonField("generator", jsonObject([
 			jsonField("name", jsonString("hxc-bindgen")),
-			jsonField("model", jsonString("clang-semantic-translation-unit-v2"))
+			jsonField("model", jsonString("clang-semantic-translation-unit-v3"))
 		])),
 		jsonField("toolchain",
 			jsonObject([
@@ -129,16 +139,30 @@ function buildBindingLock(request:HxcBindgenLockRequest):HxcJsonNode {
 			jsonObject([
 				jsonField("diagnosticArguments", jsonArray(request.diagnosticArguments.map(argument -> jsonString(paths.logicalArgument(argument))))),
 				jsonField("semanticArguments", jsonArray(request.semanticArguments.map(argument -> jsonString(paths.logicalArgument(argument))))),
-				jsonField("dependencyArguments", jsonArray(request.dependencyArguments.map(argument -> jsonString(paths.logicalArgument(argument)))))
+				jsonField("dependencyArguments", jsonArray(request.dependencyArguments.map(argument -> jsonString(paths.logicalArgument(argument))))),
+				jsonField("abiArguments", jsonArray(request.abiArguments.map(argument -> jsonString(paths.logicalArgument(argument))))),
+				jsonField("macroBaselineArguments", jsonArray(request.macroBaselineArguments.map(argument -> jsonString(paths.logicalArgument(argument))))),
+				jsonField("macroInventoryArguments", jsonArray(request.macroInventoryArguments.map(argument -> jsonString(paths.logicalArgument(argument))))),
+				jsonField("macroTypeArguments", jsonArray(request.macroTypeArguments.map(argument -> jsonString(paths.logicalArgument(argument))))),
+				jsonField("macroValueArguments", jsonArray(request.macroValueArguments.map(argument -> jsonString(paths.logicalArgument(argument))))),
+				jsonField("generatedProbeSha256",
+					jsonObject([
+						jsonField("primitive", jsonString(Sha256.encode(request.primitiveProbe))),
+						jsonField("macroTypes", jsonString(Sha256.encode(request.macroTypeProbe))),
+						jsonField("macroValues", jsonString(Sha256.encode(request.macroValueProbe)))
+					]))
 			])),
 		jsonField("inputs", jsonArray(inputs)),
 		jsonField("inputSetSha256", jsonString(Sha256.encode(inputDigestMaterial.toString()))),
-		jsonField("semanticModel", jsonObject([
-			jsonField("schemaVersion", jsonInt(1)),
-			jsonField("declarationCount", jsonInt(declarationCount)),
-			jsonField("translationUnit", ast)
-		])),
-		jsonField("semanticSha256", jsonString(Sha256.encode(semanticText)))
+		jsonField("semanticModel",
+			jsonObject([
+				jsonField("schemaVersion", jsonInt(1)),
+				jsonField("declarationCount", jsonInt(declarationCount)),
+				jsonField("translationUnit", ast)
+			])),
+		jsonField("semanticSha256", jsonString(Sha256.encode(semanticText))),
+		jsonField("primitiveAbiModel", request.primitiveAbiModel),
+		jsonField("primitiveAbiSha256", jsonString(Sha256.encode(primitiveAbiText)))
 	]);
 }
 

@@ -42,7 +42,7 @@ haxe -cp src --run Run bindgen vendor/base.h vendor/widget.h \
 ```
 
 Use `--dry-run` to print the lock without writing it. In JSON mode, parse the
-CLI response and then parse its `stdout` field as the schema-2 lock. The lock
+CLI response and then parse its `stdout` field as the schema-3 lock. The lock
 schema is
 [`schemas/hxc-bindings-lock.schema.json`](../schemas/hxc-bindings-lock.schema.json).
 
@@ -54,10 +54,17 @@ definition names fail before Clang. `--language` accepts `c` and `c++`; C++
 capture does not claim that direct C++ calls are available without the later
 reviewed C shim.
 
-This stage does not generate Haxe externs or safe wrappers. Later E6 tasks own
-type mapping, layout facts, callbacks, wrapper policy, and drift workflows.
-Clang errors remain in the child stderr stream with their original source file,
-line, and column.
+The schema-3 lock also contains a normalized primitive ABI model. Clang probes
+measure integer width and signedness, binary32/binary64 format, enum storage,
+and eligible integer macro values for the selected target. Typedefs retain
+their native identity, and const/volatile/restrict remain attached to the type
+level where Clang reported them. Anonymous enums use a native typedef when one
+exists; otherwise they receive a stable logical-source name.
+
+This stage does not write Haxe module files or safe wrappers. Later E6 tasks
+own aggregate layout, functions and callbacks, raw module emission, wrapper
+policy, and drift workflows. Clang errors remain in the child stderr stream
+with their original source file, line, and column.
 
 ## Inspect compiler decisions
 

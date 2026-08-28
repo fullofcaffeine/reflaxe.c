@@ -583,21 +583,24 @@
       "area": "cli",
       "status": "implemented",
       "disposition": "available",
-      "summary": "The Eval bootstrap exposes stable command routing, help/version behavior, exit categories, schema-1 JSON framing, inspection, and Clang semantic-lock capture.",
-      "scope": "The router recognizes the planned command vocabulary and delegates inspection and bindgen through typed command owners. Direct Haxe/HXML remains the authoritative compiler path.",
+      "summary": "The Eval bootstrap exposes stable command routing, help/version behavior, exit categories, schema-1 JSON framing, inspection, and schema-3 Clang semantic and primitive-ABI lock capture.",
+      "scope": "The router recognizes the planned command vocabulary and delegates inspection and bindgen through typed command owners. Bindgen records exact preprocessing inputs, a canonical Clang AST, target-measured scalar carriers, structural qualified typedefs, enum storage and values, and eligible Clang-evaluated integer macros. Direct Haxe/HXML remains the authoritative compiler path.",
       "evidence": [
         "src/Run.hx",
         "src/hxc/cli/HxcCli.hx",
         "src/hxc/cli/HxcProductExecutor.hx",
+        "src/hxc/bindgen/HxcBindgenAbiModel.hx",
         "docs/hxc-cli.md",
         "schemas/hxc-cli-response.schema.json",
         "test/hxc_cli/run.py"
       ],
       "owners": [
-        "E8.T02"
+        "E8.T02",
+        "E6.T03"
       ],
       "limitations": [
         "Build, run, test, clean, doctor, export, templates, and a packaged native executable remain owned by later E8 tasks; recognized unfinished commands fail with the unavailable exit category.",
+        "Aggregate and function mapping, raw Haxe module-file emission, wrappers, and drift workflows remain owned by later E6 tasks.",
         "Bindgen currently stops at a Clang semantic lock; later E6 tasks own generated externs, layout mapping, wrappers, ABI probes, and drift workflows.",
         "Repository Python validation scripts are developer tooling and are not hxc command implementations."
       ]

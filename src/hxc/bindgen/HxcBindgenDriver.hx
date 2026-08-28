@@ -4,6 +4,12 @@ import haxe.io.Path;
 import hxc.bindgen.HxcBindgenModel.HxcBindgenPaths;
 import hxc.bindgen.HxcBindgenModel.buildBindingLock;
 import hxc.bindgen.HxcBindgenModel.normalizeClangAst;
+import hxc.bindgen.HxcBindgenAbiModel.buildPrimitiveAbiModel;
+import hxc.bindgen.HxcBindgenAbiModel.discoverScalarMacros;
+import hxc.bindgen.HxcBindgenAbiModel.enumProbeSource;
+import hxc.bindgen.HxcBindgenAbiModel.macroTypeProbeSource;
+import hxc.bindgen.HxcBindgenAbiModel.macroValueProbeSource;
+import hxc.bindgen.HxcBindgenAbiModel.primitiveProbeSource;
 import hxc.bindgen.HxcBindgenOptions.HxcBindgenDefine;
 import hxc.bindgen.HxcBindgenOptions.HxcBindgenLanguage;
 import hxc.bindgen.HxcBindgenProcess.HxcBindgenProcessResult;
@@ -17,7 +23,7 @@ import sys.io.File;
 
 /** Result of one semantic capture, including the optional written lock path. */
 class HxcBindgenResult {
-	/** Canonical schema-2 lock bytes. */
+	/** Canonical schema-3 lock bytes. */
 	public final lockText:String;
 
 	/** Written lock path, or absence for a dry run. */
@@ -37,9 +43,10 @@ class HxcBindgenResult {
 /**
 	Invoke Clang as the only declaration authority and publish its semantic lock.
 
-	The driver uses an argument array, captures exact diagnostics, hashes every
-	Clang-reported dependency, and writes no generated externs. Type mapping and
-	layout interpretation remain owned by later E6 tasks.
+	The driver uses argument arrays, captures exact diagnostics, hashes every
+	Clang-reported dependency and generated probe, and writes no generated
+	externs. This stage maps primitive ABI facts; aggregate layout, functions,
+	and module-file emission remain owned by later E6 tasks.
 **/
 class HxcBindgenDriver {
 	/** Capture one translation unit and optionally write its deterministic lock. */
@@ -93,6 +100,41 @@ class HxcBindgenDriver {
 				"Check the selected Clang version and dependency-output support.");
 
 		final paths = new HxcBindgenPaths(headers, includes, sysroot, resourceDirectory);
+		final primitiveProbe = primitiveProbeSource(options.language) + enumProbeSource(parsed, paths);
+		final abiArguments = clangProbeArguments(headers, options.language, target, sysroot, includes,
+			defines).concat(["-w", "-fsyntax-only", "-Xclang", "-ast-dump=json", "-"]);
+		final abiResult = runBindgenProcess(options.clang, abiArguments, primitiveProbe);
+		if (abiResult.exitCode != 0)
+			throw new HxcBindgenError(hxc.cli.HxcCliExitCategory.Internal, "HXC-CLI-0810", "Clang rejected the generated primitive ABI probe",
+				"Check the selected target's primitive C model and report the source-positioned Clang diagnostics.", abiResult.stderr);
+		final abiAst = try {
+			new HxcJsonParser(abiResult.stdout, "clang-primitive-abi.json").parse();
+		} catch (_:haxe.Exception) {
+			throw new HxcBindgenError(hxc.cli.HxcCliExitCategory.Internal, "HXC-CLI-0810", "Clang emitted malformed primitive ABI JSON",
+				"Check the selected Clang version and report its AST JSON shape.");
+		};
+		final macroBaselineArguments = clangProbeArguments([], options.language, target, sysroot, includes, defines).concat(["-dM", "-E", "-"]);
+		final macroInventoryArguments = clangProbeArguments(headers, options.language, target, sysroot, includes, defines).concat(["-dM", "-E", "-"]);
+		final macroBaseline = requireAbiProcess(options.clang, macroBaselineArguments, "baseline macro inventory", "\n");
+		final macroInventory = requireAbiProcess(options.clang, macroInventoryArguments, "configured macro inventory", "\n");
+		final macroNames = discoverScalarMacros(macroBaseline.stdout, macroInventory.stdout);
+		final macroTypeProbe = macroTypeProbeSource(macroNames);
+		final macroTypeArguments = abiArguments.copy();
+		final macroTypeResult = requireAbiProcess(options.clang, macroTypeArguments, "macro type probe", macroTypeProbe);
+		final macroTypeAst = parseAbiAst(macroTypeResult.stdout, "clang-macro-types.json");
+		final macroValueProbe = macroValueProbeSource(macroNames, macroTypeAst);
+		final macroValueArguments = abiArguments.copy();
+		final macroValueResult = requireAbiProcess(options.clang, macroValueArguments, "macro value probe", macroValueProbe);
+		final macroValueAst = parseAbiAst(macroValueResult.stdout, "clang-macro-values.json");
+		final primitiveAbiModel = buildPrimitiveAbiModel({
+			ast: parsed,
+			probeAst: abiAst,
+			paths: paths,
+			macroNames: macroNames,
+			macroTypeAst: macroTypeAst,
+			macroValueAst: macroValueAst,
+			language: options.language
+		});
 		final normalizedAst = normalizeClangAst(parsed, paths);
 		final lock = buildBindingLock({
 			ast: normalizedAst,
@@ -105,7 +147,16 @@ class HxcBindgenDriver {
 			diagnosticArguments: diagnosticArguments,
 			semanticArguments: astArguments,
 			dependencyArguments: dependencyArguments,
+			abiArguments: abiArguments,
+			macroBaselineArguments: macroBaselineArguments,
+			macroInventoryArguments: macroInventoryArguments,
+			macroTypeArguments: macroTypeArguments,
+			macroValueArguments: macroValueArguments,
+			primitiveProbe: primitiveProbe,
+			macroTypeProbe: macroTypeProbe,
+			macroValueProbe: macroValueProbe,
 			dependencies: dependencies,
+			primitiveAbiModel: primitiveAbiModel,
 			language: options.language,
 			languageExplicit: options.languageExplicit,
 			targetExplicit: options.target != null,
@@ -131,6 +182,27 @@ class HxcBindgenDriver {
 
 	static function clangArguments(headers:Array<String>, language:HxcBindgenLanguage, target:String, sysroot:Null<String>, includes:Array<String>,
 			defines:Array<HxcBindgenDefine>):Array<String> {
+		final arguments = clangConfigurationArguments(language, target, sysroot, includes, defines);
+		for (index in 0...(headers.length - 1)) {
+			arguments.push("-include");
+			arguments.push(headers[index]);
+		}
+		arguments.push(headers[headers.length - 1]);
+		return arguments;
+	}
+
+	static function clangProbeArguments(headers:Array<String>, language:HxcBindgenLanguage, target:String, sysroot:Null<String>, includes:Array<String>,
+			defines:Array<HxcBindgenDefine>):Array<String> {
+		final arguments = clangConfigurationArguments(language, target, sysroot, includes, defines);
+		for (header in headers) {
+			arguments.push("-include");
+			arguments.push(header);
+		}
+		return arguments;
+	}
+
+	static function clangConfigurationArguments(language:HxcBindgenLanguage, target:String, sysroot:Null<String>, includes:Array<String>,
+			defines:Array<HxcBindgenDefine>):Array<String> {
 		final arguments:Array<String> = ["-x", language, "-target", target, "-fno-color-diagnostics", "-ferror-limit=20"];
 		if (sysroot != null)
 			arguments.push("--sysroot=" + sysroot);
@@ -138,12 +210,24 @@ class HxcBindgenDriver {
 			arguments.push("-I" + includeDirectory);
 		for (define in defines)
 			arguments.push("-D" + define.spelling());
-		for (index in 0...(headers.length - 1)) {
-			arguments.push("-include");
-			arguments.push(headers[index]);
-		}
-		arguments.push(headers[headers.length - 1]);
 		return arguments;
+	}
+
+	static function requireAbiProcess(clang:String, arguments:Array<String>, label:String, input:String):HxcBindgenProcessResult {
+		final result = runBindgenProcess(clang, arguments, input);
+		if (result.exitCode != 0)
+			throw new HxcBindgenError(hxc.cli.HxcCliExitCategory.Internal, "HXC-CLI-0810", 'Clang rejected the generated $label',
+				"Check the selected target's primitive C model and report the source-positioned Clang diagnostics.", result.stderr);
+		return result;
+	}
+
+	static function parseAbiAst(text:String, label:String):hxc.config.HxcJsonValue.HxcJsonNode {
+		return try {
+			new HxcJsonParser(text, label).parse();
+		} catch (_:haxe.Exception) {
+			throw new HxcBindgenError(hxc.cli.HxcCliExitCategory.Internal, "HXC-CLI-0810", "Clang emitted malformed primitive ABI JSON",
+				"Check the selected Clang version and report its AST JSON shape.");
+		};
 	}
 
 	static function requireUniquePaths(paths:Array<String>, label:String):Void {
