@@ -2,8 +2,9 @@
 
 The `hxc` bootstrap now gives people and automation one stable command entry
 point. It provides help, version reporting, process-exit categories, and a
-versioned JSON response. The read-only `inspect` command is available. Product
-commands such as `build`, `run`, and `doctor`
+versioned JSON response. The read-only `inspect` command and the first Clang
+semantic-lock stage of `bindgen` are available. Product commands such as
+`build`, `run`, and `doctor`
 are recognized but fail as unavailable until their separate implementation
 tasks land. Direct Haxe and HXML invocation remains authoritative.
 
@@ -14,10 +15,37 @@ haxe -cp src --run Run help
 haxe -cp src --run Run version
 haxe -cp src --run Run build --json
 haxe -cp src --run Run inspect runtime --manifest build/hxc.manifest.json --json
+haxe -cp src --run Run bindgen vendor/widget.h --output bindings/widget --json
 ```
 
 The `build` command currently exits with code 69 (`unavailable`). Recognition is
 not an implementation claim.
+
+## Capture a Clang semantic binding lock
+
+`hxc bindgen` invokes Clang directly with an argument array. It does not use a
+shell, and it does not parse declarations with regular expressions. The
+current stage records Clang's version, effective target, exact semantic
+arguments, transitive input hashes, and a canonical semantic abstract syntax
+tree (AST) in `hxc.bindings.lock.json`.
+
+```sh
+haxe -cp src --run Run bindgen vendor/widget.h \
+  --target arm64-apple-darwin \
+  --include-dir vendor/include \
+  --define WIDGET_FEATURE=1 \
+  --output bindings/widget
+```
+
+Use `--dry-run` to print the lock without writing it. In JSON mode, parse the
+CLI response and then parse its `stdout` field as the schema-1 lock. The lock
+schema is
+[`schemas/hxc-bindings-lock.schema.json`](../schemas/hxc-bindings-lock.schema.json).
+
+This stage does not generate Haxe externs or safe wrappers. Later E6 tasks own
+type mapping, layout facts, callbacks, wrapper policy, and drift workflows.
+Clang errors remain in the child stderr stream with their original source file,
+line, and column.
 
 ## Inspect compiler decisions
 

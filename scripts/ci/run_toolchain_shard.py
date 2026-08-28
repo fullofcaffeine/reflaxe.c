@@ -44,6 +44,7 @@ SHARDS: dict[str, tuple[str, ...]] = {
         "test:hxc-config",
         "test:hxc-cli",
         "test:hxc-inspect",
+        "test:hxc-bindgen",
         "test:all-sources",
         "test:content-digest",
         "test:bootstrap",

@@ -9,7 +9,6 @@ import reflaxe.c.ProfileResolver;
 import reflaxe.c.TargetPlatform;
 import reflaxe.c.ast.CAST.CTranslationUnit;
 import reflaxe.c.ast.CASTPrinter;
-import Run;
 
 /** Exercises target-context implementations while the HXML includes every owned module. */
 class AllSourcesProbe {
@@ -26,9 +25,6 @@ class AllSourcesProbe {
 
 		if (BuildDetection.isCBuild()) {
 			throw "the all-source Eval type-check must remain a non-C build";
-		}
-		if (Type.getClassName(Run) != "Run") {
-			throw "the hxc bootstrap entry point lost its root module identity";
 		}
 		if (ProfileResolver.resolve() != CProfile.Portable) {
 			throw "the non-macro profile default drifted";

@@ -170,7 +170,7 @@ class CapabilityManifestTests(unittest.TestCase):
             result = self.run_policy(root)
             self.assertNotEqual(result.returncode, 0)
             self.assertIn(
-                "status implemented cannot use disposition not-exposed",
+                "status implemented cannot use disposition opt-in",
                 result.stderr,
             )
 

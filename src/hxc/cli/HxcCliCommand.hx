@@ -67,7 +67,7 @@ enum abstract HxcCliCommand(String) to String {
 			case "clean": "Remove outputs owned by hxc manifests.";
 			case "doctor": "Check the selected development toolchain.";
 			case "inspect": "Explain compiler and artifact decisions.";
-			case "bindgen": "Generate typed externs from C declarations.";
+			case "bindgen": "Capture Clang semantic binding facts.";
 			case "export": "Build and verify a public C ABI package.";
 			case "fmt-generated": "Format generated C without changing semantics.";
 			case "version": "Print hxc and CLI protocol versions.";

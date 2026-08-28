@@ -1,5 +1,5 @@
 import hxc.cli.HxcCli;
-import hxc.inspect.HxcInspectExecutor;
+import hxc.cli.HxcProductExecutor;
 
 /**
 	Eval bootstrap and future native composition root for the `hxc` command.
@@ -10,7 +10,7 @@ import hxc.inspect.HxcInspectExecutor;
 **/
 class Run {
 	static function main():Void {
-		final response = new HxcCli(new HxcInspectExecutor()).route(Sys.args());
+		final response = new HxcCli(new HxcProductExecutor()).route(Sys.args());
 		Sys.stdout().writeString(response.renderStdout());
 		Sys.stdout().flush();
 		Sys.stderr().writeString(response.renderStderr());

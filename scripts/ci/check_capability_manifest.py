@@ -752,12 +752,12 @@ def validate(root: Path, manifest: Manifest) -> list[str]:
     for required_prd_text in (
         "docs/specs/bootstrap-inventory.json",
         "Implemented | Scaffold-only | Experimental | Unsupported",
-        "No CLI source, schema, or template is present",
+        "The schema-1 router implements help, version, stable exits and JSON framing, manifest-backed inspection, and Clang semantic-lock capture.",
     ):
         if required_prd_text not in prd:
             errors.append(f"docs/PRD.md lost capability contract: {required_prd_text}")
-    if "| Development runner and future CLI (`development-cli`) | `src/Run.hx`" in prd:
-        errors.append("docs/PRD.md still claims the absent Run.hx inventory seed")
+    if "No CLI source, schema, or template is present" in prd:
+        errors.append("docs/PRD.md still claims the implemented CLI source is absent")
 
     try:
         agents = (root / "AGENTS.md").read_text(encoding="utf-8")

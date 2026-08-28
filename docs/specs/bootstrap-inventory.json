@@ -145,19 +145,22 @@
     {
       "id": "bindgen",
       "area": "interop",
-      "status": "unsupported",
-      "disposition": "not-exposed",
-      "summary": "No Clang-backed binding generator or user bindgen command exists.",
-      "scope": "The PRD and Beads graph reserve deterministic parsing, mapping, locking, ABI probing, and wrapper work.",
+      "status": "experimental",
+      "disposition": "opt-in",
+      "summary": "The hxc bindgen command captures a deterministic versioned semantic lock from Clang AST JSON.",
+      "scope": "The first generic stage records exact Clang identity, target and arguments, transitive input hashes, canonical semantic declarations, and source-positioned parse failures.",
       "evidence": [
-        "docs/PRD.md",
-        "docs/specs/beads-plan.json"
+        "src/hxc/bindgen/HxcBindgenDriver.hx",
+        "schemas/hxc-bindings-lock.schema.json",
+        "docs/hxc-cli.md",
+        "test/hxc_bindgen/run.py"
       ],
       "owners": [
         "E6.T01"
       ],
       "limitations": [
-        "Independent native C fixtures are not generated bindings."
+        "This stage does not yet generate Haxe externs, interpret target layouts, apply ownership mappings, or publish ABI probes and drift reports.",
+        "C++ shims and the complete bindgen workflow remain unsupported."
       ]
     },
     {
@@ -579,11 +582,12 @@
       "area": "cli",
       "status": "implemented",
       "disposition": "available",
-      "summary": "The Eval bootstrap exposes stable command routing, help/version behavior, exit categories, and schema-1 JSON framing.",
-      "scope": "The router recognizes the planned command vocabulary and delegates through one typed executor seam. Direct Haxe/HXML remains the authoritative compiler path.",
+      "summary": "The Eval bootstrap exposes stable command routing, help/version behavior, exit categories, schema-1 JSON framing, inspection, and Clang semantic-lock capture.",
+      "scope": "The router recognizes the planned command vocabulary and delegates inspection and bindgen through typed command owners. Direct Haxe/HXML remains the authoritative compiler path.",
       "evidence": [
         "src/Run.hx",
         "src/hxc/cli/HxcCli.hx",
+        "src/hxc/cli/HxcProductExecutor.hx",
         "docs/hxc-cli.md",
         "schemas/hxc-cli-response.schema.json",
         "test/hxc_cli/run.py"
@@ -592,7 +596,8 @@
         "E8.T02"
       ],
       "limitations": [
-        "Build, run, test, clean, doctor, bindgen, export, templates, and a packaged native executable remain owned by later E8 and E6 tasks; recognized unfinished commands fail with the unavailable exit category.",
+        "Build, run, test, clean, doctor, export, templates, and a packaged native executable remain owned by later E8 tasks; recognized unfinished commands fail with the unavailable exit category.",
+        "Bindgen currently stops at a Clang semantic lock; later E6 tasks own generated externs, layout mapping, wrappers, ABI probes, and drift workflows.",
         "Repository Python validation scripts are developer tooling and are not hxc command implementations."
       ]
     },
