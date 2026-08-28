@@ -1,5 +1,7 @@
 package hxc.bindgen;
 
+import hxc.bindgen.HxcBindgenOptions.HxcBindgenDefine;
+import hxc.bindgen.HxcBindgenOptions.HxcBindgenLanguage;
 import hxc.cli.HxcCliCommand;
 import hxc.cli.HxcCliDiagnostic;
 import hxc.cli.HxcCliExecution;
@@ -36,17 +38,24 @@ class HxcBindgenExecutor implements HxcCliExecutor {
 
 	function parseArguments(arguments:Array<String>):HxcBindgenOptions {
 		if (arguments.length == 0 || StringTools.startsWith(arguments[0], "-"))
-			return usage("bindgen requires one C header path", "Run `hxc help bindgen` and pass the header first.");
-		final header = arguments[0];
+			return usage("bindgen requires at least one entry header", "Run `hxc help bindgen` and pass entry headers before options.");
+		final entryHeaders:Array<String> = [];
+		var index = 0;
+		while (index < arguments.length && !StringTools.startsWith(arguments[index], "-")) {
+			entryHeaders.push(arguments[index]);
+			index++;
+		}
 		var clang = "clang";
 		var target:Null<String> = null;
+		var language = HxcBindgenLanguage.C;
+		var languageExplicit = false;
+		var sysroot:Null<String> = null;
 		final includeDirectories:Array<String> = [];
-		final defines:Array<String> = [];
+		final defines:Array<HxcBindgenDefine> = [];
 		var output = "bindings";
 		var dryRun = false;
 		var clangSeen = false;
 		var outputSeen = false;
-		var index = 1;
 		while (index < arguments.length) {
 			final argument = arguments[index];
 			if (argument == "--dry-run") {
@@ -67,12 +76,25 @@ class HxcBindgenExecutor implements HxcCliExecutor {
 					if (target != null)
 						return usage("`--target` may appear only once", "Pass one exact Clang target triple.");
 					target = value;
+				case "--language":
+					if (languageExplicit)
+						return usage("`--language` may appear only once", "Pass one exact language mode.");
+					final parsed = HxcBindgenLanguage.parse(value);
+					if (parsed == null)
+						return usage('unsupported bindgen language `$value`', "Use `c` or `c++`.");
+					language = parsed;
+					languageExplicit = true;
+				case "--sysroot":
+					if (sysroot != null)
+						return usage("`--sysroot` may appear only once", "Pass one target sysroot directory.");
+					sysroot = value;
 				case "--include-dir":
 					includeDirectories.push(value);
 				case "--define":
-					if (!validDefine(value))
+					final define = parseDefine(value);
+					if (define == null)
 						return usage('invalid preprocessor definition `$value`', "Use NAME or NAME=value with a C identifier name.");
-					defines.push(value);
+					defines.push(define);
 				case "--output":
 					if (outputSeen)
 						return usage("`--output` may appear only once", "Pass one output directory.");
@@ -80,11 +102,22 @@ class HxcBindgenExecutor implements HxcCliExecutor {
 					outputSeen = true;
 				case _:
 					return usage('unknown bindgen option `$argument`',
-						"Use only `--clang`, `--target`, `--include-dir`, `--define`, `--output`, or `--dry-run`.");
+						"Use only `--clang`, `--target`, `--language`, `--sysroot`, `--include-dir`, `--define`, `--output`, or `--dry-run`.");
 			}
 			index += 2;
 		}
-		return new HxcBindgenOptions(header, clang, target, includeDirectories, defines, output, dryRun);
+		return new HxcBindgenOptions({
+			entryHeaders: entryHeaders,
+			clang: clang,
+			target: target,
+			language: language,
+			languageExplicit: languageExplicit,
+			sysroot: sysroot,
+			includeDirectories: includeDirectories,
+			defines: defines,
+			outputDirectory: output,
+			dryRun: dryRun
+		});
 	}
 
 	function optionValue(arguments:Array<String>, index:Int, option:String):String {
@@ -96,15 +129,17 @@ class HxcBindgenExecutor implements HxcCliExecutor {
 		return value;
 	}
 
-	function validDefine(value:String):Bool {
+	function parseDefine(value:String):Null<HxcBindgenDefine> {
 		final equals = value.indexOf("=");
 		final name = equals < 0 ? value : value.substr(0, equals);
 		if (name == "" || !identifierStart(name.charCodeAt(0)))
-			return false;
+			return null;
 		for (index in 1...name.length)
 			if (!identifierPart(name.charCodeAt(index)))
-				return false;
-		return value.indexOf("\n") < 0 && value.indexOf("\r") < 0;
+				return null;
+		if (value.indexOf("\n") >= 0 || value.indexOf("\r") >= 0)
+			return null;
+		return new HxcBindgenDefine(name, equals < 0 ? null : value.substr(equals + 1));
 	}
 
 	function identifierStart(code:Null<Int>):Bool

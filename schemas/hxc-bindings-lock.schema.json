@@ -9,6 +9,8 @@
     "authority",
     "generator",
     "toolchain",
+    "configuration",
+    "configurationSha256",
     "invocation",
     "inputs",
     "inputSetSha256",
@@ -16,7 +18,7 @@
     "semanticSha256"
   ],
   "properties": {
-    "schemaVersion": { "const": 1 },
+    "schemaVersion": { "const": 2 },
     "authority": { "const": "clang-ast-json" },
     "generator": {
       "type": "object",
@@ -24,7 +26,7 @@
       "required": ["name", "model"],
       "properties": {
         "name": { "const": "hxc-bindgen" },
-        "model": { "const": "clang-semantic-translation-unit-v1" }
+        "model": { "const": "clang-semantic-translation-unit-v2" }
       }
     },
     "toolchain": {
@@ -38,14 +40,63 @@
         "resourceDirectory": { "type": "string", "minLength": 1 }
       }
     },
+    "configuration": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["effective", "provenance"],
+      "properties": {
+        "effective": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["entryHeaders", "language", "target", "sysroot", "includeDirectories", "defines"],
+          "properties": {
+            "entryHeaders": {
+              "type": "array",
+              "minItems": 1,
+              "items": { "type": "string", "minLength": 1 }
+            },
+            "language": { "enum": ["c", "c++"] },
+            "target": { "type": "string", "minLength": 1 },
+            "sysroot": { "type": ["string", "null"] },
+            "includeDirectories": {
+              "type": "array",
+              "items": { "type": "string", "minLength": 1 }
+            },
+            "defines": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["name", "value"],
+                "properties": {
+                  "name": { "type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_]*$" },
+                  "value": { "type": ["string", "null"] }
+                }
+              }
+            }
+          }
+        },
+        "provenance": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["entryHeaders", "language", "target", "sysroot", "includeDirectories", "defines"],
+          "properties": {
+            "entryHeaders": { "const": "command-line" },
+            "language": { "enum": ["default", "command-line"] },
+            "target": { "enum": ["clang-default", "command-line"] },
+            "sysroot": { "enum": ["absent", "command-line"] },
+            "includeDirectories": { "enum": ["absent", "command-line"] },
+            "defines": { "enum": ["absent", "command-line"] }
+          }
+        }
+      }
+    },
+    "configurationSha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
     "invocation": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["header", "language", "target", "diagnosticArguments", "semanticArguments", "dependencyArguments"],
+      "required": ["diagnosticArguments", "semanticArguments", "dependencyArguments"],
       "properties": {
-        "header": { "type": "string", "minLength": 1 },
-        "language": { "const": "c" },
-        "target": { "type": "string", "minLength": 1 },
         "diagnosticArguments": {
           "type": "array",
           "minItems": 1,

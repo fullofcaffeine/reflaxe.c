@@ -147,8 +147,8 @@
       "area": "interop",
       "status": "experimental",
       "disposition": "opt-in",
-      "summary": "The hxc bindgen command captures a deterministic versioned semantic lock from Clang AST JSON.",
-      "scope": "The first generic stage records exact Clang identity, target and arguments, transitive input hashes, canonical semantic declarations, and source-positioned parse failures.",
+      "summary": "The hxc bindgen command captures a deterministic configured semantic lock from Clang AST JSON.",
+      "scope": "The generic stage records ordered entry roots, C/C++ mode, sysroot, target, normalized definitions/includes with provenance, exact Clang identity and arguments, transitive input hashes, canonical semantic declarations, and source-positioned parse failures.",
       "evidence": [
         "src/hxc/bindgen/HxcBindgenDriver.hx",
         "schemas/hxc-bindings-lock.schema.json",
@@ -156,7 +156,8 @@
         "test/hxc_bindgen/run.py"
       ],
       "owners": [
-        "E6.T01"
+        "E6.T01",
+        "E6.T02"
       ],
       "limitations": [
         "This stage does not yet generate Haxe externs, interpret target layouts, apply ownership mappings, or publish ABI probes and drift reports.",

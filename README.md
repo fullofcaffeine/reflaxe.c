@@ -267,7 +267,7 @@ This inventory combines product capability boundaries with repository infrastruc
 | Inventory item | Status | Current boundary |
 | --- | --- | --- |
 | `beads-bootstrap` | `implemented` | Repository governance tooling validates and previews the checked-in Beads plan deterministically; this is not compiler or runtime functionality. |
-| `bindgen` | `experimental` | The hxc bindgen command captures a deterministic versioned semantic lock from Clang AST JSON. |
+| `bindgen` | `experimental` | The hxc bindgen command captures a deterministic configured semantic lock from Clang AST JSON. |
 | `bootstrap-capability-manifest` | `implemented` | A schema-checked M0 product, infrastructure, and limitation inventory drives the README status table. |
 | `build-adapter-seeds` | `implemented` | One typed neutral executable plan deterministically drives optional CMake and Meson files plus a direct argument-array consumer. |
 | `c-ast-printer` | `implemented` | Target-owned AST corpora deterministically emit and native-run single-file and header/source C projects. |

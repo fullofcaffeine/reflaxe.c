@@ -15,7 +15,7 @@ haxe -cp src --run Run help
 haxe -cp src --run Run version
 haxe -cp src --run Run build --json
 haxe -cp src --run Run inspect runtime --manifest build/hxc.manifest.json --json
-haxe -cp src --run Run bindgen vendor/widget.h --output bindings/widget --json
+haxe -cp src --run Run bindgen vendor/base.h vendor/widget.h --output bindings/widget --json
 ```
 
 The `build` command currently exits with code 69 (`unavailable`). Recognition is
@@ -27,20 +27,32 @@ not an implementation claim.
 shell, and it does not parse declarations with regular expressions. The
 current stage records Clang's version, effective target, exact semantic
 arguments, transitive input hashes, and a canonical semantic abstract syntax
-tree (AST) in `hxc.bindings.lock.json`.
+tree (AST) in `hxc.bindings.lock.json`. One or more entry headers form an
+ordered translation unit. Only their transitive declaration closure is
+available to later extern and wrapper generation.
 
 ```sh
-haxe -cp src --run Run bindgen vendor/widget.h \
+haxe -cp src --run Run bindgen vendor/base.h vendor/widget.h \
+  --language c \
   --target arm64-apple-darwin \
+  --sysroot /path/to/sdk \
   --include-dir vendor/include \
   --define WIDGET_FEATURE=1 \
   --output bindings/widget
 ```
 
 Use `--dry-run` to print the lock without writing it. In JSON mode, parse the
-CLI response and then parse its `stdout` field as the schema-1 lock. The lock
+CLI response and then parse its `stdout` field as the schema-2 lock. The lock
 schema is
 [`schemas/hxc-bindings-lock.schema.json`](../schemas/hxc-bindings-lock.schema.json).
+
+The lock separates effective configuration from provenance. Equivalent,
+conflict-free definition order produces the same configuration hash, while
+entry-header and include-directory order remains exact because preprocessing
+order can change declarations. Repeated entry/include paths and repeated
+definition names fail before Clang. `--language` accepts `c` and `c++`; C++
+capture does not claim that direct C++ calls are available without the later
+reviewed C shim.
 
 This stage does not generate Haxe externs or safe wrappers. Later E6 tasks own
 type mapping, layout facts, callbacks, wrapper policy, and drift workflows.

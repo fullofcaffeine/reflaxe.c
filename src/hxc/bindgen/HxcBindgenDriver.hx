@@ -4,17 +4,20 @@ import haxe.io.Path;
 import hxc.bindgen.HxcBindgenModel.HxcBindgenPaths;
 import hxc.bindgen.HxcBindgenModel.buildBindingLock;
 import hxc.bindgen.HxcBindgenModel.normalizeClangAst;
+import hxc.bindgen.HxcBindgenOptions.HxcBindgenDefine;
+import hxc.bindgen.HxcBindgenOptions.HxcBindgenLanguage;
 import hxc.bindgen.HxcBindgenProcess.HxcBindgenProcessResult;
 import hxc.bindgen.HxcBindgenProcess.runBindgenDiagnosticProcess;
 import hxc.bindgen.HxcBindgenProcess.runBindgenProcess;
 import hxc.config.HxcJsonCodec.renderJson;
 import hxc.config.HxcJsonParser;
+import reflaxe.c.CUtf8Order.compare as compareUtf8;
 import sys.FileSystem;
 import sys.io.File;
 
 /** Result of one semantic capture, including the optional written lock path. */
 class HxcBindgenResult {
-	/** Canonical schema-1 lock bytes. */
+	/** Canonical schema-2 lock bytes. */
 	public final lockText:String;
 
 	/** Written lock path, or absence for a dry run. */
@@ -41,8 +44,12 @@ class HxcBindgenResult {
 class HxcBindgenDriver {
 	/** Capture one translation unit and optionally write its deterministic lock. */
 	public static function generate(options:HxcBindgenOptions):HxcBindgenResult {
-		final header = requireFile(options.header, "header");
+		final headers = options.entryHeaders.map(path -> requireFile(path, "entry header"));
 		final includes = options.includeDirectories.map(path -> requireDirectory(path, "include directory"));
+		final sysroot = options.sysroot == null ? null : requireDirectory(options.sysroot, "sysroot");
+		requireUniquePaths(headers, "entry header");
+		requireUniquePaths(includes, "include directory");
+		final defines = normalizedDefines(options.defines);
 		final versionResult = requireToolQuery(options.clang, ["--version"], "version");
 		final machineResult = requireToolQuery(options.clang, ["-dumpmachine"], "target");
 		final resourceResult = requireToolQuery(options.clang, ["-print-resource-dir"], "resource directory");
@@ -57,7 +64,7 @@ class HxcBindgenDriver {
 			throw new HxcBindgenError(hxc.cli.HxcCliExitCategory.Internal, "HXC-CLI-0804", "Clang omitted required toolchain identity",
 				"Check the selected Clang installation and retry.");
 
-		final common = clangArguments(header, target, includes, options.defines);
+		final common = clangArguments(headers, options.language, target, sysroot, includes, defines);
 		final diagnosticArguments = common.concat(["-fsyntax-only"]);
 		final diagnosticResult = runBindgenDiagnosticProcess(options.clang, diagnosticArguments);
 		if (diagnosticResult.exitCode != 0)
@@ -85,10 +92,26 @@ class HxcBindgenDriver {
 			throw new HxcBindgenError(hxc.cli.HxcCliExitCategory.Internal, "HXC-CLI-0806", "Clang dependency output is empty",
 				"Check the selected Clang version and dependency-output support.");
 
-		final paths = new HxcBindgenPaths(header, includes, resourceDirectory);
+		final paths = new HxcBindgenPaths(headers, includes, sysroot, resourceDirectory);
 		final normalizedAst = normalizeClangAst(parsed, paths);
-		final lock = buildBindingLock(normalizedAst, paths, options.clang, version, dumpMachine, resourceDirectory, target, diagnosticArguments, astArguments,
-			dependencyArguments, dependencies);
+		final lock = buildBindingLock({
+			ast: normalizedAst,
+			paths: paths,
+			clang: options.clang,
+			version: version,
+			dumpMachine: dumpMachine,
+			resourceDirectory: resourceDirectory,
+			target: target,
+			diagnosticArguments: diagnosticArguments,
+			semanticArguments: astArguments,
+			dependencyArguments: dependencyArguments,
+			dependencies: dependencies,
+			language: options.language,
+			languageExplicit: options.languageExplicit,
+			targetExplicit: options.target != null,
+			sysroot: sysroot,
+			defines: defines
+		});
 		final lockText = renderJson(lock, true) + "\n";
 		if (options.dryRun)
 			return new HxcBindgenResult(lockText, null, diagnosticResult.stderr);
@@ -106,14 +129,45 @@ class HxcBindgenDriver {
 		return new HxcBindgenResult(lockText, outputPath, diagnosticResult.stderr);
 	}
 
-	static function clangArguments(header:String, target:String, includes:Array<String>, defines:Array<String>):Array<String> {
-		final arguments = ["-x", "c", "-target", target, "-fno-color-diagnostics", "-ferror-limit=20"];
+	static function clangArguments(headers:Array<String>, language:HxcBindgenLanguage, target:String, sysroot:Null<String>, includes:Array<String>,
+			defines:Array<HxcBindgenDefine>):Array<String> {
+		final arguments:Array<String> = ["-x", language, "-target", target, "-fno-color-diagnostics", "-ferror-limit=20"];
+		if (sysroot != null)
+			arguments.push("--sysroot=" + sysroot);
 		for (includeDirectory in includes)
 			arguments.push("-I" + includeDirectory);
 		for (define in defines)
-			arguments.push("-D" + define);
-		arguments.push(header);
+			arguments.push("-D" + define.spelling());
+		for (index in 0...(headers.length - 1)) {
+			arguments.push("-include");
+			arguments.push(headers[index]);
+		}
+		arguments.push(headers[headers.length - 1]);
 		return arguments;
+	}
+
+	static function requireUniquePaths(paths:Array<String>, label:String):Void {
+		final seen:Map<String, Bool> = [];
+		for (path in paths) {
+			final key = StringTools.replace(path, "\\", "/");
+			if (seen.exists(key))
+				throw new HxcBindgenError(hxc.cli.HxcCliExitCategory.Usage, "HXC-CLI-0801", 'duplicate $label `$path`',
+					'Remove the repeated $label; configured order remains significant.');
+			seen.set(key, true);
+		}
+	}
+
+	static function normalizedDefines(defines:Array<HxcBindgenDefine>):Array<HxcBindgenDefine> {
+		final seen:Map<String, Bool> = [];
+		final result = defines.copy();
+		for (define in result) {
+			if (seen.exists(define.name))
+				throw new HxcBindgenError(hxc.cli.HxcCliExitCategory.Usage, "HXC-CLI-0801", 'repeated preprocessor definition `${define.name}`',
+					"Pass each definition name once so its effective value is unambiguous.");
+			seen.set(define.name, true);
+		}
+		result.sort((left, right) -> compareUtf8(left.name, right.name));
+		return result;
 	}
 
 	static function requireToolQuery(clang:String, arguments:Array<String>, fact:String):HxcBindgenProcessResult {

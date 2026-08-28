@@ -3,6 +3,8 @@ package hxc.bindgen;
 import haxe.crypto.Sha256;
 import haxe.io.Bytes;
 import haxe.io.Path;
+import hxc.bindgen.HxcBindgenOptions.HxcBindgenDefine;
+import hxc.bindgen.HxcBindgenOptions.HxcBindgenLanguage;
 import hxc.config.HxcJsonCodec.jsonArray;
 import hxc.config.HxcJsonCodec.jsonField;
 import hxc.config.HxcJsonCodec.jsonInt;
@@ -43,9 +45,30 @@ function normalizeClangAst(node:HxcJsonNode, paths:HxcBindgenPaths, fieldName:Nu
 	return new HxcJsonNode(value, 0, 0);
 }
 
-/** Build the schema-1 lock from one canonical AST and its complete dependency set. */
-function buildBindingLock(ast:HxcJsonNode, paths:HxcBindgenPaths, clang:String, version:String, dumpMachine:String, resourceDirectory:String, target:String,
-		diagnosticArguments:Array<String>, semanticArguments:Array<String>, dependencyArguments:Array<String>, dependencies:Array<String>):HxcJsonNode {
+/** Named semantic-lock inputs keep exact pass/configuration facts from being misordered. */
+typedef HxcBindgenLockRequest = {
+	final ast:HxcJsonNode;
+	final paths:HxcBindgenPaths;
+	final clang:String;
+	final version:String;
+	final dumpMachine:String;
+	final resourceDirectory:String;
+	final target:String;
+	final diagnosticArguments:Array<String>;
+	final semanticArguments:Array<String>;
+	final dependencyArguments:Array<String>;
+	final dependencies:Array<String>;
+	final language:HxcBindgenLanguage;
+	final languageExplicit:Bool;
+	final targetExplicit:Bool;
+	final sysroot:Null<String>;
+	final defines:Array<HxcBindgenDefine>;
+}
+
+/** Build the schema-2 lock from one canonical AST and its complete configured input set. */
+function buildBindingLock(request:HxcBindgenLockRequest):HxcJsonNode {
+	final ast = request.ast;
+	final paths = request.paths;
 	final kind = stringField(ast, "kind");
 	if (kind != "TranslationUnitDecl")
 		throw new HxcBindgenError(hxc.cli.HxcCliExitCategory.Internal, "HXC-CLI-0805", "Clang AST root is not a translation unit",
@@ -56,7 +79,7 @@ function buildBindingLock(ast:HxcJsonNode, paths:HxcBindgenPaths, clang:String, 
 		case _: 0;
 	};
 	final semanticText = renderJson(ast);
-	final inputs = dependencyInputs(paths, dependencies);
+	final inputs = dependencyInputs(paths, request.dependencies);
 	final inputDigestMaterial = new StringBuf();
 	for (input in inputs) {
 		inputDigestMaterial.add(stringField(input, "path"));
@@ -64,27 +87,49 @@ function buildBindingLock(ast:HxcJsonNode, paths:HxcBindgenPaths, clang:String, 
 		inputDigestMaterial.add(stringField(input, "sha256"));
 		inputDigestMaterial.add("\n");
 	}
+	final effectiveConfiguration = jsonObject([
+		jsonField("entryHeaders", jsonArray(paths.entryHeaders.map(path -> jsonString(paths.logical(path))))),
+		jsonField("language", jsonString(request.language)),
+		jsonField("target", jsonString(request.target)),
+		jsonField("sysroot", nullableString(request.sysroot == null ? null : paths.logical(request.sysroot))),
+		jsonField("includeDirectories", jsonArray(paths.includeDirectories.map(path -> jsonString(paths.logical(path))))),
+		jsonField("defines", jsonArray(request.defines.map(define -> jsonObject([
+			jsonField("name", jsonString(define.name)),
+			jsonField("value", nullableString(define.value))
+		]))))
+	]);
+	final configuration = jsonObject([
+		jsonField("effective", effectiveConfiguration),
+		jsonField("provenance", jsonObject([
+			jsonField("entryHeaders", jsonString("command-line")),
+			jsonField("language", jsonString(request.languageExplicit ? "command-line" : "default")),
+			jsonField("target", jsonString(request.targetExplicit ? "command-line" : "clang-default")),
+			jsonField("sysroot", jsonString(request.sysroot == null ? "absent" : "command-line")),
+			jsonField("includeDirectories", jsonString(paths.includeDirectories.length == 0 ? "absent" : "command-line")),
+			jsonField("defines", jsonString(request.defines.length == 0 ? "absent" : "command-line"))
+		]))
+	]);
 	return jsonObject([
-		jsonField("schemaVersion", jsonInt(1)),
+		jsonField("schemaVersion", jsonInt(2)),
 		jsonField("authority", jsonString("clang-ast-json")),
 		jsonField("generator", jsonObject([
 			jsonField("name", jsonString("hxc-bindgen")),
-			jsonField("model", jsonString("clang-semantic-translation-unit-v1"))
+			jsonField("model", jsonString("clang-semantic-translation-unit-v2"))
 		])),
-		jsonField("toolchain", jsonObject([
-			jsonField("executable", jsonString(paths.logicalExecutable(clang))),
-			jsonField("version", jsonString(version)),
-			jsonField("dumpMachine", jsonString(dumpMachine)),
-			jsonField("resourceDirectory", jsonString(paths.logical(resourceDirectory)))
-		])),
+		jsonField("toolchain",
+			jsonObject([
+				jsonField("executable", jsonString(paths.logicalExecutable(request.clang))),
+				jsonField("version", jsonString(request.version)),
+				jsonField("dumpMachine", jsonString(request.dumpMachine)),
+				jsonField("resourceDirectory", jsonString(paths.logical(request.resourceDirectory)))
+			])),
+		jsonField("configuration", configuration),
+		jsonField("configurationSha256", jsonString(Sha256.encode(renderJson(effectiveConfiguration)))),
 		jsonField("invocation",
 			jsonObject([
-				jsonField("header", jsonString(paths.logical(paths.header))),
-				jsonField("language", jsonString("c")),
-				jsonField("target", jsonString(target)),
-				jsonField("diagnosticArguments", jsonArray(diagnosticArguments.map(argument -> jsonString(paths.logicalArgument(argument))))),
-				jsonField("semanticArguments", jsonArray(semanticArguments.map(argument -> jsonString(paths.logicalArgument(argument))))),
-				jsonField("dependencyArguments", jsonArray(dependencyArguments.map(argument -> jsonString(paths.logicalArgument(argument)))))
+				jsonField("diagnosticArguments", jsonArray(request.diagnosticArguments.map(argument -> jsonString(paths.logicalArgument(argument))))),
+				jsonField("semanticArguments", jsonArray(request.semanticArguments.map(argument -> jsonString(paths.logicalArgument(argument))))),
+				jsonField("dependencyArguments", jsonArray(request.dependencyArguments.map(argument -> jsonString(paths.logicalArgument(argument)))))
 			])),
 		jsonField("inputs", jsonArray(inputs)),
 		jsonField("inputSetSha256", jsonString(Sha256.encode(inputDigestMaterial.toString()))),
@@ -96,6 +141,9 @@ function buildBindingLock(ast:HxcJsonNode, paths:HxcBindgenPaths, clang:String, 
 		jsonField("semanticSha256", jsonString(Sha256.encode(semanticText)))
 	]);
 }
+
+function nullableString(value:Null<String>):HxcJsonNode
+	return value == null ? new HxcJsonNode(HxcJsonValue.JNull, 0, 0) : jsonString(value);
 
 function dependencyInputs(paths:HxcBindgenPaths, dependencies:Array<String>):Array<HxcJsonNode> {
 	final unique:Map<String, String> = [];
@@ -138,23 +186,33 @@ function compareUtf8(left:String, right:String):Int
 
 /** Logical source-root mapping used by both AST locations and locked argv. */
 class HxcBindgenPaths {
-	/** Canonical absolute entry-header path used only while invoking Clang. */
-	public final header:String;
+	/** Ordered canonical entry-header paths used while invoking Clang. */
+	public final entryHeaders:Array<String>;
 
-	/** Canonical source root replaced by `$SOURCE` in the lock. */
-	public final sourceRoot:String;
+	/** Ordered unique source roots replaced by `$SOURCE` markers in the lock. */
+	public final sourceRoots:Array<String>;
 
 	/** Ordered canonical include roots replaced by logical markers. */
 	public final includeDirectories:Array<String>;
+
+	/** Optional target sysroot replaced by `$SYSROOT` in the lock. */
+	public final sysroot:Null<String>;
 
 	/** Clang resource root replaced by `$CLANG_RESOURCE` in the lock. */
 	public final resourceDirectory:String;
 
 	/** Build one path-normalization policy for a translation unit. */
-	public function new(header:String, includeDirectories:Array<String>, resourceDirectory:String) {
-		this.header = FileSystem.fullPath(header);
-		this.sourceRoot = normalize(Path.directory(this.header));
+	public function new(entryHeaders:Array<String>, includeDirectories:Array<String>, sysroot:Null<String>, resourceDirectory:String) {
+		this.entryHeaders = entryHeaders.map(path -> FileSystem.fullPath(path));
+		final roots:Array<String> = [];
+		for (header in this.entryHeaders) {
+			final root = normalize(Path.directory(header));
+			if (roots.indexOf(root) < 0)
+				roots.push(root);
+		}
+		this.sourceRoots = roots;
 		this.includeDirectories = includeDirectories.map(path -> FileSystem.fullPath(path));
+		this.sysroot = sysroot == null ? null : FileSystem.fullPath(sysroot);
 		this.resourceDirectory = FileSystem.fullPath(resourceDirectory);
 	}
 
@@ -163,9 +221,16 @@ class HxcBindgenPaths {
 		if (!isAbsolute(value))
 			return StringTools.replace(value, "\\", "/");
 		final normalized = normalize(FileSystem.fullPath(value));
-		final source = below(normalized, sourceRoot, "$SOURCE");
-		if (source != null)
-			return source;
+		if (sysroot != null) {
+			final rooted = below(normalized, normalize(sysroot), "$SYSROOT");
+			if (rooted != null)
+				return rooted;
+		}
+		for (index in 0...sourceRoots.length) {
+			final source = below(normalized, sourceRoots[index], index == 0 ? "$SOURCE" : '$$SOURCE$index');
+			if (source != null)
+				return source;
+		}
 		for (index in 0...includeDirectories.length) {
 			final included = below(normalized, normalize(includeDirectories[index]), '$$INCLUDE$index');
 			if (included != null)
@@ -179,6 +244,8 @@ class HxcBindgenPaths {
 	public function logicalArgument(argument:String):String {
 		if (StringTools.startsWith(argument, "-I") && argument.length > 2)
 			return "-I" + logical(argument.substr(2));
+		if (StringTools.startsWith(argument, "--sysroot=") && argument.length > 10)
+			return "--sysroot=" + logical(argument.substr(10));
 		return isAbsolute(argument) ? logical(argument) : argument;
 	}
 

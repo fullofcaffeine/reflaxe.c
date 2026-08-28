@@ -128,7 +128,7 @@ class HxcCli {
 			case HxcCliCommand.Clean: "hxc clean";
 			case HxcCliCommand.Doctor: "hxc doctor";
 			case HxcCliCommand.Inspect: "hxc inspect <report> [--manifest <path>] [--show-sensitive]";
-			case HxcCliCommand.Bindgen: "hxc bindgen <header> [options]";
+			case HxcCliCommand.Bindgen: "hxc bindgen <entry-header>... [options]";
 			case HxcCliCommand.Export: "hxc export [project.hxml] [options]";
 			case HxcCliCommand.FmtGenerated: "hxc fmt-generated";
 			case HxcCliCommand.Version: "hxc version";
