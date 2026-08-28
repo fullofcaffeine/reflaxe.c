@@ -31,7 +31,7 @@ function normalizeClangAst(node:HxcJsonNode, paths:HxcBindgenPaths, fieldName:Nu
 		case JNull: HxcJsonValue.JNull;
 		case JBool(value): HxcJsonValue.JBool(value);
 		case JNumber(value): HxcJsonValue.JNumber(value);
-		case JString(value): HxcJsonValue.JString(fieldName == "file" ? paths.logical(value) : value);
+		case JString(value): HxcJsonValue.JString(fieldName == "file" ? paths.logical(value) : paths.logicalText(value));
 		case JArray(values): HxcJsonValue.JArray(values.map(value -> normalizeClangAst(value, paths)));
 		case JObject(fields):
 			final normalized:Array<HxcJsonField> = [];
@@ -62,11 +62,13 @@ typedef HxcBindgenLockRequest = {
 	final macroInventoryArguments:Array<String>;
 	final macroTypeArguments:Array<String>;
 	final macroValueArguments:Array<String>;
+	final aggregateArguments:Array<String>;
 	final primitiveProbe:String;
 	final macroTypeProbe:String;
 	final macroValueProbe:String;
 	final dependencies:Array<String>;
 	final primitiveAbiModel:HxcJsonNode;
+	final aggregateAbiModel:HxcJsonNode;
 	final language:HxcBindgenLanguage;
 	final languageExplicit:Bool;
 	final targetExplicit:Bool;
@@ -74,7 +76,7 @@ typedef HxcBindgenLockRequest = {
 	final defines:Array<HxcBindgenDefine>;
 }
 
-/** Build the schema-3 lock from one canonical AST and its complete configured input set. */
+/** Build the schema-4 lock from one canonical AST and its complete configured input set. */
 function buildBindingLock(request:HxcBindgenLockRequest):HxcJsonNode {
 	final ast = request.ast;
 	final paths = request.paths;
@@ -89,6 +91,7 @@ function buildBindingLock(request:HxcBindgenLockRequest):HxcJsonNode {
 	};
 	final semanticText = renderJson(ast);
 	final primitiveAbiText = renderJson(request.primitiveAbiModel);
+	final aggregateAbiText = renderJson(request.aggregateAbiModel);
 	final inputs = dependencyInputs(paths, request.dependencies);
 	final inputDigestMaterial = new StringBuf();
 	for (input in inputs) {
@@ -120,11 +123,11 @@ function buildBindingLock(request:HxcBindgenLockRequest):HxcJsonNode {
 		]))
 	]);
 	return jsonObject([
-		jsonField("schemaVersion", jsonInt(3)),
+		jsonField("schemaVersion", jsonInt(4)),
 		jsonField("authority", jsonString("clang-ast-json")),
 		jsonField("generator", jsonObject([
 			jsonField("name", jsonString("hxc-bindgen")),
-			jsonField("model", jsonString("clang-semantic-translation-unit-v3"))
+			jsonField("model", jsonString("clang-semantic-translation-unit-v4"))
 		])),
 		jsonField("toolchain",
 			jsonObject([
@@ -145,6 +148,7 @@ function buildBindingLock(request:HxcBindgenLockRequest):HxcJsonNode {
 				jsonField("macroInventoryArguments", jsonArray(request.macroInventoryArguments.map(argument -> jsonString(paths.logicalArgument(argument))))),
 				jsonField("macroTypeArguments", jsonArray(request.macroTypeArguments.map(argument -> jsonString(paths.logicalArgument(argument))))),
 				jsonField("macroValueArguments", jsonArray(request.macroValueArguments.map(argument -> jsonString(paths.logicalArgument(argument))))),
+				jsonField("aggregateArguments", jsonArray(request.aggregateArguments.map(argument -> jsonString(paths.logicalArgument(argument))))),
 				jsonField("generatedProbeSha256",
 					jsonObject([
 						jsonField("primitive", jsonString(Sha256.encode(request.primitiveProbe))),
@@ -162,7 +166,9 @@ function buildBindingLock(request:HxcBindgenLockRequest):HxcJsonNode {
 			])),
 		jsonField("semanticSha256", jsonString(Sha256.encode(semanticText))),
 		jsonField("primitiveAbiModel", request.primitiveAbiModel),
-		jsonField("primitiveAbiSha256", jsonString(Sha256.encode(primitiveAbiText)))
+		jsonField("primitiveAbiSha256", jsonString(Sha256.encode(primitiveAbiText))),
+		jsonField("aggregateAbiModel", request.aggregateAbiModel),
+		jsonField("aggregateAbiSha256", jsonString(Sha256.encode(aggregateAbiText)))
 	]);
 }
 
@@ -271,6 +277,18 @@ class HxcBindgenPaths {
 		if (StringTools.startsWith(argument, "--sysroot=") && argument.length > 10)
 			return "--sysroot=" + logical(argument.substr(10));
 		return isAbsolute(argument) ? logical(argument) : argument;
+	}
+
+	/** Replace known absolute roots embedded inside a Clang type spelling. */
+	public function logicalText(value:String):String {
+		var normalized = StringTools.replace(value, "\\", "/");
+		if (sysroot != null)
+			normalized = StringTools.replace(normalized, normalize(sysroot), "$SYSROOT");
+		for (index in 0...sourceRoots.length)
+			normalized = StringTools.replace(normalized, sourceRoots[index], index == 0 ? "$SOURCE" : '$$SOURCE$index');
+		for (index in 0...includeDirectories.length)
+			normalized = StringTools.replace(normalized, normalize(includeDirectories[index]), '$$INCLUDE$index');
+		return StringTools.replace(normalized, normalize(resourceDirectory), "$CLANG_RESOURCE");
 	}
 
 	/** Keep a command name, but avoid embedding an absolute host tool path. */

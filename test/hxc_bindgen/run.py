@@ -105,6 +105,14 @@ def write_fixture(root: Path, *, broken: bool = False, warning: bool = False) ->
         "enum { WIDGET_ANONYMOUS = 9 };\n"
         "enum WidgetState { WIDGET_STATE_IDLE = 0 };\n"
         "typedef struct Widget { widget_id id; int count; } Widget;\n"
+        "typedef struct WidgetHandle WidgetHandle;\n"
+        "typedef struct __attribute__((packed, aligned(2))) {\n"
+        "  int x; unsigned a : 3; unsigned : 0; unsigned b : 5;\n"
+        "  union { short shortValue; char bytes[2]; };\n"
+        "  char tail[];\n"
+        "} WidgetPacket;\n"
+        "union WidgetChoice { int integerValue; float floatValue; };\n"
+        "struct WidgetPlatform { char marker; long nativeLong; void *pointer; };\n"
         "#if HXC_WIDGET_FEATURE\n"
         + ("int widget_sum(Widget value {\n" if broken else "int widget_sum(Widget value);\n")
         + "#endif\n",
@@ -177,13 +185,15 @@ def check_schema_and_semantics(temporary: Path) -> None:
         "semanticSha256",
         "primitiveAbiModel",
         "primitiveAbiSha256",
+        "aggregateAbiModel",
+        "aggregateAbiSha256",
     }
     require(schema.get("additionalProperties") is False and set(schema.get("required", ())) == required, "binding-lock schema drifted")
 
     source = temporary / "source-a"
     header = write_fixture(source)
     lock, text = machine_lock(header, temporary / "output-a")
-    require(lock.get("schemaVersion") == 3 and lock.get("authority") == "clang-ast-json", "Clang authority is absent")
+    require(lock.get("schemaVersion") == 4 and lock.get("authority") == "clang-ast-json", "Clang authority is absent")
     toolchain = lock.get("toolchain")
     configuration = lock.get("configuration")
     require(isinstance(configuration, dict), "effective bindgen configuration is absent")
@@ -210,6 +220,7 @@ def check_schema_and_semantics(temporary: Path) -> None:
     arguments = invocation.get("semanticArguments")
     dependency_arguments = invocation.get("dependencyArguments")
     abi_arguments = invocation.get("abiArguments")
+    aggregate_arguments = invocation.get("aggregateArguments")
     require(
         isinstance(arguments, list)
         and "-DHXC_WIDGET_FEATURE=1" in arguments
@@ -220,7 +231,9 @@ def check_schema_and_semantics(temporary: Path) -> None:
         and isinstance(dependency_arguments, list)
         and dependency_arguments[-3:] == ["-M", "-MT", "hxc-bindgen-input"]
         and isinstance(abi_arguments, list)
-        and abi_arguments[-5:] == ["-w", "-fsyntax-only", "-Xclang", "-ast-dump=json", "-"],
+        and abi_arguments[-5:] == ["-w", "-fsyntax-only", "-Xclang", "-ast-dump=json", "-"]
+        and isinstance(aggregate_arguments, list)
+        and aggregate_arguments[-5:] == ["-fsyntax-only", "-Xclang", "-fdump-record-layouts-simple", "-Xclang", "-fdump-record-layouts-complete"],
         "exact semantic invocation is not inspectable",
     )
     inputs = lock.get("inputs")
@@ -313,6 +326,37 @@ def check_schema_and_semantics(temporary: Path) -> None:
     )
     check_compiled_primitive_probe(source, scalars, macros)
 
+    aggregate_abi = lock.get("aggregateAbiModel")
+    require(isinstance(aggregate_abi, dict) and aggregate_abi.get("schemaVersion") == 1, "aggregate ABI model is absent")
+    records = {item.get("stableName"): item for item in aggregate_abi.get("records", ()) if isinstance(item, dict)}
+    handle = records.get("WidgetHandle", {})
+    packet = records.get("WidgetPacket", {})
+    choice = records.get("WidgetChoice", {})
+    require(
+        handle.get("opaque") is True and handle.get("complete") is False and handle.get("layout") is None and handle.get("fields") == [],
+        "incomplete handle did not remain opaque",
+    )
+    packet_layout = packet.get("layout")
+    packet_fields = packet.get("fields")
+    require(
+        packet.get("nativeTypedef") == "WidgetPacket"
+        and isinstance(packet_layout, dict)
+        and packet_layout.get("packed") is True
+        and packet_layout.get("requestedAlignmentBits") == 16
+        and isinstance(packet_fields, list)
+        and any(isinstance(field, dict) and field.get("bitWidth") == 0 and field.get("zeroWidthBitfield") is True for field in packet_fields)
+        and any(isinstance(field, dict) and field.get("anonymous") is True for field in packet_fields)
+        and any(isinstance(field, dict) and field.get("nativeName") == "tail" and field.get("flexibleArray") is True for field in packet_fields),
+        "packed, bitfield, anonymous-member, or flexible-array facts are incomplete",
+    )
+    require(
+        choice.get("kind") == "union"
+        and isinstance(choice.get("fields"), list)
+        and all(isinstance(field, dict) and field.get("bitOffset") == 0 for field in choice["fields"]),
+        "union field offsets are incomplete",
+    )
+    check_compiled_aggregate_probe(source, records)
+
     windows_lock, _ = machine_lock(
         header,
         temporary / "output-windows-target",
@@ -330,6 +374,21 @@ def check_schema_and_semantics(temporary: Path) -> None:
         windows_scalars.get("signed-long", {}).get("bitWidth") == 32
         and windows_scalars.get("signed-long", {}).get("haxeType") == "c.Int32",
         "selected Windows target did not use Clang's LLP64 long mapping",
+    )
+    windows_aggregates = windows_lock.get("aggregateAbiModel")
+    require(isinstance(windows_aggregates, dict), "Windows target aggregate ABI model is absent")
+    windows_records = {
+        item.get("stableName"): item
+        for item in windows_aggregates.get("records", ())
+        if isinstance(item, dict)
+    }
+    host_platform = records.get("WidgetPlatform", {}).get("layout")
+    windows_platform = windows_records.get("WidgetPlatform", {}).get("layout")
+    require(
+        isinstance(host_platform, dict)
+        and isinstance(windows_platform, dict)
+        and host_platform.get("sizeBits") != windows_platform.get("sizeBits"),
+        "selected Windows target did not change pointer/long-sensitive aggregate layout",
     )
 
     explicit_target = toolchain.get("dumpMachine")
@@ -384,6 +443,48 @@ def check_compiled_primitive_probe(
             and str(macros.get("WIDGET_LIMIT", {}).get("value")) == str(macro_value),
             f"{compiler} primitive ABI observations differ from the lock",
         )
+
+
+def check_compiled_aggregate_probe(source: Path, records: dict[object, dict[str, object]]) -> None:
+    packet = records.get("WidgetPacket", {})
+    packet_layout = packet.get("layout")
+    packet_fields = packet.get("fields")
+    require(isinstance(packet_layout, dict) and isinstance(packet_fields, list), "aggregate probe lacks packet facts")
+    offsets = {
+        field.get("nativeName"): field.get("bitOffset")
+        for field in packet_fields
+        if isinstance(field, dict) and isinstance(field.get("nativeName"), str)
+    }
+    probe = source / "aggregate-probe.c"
+    probe.write_text(
+        '#include <stddef.h>\n#include "widget.h"\n'
+        f'_Static_assert(sizeof(WidgetPacket) * 8 == {packet_layout.get("sizeBits")}, "packet size");\n'
+        f'_Static_assert(_Alignof(WidgetPacket) * 8 == {packet_layout.get("alignmentBits")}, "packet alignment");\n'
+        f'_Static_assert(offsetof(WidgetPacket, x) * 8 == {offsets.get("x")}, "x offset");\n'
+        f'_Static_assert(offsetof(WidgetPacket, tail) * 8 == {offsets.get("tail")}, "tail offset");\n'
+        'int main(void) { WidgetPacket value = {0}; value.a = 5; value.b = 17; '
+        'value.shortValue = 23; return value.a == 5 && value.b == 17 && value.shortValue == 23 ? 0 : 1; }\n',
+        encoding="utf-8",
+    )
+    observed_compilers = 0
+    for compiler in ("clang", "gcc"):
+        executable = shutil.which(compiler)
+        if executable is None:
+            continue
+        observed_compilers += 1
+        output = source / f"aggregate-probe-{compiler}"
+        compiled = run_bounded_process(
+            [executable, "-std=c11", "-Wall", "-Wextra", "-Werror", "-I", str(source), str(probe), "-o", str(output)],
+            cwd=ROOT,
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        require(compiled.returncode == 0, f"{compiler} rejected aggregate ABI probe: {compiled.stderr}")
+        observed = run_bounded_process([str(output)], cwd=ROOT, check=False, capture_output=True, text=True, timeout=10)
+        require(observed.returncode == 0, f"{compiler} aggregate ABI behavior differs from the lock")
+    require(observed_compilers > 0, "no strict native compiler was available for aggregate ABI proof")
 
 
 def check_configuration_and_reachability(temporary: Path) -> None:
@@ -522,8 +623,8 @@ def check_diagnostics_and_input_drift(temporary: Path) -> None:
     result = invoke(str(broken), "--include-dir", str(broken_root), "--define", "HXC_WIDGET_FEATURE=1", "--dry-run", "--json")
     require(result.returncode == 1, "invalid header did not preserve Clang failure")
     envelope = json.loads(result.stdout)
-    require(envelope.get("exitCategory") == "command" and "widget.h:10:" in str(envelope.get("stderr")), "source file and line were lost")
-    require("widget.h:10:" in result.stderr and "HXC-CLI-0803" in result.stderr, "human diagnostic stream lost Clang context")
+    require(envelope.get("exitCategory") == "command" and "widget.h:19:" in str(envelope.get("stderr")), "source file and line were lost")
+    require("widget.h:19:" in result.stderr and "HXC-CLI-0803" in result.stderr, "human diagnostic stream lost Clang context")
 
     warning_root = temporary / "warning"
     warning = write_fixture(warning_root, warning=True)
@@ -531,6 +632,26 @@ def check_diagnostics_and_input_drift(temporary: Path) -> None:
     require(result.returncode == 0, "non-fatal Clang diagnostic changed command success")
     envelope = json.loads(result.stdout)
     require("widget.h:1:" in str(envelope.get("stderr")) and "bindgen-warning" in result.stderr, "non-fatal source diagnostic was discarded")
+
+    nonportable_root = temporary / "nonportable"
+    nonportable_root.mkdir()
+    nonportable = nonportable_root / "nonportable.h"
+    nonportable.write_text("struct __attribute__((ms_struct)) Nonportable { int value; };\n", encoding="utf-8")
+    result = invoke(str(nonportable), "--dry-run", "--json")
+    require(
+        result.returncode == 1 and "HXC-CLI-0811" in result.stderr and "unsupported nonportable layout attribute" in result.stderr,
+        "unsupported nonportable aggregate layout did not fail precisely",
+    )
+    ambiguous = nonportable_root / "ambiguous.h"
+    ambiguous.write_text(
+        "typedef struct { int value; } __attribute__((packed, aligned(2))) Ambiguous;\n",
+        encoding="utf-8",
+    )
+    result = invoke(str(ambiguous), "--dry-run", "--json")
+    require(
+        result.returncode == 1 and "HXC-CLI-0811" in result.stderr and "places a layout attribute after its field list" in result.stderr,
+        "typedef-positioned packed layout was allowed to publish mismatched record facts",
+    )
 
     root = temporary / "drift"
     header = write_fixture(root)
@@ -554,7 +675,7 @@ def main() -> int:
         check_diagnostics_and_input_drift(root)
     print(
         "hxc-bindgen: OK: Clang authority, target-measured scalar/typedef/qualifier/enum/macro ABI facts, "
-        "compiled probes, reachability, configuration, exact inputs, and diagnostics passed"
+        "aggregate layout/bitfield/packing probes, compiled probes, reachability, configuration, exact inputs, and diagnostics passed"
     )
     return 0
 

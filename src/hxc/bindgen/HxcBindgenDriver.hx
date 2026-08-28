@@ -10,6 +10,7 @@ import hxc.bindgen.HxcBindgenAbiModel.enumProbeSource;
 import hxc.bindgen.HxcBindgenAbiModel.macroTypeProbeSource;
 import hxc.bindgen.HxcBindgenAbiModel.macroValueProbeSource;
 import hxc.bindgen.HxcBindgenAbiModel.primitiveProbeSource;
+import hxc.bindgen.HxcBindgenAggregateModel.buildAggregateAbiModel;
 import hxc.bindgen.HxcBindgenOptions.HxcBindgenDefine;
 import hxc.bindgen.HxcBindgenOptions.HxcBindgenLanguage;
 import hxc.bindgen.HxcBindgenProcess.HxcBindgenProcessResult;
@@ -23,7 +24,7 @@ import sys.io.File;
 
 /** Result of one semantic capture, including the optional written lock path. */
 class HxcBindgenResult {
-	/** Canonical schema-3 lock bytes. */
+	/** Canonical schema-4 lock bytes. */
 	public final lockText:String;
 
 	/** Written lock path, or absence for a dry run. */
@@ -135,6 +136,19 @@ class HxcBindgenDriver {
 			macroValueAst: macroValueAst,
 			language: options.language
 		});
+		final aggregateArguments = common.concat([
+			"-w",
+			"-fsyntax-only",
+			"-Xclang",
+			"-fdump-record-layouts-simple",
+			"-Xclang",
+			"-fdump-record-layouts-complete"
+		]);
+		final aggregateResult = runBindgenProcess(options.clang, aggregateArguments);
+		if (aggregateResult.exitCode != 0)
+			throw new HxcBindgenError(hxc.cli.HxcCliExitCategory.Command, "HXC-CLI-0811", "Clang could not report aggregate layouts",
+				"Fix the source-positioned diagnostics or report the selected Clang record-layout output.", aggregateResult.stderr);
+		final aggregateAbiModel = buildAggregateAbiModel({ast: parsed, layoutDump: aggregateResult.stdout, paths: paths});
 		final normalizedAst = normalizeClangAst(parsed, paths);
 		final lock = buildBindingLock({
 			ast: normalizedAst,
@@ -152,11 +166,13 @@ class HxcBindgenDriver {
 			macroInventoryArguments: macroInventoryArguments,
 			macroTypeArguments: macroTypeArguments,
 			macroValueArguments: macroValueArguments,
+			aggregateArguments: aggregateArguments,
 			primitiveProbe: primitiveProbe,
 			macroTypeProbe: macroTypeProbe,
 			macroValueProbe: macroValueProbe,
 			dependencies: dependencies,
 			primitiveAbiModel: primitiveAbiModel,
+			aggregateAbiModel: aggregateAbiModel,
 			language: options.language,
 			languageExplicit: options.languageExplicit,
 			targetExplicit: options.target != null,

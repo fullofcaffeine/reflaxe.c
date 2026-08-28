@@ -42,7 +42,7 @@ haxe -cp src --run Run bindgen vendor/base.h vendor/widget.h \
 ```
 
 Use `--dry-run` to print the lock without writing it. In JSON mode, parse the
-CLI response and then parse its `stdout` field as the schema-3 lock. The lock
+CLI response and then parse its `stdout` field as the schema-4 lock. The lock
 schema is
 [`schemas/hxc-bindings-lock.schema.json`](../schemas/hxc-bindings-lock.schema.json).
 
@@ -54,16 +54,27 @@ definition names fail before Clang. `--language` accepts `c` and `c++`; C++
 capture does not claim that direct C++ calls are available without the later
 reviewed C shim.
 
-The schema-3 lock also contains a normalized primitive ABI model. Clang probes
+The schema-4 lock contains normalized primitive and aggregate ABI models. Clang probes
 measure integer width and signedness, binary32/binary64 format, enum storage,
 and eligible integer macro values for the selected target. Typedefs retain
 their native identity, and const/volatile/restrict remain attached to the type
 level where Clang reported them. Anonymous enums use a native typedef when one
 exists; otherwise they receive a stable logical-source name.
 
+The aggregate model records structs and unions from the same configured header
+set. Complete records include size, alignment, field bit offsets, bitfield
+widths, anonymous members, flexible arrays, packing, and requested alignment.
+Incomplete declarations remain opaque and have no invented layout. Clang can
+omit `DataSize` for some targets, so that optional fact stays `null`.
+
+Place `packed` and `aligned` attributes on the record declaration before its
+field list. Clang reports a different underlying record when these attributes
+follow an anonymous record. Bindgen rejects that ambiguous form with
+`HXC-CLI-0811`. It also rejects unknown target-specific layout attributes.
+
 This stage does not write Haxe module files or safe wrappers. Later E6 tasks
-own aggregate layout, functions and callbacks, raw module emission, wrapper
-policy, and drift workflows. Clang errors remain in the child stderr stream
+own functions and callbacks, raw module emission, wrapper policy, and drift
+workflows. Clang errors remain in the child stderr stream
 with their original source file, line, and column.
 
 ## Inspect compiler decisions

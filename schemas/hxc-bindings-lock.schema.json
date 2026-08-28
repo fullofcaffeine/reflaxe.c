@@ -17,10 +17,12 @@
     "semanticModel",
     "semanticSha256",
     "primitiveAbiModel",
-    "primitiveAbiSha256"
+    "primitiveAbiSha256",
+    "aggregateAbiModel",
+    "aggregateAbiSha256"
   ],
   "properties": {
-    "schemaVersion": { "const": 3 },
+    "schemaVersion": { "const": 4 },
     "authority": { "const": "clang-ast-json" },
     "generator": {
       "type": "object",
@@ -28,7 +30,7 @@
       "required": ["name", "model"],
       "properties": {
         "name": { "const": "hxc-bindgen" },
-        "model": { "const": "clang-semantic-translation-unit-v3" }
+        "model": { "const": "clang-semantic-translation-unit-v4" }
       }
     },
     "toolchain": {
@@ -106,6 +108,7 @@
         "macroInventoryArguments",
         "macroTypeArguments",
         "macroValueArguments",
+        "aggregateArguments",
         "generatedProbeSha256"
       ],
       "properties": {
@@ -145,6 +148,11 @@
           "items": { "type": "string" }
         },
         "macroValueArguments": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string" }
+        },
+        "aggregateArguments": {
           "type": "array",
           "minItems": 1,
           "items": { "type": "string" }
@@ -218,7 +226,17 @@
         "macroConstants": { "type": "array", "items": { "$ref": "#/$defs/macroConstant" } }
       }
     },
-    "primitiveAbiSha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+    "primitiveAbiSha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "aggregateAbiModel": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schemaVersion", "records"],
+      "properties": {
+        "schemaVersion": { "const": 1 },
+        "records": { "type": "array", "items": { "$ref": "#/$defs/aggregate" } }
+      }
+    },
+    "aggregateAbiSha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
   },
   "$defs": {
     "source": {
@@ -320,6 +338,59 @@
         "haxeType": { "type": "string", "minLength": 1 },
         "value": { "type": "string", "pattern": "^-?[0-9]+$" },
         "provenance": { "const": "configured-header-closure" }
+      }
+    },
+    "aggregateFieldType": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "spelling", "canonicalSpelling"],
+      "properties": {
+        "kind": { "const": "declared" },
+        "spelling": { "type": "string", "minLength": 1 },
+        "canonicalSpelling": { "type": "string", "minLength": 1 }
+      }
+    },
+    "aggregateField": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["nativeName", "ordinal", "bitOffset", "bitWidth", "zeroWidthBitfield", "anonymous", "flexibleArray", "type"],
+      "properties": {
+        "nativeName": { "type": ["string", "null"] },
+        "ordinal": { "type": "integer", "minimum": 0 },
+        "bitOffset": { "type": "integer", "minimum": 0 },
+        "bitWidth": { "type": ["integer", "null"], "minimum": 0 },
+        "zeroWidthBitfield": { "type": "boolean" },
+        "anonymous": { "type": "boolean" },
+        "flexibleArray": { "type": "boolean" },
+        "type": { "$ref": "#/$defs/aggregateFieldType" }
+      }
+    },
+    "aggregateLayout": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sizeBits", "dataSizeBits", "alignmentBits", "packed", "requestedAlignmentBits"],
+      "properties": {
+        "sizeBits": { "type": "integer", "minimum": 0 },
+        "dataSizeBits": { "type": ["integer", "null"], "minimum": 0 },
+        "alignmentBits": { "type": "integer", "minimum": 1 },
+        "packed": { "type": "boolean" },
+        "requestedAlignmentBits": { "type": ["integer", "null"], "minimum": 1 }
+      }
+    },
+    "aggregate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["stableName", "nativeTag", "nativeTypedef", "source", "kind", "complete", "opaque", "layout", "fields"],
+      "properties": {
+        "stableName": { "type": "string", "minLength": 1 },
+        "nativeTag": { "type": ["string", "null"] },
+        "nativeTypedef": { "type": ["string", "null"] },
+        "source": { "$ref": "#/$defs/source" },
+        "kind": { "enum": ["struct", "union"] },
+        "complete": { "type": "boolean" },
+        "opaque": { "type": "boolean" },
+        "layout": { "oneOf": [{ "$ref": "#/$defs/aggregateLayout" }, { "type": "null" }] },
+        "fields": { "type": "array", "items": { "$ref": "#/$defs/aggregateField" } }
       }
     }
   }

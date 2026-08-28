@@ -752,7 +752,7 @@ def validate(root: Path, manifest: Manifest) -> list[str]:
     for required_prd_text in (
         "docs/specs/bootstrap-inventory.json",
         "Implemented | Scaffold-only | Experimental | Unsupported",
-        "The schema-1 router implements help, version, stable exits and JSON framing, manifest-backed inspection, and schema-3 Clang semantic/primitive-ABI lock capture.",
+        "The schema-1 router implements help, version, stable exits and JSON framing, manifest-backed inspection, and schema-4 Clang semantic/ABI lock capture.",
     ):
         if required_prd_text not in prd:
             errors.append(f"docs/PRD.md lost capability contract: {required_prd_text}")

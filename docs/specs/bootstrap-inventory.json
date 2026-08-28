@@ -147,20 +147,24 @@
       "area": "interop",
       "status": "experimental",
       "disposition": "opt-in",
-      "summary": "The hxc bindgen command captures a deterministic configured semantic lock from Clang AST JSON.",
-      "scope": "The generic stage records ordered entry roots, C/C++ mode, sysroot, target, normalized definitions/includes with provenance, exact Clang identity and arguments, transitive input hashes, canonical semantic declarations, and source-positioned parse failures.",
+      "summary": "The hxc bindgen command captures deterministic declarations and target ABI facts from Clang.",
+      "scope": "The generic stage records ordered entry roots, C/C++ mode, sysroot, target, normalized definitions/includes with provenance, exact Clang identity and arguments, transitive input hashes, canonical semantic declarations, primitive facts, and exact struct/union layouts. Complete aggregates include size, alignment, field offsets, bitfields, anonymous members, flexible arrays, and packing. Incomplete declarations remain opaque.",
       "evidence": [
         "src/hxc/bindgen/HxcBindgenDriver.hx",
+        "src/hxc/bindgen/HxcBindgenAbiModel.hx",
+        "src/hxc/bindgen/HxcBindgenAggregateModel.hx",
         "schemas/hxc-bindings-lock.schema.json",
         "docs/hxc-cli.md",
         "test/hxc_bindgen/run.py"
       ],
       "owners": [
         "E6.T01",
-        "E6.T02"
+        "E6.T02",
+        "E6.T03",
+        "E6.T04"
       ],
       "limitations": [
-        "This stage does not yet generate Haxe externs, interpret target layouts, apply ownership mappings, or publish ABI probes and drift reports.",
+        "This stage does not yet generate Haxe externs, map functions or callbacks, apply ownership mappings, or publish drift reports.",
         "C++ shims and the complete bindgen workflow remain unsupported."
       ]
     },
@@ -583,25 +587,27 @@
       "area": "cli",
       "status": "implemented",
       "disposition": "available",
-      "summary": "The Eval bootstrap exposes stable command routing, help/version behavior, exit categories, schema-1 JSON framing, inspection, and schema-3 Clang semantic and primitive-ABI lock capture.",
-      "scope": "The router recognizes the planned command vocabulary and delegates inspection and bindgen through typed command owners. Bindgen records exact preprocessing inputs, a canonical Clang AST, target-measured scalar carriers, structural qualified typedefs, enum storage and values, and eligible Clang-evaluated integer macros. Direct Haxe/HXML remains the authoritative compiler path.",
+      "summary": "The Eval bootstrap exposes stable command routing, help/version behavior, exit categories, schema-1 JSON framing, inspection, and schema-4 Clang semantic and ABI lock capture.",
+      "scope": "The router recognizes the planned command vocabulary and delegates inspection and bindgen through typed command owners. Bindgen records exact preprocessing inputs, a canonical Clang AST, primitive facts, and target-measured aggregate layouts. Direct Haxe/HXML remains the authoritative compiler path.",
       "evidence": [
         "src/Run.hx",
         "src/hxc/cli/HxcCli.hx",
         "src/hxc/cli/HxcProductExecutor.hx",
         "src/hxc/bindgen/HxcBindgenAbiModel.hx",
+        "src/hxc/bindgen/HxcBindgenAggregateModel.hx",
         "docs/hxc-cli.md",
         "schemas/hxc-cli-response.schema.json",
         "test/hxc_cli/run.py"
       ],
       "owners": [
         "E8.T02",
-        "E6.T03"
+        "E6.T03",
+        "E6.T04"
       ],
       "limitations": [
         "Build, run, test, clean, doctor, export, templates, and a packaged native executable remain owned by later E8 tasks; recognized unfinished commands fail with the unavailable exit category.",
-        "Aggregate and function mapping, raw Haxe module-file emission, wrappers, and drift workflows remain owned by later E6 tasks.",
-        "Bindgen currently stops at a Clang semantic lock; later E6 tasks own generated externs, layout mapping, wrappers, ABI probes, and drift workflows.",
+        "Function mapping, raw Haxe module-file emission, wrappers, and drift workflows remain owned by later E6 tasks.",
+        "Bindgen currently stops at a semantic and ABI lock; later E6 tasks own generated externs, wrappers, and drift workflows.",
         "Repository Python validation scripts are developer tooling and are not hxc command implementations."
       ]
     },
