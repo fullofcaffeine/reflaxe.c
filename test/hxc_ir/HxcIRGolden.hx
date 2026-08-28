@@ -51,6 +51,9 @@ class HxcIRGolden {
 		requireInvalidMarker(dynamicContractWrongFailureProgram(), "requires a result-error edge", "Dynamic failure kind");
 		requireInvalidMarker(dynamicContractManagedGlobalProgram(), "require a general global-root plan", "managed Dynamic global");
 		requireInvalidMarker(genericDynamicConversionProgram(), "require dedicated plan-owned instructions", "generic Dynamic conversion");
+		requireInvalidMarker(containedExceptionWithoutRegionProgram(), "requires an explicit region or unwind terminator",
+			"contained exception without an owner");
+		requireInvalidMarker(unknownExceptionRegionProgram(), "unknown region", "unknown exception frame operation");
 		validator.requireValid(nativeConstantAggregateProgram(), PROFILE);
 		validator.requireValid(borrowedClassAliasProgram(), PROFILE);
 		validator.requireValid(borrowedClassOwnedFieldReleaseProgram(), PROFILE);
@@ -3855,8 +3858,26 @@ class HxcIRGolden {
 		return program;
 	}
 
+	/** Reject a runtime strategy that owns neither a handler frame nor an unwind. */
+	static function containedExceptionWithoutRegionProgram():HxcIRProgram {
+		final file = "test/hxc_ir/fixtures/InvalidContainedException.hx";
+		return minimalProgram("fixture.InvalidContainedException", [], terminator(IRTReturn(null, []), file, 2), [], [], file, null, null,
+			IRESContainedRuntime);
+	}
+
+	/** Reject an exception operation whose frame is absent from function metadata. */
+	static function unknownExceptionRegionProgram():HxcIRProgram {
+		final file = "test/hxc_ir/fixtures/UnknownExceptionRegion.hx";
+		return minimalProgram("fixture.UnknownExceptionRegion", [
+			instruction("exception.push", null, IRIOException(IREFramePush("exception.region.missing")), file, 2)
+		], terminator(IRTReturn(null, []), file, 3), [], [], file, null, null,
+			IRESContainedRuntime);
+	}
+
 	static function minimalProgram(moduleId:String, instructions:Array<HxcIRInstruction>, terminatorValue:Null<HxcIRTerminator>, locals:Array<HxcIRLocal>,
-			regions:Array<HxcIRCleanupRegion>, file:String, ?returnType:HxcIRTypeRef, ?failureConvention:HxcIRFunctionFailureConvention):HxcIRProgram {
+			regions:Array<HxcIRCleanupRegion>, file:String, ?returnType:HxcIRTypeRef, ?failureConvention:HxcIRFunctionFailureConvention,
+			?exceptionStrategy:HxcIRExceptionStrategy, ?exceptionRegions:Array<HxcIRExceptionRegion>,
+			?exceptionCleanups:Array<HxcIRExceptionCleanup>):HxcIRProgram {
 		final functionReturnType = returnType == null ? IRTVoid : returnType;
 		final functionFailureConvention = failureConvention == null ? IRFCInfallible : failureConvention;
 		return {
@@ -3880,6 +3901,9 @@ class HxcIRGolden {
 							mutableAggregateBorrowLocalIds: [],
 							managedRoots: [],
 							locals: locals,
+							exceptionStrategy: exceptionStrategy,
+							exceptionRegions: exceptionRegions == null ? [] : exceptionRegions,
+							exceptionCleanups: exceptionCleanups == null ? [] : exceptionCleanups,
 							returnType: functionReturnType,
 							failureConvention: functionFailureConvention,
 							entryBlockId: "entry",

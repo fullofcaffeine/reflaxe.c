@@ -129,9 +129,12 @@ enum CBodyControlFlowNode {
 	CFNTagSwitch(blockId:String, valueId:String, arms:Array<CBodyControlFlowSwitchArm>, proof:CBodySwitchProof);
 }
 
-/** The only two admitted whole-function control-flow policies. */
+/** The admitted whole-function control-flow policies. */
 enum CBodyControlFlowPlan {
 	CCFStructured(root:CBodyControlFlowRegion, deferredBreakTargets:Array<String>);
+
+	/** A validated graph whose explicit exception continuations require labels. */
+	CCFExceptionContinuations(exceptionTargets:Array<String>);
 
 	/** A validated but genuinely irreducible graph retains the legacy CFG form. */
 	CCFLegacyIrreducible(entryBlockIds:Array<String>);
@@ -237,6 +240,10 @@ class CBodyControlFlowPlanner {
 		#if (macro || reflaxe_runtime)
 		CPhaseTiming.stopDetail(analysisTimer);
 		#end
+		final exceptionTargets = analysis.exceptionContinuationTargets();
+		if (exceptionTargets.length > 0) {
+			return new CBodyControlFlowPlanningResult(CCFExceptionContinuations(exceptionTargets), analysis.workReport());
+		}
 		if (analysis.irreducibleEntries.length > 0) {
 			return new CBodyControlFlowPlanningResult(CCFLegacyIrreducible(analysis.irreducibleEntries), analysis.workReport());
 		}
@@ -991,6 +998,15 @@ private class CBodyControlFlowPlanValidator {
 
 	public function requireValid(plan:CBodyControlFlowPlan):Void {
 		switch plan {
+			case CCFExceptionContinuations(targets):
+				final expected = analysis.exceptionContinuationTargets();
+				if (expected.length == 0)
+					fail('exception control-flow fallback for `${fn.id}` has no exception continuation');
+				if (targets.length != expected.length)
+					fail('exception control-flow fallback for `${fn.id}` has an incomplete target proof');
+				for (index in 0...targets.length)
+					if (targets[index] != expected[index])
+						fail('exception control-flow fallback for `${fn.id}` has invalid target `${targets[index]}`');
 			case CCFLegacyIrreducible(entries):
 				if (analysis.irreducibleEntries.length == 0)
 					fail('legacy control-flow fallback for reducible function `${fn.id}` is not admitted');
@@ -1540,13 +1556,26 @@ private class CBodyControlFlowAnalysis {
 						requirePlainEdge(defaultEdge, blockId);
 				case IRTThrow(_, failure):
 					switch failure.target {
-						case IRFTBlock(target):
-							fail('control-flow planning for `${fn.id}` does not yet admit throw-to-block edge `$blockId` -> `$target`');
-						case IRFTPropagate | IRFTAbort:
+						case IRFTBlock(_):
+						case IRFTPropagate | IRFTUnwind | IRFTAbort:
 					}
 				case IRTReturn(_, _) | IRTUnreachable:
 			}
 		}
+	}
+
+	/** Return every validated exception continuation in stable block order. */
+	public function exceptionContinuationTargets():Array<String> {
+		final found:Map<String, Bool> = [];
+		for (block in fn.blocks) {
+			if (block.terminator != null)
+				switch block.terminator.kind {
+					case IRTThrow(_, {target: IRFTBlock(target)}):
+						found.set(target, true);
+					case _:
+				}
+		}
+		return [for (block in orderedReachable) if (found.exists(block)) block];
 	}
 
 	function requireAdmittedInstructionFailure(block:HxcIRBlock, instruction:HxcIRInstruction):Void {
@@ -1560,7 +1589,7 @@ private class CBodyControlFlowAnalysis {
 		switch failure.target {
 			case IRFTBlock(targetBlockId):
 				fail('control-flow planning for `${fn.id}` does not yet admit instruction failure edge `${block.id}`/`${instruction.id}` -> `$targetBlockId`');
-			case IRFTPropagate | IRFTAbort:
+			case IRFTPropagate | IRFTUnwind | IRFTAbort:
 		}
 	}
 
@@ -1616,7 +1645,7 @@ private class CBodyControlFlowAnalysis {
 			case IRTThrow(_, failure):
 				switch failure.target {
 					case IRFTBlock(target): add(target);
-					case IRFTPropagate | IRFTAbort:
+					case IRFTPropagate | IRFTUnwind | IRFTAbort:
 				}
 			case IRTReturn(_, _) | IRTUnreachable:
 		}

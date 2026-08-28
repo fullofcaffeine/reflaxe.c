@@ -31,6 +31,8 @@ class RuntimeAbiContract {
 		"hxc_byte_view",
 		"hxc_bytes_ref",
 		"hxc_dynamic_type",
+		"hxc_exception_cleanup",
+		"hxc_exception_frame",
 		"hxc_gc",
 		"hxc_gc_allocation",
 		"hxc_gc_config",

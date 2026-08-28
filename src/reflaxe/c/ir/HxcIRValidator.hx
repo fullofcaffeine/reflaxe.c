@@ -1399,6 +1399,8 @@ private class HxcIRValidationState {
 			}
 		}
 		validateCleanupRegions(fn, path, locals, blocks, regions);
+		final exceptionRegions = validateExceptionRegions(fn, path);
+		final exceptionCleanups = validateExceptionCleanups(fn, path, locals, regions);
 		for (local in fn.locals) {
 			switch local.storage {
 				case IRLSRegion(regionId) if (!regions.exists(regionId)):
@@ -1409,7 +1411,164 @@ private class HxcIRValidationState {
 
 		final dominanceProofs = buildDominanceProofs(fn);
 		for (block in sorted(fn.blocks, item -> item.id)) {
-			validateBlock(fn, block, '$path.block:${block.id}', locals, borrowedLocalIds, blocks, regions, instructionSites, valueSites, dominanceProofs);
+			validateBlock(fn, block, '$path.block:${block.id}', locals, borrowedLocalIds, blocks, regions, exceptionRegions, exceptionCleanups,
+				instructionSites, valueSites, dominanceProofs);
+		}
+		validateExceptionProtocol(fn, path, exceptionRegions, exceptionCleanups);
+	}
+
+	/**
+		Validate the function-wide exception strategy and index its runtime frames.
+
+		Closed result lowering needs no hidden frame storage. Contained runtime
+		lowering, by contrast, must name every frame explicitly so later validation
+		and C emission agree about which `setjmp` owns each payload.
+	**/
+	function validateExceptionRegions(fn:HxcIRFunction, path:String):Map<String, HxcIRExceptionRegion> {
+		final result:Map<String, HxcIRExceptionRegion> = [];
+		final storageIds:Map<String, Bool> = [];
+		final regions = fn.exceptionRegions == null ? [] : fn.exceptionRegions;
+		final cleanups = fn.exceptionCleanups == null ? [] : fn.exceptionCleanups;
+		switch fn.exceptionStrategy {
+			case null:
+				if (regions.length > 0 || cleanups.length > 0)
+					add('$path.exceptionStrategy', "exception metadata requires an explicit function strategy", fn.source);
+			case IRESClosedResult:
+				if (regions.length > 0 || cleanups.length > 0)
+					add('$path.exceptionStrategy', "closed result lowering cannot carry contained-runtime frame or cleanup metadata", fn.source);
+			case IRESContainedRuntime:
+				if (regions.length == 0 && !functionHasRuntimeUnwind(fn))
+					add('$path.exceptionStrategy', "contained runtime lowering requires an explicit region or unwind terminator", fn.source);
+		}
+		for (index => region in regions) {
+			final regionPath = '$path.exceptionRegion:$index:${region.id}';
+			validateStableId(region.id, '$regionPath.id', region.source);
+			validateStableId(region.frameStorageId, '$regionPath.frameStorageId', region.source);
+			validateStableId(region.payloadValueId, '$regionPath.payloadValueId', region.source);
+			validateSpan(region.source, '$regionPath.source');
+			if (result.exists(region.id))
+				add(regionPath, 'duplicate exception region ID `${region.id}`', region.source);
+			else
+				result.set(region.id, region);
+			if (storageIds.exists(region.frameStorageId))
+				add(regionPath, 'duplicate exception frame storage ID `${region.frameStorageId}`', region.source);
+			else
+				storageIds.set(region.frameStorageId, true);
+		}
+		return result;
+	}
+
+	static function functionHasRuntimeUnwind(fn:HxcIRFunction):Bool {
+		for (block in fn.blocks)
+			if (block.terminator != null)
+				switch block.terminator.kind {
+					case IRTThrow(_, {target: IRFTUnwind}):
+						return true;
+					case _:
+				}
+		return false;
+	}
+
+	/** Pair each runtime cleanup record with one existing semantic release action. */
+	function validateExceptionCleanups(fn:HxcIRFunction, path:String, locals:Map<String, HxcIRLocal>,
+			regions:Map<String, HxcIRCleanupRegion>):Map<String, HxcIRExceptionCleanup> {
+		final result:Map<String, HxcIRExceptionCleanup> = [];
+		final storageIds:Map<String, Bool> = [];
+		final exceptionRegions = fn.exceptionRegions == null ? [] : fn.exceptionRegions;
+		for (region in exceptionRegions)
+			storageIds.set(region.frameStorageId, true);
+		final cleanups = fn.exceptionCleanups == null ? [] : fn.exceptionCleanups;
+		for (index => cleanup in cleanups) {
+			final cleanupPath = '$path.exceptionCleanup:$index:${cleanup.id}';
+			validateStableId(cleanup.id, '$cleanupPath.id', cleanup.source);
+			validateStableId(cleanup.storageId, '$cleanupPath.storageId', cleanup.source);
+			validateStableId(cleanup.actionId, '$cleanupPath.actionId', cleanup.source);
+			validateSpan(cleanup.source, '$cleanupPath.source');
+			validateStableCleanupPlace(cleanup.place, cleanupPath, cleanup.source, locals);
+			validateImplementation(cleanup.implementation, '$cleanupPath.implementation', cleanup.source);
+			if (result.exists(cleanup.id))
+				add(cleanupPath, 'duplicate exception cleanup ID `${cleanup.id}`', cleanup.source);
+			else
+				result.set(cleanup.id, cleanup);
+			if (storageIds.exists(cleanup.storageId))
+				add(cleanupPath, 'duplicate exception frame or cleanup storage ID `${cleanup.storageId}`', cleanup.source);
+			else
+				storageIds.set(cleanup.storageId, true);
+
+			var matched = false;
+			for (region in regions)
+				for (action in region.actions)
+					if (action.id == cleanup.actionId)
+						switch action.kind {
+							case IRCARelease(place, implementation)
+								if (placeKey(place) == placeKey(cleanup.place)
+									&& implementationKey(implementation) == implementationKey(cleanup.implementation)):
+								matched = true;
+							case _:
+						}
+			if (!matched)
+				add(cleanupPath, 'exception cleanup `${cleanup.id}` has no matching semantic release action `${cleanup.actionId}`', cleanup.source);
+		}
+		return result;
+	}
+
+	/** Make every declared runtime frame and cleanup observable in semantic IR. */
+	function validateExceptionProtocol(fn:HxcIRFunction, path:String, regions:Map<String, HxcIRExceptionRegion>,
+			cleanups:Map<String, HxcIRExceptionCleanup>):Void {
+		final framePushes:Map<String, Int> = [];
+		final frameSetjmps:Map<String, Int> = [];
+		final framePayloads:Map<String, Int> = [];
+		final framePops:Map<String, Int> = [];
+		final cleanupPushes:Map<String, Int> = [];
+		final cleanupCompletions:Map<String, Int> = [];
+		final unwindActions:Map<String, Bool> = [];
+		var operationCount = 0;
+		function increment(counts:Map<String, Int>, id:String):Void {
+			final count = counts.get(id);
+			counts.set(id, count == null ? 1 : count + 1);
+		}
+		for (block in fn.blocks)
+			for (instruction in block.instructions)
+				switch instruction.kind {
+					case IRIOException(operation):
+						operationCount++;
+						switch operation {
+							case IREFramePush(id): increment(framePushes, id);
+							case IREFrameSetJmp(id): increment(frameSetjmps, id);
+							case IREFramePayload(id): increment(framePayloads, id);
+							case IREFramePop(id): increment(framePops, id);
+							case IRECleanupPush(id): increment(cleanupPushes, id);
+							case IRECleanupRun(id) | IRECleanupDiscard(id): increment(cleanupCompletions, id);
+						}
+					case _:
+				}
+		for (block in fn.blocks)
+			if (block.terminator != null)
+				switch block.terminator.kind {
+					case IRTThrow(_, {target: IRFTUnwind, cleanup: steps}):
+						for (step in steps)
+							unwindActions.set(step.actionId, true);
+					case _:
+				}
+		if (operationCount > 0 && fn.exceptionStrategy != IRESContainedRuntime)
+			add('$path.exceptionStrategy', "exception operations require the contained-runtime strategy", fn.source);
+		for (id => region in regions) {
+			if (framePushes.get(id) != 1)
+				add('$path.exceptionRegion:$id', 'exception region `$id` requires exactly one frame push', region.source);
+			if (frameSetjmps.get(id) != 1)
+				add('$path.exceptionRegion:$id', 'exception region `$id` requires exactly one setjmp', region.source);
+			if (framePayloads.get(id) != 1)
+				add('$path.exceptionRegion:$id', 'exception region `$id` requires exactly one payload take', region.source);
+			final popCount = framePops.get(id);
+			if (popCount == null || popCount == 0)
+				add('$path.exceptionRegion:$id', 'exception region `$id` requires at least one frame pop', region.source);
+		}
+		for (id => cleanup in cleanups) {
+			if (cleanupPushes.get(id) != 1)
+				add('$path.exceptionCleanup:$id', 'exception cleanup `$id` requires exactly one push', cleanup.source);
+			final completionCount = cleanupCompletions.get(id);
+			if ((completionCount == null || completionCount == 0) && !unwindActions.exists(cleanup.actionId))
+				add('$path.exceptionCleanup:$id', 'exception cleanup `$id` requires a normal run or ownership-transfer discard', cleanup.source);
 		}
 	}
 
@@ -1696,6 +1855,7 @@ private class HxcIRValidationState {
 			case IRIOInitializeSpan(place, sourceArray, _, _): placeValueUses(place).concat(placeValueUses(sourceArray));
 			case IRIOBoundsCheck(collection, indexValueId, _): placeValueUses(collection).concat([indexValueId]);
 			case IRIODynamic(operation): dynamicInstructionValueUses(operation);
+			case IRIOException(_): [];
 			case IRIOCall(_): [];
 		};
 	}
@@ -2146,7 +2306,8 @@ private class HxcIRValidationState {
 	}
 
 	function validateBlock(fn:HxcIRFunction, block:HxcIRBlock, path:String, locals:Map<String, HxcIRLocal>, borrowedReferenceLocals:Map<String, Bool>,
-			blocks:Map<String, HxcIRBlock>, regions:Map<String, HxcIRCleanupRegion>, instructionSites:Map<String, HxcIRInstructionSite>,
+			blocks:Map<String, HxcIRBlock>, regions:Map<String, HxcIRCleanupRegion>, exceptionRegions:Map<String, HxcIRExceptionRegion>,
+			exceptionCleanups:Map<String, HxcIRExceptionCleanup>, instructionSites:Map<String, HxcIRInstructionSite>,
 			valueSites:Map<String, HxcIRInstructionSite>, dominanceProofs:HxcIRDominanceProofs):Void {
 		final available:Map<String, HxcIRTypeRef> = [];
 		final borrowedReferenceValues:Map<String, Bool> = [];
@@ -2191,8 +2352,8 @@ private class HxcIRValidationState {
 		}
 		for (index => instruction in block.instructions) {
 			final instructionPath = '$path.instruction:$index:${instruction.id}';
-			validateInstruction(instruction, instructionPath, block, available, locals, blocks, regions, instructionSites, valueSites, boundsProofs,
-				nullProofs, dominanceProofs);
+			validateInstruction(instruction, instructionPath, block, available, locals, blocks, regions, exceptionRegions, exceptionCleanups,
+				instructionSites, valueSites, boundsProofs, nullProofs, dominanceProofs);
 			validateBorrowedReferenceInstruction(instruction, instructionPath, available, locals, borrowedReferenceValues, borrowedReferenceLocals);
 			validateBorrowedSpanInstruction(instruction, instructionPath, available, locals, returnedSpanValues);
 			if (instruction.result != null) {
@@ -2292,6 +2453,7 @@ private class HxcIRValidationState {
 							reject(valueId, "a Dynamic failure edge");
 					case IRDEqual(_, _, _):
 				}
+			case IRIOException(_):
 			case IRIOSequence(_) | IRIOConstant(_) | IRIOFunctionReference(_) | IRIOLoad(_) | IRIOAddress(_) | IRIOBorrowClassField(_) | IRIOBorrowSpan(_) |
 				IRIOUnary(_, _, _) | IRIOBinary(_, _, _, _) | IRIOConvert(_, _, _, _, _) | IRIOProject(_, _) | IRIOMatchTag(_, _) |
 				IRIOProjectTag(_, _, _, _) | IRIOAllocate(_, _, _, _) | IRIODeallocate(_, _) | IRIORetain(_, _) | IRIORelease(_, _) | IRIOTrace(_, _) |
@@ -2412,6 +2574,7 @@ private class HxcIRValidationState {
 						rejectValues(failure.arguments, "a Dynamic failure-edge argument");
 					case IRDEqual(_, _, _):
 				}
+			case IRIOException(_):
 			case IRIODeallocate(place, _) | IRIORetain(place, _) | IRIORelease(place, _) | IRIOTrace(place, _):
 				if (placeUsesBorrowedReference(place, borrowed) && !placeOwnsFieldBelowBorrowedReference(place, borrowed))
 					add(path, "borrowed reference storage cannot be deallocated, retained, or traced as owned storage", instruction.source);
@@ -2660,6 +2823,7 @@ private class HxcIRValidationState {
 
 	function validateInstruction(instruction:HxcIRInstruction, path:String, block:HxcIRBlock, available:Map<String, HxcIRTypeRef>,
 			locals:Map<String, HxcIRLocal>, blocks:Map<String, HxcIRBlock>, regions:Map<String, HxcIRCleanupRegion>,
+			exceptionRegions:Map<String, HxcIRExceptionRegion>, exceptionCleanups:Map<String, HxcIRExceptionCleanup>,
 			instructionSites:Map<String, HxcIRInstructionSite>, valueSites:Map<String, HxcIRInstructionSite>, boundsProofs:Map<String, Bool>,
 			nullProofs:Map<String, Bool>, dominanceProofs:HxcIRDominanceProofs):Void {
 		final resultExpected = instructionProducesValue(instruction.kind);
@@ -2905,6 +3069,8 @@ private class HxcIRValidationState {
 				}
 			case IRIODynamic(operation):
 				validateDynamicInstruction(instruction, operation, path, available, blocks, regions);
+			case IRIOException(operation):
+				validateExceptionInstruction(instruction, operation, path, exceptionRegions, exceptionCleanups);
 			case IRIOCall(call):
 				validateCall(call, path, instruction.source, available, blocks, regions, nullProofs);
 				if (instruction.result != null && typeKey(instruction.result.type) != typeKey(call.returnType)) {
@@ -3580,13 +3746,42 @@ private class HxcIRValidationState {
 				IRIOConstructInterface(_, _, _) | IRIOUpcastInterface(_, _, _, _) | IRIOProject(_, _) | IRIOConstructTag(_, _, _) | IRIOMatchTag(_, _) |
 				IRIOProjectTag(_, _, _, _) | IRIOAllocate(_, _, _, _) | IRIOMoveManagedCarrier(_) | IRIODynamic(_):
 				true;
+			case IRIOException(IREFrameSetJmp(_) | IREFramePayload(_)):
+				true;
 			case IRIOCall(call):
 				call.returnType != IRTVoid;
 			case IRIOSequence(_) | IRIOStore(_, _) | IRIODeallocate(_, _) | IRIORetain(_, _) | IRIORelease(_, _) | IRIOTrace(_, _) |
 				IRIODeclareUninitialized(_) | IRIODeclareManagedCarrier(_, _) | IRIOAcquireManagedCarrier(_, _, _) | IRIODefaultInitialize(_, _, _) |
 				IRIOInitialize(_, _, _, _) | IRIOInitializeFixedArray(_, _, _, _) | IRIOZeroInitializeFixedArray(_, _, _) | IRIOInitializeSpan(_, _, _, _) |
-				IRIOBindVirtualTable(_, _) | IRIOBoundsCheck(_, _, _) | IRIONullCheck(_, _) | IRIOLifetime(_, _, _, _):
+				IRIOBindVirtualTable(_, _) | IRIOBoundsCheck(_, _, _) | IRIONullCheck(_, _) | IRIOLifetime(_, _, _, _) |
+				IRIOException(IREFramePush(_) | IREFramePop(_) | IRECleanupPush(_) | IRECleanupRun(_) | IRECleanupDiscard(_)):
 				false;
+		}
+	}
+
+	/** Validate one contained-runtime operation without inferring C storage. */
+	function validateExceptionInstruction(instruction:HxcIRInstruction, operation:HxcIRExceptionInstruction, path:String,
+			exceptionRegions:Map<String, HxcIRExceptionRegion>, exceptionCleanups:Map<String, HxcIRExceptionCleanup>):Void {
+		switch operation {
+			case IREFramePush(regionId) | IREFramePop(regionId):
+				if (!exceptionRegions.exists(regionId))
+					add(path, 'exception operation names unknown region `$regionId`', instruction.source);
+			case IREFrameSetJmp(regionId):
+				if (!exceptionRegions.exists(regionId))
+					add(path, 'exception setjmp names unknown region `$regionId`', instruction.source);
+				if (instruction.result != null && instruction.result.type != IRTBool)
+					add(path, "exception setjmp result must have Bool type", instruction.source);
+			case IREFramePayload(regionId):
+				final region = exceptionRegions.get(regionId);
+				if (region == null)
+					add(path, 'exception payload names unknown region `$regionId`', instruction.source);
+				else if (instruction.result != null && instruction.result.id != region.payloadValueId)
+					add(path, 'exception payload result must be `${region.payloadValueId}`', instruction.source);
+				if (instruction.result != null && instruction.result.type != IRTDynamic)
+					add(path, "exception payload result must have Dynamic type", instruction.source);
+			case IRECleanupPush(cleanupId) | IRECleanupRun(cleanupId) | IRECleanupDiscard(cleanupId):
+				if (!exceptionCleanups.exists(cleanupId))
+					add(path, 'exception cleanup operation names unknown cleanup `$cleanupId`', instruction.source);
 		}
 	}
 
@@ -4722,7 +4917,7 @@ private class HxcIRValidationState {
 				}
 				validateCleanupPath(cleanup, '$path.cleanup', source, regions);
 			case IRTThrow(valueId, edge):
-				requireValue(valueId, '$path.value', source, available);
+				final thrownType = requireValue(valueId, '$path.value', source, available);
 				validateFailureEdge(edge, '$path.failure', source, available, blocks, regions);
 				if (edge.kind != IRFException) {
 					add(path, "throw terminator must use an exception failure edge", source);
@@ -4734,6 +4929,17 @@ private class HxcIRValidationState {
 							case _:
 								add(path, "throw propagation requires a matching function status convention", source);
 						}
+					case IRFTUnwind:
+						if (thrownType != IRTDynamic)
+							add(path, "contained runtime unwind requires a Dynamic payload", source);
+						if (fn.exceptionStrategy != IRESContainedRuntime)
+							add(path, "contained runtime unwind requires the contained-runtime function strategy", source);
+						if (edge.arguments.length > 0)
+							add(path, "contained runtime unwind cannot carry block arguments", source);
+						final exceptionCleanups = fn.exceptionCleanups == null ? [] : fn.exceptionCleanups;
+						for (step in edge.cleanup)
+							if (!Lambda.exists(exceptionCleanups, cleanup -> cleanup.actionId == step.actionId))
+								add(path, 'unwind cleanup action `${step.actionId}` has no runtime cleanup registration', source);
 					case IRFTBlock(_) | IRFTAbort:
 				}
 			case IRTUnreachable:
@@ -4761,7 +4967,7 @@ private class HxcIRValidationState {
 				} else {
 					validateEdgeArguments(edge.arguments, target.parameters, path, source, available);
 				}
-			case IRFTPropagate | IRFTAbort:
+			case IRFTPropagate | IRFTUnwind | IRFTAbort:
 				if (edge.arguments.length > 0) {
 					add(path, "propagate/abort failure edge cannot carry block arguments", source);
 				}
@@ -5469,7 +5675,7 @@ private class HxcIRValidationState {
 			case IRIOInitializeSpan(place, sourceArray, _, _): placeContainsLocal(place, localId) || placeContainsLocal(sourceArray, localId);
 			case IRIOBorrowSpan(sourceArray): placeContainsLocal(sourceArray, localId);
 			case IRIOSequence(_) | IRIOConstant(_) | IRIOFunctionReference(_) | IRIOUnary(_, _, _) | IRIOBinary(_, _, _, _) | IRIOConvert(_, _, _, _, _) |
-				IRIODynamic(_) | IRIOCall(_) | IRIOConstructAggregate(_, _) | IRIOZeroAggregate(_) | IRIOConstructInterface(_, _, _) |
+				IRIODynamic(_) | IRIOException(_) | IRIOCall(_) | IRIOConstructAggregate(_, _) | IRIOZeroAggregate(_) | IRIOConstructInterface(_, _, _) |
 				IRIOUpcastInterface(_, _, _, _) | IRIOProject(_, _) | IRIOConstructTag(_, _, _) | IRIOMatchTag(_, _) | IRIOProjectTag(_, _, _, _) |
 				IRIOAllocate(_, _, _, _) | IRIONullCheck(_, _):
 				false;
@@ -5480,6 +5686,23 @@ private class HxcIRValidationState {
 			case IRPLocal(value): value == localId;
 			case IRPField(base, _) | IRPIndex(base, _): placeContainsLocal(base, localId);
 			case IRPGlobal(_) | IRPDereference(_): false;
+		};
+
+	/** Stable structural keys used only to pair exception records with cleanup actions. */
+	static function placeKey(place:HxcIRPlace):String
+		return switch place {
+			case IRPLocal(id): 'local:$id';
+			case IRPGlobal(id): 'global:$id';
+			case IRPDereference(id): 'deref:$id';
+			case IRPField(base, field): 'field:${placeKey(base)}:$field';
+			case IRPIndex(base, index): 'index:${placeKey(base)}:$index';
+		};
+
+	static function implementationKey(implementation:HxcIRImplementation):String
+		return switch implementation {
+			case IRIStatic: "static";
+			case IRIProgramLocal(id): 'program:$id';
+			case IRIRuntime(id): 'runtime:$id';
 		};
 
 	/** True when an instance can live directly inside `{ has_value, value }`. */

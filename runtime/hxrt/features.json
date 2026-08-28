@@ -11,11 +11,6 @@
       "ownerTask": "E5.T08"
     },
     {
-      "id": "exception",
-      "summary": "Contained general exception frames after result lowering is ineligible.",
-      "ownerTask": "E4.T09"
-    },
-    {
       "id": "export-error",
       "summary": "Thread-safe exported status and error-detail boundary.",
       "ownerTask": "E7.T04"
@@ -207,6 +202,7 @@
         "hxc_array_ref_pop_move",
         "hxc_array_ref_push_copy",
         "hxc_array_ref_release",
+        "hxc_array_ref_release_slot",
         "hxc_array_ref_resize_default",
         "hxc_array_ref_retain",
         "hxc_array_ref_set_copy",
@@ -224,13 +220,13 @@
       ],
       "artifacts": [
         {
-          "sourceSha256": "32782a39200bd43c463e566b546dea0a45de4feb39e8e287f2c48351dcb9c41f",
+          "sourceSha256": "b647fc5be70b1ddca8c0da723732cacf5d52ac43f061671ab4483ab8a677d96b",
           "kind": "runtime-header",
           "outputPath": "runtime/include/hxrt/array.h",
           "sourcePath": "runtime/hxrt/include/hxrt/array.h"
         },
         {
-          "sourceSha256": "2f93e4b34ea5fc3574b1b8be795e65dc8dfcd025f05403110a1c22363610cf17",
+          "sourceSha256": "c5fec3dcf78ed27dcd38219efec8289dd38a23eeef352785396bde64fa99c98a",
           "kind": "runtime-source",
           "outputPath": "runtime/src/array.c",
           "sourcePath": "runtime/hxrt/src/array.c"
@@ -339,19 +335,20 @@
         "hxc_bytes_ref_is_valid",
         "hxc_bytes_ref_length",
         "hxc_bytes_ref_release",
+        "hxc_bytes_ref_release_slot",
         "hxc_bytes_ref_retain",
         "hxc_bytes_ref_set",
         "hxc_bytes_ref_sub"
       ],
       "artifacts": [
         {
-          "sourceSha256": "3f2dc89578ee5381e98051c5b3d06dcb6859e0cce10535edaba9c9bf5b38f31d",
+          "sourceSha256": "dc9f59ab163486e2fc06f988cd931065eda3f480dfadae6917ee08ab60e9a4f5",
           "kind": "runtime-header",
           "outputPath": "runtime/include/hxrt/bytes.h",
           "sourcePath": "runtime/hxrt/include/hxrt/bytes.h"
         },
         {
-          "sourceSha256": "902f1a40eb6ff1d94cc58d48a8096c9c0cb60eef4e6e9b0d0469448f929bfcb8",
+          "sourceSha256": "10a4c6c17d1cedc31562fef6708fd54351e094ec4be631848d6348bb82ced46c",
           "kind": "runtime-source",
           "outputPath": "runtime/src/bytes.c",
           "sourcePath": "runtime/hxrt/src/bytes.c"
@@ -464,13 +461,13 @@
       ],
       "artifacts": [
         {
-          "sourceSha256": "a65b9cf70b392f34657d512c1eecf125c18c6e6fde57569a71383169c459012a",
+          "sourceSha256": "6acbca9069ce4670988e682c5c214a32968fadee892ea4490d0844674c2e24b2",
           "kind": "runtime-header",
           "outputPath": "runtime/include/hxrt/dynamic.h",
           "sourcePath": "runtime/hxrt/include/hxrt/dynamic.h"
         },
         {
-          "sourceSha256": "fd4b8982d36cf5abea1b1bf16edaabbb736a86b1a5bb7af9e6efc82d56c59d6d",
+          "sourceSha256": "804371b7eb2bfa6dbcb6598ff729754b312a2ba7b24a94a615915c30dee68503",
           "kind": "runtime-source",
           "outputPath": "runtime/src/dynamic.c",
           "sourcePath": "runtime/hxrt/src/dynamic.c"
@@ -522,6 +519,66 @@
     },
     {
       "documentation": {
+        "referencePath": "docs/hxrt.md",
+        "selectionRoots": [
+          {
+            "description": "A reachable throw/catch region cannot be proven equivalent to ordinary result/status control flow.",
+            "id": "general-exception-region",
+            "kind": "hxc-ir-operation"
+          }
+        ],
+        "runtimeRationale": "Arbitrary cross-call throw and catch need one same-thread target chain. The frame keeps setjmp in generated code, roots managed payloads through a supplied slot, runs registered cleanups in reverse, and rejects missing or stale targets.",
+        "evidence": [
+          "runtime/hxrt/test/exception_contract.c",
+          "runtime/hxrt/test/exception_header_cpp.cpp",
+          "test/exception_lowering/run.py",
+          "test/runtime/runtime-feature-graph/run.py"
+        ],
+        "directAlternative": "Closed exact-type regions use explicit HxcIR failure edges and ordinary C labels with no exception runtime.",
+        "contract": "Maintains a thread-local stack of active lexical handlers, rooted Dynamic payloads, and exactly-once cleanup callbacks around compiler-owned setjmp sites.",
+        "programLocalAlternative": "A complete closed call graph may use generated status propagation when payload matching, cleanup, and observable behavior remain equivalent."
+      },
+      "dependencies": [
+        "dynamic"
+      ],
+      "id": "exception",
+      "availability": "compiler-selectable",
+      "symbols": [
+        "hxc_exception_cleanup_discard",
+        "hxc_exception_cleanup_push",
+        "hxc_exception_cleanup_run",
+        "hxc_exception_frame_payload",
+        "hxc_exception_frame_pop",
+        "hxc_exception_frame_push",
+        "hxc_exception_frame_take_payload",
+        "hxc_exception_raise",
+        "hxc_exception_root_slot_update"
+      ],
+      "artifacts": [
+        {
+          "sourceSha256": "af147c885d31d9408b27b0777a3021bb6d1631b580b237fed75aa21459bad529",
+          "kind": "runtime-header",
+          "outputPath": "runtime/include/hxrt/exception.h",
+          "sourcePath": "runtime/hxrt/include/hxrt/exception.h"
+        },
+        {
+          "sourceSha256": "e6660d0b55b56be3cd436af8f0c16a7668b70f7e82031687a5a149e029c12741",
+          "kind": "runtime-source",
+          "outputPath": "runtime/src/exception.c",
+          "sourcePath": "runtime/hxrt/src/exception.c"
+        }
+      ],
+      "libraries": [],
+      "minimalAllowed": false,
+      "summary": "Contained same-thread exception frames with rooted payload transport and reverse cleanup.",
+      "defines": [],
+      "environments": [
+        "freestanding",
+        "hosted"
+      ]
+    },
+    {
+      "documentation": {
         "referencePath": "docs/gc-runtime.md",
         "selectionRoots": [
           {
@@ -559,6 +616,7 @@
         "hxc_gc_owns_exact",
         "hxc_gc_pin_object",
         "hxc_gc_root_frame_pop",
+        "hxc_gc_root_frame_pop_cleanup",
         "hxc_gc_root_frame_push",
         "hxc_gc_root_table_register",
         "hxc_gc_root_table_unregister",
@@ -569,13 +627,13 @@
       ],
       "artifacts": [
         {
-          "sourceSha256": "2ca9523f1c74c62877c3f006bab9bd8a3a2a1eced93d67ad59d015a7c6ecb9de",
+          "sourceSha256": "d99575a5bad765d45822a1d6221f7bc1b620d59dd6111e0c8ec8a2d45db36159",
           "kind": "runtime-header",
           "outputPath": "runtime/include/hxrt/gc.h",
           "sourcePath": "runtime/hxrt/include/hxrt/gc.h"
         },
         {
-          "sourceSha256": "96cf942d6752070aaa5005eae3bc45c7d00aca37c360dfecaeb76d8db767b4cc",
+          "sourceSha256": "a79c93c94db215b3bc303ea4c761de627637d0eb881faeeaf10c07f9bed4c502",
           "kind": "runtime-source",
           "outputPath": "runtime/src/gc.c",
           "sourcePath": "runtime/hxrt/src/gc.c"
@@ -630,6 +688,7 @@
         "hxc_int_bool_map_ref_key_iterator",
         "hxc_int_bool_map_ref_pair_iterator",
         "hxc_int_bool_map_ref_release",
+        "hxc_int_bool_map_ref_release_slot",
         "hxc_int_bool_map_ref_remove",
         "hxc_int_bool_map_ref_retain",
         "hxc_int_bool_map_ref_set",
@@ -638,13 +697,13 @@
       ],
       "artifacts": [
         {
-          "sourceSha256": "69dfbe45cc182cfb66fbc5e44b38c7cf3205386ff8edabd7d33bc1daabe5ef83",
+          "sourceSha256": "11213ebbb4fccb5620a4e949ec4a0852a512c7be8d1f5750d987f56aca71cd7f",
           "kind": "runtime-header",
           "outputPath": "runtime/include/hxrt/int_map.h",
           "sourcePath": "runtime/hxrt/include/hxrt/int_map.h"
         },
         {
-          "sourceSha256": "769ca4906fc47b0f61499e3f5ca14aea22237dbd37fef81e5f4eafbf6f71ec9e",
+          "sourceSha256": "1b9a0cf4a376e2c2afe7cb79457f50557d50274e8187239e9e4ae80a5a8108cf",
           "kind": "runtime-source",
           "outputPath": "runtime/src/int_map.c",
           "sourcePath": "runtime/hxrt/src/int_map.c"
@@ -775,17 +834,18 @@
         "hxc_iterator_ref_has_next",
         "hxc_iterator_ref_next_move",
         "hxc_iterator_ref_release",
+        "hxc_iterator_ref_release_slot",
         "hxc_iterator_ref_retain"
       ],
       "artifacts": [
         {
-          "sourceSha256": "55e3b3f7a64bf7b62c690bfac4a0930688f3333d9d993d01fc2d6fd4f9e7d5d5",
+          "sourceSha256": "10ec767355e93a45e214b4774435a46496dd2c601f285412bc072af7904a3e51",
           "kind": "runtime-header",
           "outputPath": "runtime/include/hxrt/iterator.h",
           "sourcePath": "runtime/hxrt/include/hxrt/iterator.h"
         },
         {
-          "sourceSha256": "d5eee743576672a903009144ed35cfc26168d171dffec0e2de68105831681e99",
+          "sourceSha256": "a4f3da3f7e3a3fb5ad2f24497b00d77eae1b11c600167b8f5553b656623dba6b",
           "kind": "runtime-source",
           "outputPath": "runtime/src/iterator.c",
           "sourcePath": "runtime/hxrt/src/iterator.c"
@@ -1152,18 +1212,19 @@
         "hxc_string_from_utf8_checked",
         "hxc_string_from_utf8_lossy",
         "hxc_string_release",
+        "hxc_string_release_slot",
         "hxc_string_retain",
         "hxc_string_to_cstring_owned"
       ],
       "artifacts": [
         {
-          "sourceSha256": "60c745b0e4e0b35d1f285f913ed7b2a284438130b8ebd44c3751247ffeb9cae7",
+          "sourceSha256": "cd6d27f1f2722a3ecad127ddd07827721f42a7de5ea547024c9e1564822427c6",
           "kind": "runtime-header",
           "outputPath": "runtime/include/hxrt/string.h",
           "sourcePath": "runtime/hxrt/include/hxrt/string.h"
         },
         {
-          "sourceSha256": "9e267e14bdca44436a282b4956121b5340e71e0dffc5060306fee898c11d181a",
+          "sourceSha256": "62659b0ca0bd92acc7ab2c2bef9b86c9b0ddb1431e2ec81f71b76e6bc8ea28a2",
           "kind": "runtime-source",
           "outputPath": "runtime/src/string.c",
           "sourcePath": "runtime/hxrt/src/string.c"
@@ -1383,6 +1444,7 @@
         "hxc_string_map_ref_key_iterator",
         "hxc_string_map_ref_pair_iterator",
         "hxc_string_map_ref_release",
+        "hxc_string_map_ref_release_slot",
         "hxc_string_map_ref_remove",
         "hxc_string_map_ref_retain",
         "hxc_string_map_ref_set_copy",
@@ -1392,13 +1454,13 @@
       ],
       "artifacts": [
         {
-          "sourceSha256": "8d5d791b4df91205d843e892e23c1da7582f05da3146b7f371a4a4a51f18ce2e",
+          "sourceSha256": "a12868bdfbc4b5420b2930bc920fc45e6e69ead5b72be130c54919c54ba0c042",
           "kind": "runtime-header",
           "outputPath": "runtime/include/hxrt/string_map.h",
           "sourcePath": "runtime/hxrt/include/hxrt/string_map.h"
         },
         {
-          "sourceSha256": "41a2b4477c29b2d1692b5ad1263c09ebfed37b331788299b9a11de1a2cd76a24",
+          "sourceSha256": "c637ffdce4e990fe7436f88e7445376722ee0b28dec10cf57db860a5120706e9",
           "kind": "runtime-source",
           "outputPath": "runtime/src/string_map.c",
           "sourcePath": "runtime/hxrt/src/string_map.c"
@@ -1651,6 +1713,7 @@
     "bytes-string",
     "dynamic",
     "enum-value-map",
+    "exception",
     "gc",
     "int-map",
     "io",
@@ -1689,6 +1752,8 @@
         "hxc_byte_view",
         "hxc_bytes_ref",
         "hxc_dynamic_type",
+        "hxc_exception_cleanup",
+        "hxc_exception_frame",
         "hxc_gc",
         "hxc_gc_allocation",
         "hxc_gc_config",
@@ -1720,7 +1785,7 @@
     "releaseProvenance": {
       "runtimeCStandard": "c11",
       "sourceHashAlgorithm": "sha256",
-      "sourceSetSha256": "e23350034c3d2d9856eeab98a087f0700ec5338ecab6316cdabd0a0f1feb6808",
+      "sourceSetSha256": "0480ef0b58f315b51d263f1e2e38fd8a450efdde137e1b0c64ff1c7f1c21a191",
       "publicHeaderCppStandard": "c++17"
     },
     "generatedCodeCompatibility": "same-major",

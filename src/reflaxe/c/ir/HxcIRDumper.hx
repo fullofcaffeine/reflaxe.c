@@ -134,10 +134,17 @@ class HxcIRDumper {
 	function dumpFunction(fn:HxcIRFunction):Void {
 		final start = output.length;
 		final borrowedReturn = fn.borrowedSpanReturn == null ? "" : ' borrowed-span-return=${borrowedSpanReturn(fn.borrowedSpanReturn)}';
-		line('  function ${quote(fn.id)} name=${quote(fn.displayName)} returns=${typeRef(fn.returnType)}$borrowedReturn failure=${functionFailure(fn.failureConvention)} entry=${quote(fn.entryBlockId)} ${source(fn.source)}');
+		final exceptionStrategy = fn.exceptionStrategy == null ? "none" : renderExceptionStrategy(fn.exceptionStrategy);
+		line('  function ${quote(fn.id)} name=${quote(fn.displayName)} returns=${typeRef(fn.returnType)}$borrowedReturn failure=${functionFailure(fn.failureConvention)} exception-strategy=$exceptionStrategy entry=${quote(fn.entryBlockId)} ${source(fn.source)}');
 		final managedRoots = fn.managedRoots == null ? [] : fn.managedRoots;
 		for (root in managedRoots)
 			line('    managed-root ${quote(root.id)} value=${quote(root.valueId)} path=${quote(HxcIRManagedRootPaths.key(root.projections))} ${source(root.source)}');
+		final exceptionRegions = fn.exceptionRegions == null ? [] : fn.exceptionRegions;
+		for (region in exceptionRegions)
+			line('    exception-region ${quote(region.id)} frame=${quote(region.frameStorageId)} payload=${quote(region.payloadValueId)} ${source(region.source)}');
+		final exceptionCleanups = fn.exceptionCleanups == null ? [] : fn.exceptionCleanups;
+		for (cleanup in exceptionCleanups)
+			line('    exception-cleanup ${quote(cleanup.id)} storage=${quote(cleanup.storageId)} action=${quote(cleanup.actionId)} place=${renderPlace(cleanup.place)} implementation=${implementation(cleanup.implementation)} ${source(cleanup.source)}');
 		final borrowedInterfaceParameterIds = fn.borrowedInterfaceParameterIds == null ? [] : fn.borrowedInterfaceParameterIds;
 		final borrowedAggregateParameterIds = fn.borrowedAggregateParameterIds == null ? [] : fn.borrowedAggregateParameterIds;
 		final mutableAggregateBorrowParameterIds = fn.mutableAggregateBorrowParameterIds == null ? [] : fn.mutableAggregateBorrowParameterIds;
@@ -218,6 +225,7 @@ class HxcIRDumper {
 			case IRIOConvert(valueId, kind, targetType, selected, failure):
 				'convert value=${quote(valueId)} kind=${conversion(kind)} target=${typeRef(targetType)} implementation=${implementation(selected)} failure=${failure == null ? "none" : failureEdge(failure)}';
 			case IRIODynamic(operation): dynamicInstruction(operation);
+			case IRIOException(operation): exceptionInstruction(operation);
 			case IRIOCall(call): renderCall(call);
 			case IRIOConstructAggregate(instanceId, fields):
 				'construct-aggregate instance=${quote(instanceId)} fields=[${fields.map(field -> quote(field.name) + "=" + quote(field.valueId)).join(",")}]';
@@ -266,6 +274,23 @@ class HxcIRDumper {
 				'lifetime place=${renderPlace(place)} transition=${state(from)}->${state(to)} reason=${quote(reason)}';
 		}
 	}
+
+	function exceptionInstruction(operation:HxcIRExceptionInstruction):String
+		return switch operation {
+			case IREFramePush(regionId): 'exception-frame-push region=${quote(regionId)}';
+			case IREFrameSetJmp(regionId): 'exception-frame-setjmp region=${quote(regionId)}';
+			case IREFramePayload(regionId): 'exception-frame-payload region=${quote(regionId)}';
+			case IREFramePop(regionId): 'exception-frame-pop region=${quote(regionId)}';
+			case IRECleanupPush(cleanupId): 'exception-cleanup-push cleanup=${quote(cleanupId)}';
+			case IRECleanupRun(cleanupId): 'exception-cleanup-run cleanup=${quote(cleanupId)}';
+			case IRECleanupDiscard(cleanupId): 'exception-cleanup-discard cleanup=${quote(cleanupId)}';
+		};
+
+	function renderExceptionStrategy(value:HxcIRExceptionStrategy):String
+		return switch value {
+			case IRESClosedResult: "closed-result";
+			case IRESContainedRuntime: "contained-runtime";
+		};
 
 	function dynamicInstruction(operation:HxcIRDynamicInstruction):String
 		return switch operation {
@@ -410,6 +435,7 @@ class HxcIRDumper {
 		return switch value {
 			case IRFTBlock(blockId): 'block(${quote(blockId)})';
 			case IRFTPropagate: "propagate";
+			case IRFTUnwind: "unwind";
 			case IRFTAbort: "abort";
 		}
 	}

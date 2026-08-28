@@ -341,6 +341,45 @@ opaque type values. Managed globals, computed names, bound methods, open
 generics, Dynamic map keys, payload-enum equality, and unresolved polymorphic
 identities still fail before C emission.
 
+<!-- hxrt-feature:exception -->
+### `exception`
+
+Compiler-selectable same-thread frames for a throw/catch region that cannot use
+ordinary result or status control flow without changing Haxe behavior. The
+generated function owns each `setjmp` call. The runtime owns the active frame
+chain, a non-owning `hxc_value` payload, reverse cleanup callbacks, and the
+final `longjmp` to an active frame on the same thread.
+
+The frame's payload carrier and presence flag are volatile because the runtime
+changes them after `setjmp` and the generated handler reads them after
+`longjmp`. Generated root and state slots follow the same rule; ordinary
+automatic locals are never assumed to retain a changed value across the jump.
+
+A frame can publish the managed object hidden in its payload to a
+compiler-supplied root slot. Taking the payload transfers that slot to the
+handler's ordinary generated root frame before the exception frame is popped.
+Throwing callees register their collector root frames as reverse-order exception
+cleanups, so a non-local transfer cannot leave an automatic root frame linked.
+A raise without an active frame, a managed
+payload without a root slot, stale cleanup state, or a failing cleanup returns
+a status to the generated fail-stop boundary instead of making an unchecked
+transfer.
+
+The frame and jump token remain private runtime types. Generated export and
+callback wrappers must catch and translate before control returns to foreign C;
+non-local transfer never crosses a public ABI, foreign frame, signal handler,
+or thread boundary. The default metal `minimal` policy rejects this feature.
+Closed exact-type regions keep explicit HxcIR failure edges and direct C labels,
+so they remain valid under `hxc_runtime=none`.
+
+The current generated runtime path accepts one catch-all `Dynamic` handler per
+region. It transports scalar values and exact managed references across direct
+generated calls. Runtime-owned Array, Bytes, String, map, iterator, and collector
+root owners have standardized unwind callbacks. A region that would need a
+program-local record, enum, or optional destructor still fails before C emission.
+Other runtime-typed catch lists remain unsupported. Generated exports, callback
+trampolines, signals, and cross-thread transfer are also outside this slice.
+
 <!-- hxrt-feature:alloc -->
 ### `alloc`
 

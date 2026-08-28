@@ -27,7 +27,7 @@ import reflaxe.c.naming.CSymbolRequest;
 @:noCompletion
 class CBodyFunctionReplayCache {
 	/** Bump this whenever the retained payload or canonical key contract changes. */
-	public static inline final SCHEMA_VERSION = 2;
+	public static inline final SCHEMA_VERSION = 3;
 
 	/** Disable replay while keeping ordinary function construction authoritative. */
 	public static inline final DISABLE_DEFINE = "reflaxe_c_test_disable_body_function_replay_cache";
@@ -266,6 +266,20 @@ class CBodyFunctionReplayCache {
 			projections: root.projections.copy(),
 			source: root.source
 		});
+		final exceptionRegions = value.exceptionRegions == null ? null : value.exceptionRegions.map(region -> {
+			id: region.id,
+			frameStorageId: region.frameStorageId,
+			payloadValueId: region.payloadValueId,
+			source: region.source
+		});
+		final exceptionCleanups = value.exceptionCleanups == null ? null : value.exceptionCleanups.map(cleanup -> {
+			id: cleanup.id,
+			storageId: cleanup.storageId,
+			actionId: cleanup.actionId,
+			place: cleanup.place,
+			implementation: cleanup.implementation,
+			source: cleanup.source
+		});
 		return {
 			id: value.id,
 			displayName: value.displayName,
@@ -279,6 +293,9 @@ class CBodyFunctionReplayCache {
 			borrowedAggregateLocalIds: value.borrowedAggregateLocalIds == null ? null : value.borrowedAggregateLocalIds.copy(),
 			mutableAggregateBorrowLocalIds: value.mutableAggregateBorrowLocalIds == null ? null : value.mutableAggregateBorrowLocalIds.copy(),
 			managedRoots: managedRoots,
+			exceptionStrategy: value.exceptionStrategy,
+			exceptionRegions: exceptionRegions,
+			exceptionCleanups: exceptionCleanups,
 			locals: value.locals.copy(),
 			returnType: value.returnType,
 			borrowedSpanReturn: value.borrowedSpanReturn,

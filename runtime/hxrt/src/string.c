@@ -1036,3 +1036,9 @@ hxc_status hxc_owned_cstring_dispose(hxc_owned_cstring *value) {
   hxc_owned_cstring_clear(value);
   return HXC_STATUS_OK;
 }
+
+hxc_status hxc_string_release_slot(void *context) {
+  return context == NULL
+    ? HXC_STATUS_INVALID_ARGUMENT
+    : hxc_string_release((hxc_string *)context);
+}

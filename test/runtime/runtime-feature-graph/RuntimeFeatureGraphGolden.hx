@@ -95,6 +95,7 @@ class RuntimeFeatureGraphGolden {
 		final bytes = planner.plan(featureRequest(CRuntimePolicy.Auto, [reason("fixture.bytes", "bytes")], []));
 		final bytesString = planner.plan(featureRequest(CRuntimePolicy.Auto, [reason("fixture.bytes-string", "bytes-string")], []));
 		final dynamicPlan = planner.plan(featureRequest(CRuntimePolicy.Auto, [reason("fixture.dynamic", "dynamic")], []));
+		final exceptionPlan = planner.plan(featureRequest(CRuntimePolicy.Auto, [reason("fixture.exception", "exception")], []));
 		final objectPlan = planner.plan(featureRequest(CRuntimePolicy.Auto, [reason("fixture.object", "object")], []));
 		final gc = planner.plan(featureRequest(CRuntimePolicy.Auto, [reason("fixture.gc", "gc")], []));
 		final stringScalar = planner.plan(featureRequest(CRuntimePolicy.Auto, [reason("fixture.string-scalar", "string-scalar")], []));
@@ -125,6 +126,7 @@ class RuntimeFeatureGraphGolden {
 		final bytesFiles = packager.packageFiles(bytes, repositorySource);
 		final bytesStringFiles = packager.packageFiles(bytesString, repositorySource);
 		final dynamicFiles = packager.packageFiles(dynamicPlan, repositorySource);
+		final exceptionFiles = packager.packageFiles(exceptionPlan, repositorySource);
 		final objectFiles = packager.packageFiles(objectPlan, repositorySource);
 		final gcFiles = packager.packageFiles(gc, repositorySource);
 		final stringScalarFiles = packager.packageFiles(stringScalar, repositorySource);
@@ -183,6 +185,7 @@ class RuntimeFeatureGraphGolden {
 			bytes: bytes,
 			bytesString: bytesString,
 			dynamicCarrier: dynamicPlan,
+			exception: exceptionPlan,
 			object: objectPlan,
 			gc: gc,
 			stringScalar: stringScalar,
@@ -236,6 +239,7 @@ class RuntimeFeatureGraphGolden {
 			bytes: packageRecords(bytesFiles),
 			bytesString: packageRecords(bytesStringFiles),
 			dynamicCarrier: packageRecords(dynamicFiles),
+			exception: packageRecords(exceptionFiles),
 			object: packageRecords(objectFiles),
 			gc: packageRecords(gcFiles),
 			stringScalar: packageRecords(stringScalarFiles),

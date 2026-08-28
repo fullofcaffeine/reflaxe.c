@@ -103,6 +103,7 @@ HXC_API hxc_status hxc_string_map_ref_create_with_ops(
  */
 HXC_API hxc_status hxc_string_map_ref_retain(hxc_string_map_ref *map);
 HXC_API hxc_status hxc_string_map_ref_release(hxc_string_map_ref *map);
+HXC_API hxc_status hxc_string_map_ref_release_slot(void *context);
 
 /** Copy every key and value into one independent shared Map object. */
 HXC_API hxc_status hxc_string_map_ref_copy(

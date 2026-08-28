@@ -161,6 +161,7 @@ HXC_API hxc_status hxc_iterator_ref_create_array_pairs(
 /** Retain or release one alias to the same cursor; NULL is a successful no-op. */
 HXC_API hxc_status hxc_iterator_ref_retain(hxc_iterator_ref *iterator);
 HXC_API hxc_status hxc_iterator_ref_release(hxc_iterator_ref *iterator);
+HXC_API hxc_status hxc_iterator_ref_release_slot(void *context);
 
 /** Report whether the snapshot or current live Array has another element. */
 HXC_API hxc_status hxc_iterator_ref_has_next(

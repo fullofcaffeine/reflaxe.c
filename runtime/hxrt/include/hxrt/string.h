@@ -79,6 +79,7 @@ HXC_API hxc_status hxc_string_retain(hxc_string value);
  * reset the slot because their bytes live for the whole program.
  */
 HXC_API hxc_status hxc_string_release(hxc_string *value);
+HXC_API hxc_status hxc_string_release_slot(void *context);
 
 /**
  * Construct one valid UTF-8 scalar as an independently owned Haxe String.

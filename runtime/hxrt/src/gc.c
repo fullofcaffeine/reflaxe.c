@@ -172,6 +172,25 @@ static hxc_status hxc_gc_mark_slots(
   return HXC_STATUS_OK;
 }
 
+static hxc_status hxc_gc_mark_frame_slots(
+  hxc_gc_mark_context *context,
+  const void *volatile *slots,
+  size_t slot_count
+) {
+  size_t index;
+  if (slots == NULL || slot_count == 0u) {
+    return HXC_STATUS_INVALID_ARGUMENT;
+  }
+  context->unknown_pointer_status = HXC_STATUS_INVALID_ARGUMENT;
+  for (index = 0u; index < slot_count; index++) {
+    hxc_gc_mark_exact(context, slots[index]);
+    if (context->status != HXC_STATUS_OK) {
+      return context->status;
+    }
+  }
+  return HXC_STATUS_OK;
+}
+
 static hxc_status hxc_gc_mark_roots(hxc_gc_mark_context *context) {
   hxc_gc_root_table *table = context->gc->global_roots;
   hxc_gc_thread *thread;
@@ -196,7 +215,7 @@ static hxc_status hxc_gc_mark_roots(hxc_gc_mark_context *context) {
       if (!frame->active || frame->thread != thread) {
         return HXC_STATUS_INTERNAL_ERROR;
       }
-      context->status = hxc_gc_mark_slots(context, frame->slots, frame->slot_count);
+      context->status = hxc_gc_mark_frame_slots(context, frame->slots, frame->slot_count);
       if (context->status != HXC_STATUS_OK) {
         return context->status;
       }
@@ -595,7 +614,7 @@ hxc_status hxc_gc_thread_unregister(hxc_gc_thread *thread) {
 
 hxc_status hxc_gc_root_frame_push(
   hxc_gc_thread *thread,
-  const void **slots,
+  const void *volatile *slots,
   size_t slot_count,
   hxc_gc_root_frame *frame
 ) {
@@ -651,6 +670,10 @@ hxc_status hxc_gc_root_frame_pop(hxc_gc_root_frame *frame) {
   frame->slot_count = 0u;
   frame->active = false;
   return HXC_STATUS_OK;
+}
+
+hxc_status hxc_gc_root_frame_pop_cleanup(void *context) {
+  return hxc_gc_root_frame_pop((hxc_gc_root_frame *)context);
 }
 
 hxc_status hxc_gc_root_table_register(

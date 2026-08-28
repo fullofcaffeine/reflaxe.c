@@ -122,8 +122,8 @@ static int gc_test_primary_contract(hxc_gc *gc) {
   hxc_gc_root_frame worker_frame = HXC_GC_ROOT_FRAME_INITIALIZER;
   hxc_gc_root_table globals = HXC_GC_ROOT_TABLE_INITIALIZER;
   hxc_gc_pin pin = HXC_GC_PIN_INITIALIZER;
-  const void *main_slots[2] = { NULL, NULL };
-  const void *worker_slots[1] = { NULL };
+  const void *volatile main_slots[2] = { NULL, NULL };
+  const void *volatile worker_slots[1] = { NULL };
   const void *global_slots[1] = { NULL };
   gc_test_node *first = NULL;
   gc_test_node *second = NULL;
@@ -245,7 +245,7 @@ static int gc_test_pressure_contract(hxc_allocator allocator) {
   hxc_gc gc = HXC_GC_INITIALIZER;
   hxc_gc_thread thread = HXC_GC_THREAD_INITIALIZER;
   hxc_gc_root_frame frame = HXC_GC_ROOT_FRAME_INITIALIZER;
-  const void *slots[1] = { NULL };
+  const void *volatile slots[1] = { NULL };
   hxc_gc_config config;
   hxc_gc_stats stats = HXC_GC_STATS_INITIALIZER;
   gc_test_node *first = NULL;

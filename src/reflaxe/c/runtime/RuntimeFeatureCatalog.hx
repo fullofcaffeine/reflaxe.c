@@ -23,6 +23,7 @@ class RuntimeFeatureCatalog {
 		final status = RuntimeFeatureId.parse("status");
 		final statusName = RuntimeFeatureId.parse("status-name");
 		final dynamicFeature = RuntimeFeatureId.parse("dynamic");
+		final exceptionFeature = RuntimeFeatureId.parse("exception");
 		final alloc = RuntimeFeatureId.parse("alloc");
 		final array = RuntimeFeatureId.parse("array");
 		final iterator = RuntimeFeatureId.parse("iterator");
@@ -124,6 +125,34 @@ class RuntimeFeatureCatalog {
 						"test/runtime/dynamic/run.py",
 						"test/runtime/runtime-feature-graph/run.py"
 					])),
+			new RuntimeFeatureDefinition(exceptionFeature, "Contained same-thread exception frames with rooted payload transport and reverse cleanup.",
+				CompilerSelectable, false, environments, [dynamicFeature], [header("exception.h"), source("exception.c")], [
+					"hxc_exception_cleanup_push",
+					"hxc_exception_cleanup_run",
+					"hxc_exception_cleanup_discard",
+					"hxc_exception_frame_payload",
+					"hxc_exception_frame_take_payload",
+					"hxc_exception_frame_pop",
+					"hxc_exception_frame_push",
+					"hxc_exception_root_slot_update",
+					"hxc_exception_raise"
+				],
+				[], [],
+				documentation("Maintains a thread-local stack of active lexical handlers, rooted Dynamic payloads, and exactly-once cleanup callbacks around compiler-owned setjmp sites.",
+					[
+						new RuntimeFeatureSelectionRoot("general-exception-region", RuntimeFeatureSelectionRootKind.HxcIrOperation,
+							"A reachable throw/catch region cannot be proven equivalent to ordinary result/status control flow.")
+					],
+					"Closed exact-type regions use explicit HxcIR failure edges and ordinary C labels with no exception runtime.",
+					"A complete closed call graph may use generated status propagation when payload matching, cleanup, and observable behavior remain equivalent.",
+					"Arbitrary cross-call throw and catch need one same-thread target chain. The frame keeps setjmp in generated code, roots managed payloads through a supplied slot, runs registered cleanups in reverse, and rejects missing or stale targets.",
+					"docs/hxrt.md",
+					[
+						"runtime/hxrt/test/exception_contract.c",
+						"runtime/hxrt/test/exception_header_cpp.cpp",
+						"test/exception_lowering/run.py",
+						"test/runtime/runtime-feature-graph/run.py"
+					])),
 			new RuntimeFeatureDefinition(alloc, "Hardened allocator ownership and failure contracts with hosted and custom native evidence.",
 				CompilerSelectable, true, environments, [status], [header("allocator.h"), source("allocator.c")], [
 					"hxc_default_allocator",
@@ -186,6 +215,7 @@ class RuntimeFeatureCatalog {
 					"hxc_array_ref_push_copy",
 					"hxc_array_ref_resize_default",
 					"hxc_array_ref_release",
+					"hxc_array_ref_release_slot",
 					"hxc_array_ref_retain",
 					"hxc_array_ref_set_copy",
 					"hxc_array_ref_sort",
@@ -230,6 +260,7 @@ class RuntimeFeatureCatalog {
 					"hxc_iterator_ref_create_array_pairs",
 					"hxc_iterator_ref_retain",
 					"hxc_iterator_ref_release",
+					"hxc_iterator_ref_release_slot",
 					"hxc_iterator_ref_has_next",
 					"hxc_iterator_ref_next_move"
 				],
@@ -262,6 +293,7 @@ class RuntimeFeatureCatalog {
 					"hxc_string_map_ref_create_with_ops",
 					"hxc_string_map_ref_retain",
 					"hxc_string_map_ref_release",
+					"hxc_string_map_ref_release_slot",
 					"hxc_string_map_ref_copy",
 					"hxc_string_map_ref_set_copy",
 					"hxc_string_map_ref_exists",
@@ -295,6 +327,7 @@ class RuntimeFeatureCatalog {
 					"hxc_int_bool_map_ref_create",
 					"hxc_int_bool_map_ref_retain",
 					"hxc_int_bool_map_ref_release",
+					"hxc_int_bool_map_ref_release_slot",
 					"hxc_int_bool_map_ref_copy",
 					"hxc_int_bool_map_ref_set",
 					"hxc_int_bool_map_ref_exists",
@@ -391,6 +424,7 @@ class RuntimeFeatureCatalog {
 					"hxc_bytes_ref_is_valid",
 					"hxc_bytes_ref_retain",
 					"hxc_bytes_ref_release",
+					"hxc_bytes_ref_release_slot",
 					"hxc_bytes_ref_length",
 					"hxc_bytes_ref_get",
 					"hxc_bytes_ref_set",
@@ -462,6 +496,7 @@ class RuntimeFeatureCatalog {
 					"hxc_gc_thread_unregister",
 					"hxc_gc_root_frame_push",
 					"hxc_gc_root_frame_pop",
+					"hxc_gc_root_frame_pop_cleanup",
 					"hxc_gc_root_table_register",
 					"hxc_gc_root_table_unregister",
 					"hxc_gc_pin_object",
@@ -541,6 +576,7 @@ class RuntimeFeatureCatalog {
 				environments, [alloc, stringScalar], [header("string.h"), source("string.c")], [
 					"hxc_string_retain",
 					"hxc_string_release",
+					"hxc_string_release_slot",
 					"hxc_string_from_scalar",
 					"hxc_string_from_int32",
 					"hxc_string_concat_ref",
@@ -679,7 +715,6 @@ class RuntimeFeatureCatalog {
 		return [
 			reserved("closure", "E3.T08", "Escaping closure environment support after escape analysis."),
 			reserved("date-time", "E5.T08", "Date, timezone, wall-clock, and monotonic-time adapters."),
-			reserved("exception", "E4.T09", "Contained general exception frames after result lowering is ineligible."),
 			reserved("export-error", "E7.T04", "Thread-safe exported status and error-detail boundary."),
 			reserved("filesystem", "E5.T09", "Hosted filesystem and file-resource adapters."),
 			reserved("process", "E5.T09", "Hosted environment and process adapters."),
@@ -711,26 +746,27 @@ class RuntimeFeatureCatalog {
 		return switch name {
 			case "abi.h": "787d82dc867999ba8e8e6987cc6933ad6f6ab5d087b415e97042934c454ccf62";
 			case "allocator.h": "6e21c0bc498eb40bcec901914a04dd1bee33b6b21e5a27f1ac5f169a8a1cc448";
-			case "array.h": "32782a39200bd43c463e566b546dea0a45de4feb39e8e287f2c48351dcb9c41f";
+			case "array.h": "b647fc5be70b1ddca8c0da723732cacf5d52ac43f061671ab4483ab8a677d96b";
 			case "array_join.h": "5829a159dab0bd3446b5bc418c2ee32ad2902c0fec6bcc04f82efeb66c294fea";
 			case "base.h": "7d4f67124bf94b76bfc24d5db973426f48f3f9f37daeae975fd4948f5b1dea25";
-			case "bytes.h": "3f2dc89578ee5381e98051c5b3d06dcb6859e0cce10535edaba9c9bf5b38f31d";
+			case "bytes.h": "dc9f59ab163486e2fc06f988cd931065eda3f480dfadae6917ee08ab60e9a4f5";
 			case "bytes_string.h": "9d944e38a748696628076b0c5fd56339668e48953a220d51c8da1630fbdf9c40";
-			case "dynamic.h": "a65b9cf70b392f34657d512c1eecf125c18c6e6fde57569a71383169c459012a";
-			case "gc.h": "2ca9523f1c74c62877c3f006bab9bd8a3a2a1eced93d67ad59d015a7c6ecb9de";
+			case "dynamic.h": "6acbca9069ce4670988e682c5c214a32968fadee892ea4490d0844674c2e24b2";
+			case "exception.h": "af147c885d31d9408b27b0777a3021bb6d1631b580b237fed75aa21459bad529";
+			case "gc.h": "d99575a5bad765d45822a1d6221f7bc1b620d59dd6111e0c8ec8a2d45db36159";
 			case "io.h": "4b92f03451dc4d04ea74c857ca3ce54d52fbe80d31f155b93781ee2fab946589";
-			case "int_map.h": "69dfbe45cc182cfb66fbc5e44b38c7cf3205386ff8edabd7d33bc1daabe5ef83";
-			case "iterator.h": "55e3b3f7a64bf7b62c690bfac4a0930688f3333d9d993d01fc2d6fd4f9e7d5d5";
+			case "int_map.h": "11213ebbb4fccb5620a4e949ec4a0852a512c7be8d1f5750d987f56aca71cd7f";
+			case "iterator.h": "10ec767355e93a45e214b4774435a46496dd2c601f285412bc072af7904a3e51";
 			case "object.h": "779b452097e4c58c7971b90743ace19a2dc6c91e381557abc84fbd5f9b30f1e5";
 			case "status.h": "6bf20f5d82594014ad0f2b79a25cb81417791bd9c07375d2fb89835e415be1c4";
 			case "status_name.h": "64bf3917787ffcf924369c8e1c0a525cf10902d004d5bb4b898f2af46a7456cc";
-			case "string.h": "60c745b0e4e0b35d1f285f913ed7b2a284438130b8ebd44c3751247ffeb9cae7";
+			case "string.h": "cd6d27f1f2722a3ecad127ddd07827721f42a7de5ea547024c9e1564822427c6";
 			case "string_lower_case.h": "c2fb77f0f59ba1b8804e308ca769c75fac2fde81a6faf52056424c8f6c7e490a";
 			case "string_lower_case_data.h": "b069c988dec0cd7f7cfc5b116ec0c534136f022d80c71684efd9294290ea9961";
 			case "string_decode.h": "aa93ea7f132aff625adfdcc7498532b139f621196deab4c0e9ecb5de2934fd48";
 			case "string_float.h": "8747a86c3cabae9bf54a4125305f043d6c70d7c97bc9f6f90174ba6185e3ecc1";
 			case "string_literal.h": "ac6b5ad9fa13004c62e3b33b9b28a935bfb8a22287cd4595ce6e6eb81490e283";
-			case "string_map.h": "8d5d791b4df91205d843e892e23c1da7582f05da3146b7f371a4a4a51f18ce2e";
+			case "string_map.h": "a12868bdfbc4b5420b2930bc920fc45e6e69ead5b72be130c54919c54ba0c042";
 			case "string_scalar.h": "b400d7ef9af853410334b30627ea98a5af87d5c3a863f6aa4c770d7cc4b3d90b";
 			case "string_split.h": "a17c9cd6c31cfdb8da2cf4955b980090c144e68ee1ae4f1d0f0b543f4b6eb3eb";
 			case "typed_map.h": "8e0838bbf09921bf4167fc85e55d99a762cd208b069a41008e645b5e07949f11";
@@ -742,21 +778,22 @@ class RuntimeFeatureCatalog {
 		return switch name {
 			case "abi.c": "3300a4498a7ca20f771b1334d7be8f2c908d2bb067ea8f2fe3c059300e680b32";
 			case "allocator.c": "13385273c7c3d4a15785caa3095dd82d97bda8a026ebd9b6d54e2f531eb3b10e";
-			case "array.c": "2f93e4b34ea5fc3574b1b8be795e65dc8dfcd025f05403110a1c22363610cf17";
+			case "array.c": "c5fec3dcf78ed27dcd38219efec8289dd38a23eeef352785396bde64fa99c98a";
 			case "array_join.c": "b158708b62c7e407f9da21c24a1b3306d4b41baa6b63f2d8019f631a98008fde";
-			case "bytes.c": "902f1a40eb6ff1d94cc58d48a8096c9c0cb60eef4e6e9b0d0469448f929bfcb8";
+			case "bytes.c": "10a4c6c17d1cedc31562fef6708fd54351e094ec4be631848d6348bb82ced46c";
 			case "bytes_string.c": "0ee9604f1b4ae78baeeaf7cac8b2a35b5634f115c958a7575230c790e8aa6ca6";
-			case "dynamic.c": "fd4b8982d36cf5abea1b1bf16edaabbb736a86b1a5bb7af9e6efc82d56c59d6d";
-			case "gc.c": "96cf942d6752070aaa5005eae3bc45c7d00aca37c360dfecaeb76d8db767b4cc";
+			case "dynamic.c": "804371b7eb2bfa6dbcb6598ff729754b312a2ba7b24a94a615915c30dee68503";
+			case "exception.c": "e6660d0b55b56be3cd436af8f0c16a7668b70f7e82031687a5a149e029c12741";
+			case "gc.c": "a79c93c94db215b3bc303ea4c761de627637d0eb881faeeaf10c07f9bed4c502";
 			case "io.c": "898b3f351b60a91f25fd1ffdfe8d832e95a5a6a738ffe226ac33581f1fcb5b0f";
-			case "int_map.c": "769ca4906fc47b0f61499e3f5ca14aea22237dbd37fef81e5f4eafbf6f71ec9e";
-			case "iterator.c": "d5eee743576672a903009144ed35cfc26168d171dffec0e2de68105831681e99";
+			case "int_map.c": "1b9a0cf4a376e2c2afe7cb79457f50557d50274e8187239e9e4ae80a5a8108cf";
+			case "iterator.c": "a4f3da3f7e3a3fb5ad2f24497b00d77eae1b11c600167b8f5553b656623dba6b";
 			case "object.c": "0e7fc6a55b562eaaf03fe63eca743dd73248f0bee1c09e21b79464917e8c89c0";
 			case "status.c": "0695ab2528db6e29d5cf29d905ad736b7c1a3a79333082347ec18faea2d4e6d8";
-			case "string.c": "9e267e14bdca44436a282b4956121b5340e71e0dffc5060306fee898c11d181a";
+			case "string.c": "62659b0ca0bd92acc7ab2c2bef9b86c9b0ddb1431e2ec81f71b76e6bc8ea28a2";
 			case "string_lower_case.c": "55a692cfd855f71f1a1fa4f90f311f1653ec0638797ecfb024764e23a66680c8";
 			case "string_float.c": "60e5189e7f7304ccbc1f69136b7393e4eea35760cde590853ebced414bf39267";
-			case "string_map.c": "41a2b4477c29b2d1692b5ad1263c09ebfed37b331788299b9a11de1a2cd76a24";
+			case "string_map.c": "c637ffdce4e990fe7436f88e7445376722ee0b28dec10cf57db860a5120706e9";
 			case "string_scalar.c": "2c44eebc655dd34ed374b58402de9dfe731425fb4e0b54997a7c16c12e1309fb";
 			case "string_split.c": "799fc917a450169e4babd86748e879fe7222b4abfef293880c47891e671f9d1b";
 			case "typed_map.c": "2a890d9f7a66a2faaffff43eee084fcf704138442f5915e8e728acbcad6fbcff";

@@ -890,6 +890,19 @@ hxc_status hxc_array_ref_release(hxc_array_ref *array) {
   );
 }
 
+hxc_status hxc_array_ref_release_slot(void *context) {
+  hxc_array_ref **slot = (hxc_array_ref **)context;
+  hxc_status status;
+  if (slot == NULL) {
+    return HXC_STATUS_INVALID_ARGUMENT;
+  }
+  status = hxc_array_ref_release(*slot);
+  if (status == HXC_STATUS_OK) {
+    *slot = NULL;
+  }
+  return status;
+}
+
 hxc_status hxc_array_ref_length(
   const hxc_array_ref *array,
   int32_t *out_length

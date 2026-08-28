@@ -54,6 +54,7 @@ HXC_API hxc_status hxc_bytes_ref_retain(hxc_bytes_ref *bytes);
 
 /** Release one alias and free the buffer after the final release. */
 HXC_API hxc_status hxc_bytes_ref_release(hxc_bytes_ref *bytes);
+HXC_API hxc_status hxc_bytes_ref_release_slot(void *context);
 
 /** Read a length that is guaranteed to fit Haxe's signed 32-bit Int. */
 HXC_API hxc_status hxc_bytes_ref_length(

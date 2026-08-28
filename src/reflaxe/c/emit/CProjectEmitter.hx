@@ -851,6 +851,7 @@ class CProjectEmitter {
 						case "box" | "box-null" | "box-type-token" | "unbox" | "get" | "set" | "call" | "invoke" | "equal": true;
 						case _: false;
 					}):
+				case "exception" if (reason.kind == "runtime-operation" && reason.operationId == "general-exception-region"):
 				case "alloc" if (reason.kind == "runtime-operation" && reason.operationId == "allocation"):
 				case "gc" if (reason.kind == "runtime-operation" && switch reason.operationId {
 						case "allocation" | "class-object-header" | "managed-type-representation" | "root-frame": true;

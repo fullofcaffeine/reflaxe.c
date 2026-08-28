@@ -254,7 +254,7 @@ class HxcIRControlFlowAnalysis {
 				switch failure.target {
 					case IRFTBlock(target):
 						add(target);
-					case IRFTPropagate | IRFTAbort:
+					case IRFTPropagate | IRFTUnwind | IRFTAbort:
 				}
 		}
 		if (block.terminator != null)
@@ -276,7 +276,7 @@ class HxcIRControlFlowAnalysis {
 				case IRTThrow(_, failure):
 					switch failure.target {
 						case IRFTBlock(target): add(target);
-						case IRFTPropagate | IRFTAbort:
+						case IRFTPropagate | IRFTUnwind | IRFTAbort:
 					}
 				case IRTReturn(_, _) | IRTUnreachable:
 			}
@@ -290,7 +290,7 @@ class HxcIRControlFlowAnalysis {
 				switch failure.target {
 					case IRFTBlock(_):
 						return true;
-					case IRFTPropagate | IRFTAbort:
+					case IRFTPropagate | IRFTUnwind | IRFTAbort:
 				}
 		}
 		return false;
@@ -305,6 +305,7 @@ class HxcIRControlFlowAnalysis {
 						failure) | IRDGet(_, _, failure) | IRDSet(_, _, _, failure) | IRDCall(_, _, _, failure) | IRDInvoke(_, _, _, failure): failure;
 					case IRDBox(_, _) | IRDBoxNull(_) | IRDBoxTypeToken(_) | IRDEqual(_, _, _): null;
 				};
+			case IRIOException(_): null;
 			case _: null;
 		};
 

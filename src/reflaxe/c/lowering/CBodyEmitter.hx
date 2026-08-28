@@ -631,6 +631,8 @@ class CBodyEmitter {
 				emitRegion(statements, root, state, fn);
 			case CCFLegacyIrreducible(_):
 				emitLegacyGraph(statements, state, fn);
+			case CCFExceptionContinuations(_):
+				emitLegacyGraph(statements, state, fn);
 		}
 		CPhaseTiming.stopDetail(emissionTimer);
 		if (state.terminatedByTailLoop) {
@@ -735,6 +737,7 @@ class CBodyEmitter {
 			case CCFStructured(root, _):
 				visitRegion(root);
 			case CCFLegacyIrreducible(_):
+			case CCFExceptionContinuations(_):
 		}
 
 		final result:Map<String, Bool> = [];
@@ -791,7 +794,7 @@ class CBodyEmitter {
 			storage: [],
 			alignments: [],
 			type: new CType(TVoid, [QConst]),
-			declarator: DArray(DPointer(DName(rootArray), []), ABFixed(EInt(CIntegerLiteral.decimal(Std.string(roots.length)))), []),
+			declarator: DArray(DPointer(DName(rootArray), [QVolatile]), ABFixed(EInt(CIntegerLiteral.decimal(Std.string(roots.length)))), []),
 			initializer: IList(initializers),
 			attributes: []
 		}));
@@ -818,6 +821,22 @@ class CBodyEmitter {
 			EInt(CIntegerLiteral.decimal(Std.string(roots.length))),
 			EUnary(AddressOf, EIdentifier(rootFrame))
 		]), state.boundsAbortName, 'managed-root-frame-push', fn.id);
+		final exceptionCleanup = managedProgram.rootExceptionCleanups.get(fn.id);
+		if (exceptionCleanup != null) {
+			statements.push(SDecl({
+				storage: [],
+				alignments: [],
+				type: new CType(TStruct(CBodyRuntimeNames.identifier(CBRNExceptionCleanupType))),
+				declarator: DName(exceptionCleanup),
+				initializer: IExpr(EIdentifier(CBodyRuntimeNames.identifier(CBRNExceptionCleanupInitializer))),
+				attributes: []
+			}));
+			emitStatusAbort(statements, ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNExceptionCleanupPush)), [
+				EUnary(AddressOf, EIdentifier(exceptionCleanup)),
+				EIdentifier(CBodyRuntimeNames.identifier(CBRNGcRootFramePopCleanup)),
+				EUnary(AddressOf, EIdentifier(rootFrame))
+			]), state.boundsAbortName, 'managed-root-frame-exception-cleanup-push', fn.id);
+		}
 	}
 
 	/** Publish one newly defined managed value to its already-registered slot. */
@@ -845,8 +864,12 @@ class CBodyEmitter {
 		final frame = managedProgram.rootFrames.get(fn.id);
 		if (frame == null)
 			fail('managed-root function `${fn.id}` lost its finalized frame name');
-		emitStatusAbort(statements, ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNGcRootFramePop)), [EUnary(AddressOf, EIdentifier(frame))]),
-			boundsAbortName, 'managed-root-frame-pop', fn.id);
+		final exceptionCleanup = managedProgram.rootExceptionCleanups.get(fn.id);
+		final pop = exceptionCleanup == null ? ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNGcRootFramePop)),
+			[EUnary(AddressOf,
+				EIdentifier(frame))]) : ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNExceptionCleanupRun)),
+				[EUnary(AddressOf, EIdentifier(exceptionCleanup))]);
+		emitStatusAbort(statements, pop, boundsAbortName, 'managed-root-frame-pop', fn.id);
 	}
 
 	/** Publish one root path without reading an inactive Dynamic union member. */
@@ -976,7 +999,7 @@ class CBodyEmitter {
 			case IRTThrow(_, failure):
 				switch failure.target {
 					case IRFTBlock(target): [target];
-					case IRFTPropagate | IRFTAbort: [];
+					case IRFTPropagate | IRFTUnwind | IRFTAbort: [];
 				}
 			case IRTReturn(_, _) | IRTUnreachable: [];
 		};
@@ -1419,6 +1442,8 @@ class CBodyEmitter {
 					}
 				case IRIODynamic(operation):
 					emitDynamicInstruction(statements, state, instruction, operation, fn);
+				case IRIOException(operation):
+					emitExceptionInstruction(statements, state, instruction, operation, fn);
 				case IRIOAllocate(type, IRAOwned, IRIRuntime("alloc"), {target: IRFTAbort}):
 					emitOwnedAllocation(statements, state.values, state.referencedValues, instruction, type, state.temporaryNames, state.lineDirectives,
 						state.boundsAbortName, fn);
@@ -1905,6 +1930,115 @@ class CBodyEmitter {
 		if (!state.referencedValues.exists(result.id))
 			statements.push(ignoreExpression(EIdentifier(name)));
 		return name;
+	}
+
+	/** Emit one frame operation while retaining `setjmp` in its owning function. */
+	function emitExceptionInstruction(statements:Array<CStmt>, state:CBodyEmissionState, instruction:HxcIRInstruction, operation:HxcIRExceptionInstruction,
+			fn:HxcIRFunction):Void {
+		function frameName(regionId:String):CIdentifier {
+			final regions = fn.exceptionRegions == null ? [] : fn.exceptionRegions;
+			for (region in regions)
+				if (region.id == regionId)
+					return requireLocalName(state.localNames, region.frameStorageId, fn.id);
+			return fail('exception instruction `${instruction.id}` in `${fn.id}` names unknown region `$regionId`');
+		}
+		addLineDirective(statements, instruction.source, state.lineDirectives);
+		switch operation {
+			case IREFramePush(regionId):
+				final frame = frameName(regionId);
+				final region = requireExceptionRegion(fn, regionId);
+				final payloadRoots = state.managedRootSlots.get(region.payloadValueId);
+				if (payloadRoots != null && payloadRoots.length != 1)
+					return fail('exception region `$regionId` in `${fn.id}` requires exactly one managed payload root slot');
+				final rootUpdate = payloadRoots == null ? ENull : EIdentifier(CBodyRuntimeNames.identifier(CBRNExceptionRootSlotUpdate));
+				final rootContext:CExpr = if (payloadRoots == null) {
+					ENull;
+				} else {
+					final rootArray = state.managedRootArray;
+					if (rootArray == null)
+						return fail('exception region `$regionId` in `${fn.id}` lost its managed root array');
+					ECast(new CType(TVoid), DPointer(DName(null), []),
+						EUnary(AddressOf, EIndex(EIdentifier(rootArray), EInt(CIntegerLiteral.decimal(Std.string(payloadRoots[0].index))))));
+				};
+				statements.push(SDecl({
+					storage: [],
+					alignments: [],
+					type: new CType(TStruct(CBodyRuntimeNames.identifier(CBRNExceptionFrameType))),
+					declarator: DName(frame),
+					initializer: IExpr(EIdentifier(CBodyRuntimeNames.identifier(CBRNExceptionFrameInitializer))),
+					attributes: []
+				}));
+				emitStatusAbort(statements,
+					ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNExceptionFramePush)), [EUnary(AddressOf, EIdentifier(frame)), rootUpdate, rootContext]),
+					state.boundsAbortName, instruction.id, fn.id);
+			case IREFrameSetJmp(regionId):
+				final result = requireResult(instruction, fn.id);
+				final expression = EBinary(Equal,
+					ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNExceptionFrameSetJmp)), [EUnary(AddressOf, EIdentifier(frameName(regionId)))]),
+					EInt(CIntegerLiteral.decimal("0")));
+				recordPureResult(statements, state.values, state.referencedValues, instruction, result, expression, state.lineDirectives, fn.id);
+			case IREFramePayload(regionId):
+				final name = declareDynamicResult(statements, state, instruction, fn.id);
+				emitStatusAbort(statements, ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNExceptionFrameTakePayload)), [
+					EUnary(AddressOf, EIdentifier(frameName(regionId))),
+					EUnary(AddressOf, EIdentifier(name))
+				]), state.boundsAbortName, instruction.id, fn.id);
+			case IREFramePop(regionId):
+				emitStatusAbort(statements,
+					ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNExceptionFramePop)), [EUnary(AddressOf, EIdentifier(frameName(regionId)))]),
+					state.boundsAbortName, instruction.id, fn.id);
+			case IRECleanupPush(cleanupId):
+				final cleanup = requireExceptionCleanup(fn, cleanupId);
+				final storage = requireLocalName(state.localNames, cleanup.storageId, fn.id);
+				final callback = switch cleanup.implementation {
+					case IRIRuntime("array"): CBodyRuntimeNames.identifier(CBRNArrayReleaseSlot);
+					case IRIRuntime("string-map"): CBodyRuntimeNames.identifier(CBRNStringMapReleaseSlot);
+					case IRIRuntime("iterator"): CBodyRuntimeNames.identifier(CBRNIteratorReleaseSlot);
+					case IRIRuntime("int-map"): CBodyRuntimeNames.identifier(CBRNIntMapReleaseSlot);
+					case IRIRuntime("bytes"): CBodyRuntimeNames.identifier(CBRNBytesReleaseSlot);
+					case IRIRuntime("string"): CBodyRuntimeNames.identifier(CBRNStringReleaseSlot);
+					case _: return fail('exception cleanup `$cleanupId` in `${fn.id}` has no standardized runtime callback');
+				};
+				statements.push(SDecl({
+					storage: [],
+					alignments: [],
+					type: new CType(TStruct(CBodyRuntimeNames.identifier(CBRNExceptionCleanupType))),
+					declarator: DName(storage),
+					initializer: IExpr(EIdentifier(CBodyRuntimeNames.identifier(CBRNExceptionCleanupInitializer))),
+					attributes: []
+				}));
+				emitStatusAbort(statements, ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNExceptionCleanupPush)), [
+					EUnary(AddressOf, EIdentifier(storage)),
+					EIdentifier(callback),
+					EUnary(AddressOf, placeExpression(cleanup.place, fn, state.localNames, state.globalNames, state.spanLengthNames, state.values))
+				]), state.boundsAbortName, instruction.id, fn.id);
+			case IRECleanupRun(cleanupId):
+				final cleanup = requireExceptionCleanup(fn, cleanupId);
+				emitStatusAbort(statements, ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNExceptionCleanupRun)), [
+					EUnary(AddressOf, EIdentifier(requireLocalName(state.localNames, cleanup.storageId, fn.id)))
+				]), state.boundsAbortName, instruction.id, fn.id);
+			case IRECleanupDiscard(cleanupId):
+				final cleanup = requireExceptionCleanup(fn, cleanupId);
+				emitStatusAbort(statements, ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNExceptionCleanupDiscard)), [
+					EUnary(AddressOf, EIdentifier(requireLocalName(state.localNames, cleanup.storageId, fn.id)))
+				]), state.boundsAbortName, instruction.id, fn.id);
+		}
+	}
+
+	static function requireExceptionCleanup(fn:HxcIRFunction, cleanupId:String):HxcIRExceptionCleanup {
+		final cleanups = fn.exceptionCleanups == null ? [] : fn.exceptionCleanups;
+		for (cleanup in cleanups)
+			if (cleanup.id == cleanupId)
+				return cleanup;
+		throw new CBodyEmissionError('function `${fn.id}` cannot resolve exception cleanup `$cleanupId`');
+	}
+
+	static function requireExceptionRegion(fn:HxcIRFunction, regionId:String):HxcIRExceptionRegion {
+		final regions = fn.exceptionRegions == null ? [] : fn.exceptionRegions;
+		for (region in regions)
+			if (region.id == regionId)
+				return region;
+		throw new CBodyEmissionError('function `${fn.id}` cannot resolve exception region `$regionId`');
 	}
 
 	/** Read one exact scalar or managed-reference payload with its HxcIR failure edge. */
@@ -3090,10 +3224,25 @@ class CBodyEmitter {
 				}
 				statements.push(SSwitch(enumTagExpression(requireValue(values, valueId, functionId), instanceId), emittedCases));
 			case IRTThrow(valueId, failure):
+				if (failure.target == IRFTUnwind) {
+					emitStatusAbort(statements,
+						ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNExceptionRaise)), [EUnary(AddressOf, requireValue(values, valueId, functionId))]),
+						boundsAbortName, "exception-raise", functionId);
+					statements.push(SExpr(ECall(EIdentifier(requireBoundsAbortName(boundsAbortName, "exception-raise-returned", functionId)), [])));
+					return;
+				}
 				statements.push(SExpr(ECast(new CType(TVoid), DName(null), requireValue(values, valueId, functionId))));
 				emitCleanupSteps(statements, failure.cleanup, fn, values, localNames, globalNames, spanLengthNames, boundsAbortName);
-				emitManagedRootFramePop(statements, fn, boundsAbortName);
-				emitFailureTarget(statements, failure, fn, boundsAbortName, "throw");
+				switch failure.target {
+					case IRFTBlock(_):
+					case _: emitManagedRootFramePop(statements, fn, boundsAbortName);
+				}
+				switch failure.target {
+					case IRFTBlock(blockId):
+						statements.push(SGoto(requireLabelName(labelNames, blockId, functionId)));
+					case _:
+						emitFailureTarget(statements, failure, fn, boundsAbortName, "throw");
+				}
 			case IRTUnreachable:
 				statements.push(SExpr(ECall(EIdentifier(requireBoundsAbortName(boundsAbortName, "unreachable", functionId)), [])));
 		}
@@ -3242,6 +3391,8 @@ class CBodyEmitter {
 				}
 			case IRFTAbort:
 				statements.push(SExpr(ECall(EIdentifier(requireBoundsAbortName(boundsAbortName, owner, fn.id)), [])));
+			case IRFTUnwind:
+				fail('$owner in `${fn.id}` requires contained exception emission');
 			case IRFTBlock(blockId):
 				fail('$owner in `${fn.id}` has unsupported failure continuation block `$blockId`');
 		}
@@ -3668,12 +3819,18 @@ class CBodyEmitter {
 								}
 							case _:
 						}
+					case IRIOException(_):
+						addUnique(headers, "hxrt/exception.h");
+						addUnique(headers, "stdlib.h");
 					case _:
 				}
 			}
 			if (block.terminator != null) {
 				switch block.terminator.kind {
 					case IRTThrow(_, {target: IRFTAbort}) | IRTUnreachable | IRTTagSwitch(_, _, null):
+						addUnique(headers, "stdlib.h");
+					case IRTThrow(_, {target: IRFTUnwind}):
+						addUnique(headers, "hxrt/exception.h");
 						addUnique(headers, "stdlib.h");
 					case _:
 				}

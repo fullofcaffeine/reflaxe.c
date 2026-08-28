@@ -160,6 +160,7 @@
           "hxc_bytes_ref_is_valid",
           "hxc_bytes_ref_length",
           "hxc_bytes_ref_release",
+          "hxc_bytes_ref_release_slot",
           "hxc_bytes_ref_retain",
           "hxc_bytes_ref_set",
           "hxc_bytes_ref_sub"
@@ -238,6 +239,7 @@
           "hxc_string_from_utf8_checked",
           "hxc_string_from_utf8_lossy",
           "hxc_string_release",
+          "hxc_string_release_slot",
           "hxc_string_retain",
           "hxc_string_to_cstring_owned"
         ],
@@ -479,6 +481,7 @@
       "hxc_bytes_ref_is_valid",
       "hxc_bytes_ref_length",
       "hxc_bytes_ref_release",
+      "hxc_bytes_ref_release_slot",
       "hxc_bytes_ref_retain",
       "hxc_bytes_ref_set",
       "hxc_bytes_ref_sub",
@@ -514,6 +517,7 @@
       "hxc_string_is_valid",
       "hxc_string_last_index_of",
       "hxc_string_release",
+      "hxc_string_release_slot",
       "hxc_string_retain",
       "hxc_string_scalar_at",
       "hxc_string_scalar_length",
@@ -779,11 +783,11 @@
         "source": {
           "file": "test/runtime/runtime-feature-graph/RuntimeFeatureGraphGolden.hx",
           "end": {
-            "line": 100,
+            "line": 101,
             "column": 2
           },
           "start": {
-            "line": 100,
+            "line": 101,
             "column": 1
           }
         }
@@ -907,11 +911,11 @@
         "source": {
           "file": "test/runtime/runtime-feature-graph/RuntimeFeatureGraphGolden.hx",
           "end": {
-            "line": 98,
+            "line": 99,
             "column": 2
           },
           "start": {
-            "line": 98,
+            "line": 99,
             "column": 1
           }
         }
@@ -980,11 +984,11 @@
         "source": {
           "file": "test/runtime/runtime-feature-graph/RuntimeFeatureGraphGolden.hx",
           "end": {
-            "line": 342,
+            "line": 346,
             "column": 2
           },
           "start": {
-            "line": 342,
+            "line": 346,
             "column": 1
           }
         }
@@ -1097,6 +1101,7 @@
           "hxc_array_ref_pop_move",
           "hxc_array_ref_push_copy",
           "hxc_array_ref_release",
+          "hxc_array_ref_release_slot",
           "hxc_array_ref_resize_default",
           "hxc_array_ref_retain",
           "hxc_array_ref_set_copy",
@@ -1139,6 +1144,7 @@
           "hxc_iterator_ref_has_next",
           "hxc_iterator_ref_next_move",
           "hxc_iterator_ref_release",
+          "hxc_iterator_ref_release_slot",
           "hxc_iterator_ref_retain"
         ],
         "artifacts": [
@@ -1232,6 +1238,7 @@
           "hxc_string_from_utf8_checked",
           "hxc_string_from_utf8_lossy",
           "hxc_string_release",
+          "hxc_string_release_slot",
           "hxc_string_retain",
           "hxc_string_to_cstring_owned"
         ],
@@ -1265,6 +1272,7 @@
           "hxc_string_map_ref_key_iterator",
           "hxc_string_map_ref_pair_iterator",
           "hxc_string_map_ref_release",
+          "hxc_string_map_ref_release_slot",
           "hxc_string_map_ref_remove",
           "hxc_string_map_ref_retain",
           "hxc_string_map_ref_set_copy",
@@ -1533,6 +1541,7 @@
       "hxc_array_ref_pop_move",
       "hxc_array_ref_push_copy",
       "hxc_array_ref_release",
+      "hxc_array_ref_release_slot",
       "hxc_array_ref_resize_default",
       "hxc_array_ref_retain",
       "hxc_array_ref_set_copy",
@@ -1558,6 +1567,7 @@
       "hxc_iterator_ref_has_next",
       "hxc_iterator_ref_next_move",
       "hxc_iterator_ref_release",
+      "hxc_iterator_ref_release_slot",
       "hxc_iterator_ref_retain",
       "hxc_owned_cstring_dispose",
       "hxc_owned_string_dispose",
@@ -1597,6 +1607,7 @@
       "hxc_string_map_ref_key_iterator",
       "hxc_string_map_ref_pair_iterator",
       "hxc_string_map_ref_release",
+      "hxc_string_map_ref_release_slot",
       "hxc_string_map_ref_remove",
       "hxc_string_map_ref_retain",
       "hxc_string_map_ref_set_copy",
@@ -1604,6 +1615,7 @@
       "hxc_string_map_ref_value_iterator",
       "hxc_string_map_value_ops_is_valid",
       "hxc_string_release",
+      "hxc_string_release_slot",
       "hxc_string_retain",
       "hxc_string_scalar_at",
       "hxc_string_scalar_length",
@@ -1770,6 +1782,7 @@
           "hxc_gc_owns_exact",
           "hxc_gc_pin_object",
           "hxc_gc_root_frame_pop",
+          "hxc_gc_root_frame_pop_cleanup",
           "hxc_gc_root_frame_push",
           "hxc_gc_root_table_register",
           "hxc_gc_root_table_unregister",
@@ -1911,6 +1924,7 @@
       "hxc_gc_owns_exact",
       "hxc_gc_pin_object",
       "hxc_gc_root_frame_pop",
+      "hxc_gc_root_frame_pop_cleanup",
       "hxc_gc_root_frame_push",
       "hxc_gc_root_table_register",
       "hxc_gc_root_table_unregister",
@@ -1951,11 +1965,11 @@
         "source": {
           "file": "test/runtime/runtime-feature-graph/RuntimeFeatureGraphGolden.hx",
           "end": {
-            "line": 99,
+            "line": 100,
             "column": 2
           },
           "start": {
-            "line": 99,
+            "line": 100,
             "column": 1
           }
         }
@@ -2066,6 +2080,7 @@
           "hxc_array_ref_pop_move",
           "hxc_array_ref_push_copy",
           "hxc_array_ref_release",
+          "hxc_array_ref_release_slot",
           "hxc_array_ref_resize_default",
           "hxc_array_ref_retain",
           "hxc_array_ref_set_copy",
@@ -2132,6 +2147,7 @@
           "hxc_gc_owns_exact",
           "hxc_gc_pin_object",
           "hxc_gc_root_frame_pop",
+          "hxc_gc_root_frame_pop_cleanup",
           "hxc_gc_root_frame_push",
           "hxc_gc_root_table_register",
           "hxc_gc_root_table_unregister",
@@ -2167,6 +2183,7 @@
           "hxc_iterator_ref_has_next",
           "hxc_iterator_ref_next_move",
           "hxc_iterator_ref_release",
+          "hxc_iterator_ref_release_slot",
           "hxc_iterator_ref_retain"
         ],
         "artifacts": [
@@ -2429,6 +2446,7 @@
       "hxc_array_ref_pop_move",
       "hxc_array_ref_push_copy",
       "hxc_array_ref_release",
+      "hxc_array_ref_release_slot",
       "hxc_array_ref_resize_default",
       "hxc_array_ref_retain",
       "hxc_array_ref_set_copy",
@@ -2453,6 +2471,7 @@
       "hxc_gc_owns_exact",
       "hxc_gc_pin_object",
       "hxc_gc_root_frame_pop",
+      "hxc_gc_root_frame_pop_cleanup",
       "hxc_gc_root_frame_push",
       "hxc_gc_root_table_register",
       "hxc_gc_root_table_unregister",
@@ -2468,6 +2487,7 @@
       "hxc_iterator_ref_has_next",
       "hxc_iterator_ref_next_move",
       "hxc_iterator_ref_release",
+      "hxc_iterator_ref_release_slot",
       "hxc_iterator_ref_retain",
       "hxc_object_header_init",
       "hxc_object_header_is_valid",
@@ -2643,6 +2663,7 @@
           "hxc_array_ref_pop_move",
           "hxc_array_ref_push_copy",
           "hxc_array_ref_release",
+          "hxc_array_ref_release_slot",
           "hxc_array_ref_resize_default",
           "hxc_array_ref_retain",
           "hxc_array_ref_set_copy",
@@ -2777,6 +2798,7 @@
       "hxc_array_ref_pop_move",
       "hxc_array_ref_push_copy",
       "hxc_array_ref_release",
+      "hxc_array_ref_release_slot",
       "hxc_array_ref_resize_default",
       "hxc_array_ref_retain",
       "hxc_array_ref_set_copy",
@@ -2983,11 +3005,11 @@
           "source": {
             "file": "test/runtime/runtime-feature-graph/RuntimeFeatureGraphGolden.hx",
             "end": {
-              "line": 355,
+              "line": 359,
               "column": 2
             },
             "start": {
-              "line": 355,
+              "line": 359,
               "column": 1
             }
           }
@@ -3009,11 +3031,11 @@
           "source": {
             "file": "test/runtime/runtime-feature-graph/RuntimeFeatureGraphGolden.hx",
             "end": {
-              "line": 355,
+              "line": 359,
               "column": 2
             },
             "start": {
-              "line": 355,
+              "line": 359,
               "column": 1
             }
           }
@@ -3028,7 +3050,7 @@
         "string-scalar"
       ],
       "id": "HXC2000",
-      "message": "runtime policy `none` found 2 deduplicated runtime blocker(s):\n- fixture.none.a kind=fixture-semantic-gap operation=fixture-runtime-operation surface=`fixture.RuntimeFeatureGraph` source=test/runtime/runtime-feature-graph/RuntimeFeatureGraphGolden.hx:355:1-355:2 feature=string dependency-chains=[string -> alloc -> status -> runtime-base; string -> string-scalar -> status -> runtime-base; string -> string-scalar -> string-literal -> runtime-base] alternative=`use a direct fixture representation when it preserves semantics`\n- fixture.none.z kind=fixture-semantic-gap operation=fixture-runtime-operation surface=`fixture.RuntimeFeatureGraph` source=test/runtime/runtime-feature-graph/RuntimeFeatureGraphGolden.hx:355:1-355:2 feature=alloc dependency-chains=[alloc -> status -> runtime-base] alternative=`use a direct fixture representation when it preserves semantics`"
+      "message": "runtime policy `none` found 2 deduplicated runtime blocker(s):\n- fixture.none.a kind=fixture-semantic-gap operation=fixture-runtime-operation surface=`fixture.RuntimeFeatureGraph` source=test/runtime/runtime-feature-graph/RuntimeFeatureGraphGolden.hx:359:1-359:2 feature=string dependency-chains=[string -> alloc -> status -> runtime-base; string -> string-scalar -> status -> runtime-base; string -> string-scalar -> string-literal -> runtime-base] alternative=`use a direct fixture representation when it preserves semantics`\n- fixture.none.z kind=fixture-semantic-gap operation=fixture-runtime-operation surface=`fixture.RuntimeFeatureGraph` source=test/runtime/runtime-feature-graph/RuntimeFeatureGraphGolden.hx:359:1-359:2 feature=alloc dependency-chains=[alloc -> status -> runtime-base] alternative=`use a direct fixture representation when it preserves semantics`"
     }
   },
   "compilerIo": {
@@ -3207,11 +3229,11 @@
         "source": {
           "file": "test/runtime/runtime-feature-graph/RuntimeFeatureGraphGolden.hx",
           "end": {
-            "line": 313,
+            "line": 317,
             "column": 2
           },
           "start": {
-            "line": 313,
+            "line": 317,
             "column": 1
           }
         }
@@ -3372,6 +3394,7 @@
           "hxc_string_from_utf8_checked",
           "hxc_string_from_utf8_lossy",
           "hxc_string_release",
+          "hxc_string_release_slot",
           "hxc_string_retain",
           "hxc_string_to_cstring_owned"
         ],
@@ -3599,6 +3622,7 @@
       "hxc_string_is_valid",
       "hxc_string_last_index_of",
       "hxc_string_release",
+      "hxc_string_release_slot",
       "hxc_string_retain",
       "hxc_string_scalar_at",
       "hxc_string_scalar_length",
@@ -3801,6 +3825,7 @@
           "hxc_string_from_utf8_checked",
           "hxc_string_from_utf8_lossy",
           "hxc_string_release",
+          "hxc_string_release_slot",
           "hxc_string_retain",
           "hxc_string_to_cstring_owned"
         ],
@@ -3993,6 +4018,7 @@
       "hxc_string_is_valid",
       "hxc_string_last_index_of",
       "hxc_string_release",
+      "hxc_string_release_slot",
       "hxc_string_retain",
       "hxc_string_scalar_at",
       "hxc_string_scalar_length",
@@ -4028,11 +4054,11 @@
         "source": {
           "file": "test/runtime/runtime-feature-graph/RuntimeFeatureGraphGolden.hx",
           "end": {
-            "line": 110,
+            "line": 111,
             "column": 2
           },
           "start": {
-            "line": 110,
+            "line": 111,
             "column": 1
           }
         }
@@ -4143,6 +4169,7 @@
           "hxc_array_ref_pop_move",
           "hxc_array_ref_push_copy",
           "hxc_array_ref_release",
+          "hxc_array_ref_release_slot",
           "hxc_array_ref_resize_default",
           "hxc_array_ref_retain",
           "hxc_array_ref_set_copy",
@@ -4209,6 +4236,7 @@
           "hxc_gc_owns_exact",
           "hxc_gc_pin_object",
           "hxc_gc_root_frame_pop",
+          "hxc_gc_root_frame_pop_cleanup",
           "hxc_gc_root_frame_push",
           "hxc_gc_root_table_register",
           "hxc_gc_root_table_unregister",
@@ -4244,6 +4272,7 @@
           "hxc_iterator_ref_has_next",
           "hxc_iterator_ref_next_move",
           "hxc_iterator_ref_release",
+          "hxc_iterator_ref_release_slot",
           "hxc_iterator_ref_retain"
         ],
         "artifacts": [
@@ -4529,6 +4558,7 @@
       "hxc_array_ref_pop_move",
       "hxc_array_ref_push_copy",
       "hxc_array_ref_release",
+      "hxc_array_ref_release_slot",
       "hxc_array_ref_resize_default",
       "hxc_array_ref_retain",
       "hxc_array_ref_set_copy",
@@ -4553,6 +4583,7 @@
       "hxc_gc_owns_exact",
       "hxc_gc_pin_object",
       "hxc_gc_root_frame_pop",
+      "hxc_gc_root_frame_pop_cleanup",
       "hxc_gc_root_frame_push",
       "hxc_gc_root_table_register",
       "hxc_gc_root_table_unregister",
@@ -4568,6 +4599,7 @@
       "hxc_iterator_ref_has_next",
       "hxc_iterator_ref_next_move",
       "hxc_iterator_ref_release",
+      "hxc_iterator_ref_release_slot",
       "hxc_iterator_ref_retain",
       "hxc_object_header_init",
       "hxc_object_header_is_valid",
@@ -4743,6 +4775,7 @@
           "hxc_array_ref_pop_move",
           "hxc_array_ref_push_copy",
           "hxc_array_ref_release",
+          "hxc_array_ref_release_slot",
           "hxc_array_ref_resize_default",
           "hxc_array_ref_retain",
           "hxc_array_ref_set_copy",
@@ -4849,6 +4882,7 @@
           "hxc_string_from_utf8_checked",
           "hxc_string_from_utf8_lossy",
           "hxc_string_release",
+          "hxc_string_release_slot",
           "hxc_string_retain",
           "hxc_string_to_cstring_owned"
         ],
@@ -5093,6 +5127,7 @@
       "hxc_array_ref_pop_move",
       "hxc_array_ref_push_copy",
       "hxc_array_ref_release",
+      "hxc_array_ref_release_slot",
       "hxc_array_ref_resize_default",
       "hxc_array_ref_retain",
       "hxc_array_ref_set_copy",
@@ -5140,6 +5175,7 @@
       "hxc_string_is_valid",
       "hxc_string_last_index_of",
       "hxc_string_release",
+      "hxc_string_release_slot",
       "hxc_string_retain",
       "hxc_string_scalar_at",
       "hxc_string_scalar_length",
@@ -5524,6 +5560,7 @@
           "hxc_string_from_utf8_checked",
           "hxc_string_from_utf8_lossy",
           "hxc_string_release",
+          "hxc_string_release_slot",
           "hxc_string_retain",
           "hxc_string_to_cstring_owned"
         ],
@@ -5712,6 +5749,7 @@
       "hxc_string_is_valid",
       "hxc_string_last_index_of",
       "hxc_string_release",
+      "hxc_string_release_slot",
       "hxc_string_retain",
       "hxc_string_scalar_at",
       "hxc_string_scalar_length",
@@ -5747,11 +5785,11 @@
         "source": {
           "file": "test/runtime/runtime-feature-graph/RuntimeFeatureGraphGolden.hx",
           "end": {
-            "line": 102,
+            "line": 103,
             "column": 2
           },
           "start": {
-            "line": 102,
+            "line": 103,
             "column": 1
           }
         }
@@ -5766,11 +5804,254 @@
         "source": {
           "file": "test/runtime/runtime-feature-graph/RuntimeFeatureGraphGolden.hx",
           "end": {
-            "line": 101,
+            "line": 102,
             "column": 2
           },
           "start": {
-            "line": 101,
+            "line": 102,
+            "column": 1
+          }
+        }
+      }
+    ],
+    "requestedPolicy": "auto",
+    "defines": [],
+    "planPurpose": "native-seed-fixture",
+    "algorithm": "hxc-runtime-plan-v2",
+    "policyProvenance": "fixture:explicit-policy"
+  },
+  "exception": {
+    "selectedFeatures": [
+      {
+        "dependencies": [],
+        "id": "runtime-base",
+        "reasonIds": [
+          "fixture.exception"
+        ],
+        "availability": "compiler-selectable",
+        "symbols": [],
+        "artifacts": [
+          "runtime/include/hxrt/base.h"
+        ],
+        "libraries": [],
+        "defines": [],
+        "root": false
+      },
+      {
+        "dependencies": [
+          "runtime-base"
+        ],
+        "id": "status",
+        "reasonIds": [
+          "fixture.exception"
+        ],
+        "availability": "compiler-selectable",
+        "symbols": [],
+        "artifacts": [
+          "runtime/include/hxrt/status.h"
+        ],
+        "libraries": [],
+        "defines": [],
+        "root": false
+      },
+      {
+        "dependencies": [
+          "status"
+        ],
+        "id": "dynamic",
+        "reasonIds": [
+          "fixture.exception"
+        ],
+        "availability": "compiler-selectable",
+        "symbols": [
+          "hxc_dynamic_type_is_valid",
+          "hxc_value_init_bool",
+          "hxc_value_init_float64",
+          "hxc_value_init_int32",
+          "hxc_value_init_managed_reference",
+          "hxc_value_init_managed_wrapper",
+          "hxc_value_init_null",
+          "hxc_value_init_static_token",
+          "hxc_value_is_null",
+          "hxc_value_is_valid",
+          "hxc_value_managed_payload",
+          "hxc_value_read_bool",
+          "hxc_value_read_float64",
+          "hxc_value_read_int32",
+          "hxc_value_read_managed_reference",
+          "hxc_value_read_managed_wrapper",
+          "hxc_value_read_static_token"
+        ],
+        "artifacts": [
+          "runtime/include/hxrt/dynamic.h",
+          "runtime/src/dynamic.c"
+        ],
+        "libraries": [],
+        "defines": [],
+        "root": false
+      },
+      {
+        "dependencies": [
+          "dynamic"
+        ],
+        "id": "exception",
+        "reasonIds": [
+          "fixture.exception"
+        ],
+        "availability": "compiler-selectable",
+        "symbols": [
+          "hxc_exception_cleanup_discard",
+          "hxc_exception_cleanup_push",
+          "hxc_exception_cleanup_run",
+          "hxc_exception_frame_payload",
+          "hxc_exception_frame_pop",
+          "hxc_exception_frame_push",
+          "hxc_exception_frame_take_payload",
+          "hxc_exception_raise",
+          "hxc_exception_root_slot_update"
+        ],
+        "artifacts": [
+          "runtime/include/hxrt/exception.h",
+          "runtime/src/exception.c"
+        ],
+        "libraries": [],
+        "defines": [],
+        "root": true
+      }
+    ],
+    "directDecisions": [
+      "direct-c-considered",
+      "program-local-specialization-considered"
+    ],
+    "profile": "portable",
+    "environment": "hosted",
+    "dependencyEdges": [
+      {
+        "featureId": "dynamic",
+        "reasonIds": [
+          "fixture.exception"
+        ],
+        "dependencyId": "status"
+      },
+      {
+        "featureId": "exception",
+        "reasonIds": [
+          "fixture.exception"
+        ],
+        "dependencyId": "dynamic"
+      },
+      {
+        "featureId": "status",
+        "reasonIds": [
+          "fixture.exception"
+        ],
+        "dependencyId": "runtime-base"
+      }
+    ],
+    "manualOverrides": [],
+    "noRuntimeProof": null,
+    "features": [
+      "runtime-base",
+      "status",
+      "dynamic",
+      "exception"
+    ],
+    "artifactDetails": [
+      {
+        "featureId": "runtime-base",
+        "kind": "runtime-header",
+        "outputPath": "runtime/include/hxrt/base.h",
+        "sourcePath": "runtime/hxrt/include/hxrt/base.h"
+      },
+      {
+        "featureId": "dynamic",
+        "kind": "runtime-header",
+        "outputPath": "runtime/include/hxrt/dynamic.h",
+        "sourcePath": "runtime/hxrt/include/hxrt/dynamic.h"
+      },
+      {
+        "featureId": "exception",
+        "kind": "runtime-header",
+        "outputPath": "runtime/include/hxrt/exception.h",
+        "sourcePath": "runtime/hxrt/include/hxrt/exception.h"
+      },
+      {
+        "featureId": "status",
+        "kind": "runtime-header",
+        "outputPath": "runtime/include/hxrt/status.h",
+        "sourcePath": "runtime/hxrt/include/hxrt/status.h"
+      },
+      {
+        "featureId": "dynamic",
+        "kind": "runtime-source",
+        "outputPath": "runtime/src/dynamic.c",
+        "sourcePath": "runtime/hxrt/src/dynamic.c"
+      },
+      {
+        "featureId": "exception",
+        "kind": "runtime-source",
+        "outputPath": "runtime/src/exception.c",
+        "sourcePath": "runtime/hxrt/src/exception.c"
+      }
+    ],
+    "status": "analyzed-native-seed-features",
+    "schemaVersion": 2,
+    "diagnosticProvenance": "fixture:diagnostics-off",
+    "symbols": [
+      "hxc_dynamic_type_is_valid",
+      "hxc_exception_cleanup_discard",
+      "hxc_exception_cleanup_push",
+      "hxc_exception_cleanup_run",
+      "hxc_exception_frame_payload",
+      "hxc_exception_frame_pop",
+      "hxc_exception_frame_push",
+      "hxc_exception_frame_take_payload",
+      "hxc_exception_raise",
+      "hxc_exception_root_slot_update",
+      "hxc_value_init_bool",
+      "hxc_value_init_float64",
+      "hxc_value_init_int32",
+      "hxc_value_init_managed_reference",
+      "hxc_value_init_managed_wrapper",
+      "hxc_value_init_null",
+      "hxc_value_init_static_token",
+      "hxc_value_is_null",
+      "hxc_value_is_valid",
+      "hxc_value_managed_payload",
+      "hxc_value_read_bool",
+      "hxc_value_read_float64",
+      "hxc_value_read_int32",
+      "hxc_value_read_managed_reference",
+      "hxc_value_read_managed_wrapper",
+      "hxc_value_read_static_token"
+    ],
+    "diagnosticMode": "off",
+    "resolvedPolicy": "auto",
+    "artifacts": [
+      "runtime/include/hxrt/base.h",
+      "runtime/include/hxrt/dynamic.h",
+      "runtime/include/hxrt/exception.h",
+      "runtime/include/hxrt/status.h",
+      "runtime/src/dynamic.c",
+      "runtime/src/exception.c"
+    ],
+    "libraries": [],
+    "rootReasons": [
+      {
+        "featureId": "exception",
+        "alternative": "use a direct fixture representation when it preserves semantics",
+        "id": "fixture.exception",
+        "operationId": "fixture-runtime-operation",
+        "kind": "fixture-semantic-gap",
+        "surface": "fixture.RuntimeFeatureGraph",
+        "source": {
+          "file": "test/runtime/runtime-feature-graph/RuntimeFeatureGraphGolden.hx",
+          "end": {
+            "line": 98,
+            "column": 2
+          },
+          "start": {
+            "line": 98,
             "column": 1
           }
         }
@@ -5887,6 +6168,7 @@
           "hxc_bytes_ref_is_valid",
           "hxc_bytes_ref_length",
           "hxc_bytes_ref_release",
+          "hxc_bytes_ref_release_slot",
           "hxc_bytes_ref_retain",
           "hxc_bytes_ref_set",
           "hxc_bytes_ref_sub"
@@ -6019,6 +6301,7 @@
       "hxc_bytes_ref_is_valid",
       "hxc_bytes_ref_length",
       "hxc_bytes_ref_release",
+      "hxc_bytes_ref_release_slot",
       "hxc_bytes_ref_retain",
       "hxc_bytes_ref_set",
       "hxc_bytes_ref_sub",
@@ -6166,6 +6449,7 @@
           "hxc_array_ref_pop_move",
           "hxc_array_ref_push_copy",
           "hxc_array_ref_release",
+          "hxc_array_ref_release_slot",
           "hxc_array_ref_resize_default",
           "hxc_array_ref_retain",
           "hxc_array_ref_set_copy",
@@ -6232,6 +6516,7 @@
           "hxc_gc_owns_exact",
           "hxc_gc_pin_object",
           "hxc_gc_root_frame_pop",
+          "hxc_gc_root_frame_pop_cleanup",
           "hxc_gc_root_frame_push",
           "hxc_gc_root_table_register",
           "hxc_gc_root_table_unregister",
@@ -6267,6 +6552,7 @@
           "hxc_iterator_ref_has_next",
           "hxc_iterator_ref_next_move",
           "hxc_iterator_ref_release",
+          "hxc_iterator_ref_release_slot",
           "hxc_iterator_ref_retain"
         ],
         "artifacts": [
@@ -6552,6 +6838,7 @@
       "hxc_array_ref_pop_move",
       "hxc_array_ref_push_copy",
       "hxc_array_ref_release",
+      "hxc_array_ref_release_slot",
       "hxc_array_ref_resize_default",
       "hxc_array_ref_retain",
       "hxc_array_ref_set_copy",
@@ -6576,6 +6863,7 @@
       "hxc_gc_owns_exact",
       "hxc_gc_pin_object",
       "hxc_gc_root_frame_pop",
+      "hxc_gc_root_frame_pop_cleanup",
       "hxc_gc_root_frame_push",
       "hxc_gc_root_table_register",
       "hxc_gc_root_table_unregister",
@@ -6591,6 +6879,7 @@
       "hxc_iterator_ref_has_next",
       "hxc_iterator_ref_next_move",
       "hxc_iterator_ref_release",
+      "hxc_iterator_ref_release_slot",
       "hxc_iterator_ref_retain",
       "hxc_object_header_init",
       "hxc_object_header_is_valid",
@@ -6766,6 +7055,7 @@
           "hxc_array_ref_pop_move",
           "hxc_array_ref_push_copy",
           "hxc_array_ref_release",
+          "hxc_array_ref_release_slot",
           "hxc_array_ref_resize_default",
           "hxc_array_ref_retain",
           "hxc_array_ref_set_copy",
@@ -6808,6 +7098,7 @@
           "hxc_iterator_ref_has_next",
           "hxc_iterator_ref_next_move",
           "hxc_iterator_ref_release",
+          "hxc_iterator_ref_release_slot",
           "hxc_iterator_ref_retain"
         ],
         "artifacts": [
@@ -6901,6 +7192,7 @@
           "hxc_string_from_utf8_checked",
           "hxc_string_from_utf8_lossy",
           "hxc_string_release",
+          "hxc_string_release_slot",
           "hxc_string_retain",
           "hxc_string_to_cstring_owned"
         ],
@@ -6932,6 +7224,7 @@
           "hxc_int_bool_map_ref_key_iterator",
           "hxc_int_bool_map_ref_pair_iterator",
           "hxc_int_bool_map_ref_release",
+          "hxc_int_bool_map_ref_release_slot",
           "hxc_int_bool_map_ref_remove",
           "hxc_int_bool_map_ref_retain",
           "hxc_int_bool_map_ref_set",
@@ -7192,6 +7485,7 @@
       "hxc_array_ref_pop_move",
       "hxc_array_ref_push_copy",
       "hxc_array_ref_release",
+      "hxc_array_ref_release_slot",
       "hxc_array_ref_resize_default",
       "hxc_array_ref_retain",
       "hxc_array_ref_set_copy",
@@ -7217,6 +7511,7 @@
       "hxc_int_bool_map_ref_key_iterator",
       "hxc_int_bool_map_ref_pair_iterator",
       "hxc_int_bool_map_ref_release",
+      "hxc_int_bool_map_ref_release_slot",
       "hxc_int_bool_map_ref_remove",
       "hxc_int_bool_map_ref_retain",
       "hxc_int_bool_map_ref_set",
@@ -7230,6 +7525,7 @@
       "hxc_iterator_ref_has_next",
       "hxc_iterator_ref_next_move",
       "hxc_iterator_ref_release",
+      "hxc_iterator_ref_release_slot",
       "hxc_iterator_ref_retain",
       "hxc_owned_cstring_dispose",
       "hxc_owned_string_dispose",
@@ -7261,6 +7557,7 @@
       "hxc_string_is_valid",
       "hxc_string_last_index_of",
       "hxc_string_release",
+      "hxc_string_release_slot",
       "hxc_string_retain",
       "hxc_string_scalar_at",
       "hxc_string_scalar_length",
@@ -7651,6 +7948,7 @@
           "hxc_string_from_utf8_checked",
           "hxc_string_from_utf8_lossy",
           "hxc_string_release",
+          "hxc_string_release_slot",
           "hxc_string_retain",
           "hxc_string_to_cstring_owned"
         ],
@@ -7884,6 +8182,7 @@
       "hxc_string_is_valid",
       "hxc_string_last_index_of",
       "hxc_string_release",
+      "hxc_string_release_slot",
       "hxc_string_retain",
       "hxc_string_scalar_at",
       "hxc_string_scalar_length",

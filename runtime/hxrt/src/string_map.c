@@ -994,3 +994,9 @@ hxc_status hxc_string_map_ref_to_string(
   if (status != HXC_STATUS_OK) (void)hxc_string_buffer_dispose(&buffer);
   return status;
 }
+
+hxc_status hxc_string_map_ref_release_slot(void *context) {
+  return context == NULL
+    ? HXC_STATUS_INVALID_ARGUMENT
+    : hxc_string_map_ref_release((hxc_string_map_ref *)context);
+}

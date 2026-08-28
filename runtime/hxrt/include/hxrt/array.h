@@ -343,6 +343,9 @@ HXC_API hxc_status hxc_array_ref_retain(hxc_array_ref *array);
  */
 HXC_API hxc_status hxc_array_ref_release(hxc_array_ref *array);
 
+/** Release and clear one generated owner slot through a cleanup callback. */
+HXC_API hxc_status hxc_array_ref_release_slot(void *context);
+
 /** Read a length that is guaranteed to fit Haxe's signed 32-bit Int. */
 HXC_API hxc_status hxc_array_ref_length(
   const hxc_array_ref *array,

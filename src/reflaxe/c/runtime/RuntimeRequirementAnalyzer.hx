@@ -137,6 +137,12 @@ class RuntimeRequirementAnalyzer {
 					for (instruction in block.instructions) {
 						collectInstruction(instruction, program.dynamicPlan, observations);
 					}
+					if (block.terminator != null)
+						switch block.terminator.kind {
+							case IRTThrow(_, {target: IRFTUnwind}):
+								observations.push(new RuntimeIntentObservation("exception", "general-exception-region", block.terminator.source));
+							case _:
+						}
 				}
 				for (region in fn.cleanupRegions) {
 					cleanupActionCount += region.actions.length;
@@ -252,6 +258,9 @@ class RuntimeRequirementAnalyzer {
 				observations.push(new RuntimeIntentObservation("dynamic", dynamicOperationName(operation), instruction.source));
 				if (dynamicOperationAllocatesWrapper(operation, dynamicPlan))
 					observations.push(new RuntimeIntentObservation("gc", "allocation", instruction.source));
+			case IRIOException(IREFramePush(_)):
+				observations.push(new RuntimeIntentObservation("exception", "general-exception-region", instruction.source));
+			case IRIOException(_):
 			case _:
 		}
 	}

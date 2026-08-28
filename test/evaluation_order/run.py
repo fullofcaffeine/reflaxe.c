@@ -1628,7 +1628,10 @@ def main(arguments: Iterable[str] = ()) -> int:
         reverse_payload, reverse = render("reverse evaluation-order render", reverse=True)
         metal_payload, metal = render("metal evaluation-order render", profile="metal")
         if first_payload != second_payload or first != second:
-            raise EvaluationOrderFailure("repeated evaluation-order renders differed")
+            raise EvaluationOrderFailure(
+                "repeated evaluation-order renders differed:\n"
+                + difference(first_payload + "\n", second_payload + "\n", "evaluation-order-report.json")
+            )
         if first_payload != reverse_payload or first != reverse:
             raise EvaluationOrderFailure("evaluation-order render changed with input order")
         validate(first)

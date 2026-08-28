@@ -404,7 +404,7 @@ class CBodyValueCoalescingPlanner {
 
 	function collectInstructionUses(kind:HxcIRInstructionKind, site:CBodyValueUseSite):Void {
 		switch kind {
-			case IRIOSequence(_) | IRIOConstant(_) | IRIOFunctionReference(_) | IRIOZeroAggregate(_):
+			case IRIOSequence(_) | IRIOConstant(_) | IRIOFunctionReference(_) | IRIOZeroAggregate(_) | IRIOException(_):
 			case IRIOLoad(place) | IRIOAddress(place) | IRIOBorrowClassField(place) | IRIODeallocate(place, _) | IRIORetain(place, _) |
 				IRIORelease(place, _) | IRIOTrace(place, _) | IRIODeclareUninitialized(place) | IRIODeclareManagedCarrier(place, _) |
 				IRIOMoveManagedCarrier(place) | IRIODefaultInitialize(place, _, _) | IRIOBindVirtualTable(place, _) | IRIOLifetime(place, _, _, _):

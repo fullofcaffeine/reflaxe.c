@@ -287,12 +287,15 @@ class CManagedProgramNames {
 	public final thread:CIdentifier;
 	public final rootArrays:Map<String, CIdentifier>;
 	public final rootFrames:Map<String, CIdentifier>;
+	public final rootExceptionCleanups:Map<String, CIdentifier>;
 
-	public function new(collector:CIdentifier, thread:CIdentifier, rootArrays:Map<String, CIdentifier>, rootFrames:Map<String, CIdentifier>) {
+	public function new(collector:CIdentifier, thread:CIdentifier, rootArrays:Map<String, CIdentifier>, rootFrames:Map<String, CIdentifier>,
+			rootExceptionCleanups:Map<String, CIdentifier>) {
 		this.collector = collector;
 		this.thread = thread;
 		this.rootArrays = rootArrays;
 		this.rootFrames = rootFrames;
+		this.rootExceptionCleanups = rootExceptionCleanups;
 	}
 }
 
@@ -301,6 +304,7 @@ private typedef CManagedProgramRequests = {
 	final thread:CSymbolRequest;
 	final rootArrays:Map<String, CSymbolRequest>;
 	final rootFrames:Map<String, CSymbolRequest>;
+	final rootExceptionCleanups:Map<String, CSymbolRequest>;
 }
 
 /** Complete deterministic result for the admitted body subset. */
@@ -1130,6 +1134,7 @@ class CBodyLowering {
 		context.symbols.register(thread);
 		final rootArrays:Map<String, CSymbolRequest> = [];
 		final rootFrames:Map<String, CSymbolRequest> = [];
+		final rootExceptionCleanups:Map<String, CSymbolRequest> = [];
 		for (module in program.modules)
 			for (fn in module.functions) {
 				if (fn.managedRoots == null || fn.managedRoots.length == 0)
@@ -1145,12 +1150,19 @@ class CBodyLowering {
 				context.symbols.register(frame);
 				rootArrays.set(fn.id, roots);
 				rootFrames.set(fn.id, frame);
+				if (fn.exceptionStrategy == IRESContainedRuntime) {
+					final cleanup = new CSymbolRequest(CSKRuntimePrivate, ["compiler", "gc", fn.id, "exception-cleanup"],
+						CNSOrdinary(prepared.functionRequest.stableKey()), CSVInternal, null, [], [], 2, ["gc", "roots", "exception"]);
+					context.symbols.register(cleanup);
+					rootExceptionCleanups.set(fn.id, cleanup);
+				}
 			}
 		return {
 			collector: collector,
 			thread: thread,
 			rootArrays: rootArrays,
-			rootFrames: rootFrames
+			rootFrames: rootFrames,
+			rootExceptionCleanups: rootExceptionCleanups
 		};
 	}
 
@@ -1159,11 +1171,15 @@ class CBodyLowering {
 			return null;
 		final roots:Map<String, CIdentifier> = [];
 		final frames:Map<String, CIdentifier> = [];
+		final exceptionCleanups:Map<String, CIdentifier> = [];
 		for (id => request in requests.rootArrays)
 			roots.set(id, context.symbols.identifierFor(request));
 		for (id => request in requests.rootFrames)
 			frames.set(id, context.symbols.identifierFor(request));
-		return new CManagedProgramNames(context.symbols.identifierFor(requests.collector), context.symbols.identifierFor(requests.thread), roots, frames);
+		for (id => request in requests.rootExceptionCleanups)
+			exceptionCleanups.set(id, context.symbols.identifierFor(request));
+		return new CManagedProgramNames(context.symbols.identifierFor(requests.collector), context.symbols.identifierFor(requests.thread), roots, frames,
+			exceptionCleanups);
 	}
 
 	function registerBoundsAbort(program:HxcIRProgram):Null<CSymbolRequest> {
@@ -1178,7 +1194,7 @@ class CBodyLowering {
 					for (instruction in block.instructions) {
 						switch instruction.kind {
 							case IRIOBoundsCheck(_, _, IRBPCheckedAbort(_, _)) | IRIOProjectTag(_, _, _, IRTCPCheckedAbort(_, _)) |
-								IRIONullCheck(_, IRNCPCheckedAbort(_, _)) | IRIODynamic(_):
+								IRIONullCheck(_, IRNCPCheckedAbort(_, _)) | IRIODynamic(_) | IRIOException(_):
 								// Dynamic carriers use checked status-returning runtime entry points
 								// even in their allocation-free scalar slice. Register abort from
 								// semantic HxcIR instead of relying on a managed-root side effect.
@@ -1915,6 +1931,21 @@ private typedef LoopControlTargets = {
 
 	var usedBreak:Bool;
 	var usedContinue:Bool;
+}
+
+/** One source catch that a statically typed throw may enter directly. */
+private typedef BodyExceptionHandler = {
+	final variable:TVar;
+	final mapping:CBodyValueType;
+	final localId:Null<String>;
+	final block:MutableBodyBlock;
+	var used:Bool;
+}
+
+/** The lexical catch set and cleanup boundary surrounding one try body. */
+private typedef BodyExceptionRegion = {
+	final handlers:Array<BodyExceptionHandler>;
+	final cleanupDepth:Int;
 }
 
 private typedef TypedSwitchArm = {
@@ -4295,6 +4326,12 @@ private class FunctionBuilder {
 	final locals:Array<HxcIRLocal> = [];
 	final blocks:Array<MutableBodyBlock> = [];
 	final loopControlStack:Array<LoopControlTargets> = [];
+	final exceptionRegionStack:Array<BodyExceptionRegion> = [];
+	final runtimeExceptionRegions:Array<HxcIRExceptionRegion> = [];
+	final runtimeExceptionCleanups:Array<HxcIRExceptionCleanup> = [];
+	final runtimeExceptionCleanupDepths:Array<Int> = [];
+	final runtimeExceptionRegionIds:Array<String> = [];
+	final runtimeCleanupIdsByActionId:Map<String, String> = [];
 	final runtimeRequirements:Array<CBodyRuntimeRequirement> = [];
 	final constructionCleanupActions:Array<HxcIRCleanupAction> = [];
 	final constructedObjects:Array<BodyConstructedObject> = [];
@@ -4360,6 +4397,7 @@ private class FunctionBuilder {
 	var instructionOrdinal = 0;
 	var valueOrdinal = 0;
 	var blockOrdinal = 0;
+	var exceptionOrdinal = 0;
 	var currentBlock:MutableBodyBlock;
 
 	/**
@@ -4716,6 +4754,25 @@ private class FunctionBuilder {
 							for (argument in arguments)
 								visit(argument);
 						case _:
+							if (isDirectStaticFunctionExpression(callee)) {
+								final targetId = directStaticFunctionId(callee, arguments);
+								final target = functionsById.get(targetId);
+								if (target != null)
+									for (index in 0...arguments.length)
+										if (index < target.parameters.length) {
+											final argument = arguments[index];
+											final parameter = target.parameters[index];
+											if (parameter.mapping.kind == CBVKDynamic) {
+												final adapter = dynamicAdapterForBoxSource(argument, localTypes, 'TCall(argument:$index,target=$targetId)');
+												if (adapter != null)
+													dynamicRegistry.requireBox(adapter, sourceSpan(argument.pos));
+											} else if (isDynamicSourceType(argument.t)) {
+												final adapter = dynamicRegistry.requireType(parameter.mapping, sourceSpan(argument.pos));
+												if (adapter != null)
+													dynamicRegistry.requireUnbox(adapter, sourceSpan(argument.pos));
+											}
+										}
+							}
 							TypedExprTools.iter(expression, visit);
 					}
 				case TBinop(OpEq | OpNotEq, left, right) if (isDynamicSourceType(left.t) || isDynamicSourceType(right.t)):
@@ -5559,6 +5616,9 @@ private class FunctionBuilder {
 			borrowedAggregateLocalIds: borrowedAggregateLocals,
 			mutableAggregateBorrowLocalIds: mutableAggregateBorrowLocals,
 			managedRoots: [],
+			exceptionStrategy: hasRuntimeExceptionControlFlow() ? IRESContainedRuntime : (hasClosedExceptionControlFlow() ? IRESClosedResult : null),
+			exceptionRegions: runtimeExceptionRegions,
+			exceptionCleanups: runtimeExceptionCleanups,
 			locals: locals,
 			returnType: prepared.returnMapping.irType,
 			borrowedSpanReturn: prepared.borrowedSpanReturn,
@@ -5622,6 +5682,32 @@ private class FunctionBuilder {
 			labelRequests: labelRequests,
 			runtimeRequirements: runtimeRequirements
 		};
+	}
+
+	/** Report whether this function retained an ordinary direct catch edge. */
+	function hasClosedExceptionControlFlow():Bool {
+		for (block in blocks)
+			if (block.terminator != null)
+				switch block.terminator.kind {
+					case IRTThrow(_, {target: IRFTBlock(_)}):
+						return true;
+					case _:
+				}
+		return false;
+	}
+
+	/** Report whether this function owns a frame or raises through an outer one. */
+	function hasRuntimeExceptionControlFlow():Bool {
+		if (runtimeExceptionRegions.length > 0)
+			return true;
+		for (block in blocks)
+			if (block.terminator != null)
+				switch block.terminator.kind {
+					case IRTThrow(_, {target: IRFTUnwind}):
+						return true;
+					case _:
+				}
+		return false;
 	}
 
 	/**
@@ -5728,6 +5814,8 @@ private class FunctionBuilder {
 					destroyDiscardedFreshManagedCallResult(result, expression.pos);
 			case TThrow(value):
 				lowerThrow(expression, value);
+			case TTry(body, catches):
+				lowerTry(expression, body, catches);
 			case TIf(condition, whenTrue, whenFalse):
 				lowerStatementConditional(expression, condition, whenTrue, whenFalse);
 			case TWhile(condition, body, normalWhile):
@@ -6970,6 +7058,7 @@ private class FunctionBuilder {
 				source: source
 			});
 			normalCleanupActionIds.push(cleanupId);
+			registerRuntimeExceptionCleanup(cleanupId, IRPLocal(localId), IRIRuntime("array"), source, position);
 			arrayCleanupActionIdsByCompilerId.set(variable.id, cleanupId);
 			runtimeRequirements.push(new CBodyRuntimeRequirement("array", "cleanup-release", "ordinary Haxe Array local lifetime", source, position));
 		}
@@ -6987,6 +7076,7 @@ private class FunctionBuilder {
 				source: source
 			});
 			normalCleanupActionIds.push(cleanupId);
+			registerRuntimeExceptionCleanup(cleanupId, IRPLocal(localId), IRIRuntime("string-map"), source, position);
 			stringMapCleanupActionIdsByCompilerId.set(variable.id, cleanupId);
 			runtimeRequirements.push(new CBodyRuntimeRequirement("string-map", "cleanup-release", "ordinary Haxe StringMap local lifetime", source, position));
 		}
@@ -7004,6 +7094,7 @@ private class FunctionBuilder {
 				source: source
 			});
 			normalCleanupActionIds.push(cleanupId);
+			registerRuntimeExceptionCleanup(cleanupId, IRPLocal(localId), IRIRuntime("iterator"), source, position);
 			iteratorCleanupActionIdsByCompilerId.set(variable.id, cleanupId);
 			runtimeRequirements.push(new CBodyRuntimeRequirement("iterator", "cleanup-release", "standard Haxe Iterator local lifetime", source, position));
 		}
@@ -7021,6 +7112,7 @@ private class FunctionBuilder {
 				source: source
 			});
 			normalCleanupActionIds.push(cleanupId);
+			registerRuntimeExceptionCleanup(cleanupId, IRPLocal(localId), IRIRuntime("int-map"), source, position);
 			intMapCleanupActionIdsByCompilerId.set(variable.id, cleanupId);
 			runtimeRequirements.push(new CBodyRuntimeRequirement("int-map", "cleanup-release", "ordinary Haxe IntMap local lifetime", source, position));
 		}
@@ -7038,6 +7130,7 @@ private class FunctionBuilder {
 				source: source
 			});
 			normalCleanupActionIds.push(cleanupId);
+			registerRuntimeExceptionCleanup(cleanupId, IRPLocal(localId), IRIRuntime("bytes"), source, position);
 			bytesCleanupActionIdsByCompilerId.set(variable.id, cleanupId);
 			runtimeRequirements.push(new CBodyRuntimeRequirement("bytes", "cleanup-release", "ordinary haxe.io.Bytes local lifetime", source, position));
 		}
@@ -7055,6 +7148,7 @@ private class FunctionBuilder {
 				source: source
 			});
 			normalCleanupActionIds.push(cleanupId);
+			registerRuntimeExceptionCleanup(cleanupId, IRPLocal(localId), IRIRuntime("string"), source, position);
 			stringCleanupActionIdsByCompilerId.set(variable.id, cleanupId);
 			runtimeRequirements.push(new CBodyRuntimeRequirement("string", "cleanup-release", "ordinary Haxe managed String cleanup", source, position));
 		}
@@ -7075,6 +7169,7 @@ private class FunctionBuilder {
 				source: source
 			});
 			normalCleanupActionIds.push(cleanupId);
+			registerRuntimeExceptionCleanup(cleanupId, IRPLocal(localId), IRIProgramLocal(destroyId), source, position);
 			enumCleanupActionIdsByCompilerId.set(variable.id, cleanupId);
 		}
 		final managedAggregate = localMapping.aggregateValue();
@@ -7094,6 +7189,7 @@ private class FunctionBuilder {
 				source: source
 			});
 			normalCleanupActionIds.push(cleanupId);
+			registerRuntimeExceptionCleanup(cleanupId, IRPLocal(localId), IRIProgramLocal(destroyId), source, position);
 			aggregateCleanupActionIdsByCompilerId.set(variable.id, cleanupId);
 		}
 		final managedOptional = localMapping.optionalValue();
@@ -7113,6 +7209,7 @@ private class FunctionBuilder {
 				source: source
 			});
 			normalCleanupActionIds.push(cleanupId);
+			registerRuntimeExceptionCleanup(cleanupId, IRPLocal(localId), IRIProgramLocal(destroyId), source, position);
 			optionalCleanupActionIdsByCompilerId.set(variable.id, cleanupId);
 		}
 		localIdsByCompilerId.set(variable.id, localId);
@@ -7650,23 +7747,64 @@ private class FunctionBuilder {
 		value = stabilizeFreshManagedAggregate(value, valueExpression.pos, "throw-payload");
 		value = stabilizeFreshManagedOptional(value, valueExpression.pos, "throw-payload");
 		rejectOwnedClassBorrow(value, valueExpression.pos, "TThrow(owned-class-borrow-escape)");
+		if (runtimeExceptionRegionIds.length > 0 && value.mapping.kind != CBVKDynamic)
+			unsupported(valueExpression, 'TThrow(contained-runtime-handler-requires-Dynamic-payload:${value.mapping.cSpelling})');
+		if (value.mapping.kind == CBVKDynamic && exceptionRegionStack.length > 0)
+			unsupported(valueExpression, "TThrow(Dynamic-payload-requires-runtime-typed-catch-matching)");
 		switch value.mapping.kind {
 			// A managed String literal is still a non-owning view of
 			// compiler-owned bytes. It needs no payload transport because this
 			// bounded uncaught-throw path terminates after evaluating it.
+			case CBVKDynamic:
 			case CBVKPrimitive(_) | CBVKStaticString(_) | CBVKManagedString(_) | CBVKCString:
 			case CBVKAggregate(aggregate) if (!aggregate.managedLifetime):
 			case CBVKEnum(enumValue) if (!enumValue.managedLifetime):
 			case _:
 				unsupported(valueExpression, 'TThrow(managed-payload-requires-exception-owner:${value.mapping.cSpelling})');
 		}
+		if (value.mapping.kind == CBVKDynamic) {
+			runtimeRequirements.push(new CBodyRuntimeRequirement("exception", "general-exception-region",
+				"Dynamic throw transferred to the nearest contained same-thread handler", sourceSpan(expression.pos), expression.pos));
+			currentBlock.terminator = {
+				kind: IRTThrow(value.id, {
+					kind: IRFException,
+					target: IRFTUnwind,
+					arguments: [],
+					cleanup: runtimeExceptionCleanupDepths.length == 0 ? normalCleanupSteps() : cleanupStepsAfterDepth(runtimeExceptionCleanupDepths[runtimeExceptionCleanupDepths.length
+						- 1])
+				}),
+				source: sourceSpan(expression.pos)
+			};
+			return;
+		}
+		final handler = findDirectExceptionHandler(value.mapping);
+		if (handler != null) {
+			if (!isDirectThrownCatchType(value.mapping))
+				unsupported(valueExpression, 'TThrow(caught-payload-requires-runtime-owner:${value.mapping.cSpelling})');
+			final handlerLocalId = handler.handler.localId;
+			if (handlerLocalId == null)
+				throw new CBodyEmissionError('direct catch `${handler.handler.variable.name}` in `${prepared.irId}` lost its payload local');
+			handler.handler.used = true;
+			if (!handler.handler.block.active)
+				activateGeneratedBlock(handler.handler.block);
+			appendInstruction(null, IRIOStore(IRPLocal(handlerLocalId), value.id), sourceSpan(valueExpression.pos), "catch-payload-store");
+			currentBlock.terminator = {
+				kind: IRTThrow(value.id, {
+					kind: IRFException,
+					target: IRFTBlock(handler.handler.block.id),
+					arguments: [],
+					cleanup: cleanupStepsAfterDepth(handler.region.cleanupDepth)
+				}),
+				source: sourceSpan(expression.pos)
+			};
+			return;
+		}
 		final target = switch prepared.role {
 			case PBRConstructor(signature) if (signature.input.canFail): IRFTPropagate;
 			case _:
-				// No catch/finally node is admitted in this bounded stage. An
-				// ordinary function's throw is therefore known to be uncaught in
-				// the complete reachable graph and can use the established
-				// fail-stop policy without changing its C return signature.
+				// No compatible local handler remains. An ordinary function's exact
+				// throw is therefore uncaught in this bounded graph and can use the
+				// established fail-stop policy without changing its C return signature.
 				IRFTAbort;
 		};
 		currentBlock.terminator = {
@@ -7680,6 +7818,226 @@ private class FunctionBuilder {
 		};
 	}
 
+	/**
+	 * Lower one closed try/catch region without selecting the exception runtime.
+	 *
+	 * A direct throw can use ordinary C control flow when its exact HxcIR type
+	 * identifies the first compatible catch. Runtime-dependent Dynamic and class
+	 * hierarchy matching remain unsupported here instead of silently skipping a
+	 * potentially compatible handler.
+	 */
+	function lowerTry(expression:TypedExpr, body:TypedExpr, catches:Array<{v:TVar, expr:TypedExpr}>):Void {
+		if (catches.length == 0)
+			return unsupported(expression, "TTry(no-catches)");
+		final firstCatchMapping = bodyValueType(catches[0].v.t, catches[0].expr.pos, 'TTry(catch:${catches[0].v.name}:type)');
+		if (firstCatchMapping.kind == CBVKDynamic) {
+			if (catches.length != 1)
+				return unsupported(expression, "TTry(Dynamic-catch-must-be-the-only-handler)");
+			return lowerRuntimeTry(expression, body, catches[0], firstCatchMapping);
+		}
+		final source = sourceSpan(expression.pos);
+		final cleanupDepth = normalCleanupActionIds.length;
+		final handlers:Array<BodyExceptionHandler> = [];
+		for (index => item in catches) {
+			final mapping = bodyValueType(item.v.t, item.expr.pos, 'TTry(catch:${item.v.name}:type)');
+			if (!isDirectCatchType(mapping))
+				unsupported(item.expr, 'TTry(catch:${item.v.name}:requires-runtime-type-match:${mapping.cSpelling})');
+			var localId:Null<String> = null;
+			if (isDirectThrownCatchType(mapping)) {
+				localId = declareFlowLocal(mapping, sourceSpan(item.expr.pos), 'catch-${item.v.name}');
+				final empty:HxcIRResult = {id: nextValueId(), type: mapping.irType};
+				appendInstruction(empty, IRIOConstant(defaultConstant(mapping.irType, item.expr, 'TTry(catch:${item.v.name}:default)')),
+					sourceSpan(item.expr.pos), "catch-payload-default");
+				appendInstruction(null, IRIOInitialize(IRPLocal(localId), empty.id, IRISUninitialized, IRISInitialized), sourceSpan(item.expr.pos),
+					"catch-payload-initialize");
+			}
+			if (localId != null) {
+				localIdsByCompilerId.set(item.v.id, localId);
+				localTypesByCompilerId.set(item.v.id, mapping);
+			}
+			handlers.push({
+				variable: item.v,
+				mapping: mapping,
+				localId: localId,
+				block: reserveGeneratedBlock('catch-$index', sourceSpan(item.expr.pos)),
+				used: false
+			});
+		}
+		final region:BodyExceptionRegion = {handlers: handlers, cleanupDepth: cleanupDepth};
+		exceptionRegionStack.push(region);
+		lowerNestedControlStatement(body);
+		exceptionRegionStack.pop();
+
+		final openEnds:Array<MutableBodyBlock> = [];
+		if (currentBlock.terminator == null) {
+			appendScopedCleanupInstructions(cleanupDepth);
+			openEnds.push(currentBlock);
+		}
+		restoreCleanupDepth(cleanupDepth);
+
+		for (handler in handlers) {
+			if (!handler.used)
+				continue;
+			currentBlock = handler.block;
+			lowerNestedControlStatement(catches[handlers.indexOf(handler)].expr);
+			if (currentBlock.terminator == null) {
+				appendScopedCleanupInstructions(cleanupDepth);
+				openEnds.push(currentBlock);
+			}
+			restoreCleanupDepth(cleanupDepth);
+		}
+
+		if (openEnds.length == 0)
+			return;
+		final join = createGeneratedBlock("try-join", source);
+		for (end in openEnds)
+			end.terminator = {kind: IRTJump(edge(join.id)), source: source};
+		currentBlock = join;
+	}
+
+	/**
+		Lower one catch-all Dynamic handler through an explicit same-thread frame.
+
+		The frame owner keeps `setjmp` in this function. The catch reads and then
+		pops the payload before executing user code, so a rethrow targets the next
+		outer frame instead of recursively selecting itself.
+	**/
+	function lowerRuntimeTry(expression:TypedExpr, body:TypedExpr, handler:{v:TVar, expr:TypedExpr}, mapping:CBodyValueType):Void {
+		final source = sourceSpan(expression.pos);
+		final cleanupDepth = normalCleanupActionIds.length;
+		final ordinal = exceptionOrdinal++;
+		final regionId = 'exception.region.$ordinal';
+		final frameStorageId = 'exception.frame.$ordinal';
+		final payloadValueId = nextValueId();
+		registerExceptionStorage(frameStorageId, 'exception-frame-$ordinal', ordinal);
+		runtimeExceptionRegions.push({
+			id: regionId,
+			frameStorageId: frameStorageId,
+			payloadValueId: payloadValueId,
+			source: source
+		});
+		runtimeRequirements.push(new CBodyRuntimeRequirement("exception", "general-exception-region",
+			"catch-all Dynamic handler with contained same-thread transfer", source, expression.pos));
+
+		final bodyBlock = reserveGeneratedBlock("runtime-try-body", sourceSpan(body.pos));
+		final catchBlock = reserveGeneratedBlock("runtime-catch", sourceSpan(handler.expr.pos));
+		appendInstruction(null, IRIOException(IREFramePush(regionId)), source, "exception-frame-push");
+		final normalResult:HxcIRResult = {id: nextValueId(), type: IRTBool};
+		registerValueTemporary(normalResult.id, "exception-setjmp-result");
+		appendInstruction(normalResult, IRIOException(IREFrameSetJmp(regionId)), source, "exception-frame-setjmp");
+		activateGeneratedBlock(bodyBlock);
+		activateGeneratedBlock(catchBlock);
+		currentBlock.terminator = {kind: IRTBranch(normalResult.id, edge(bodyBlock.id), edge(catchBlock.id)), source: source};
+
+		currentBlock = bodyBlock;
+		runtimeExceptionCleanupDepths.push(cleanupDepth);
+		runtimeExceptionRegionIds.push(regionId);
+		lowerNestedControlStatement(body);
+		runtimeExceptionRegionIds.pop();
+		runtimeExceptionCleanupDepths.pop();
+		final openEnds:Array<MutableBodyBlock> = [];
+		if (currentBlock.terminator == null) {
+			appendScopedCleanupInstructions(cleanupDepth);
+			appendInstruction(null, IRIOException(IREFramePop(regionId)), source, "exception-frame-pop-normal");
+			openEnds.push(currentBlock);
+		}
+		restoreCleanupDepth(cleanupDepth);
+
+		currentBlock = catchBlock;
+		final payload:HxcIRResult = {id: payloadValueId, type: IRTDynamic};
+		registerValueTemporary(payload.id, "exception-payload");
+		appendInstruction(payload, IRIOException(IREFramePayload(regionId)), sourceSpan(handler.expr.pos), "exception-frame-payload");
+		appendInstruction(null, IRIOException(IREFramePop(regionId)), sourceSpan(handler.expr.pos), "exception-frame-pop-catch");
+		if (handler.v.name != "_") {
+			final localId = declareFlowLocal(mapping, sourceSpan(handler.expr.pos), 'catch-${handler.v.name}');
+			appendInstruction(null, IRIOInitialize(IRPLocal(localId), payload.id, IRISUninitialized, IRISInitialized), sourceSpan(handler.expr.pos),
+				"catch-payload-initialize");
+			localIdsByCompilerId.set(handler.v.id, localId);
+			localTypesByCompilerId.set(handler.v.id, mapping);
+		}
+		lowerNestedControlStatement(handler.expr);
+		if (currentBlock.terminator == null) {
+			appendScopedCleanupInstructions(cleanupDepth);
+			openEnds.push(currentBlock);
+		}
+		restoreCleanupDepth(cleanupDepth);
+
+		if (openEnds.length == 0)
+			return;
+		final join = createGeneratedBlock("runtime-try-join", source);
+		for (end in openEnds)
+			end.terminator = {kind: IRTJump(edge(join.id)), source: source};
+		currentBlock = join;
+	}
+
+	/** Reserve one deterministic C name for compiler-owned exception storage. */
+	function registerExceptionStorage(storageId:String, role:String, ordinal:Int):Void {
+		final request = new CSymbolRequest(CSKTemporary, input.declarationPath.split(".").concat([input.fieldName, role]),
+			CNSOrdinary(prepared.functionRequest.stableKey()), CSVInternal, null, [], [], ordinal);
+		context.symbols.register(request);
+		localRequests.set(storageId, request);
+	}
+
+	/** Register one existing semantic release action for non-local unwinding. */
+	function registerRuntimeExceptionCleanup(actionId:String, place:HxcIRPlace, implementation:HxcIRImplementation, source:HxcSourceSpan,
+			position:Position):Void {
+		if (runtimeExceptionCleanupDepths.length == 0)
+			return;
+		switch implementation {
+			case IRIRuntime("array" | "string-map" | "iterator" | "int-map" | "bytes" | "string"):
+			case IRIRuntime(featureId):
+				unsupportedAt(position, 'TTry(runtime-cleanup-callback-not-admitted:$featureId)');
+			case IRIProgramLocal(_):
+				unsupportedAt(position, "TTry(program-local-runtime-cleanup-callback-not-admitted)");
+			case IRIStatic:
+				unsupportedAt(position, "TTry(static-runtime-cleanup-callback-not-admitted)");
+		}
+		final ordinal = exceptionOrdinal++;
+		final cleanupId = 'exception.cleanup.$ordinal';
+		final storageId = 'exception.cleanup-storage.$ordinal';
+		registerExceptionStorage(storageId, 'exception-cleanup-$ordinal', ordinal);
+		runtimeExceptionCleanups.push({
+			id: cleanupId,
+			storageId: storageId,
+			actionId: actionId,
+			place: place,
+			implementation: implementation,
+			source: source
+		});
+		runtimeCleanupIdsByActionId.set(actionId, cleanupId);
+		appendInstruction(null, IRIOException(IRECleanupPush(cleanupId)), source, "exception-cleanup-push");
+	}
+
+	/** Return the nearest first catch proven compatible with one exact value type. */
+	function findDirectExceptionHandler(mapping:CBodyValueType):Null<{handler:BodyExceptionHandler, region:BodyExceptionRegion}> {
+		var regionIndex = exceptionRegionStack.length;
+		while (regionIndex > 0) {
+			final region = exceptionRegionStack[--regionIndex];
+			for (handler in region.handlers)
+				if (typeKey(handler.mapping.irType) == typeKey(mapping.irType))
+					return {handler: handler, region: region};
+		}
+		return null;
+	}
+
+	/** Types whose catch declaration can participate in exact closed matching. */
+	static function isDirectCatchType(mapping:CBodyValueType):Bool
+		return switch mapping.kind {
+			case CBVKPrimitive(_) | CBVKStaticString(_) | CBVKManagedString(_) | CBVKCString: true;
+			case CBVKAggregate(value): !value.managedLifetime;
+			case CBVKEnum(value): !value.managedLifetime;
+			case _: false;
+		};
+
+	/** Payloads that can cross a local exception edge without an owned box. */
+	static function isDirectThrownCatchType(mapping:CBodyValueType):Bool
+		return switch mapping.kind {
+			case CBVKPrimitive(_): true;
+			case CBVKAggregate(value): !value.managedLifetime;
+			case CBVKEnum(value): !value.managedLifetime;
+			case _: false;
+		};
+
 	function normalCleanupSteps(?excludedActionId:String):Array<HxcIRCleanupStep> {
 		final result:Array<HxcIRCleanupStep> = [];
 		var index = normalCleanupActionIds.length;
@@ -7687,6 +8045,17 @@ private class FunctionBuilder {
 			final actionId = normalCleanupActionIds[--index];
 			if (actionId != excludedActionId)
 				result.push({regionId: "cleanup.construction", actionId: actionId});
+		}
+		return result;
+	}
+
+	/** Build reverse cleanup for owners created inside one lexical boundary. */
+	function cleanupStepsAfterDepth(depth:Int):Array<HxcIRCleanupStep> {
+		final result:Array<HxcIRCleanupStep> = [];
+		var index = normalCleanupActionIds.length;
+		while (index > depth) {
+			final actionId = normalCleanupActionIds[--index];
+			result.push({regionId: "cleanup.construction", actionId: actionId});
 		}
 		return result;
 	}
@@ -7700,7 +8069,7 @@ private class FunctionBuilder {
 		a semantic lifetime transition because its field releases already did the
 		observable work and the C bytes themselves need no destructor.
 	**/
-	function appendScopedCleanupInstructions(depth:Int):Void {
+	function appendScopedCleanupInstructions(depth:Int, ?transferredActionId:String):Void {
 		var index = normalCleanupActionIds.length;
 		while (index > depth) {
 			final actionId = normalCleanupActionIds[--index];
@@ -7710,8 +8079,19 @@ private class FunctionBuilder {
 					found = action;
 			if (found == null)
 				throw new CBodyEmissionError('branch-local cleanup `$actionId` in `${prepared.irId}` lost its typed action');
+			if (actionId == transferredActionId) {
+				final runtimeCleanupId = runtimeCleanupIdsByActionId.get(actionId);
+				if (runtimeCleanupId != null)
+					appendInstruction(null, IRIOException(IRECleanupDiscard(runtimeCleanupId)), found.source, "exception-cleanup-discard");
+				continue;
+			}
 			switch found.kind {
 				case IRCARelease(place, implementation):
+					final runtimeCleanupId = runtimeCleanupIdsByActionId.get(actionId);
+					if (runtimeCleanupId != null) {
+						appendInstruction(null, IRIOException(IRECleanupRun(runtimeCleanupId)), found.source, "exception-cleanup-run");
+						continue;
+					}
 					// The surrounding boundary decides when cleanup runs, but the
 					// original owner expression remains the reason it exists.
 					// Runtime provenance is matched by exact source span.
@@ -7723,6 +8103,19 @@ private class FunctionBuilder {
 					throw new CBodyEmissionError('scoped cleanup `$actionId` in `${prepared.irId}` is outside release/destroy ownership');
 			}
 		}
+	}
+
+	/** End every active runtime frame before one source return leaves its try. */
+	function terminateReturn(valueId:Null<String>, source:HxcSourceSpan, ?transferredActionId:String):Void {
+		var index = runtimeExceptionRegionIds.length;
+		while (index > 0) {
+			index--;
+			final depth = runtimeExceptionCleanupDepths[index];
+			appendScopedCleanupInstructions(depth, transferredActionId);
+			restoreCleanupDepth(depth);
+			appendInstruction(null, IRIOException(IREFramePop(runtimeExceptionRegionIds[index])), source, "exception-frame-pop-return");
+		}
+		currentBlock.terminator = {kind: IRTReturn(valueId, normalCleanupSteps(transferredActionId)), source: source};
 	}
 
 	/** End temporary argument owners after their synchronous call has returned. */
@@ -8239,7 +8632,7 @@ private class FunctionBuilder {
 	function lowerReturn(value:Null<TypedExpr>, position:Position):Void {
 		final source = sourceSpan(position);
 		if (value == null) {
-			currentBlock.terminator = {kind: IRTReturn(null, normalCleanupSteps()), source: source};
+			terminateReturn(null, source);
 			return;
 		}
 		if (isTerminalThrowExpression(value)) {
@@ -8263,7 +8656,7 @@ private class FunctionBuilder {
 				type: prepared.returnMapping.irType
 			};
 			appendInstruction(result, IRIOBorrowSpan(sourceBorrow.place), source, "receiver-borrowed-span");
-			currentBlock.terminator = {kind: IRTReturn(result.id, normalCleanupSteps()), source: source};
+			terminateReturn(result.id, source);
 			return;
 		}
 		if (referencesStackConstructedValue(value))
@@ -8275,7 +8668,7 @@ private class FunctionBuilder {
 				case _:
 					unsupported(value, "TReturn(value-for-Void)");
 			}
-			currentBlock.terminator = {kind: IRTReturn(null, normalCleanupSteps()), source: source};
+			terminateReturn(null, source);
 			return;
 		}
 		final returnedArray = prepared.returnMapping.arrayValue();
@@ -8293,7 +8686,7 @@ private class FunctionBuilder {
 				managed representations fail when Array specialization is prepared.
 			 */
 			borrowedManagedArrayElementOwners.remove(lowered.id);
-			currentBlock.terminator = {kind: IRTReturn(lowered.id, normalCleanupSteps(arrayElementOwner.cleanupId)), source: source};
+			terminateReturn(lowered.id, source, arrayElementOwner.cleanupId);
 			return;
 		}
 		if (returnedArray != null && !returnedArray.managedByCollector) {
@@ -8301,7 +8694,7 @@ private class FunctionBuilder {
 				// NULL owns no container, so it crosses the return boundary without a
 				// retain/release pair. This keeps the generated C as direct as the
 				// source while the runtime remains null-safe for dynamic paths.
-				currentBlock.terminator = {kind: IRTReturn(lowered.id, normalCleanupSteps()), source: source};
+				terminateReturn(lowered.id, source);
 				return;
 			}
 			var transferredCleanupId:Null<String> = null;
@@ -8318,7 +8711,7 @@ private class FunctionBuilder {
 						"returned-array-owned-load").id;
 				}
 			}
-			currentBlock.terminator = {kind: IRTReturn(returnedValueId, normalCleanupSteps(transferredCleanupId)), source: source};
+			terminateReturn(returnedValueId, source, transferredCleanupId);
 			return;
 		}
 		if (prepared.returnMapping.stringMapValue() != null) {
@@ -8336,7 +8729,7 @@ private class FunctionBuilder {
 						"returned-string-map-owned-load").id;
 				}
 			}
-			currentBlock.terminator = {kind: IRTReturn(returnedValueId, normalCleanupSteps(transferredCleanupId)), source: source};
+			terminateReturn(returnedValueId, source, transferredCleanupId);
 			return;
 		}
 		if (prepared.returnMapping.iteratorValue() != null) {
@@ -8354,7 +8747,7 @@ private class FunctionBuilder {
 						"returned-iterator-owned-load").id;
 				}
 			}
-			currentBlock.terminator = {kind: IRTReturn(returnedValueId, normalCleanupSteps(transferredCleanupId)), source: source};
+			terminateReturn(returnedValueId, source, transferredCleanupId);
 			return;
 		}
 		if (prepared.returnMapping.bytesValue() != null) {
@@ -8367,7 +8760,7 @@ private class FunctionBuilder {
 				if (transferredCleanupId == null)
 					unsupported(value, "TReturn(managed-Bytes-borrowed-return-needs-retain)");
 			}
-			currentBlock.terminator = {kind: IRTReturn(lowered.id, normalCleanupSteps(transferredCleanupId)), source: source};
+			terminateReturn(lowered.id, source, transferredCleanupId);
 			return;
 		}
 		if (prepared.returnMapping.irType == IRTManagedString) {
@@ -8385,7 +8778,7 @@ private class FunctionBuilder {
 						"returned-string-owned-load").id;
 				}
 			}
-			currentBlock.terminator = {kind: IRTReturn(returnedValueId, normalCleanupSteps(transferredCleanupId)), source: source};
+			terminateReturn(returnedValueId, source, transferredCleanupId);
 			return;
 		}
 		final returnedEnum = prepared.returnMapping.enumValue();
@@ -8406,7 +8799,7 @@ private class FunctionBuilder {
 						"returned-enum-owned-load").id;
 				}
 			}
-			currentBlock.terminator = {kind: IRTReturn(returnedValueId, normalCleanupSteps(transferredCleanupId)), source: source};
+			terminateReturn(returnedValueId, source, transferredCleanupId);
 			return;
 		}
 		final returnedAggregate = prepared.returnMapping.aggregateValue();
@@ -8427,7 +8820,7 @@ private class FunctionBuilder {
 						"returned-record-owned-load").id;
 				}
 			}
-			currentBlock.terminator = {kind: IRTReturn(returnedValueId, normalCleanupSteps(transferredCleanupId)), source: source};
+			terminateReturn(returnedValueId, source, transferredCleanupId);
 			return;
 		}
 		final returnedOptional = prepared.returnMapping.optionalValue();
@@ -8448,11 +8841,11 @@ private class FunctionBuilder {
 						"returned-optional-owned-load").id;
 				}
 			}
-			currentBlock.terminator = {kind: IRTReturn(returnedValueId, normalCleanupSteps(transferredCleanupId)), source: source};
+			terminateReturn(returnedValueId, source, transferredCleanupId);
 			return;
 		}
 		rejectOwnedClassBorrow(lowered, value.pos, "TReturn(owned-class-borrow-escape)");
-		currentBlock.terminator = {kind: IRTReturn(lowered.id, normalCleanupSteps()), source: source};
+		terminateReturn(lowered.id, source);
 	}
 
 	/** Find a named local whose existing owner can move across a return boundary. */

@@ -32,6 +32,7 @@ HXC_API hxc_status hxc_int_bool_map_ref_create(
  */
 HXC_API hxc_status hxc_int_bool_map_ref_retain(hxc_int_bool_map_ref *map);
 HXC_API hxc_status hxc_int_bool_map_ref_release(hxc_int_bool_map_ref *map);
+HXC_API hxc_status hxc_int_bool_map_ref_release_slot(void *context);
 
 /** Copy every entry into one independent shared Map object. */
 HXC_API hxc_status hxc_int_bool_map_ref_copy(

@@ -202,7 +202,7 @@ HXC_API hxc_status hxc_value_read_static_token(
  */
 HXC_API hxc_status hxc_value_managed_payload(
   const hxc_value *value,
-  const void **out_managed_object
+  const void *volatile *out_managed_object
 );
 
 #if defined(__cplusplus)

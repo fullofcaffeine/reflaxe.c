@@ -460,6 +460,10 @@ enum HxcIRFunctionFailureConvention {
 enum HxcIRFailureTarget {
 	IRFTBlock(blockId:String);
 	IRFTPropagate;
+
+	/** Transfer one genuine Dynamic payload to the active contained frame. */
+	IRFTUnwind;
+
 	IRFTAbort;
 }
 
@@ -569,6 +573,9 @@ enum HxcIRInstructionKind {
 	**/
 	IRIODynamic(operation:HxcIRDynamicInstruction);
 
+	/** Operate on compiler-owned contained exception frames and cleanup records. */
+	IRIOException(operation:HxcIRExceptionInstruction);
+
 	IRIOCall(call:HxcIRCall);
 	IRIOConstructAggregate(instanceId:String, fields:Array<HxcIRNamedValue>);
 
@@ -656,6 +663,17 @@ enum HxcIRInstructionKind {
 	IRIOBoundsCheck(collection:HxcIRPlace, indexValueId:String, policy:HxcIRBoundsPolicy);
 	IRIONullCheck(valueId:String, policy:HxcIRNullCheckPolicy);
 	IRIOLifetime(place:HxcIRPlace, from:HxcIRInitializationState, to:HxcIRInitializationState, reason:String);
+}
+
+/** Runtime operations whose ordering remains explicit in HxcIR. */
+enum HxcIRExceptionInstruction {
+	IREFramePush(regionId:String);
+	IREFrameSetJmp(regionId:String);
+	IREFramePayload(regionId:String);
+	IREFramePop(regionId:String);
+	IRECleanupPush(cleanupId:String);
+	IRECleanupRun(cleanupId:String);
+	IRECleanupDiscard(cleanupId:String);
 }
 
 /**
@@ -786,6 +804,30 @@ typedef HxcIRManagedRoot = {
 	final source:HxcSourceSpan;
 }
 
+/** The selected source-exception strategy for one generated function. */
+enum HxcIRExceptionStrategy {
+	IRESClosedResult;
+	IRESContainedRuntime;
+}
+
+/** One lexical contained-runtime frame and its caught Dynamic value. */
+typedef HxcIRExceptionRegion = {
+	final id:String;
+	final frameStorageId:String;
+	final payloadValueId:String;
+	final source:HxcSourceSpan;
+}
+
+/** One cleanup action registered for non-local transfer through this function. */
+typedef HxcIRExceptionCleanup = {
+	final id:String;
+	final storageId:String;
+	final actionId:String;
+	final place:HxcIRPlace;
+	final implementation:HxcIRImplementation;
+	final source:HxcSourceSpan;
+}
+
 typedef HxcIRFunction = {
 	final id:String;
 	final displayName:String;
@@ -843,6 +885,15 @@ typedef HxcIRFunction = {
 		compiler-produced HxcIR always supplies it, including an empty list.
 	**/
 	final ?managedRoots:Array<HxcIRManagedRoot>;
+
+	/** Present only when source try/throw lowering selected an exception strategy. */
+	final ?exceptionStrategy:HxcIRExceptionStrategy;
+
+	/** Lexical frames used by the contained runtime strategy. */
+	final ?exceptionRegions:Array<HxcIRExceptionRegion>;
+
+	/** Automatic cleanup records paired with existing semantic cleanup actions. */
+	final ?exceptionCleanups:Array<HxcIRExceptionCleanup>;
 
 	final locals:Array<HxcIRLocal>;
 	final returnType:HxcIRTypeRef;

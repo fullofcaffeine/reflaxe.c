@@ -38,6 +38,7 @@ TYPED_MAP_CONSUMER = ROOT / "test/differential/object-enum-map/typed_map_runtime
 BYTES_CONSUMER = CASE / "bytes_consumer.c"
 BYTES_STRING_CONSUMER = CASE / "bytes_string_consumer.c"
 DYNAMIC_CONSUMER = ROOT / "runtime/hxrt/test/dynamic_contract.c"
+EXCEPTION_CONSUMER = ROOT / "runtime/hxrt/test/exception_contract.c"
 OBJECT_CONSUMER = CASE / "object_consumer.c"
 GC_CONSUMER = ROOT / "runtime/hxrt/test/gc_contract.c"
 STRING_CONSUMER = CASE / "string_consumer.c"
@@ -89,6 +90,8 @@ class Toolchain:
 
 
 def development_tool(name: str) -> str:
+    if name == "haxe" and os.environ.get("HXC_TEST_HAXE"):
+        return os.environ["HXC_TEST_HAXE"]
     local = ROOT / "node_modules/.bin" / name
     return str(local) if local.is_file() else name
 
@@ -110,9 +113,16 @@ def extract_record(stdout: str, prefix: str, label: str) -> tuple[str, dict[str,
 
 def render(label: str) -> RuntimeRender:
     environment = os.environ.copy()
-    environment["HAXE_NO_SERVER"] = "1"
+    connect = environment.get("HXC_TEST_HAXE_CONNECT")
+    command = [development_tool("haxe")]
+    if connect is None:
+        environment["HAXE_NO_SERVER"] = "1"
+    else:
+        environment.pop("HAXE_NO_SERVER", None)
+        command.extend(["--connect", connect])
+    command.append(str(HXML))
     result = run_bounded_process(
-        [development_tool("haxe"), str(HXML)],
+        command,
         cwd=ROOT,
         env=environment,
         check=False,
@@ -186,6 +196,7 @@ def validate_catalog(catalog: dict[str, object]) -> None:
         "bytes-string",
         "dynamic",
         "enum-value-map",
+        "exception",
         "gc",
         "int-map",
         "io",
@@ -259,6 +270,7 @@ def validate_catalog(catalog: dict[str, object]) -> None:
         "bytes",
         "bytes-string",
         "dynamic",
+        "exception",
         "gc",
         "object",
         "string-literal",
@@ -275,6 +287,7 @@ def validate_catalog(catalog: dict[str, object]) -> None:
         "alloc": ["status"],
         "array": ["alloc"],
         "array-join": ["array", "string"],
+        "exception": ["dynamic"],
         "int-map": ["alloc", "iterator", "string"],
         "iterator": ["alloc", "array"],
         "string-map": ["alloc", "iterator", "string", "string-literal"],
@@ -314,6 +327,7 @@ def validate_catalog(catalog: dict[str, object]) -> None:
         "bytes": "compiler-selectable",
         "bytes-string": "compiler-selectable",
         "dynamic": "compiler-selectable",
+        "exception": "compiler-selectable",
         "gc": "compiler-selectable",
         "object": "compiler-selectable",
         "string-literal": "compiler-selectable",
@@ -328,8 +342,9 @@ def validate_catalog(catalog: dict[str, object]) -> None:
         feature = features[identifier]
         if feature.get("availability") != expected_availability[identifier] or feature.get("dependencies") != dependencies:
             raise RuntimeFeatureFailure(f"feature {identifier} availability/dependencies drifted")
-        if feature.get("minimalAllowed") is not True:
-            raise RuntimeFeatureFailure(f"seed feature {identifier} left the narrow allowlist")
+        expected_minimal = identifier != "exception"
+        if feature.get("minimalAllowed") is not expected_minimal:
+            raise RuntimeFeatureFailure(f"feature {identifier} minimal-policy admission drifted")
         documentation = record(feature.get("documentation"), f"feature {identifier} documentation")
         expected_documentation_fields = {
             "contract",
@@ -452,10 +467,10 @@ def validate_catalog(catalog: dict[str, object]) -> None:
         str(record(value, "reserved feature").get("id"))
         for value in records(catalog.get("reservedFeatures"), "reserved features")
     }
-    for required in ("reflection", "exception", "thread"):
+    for required in ("reflection", "thread"):
         if required not in reserved:
             raise RuntimeFeatureFailure(f"catalog omitted reserved independent feature {required}")
-    if "dynamic" in reserved or "io" in reserved:
+    if "dynamic" in reserved or "exception" in reserved or "io" in reserved:
         raise RuntimeFeatureFailure("a compiler-selectable feature remains reserved")
     serialized = json.dumps(catalog, sort_keys=True, ensure_ascii=False)
     if str(ROOT) in serialized or "/Users/" in serialized or "\\" in serialized:
@@ -561,6 +576,7 @@ def validate_plans(plans: dict[str, object]) -> None:
     bytes_plan = record(plans.get("bytes"), "bytes plan")
     bytes_string = record(plans.get("bytesString"), "Bytes-to-String plan")
     dynamic = record(plans.get("dynamicCarrier"), "Dynamic plan")
+    exception = record(plans.get("exception"), "exception plan")
     object_plan = record(plans.get("object"), "object plan")
     gc_plan = record(plans.get("gc"), "gc plan")
     string_scalar = record(plans.get("stringScalar"), "string scalar plan")
@@ -650,6 +666,8 @@ def validate_plans(plans: dict[str, object]) -> None:
         raise RuntimeFeatureFailure("Bytes-to-String closure is incomplete or nondeterministic")
     if dynamic.get("features") != ["runtime-base", "status", "dynamic"]:
         raise RuntimeFeatureFailure("scalar Dynamic closure is incomplete or retained managed dependencies")
+    if exception.get("features") != ["runtime-base", "status", "dynamic", "exception"]:
+        raise RuntimeFeatureFailure("exception closure is incomplete or nondeterministic")
     if object_plan.get("features") != ["runtime-base", "object"]:
         raise RuntimeFeatureFailure("object descriptor closure is incomplete or nondeterministic")
     if gc_plan.get("features") != ["runtime-base", "status", "alloc", "object", "gc"]:
@@ -682,6 +700,7 @@ def validate_plans(plans: dict[str, object]) -> None:
     validate_selected_reasons(bytes_plan, "Bytes")
     validate_selected_reasons(bytes_string, "Bytes-to-String")
     validate_selected_reasons(dynamic, "Dynamic")
+    validate_selected_reasons(exception, "exception")
     validate_selected_reasons(object_plan, "object")
     validate_selected_reasons(gc_plan, "gc")
     validate_selected_reasons(string_scalar, "string scalar")
@@ -854,6 +873,7 @@ def validate_package(package: dict[str, object], plans: dict[str, object]) -> No
         "bytes",
         "bytesString",
         "dynamicCarrier",
+        "exception",
         "object",
         "gc",
         "stringScalar",
@@ -1069,6 +1089,7 @@ def package_from_snapshots(
         "bytes",
         "bytesString",
         "dynamicCarrier",
+        "exception",
         "object",
         "gc",
         "stringScalar",
@@ -1174,6 +1195,7 @@ def run_native(package: dict[str, object], toolchains: list[Toolchain]) -> None:
     bytes_package = records(package.get("bytes"), "Bytes package")
     bytes_string_package = records(package.get("bytesString"), "Bytes-to-String package")
     dynamic_package = records(package.get("dynamicCarrier"), "Dynamic package")
+    exception_package = records(package.get("exception"), "exception package")
     object_package = records(package.get("object"), "object package")
     gc_package = records(package.get("gc"), "gc package")
     string_scalar = records(package.get("stringScalar"), "string scalar package")
@@ -1206,6 +1228,7 @@ def run_native(package: dict[str, object], toolchains: list[Toolchain]) -> None:
                 "dynamic-runtime-contract: OK\n",
                 family_root,
             )
+            run_native_case(toolchain, "exception", exception_package, EXCEPTION_CONSUMER, "", family_root)
             run_native_case(toolchain, "object", object_package, OBJECT_CONSUMER, "runtime-feature-object: OK\n", family_root)
             run_native_case(
                 toolchain,

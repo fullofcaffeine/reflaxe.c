@@ -91,7 +91,7 @@ int main(void) {
   hxc_gc_config config;
   hxc_gc_thread thread = HXC_GC_THREAD_INITIALIZER;
   hxc_gc_root_frame frame = HXC_GC_ROOT_FRAME_INITIALIZER;
-  const void *roots[1] = { NULL };
+  const void *volatile roots[1] = { NULL };
   gc_pair *left = NULL;
   gc_pair *right = NULL;
 

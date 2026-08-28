@@ -673,3 +673,9 @@ hxc_status hxc_iterator_ref_next_move(
   iterator->cursor++;
   return HXC_STATUS_OK;
 }
+
+hxc_status hxc_iterator_ref_release_slot(void *context) {
+  return context == NULL
+    ? HXC_STATUS_INVALID_ARGUMENT
+    : hxc_iterator_ref_release((hxc_iterator_ref *)context);
+}
