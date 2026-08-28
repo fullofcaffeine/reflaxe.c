@@ -43,7 +43,7 @@ module "Main" @"Main.hx":2:2-128:3
   instance "instance.class.6496d5123c43d3e326fae55e002b27d083bb1e327a86985c522ebcded24489a6" declaration="type.class.6496d5123c43d3e326fae55e002b27d083bb1e327a86985c522ebcded24489a6" arguments=[] representation=direct @"Main.hx":20:1-28:2
   instance "instance.class.a095ab85ab47f0a42fdf4b4481d77d9c964a28a1c98eea73b260cf0f96a74be7" declaration="type.class.a095ab85ab47f0a42fdf4b4481d77d9c964a28a1c98eea73b260cf0f96a74be7" arguments=[] representation=direct @"Main.hx":59:1-80:2
   global "global.ConstructorTrace.value" type=i32 mutable=true initialization=deferred("initializer.ConstructorTrace.field.value") @"Main.hx":2:2-2:34
-  function "constructor.BaseRecord" name="BaseRecord.new" returns=void failure=infallible entry="entry" @"Main.hx":14:2-17:3
+  function "constructor.BaseRecord" name="BaseRecord.new" returns=void failure=infallible exception-strategy=none entry="entry" @"Main.hx":14:2-17:3
     parameter "parameter.self" type=pointer(nonnull,instance("instance.class.013f441ddf81490f0bde8c33b019f8a11fcac4294a7978b7bf4cb55f77513fb3")) ownership=owned-or-value @"Main.hx":14:2-17:3
     parameter "parameter.0" type=i32 ownership=owned-or-value @"Main.hx":14:2-17:3
     block "entry" @"Main.hx":10:1-18:2
@@ -56,7 +56,7 @@ module "Main" @"Main.hx":2:2-128:3
       terminator return value=none cleanup=[] @"Main.hx":10:1-18:2
     end block "entry"
   end function "constructor.BaseRecord"
-  function "constructor.CounterOwner" name="CounterOwner.new" returns=void failure=infallible entry="entry" @"Main.hx":87:2-91:3
+  function "constructor.CounterOwner" name="CounterOwner.new" returns=void failure=infallible exception-strategy=none entry="entry" @"Main.hx":87:2-91:3
     parameter "parameter.self" type=pointer(nonnull,instance("instance.class.445e668dc10d9b0786580ae268da848cba775ff445dade8e1aef82c1590e9b20")) ownership=owned-or-value @"Main.hx":87:2-91:3
     block "entry" @"Main.hx":83:1-100:2
       instruction "instruction.0.constant" result="value.0":i32 constant value=int(11) @"Main.hx":84:53-84:55
@@ -72,7 +72,7 @@ module "Main" @"Main.hx":2:2-128:3
       terminator return value=none cleanup=[] @"Main.hx":83:1-100:2
     end block "entry"
   end function "constructor.CounterOwner"
-  function "constructor.FailableBase" name="FailableBase.new" returns=void failure=status(exception) entry="entry" @"Main.hx":43:2-48:3
+  function "constructor.FailableBase" name="FailableBase.new" returns=void failure=status(exception) exception-strategy=none entry="entry" @"Main.hx":43:2-48:3
     parameter "parameter.self" type=pointer(nonnull,instance("instance.class.4d45d3f5f73ae1c326732425b6fae93179444309fa749f60010872941a8cd5fb")) ownership=owned-or-value @"Main.hx":43:2-48:3
     parameter "parameter.0" type=bool ownership=owned-or-value @"Main.hx":43:2-48:3
     local "local.2" type=pointer(nullable,instance("instance.class.3e4c96cf3de0c1da0123f187164fd36d7d91a1b6cfd558e05b3c601bb034b93a")) ownership=borrowed-class storage=automatic state=uninitialized @"Main.hx":44:3-44:35
@@ -113,7 +113,7 @@ module "Main" @"Main.hx":2:2-128:3
       terminator return value=none cleanup=["cleanup.construction"."construction.0.initialized"] @"Main.hx":40:1-49:2
     end block "block.3.if-join"
   end function "constructor.FailableBase"
-  function "constructor.FailableLeaf" name="FailableLeaf.new" returns=void failure=status(exception) entry="entry" @"Main.hx":52:39-55:3
+  function "constructor.FailableLeaf" name="FailableLeaf.new" returns=void failure=status(exception) exception-strategy=none entry="entry" @"Main.hx":52:39-55:3
     parameter "parameter.self" type=pointer(nonnull,instance("instance.class.3240fcbecf4719a2e97503ee3f5a3f185b9a12a23e7fd2b5ed008161fe46762b")) ownership=owned-or-value @"Main.hx":52:39-55:3
     parameter "parameter.0" type=bool ownership=owned-or-value @"Main.hx":52:39-55:3
     block "entry" @"Main.hx":52:39-55:3
@@ -124,7 +124,7 @@ module "Main" @"Main.hx":2:2-128:3
       terminator return value=none cleanup=[] @"Main.hx":52:39-55:3
     end block "entry"
   end function "constructor.FailableLeaf"
-  function "constructor.LeafRecord" name="LeafRecord.new" returns=void failure=infallible entry="entry" @"Main.hx":24:2-27:3
+  function "constructor.LeafRecord" name="LeafRecord.new" returns=void failure=infallible exception-strategy=none entry="entry" @"Main.hx":24:2-27:3
     parameter "parameter.self" type=pointer(nonnull,instance("instance.class.6496d5123c43d3e326fae55e002b27d083bb1e327a86985c522ebcded24489a6")) ownership=owned-or-value @"Main.hx":24:2-27:3
     parameter "parameter.0" type=i32 ownership=owned-or-value @"Main.hx":24:2-27:3
     block "entry" @"Main.hx":20:1-28:2
@@ -144,7 +144,7 @@ module "Main" @"Main.hx":2:2-128:3
       terminator return value=none cleanup=[] @"Main.hx":20:1-28:2
     end block "entry"
   end function "constructor.LeafRecord"
-  function "constructor.OwnedCounter" name="OwnedCounter.new" returns=void failure=infallible entry="entry" @"Main.hx":62:32-64:3
+  function "constructor.OwnedCounter" name="OwnedCounter.new" returns=void failure=infallible exception-strategy=none entry="entry" @"Main.hx":62:32-64:3
     parameter "parameter.self" type=pointer(nonnull,instance("instance.class.a095ab85ab47f0a42fdf4b4481d77d9c964a28a1c98eea73b260cf0f96a74be7")) ownership=owned-or-value @"Main.hx":62:32-64:3
     parameter "parameter.0" type=i32 ownership=owned-or-value @"Main.hx":62:32-64:3
     block "entry" @"Main.hx":63:3-63:15
@@ -152,7 +152,7 @@ module "Main" @"Main.hx":2:2-128:3
       terminator return value=none cleanup=[] @"Main.hx":63:3-63:15
     end block "entry"
   end function "constructor.OwnedCounter"
-  function "function.ConstructorTrace.mark" name="ConstructorTrace.mark" returns=i32 failure=infallible entry="entry" @"Main.hx":4:45-7:3
+  function "function.ConstructorTrace.mark" name="ConstructorTrace.mark" returns=i32 failure=infallible exception-strategy=none entry="entry" @"Main.hx":4:45-7:3
     parameter "parameter.0" type=i32 ownership=owned-or-value @"Main.hx":4:45-7:3
     block "entry" @"Main.hx":4:45-7:3
       instruction "instruction.0.global-load" result="value.0":i32 load place=global("global.ConstructorTrace.value") @"Main.hx":5:11-5:16
@@ -163,7 +163,7 @@ module "Main" @"Main.hx":2:2-128:3
       terminator return value="parameter.0" cleanup=[] @"Main.hx":6:3-6:15
     end block "entry"
   end function "function.ConstructorTrace.mark"
-  function "function.Main.drive" name="Main.drive" returns=i32 failure=infallible entry="entry" @"Main.hx":104:59-106:3
+  function "function.Main.drive" name="Main.drive" returns=i32 failure=infallible exception-strategy=none entry="entry" @"Main.hx":104:59-106:3
     parameter "parameter.0" type=pointer(nullable,instance("instance.class.445e668dc10d9b0786580ae268da848cba775ff445dade8e1aef82c1590e9b20")) ownership=borrowed-class @"Main.hx":104:59-106:3
     parameter "parameter.1" type=i32 ownership=owned-or-value @"Main.hx":104:59-106:3
     block "entry" @"Main.hx":105:3-105:26
@@ -172,7 +172,7 @@ module "Main" @"Main.hx":2:2-128:3
       terminator return value="value.0" cleanup=[] @"Main.hx":105:3-105:26
     end block "entry"
   end function "function.Main.drive"
-  function "function.Main.main" name="Main.main" returns=void failure=infallible entry="entry" @"Main.hx":108:30-128:3
+  function "function.Main.main" name="Main.main" returns=void failure=infallible exception-strategy=none entry="entry" @"Main.hx":108:30-128:3
     local "local.0" type=pointer(nullable,instance("instance.class.6496d5123c43d3e326fae55e002b27d083bb1e327a86985c522ebcded24489a6")) ownership=borrowed-class storage=automatic state=uninitialized @"Main.hx":110:3-110:55
     local "local.1" type=instance("instance.class.6496d5123c43d3e326fae55e002b27d083bb1e327a86985c522ebcded24489a6") ownership=owned-or-value storage=automatic state=uninitialized @"Main.hx":110:3-110:55
     local "local.10" type=bool ownership=owned-or-value storage=automatic state=uninitialized @"Main.hx":118:12-119:26
@@ -375,14 +375,14 @@ module "Main" @"Main.hx":2:2-128:3
       terminator jump edge(target="block.10.short-circuit-join",arguments=[],cleanup=[]) @"Main.hx":118:12-122:32
     end block "block.9.short-circuit-rhs"
   end function "function.Main.main"
-  function "initializer.ConstructorTrace.field.value" name="ConstructorTrace.static-field-value" returns=void failure=infallible entry="entry" @"Main.hx":2:32-2:33
+  function "initializer.ConstructorTrace.field.value" name="ConstructorTrace.static-field-value" returns=void failure=infallible exception-strategy=none entry="entry" @"Main.hx":2:32-2:33
     block "entry" @"Main.hx":2:32-2:33
       instruction "instruction.0.constant" result="value.0":i32 constant value=int(0) @"Main.hx":2:32-2:33
       instruction "instruction.1.initialize-global" result=- initialize place=global("global.ConstructorTrace.value") value="value.0" transition=uninitialized->initialized @"Main.hx":2:32-2:33
       terminator return value=none cleanup=[] @"Main.hx":2:32-2:33
     end block "entry"
   end function "initializer.ConstructorTrace.field.value"
-  function "method.CounterOwner.run" name="CounterOwner.run" returns=i32 failure=infallible entry="entry" @"Main.hx":93:37-99:3
+  function "method.CounterOwner.run" name="CounterOwner.run" returns=i32 failure=infallible exception-strategy=none entry="entry" @"Main.hx":93:37-99:3
     parameter "parameter.self" type=pointer(nullable,instance("instance.class.445e668dc10d9b0786580ae268da848cba775ff445dade8e1aef82c1590e9b20")) ownership=borrowed-class @"Main.hx":93:37-99:3
     parameter "parameter.0" type=i32 ownership=owned-or-value @"Main.hx":93:37-99:3
     local "local.2" type=pointer(nullable,instance("instance.class.a095ab85ab47f0a42fdf4b4481d77d9c964a28a1c98eea73b260cf0f96a74be7")) ownership=borrowed-class storage=automatic state=uninitialized @"Main.hx":96:8-96:31
@@ -436,7 +436,7 @@ module "Main" @"Main.hx":2:2-128:3
       terminator return value="value.21" cleanup=[] @"Main.hx":98:3-98:61
     end block "block.3.if-join"
   end function "method.CounterOwner.run"
-  function "method.OwnedCounter.add" name="OwnedCounter.add" returns=i32 failure=infallible entry="entry" @"Main.hx":66:37-69:3
+  function "method.OwnedCounter.add" name="OwnedCounter.add" returns=i32 failure=infallible exception-strategy=none entry="entry" @"Main.hx":66:37-69:3
     parameter "parameter.self" type=pointer(nullable,instance("instance.class.a095ab85ab47f0a42fdf4b4481d77d9c964a28a1c98eea73b260cf0f96a74be7")) ownership=borrowed-class @"Main.hx":66:37-69:3
     parameter "parameter.0" type=i32 ownership=owned-or-value @"Main.hx":66:37-69:3
     block "entry" @"Main.hx":66:37-69:3

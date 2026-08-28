@@ -916,6 +916,18 @@ REQUIRED_GATE_FILES = (
     "test/snapshot/raylib-provisioning/case.json",
     "test/runtime/raylib-provisioning/case.json",
     "test/abi/raylib-provisioning/case.json",
+    "docs/specs/platform-support-matrix.json",
+    "docs/specs/platform-support-matrix.schema.json",
+    "scripts/ci/platform_matrix.py",
+    "test/platform_matrix/run.py",
+    "test/platform_matrix/test_platform_matrix.py",
+    "test/platform_matrix/fixtures/hosted/hello_consumer.cpp",
+    "test/platform_matrix/fixtures/windows/library.h",
+    "test/platform_matrix/fixtures/windows/library.c",
+    "test/platform_matrix/fixtures/windows/consumer.c",
+    "test/platform_matrix/fixtures/windows/consumer.cpp",
+    "test/platform_matrix/fixtures/cortex_m3/smoke.c",
+    "test/platform_matrix/fixtures/cortex_m3/link.ld",
     "scripts/ci/runtime_smoke.py",
 )
 
@@ -935,6 +947,9 @@ REQUIRED_WORKFLOW_SNIPPETS = (
     "  pinned-toolchain:\n    runs-on: ubuntu-latest\n    timeout-minutes: 5\n    needs:\n      - toolchain-shards\n    if: ${{ always() }}\n",
     "          TOOLCHAIN_SHARDS_RESULT: ${{ needs['toolchain-shards'].result }}\n",
     "  native-smoke:\n",
+    "  platform-matrix-plan:\n",
+    "  platform-matrix:\n",
+    "  platform-matrix-aggregate:\n",
     "  build-adapters:\n",
     "  raylib-headless:\n",
     "  raylib-desktop:\n",
@@ -952,6 +967,14 @@ REQUIRED_WORKFLOW_SNIPPETS = (
     "npx --no-install haxelib install formatter 1.18.0 --quiet",
     "npm run format:haxe:check",
     'python3 scripts/ci/runtime_smoke.py --toolchain "${{ matrix.toolchain }}"',
+    'python3 scripts/ci/platform_matrix.py plan --github-output "$GITHUB_OUTPUT"',
+    "python3 scripts/ci/platform_matrix.py execute",
+    "python3 scripts/ci/platform_matrix.py aggregate",
+    "matrix: ${{ fromJSON(needs.platform-matrix-plan.outputs.matrix) }}",
+    "gcc-arm-none-eabi",
+    "qemu-system-arm",
+    "name: hxc-platform-matrix",
+    "retention-days: 90",
     'python3 test/primitive_semantics/run.py --native-only --toolchain "${{ matrix.toolchain }}"',
     'python3 test/body_lowering/run.py --native-only --toolchain "${{ matrix.toolchain }}"',
     'python3 test/function_lowering/run.py --native-only --toolchain "${{ matrix.toolchain }}"',
@@ -1114,6 +1137,8 @@ def validate() -> list[str]:
         != "python3 test/raylib_provisioning/run.py"
     ):
         errors.append("package.json must retain the test:raylib-provisioning entry point")
+    if scripts.get("test:platform-matrix") != "python3 test/platform_matrix/run.py":
+        errors.append("package.json must retain the test:platform-matrix entry point")
     if scripts.get("test:raygui-binding") != "python3 test/raygui_binding/test_binding.py":
         errors.append("package.json must retain the test:raygui-binding entry point")
     if scripts.get("test:declaration-plan") != "python3 test/declaration_plan/run.py":

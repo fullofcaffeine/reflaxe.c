@@ -1,6 +1,6 @@
 hxcir schema=27
 module "BodyFixture" @"test/body_lowering/fixtures/positive/BodyFixture.hx":2:37-55:3
-  function "function.BodyFixture.booleanValue" name="BodyFixture.booleanValue" returns=bool failure=infallible entry="entry" @"test/body_lowering/fixtures/positive/BodyFixture.hx":20:38-23:3
+  function "function.BodyFixture.booleanValue" name="BodyFixture.booleanValue" returns=bool failure=infallible exception-strategy=none entry="entry" @"test/body_lowering/fixtures/positive/BodyFixture.hx":20:38-23:3
     local "local.0" type=bool ownership=owned-or-value storage=automatic state=uninitialized @"test/body_lowering/fixtures/positive/BodyFixture.hx":21:3-21:25
     block "entry" @"test/body_lowering/fixtures/positive/BodyFixture.hx":20:38-23:3
       instruction "instruction.0.constant" result="value.0":bool constant value=bool(true) @"test/body_lowering/fixtures/positive/BodyFixture.hx":21:20-21:24
@@ -9,7 +9,7 @@ module "BodyFixture" @"test/body_lowering/fixtures/positive/BodyFixture.hx":2:37
       terminator return value="value.1" cleanup=[] @"test/body_lowering/fixtures/positive/BodyFixture.hx":22:3-22:15
     end block "entry"
   end function "function.BodyFixture.booleanValue"
-  function "function.BodyFixture.chooseOrThrow" name="BodyFixture.chooseOrThrow" returns=i32 failure=infallible entry="entry" @"test/body_lowering/fixtures/positive/BodyFixture.hx":49:48-55:3
+  function "function.BodyFixture.chooseOrThrow" name="BodyFixture.chooseOrThrow" returns=i32 failure=infallible exception-strategy=none entry="entry" @"test/body_lowering/fixtures/positive/BodyFixture.hx":49:48-55:3
     parameter "parameter.0" type=i32 ownership=owned-or-value @"test/body_lowering/fixtures/positive/BodyFixture.hx":49:48-55:3
     local "local.1" type=i32 ownership=owned-or-value storage=automatic state=uninitialized @"test/body_lowering/fixtures/positive/BodyFixture.hx":50:10-54:4
     block "entry" @"test/body_lowering/fixtures/positive/BodyFixture.hx":49:48-55:3
@@ -36,13 +36,13 @@ module "BodyFixture" @"test/body_lowering/fixtures/positive/BodyFixture.hx":2:37
       terminator return value="value.4" cleanup=[] @"test/body_lowering/fixtures/positive/BodyFixture.hx":50:3-54:4
     end block "block.3.switch-value-join"
   end function "function.BodyFixture.chooseOrThrow"
-  function "function.BodyFixture.directInteger" name="BodyFixture.directInteger" returns=i32 failure=infallible entry="entry" @"test/body_lowering/fixtures/positive/BodyFixture.hx":11:38-13:3
+  function "function.BodyFixture.directInteger" name="BodyFixture.directInteger" returns=i32 failure=infallible exception-strategy=none entry="entry" @"test/body_lowering/fixtures/positive/BodyFixture.hx":11:38-13:3
     block "entry" @"test/body_lowering/fixtures/positive/BodyFixture.hx":11:38-13:3
       instruction "instruction.0.constant" result="value.0":i32 constant value=int(23) @"test/body_lowering/fixtures/positive/BodyFixture.hx":12:10-12:12
       terminator return value="value.0" cleanup=[] @"test/body_lowering/fixtures/positive/BodyFixture.hx":12:3-12:12
     end block "entry"
   end function "function.BodyFixture.directInteger"
-  function "function.BodyFixture.explicitVoid" name="BodyFixture.explicitVoid" returns=void failure=infallible entry="entry" @"test/body_lowering/fixtures/positive/BodyFixture.hx":25:38-33:3
+  function "function.BodyFixture.explicitVoid" name="BodyFixture.explicitVoid" returns=void failure=infallible exception-strategy=none entry="entry" @"test/body_lowering/fixtures/positive/BodyFixture.hx":25:38-33:3
     local "local.0" type=i32 ownership=owned-or-value storage=automatic state=uninitialized @"test/body_lowering/fixtures/positive/BodyFixture.hx":26:3-26:21
     local "local.1" type=i32 ownership=owned-or-value storage=automatic state=uninitialized @"test/body_lowering/fixtures/positive/BodyFixture.hx":29:4-29:23
     block "entry" @"test/body_lowering/fixtures/positive/BodyFixture.hx":25:38-33:3
@@ -55,7 +55,7 @@ module "BodyFixture" @"test/body_lowering/fixtures/positive/BodyFixture.hx":2:37
       terminator return value=none cleanup=[] @"test/body_lowering/fixtures/positive/BodyFixture.hx":32:3-32:9
     end block "entry"
   end function "function.BodyFixture.explicitVoid"
-  function "function.BodyFixture.floatingValue" name="BodyFixture.floatingValue" returns=f64 failure=infallible entry="entry" @"test/body_lowering/fixtures/positive/BodyFixture.hx":15:40-18:3
+  function "function.BodyFixture.floatingValue" name="BodyFixture.floatingValue" returns=f64 failure=infallible exception-strategy=none entry="entry" @"test/body_lowering/fixtures/positive/BodyFixture.hx":15:40-18:3
     local "local.0" type=f64 ownership=owned-or-value storage=automatic state=uninitialized @"test/body_lowering/fixtures/positive/BodyFixture.hx":16:3-16:25
     block "entry" @"test/body_lowering/fixtures/positive/BodyFixture.hx":15:40-18:3
       instruction "instruction.0.constant" result="value.0":f64 constant value=float(1.5) @"test/body_lowering/fixtures/positive/BodyFixture.hx":16:21-16:24
@@ -64,7 +64,7 @@ module "BodyFixture" @"test/body_lowering/fixtures/positive/BodyFixture.hx":2:37
       terminator return value="value.1" cleanup=[] @"test/body_lowering/fixtures/positive/BodyFixture.hx":17:3-17:15
     end block "entry"
   end function "function.BodyFixture.floatingValue"
-  function "function.BodyFixture.implicitVoid" name="BodyFixture.implicitVoid" returns=void failure=infallible entry="entry" @"test/body_lowering/fixtures/positive/BodyFixture.hx":35:38-38:3
+  function "function.BodyFixture.implicitVoid" name="BodyFixture.implicitVoid" returns=void failure=infallible exception-strategy=none entry="entry" @"test/body_lowering/fixtures/positive/BodyFixture.hx":35:38-38:3
     local "local.0" type=bool ownership=owned-or-value storage=automatic state=uninitialized @"test/body_lowering/fixtures/positive/BodyFixture.hx":36:3-36:26
     block "entry" @"test/body_lowering/fixtures/positive/BodyFixture.hx":35:38-38:3
       instruction "instruction.0.constant" result="value.0":bool constant value=bool(false) @"test/body_lowering/fixtures/positive/BodyFixture.hx":36:20-36:25
@@ -73,7 +73,7 @@ module "BodyFixture" @"test/body_lowering/fixtures/positive/BodyFixture.hx":2:37
       terminator return value=none cleanup=[] @"test/body_lowering/fixtures/positive/BodyFixture.hx":35:38-38:3
     end block "entry"
   end function "function.BodyFixture.implicitVoid"
-  function "function.BodyFixture.integerValue" name="BodyFixture.integerValue" returns=i32 failure=infallible entry="entry" @"test/body_lowering/fixtures/positive/BodyFixture.hx":2:37-9:3
+  function "function.BodyFixture.integerValue" name="BodyFixture.integerValue" returns=i32 failure=infallible exception-strategy=none entry="entry" @"test/body_lowering/fixtures/positive/BodyFixture.hx":2:37-9:3
     local "local.0" type=i32 ownership=owned-or-value storage=automatic state=uninitialized @"test/body_lowering/fixtures/positive/BodyFixture.hx":3:3-3:22
     local "local.1" type=i32 ownership=owned-or-value storage=automatic state=uninitialized @"test/body_lowering/fixtures/positive/BodyFixture.hx":6:4-6:23
     block "entry" @"test/body_lowering/fixtures/positive/BodyFixture.hx":2:37-9:3
@@ -86,13 +86,13 @@ module "BodyFixture" @"test/body_lowering/fixtures/positive/BodyFixture.hx":2:37
       terminator return value="value.3" cleanup=[] @"test/body_lowering/fixtures/positive/BodyFixture.hx":7:4-7:16
     end block "entry"
   end function "function.BodyFixture.integerValue"
-  function "function.BodyFixture.throwPayload" name="BodyFixture.throwPayload" returns=i32 failure=infallible entry="entry" @"test/body_lowering/fixtures/positive/BodyFixture.hx":45:37-47:3
+  function "function.BodyFixture.throwPayload" name="BodyFixture.throwPayload" returns=i32 failure=infallible exception-strategy=none entry="entry" @"test/body_lowering/fixtures/positive/BodyFixture.hx":45:37-47:3
     block "entry" @"test/body_lowering/fixtures/positive/BodyFixture.hx":45:37-47:3
       instruction "instruction.0.constant" result="value.0":i32 constant value=int(99) @"test/body_lowering/fixtures/positive/BodyFixture.hx":46:10-46:12
       terminator return value="value.0" cleanup=[] @"test/body_lowering/fixtures/positive/BodyFixture.hx":46:3-46:12
     end block "entry"
   end function "function.BodyFixture.throwPayload"
-  function "function.BodyFixture.unsignedValue" name="BodyFixture.unsignedValue" returns=u32 failure=infallible entry="entry" @"test/body_lowering/fixtures/positive/BodyFixture.hx":40:39-43:3
+  function "function.BodyFixture.unsignedValue" name="BodyFixture.unsignedValue" returns=u32 failure=infallible exception-strategy=none entry="entry" @"test/body_lowering/fixtures/positive/BodyFixture.hx":40:39-43:3
     local "local.0" type=u32 ownership=owned-or-value storage=automatic state=uninitialized @"test/body_lowering/fixtures/positive/BodyFixture.hx":41:3-41:23
     block "entry" @"test/body_lowering/fixtures/positive/BodyFixture.hx":40:39-43:3
       instruction "instruction.0.constant" result="value.0":u32 constant value=int(29) @"test/body_lowering/fixtures/positive/BodyFixture.hx":41:20-41:22

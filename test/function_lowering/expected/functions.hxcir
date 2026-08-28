@@ -8,7 +8,7 @@ module "FunctionFixture" @"test/function_lowering/fixtures/positive/FunctionFixt
     field "capture.1" type=pointer(nonnull,i32) mutable=false @"test/function_lowering/fixtures/positive/FunctionFixture.hx":77:14-77:18
   instance "instance.closed-record.155aa813c1c5ab50f5236b6c4eb50ea07d553c576ccb72fac37da5af0fc87bd9" declaration="type.closed-record.155aa813c1c5ab50f5236b6c4eb50ea07d553c576ccb72fac37da5af0fc87bd9" arguments=[] representation=stack-closure(i32)->i32 @"test/function_lowering/fixtures/positive/FunctionFixture.hx":47:59-49:3
   instance "instance.closed-record.ac12f5bc4d8acaac42e6a080b0a4245508c4881afeb343cfc6b01f6ec5354508" declaration="type.closed-record.ac12f5bc4d8acaac42e6a080b0a4245508c4881afeb343cfc6b01f6ec5354508" arguments=[] representation=direct @"test/function_lowering/fixtures/positive/FunctionFixture.hx":73:32-85:4
-  function "function.FunctionFixture.apply" name="FunctionFixture.apply" returns=i32 failure=infallible entry="entry" @"test/function_lowering/fixtures/positive/FunctionFixture.hx":47:59-49:3
+  function "function.FunctionFixture.apply" name="FunctionFixture.apply" returns=i32 failure=infallible exception-strategy=none entry="entry" @"test/function_lowering/fixtures/positive/FunctionFixture.hx":47:59-49:3
     parameter "parameter.0" type=i32 ownership=owned-or-value @"test/function_lowering/fixtures/positive/FunctionFixture.hx":47:59-49:3
     parameter "parameter.1" type=instance("instance.closed-record.155aa813c1c5ab50f5236b6c4eb50ea07d553c576ccb72fac37da5af0fc87bd9") ownership=owned-or-value @"test/function_lowering/fixtures/positive/FunctionFixture.hx":47:59-49:3
     block "entry" @"test/function_lowering/fixtures/positive/FunctionFixture.hx":47:59-49:3
@@ -16,7 +16,7 @@ module "FunctionFixture" @"test/function_lowering/fixtures/positive/FunctionFixt
       terminator return value="value.0" cleanup=[] @"test/function_lowering/fixtures/positive/FunctionFixture.hx":48:3-48:26
     end block "entry"
   end function "function.FunctionFixture.apply"
-  function "function.FunctionFixture.applyTwice" name="FunctionFixture.applyTwice" returns=i32 failure=infallible entry="entry" @"test/function_lowering/fixtures/positive/FunctionFixture.hx":58:64-61:3
+  function "function.FunctionFixture.applyTwice" name="FunctionFixture.applyTwice" returns=i32 failure=infallible exception-strategy=none entry="entry" @"test/function_lowering/fixtures/positive/FunctionFixture.hx":58:64-61:3
     parameter "parameter.0" type=i32 ownership=owned-or-value @"test/function_lowering/fixtures/positive/FunctionFixture.hx":58:64-61:3
     parameter "parameter.1" type=instance("instance.closed-record.155aa813c1c5ab50f5236b6c4eb50ea07d553c576ccb72fac37da5af0fc87bd9") ownership=owned-or-value @"test/function_lowering/fixtures/positive/FunctionFixture.hx":58:64-61:3
     local "local.2" type=i32 ownership=owned-or-value storage=automatic state=uninitialized @"test/function_lowering/fixtures/positive/FunctionFixture.hx":59:3-59:34
@@ -28,13 +28,13 @@ module "FunctionFixture" @"test/function_lowering/fixtures/positive/FunctionFixt
       terminator return value="value.2" cleanup=[] @"test/function_lowering/fixtures/positive/FunctionFixture.hx":60:3-60:26
     end block "entry"
   end function "function.FunctionFixture.applyTwice"
-  function "function.FunctionFixture.asFloat" name="FunctionFixture.asFloat" returns=f64 failure=infallible entry="entry" @"test/function_lowering/fixtures/positive/FunctionFixture.hx":21:45-23:3
+  function "function.FunctionFixture.asFloat" name="FunctionFixture.asFloat" returns=f64 failure=infallible exception-strategy=none entry="entry" @"test/function_lowering/fixtures/positive/FunctionFixture.hx":21:45-23:3
     parameter "parameter.0" type=f64 ownership=owned-or-value @"test/function_lowering/fixtures/positive/FunctionFixture.hx":21:45-23:3
     block "entry" @"test/function_lowering/fixtures/positive/FunctionFixture.hx":21:45-23:3
       terminator return value="parameter.0" cleanup=[] @"test/function_lowering/fixtures/positive/FunctionFixture.hx":22:3-22:15
     end block "entry"
   end function "function.FunctionFixture.asFloat"
-  function "function.FunctionFixture.captureRoundTrip" name="FunctionFixture.captureRoundTrip" returns=i32 failure=infallible entry="entry" @"test/function_lowering/fixtures/positive/FunctionFixture.hx":71:49-89:3
+  function "function.FunctionFixture.captureRoundTrip" name="FunctionFixture.captureRoundTrip" returns=i32 failure=infallible exception-strategy=none entry="entry" @"test/function_lowering/fixtures/positive/FunctionFixture.hx":71:49-89:3
     parameter "parameter.0" type=i32 ownership=owned-or-value @"test/function_lowering/fixtures/positive/FunctionFixture.hx":71:49-89:3
     local "local.1" type=i32 ownership=owned-or-value storage=automatic state=uninitialized @"test/function_lowering/fixtures/positive/FunctionFixture.hx":72:3-72:17
     local "local.2" type=i32 ownership=owned-or-value storage=automatic state=uninitialized @"test/function_lowering/fixtures/positive/FunctionFixture.hx":73:3-85:6
@@ -82,20 +82,20 @@ module "FunctionFixture" @"test/function_lowering/fixtures/positive/FunctionFixt
       terminator return value="value.18" cleanup=[] @"test/function_lowering/fixtures/positive/FunctionFixture.hx":88:3-88:16
     end block "block.3.if-join"
   end function "function.FunctionFixture.captureRoundTrip"
-  function "function.FunctionFixture.chain" name="FunctionFixture.chain" returns=i32 failure=infallible entry="entry" @"test/function_lowering/fixtures/positive/FunctionFixture.hx":25:39-27:3
+  function "function.FunctionFixture.chain" name="FunctionFixture.chain" returns=i32 failure=infallible exception-strategy=none entry="entry" @"test/function_lowering/fixtures/positive/FunctionFixture.hx":25:39-27:3
     parameter "parameter.0" type=i32 ownership=owned-or-value @"test/function_lowering/fixtures/positive/FunctionFixture.hx":25:39-27:3
     block "entry" @"test/function_lowering/fixtures/positive/FunctionFixture.hx":25:39-27:3
       instruction "instruction.0.call" result="value.0":i32 call dispatch=direct("function.FunctionFixture.passthrough") arguments=["parameter.0"] returns=i32 failure=none @"test/function_lowering/fixtures/positive/FunctionFixture.hx":26:10-26:28
       terminator return value="value.0" cleanup=[] @"test/function_lowering/fixtures/positive/FunctionFixture.hx":26:3-26:28
     end block "entry"
   end function "function.FunctionFixture.chain"
-  function "function.FunctionFixture.choose" name="FunctionFixture.choose" returns=function(i32)->i32 failure=infallible entry="entry" @"test/function_lowering/fixtures/positive/FunctionFixture.hx":91:36-93:3
+  function "function.FunctionFixture.choose" name="FunctionFixture.choose" returns=function(i32)->i32 failure=infallible exception-strategy=none entry="entry" @"test/function_lowering/fixtures/positive/FunctionFixture.hx":91:36-93:3
     block "entry" @"test/function_lowering/fixtures/positive/FunctionFixture.hx":91:36-93:3
       instruction "instruction.0.function-reference" result="value.0":function(i32)->i32 function-reference target="function.FunctionFixture.chain" @"test/function_lowering/fixtures/positive/FunctionFixture.hx":92:10-92:15
       terminator return value="value.0" cleanup=[] @"test/function_lowering/fixtures/positive/FunctionFixture.hx":92:3-92:15
     end block "entry"
   end function "function.FunctionFixture.choose"
-  function "function.FunctionFixture.chooseConditional" name="FunctionFixture.chooseConditional" returns=function(i32)->i32 failure=infallible entry="entry" @"test/function_lowering/fixtures/positive/FunctionFixture.hx":109:59-111:3
+  function "function.FunctionFixture.chooseConditional" name="FunctionFixture.chooseConditional" returns=function(i32)->i32 failure=infallible exception-strategy=none entry="entry" @"test/function_lowering/fixtures/positive/FunctionFixture.hx":109:59-111:3
     parameter "parameter.0" type=bool ownership=owned-or-value @"test/function_lowering/fixtures/positive/FunctionFixture.hx":109:59-111:3
     local "local.1" type=function(i32)->i32 ownership=owned-or-value storage=automatic state=uninitialized @"test/function_lowering/fixtures/positive/FunctionFixture.hx":110:10-110:46
     block "entry" @"test/function_lowering/fixtures/positive/FunctionFixture.hx":109:59-111:3
@@ -117,7 +117,7 @@ module "FunctionFixture" @"test/function_lowering/fixtures/positive/FunctionFixt
       terminator return value="value.2" cleanup=[] @"test/function_lowering/fixtures/positive/FunctionFixture.hx":110:3-110:46
     end block "block.2.conditional-join"
   end function "function.FunctionFixture.chooseConditional"
-  function "function.FunctionFixture.chooseSwitch" name="FunctionFixture.chooseSwitch" returns=function(i32)->i32 failure=infallible entry="entry" @"test/function_lowering/fixtures/positive/FunctionFixture.hx":114:50-120:3
+  function "function.FunctionFixture.chooseSwitch" name="FunctionFixture.chooseSwitch" returns=function(i32)->i32 failure=infallible exception-strategy=none entry="entry" @"test/function_lowering/fixtures/positive/FunctionFixture.hx":114:50-120:3
     parameter "parameter.0" type=i32 ownership=owned-or-value @"test/function_lowering/fixtures/positive/FunctionFixture.hx":114:50-120:3
     local "local.1" type=function(i32)->i32 ownership=owned-or-value storage=automatic state=uninitialized @"test/function_lowering/fixtures/positive/FunctionFixture.hx":115:10-119:4
     block "entry" @"test/function_lowering/fixtures/positive/FunctionFixture.hx":114:50-120:3
@@ -144,7 +144,7 @@ module "FunctionFixture" @"test/function_lowering/fixtures/positive/FunctionFixt
       terminator return value="value.3" cleanup=[] @"test/function_lowering/fixtures/positive/FunctionFixture.hx":115:3-119:4
     end block "block.3.switch-value-join"
   end function "function.FunctionFixture.chooseSwitch"
-  function "function.FunctionFixture.convert" name="FunctionFixture.convert" returns=f64 failure=infallible entry="entry" @"test/function_lowering/fixtures/positive/FunctionFixture.hx":29:43-31:3
+  function "function.FunctionFixture.convert" name="FunctionFixture.convert" returns=f64 failure=infallible exception-strategy=none entry="entry" @"test/function_lowering/fixtures/positive/FunctionFixture.hx":29:43-31:3
     parameter "parameter.0" type=i32 ownership=owned-or-value @"test/function_lowering/fixtures/positive/FunctionFixture.hx":29:43-31:3
     block "entry" @"test/function_lowering/fixtures/positive/FunctionFixture.hx":29:43-31:3
       instruction "instruction.0.convert" result="value.0":f64 convert value="parameter.0" kind=numeric-exact target=f64 implementation=static failure=none @"test/function_lowering/fixtures/positive/FunctionFixture.hx":30:18-30:23
@@ -152,21 +152,21 @@ module "FunctionFixture" @"test/function_lowering/fixtures/positive/FunctionFixt
       terminator return value="value.1" cleanup=[] @"test/function_lowering/fixtures/positive/FunctionFixture.hx":30:3-30:24
     end block "entry"
   end function "function.FunctionFixture.convert"
-  function "function.FunctionFixture.discarded" name="FunctionFixture.discarded" returns=void failure=infallible entry="entry" @"test/function_lowering/fixtures/positive/FunctionFixture.hx":33:44-36:3
+  function "function.FunctionFixture.discarded" name="FunctionFixture.discarded" returns=void failure=infallible exception-strategy=none entry="entry" @"test/function_lowering/fixtures/positive/FunctionFixture.hx":33:44-36:3
     parameter "parameter.0" type=i32 ownership=owned-or-value @"test/function_lowering/fixtures/positive/FunctionFixture.hx":33:44-36:3
     block "entry" @"test/function_lowering/fixtures/positive/FunctionFixture.hx":33:44-36:3
       instruction "instruction.0.call" result="value.0":i32 call dispatch=direct("function.FunctionFixture.passthrough") arguments=["parameter.0"] returns=i32 failure=none @"test/function_lowering/fixtures/positive/FunctionFixture.hx":34:3-34:21
       terminator return value=none cleanup=[] @"test/function_lowering/fixtures/positive/FunctionFixture.hx":35:3-35:9
     end block "entry"
   end function "function.FunctionFixture.discarded"
-  function "function.FunctionFixture.first" name="FunctionFixture.first" returns=i32 failure=infallible entry="entry" @"test/function_lowering/fixtures/positive/FunctionFixture.hx":38:49-41:3
+  function "function.FunctionFixture.first" name="FunctionFixture.first" returns=i32 failure=infallible exception-strategy=none entry="entry" @"test/function_lowering/fixtures/positive/FunctionFixture.hx":38:49-41:3
     parameter "parameter.0" type=i32 ownership=owned-or-value @"test/function_lowering/fixtures/positive/FunctionFixture.hx":38:49-41:3
     parameter "parameter.1" type=i32 ownership=owned-or-value @"test/function_lowering/fixtures/positive/FunctionFixture.hx":38:49-41:3
     block "entry" @"test/function_lowering/fixtures/positive/FunctionFixture.hx":38:49-41:3
       terminator return value="parameter.0" cleanup=[] @"test/function_lowering/fixtures/positive/FunctionFixture.hx":40:3-40:14
     end block "entry"
   end function "function.FunctionFixture.first"
-  function "function.FunctionFixture.indirect" name="FunctionFixture.indirect" returns=i32 failure=infallible entry="entry" @"test/function_lowering/fixtures/positive/FunctionFixture.hx":95:42-98:3
+  function "function.FunctionFixture.indirect" name="FunctionFixture.indirect" returns=i32 failure=infallible exception-strategy=none entry="entry" @"test/function_lowering/fixtures/positive/FunctionFixture.hx":95:42-98:3
     parameter "parameter.0" type=i32 ownership=owned-or-value @"test/function_lowering/fixtures/positive/FunctionFixture.hx":95:42-98:3
     local "local.1" type=function(i32)->i32 ownership=owned-or-value storage=automatic state=uninitialized @"test/function_lowering/fixtures/positive/FunctionFixture.hx":96:3-96:37
     block "entry" @"test/function_lowering/fixtures/positive/FunctionFixture.hx":95:42-98:3
@@ -181,7 +181,7 @@ module "FunctionFixture" @"test/function_lowering/fixtures/positive/FunctionFixt
       terminator return value="value.6" cleanup=[] @"test/function_lowering/fixtures/positive/FunctionFixture.hx":97:3-97:46
     end block "entry"
   end function "function.FunctionFixture.indirect"
-  function "function.FunctionFixture.main" name="FunctionFixture.main" returns=void failure=infallible entry="entry" @"test/function_lowering/fixtures/positive/FunctionFixture.hx":189:30-217:3
+  function "function.FunctionFixture.main" name="FunctionFixture.main" returns=void failure=infallible exception-strategy=none entry="entry" @"test/function_lowering/fixtures/positive/FunctionFixture.hx":189:30-217:3
     local "local.0" type=i32 ownership=owned-or-value storage=automatic state=uninitialized @"test/function_lowering/fixtures/positive/FunctionFixture.hx":190:3-190:30
     local "local.1" type=f64 ownership=owned-or-value storage=automatic state=uninitialized @"test/function_lowering/fixtures/positive/FunctionFixture.hx":192:3-192:35
     local "local.2" type=i32 ownership=owned-or-value storage=automatic state=uninitialized @"test/function_lowering/fixtures/positive/FunctionFixture.hx":195:3-195:38
@@ -375,7 +375,7 @@ module "FunctionFixture" @"test/function_lowering/fixtures/positive/FunctionFixt
       terminator branch condition="value.32" true=edge(target="block.10.while-body",arguments=[],cleanup=[]) false=edge(target="block.11.while-exit",arguments=[],cleanup=[]) @"test/function_lowering/fixtures/positive/FunctionFixture.hx":203:3-203:37
     end block "block.9.while-condition"
   end function "function.FunctionFixture.main"
-  function "function.FunctionFixture.mutateFloat" name="FunctionFixture.mutateFloat" returns=f64 failure=infallible entry="entry" @"test/function_lowering/fixtures/positive/FunctionFixture.hx":161:49-164:3
+  function "function.FunctionFixture.mutateFloat" name="FunctionFixture.mutateFloat" returns=f64 failure=infallible exception-strategy=none entry="entry" @"test/function_lowering/fixtures/positive/FunctionFixture.hx":161:49-164:3
     parameter "parameter.0" type=f64 ownership=owned-or-value @"test/function_lowering/fixtures/positive/FunctionFixture.hx":161:49-164:3
     local "local.1" type=f64 ownership=owned-or-value storage=automatic state=uninitialized @"test/function_lowering/fixtures/positive/FunctionFixture.hx":162:3-162:15
     block "entry" @"test/function_lowering/fixtures/positive/FunctionFixture.hx":161:49-164:3
@@ -388,7 +388,7 @@ module "FunctionFixture" @"test/function_lowering/fixtures/positive/FunctionFixt
       terminator return value="value.3" cleanup=[] @"test/function_lowering/fixtures/positive/FunctionFixture.hx":163:3-163:15
     end block "entry"
   end function "function.FunctionFixture.mutateFloat"
-  function "function.FunctionFixture.mutateParameters" name="FunctionFixture.mutateParameters" returns=i32 failure=infallible entry="entry" @"test/function_lowering/fixtures/positive/FunctionFixture.hx":138:75-152:3
+  function "function.FunctionFixture.mutateParameters" name="FunctionFixture.mutateParameters" returns=i32 failure=infallible exception-strategy=none entry="entry" @"test/function_lowering/fixtures/positive/FunctionFixture.hx":138:75-152:3
     parameter "parameter.0" type=i32 ownership=owned-or-value @"test/function_lowering/fixtures/positive/FunctionFixture.hx":138:75-152:3
     parameter "parameter.1" type=i32 ownership=owned-or-value @"test/function_lowering/fixtures/positive/FunctionFixture.hx":138:75-152:3
     parameter "parameter.2" type=bool ownership=owned-or-value @"test/function_lowering/fixtures/positive/FunctionFixture.hx":138:75-152:3
@@ -450,21 +450,21 @@ module "FunctionFixture" @"test/function_lowering/fixtures/positive/FunctionFixt
       terminator return value="value.16" cleanup=[] @"test/function_lowering/fixtures/positive/FunctionFixture.hx":151:3-151:14
     end block "block.6.if-join"
   end function "function.FunctionFixture.mutateParameters"
-  function "function.FunctionFixture.mutualLeft" name="FunctionFixture.mutualLeft" returns=void failure=infallible entry="entry" @"test/function_lowering/fixtures/positive/FunctionFixture.hx":181:45-183:3
+  function "function.FunctionFixture.mutualLeft" name="FunctionFixture.mutualLeft" returns=void failure=infallible exception-strategy=none entry="entry" @"test/function_lowering/fixtures/positive/FunctionFixture.hx":181:45-183:3
     parameter "parameter.0" type=i32 ownership=owned-or-value @"test/function_lowering/fixtures/positive/FunctionFixture.hx":181:45-183:3
     block "entry" @"test/function_lowering/fixtures/positive/FunctionFixture.hx":181:45-183:3
       instruction "instruction.0.call" result=- call dispatch=direct("function.FunctionFixture.mutualRight") arguments=["parameter.0"] returns=void failure=none @"test/function_lowering/fixtures/positive/FunctionFixture.hx":182:3-182:21
       terminator return value=none cleanup=[] @"test/function_lowering/fixtures/positive/FunctionFixture.hx":181:45-183:3
     end block "entry"
   end function "function.FunctionFixture.mutualLeft"
-  function "function.FunctionFixture.mutualRight" name="FunctionFixture.mutualRight" returns=void failure=infallible entry="entry" @"test/function_lowering/fixtures/positive/FunctionFixture.hx":185:46-187:3
+  function "function.FunctionFixture.mutualRight" name="FunctionFixture.mutualRight" returns=void failure=infallible exception-strategy=none entry="entry" @"test/function_lowering/fixtures/positive/FunctionFixture.hx":185:46-187:3
     parameter "parameter.0" type=i32 ownership=owned-or-value @"test/function_lowering/fixtures/positive/FunctionFixture.hx":185:46-187:3
     block "entry" @"test/function_lowering/fixtures/positive/FunctionFixture.hx":185:46-187:3
       instruction "instruction.0.call" result=- call dispatch=direct("function.FunctionFixture.mutualLeft") arguments=["parameter.0"] returns=void failure=none @"test/function_lowering/fixtures/positive/FunctionFixture.hx":186:3-186:20
       terminator return value=none cleanup=[] @"test/function_lowering/fixtures/positive/FunctionFixture.hx":185:46-187:3
     end block "entry"
   end function "function.FunctionFixture.mutualRight"
-  function "function.FunctionFixture.ordered" name="FunctionFixture.ordered" returns=i32 failure=infallible entry="entry" @"test/function_lowering/fixtures/positive/FunctionFixture.hx":43:41-45:3
+  function "function.FunctionFixture.ordered" name="FunctionFixture.ordered" returns=i32 failure=infallible exception-strategy=none entry="entry" @"test/function_lowering/fixtures/positive/FunctionFixture.hx":43:41-45:3
     parameter "parameter.0" type=i32 ownership=owned-or-value @"test/function_lowering/fixtures/positive/FunctionFixture.hx":43:41-45:3
     block "entry" @"test/function_lowering/fixtures/positive/FunctionFixture.hx":43:41-45:3
       instruction "instruction.0.call" result="value.0":i32 call dispatch=direct("function.FunctionFixture.passthrough") arguments=["parameter.0"] returns=i32 failure=none @"test/function_lowering/fixtures/positive/FunctionFixture.hx":44:16-44:34
@@ -473,13 +473,13 @@ module "FunctionFixture" @"test/function_lowering/fixtures/positive/FunctionFixt
       terminator return value="value.2" cleanup=[] @"test/function_lowering/fixtures/positive/FunctionFixture.hx":44:3-44:49
     end block "entry"
   end function "function.FunctionFixture.ordered"
-  function "function.FunctionFixture.passthrough" name="FunctionFixture.passthrough" returns=i32 failure=infallible entry="entry" @"test/function_lowering/fixtures/positive/FunctionFixture.hx":17:45-19:3
+  function "function.FunctionFixture.passthrough" name="FunctionFixture.passthrough" returns=i32 failure=infallible exception-strategy=none entry="entry" @"test/function_lowering/fixtures/positive/FunctionFixture.hx":17:45-19:3
     parameter "parameter.0" type=i32 ownership=owned-or-value @"test/function_lowering/fixtures/positive/FunctionFixture.hx":17:45-19:3
     block "entry" @"test/function_lowering/fixtures/positive/FunctionFixture.hx":17:45-19:3
       terminator return value="parameter.0" cleanup=[] @"test/function_lowering/fixtures/positive/FunctionFixture.hx":18:3-18:15
     end block "entry"
   end function "function.FunctionFixture.passthrough"
-  function "function.FunctionFixture.readOnlyParameters" name="FunctionFixture.readOnlyParameters" returns=i32 failure=infallible entry="entry" @"test/function_lowering/fixtures/positive/FunctionFixture.hx":173:76-175:3
+  function "function.FunctionFixture.readOnlyParameters" name="FunctionFixture.readOnlyParameters" returns=i32 failure=infallible exception-strategy=none entry="entry" @"test/function_lowering/fixtures/positive/FunctionFixture.hx":173:76-175:3
     parameter "parameter.0" type=i32 ownership=owned-or-value @"test/function_lowering/fixtures/positive/FunctionFixture.hx":173:76-175:3
     parameter "parameter.1" type=i32 ownership=owned-or-value @"test/function_lowering/fixtures/positive/FunctionFixture.hx":173:76-175:3
     parameter "parameter.2" type=bool ownership=owned-or-value @"test/function_lowering/fixtures/positive/FunctionFixture.hx":173:76-175:3
@@ -502,7 +502,7 @@ module "FunctionFixture" @"test/function_lowering/fixtures/positive/FunctionFixt
       terminator return value="value.1" cleanup=[] @"test/function_lowering/fixtures/positive/FunctionFixture.hx":174:3-174:32
     end block "block.2.conditional-join"
   end function "function.FunctionFixture.readOnlyParameters"
-  function "function.FunctionFixture.recursive" name="FunctionFixture.recursive" returns=void failure=infallible entry="entry" @"test/function_lowering/fixtures/positive/FunctionFixture.hx":177:54-179:3
+  function "function.FunctionFixture.recursive" name="FunctionFixture.recursive" returns=void failure=infallible exception-strategy=none entry="entry" @"test/function_lowering/fixtures/positive/FunctionFixture.hx":177:54-179:3
     parameter "parameter.0" type=i32 ownership=owned-or-value @"test/function_lowering/fixtures/positive/FunctionFixture.hx":177:54-179:3
     parameter "parameter.1" type=i32 ownership=owned-or-value @"test/function_lowering/fixtures/positive/FunctionFixture.hx":177:54-179:3
     block "entry" @"test/function_lowering/fixtures/positive/FunctionFixture.hx":177:54-179:3
@@ -510,7 +510,7 @@ module "FunctionFixture" @"test/function_lowering/fixtures/positive/FunctionFixt
       terminator return value=none cleanup=[] @"test/function_lowering/fixtures/positive/FunctionFixture.hx":177:54-179:3
     end block "entry"
   end function "function.FunctionFixture.recursive"
-  function "function.FunctionFixture.recursiveThroughValue" name="FunctionFixture.recursiveThroughValue" returns=i32 failure=infallible entry="entry" @"test/function_lowering/fixtures/positive/FunctionFixture.hx":123:58-128:3
+  function "function.FunctionFixture.recursiveThroughValue" name="FunctionFixture.recursiveThroughValue" returns=i32 failure=infallible exception-strategy=none entry="entry" @"test/function_lowering/fixtures/positive/FunctionFixture.hx":123:58-128:3
     parameter "parameter.0" type=bool ownership=owned-or-value @"test/function_lowering/fixtures/positive/FunctionFixture.hx":123:58-128:3
     local "local.1" type=function(bool)->i32 ownership=owned-or-value storage=automatic state=uninitialized @"test/function_lowering/fixtures/positive/FunctionFixture.hx":126:3-126:48
     block "entry" @"test/function_lowering/fixtures/positive/FunctionFixture.hx":123:58-128:3
@@ -530,21 +530,21 @@ module "FunctionFixture" @"test/function_lowering/fixtures/positive/FunctionFixt
       terminator return value="value.5" cleanup=[] @"test/function_lowering/fixtures/positive/FunctionFixture.hx":127:3-127:21
     end block "block.1.if-join"
   end function "function.FunctionFixture.recursiveThroughValue"
-  function "function.FunctionFixture.selectedFive" name="FunctionFixture.selectedFive" returns=i32 failure=infallible entry="entry" @"test/function_lowering/fixtures/positive/FunctionFixture.hx":100:46-102:3
+  function "function.FunctionFixture.selectedFive" name="FunctionFixture.selectedFive" returns=i32 failure=infallible exception-strategy=none entry="entry" @"test/function_lowering/fixtures/positive/FunctionFixture.hx":100:46-102:3
     parameter "parameter.0" type=i32 ownership=owned-or-value @"test/function_lowering/fixtures/positive/FunctionFixture.hx":100:46-102:3
     block "entry" @"test/function_lowering/fixtures/positive/FunctionFixture.hx":100:46-102:3
       instruction "instruction.0.constant" result="value.0":i32 constant value=int(5) @"test/function_lowering/fixtures/positive/FunctionFixture.hx":101:10-101:11
       terminator return value="value.0" cleanup=[] @"test/function_lowering/fixtures/positive/FunctionFixture.hx":101:3-101:11
     end block "entry"
   end function "function.FunctionFixture.selectedFive"
-  function "function.FunctionFixture.selectedTen" name="FunctionFixture.selectedTen" returns=i32 failure=infallible entry="entry" @"test/function_lowering/fixtures/positive/FunctionFixture.hx":104:45-106:3
+  function "function.FunctionFixture.selectedTen" name="FunctionFixture.selectedTen" returns=i32 failure=infallible exception-strategy=none entry="entry" @"test/function_lowering/fixtures/positive/FunctionFixture.hx":104:45-106:3
     parameter "parameter.0" type=i32 ownership=owned-or-value @"test/function_lowering/fixtures/positive/FunctionFixture.hx":104:45-106:3
     block "entry" @"test/function_lowering/fixtures/positive/FunctionFixture.hx":104:45-106:3
       instruction "instruction.0.constant" result="value.0":i32 constant value=int(10) @"test/function_lowering/fixtures/positive/FunctionFixture.hx":105:10-105:12
       terminator return value="value.0" cleanup=[] @"test/function_lowering/fixtures/positive/FunctionFixture.hx":105:3-105:12
     end block "entry"
   end function "function.FunctionFixture.selectedTen"
-  function "function.lambda.function.FunctionFixture.captureRoundTrip.stack.2105.2323" name="FunctionFixture.captureRoundTrip lambda at 73:32" returns=i32 failure=infallible entry="entry" @"test/function_lowering/fixtures/positive/FunctionFixture.hx":73:32-85:4
+  function "function.lambda.function.FunctionFixture.captureRoundTrip.stack.2105.2323" name="FunctionFixture.captureRoundTrip lambda at 73:32" returns=i32 failure=infallible exception-strategy=none entry="entry" @"test/function_lowering/fixtures/positive/FunctionFixture.hx":73:32-85:4
     parameter "parameter.context" type=pointer(nullable,void) ownership=owned-or-value @"test/function_lowering/fixtures/positive/FunctionFixture.hx":73:32-85:4
     parameter "parameter.0" type=i32 ownership=owned-or-value @"test/function_lowering/fixtures/positive/FunctionFixture.hx":73:32-85:4
     local "local.2" type=pointer(nonnull,i32) ownership=owned-or-value storage=automatic state=uninitialized @"test/function_lowering/fixtures/positive/FunctionFixture.hx":75:8-75:13
@@ -612,7 +612,7 @@ module "FunctionFixture" @"test/function_lowering/fixtures/positive/FunctionFixt
       terminator return value="value.24" cleanup=[] @"test/function_lowering/fixtures/positive/FunctionFixture.hx":84:4-84:17
     end block "block.6.if-join"
   end function "function.lambda.function.FunctionFixture.captureRoundTrip.stack.2105.2323"
-  function "function.synchronous-callback-adapter.function.FunctionFixture.passthrough.instance.closed-record.155aa813c1c5ab50f5236b6c4eb50ea07d553c576ccb72fac37da5af0fc87bd9" name="FunctionFixture.passthrough synchronous callback adapter" returns=i32 failure=infallible entry="entry" @"test/function_lowering/fixtures/positive/FunctionFixture.hx":17:45-19:3
+  function "function.synchronous-callback-adapter.function.FunctionFixture.passthrough.instance.closed-record.155aa813c1c5ab50f5236b6c4eb50ea07d553c576ccb72fac37da5af0fc87bd9" name="FunctionFixture.passthrough synchronous callback adapter" returns=i32 failure=infallible exception-strategy=none entry="entry" @"test/function_lowering/fixtures/positive/FunctionFixture.hx":17:45-19:3
     parameter "parameter.context" type=pointer(nullable,void) ownership=owned-or-value @"test/function_lowering/fixtures/positive/FunctionFixture.hx":17:45-19:3
     parameter "parameter.0" type=i32 ownership=owned-or-value @"test/function_lowering/fixtures/positive/FunctionFixture.hx":17:45-19:3
     block "entry" @"test/function_lowering/fixtures/positive/FunctionFixture.hx":17:45-19:3

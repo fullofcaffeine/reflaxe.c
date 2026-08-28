@@ -75,7 +75,7 @@
         "E10.T01",
         "E10.T07"
       ],
-      "reason": "Current native CI is component evidence, not the complete ADR 0007 environment/runtime/architecture/compiler tuple matrix."
+      "reason": "The complete ADR 0007 matrix is now release-blocking CI, but supported-platform claims still require a passing archived aggregate and the E10.T07 compatibility qualification."
     },
     {
       "id": "supported-release",
@@ -774,20 +774,23 @@
     {
       "id": "platform-support-matrix",
       "area": "platform",
-      "status": "unsupported",
-      "disposition": "not-validated",
-      "summary": "No operating-system, architecture, environment, runtime, and compiler tuple is currently a supported release lane.",
-      "scope": "ADR 0007 records the future Tier 1 gate; current local and CI compilers provide component evidence only.",
+      "status": "implemented",
+      "disposition": "available",
+      "summary": "One data-owned Tier 1 plan drives non-skippable native and emulated qualification jobs and a fail-closed release evidence aggregate.",
+      "scope": "The matrix covers the eight ADR 0007 operating-system, architecture, environment, runtime-policy, and compiler tuples without treating cross compilation as native execution.",
       "evidence": [
         "docs/adr/0007-strict-c11-target-and-platform-baseline.md",
-        "docs/specs/beads-plan.json"
+        "docs/specs/platform-support-matrix.json",
+        "scripts/ci/platform_matrix.py",
+        ".github/workflows/governance.yml",
+        "test/platform_matrix/test_platform_matrix.py"
       ],
       "owners": [
         "E10.T01",
         "E10.T07"
       ],
       "limitations": [
-        "Cross compilation or one native fixture cannot establish a supported platform tuple."
+        "The supported-platforms claim remains false until one complete remote aggregate is archived and E10.T07 completes compatibility qualification."
       ]
     },
     {

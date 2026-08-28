@@ -31,7 +31,7 @@ module "AggregateFixture" @"test/aggregate_lowering/fixtures/positive/AggregateF
   instance "instance.closed-record.b661c8070fec7e24aaa423b15bc362ef6a0a03547ff6bd6decc1ac8cc31cde54" declaration="type.closed-record.b661c8070fec7e24aaa423b15bc362ef6a0a03547ff6bd6decc1ac8cc31cde54" arguments=[] representation=direct @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":11:1-14:2
   instance "instance.closed-record.bb5fc2f0f3e2a65e6947a5c6deaf89cb7310661faa3bb69749821e29c737148a" declaration="type.closed-record.bb5fc2f0f3e2a65e6947a5c6deaf89cb7310661faa3bb69749821e29c737148a" arguments=[] representation=direct @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":35:1-37:2
   instance "instance.enum.6ef81aa5dac2c3bd4abd53902efc013401a4bd86a5ae69ae6a635c526204641c" declaration="type.enum.6ef81aa5dac2c3bd4abd53902efc013401a4bd86a5ae69ae6a635c526204641c" arguments=[] representation=tagged @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":30:1-33:2
-  function "function.AggregateFixture.actorSpeed" name="AggregateFixture.actorSpeed" returns=i32 failure=infallible entry="entry" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":140:52-145:3
+  function "function.AggregateFixture.actorSpeed" name="AggregateFixture.actorSpeed" returns=i32 failure=infallible exception-strategy=none entry="entry" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":140:52-145:3
     parameter "parameter.0" type=instance("instance.closed-record.bb5fc2f0f3e2a65e6947a5c6deaf89cb7310661faa3bb69749821e29c737148a") ownership=owned-or-value @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":140:52-145:3
     local "local.1" type=instance("instance.enum.6ef81aa5dac2c3bd4abd53902efc013401a4bd86a5ae69ae6a635c526204641c") ownership=owned-or-value storage=automatic state=uninitialized @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":141:17-141:28
     local "local.2" type=i32 ownership=owned-or-value storage=automatic state=uninitialized @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":141:17-141:28
@@ -65,7 +65,7 @@ module "AggregateFixture" @"test/aggregate_lowering/fixtures/positive/AggregateF
       terminator return value="value.8" cleanup=[] @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":141:3-144:4
     end block "block.2.enum-switch-value-join"
   end function "function.AggregateFixture.actorSpeed"
-  function "function.AggregateFixture.checkedField" name="AggregateFixture.checkedField" returns=i32 failure=infallible entry="entry" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":58:53-60:3
+  function "function.AggregateFixture.checkedField" name="AggregateFixture.checkedField" returns=i32 failure=infallible exception-strategy=none entry="entry" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":58:53-60:3
     parameter "parameter.0" type=i32 ownership=owned-or-value @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":58:53-60:3
     local "local.1" type=i32 ownership=owned-or-value storage=automatic state=uninitialized @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":59:10-59:36
     block "entry" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":58:53-60:3
@@ -89,7 +89,7 @@ module "AggregateFixture" @"test/aggregate_lowering/fixtures/positive/AggregateF
       terminator return value="value.4" cleanup=[] @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":59:3-59:36
     end block "block.2.conditional-join"
   end function "function.AggregateFixture.checkedField"
-  function "function.AggregateFixture.conditionalRecordSum" name="AggregateFixture.conditionalRecordSum" returns=i32 failure=infallible entry="entry" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":167:3-167:43
+  function "function.AggregateFixture.conditionalRecordSum" name="AggregateFixture.conditionalRecordSum" returns=i32 failure=infallible exception-strategy=none entry="entry" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":167:3-167:43
     parameter "parameter.0" type=bool ownership=owned-or-value @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":167:3-167:43
     parameter "parameter.1" type=instance("instance.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367") ownership=owned-or-value @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":167:3-167:43
     parameter "parameter.2" type=instance("instance.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367") ownership=owned-or-value @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":167:3-167:43
@@ -112,7 +112,7 @@ module "AggregateFixture" @"test/aggregate_lowering/fixtures/positive/AggregateF
       terminator return value="value.1" cleanup=[] @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":167:3-167:43
     end block "block.2.conditional-join"
   end function "function.AggregateFixture.conditionalRecordSum"
-  function "function.AggregateFixture.copy" name="AggregateFixture.copy" returns=instance("instance.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367") failure=infallible entry="entry" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":66:44-69:3
+  function "function.AggregateFixture.copy" name="AggregateFixture.copy" returns=instance("instance.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367") failure=infallible exception-strategy=none entry="entry" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":66:44-69:3
     parameter "parameter.0" type=instance("instance.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367") ownership=owned-or-value @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":66:44-69:3
     local "local.1" type=instance("instance.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367") ownership=owned-or-value storage=automatic state=uninitialized @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":67:3-67:29
     block "entry" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":66:44-69:3
@@ -121,7 +121,7 @@ module "AggregateFixture" @"test/aggregate_lowering/fixtures/positive/AggregateF
       terminator return value="value.0" cleanup=[] @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":68:3-68:16
     end block "entry"
   end function "function.AggregateFixture.copy"
-  function "function.AggregateFixture.envelope" name="AggregateFixture.envelope" returns=instance("instance.closed-record.b661c8070fec7e24aaa423b15bc362ef6a0a03547ff6bd6decc1ac8cc31cde54") failure=infallible entry="entry" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":80:50-82:3
+  function "function.AggregateFixture.envelope" name="AggregateFixture.envelope" returns=instance("instance.closed-record.b661c8070fec7e24aaa423b15bc362ef6a0a03547ff6bd6decc1ac8cc31cde54") failure=infallible exception-strategy=none entry="entry" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":80:50-82:3
     parameter "parameter.0" type=instance("instance.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367") ownership=owned-or-value @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":80:50-82:3
     block "entry" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":80:50-82:3
       instruction "instruction.0.constant" result="value.0":bool constant value=bool(true) @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":81:34-81:38
@@ -129,7 +129,7 @@ module "AggregateFixture" @"test/aggregate_lowering/fixtures/positive/AggregateF
       terminator return value="value.1" cleanup=[] @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":81:3-81:39
     end block "entry"
   end function "function.AggregateFixture.envelope"
-  function "function.AggregateFixture.envelopeSum" name="AggregateFixture.envelopeSum" returns=i32 failure=infallible entry="entry" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":84:50-86:3
+  function "function.AggregateFixture.envelopeSum" name="AggregateFixture.envelopeSum" returns=i32 failure=infallible exception-strategy=none entry="entry" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":84:50-86:3
     parameter "parameter.0" type=instance("instance.closed-record.b661c8070fec7e24aaa423b15bc362ef6a0a03547ff6bd6decc1ac8cc31cde54") ownership=owned-or-value @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":84:50-86:3
     local "local.1" type=i32 ownership=owned-or-value storage=automatic state=uninitialized @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":85:10-85:59
     block "entry" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":84:50-86:3
@@ -157,13 +157,13 @@ module "AggregateFixture" @"test/aggregate_lowering/fixtures/positive/AggregateF
       terminator return value="value.8" cleanup=[] @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":85:3-85:59
     end block "block.2.conditional-join"
   end function "function.AggregateFixture.envelopeSum"
-  function "function.AggregateFixture.identity" name="AggregateFixture.identity" returns=i32 failure=infallible entry="entry" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":53:42-55:3
+  function "function.AggregateFixture.identity" name="AggregateFixture.identity" returns=i32 failure=infallible exception-strategy=none entry="entry" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":53:42-55:3
     parameter "parameter.0" type=i32 ownership=owned-or-value @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":53:42-55:3
     block "entry" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":53:42-55:3
       terminator return value="parameter.0" cleanup=[] @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":54:3-54:15
     end block "entry"
   end function "function.AggregateFixture.identity"
-  function "function.AggregateFixture.localSum" name="AggregateFixture.localSum" returns=i32 failure=infallible entry="entry" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":75:52-78:3
+  function "function.AggregateFixture.localSum" name="AggregateFixture.localSum" returns=i32 failure=infallible exception-strategy=none entry="entry" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":75:52-78:3
     parameter "parameter.0" type=i32 ownership=owned-or-value @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":75:52-78:3
     parameter "parameter.1" type=i32 ownership=owned-or-value @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":75:52-78:3
     local "local.2" type=instance("instance.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367") ownership=owned-or-value storage=automatic state=uninitialized @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":76:3-76:40
@@ -176,7 +176,7 @@ module "AggregateFixture" @"test/aggregate_lowering/fixtures/positive/AggregateF
       terminator return value="value.3" cleanup=[] @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":77:3-77:27
     end block "entry"
   end function "function.AggregateFixture.localSum"
-  function "function.AggregateFixture.main" name="AggregateFixture.main" returns=void failure=infallible entry="entry" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":177:30-218:3
+  function "function.AggregateFixture.main" name="AggregateFixture.main" returns=void failure=infallible exception-strategy=none entry="entry" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":177:30-218:3
     local "local.0" type=instance("instance.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367") ownership=owned-or-value storage=automatic state=uninitialized @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":178:3-178:33
     local "local.1" type=instance("instance.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367") ownership=owned-or-value storage=automatic state=uninitialized @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":179:3-179:35
     local "local.10" type=bool ownership=owned-or-value storage=automatic state=uninitialized @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":186:12-189:27
@@ -632,7 +632,7 @@ module "AggregateFixture" @"test/aggregate_lowering/fixtures/positive/AggregateF
       terminator jump edge(target="block.10.short-circuit-join",arguments=[],cleanup=[]) @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":186:12-190:28
     end block "block.9.short-circuit-rhs"
   end function "function.AggregateFixture.main"
-  function "function.AggregateFixture.make" name="AggregateFixture.make" returns=instance("instance.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367") failure=infallible entry="entry" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":62:51-64:3
+  function "function.AggregateFixture.make" name="AggregateFixture.make" returns=instance("instance.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367") failure=infallible exception-strategy=none entry="entry" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":62:51-64:3
     parameter "parameter.0" type=i32 ownership=owned-or-value @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":62:51-64:3
     parameter "parameter.1" type=i32 ownership=owned-or-value @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":62:51-64:3
     block "entry" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":62:51-64:3
@@ -642,14 +642,14 @@ module "AggregateFixture" @"test/aggregate_lowering/fixtures/positive/AggregateF
       terminator return value="value.2" cleanup=[] @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":63:3-63:49
     end block "entry"
   end function "function.AggregateFixture.make"
-  function "function.AggregateFixture.makeActor" name="AggregateFixture.makeActor" returns=instance("instance.closed-record.bb5fc2f0f3e2a65e6947a5c6deaf89cb7310661faa3bb69749821e29c737148a") failure=infallible entry="entry" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":104:58-106:3
+  function "function.AggregateFixture.makeActor" name="AggregateFixture.makeActor" returns=instance("instance.closed-record.bb5fc2f0f3e2a65e6947a5c6deaf89cb7310661faa3bb69749821e29c737148a") failure=infallible exception-strategy=none entry="entry" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":104:58-106:3
     parameter "parameter.0" type=instance("instance.enum.6ef81aa5dac2c3bd4abd53902efc013401a4bd86a5ae69ae6a635c526204641c") ownership=owned-or-value @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":104:58-106:3
     block "entry" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":104:58-106:3
       instruction "instruction.0.construct-record" result="value.0":instance("instance.closed-record.bb5fc2f0f3e2a65e6947a5c6deaf89cb7310661faa3bb69749821e29c737148a") construct-aggregate instance="instance.closed-record.bb5fc2f0f3e2a65e6947a5c6deaf89cb7310661faa3bb69749821e29c737148a" fields=["phase"="parameter.0"] @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":105:10-105:24
       terminator return value="value.0" cleanup=[] @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":105:3-105:24
     end block "entry"
   end function "function.AggregateFixture.makeActor"
-  function "function.AggregateFixture.makeFlowRecord" name="AggregateFixture.makeFlowRecord" returns=instance("instance.closed-record.a6e9a54a91b748a3add7c25a17f8fcebf0095023e207b32730239cc1461466b7") failure=infallible entry="entry" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":109:78-126:3
+  function "function.AggregateFixture.makeFlowRecord" name="AggregateFixture.makeFlowRecord" returns=instance("instance.closed-record.a6e9a54a91b748a3add7c25a17f8fcebf0095023e207b32730239cc1461466b7") failure=infallible exception-strategy=none entry="entry" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":109:78-126:3
     parameter "parameter.0" type=i32 ownership=owned-or-value @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":109:78-126:3
     parameter "parameter.1" type=i32 ownership=owned-or-value @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":109:78-126:3
     parameter "parameter.2" type=i32 ownership=owned-or-value @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":109:78-126:3
@@ -740,14 +740,14 @@ module "AggregateFixture" @"test/aggregate_lowering/fixtures/positive/AggregateF
       terminator return value="value.34" cleanup=[] @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":111:3-125:4
     end block "block.8.conditional-join"
   end function "function.AggregateFixture.makeFlowRecord"
-  function "function.AggregateFixture.makeSwitch" name="AggregateFixture.makeSwitch" returns=instance("instance.closed-record.4f7014ab7abe19a7ec35be86539abe1f771249e6941f17a8f83d6d9c74863be0") failure=infallible entry="entry" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":100:61-102:3
+  function "function.AggregateFixture.makeSwitch" name="AggregateFixture.makeSwitch" returns=instance("instance.closed-record.4f7014ab7abe19a7ec35be86539abe1f771249e6941f17a8f83d6d9c74863be0") failure=infallible exception-strategy=none entry="entry" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":100:61-102:3
     parameter "parameter.0" type=i32 ownership=owned-or-value @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":100:61-102:3
     block "entry" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":100:61-102:3
       instruction "instruction.0.construct-record" result="value.0":instance("instance.closed-record.4f7014ab7abe19a7ec35be86539abe1f771249e6941f17a8f83d6d9c74863be0") construct-aggregate instance="instance.closed-record.4f7014ab7abe19a7ec35be86539abe1f771249e6941f17a8f83d6d9c74863be0" fields=["state"="parameter.0"] @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":101:10-101:24
       terminator return value="value.0" cleanup=[] @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":101:3-101:24
     end block "entry"
   end function "function.AggregateFixture.makeSwitch"
-  function "function.AggregateFixture.nestedRecord" name="AggregateFixture.nestedRecord" returns=instance("instance.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367") failure=infallible entry="entry" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":171:3-171:71
+  function "function.AggregateFixture.nestedRecord" name="AggregateFixture.nestedRecord" returns=instance("instance.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367") failure=infallible exception-strategy=none entry="entry" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":171:3-171:71
     parameter "parameter.0" type=bool ownership=owned-or-value @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":171:3-171:71
     parameter "parameter.1" type=bool ownership=owned-or-value @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":171:3-171:71
     parameter "parameter.2" type=instance("instance.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367") ownership=owned-or-value @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":171:3-171:71
@@ -787,20 +787,20 @@ module "AggregateFixture" @"test/aggregate_lowering/fixtures/positive/AggregateF
       terminator jump edge(target="block.2.conditional-join",arguments=[],cleanup=[]) @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":171:10-171:71
     end block "block.5.conditional-join"
   end function "function.AggregateFixture.nestedRecord"
-  function "function.AggregateFixture.noPoint" name="AggregateFixture.noPoint" returns=nullable(tagged,instance("instance.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367")) failure=infallible entry="entry" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":89:3-89:14
+  function "function.AggregateFixture.noPoint" name="AggregateFixture.noPoint" returns=nullable(tagged,instance("instance.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367")) failure=infallible exception-strategy=none entry="entry" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":89:3-89:14
     block "entry" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":89:3-89:14
       instruction "instruction.0.null-direct-optional" result="value.0":nullable(tagged,instance("instance.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367")) constant value=null @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":89:10-89:14
       terminator return value="value.0" cleanup=[] @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":89:3-89:14
     end block "entry"
   end function "function.AggregateFixture.noPoint"
-  function "function.AggregateFixture.optionalEnvelope" name="AggregateFixture.optionalEnvelope" returns=instance("instance.closed-record.20e4ff95bda8af6280ffe5d770d5a10346685525568e485f46ce93961bd8813f") failure=infallible entry="entry" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":95:3-95:24
+  function "function.AggregateFixture.optionalEnvelope" name="AggregateFixture.optionalEnvelope" returns=instance("instance.closed-record.20e4ff95bda8af6280ffe5d770d5a10346685525568e485f46ce93961bd8813f") failure=infallible exception-strategy=none entry="entry" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":95:3-95:24
     parameter "parameter.0" type=nullable(tagged,instance("instance.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367")) ownership=owned-or-value @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":95:3-95:24
     block "entry" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":95:3-95:24
       instruction "instruction.0.construct-record" result="value.0":instance("instance.closed-record.20e4ff95bda8af6280ffe5d770d5a10346685525568e485f46ce93961bd8813f") construct-aggregate instance="instance.closed-record.20e4ff95bda8af6280ffe5d770d5a10346685525568e485f46ce93961bd8813f" fields=["point"="parameter.0"] @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":95:10-95:24
       terminator return value="value.0" cleanup=[] @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":95:3-95:24
     end block "entry"
   end function "function.AggregateFixture.optionalEnvelope"
-  function "function.AggregateFixture.optionalSum" name="AggregateFixture.optionalSum" returns=i32 failure=infallible entry="entry" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":98:3-98:47
+  function "function.AggregateFixture.optionalSum" name="AggregateFixture.optionalSum" returns=i32 failure=infallible exception-strategy=none entry="entry" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":98:3-98:47
     parameter "parameter.0" type=nullable(tagged,instance("instance.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367")) ownership=owned-or-value @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":98:3-98:47
     local "local.1" type=i32 ownership=owned-or-value storage=automatic state=uninitialized @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":98:10-98:47
     block "entry" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":98:3-98:47
@@ -829,7 +829,7 @@ module "AggregateFixture" @"test/aggregate_lowering/fixtures/positive/AggregateF
       terminator return value="value.8" cleanup=[] @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":98:3-98:47
     end block "block.2.conditional-join"
   end function "function.AggregateFixture.optionalSum"
-  function "function.AggregateFixture.selectPhase" name="AggregateFixture.selectPhase" returns=instance("instance.enum.6ef81aa5dac2c3bd4abd53902efc013401a4bd86a5ae69ae6a635c526204641c") failure=infallible entry="entry" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":175:3-175:64
+  function "function.AggregateFixture.selectPhase" name="AggregateFixture.selectPhase" returns=instance("instance.enum.6ef81aa5dac2c3bd4abd53902efc013401a4bd86a5ae69ae6a635c526204641c") failure=infallible exception-strategy=none entry="entry" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":175:3-175:64
     parameter "parameter.0" type=bool ownership=owned-or-value @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":175:3-175:64
     parameter "parameter.1" type=i32 ownership=owned-or-value @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":175:3-175:64
     local "local.2" type=instance("instance.enum.6ef81aa5dac2c3bd4abd53902efc013401a4bd86a5ae69ae6a635c526204641c") ownership=owned-or-value storage=automatic state=uninitialized @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":175:10-175:64
@@ -852,7 +852,7 @@ module "AggregateFixture" @"test/aggregate_lowering/fixtures/positive/AggregateF
       terminator return value="value.2" cleanup=[] @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":175:3-175:64
     end block "block.2.conditional-join"
   end function "function.AggregateFixture.selectPhase"
-  function "function.AggregateFixture.selectRecord" name="AggregateFixture.selectRecord" returns=instance("instance.closed-record.840d047eb355663f884164459c1fe9a161891ec244fd0f8c980490a3a0569c1b") failure=infallible entry="entry" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":153:96-163:3
+  function "function.AggregateFixture.selectRecord" name="AggregateFixture.selectRecord" returns=instance("instance.closed-record.840d047eb355663f884164459c1fe9a161891ec244fd0f8c980490a3a0569c1b") failure=infallible exception-strategy=none entry="entry" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":153:96-163:3
     parameter "parameter.0" type=bool ownership=owned-or-value @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":153:96-163:3
     parameter "parameter.1" type=instance("instance.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367") ownership=owned-or-value @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":153:96-163:3
     parameter "parameter.2" type=instance("instance.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367") ownership=owned-or-value @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":153:96-163:3
@@ -894,14 +894,14 @@ module "AggregateFixture" @"test/aggregate_lowering/fixtures/positive/AggregateF
       terminator return value="value.14" cleanup=[] @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":162:3-162:41
     end block "block.2.conditional-join"
   end function "function.AggregateFixture.selectRecord"
-  function "function.AggregateFixture.somePoint" name="AggregateFixture.somePoint" returns=nullable(tagged,instance("instance.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367")) failure=infallible entry="entry" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":92:3-92:15
+  function "function.AggregateFixture.somePoint" name="AggregateFixture.somePoint" returns=nullable(tagged,instance("instance.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367")) failure=infallible exception-strategy=none entry="entry" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":92:3-92:15
     parameter "parameter.0" type=instance("instance.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367") ownership=owned-or-value @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":92:3-92:15
     block "entry" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":92:3-92:15
       instruction "instruction.0.direct-optional-inject" result="value.0":nullable(tagged,instance("instance.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367")) convert value="parameter.0" kind=nullable-inject target=nullable(tagged,instance("instance.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367")) implementation=static failure=none @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":92:10-92:15
       terminator return value="value.0" cleanup=[] @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":92:3-92:15
     end block "entry"
   end function "function.AggregateFixture.somePoint"
-  function "function.AggregateFixture.sum" name="AggregateFixture.sum" returns=i32 failure=infallible entry="entry" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":71:40-73:3
+  function "function.AggregateFixture.sum" name="AggregateFixture.sum" returns=i32 failure=infallible exception-strategy=none entry="entry" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":71:40-73:3
     parameter "parameter.0" type=instance("instance.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367") ownership=owned-or-value @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":71:40-73:3
     block "entry" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":71:40-73:3
       instruction "instruction.0.record-field-project" result="value.0":i32 project value="parameter.0" field="a" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":72:10-72:17
@@ -910,7 +910,7 @@ module "AggregateFixture" @"test/aggregate_lowering/fixtures/positive/AggregateF
       terminator return value="value.2" cleanup=[] @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":72:3-72:27
     end block "entry"
   end function "function.AggregateFixture.sum"
-  function "function.AggregateFixture.switchIsOn" name="AggregateFixture.switchIsOn" returns=bool failure=infallible entry="entry" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":128:54-130:3
+  function "function.AggregateFixture.switchIsOn" name="AggregateFixture.switchIsOn" returns=bool failure=infallible exception-strategy=none entry="entry" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":128:54-130:3
     parameter "parameter.0" type=instance("instance.closed-record.4f7014ab7abe19a7ec35be86539abe1f771249e6941f17a8f83d6d9c74863be0") ownership=owned-or-value @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":128:54-130:3
     block "entry" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":128:54-130:3
       instruction "instruction.0.record-field-project" result="value.0":i32 project value="parameter.0" field="state" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":129:10-129:21
@@ -919,7 +919,7 @@ module "AggregateFixture" @"test/aggregate_lowering/fixtures/positive/AggregateF
       terminator return value="value.2" cleanup=[] @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":129:3-129:39
     end block "entry"
   end function "function.AggregateFixture.switchIsOn"
-  function "function.AggregateFixture.switchStateValue" name="AggregateFixture.switchStateValue" returns=i32 failure=infallible entry="entry" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":132:58-138:3
+  function "function.AggregateFixture.switchStateValue" name="AggregateFixture.switchStateValue" returns=i32 failure=infallible exception-strategy=none entry="entry" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":132:58-138:3
     parameter "parameter.0" type=i32 ownership=owned-or-value @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":132:58-138:3
     local "local.1" type=i32 ownership=owned-or-value storage=automatic state=uninitialized @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":133:10-137:4
     block "entry" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":132:58-138:3

@@ -450,11 +450,11 @@
       "releaseCommand": null,
       "lastObserved": {
         "state": "not-qualified",
-        "evidence": "Current native smoke and hosted component jobs are evidence inputs; platform-support-matrix remains unsupported."
+        "evidence": "The data-owned Tier 1 workflow now fails closed and archives normalized reports; a supported-platform claim still requires a passing remote aggregate and E10.T07 compatibility qualification."
       },
       "residualRisks": [
-        "The ADR 0007 Tier 1 tuple matrix is incomplete.",
-        "No R5 release command can honestly qualify supported platforms yet."
+        "The first complete remote Tier 1 aggregate has not been archived yet.",
+        "E10.T07 still owns compatibility qualification before a supported-platform claim."
       ]
     },
     {

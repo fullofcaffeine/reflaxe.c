@@ -13,6 +13,7 @@ import reflaxe.c.interop.CImportRegistry.CLoweredImports;
 import reflaxe.c.lowering.CBodyDispatch.CBodyDispatchGraph;
 import reflaxe.c.lowering.CBodyDispatch.CLoweredBodyDispatch;
 import reflaxe.c.lowering.CBodyDispatch.CPreparedBodyDispatch;
+import reflaxe.c.lowering.CBodyDynamic.CLoweredBodyDynamicPlan;
 import reflaxe.c.lowering.CBodyEmitter;
 import reflaxe.c.lowering.CBodyLowering.CBodyLoweringResult;
 import reflaxe.c.lowering.CBodyLowering.CLoweredBodyFunction;
@@ -56,7 +57,9 @@ class GeneratedRootFrameProbe {
 		rootFrames.set(normal.id, new CIdentifier("hxc_normal_frame"));
 		rootArrays.set(failure.id, new CIdentifier("hxc_failure_roots"));
 		rootFrames.set(failure.id, new CIdentifier("hxc_failure_frame"));
-		final names = new CManagedProgramNames(new CIdentifier("hxc_program_gc"), new CIdentifier("hxc_program_thread"), rootArrays, rootFrames);
+		final rootExceptionCleanups:Map<String, CIdentifier> = [];
+		final names = new CManagedProgramNames(new CIdentifier("hxc_program_gc"), new CIdentifier("hxc_program_thread"), rootArrays, rootFrames,
+			rootExceptionCleanups);
 		final emitter = new CBodyEmitter(null, null, null, null, null, null, null, null, null, null, null, names);
 		final unit = new CTranslationUnit();
 		for (header in ["stdbool.h", "stddef.h", "stdlib.h", "hxrt/gc.h"])
@@ -103,7 +106,9 @@ class GeneratedRootFrameProbe {
 		final entry = emptyFunction("fn.project.entry");
 		final rootArrays:Map<String, CIdentifier> = [root.id => new CIdentifier("hxc_project_roots")];
 		final rootFrames:Map<String, CIdentifier> = [root.id => new CIdentifier("hxc_project_frame")];
-		final names = new CManagedProgramNames(new CIdentifier("hxc_project_gc"), new CIdentifier("hxc_project_thread"), rootArrays, rootFrames);
+		final rootExceptionCleanups:Map<String, CIdentifier> = [];
+		final names = new CManagedProgramNames(new CIdentifier("hxc_project_gc"), new CIdentifier("hxc_project_thread"), rootArrays, rootFrames,
+			rootExceptionCleanups);
 		final emitter = new CBodyEmitter(null, null, null, null, null, null, null, null, null, null, null, names);
 		final rootNames:Map<String, CIdentifier> = ["value.object" => new CIdentifier("value_object")];
 		final loweredRoot = loweredFunction(emitter, root, "fixture.ManagedRoots", new CIdentifier("hxc_project_root"), rootNames);
@@ -130,8 +135,20 @@ class GeneratedRootFrameProbe {
 				}
 			]
 		};
-		final lowered = new CBodyLoweringResult(program, [loweredRoot, loweredEntry], [], [], [], [], [], [], [], [], [], [], [], [], dispatch,
-			CLoweredImports.empty(), [], [], {
+		final dynamicPlan = new CLoweredBodyDynamicPlan(program.dynamicPlan, [], [], [], []);
+		final lowered = new CBodyLoweringResult(program, [loweredRoot, loweredEntry], [], // globals
+			[], // aggregates
+			[], // enums
+			[], // classes
+			[], // arrays
+			[], // iterators
+			[], // IntMap instances
+			[], // StringMap instances
+			[], // typed map instances
+			[], // Bytes instances
+			[], // optional instances
+			dynamicPlan, [], // constructors
+			dispatch, CLoweredImports.empty(), [], [], {
 				schemaVersion: 1,
 				algorithm: "synthetic-root-frame",
 				symbols: [],

@@ -259,10 +259,10 @@ This inventory combines product capability boundaries with repository infrastruc
 
 | Status | Count | Meaning |
 | --- | ---: | --- |
-| `implemented` | 39 | The exact bounded scope has executable repository evidence. This does not confer support on adjacent Haxe semantics or make a release promise. |
+| `implemented` | 40 | The exact bounded scope has executable repository evidence. This does not confer support on adjacent Haxe semantics or make a release promise. |
 | `scaffold-only` | 3 | A typed contract, seed, fixture, or plan exists, but it is not evidence of an available user-program capability. |
 | `experimental` | 1 | The surface is explicit and opt-in, remains unstable, and has not passed a supported-release capability gate. |
-| `unsupported` | 11 | The surface is absent, deliberately fails closed, or lacks the evidence needed for a product claim. |
+| `unsupported` | 10 | The surface is absent, deliberately fails closed, or lacks the evidence needed for a product claim. |
 
 | Inventory item | Status | Current boundary |
 | --- | --- | --- |
@@ -294,7 +294,7 @@ This inventory combines product capability boundaries with repository infrastruc
 | `native-interop-fixtures` | `scaffold-only` | Independent C-library and C++ extern-C shim inputs validate interop boundary shapes. |
 | `native-smoke` | `implemented` | Strict GCC/G++ and Clang/Clang++ CI lanes compile and run the declared structural, generated, runtime, import, aggregate/class/constructor/dispatch/enum-layout, generic-specialization, hello, and Caxecraft-domain corpus. |
 | `performance-evidence` | `unsupported` | No compiler-time, C-compile-time, runtime, size, allocation, FFI, or agent benchmark claim is validated. |
-| `platform-support-matrix` | `unsupported` | No operating-system, architecture, environment, runtime, and compiler tuple is currently a supported release lane. |
+| `platform-support-matrix` | `implemented` | One data-owned Tier 1 plan drives non-skippable native and emulated qualification jobs and a fail-closed release evidence aggregate. |
 | `primitive-executable-lowering` | `implemented` | A bounded primitive static-function graph with deterministic initialization, typed direct exact/modulo integer conversions, selective mutable-parameter locals, and literal or bounded zero-initialized local or nonescaping class-owned fixed-array/span storage plus nonescaping internal span parameters and receiver-tied read-only span returns emits and runs runtime-free strict C11. |
 | `primitive-semantics` | `implemented` | A typed schema-3 primitive representation, nullability, conversion, and operation contract has independent and generated C evidence. |
 | `public-c-abi` | `unsupported` | No generated public C header, stable export symbol set, ownership boundary, or ABI compatibility promise exists. |

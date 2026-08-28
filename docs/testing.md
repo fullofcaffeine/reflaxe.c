@@ -191,6 +191,28 @@ boundary remains. This “double lock” is not duplicate testing: one test
 diagnoses the semantic rule and the other proves that the cross-language
 contract is still connected.
 
+## Tier-1 platform qualification
+
+`npm run test:platform-matrix` checks the release-blocking platform plan without
+starting remote builds. The plan has eight exact lanes: Linux on x86_64 and
+aarch64 with GCC and Clang, macOS on arm64 and x86_64 with Apple Clang, Windows
+on x86_64 with clang-cl, and an emulated Cortex-M3 lane with GNU Arm Embedded
+GCC. The JSON file in `docs/specs` owns these facts. The workflow does not keep
+a second hand-written list.
+
+Each CI lane first checks that its runner matches the planned operating system
+and architecture. Hosted lanes compile, link, and run native C, and consume a
+checked C ABI from C++. Linux also runs the required sanitizers. Windows makes
+both static and dynamic libraries. The Cortex-M lane cross-compiles and links a
+freestanding image, checks its linker map and reset symbol, and runs it with
+QEMU semihosting.
+
+Every lane uploads one normalized report. The aggregate job requires exactly
+one passing report for every planned lane and requires one source revision in
+all reports. It then archives `hxc-platform-matrix.json` as release metadata.
+A cross-compile report cannot satisfy a native-run duty, and a missing job or
+artifact makes the aggregate fail.
+
 ## Product-surface scorecards
 
 Five scorecards keep independent claims from borrowing each other's green

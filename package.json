@@ -130,6 +130,7 @@
     "test:typed-c": "python3 test/typed_c/run.py",
     "test:c-import": "python3 test/c_import/run.py",
     "test:raylib-provisioning": "python3 test/raylib_provisioning/run.py",
+    "test:platform-matrix": "python3 test/platform_matrix/run.py",
     "test:raygui-binding": "python3 test/raygui_binding/test_binding.py",
     "test:native": "python3 scripts/ci/runtime_smoke.py",
     "test:local-gate": "python3 scripts/ci/run_local_gate.py",
