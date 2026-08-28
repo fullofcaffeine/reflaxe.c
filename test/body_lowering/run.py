@@ -829,8 +829,8 @@ def check_production_boundaries() -> None:
             if (
                 unsupported.returncode != 1
                 or "HXC1001" not in combined
-                or "Unsupported typed Haxe node `TTry`" not in combined
-                or "Main.hx:3: lines 3-7" not in combined
+                or "Unsupported typed Haxe node `TFunction(capturing-closure:outer-local:message)`" not in combined
+                or "Main.hx:4: characters 20-52" not in combined
                 or f"[profile={profile}]" not in combined
             ):
                 raise BodyLoweringFailure(
