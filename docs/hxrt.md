@@ -243,6 +243,21 @@ failure and cleanup edges until a validated result/status or contained-unwinding
 strategy is selected, as required by
 [ADR 0006](adr/0006-explicit-failure-edges-and-contained-unwinding.md).
 
+### Stress and failure evidence
+
+Run `npm run test:runtime-stress` for the bounded cross-feature native stress
+lane. One fixed seed and limit exercise String growth, Array growth, a deep
+cyclic collector graph, repeated exception cleanup, and malformed inputs. The
+runner sweeps each observed allocator callback attempt. Every failed attempt
+must leave no live block or partially published owner.
+
+The runner prints the compiler identity, runtime ABI, selected feature set,
+seed, limit, and phase when a check fails. It compares strict C11 `O0`, `O2`,
+AddressSanitizer, and UndefinedBehaviorSanitizer reports. LeakSanitizer also
+runs when the platform compiler provides it. The current runtime has no thread
+feature, so this lane reports operating-system thread stress as not applicable;
+E5.T11 owns that future synchronization evidence.
+
 ### ABI and versioning
 
 The runtime ABI is internal and versioned, currently 0.19.0. Generated

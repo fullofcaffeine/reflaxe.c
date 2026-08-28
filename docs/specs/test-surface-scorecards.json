@@ -272,6 +272,7 @@
       "focusedOwners": [
         "test:runtime-features",
         "test:gc-runtime",
+        "test:runtime-stress",
         "test:string-runtime",
         "test:array-runtime",
         "test:bytes-runtime",
@@ -304,14 +305,20 @@
       ],
       "affectedExtendedOwners": [
         "test:gc-runtime",
+        "test:runtime-stress",
         "test:caxecraft-domain:full"
       ],
       "oracles": [
         "Pinned Haxe Eval behavior for shared semantics",
-        "ASan and UBSan for invalid memory and undefined C behavior",
+        "ASan and UBSan for invalid memory and undefined C behavior, plus LeakSanitizer where the platform compiler provides it",
         "Independent allocator and C consumer invariants"
       ],
       "evidence": [
+        {
+          "path": "test/runtime_stress/runtime_stress.c",
+          "proves": "One reproducible cross-feature native contract sweeps observed String, Array, and collector allocation attempts, checks deep cyclic collection and repeated exception cleanup, and runs under strict optimization plus available memory sanitizers.",
+          "doesNotProve": "Operating-system thread safety before the thread runtime exists, leak detection on platforms without LeakSanitizer, every future runtime feature, or stable public ABI support."
+        },
         {
           "path": "test/runtime/gc/case.json",
           "proves": "The declared collector seed has a native and sanitizer owner.",

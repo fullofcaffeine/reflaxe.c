@@ -189,6 +189,7 @@
         "span-lowering",
         "project-layout",
         "gc-runtime",
+        "runtime-stress",
         "runtime-feature-graph",
         "array-runtime",
         "string-map",
@@ -962,6 +963,26 @@
         "generated descriptor callbacks visit exact managed bases; an interior field reports an internal error without sweeping live storage",
         "allocation pressure triggers deterministic collection and reports allocations, completed collections, live and reclaimed payload bytes, collector overhead, and injected-clock pause ticks",
         "strict C11 O0/O2, custom freestanding allocation with no hosted allocation symbols, C++17 header consumption, and combined address/undefined-behavior sanitizers pass under every available identified compiler family"
+      ]
+    },
+    {
+      "id": "runtime-stress",
+      "directory": "test/runtime_stress",
+      "runner": [
+        "python3",
+        "test/runtime_stress/run.py"
+      ],
+      "types": [
+        "runtime"
+      ],
+      "status": "active",
+      "assertions": [
+        "one fixed seed and bounded limit drive repeatable String, Array, deep cyclic collector, and exception-cleanup stress",
+        "fail-at sweeps reach allocator allocate and reallocate callback classes and every observed allocation attempt in the required String, Array, and collector scenarios",
+        "each injected failure leaves no live allocation, release underflow, partial publication, or stale exception cleanup",
+        "malformed UTF-8 and invalid collector descriptors fail before allocation",
+        "strict C11 O0/O2 and address/undefined sanitizer reports are identical under every available identified compiler; leak sanitizer runs where the platform toolchain provides it",
+        "every failure names compiler identity, runtime ABI, selected feature set, seed, limit, and phase; operating-system thread stress remains explicitly inapplicable until the runtime has a thread feature"
       ]
     },
     {

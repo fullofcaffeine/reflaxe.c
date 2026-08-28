@@ -1146,6 +1146,8 @@ def validate() -> list[str]:
         errors.append("package.json must retain the test:bytes-runtime entry point")
     if scripts.get("test:gc-runtime") != "python3 test/runtime/gc/run.py":
         errors.append("package.json must retain the test:gc-runtime entry point")
+    if scripts.get("test:runtime-stress") != "python3 test/runtime_stress/run.py":
+        errors.append("package.json must retain the test:runtime-stress entry point")
     if scripts.get("test:string-runtime") != "python3 test/differential/string-runtime/run.py":
         errors.append("package.json must retain the test:string-runtime entry point")
     if scripts.get("test:string-output") != "python3 test/string_output/run.py":
@@ -1371,6 +1373,8 @@ def validate() -> list[str]:
         errors.append("package.json test:toolchain must execute test:bytes-runtime")
     if "npm run test:gc-runtime" not in str(scripts.get("test:toolchain", "")):
         errors.append("package.json test:toolchain must execute test:gc-runtime")
+    if "npm run test:runtime-stress" not in str(scripts.get("test:toolchain", "")):
+        errors.append("package.json test:toolchain must execute test:runtime-stress")
     if "npm run test:string-runtime" not in str(scripts.get("test:toolchain", "")):
         errors.append("package.json test:toolchain must execute test:string-runtime")
     if "npm run test:string-output" not in str(scripts.get("test:toolchain", "")):

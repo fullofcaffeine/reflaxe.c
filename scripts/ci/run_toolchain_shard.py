@@ -65,6 +65,7 @@ SHARDS: dict[str, tuple[str, ...]] = {
         "test:string-null",
         "test:bytes-runtime",
         "test:gc-runtime",
+        "test:runtime-stress",
         "test:string-runtime",
         "test:string-output",
         "test:hello",
@@ -74,6 +75,7 @@ SHARDS: dict[str, tuple[str, ...]] = {
     ),
     "lowering-objects": (
         "test:body-lowering",
+        "test:exception-lowering",
         "test:function-lowering",
         "test:aggregate-lowering",
         "test:class-layout",
