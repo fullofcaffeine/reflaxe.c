@@ -2,17 +2,18 @@
 
 The `hxc` bootstrap now gives people and automation one stable command entry
 point. It provides help, version reporting, process-exit categories, and a
-versioned JSON response. The read-only `inspect` command and the first Clang
-semantic-lock stage of `bindgen` are available. Product commands such as
-`build`, `run`, and `doctor`
-are recognized but fail as unavailable until their separate implementation
-tasks land. Direct Haxe and HXML invocation remains authoritative.
+versioned JSON response. The `new` project generator, read-only `inspect`
+command, and first Clang semantic-lock stage of `bindgen` are available.
+Product commands such as `build`, `run`, and `doctor` are recognized but fail
+as unavailable until their separate implementation tasks land. Direct Haxe
+and HXML invocation remains authoritative.
 
 Run the development entry point through Haxe Eval:
 
 ```sh
 haxe -cp src --run Run help
 haxe -cp src --run Run version
+haxe -cp src --run Run new hello-world --kind app
 haxe -cp src --run Run build --json
 haxe -cp src --run Run inspect runtime --manifest build/hxc.manifest.json --json
 haxe -cp src --run Run bindgen vendor/base.h vendor/widget.h --output bindings/widget --json
@@ -20,6 +21,38 @@ haxe -cp src --run Run bindgen vendor/base.h vendor/widget.h --output bindings/w
 
 The `build` command currently exits with code 69 (`unavailable`). Recognition is
 not an implementation claim.
+
+## Create a starter project
+
+`hxc new` creates one of three reviewed project shapes. An app is the default;
+library and embedded starters are explicit:
+
+```sh
+haxe -cp src --run Run new hello-world
+haxe -cp src --run Run new arithmetic --kind library --module Arithmetic
+haxe -cp src --run Run new board-loop --kind embedded --license MIT
+```
+
+Project names use lowercase letters, digits, and single hyphens, starting with
+a letter. The default Haxe module is the project name in upper camel case, such
+as `hello-world` becoming `HelloWorld`. `--module` accepts an uppercase Haxe
+identifier. `--license` accepts `UNLICENSED`, `Apache-2.0`, `BSD-3-Clause`,
+`GPL-3.0-only`, `MIT`, or `MPL-2.0`; the default is `UNLICENSED` so generation
+does not silently make a legal choice. The generated license note tells the
+author to add the canonical license text before distribution.
+
+By default, an existing target path fails before any write. `--merge` preserves
+every existing template path and creates only missing files. `--force`
+replaces only the files owned by the selected template and preserves unrelated
+files. Both modes preflight every output and parent path before writing, and
+they reject symbolic links. `--merge` and `--force` cannot be combined.
+
+The app, C export-intent library, and freestanding starters each contain
+`build.hxml`, a schema-1 `hxc.json`, typed Haxe, and an honest README. The
+library does not claim a stable public C application binary interface (ABI),
+and the embedded starter does not supply platform startup or linker files.
+Native build orchestration remains outside this command until `hxc build` is
+implemented.
 
 ## Capture a Clang semantic binding lock
 

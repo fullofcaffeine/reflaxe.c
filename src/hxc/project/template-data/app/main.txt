@@ -1,0 +1,11 @@
+/**
+	Small hosted entry point for ${PROJECT_NAME}.
+
+	It keeps the first build observable: successful generated C prints one line.
+**/
+class ${MODULE_NAME} {
+	/** Print the starter message through the selected hosted runtime. */
+	static function main():Void {
+		Sys.println("Hello from ${PROJECT_NAME}");
+	}
+}

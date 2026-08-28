@@ -1,0 +1,12 @@
+/**
+	Runtime-free calculation seed for ${PROJECT_NAME}.
+
+	The function avoids allocation and hosted services so a freestanding build
+	can prove that it needs no haxe.c runtime slice.
+**/
+class ${MODULE_NAME} {
+	/** Advance one application-owned integer without platform dependencies. */
+	public static function step(value:Int):Int {
+		return value + 1;
+	}
+}

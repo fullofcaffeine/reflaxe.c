@@ -28,6 +28,7 @@
         "bootstrap",
         "diagnostics",
         "hxc-configuration",
+        "hxc-project-templates",
         "typed-c",
         "c-import",
         "raylib-provisioning",
@@ -73,6 +74,7 @@
         "bootstrap",
         "diagnostics",
         "hxc-configuration",
+        "hxc-project-templates",
         "typed-c",
         "c-import",
         "raylib-provisioning",
@@ -343,6 +345,25 @@
         "compiler defaults, environment presets, project values, named overlays, CLI flags, and direct defines resolve in documented order with source provenance on every effective field",
         "config-relative paths and effective reports are byte-stable across process cwd, CRLF, locale, input order, repeated cold runs, and warm compiler-server requests",
         "unknown or duplicate keys and defines, malformed JSON/Unicode, invalid values/combinations, and path traversal fail with HXC0003 before compilation without exposing a host path"
+      ]
+    },
+    {
+      "id": "hxc-project-templates",
+      "directory": "test/hxc_new",
+      "runner": [
+        "python3",
+        "test/hxc_new/run.py"
+      ],
+      "types": [
+        "positive",
+        "negative"
+      ],
+      "status": "active",
+      "assertions": [
+        "app, C export-intent library, and freestanding projects have deterministic file inventories and bytes across clean directories",
+        "every generated hxc.json passes the typed schema-1 loader and every generated Haxe module type-checks",
+        "default mode refuses existing targets, merge preserves existing template files, force replaces only template-owned files, and preflight conflicts leave no partial output",
+        "unsafe project, module, license, option, path-prefix, and symbolic-link inputs fail with stable CLI categories before an unintended write"
       ]
     },
     {

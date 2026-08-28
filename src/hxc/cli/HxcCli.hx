@@ -121,7 +121,7 @@ class HxcCli {
 
 	function commandHelp(command:HxcCliCommand):String {
 		final synopsis = switch command {
-			case HxcCliCommand.New: "hxc new <name> [--kind app|library|embedded]";
+			case HxcCliCommand.New: "hxc new <name> [--kind app|library|embedded] [--module Name] [--license SPDX] [--merge|--force]";
 			case HxcCliCommand.Build: "hxc build [project.hxml] [options]";
 			case HxcCliCommand.Run: "hxc run [project.hxml] [-- arguments...]";
 			case HxcCliCommand.Test: "hxc test [selector]";

@@ -587,25 +587,29 @@
       "area": "cli",
       "status": "implemented",
       "disposition": "available",
-      "summary": "The Eval bootstrap exposes stable command routing, help/version behavior, exit categories, schema-1 JSON framing, inspection, and schema-4 Clang semantic and ABI lock capture.",
-      "scope": "The router recognizes the planned command vocabulary and delegates inspection and bindgen through typed command owners. Bindgen records exact preprocessing inputs, a canonical Clang AST, primitive facts, and target-measured aggregate layouts. Direct Haxe/HXML remains the authoritative compiler path.",
+      "summary": "The Eval bootstrap exposes deterministic project templates, stable command routing, help/version behavior, exit categories, schema-1 JSON framing, inspection, and schema-4 Clang semantic and ABI lock capture.",
+      "scope": "The router creates reviewed app, C export-intent library, and freestanding projects without implicit overwrites, and delegates inspection and bindgen through typed command owners. Bindgen records exact preprocessing inputs, a canonical Clang AST, primitive facts, and target-measured aggregate layouts. Direct Haxe/HXML remains the authoritative compiler path.",
       "evidence": [
         "src/Run.hx",
         "src/hxc/cli/HxcCli.hx",
         "src/hxc/cli/HxcProductExecutor.hx",
+        "src/hxc/project/HxcNewExecutor.hx",
+        "src/hxc/project/template-data/manifest.tsv",
         "src/hxc/bindgen/HxcBindgenAbiModel.hx",
         "src/hxc/bindgen/HxcBindgenAggregateModel.hx",
         "docs/hxc-cli.md",
         "schemas/hxc-cli-response.schema.json",
-        "test/hxc_cli/run.py"
+        "test/hxc_cli/run.py",
+        "test/hxc_new/run.py"
       ],
       "owners": [
         "E8.T02",
+        "E8.T03",
         "E6.T03",
         "E6.T04"
       ],
       "limitations": [
-        "Build, run, test, clean, doctor, export, templates, and a packaged native executable remain owned by later E8 tasks; recognized unfinished commands fail with the unavailable exit category.",
+        "Build, run, test, clean, doctor, export, and a packaged native executable remain owned by later E8 tasks; recognized unfinished commands fail with the unavailable exit category.",
         "Function mapping, raw Haxe module-file emission, wrappers, and drift workflows remain owned by later E6 tasks.",
         "Bindgen currently stops at a semantic and ABI lock; later E6 tasks own generated externs, wrappers, and drift workflows.",
         "Repository Python validation scripts are developer tooling and are not hxc command implementations."
