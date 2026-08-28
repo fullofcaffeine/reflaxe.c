@@ -109,16 +109,14 @@ class Toolchain:
     cxx_version: str
 
 
-def command_result(
-    command: list[str], *, timeout: int = 30
-) -> subprocess.CompletedProcess[str]:
+def command_result(command: list[str]) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
         command,
         cwd=ROOT,
         check=False,
         capture_output=True,
         text=True,
-        timeout=timeout,
+        timeout=30,
     )
 
 
@@ -192,15 +190,9 @@ def selected_toolchains(requested: str) -> list[Toolchain]:
     return resolved
 
 
-def run_command(
-    command: list[str],
-    *,
-    label: str,
-    echo_output: bool = False,
-    timeout: int = 30,
-) -> None:
+def run_command(command: list[str], *, label: str, echo_output: bool = False) -> None:
     print(f"native-smoke: RUN {label}: {shlex.join(command)}")
-    result = command_result(command, timeout=timeout)
+    result = command_result(command)
     if result.returncode != 0:
         raise NativeSmokeFailure(
             f"{label} failed with exit {result.returncode}\n"
@@ -360,10 +352,6 @@ def run_toolchain(toolchain: Toolchain, build: Path) -> tuple[str, ...]:
             family,
         ],
         label=f"{family} precise non-moving collector contract",
-        # Containment for haxe_c-74ko: the complete focused GC child currently
-        # exceeds the generic 30-second command budget on macOS arm64. Keep a
-        # bounded gate while its owning performance task removes avoidable work.
-        timeout=60,
     )
     lanes.append("gc-runtime-contract")
 

@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import concurrent.futures
 import json
 import os
 import shutil
@@ -172,6 +173,22 @@ def render_generated_root_frame(
         raise GcTestFailure(f"{label} omitted project-layout evidence")
     validate_generated_projects(projects, label)
     return source, projects
+
+
+def render_generated_root_frames() -> tuple[
+    tuple[str, list[dict[str, object]]],
+    tuple[str, list[dict[str, object]]],
+]:
+    """Render two isolated cold samples concurrently and retain result order."""
+    labels = (
+        "first generated root-frame render",
+        "second generated root-frame render",
+    )
+    with concurrent.futures.ThreadPoolExecutor(
+        max_workers=len(labels), thread_name_prefix="gc-cold-render"
+    ) as executor:
+        futures = [executor.submit(render_generated_root_frame, label) for label in labels]
+        return futures[0].result(), futures[1].result()
 
 
 def validate_generated_projects(
@@ -418,8 +435,10 @@ def main() -> int:
     parser.add_argument("--toolchain", choices=("auto", "gcc", "clang"), default="auto")
     arguments = parser.parse_args()
     toolchains = resolve(arguments.toolchain)
-    first_root_source, first_projects = render_generated_root_frame("first generated root-frame render")
-    second_root_source, second_projects = render_generated_root_frame("second generated root-frame render")
+    (
+        (first_root_source, first_projects),
+        (second_root_source, second_projects),
+    ) = render_generated_root_frames()
     if first_root_source != second_root_source or first_projects != second_projects:
         raise GcTestFailure("generated root-frame C was not byte-identical across cold renders")
     with tempfile.TemporaryDirectory(prefix="haxe-c-gc-runtime-") as temporary:

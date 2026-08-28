@@ -119,6 +119,18 @@ native owner still compiled and executed three generated projects through the
 raw manifest and CMake; Meson was unavailable locally and remains mandatory in
 the hosted `test:build-adapters` job.
 
+One August 27, 2026 macOS arm64 diagnostic sample found that the focused GC
+runtime lane spent 33.26 of about 37 seconds in two independent, server-disabled
+Haxe renders. All native builds and executions together took about 3.7 seconds.
+Running the two isolated cold renders concurrently retained the byte-for-byte
+determinism comparison and reduced the complete Clang lane to 20.30 seconds.
+An isolated detached worktree containing only the scoped change repeated the
+complete lane in 20.10 seconds.
+The native-smoke parent therefore keeps its ordinary 30-second child timeout;
+the measured result has about 9.7 seconds of local margin. A deterministic unit
+test also requires both render jobs to overlap and preserves their result order.
+These values are one before/after sample, not a cross-platform percentile claim.
+
 For an AI-agent loop, “focused owner passes” is the normal signal to continue
 implementation. “R1 passes” is the normal signal to create the task commit.
 R2 through R5 are independent hosted or qualification evidence: an agent
