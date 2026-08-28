@@ -107,6 +107,10 @@ typedef CProjectEmissionPlan = {
 	final ?stdlibCapabilities:Array<String>;
 	final ?staticInitialization:CStaticInitializationSnapshot;
 	final ?runtimePlan:RuntimeFeaturePlanSnapshot;
+
+	/** Optional compiler-owned semantic evidence requested for later read-only inspection. */
+	final ?inspectionFiles:Array<GeneratedFile>;
+
 	final symbolTable:CSymbolTableSnapshot;
 }
 
@@ -277,13 +281,17 @@ class CProjectEmitter {
 
 	static final SIDECAR_PATHS = [
 		"hxc.abi.json",
+		"hxc.c-ast.json",
+		"hxc.declarations.json",
 		"hxc.dispatch.json",
 		"hxc.initialization-plan.json",
+		"hxc.hxcir.json",
 		"hxc.manifest.json",
 		"hxc.runtime-plan.json",
 		"hxc.specializations.json",
 		"hxc.stdlib-report.json",
 		"hxc.symbols.json",
+		"hxc.typed-inventory.json",
 		CBuildAdapterEmitter.CMAKE_PATH,
 		CBuildAdapterEmitter.MESON_PATH
 	];
@@ -302,6 +310,11 @@ class CProjectEmitter {
 		final units = canonicalUnits(plan.units);
 		final buildPlan = new CBuildPlanBuilder().build(plan.projectName, plan.cStandard, units, plan.buildFacts);
 		final files = units.copy();
+		if (plan.inspectionFiles != null) {
+			for (file in plan.inspectionFiles) {
+				files.push(file);
+			}
+		}
 		#if (macro || reflaxe_runtime)
 		CPhaseTiming.stopDetail(unitCanonicalizationTimer);
 
@@ -498,6 +511,7 @@ class CProjectEmitter {
 		if (plan.symbolTable.schemaVersion != CSymbolRegistry.SCHEMA_VERSION || plan.symbolTable.algorithm != CSymbolRegistry.ALGORITHM) {
 			fail('project emission requires the finalized schema-${CSymbolRegistry.SCHEMA_VERSION} ${CSymbolRegistry.ALGORITHM} symbol table');
 		}
+		validateInspectionFiles(plan.inspectionFiles);
 		final helperIds = plan.primitiveHelperIds;
 		if (helperIds != null) {
 			final seen:Map<String, Bool> = [];
@@ -508,6 +522,28 @@ class CProjectEmitter {
 				}
 				seen.set(helperId, true);
 			}
+		}
+	}
+
+	/** Keep opt-in semantic evidence closed, deterministic, and separate from C payload ownership. */
+	function validateInspectionFiles(files:Null<Array<GeneratedFile>>):Void {
+		if (files == null)
+			return;
+		final seen:Map<String, Bool> = [];
+		for (file in files) {
+			final admitted = file.relativePath == "hxc.typed-inventory.json"
+				&& file.kind == GeneratedFileKind.TypedInventory
+				|| file.relativePath == "hxc.hxcir.json"
+				&& file.kind == GeneratedFileKind.HxcIR
+				|| file.relativePath == "hxc.c-ast.json"
+				&& file.kind == GeneratedFileKind.CAst
+				|| file.relativePath == "hxc.declarations.json"
+				&& file.kind == GeneratedFileKind.DeclarationReport;
+			if (!admitted)
+				fail('inspection artifact `${file.relativePath}` has an unsupported path or role');
+			if (seen.exists(file.relativePath))
+				fail('inspection artifact `${file.relativePath}` is duplicated');
+			seen.set(file.relativePath, true);
 		}
 	}
 

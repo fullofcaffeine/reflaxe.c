@@ -7,6 +7,7 @@ import haxe.macro.Expr.Position;
 import haxe.macro.Type;
 import haxe.Json;
 import reflaxe.c.ast.CAST.CIdentifier;
+import reflaxe.c.ast.CAST.CDecl;
 import reflaxe.c.CDiagnostic.CDiagnosticId;
 import reflaxe.c.CPhaseTiming.CProfileCounterId;
 import reflaxe.c.CPhaseTiming.CPhaseTimingId;
@@ -23,6 +24,7 @@ import reflaxe.c.emit.CProjectLayout.CProjectLayoutPlan;
 import reflaxe.c.emit.CProjectLayout.CProjectLayoutPlanner;
 import reflaxe.c.emit.CStaticFunctionProjectEmitter;
 import reflaxe.c.emit.GeneratedFile;
+import reflaxe.c.emit.GeneratedFile.GeneratedFileKind;
 import reflaxe.c.emit.ProjectEmissionError;
 import reflaxe.c.frontend.TypedAstInventory;
 import reflaxe.c.frontend.IncrementalInputInventory;
@@ -117,6 +119,7 @@ private typedef VirtualDispatchInspection = {
 
 /** Whole-program adapter into the primitive static-function executable slice. */
 class CCompiler {
+	public static inline final INSPECTION_REPORTS_DEFINE = "hxc_inspection_reports";
 	public static inline final STATIC_INITIALIZATION_REPORT_DEFINE = "reflaxe_c_static_initialization_report";
 	public static inline final STATIC_INITIALIZATION_REPORT_PREFIX = "HXC_STATIC_INITIALIZATION=";
 	public static inline final CONSTRUCTOR_LOWERING_REPORT_DEFINE = "reflaxe_c_constructor_lowering_report";
@@ -135,8 +138,10 @@ class CCompiler {
 			CDiagnostic.fatal(CDiagnosticId.InternalCompilerError, "whole-program compiler received an input outside its per-build CompilationContext",
 				compilationPosition(), context.profile);
 		}
+		final typedInventory = Context.defined(TypedAstInventory.REPORT_DEFINE)
+			|| Context.defined(INSPECTION_REPORTS_DEFINE) ? TypedAstInventory.snapshot(program) : null;
 		if (Context.defined(TypedAstInventory.REPORT_DEFINE)) {
-			Sys.println(TypedAstInventory.REPORT_PREFIX + Json.stringify(TypedAstInventory.snapshot(program)));
+			Sys.println(TypedAstInventory.REPORT_PREFIX + Json.stringify(typedInventory));
 		}
 		if (Context.defined(IncrementalInputInventory.REPORT_DEFINE)) {
 			Sys.println(IncrementalInputInventory.REPORT_PREFIX + Json.stringify(IncrementalInputInventory.snapshot(program)));
@@ -186,7 +191,8 @@ class CCompiler {
 			final loweringTimer = CPhaseTiming.start(CPSemanticLowering);
 			final captureHxcIRDump = Context.defined(STATIC_INITIALIZATION_REPORT_DEFINE)
 				|| Context.defined(CONSTRUCTOR_LOWERING_REPORT_DEFINE)
-				|| Context.defined(VIRTUAL_DISPATCH_REPORT_DEFINE);
+				|| Context.defined(VIRTUAL_DISPATCH_REPORT_DEFINE)
+				|| Context.defined(INSPECTION_REPORTS_DEFINE);
 			final lowered = new CBodyLowering(context).lower(graph.functions, graph.globals, staticInitialization.initializerInputs, graph.constructors,
 				graph.dispatch, program, typedCContract, captureHxcIRDump);
 			CPhaseTiming.stop(loweringTimer);
@@ -288,6 +294,41 @@ class CCompiler {
 				input.expression.pos, input.sourcePath);
 			CPhaseTiming.stopDetail(specializationReportTimer);
 			final projectEmissionTimer = CPhaseTiming.startDetail(CDTArtifactProjectEmission);
+			final inspectionFiles:Array<GeneratedFile> = [];
+			if (Context.defined(INSPECTION_REPORTS_DEFINE)) {
+				inspectionFiles.push(new GeneratedFile("hxc.typed-inventory.json", Json.stringify(typedInventory, null, "  ") + "\n",
+					GeneratedFileKind.TypedInventory));
+				inspectionFiles.push(new GeneratedFile("hxc.hxcir.json", Json.stringify({
+					schemaVersion: 1,
+					format: "hxcir-text-v1",
+					producerPasses: [
+						"typed-ast-normalization",
+						"typed-c-contract-collection",
+						"static-function-graph",
+						"semantic-lowering"
+					],
+					text: requireHxcIRDump(lowered)
+				}, null, "  ") + "\n", GeneratedFileKind.HxcIR));
+				inspectionFiles.push(new GeneratedFile("hxc.c-ast.json", Json.stringify({
+					schemaVersion: 1,
+					format: "structural-c-ast-summary-v1",
+					producerPasses: ["runtime-feature-planning", "c-ast-project-planning"],
+					headers: staticProject.headers.map(header -> {
+						path: header.path,
+						includeCount: header.unit.translationUnit.includes.length,
+						declarationCount: header.unit.translationUnit.declarations.length,
+						declarations: header.unit.translationUnit.declarations.map(cAstDeclarationKind)
+					}),
+					sources: staticProject.sources.map(source -> {
+						path: source.path,
+						includeCount: source.unit.includes.length,
+						declarationCount: source.unit.declarations.length,
+						declarations: source.unit.declarations.map(cAstDeclarationKind)
+					})
+				}, null, "  ") + "\n", GeneratedFileKind.CAst));
+				inspectionFiles.push(new GeneratedFile("hxc.declarations.json", Json.stringify(typedCContract, null, "  ") + "\n",
+					GeneratedFileKind.DeclarationReport));
+			}
 			final generatedFiles = new CProjectEmitter().emit({
 				schemaVersion: CProjectEmitter.SCHEMA_VERSION,
 				projectName: input.readableDeclarationPath == null ? input.declarationPath : input.readableDeclarationPath,
@@ -327,6 +368,7 @@ class CCompiler {
 				stdlibCapabilities: stdlibCapabilities(lowered.runtimeRequirements),
 				staticInitialization: staticInitialization.snapshot,
 				runtimePlan: runtimePlan,
+				inspectionFiles: inspectionFiles,
 				symbolTable: lowered.symbolTable
 			});
 			CPhaseTiming.stopDetail(projectEmissionTimer);
@@ -358,6 +400,24 @@ class CCompiler {
 			CDiagnostic.fatal(error.diagnosticId, error.detail, input.expression.pos, context.profile);
 		}
 		return [];
+	}
+
+	/** Name one top-level structural C AST node without serializing target-language text as its model. */
+	static function cAstDeclarationKind(declaration:CDecl):String {
+		return switch declaration {
+			case DComment(_): "comment";
+			case DLineDirective(_): "line-directive";
+			case DStaticAssert(_, _): "static-assert";
+			case DForwardStruct(_, _): "forward-struct";
+			case DForwardUnion(_, _): "forward-union";
+			case DStruct(_, _, _): "struct";
+			case DUnion(_, _, _): "union";
+			case DEnum(_, _, _): "enum";
+			case DTypedef(_, _, _): "typedef";
+			case DVariable(_): "variable";
+			case DFunction(_): "function";
+			case DPrototype(_, _, _, _, _): "prototype";
+		};
 	}
 
 	/**

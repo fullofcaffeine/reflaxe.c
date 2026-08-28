@@ -259,7 +259,7 @@ This inventory combines product capability boundaries with repository infrastruc
 
 | Status | Count | Meaning |
 | --- | ---: | --- |
-| `implemented` | 41 | The exact bounded scope has executable repository evidence. This does not confer support on adjacent Haxe semantics or make a release promise. |
+| `implemented` | 42 | The exact bounded scope has executable repository evidence. This does not confer support on adjacent Haxe semantics or make a release promise. |
 | `scaffold-only` | 3 | A typed contract, seed, fixture, or plan exists, but it is not evidence of an available user-program capability. |
 | `experimental` | 1 | The surface is explicit and opt-in, remains unstable, and has not passed a supported-release capability gate. |
 | `unsupported` | 9 | The surface is absent, deliberately fails closed, or lacks the evidence needed for a product claim. |
@@ -288,6 +288,7 @@ This inventory combines product capability boundaries with repository infrastruc
 | `governance-and-provenance` | `implemented` | Contribution, disclosure, license, vendoring, provenance, and future release responsibilities are drift-checked. |
 | `hxc-cli` | `implemented` | The Eval bootstrap exposes stable command routing, help/version behavior, exit categories, and schema-1 JSON framing. |
 | `hxc-doctor` | `unsupported` | The hxc doctor human and JSON command is not implemented. |
+| `hxc-inspect` | `implemented` | The Eval bootstrap validates compiler manifests and exposes versioned human and JSON views of configuration, semantic lowering, runtime, build, declaration, ABI, and size evidence. |
 | `hxc-ir` | `implemented` | Schema-21 HxcIR structurally records values, tagged cases, concrete and header-owned nominal types, reachable class/interface layouts, slots and tables, distinct caller-owned class and interface borrows, receiver-tied read-only span returns, call-scoped mutable C-string buffers, exact native dispatch/constants, binary32 rounding/binary64 widening, strings, ordering, control flow, failures, cleanup, managed roots, unmanaged branch carriers, managed-enum ownership joins, and runtime intent. |
 | `literal-backed-string-values` | `implemented` | Immutable Haxe String values backed by source literals can flow through direct typed values without allocation. |
 | `literal-string-output` | `implemented` | Hosted Sys.println accepts statically typed String values, while default trace accepts compiler-known literals; both preserve exact UTF-8/NUL bytes and explicit output failure handling. |

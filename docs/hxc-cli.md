@@ -2,7 +2,8 @@
 
 The `hxc` bootstrap now gives people and automation one stable command entry
 point. It provides help, version reporting, process-exit categories, and a
-versioned JSON response. Product commands such as `build`, `run`, and `doctor`
+versioned JSON response. The read-only `inspect` command is available. Product
+commands such as `build`, `run`, and `doctor`
 are recognized but fail as unavailable until their separate implementation
 tasks land. Direct Haxe and HXML invocation remains authoritative.
 
@@ -12,10 +13,47 @@ Run the development entry point through Haxe Eval:
 haxe -cp src --run Run help
 haxe -cp src --run Run version
 haxe -cp src --run Run build --json
+haxe -cp src --run Run inspect runtime --manifest build/hxc.manifest.json --json
 ```
 
-The last command currently exits with code 69 (`unavailable`). Recognition is
+The `build` command currently exits with code 69 (`unavailable`). Recognition is
 not an implementation claim.
+
+## Inspect compiler decisions
+
+`hxc inspect` reads an existing `hxc.manifest.json`; it never builds or changes
+the output. The command checks every manifest-owned artifact path and SHA-256
+digest before it reports a fact. This prevents a report from silently mixing
+files from different builds.
+
+Use `-D hxc_inspection_reports` when compiling if you need the typed inventory,
+HxcIR, structural C abstract syntax tree (AST) summary, declaration effects, or
+combined lowering reports. The define adds report sidecars to the manifest. It
+does not change generated C or runtime selection. Reports already emitted by a
+normal build, such as configuration, runtime, symbols, includes, build facts,
+standard-library ownership, and application binary interface (ABI), need no
+extra define.
+
+```sh
+haxe build.hxml -D hxc_inspection_reports --custom-target c=build/generated
+haxe -cp src --run Run inspect lowering \
+  --manifest build/generated/hxc.manifest.json
+```
+
+The stable report names are `manifest`, `config`, `typed-inventory`, `hxcir`,
+`c-ast`, `lowering`, `runtime`, `symbols`, `includes`, `build`, `declarations`,
+`macros`, `stdlib`, `abi`, `sizes`, and `all`. The `declarations` and `macros`
+views include typed ownership, unsafe-boundary, portability, runtime, metadata,
+and source-reason evidence. The `sizes` view reports exact artifact bytes and
+the runtime plan used as allocation evidence; it does not invent measured heap
+allocation counts.
+
+Host-absolute paths are redacted by default. Use `--show-sensitive` only when
+the output is trusted and the exact host paths are necessary. JSON mode keeps
+the schema-1 inspect report in the shared response's `stdout` string, including
+its terminating newline. Parse the CLI response once, then parse that field.
+The report schema is
+[`schemas/hxc-inspect-report.schema.json`](../schemas/hxc-inspect-report.schema.json).
 
 ## Output contract
 

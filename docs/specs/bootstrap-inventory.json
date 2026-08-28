@@ -592,7 +592,7 @@
         "E8.T02"
       ],
       "limitations": [
-        "Build, run, test, clean, doctor, inspect, bindgen, export, templates, and a packaged native executable remain owned by later E8 and E6 tasks; recognized unfinished commands fail with the unavailable exit category.",
+        "Build, run, test, clean, doctor, bindgen, export, templates, and a packaged native executable remain owned by later E8 and E6 tasks; recognized unfinished commands fail with the unavailable exit category.",
         "Repository Python validation scripts are developer tooling and are not hxc command implementations."
       ]
     },
@@ -612,6 +612,28 @@
       ],
       "limitations": [
         "No tool, SDK, sysroot, compiler, sanitizer, or writable-output probe is exposed as hxc doctor today."
+      ]
+    },
+    {
+      "id": "hxc-inspect",
+      "area": "cli",
+      "status": "implemented",
+      "disposition": "available",
+      "summary": "The Eval bootstrap validates compiler manifests and exposes versioned human and JSON views of configuration, semantic lowering, runtime, build, declaration, ABI, and size evidence.",
+      "scope": "Inspection is read-only and manifest-driven. Normal compiler sidecars remain authoritative; one opt-in compiler define publishes typed inventory, HxcIR, structural C AST, and typed declaration evidence without changing generated C semantics.",
+      "evidence": [
+        "src/hxc/inspect/HxcInspectExecutor.hx",
+        "src/hxc/inspect/HxcInspectManifest.hx",
+        "schemas/hxc-inspect-report.schema.json",
+        "docs/hxc-cli.md",
+        "test/hxc_inspect/run.py"
+      ],
+      "owners": [
+        "E8.T07"
+      ],
+      "limitations": [
+        "The current bootstrap inspects an existing compiler output; the unfinished hxc build command does not yet request inspection sidecars on the user's behalf.",
+        "Size reports contain exact artifact bytes and compiler allocation evidence, not runtime heap measurements."
       ]
     },
     {

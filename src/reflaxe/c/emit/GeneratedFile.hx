@@ -15,6 +15,10 @@ enum abstract GeneratedFileKind(String) to String {
 	var SpecializationReport = "specialization-report";
 	var DispatchReport = "dispatch-report";
 	var InitializationPlan = "initialization-plan";
+	var TypedInventory = "typed-inventory";
+	var HxcIR = "hxcir";
+	var CAst = "c-ast";
+	var DeclarationReport = "declaration-report";
 	var CMakeAdapter = "cmake-adapter";
 	var MesonAdapter = "meson-adapter";
 }
@@ -83,14 +87,15 @@ class GeneratedFile {
 		return switch kind {
 			case PublicHeader | PrivateHeader | Source | RuntimeHeader | RuntimeSource: true;
 			case CompilerManifest | RuntimePlan | AbiManifest | SymbolTable | StdlibReport | SpecializationReport | DispatchReport | InitializationPlan |
-				CMakeAdapter | MesonAdapter: false;
+				TypedInventory | HxcIR | CAst | DeclarationReport | CMakeAdapter | MesonAdapter: false;
 		};
 	}
 
 	static function isKnownKind(kind:GeneratedFileKind):Bool {
 		return switch kind {
 			case PublicHeader | PrivateHeader | Source | RuntimeHeader | RuntimeSource | CompilerManifest | RuntimePlan | AbiManifest | SymbolTable |
-				StdlibReport | SpecializationReport | DispatchReport | InitializationPlan | CMakeAdapter | MesonAdapter:
+				StdlibReport | SpecializationReport | DispatchReport | InitializationPlan | TypedInventory | HxcIR | CAst | DeclarationReport | CMakeAdapter |
+				MesonAdapter:
 				true;
 			case _: false;
 		};
