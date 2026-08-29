@@ -44,8 +44,10 @@
       "focusedOwners": [
         "test:body-lowering",
         "test:function-lowering",
+        "test:incremental-backend",
         "test:aggregate-lowering",
         "test:enum-lowering",
+        "test:span-lowering",
         "test:string-runtime"
       ],
       "verticalOwners": [
@@ -273,6 +275,7 @@
         "test:runtime-features",
         "test:gc-runtime",
         "test:runtime-stress",
+        "test:span-lowering",
         "test:string-runtime",
         "test:array-runtime",
         "test:bytes-runtime",
@@ -478,7 +481,8 @@
         "hxc-doctor"
       ],
       "focusedOwners": [
-        "test:diagnostics"
+        "test:diagnostics",
+        "test:span-lowering"
       ],
       "verticalOwners": [
         "test:hello",

@@ -750,6 +750,84 @@ class ToolchainShardTests(unittest.TestCase):
         )
         self.assertFalse(extended_owner_plan["fullBackstop"]["required"])
 
+    def test_incremental_and_span_owners_use_reviewed_scorecard_mappings(self) -> None:
+        incremental_plan = self.route_selector.build_test_plan(
+            ("test/typed_ast/fixtures/incremental/Main.hx",)
+        )
+        incremental_owner = next(
+            owner
+            for owner in incremental_plan["taskOwners"]
+            if owner["script"] == "test:incremental-backend"
+        )
+        self.assertEqual(
+            incremental_owner["productSurfaces"],
+            ["compiler-admitted-slices"],
+        )
+        self.assertFalse(incremental_plan["fullBackstop"]["required"])
+
+        json_stdout = io.StringIO()
+        with mock.patch.object(
+            sys,
+            "stdin",
+            io.StringIO("test/typed_ast/fixtures/incremental/Main.hx\n"),
+        ):
+            with mock.patch.object(sys, "stdout", json_stdout):
+                self.assertEqual(
+                    self.route_selector.main(("--plan", "--json")),
+                    0,
+                )
+        json_plan = json.loads(json_stdout.getvalue())
+        self.assertEqual(
+            json_plan["taskOwners"][0]["productSurfaces"],
+            ["compiler-admitted-slices"],
+        )
+        self.assertFalse(json_plan["fullBackstop"]["required"])
+
+        span_plan = self.route_selector.build_test_plan(
+            ("test/span_lowering/run.py",)
+        )
+        self.assertEqual(
+            span_plan["taskOwners"][0]["productSurfaces"],
+            [
+                "compiler-admitted-slices",
+                "runtime-memory-lifetime",
+                "diagnostics-source-mapping-downstream",
+            ],
+        )
+        self.assertEqual(
+            span_plan["affectedExtended"]["productSurfaces"],
+            [
+                "compiler-admitted-slices",
+                "diagnostics-source-mapping-downstream",
+                "runtime-memory-lifetime",
+            ],
+        )
+        self.assertEqual(
+            [owner["script"] for owner in span_plan["affectedExtended"]["owners"]],
+            [
+                "test:primitive-differential",
+                "test:caxecraft-domain:full",
+                "test:diagnostics",
+                "test:gc-runtime",
+                "test:runtime-stress",
+            ],
+        )
+        self.assertFalse(span_plan["fullBackstop"]["required"])
+
+        stdout = io.StringIO()
+        with mock.patch.object(
+            sys, "stdin", io.StringIO("test/span_lowering/run.py\n")
+        ):
+            with mock.patch.object(sys, "stdout", stdout):
+                self.assertEqual(self.route_selector.main(("--plan",)), 0)
+        explanation = stdout.getvalue()
+        self.assertIn(
+            "R3 affected extended: compiler-admitted-slices, "
+            "diagnostics-source-mapping-downstream, runtime-memory-lifetime",
+            explanation,
+        )
+        self.assertIn("R4 full/main/nightly backstop (available)", explanation)
+
     def test_unknown_target_surface_requires_the_full_r4_backstop(self) -> None:
         plan = self.route_selector.build_test_plan(("std/c/NewSurface.hx",))
         self.assertEqual(plan["route"], self.route_selector.AFFECTED)
