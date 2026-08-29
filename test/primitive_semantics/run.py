@@ -235,6 +235,7 @@ def validate_contract(contract: dict[str, object]) -> None:
     required_operation_facts = {
         "int-add": ("haxe.i32.add", "program-local:hxc.i32.add.wrapping"),
         "int-divide": ("haxe.f64.divide", "program-local:hxc.f64.divide.zero-safe"),
+        "std-int-positive-constant-divide": ("haxe.i32.divide.positive-constant", "direct-c"),
         "int-modulo": ("haxe.i32.modulo", "program-local:hxc.i32.modulo.zero-safe"),
         "int-shift-right": ("haxe.i32.shift-right.masked", "program-local:hxc.i32.shift-right.masked"),
         "int-bit-xor": ("haxe.i32.bit-xor", "program-local:hxc.i32.bit-xor"),
@@ -251,6 +252,24 @@ def validate_contract(contract: dict[str, object]) -> None:
             or record.get("implementation") != implementation
         ):
             raise PrimitiveSemanticsFailure(f"operation contract drifted: {identifier}")
+
+    direct_division = operations["std-int-positive-constant-divide"]
+    direct_division_edges = object_list(
+        direct_division.get("edgeCases"),
+        "std-int-positive-constant-divide edge cases",
+    )
+    direct_division_text = " ".join(str(value) for value in direct_division_edges)
+    if (
+        direct_division.get("sourceOperandTypes") != ["Int", "Int"]
+        or direct_division.get("loweredOperandTypes") != ["Int", "Int"]
+        or direct_division.get("resultType") != "Int"
+        or direct_division.get("runtimeFeatures") != []
+        or "-2147483648 through 2147483647" not in direct_division_text
+        or "1 through 2147483647" not in direct_division_text
+        or "at least 1 / divisor" not in direct_division_text
+        or "at most 2^-22 / divisor" not in direct_division_text
+    ):
+        raise PrimitiveSemanticsFailure("proven direct division boundary contract drifted")
 
     if "zero divisor returns 0" not in " ".join(
         str(value) for value in object_list(operations["int-modulo"].get("edgeCases"), "int-modulo edge cases")

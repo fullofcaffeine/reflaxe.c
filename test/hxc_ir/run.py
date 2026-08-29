@@ -23,6 +23,9 @@ HXML = Path(__file__).with_name("hxc_ir.hxml")
 ORACLE_HXML = Path(__file__).with_name("oracle.hxml")
 DYNAMIC_ORACLE_HXML = Path(__file__).with_name("dynamic_oracle.hxml")
 RAW_PROGRAM_CONSUMER_HXML = Path(__file__).with_name("raw_program_consumer.hxml")
+RAW_BODY_EMITTER_CONSUMER_HXML = Path(__file__).with_name(
+    "raw_body_emitter_consumer.hxml"
+)
 VALIDATED_PROGRAM_CONSTRUCTOR_CONSUMER_HXML = Path(__file__).with_name(
     "validated_program_constructor_consumer.hxml"
 )
@@ -129,6 +132,27 @@ def check_raw_program_boundary() -> None:
     if result.returncode == 0 or "ValidatedHxcIRProgram" not in output:
         raise HxcIRFailure(
             "raw HxcIR crossed the validated production boundary\n"
+            f"exit: {result.returncode}\nstdout:\n{result.stdout}\nstderr:\n{result.stderr}"
+        )
+
+
+def check_raw_body_emitter_boundary() -> None:
+    """Prove a raw HxcIR producer cannot call structural C body emission."""
+    environment = os.environ.copy()
+    environment["HAXE_NO_SERVER"] = "1"
+    result = run_bounded_process(
+        [development_tool("haxe"), str(RAW_BODY_EMITTER_CONSUMER_HXML)],
+        cwd=ROOT,
+        env=environment,
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    output = result.stdout + result.stderr
+    if result.returncode == 0 or "CBodyEmitter has no field emitBody" not in output:
+        raise HxcIRFailure(
+            "raw HxcIR reached structural C body emission\n"
             f"exit: {result.returncode}\nstdout:\n{result.stdout}\nstderr:\n{result.stderr}"
         )
 
@@ -319,6 +343,7 @@ def main() -> int:
         check_oracle()
         check_dynamic_oracle()
         check_raw_program_boundary()
+        check_raw_body_emitter_boundary()
         check_validated_program_constructor_boundary()
         first_payload, first = render("first HxcIR render")
         second_payload, _ = render("second HxcIR render")

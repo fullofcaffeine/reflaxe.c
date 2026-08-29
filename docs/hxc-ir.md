@@ -5,6 +5,10 @@ the structural C AST. Its schema is internal to the compiler: schema version 27
 is deterministic and validation-backed, but it is not a public file format or
 ABI promise.
 
+Increment the schema when a serialized constructor, field, or traversal rule
+changes. A new validated operation ID does not change that structure. Its
+semantic contract and focused fixtures own compatibility instead.
+
 C is deceptively close to Haxe syntactically, but semantically quite distant.
 HxcIR makes those differences explicit before selecting C syntax. This is why
 the layer records meaning such as evaluation order, ownership, failure, and
@@ -326,6 +330,10 @@ it, and every returned array is read-only by contract. The lowering pipeline
 must not mutate the raw graph after it creates this wrapper. Production dumps,
 runtime planning, helper selection, failure-symbol selection, and C generation
 accept the wrapper, so a schema-number check cannot impersonate validation.
+Validation also checks that each fixed-width integer constant fits its declared
+signed or unsigned carrier. This check applies at global initializers,
+instruction results, and switch cases, and compares decimal text without
+depending on the host compiler's integer width.
 
 `HxcIRTraversal` owns deterministic structural recursion through a validated
 program. It visits structural children in authored order and treats string IDs
@@ -952,10 +960,11 @@ zero-initialized local arrays, zero-initialized inline arrays owned by a
 nonescaping class object, exact-width mutable/const views from either place,
 checked/static/loop bounds policies, ordinary-Haxe three-dimensional indexing,
 direct guarded iteration, storage-budget negatives, and strict generated-C
-execution. The arithmetic
-suite adds source-backed operation/helper decisions, `Std.int`, boundary
-execution, and eligible UBSan. All select no runtime files or public C ABI and
-compile/run as strict C11 with available GCC and Clang at `-O0` and `-O2`.
+execution. The arithmetic suite adds source-backed operation/helper decisions,
+`Std.int`, the validated `haxe.i32.divide.positive-constant` compound
+operation, boundary execution, and eligible UBSan. All select no runtime files
+or public C ABI and compile/run as strict C11 with available GCC and Clang at
+`-O0` and `-O2`.
 The aggregate-lowering suite adds source-backed named construction, direct
 record instances, explicit copies and field addresses, dependency-first private
 structs, and exact C/C++17 layout agreement under both required compiler

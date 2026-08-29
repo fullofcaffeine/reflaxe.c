@@ -57,10 +57,15 @@ private enum HxcIRDispatchLayoutKind {
 **/
 class ValidatedHxcIRProgram {
 	final value:HxcIRProgram;
+	final functionsById:Map<String, HxcIRFunction>;
 
 	@:allow(reflaxe.c.ir.HxcIRValidator)
 	private function new(value:HxcIRProgram) {
 		this.value = value;
+		this.functionsById = [];
+		for (module in value.modules)
+			for (fn in module.functions)
+				functionsById.set(fn.id, fn);
 	}
 
 	/** The validated schema version. */
@@ -86,6 +91,21 @@ class ValidatedHxcIRProgram {
 
 	inline function get_modules():Array<HxcIRModule>
 		return value.modules;
+
+	/**
+		Require one raw function to belong to this validated program by identity.
+
+		Downstream emitters can retain compact raw function records, but they must
+		present this program proof before those records reach C construction. A
+		matching ID from another graph is not sufficient.
+	**/
+	public function requireOwnedFunction(fn:HxcIRFunction):Void {
+		final candidate = functionsById.get(fn.id);
+		if (candidate == null)
+			throw 'validated HxcIR program does not contain function `${fn.id}`';
+		if (candidate != fn)
+			throw 'validated HxcIR function `${fn.id}` does not belong to this program';
+	}
 }
 
 /** Validates the semantic invariants required before any HxcIR reaches C AST lowering. */
@@ -1092,6 +1112,7 @@ private class HxcIRValidationState {
 			case IRGIUninitialized:
 			case IRGIConstant(value):
 				validateConstant(value, '$path.initialization', global.source);
+				validateFixedWidthIntegerConstant(value, global.type, '$path.initialization', global.source);
 			case IRGIDeferred(initializerFunctionId):
 				final initializer = functions.get(initializerFunctionId);
 				if (initializer == null) {
@@ -2886,6 +2907,8 @@ private class HxcIRValidationState {
 				validateText(label, '$path.label', instruction.source);
 			case IRIOConstant(value):
 				validateConstant(value, '$path.constant', instruction.source);
+				if (instruction.result != null)
+					validateFixedWidthIntegerConstant(value, instruction.result.type, '$path.constant', instruction.source);
 				if (instruction.result != null && !constantMatchesType(value, instruction.result.type)) {
 					add(path, "constant result type does not match its literal family", instruction.source);
 				}
@@ -2995,7 +3018,16 @@ private class HxcIRValidationState {
 				final leftType = requireValue(leftValueId, '$path.left', instruction.source, available);
 				final rightType = requireValue(rightValueId, '$path.right', instruction.source, available);
 				validateImplementation(implementation, '$path.implementation', instruction.source);
-				if (operationId == "haxe.class-reference.equal" || operationId == "haxe.class-reference.not-equal") {
+				if (operationId == "haxe.i32.divide.positive-constant") {
+					final validTypes = isSignedI32(leftType)
+						&& isSignedI32(rightType)
+						&& isSignedI32(instruction.result == null ? null : instruction.result.type);
+					if (!validTypes || implementation != IRIStatic || !isPositiveI32Constant(valueSites.get(rightValueId))) {
+						add(path,
+							"proven integral Std.int division requires two Int operands, a direct positive constant divisor, a static implementation, and an Int result",
+							instruction.source);
+					}
+				} else if (operationId == "haxe.class-reference.equal" || operationId == "haxe.class-reference.not-equal") {
 					if (leftType == null
 						|| rightType == null
 						|| typeKey(leftType) != typeKey(rightType)
@@ -3630,6 +3662,37 @@ private class HxcIRValidationState {
 				validateTransition(from, to, '$path.transition', instruction.source);
 				validateText(reason, '$path.reason', instruction.source);
 		}
+	}
+
+	/** True only for one directly materialized positive Haxe Int constant. */
+	static function isPositiveI32Constant(site:Null<HxcIRInstructionSite>):Bool {
+		if (site == null)
+			return false;
+		final result = site.instruction.result;
+		if (result == null || !isSignedI32(result.type))
+			return false;
+		return switch site.instruction.kind {
+			case IRIOConstant(IRCInt(value)):
+				isCanonicalPositiveI32(value);
+			case _:
+				false;
+		};
+	}
+
+	/** Match the exact fixed signed-32 carrier without a string projection. */
+	static function isSignedI32(type:Null<HxcIRTypeRef>):Bool {
+		return switch type {
+			case IRTInt(32, true): true;
+			case _: false;
+		};
+	}
+
+	/** Recognize decimal 1 through INT32_MAX without host-Int overflow. */
+	static function isCanonicalPositiveI32(value:String):Bool {
+		if (!~/^[1-9][0-9]*$/.match(value))
+			return false;
+		final maximum = "2147483647";
+		return value.length < maximum.length || value.length == maximum.length && value <= maximum;
 	}
 
 	function validateDynamicInstruction(instruction:HxcIRInstruction, operation:HxcIRDynamicInstruction, path:String, available:Map<String, HxcIRTypeRef>,
@@ -4938,6 +5001,8 @@ private class HxcIRValidationState {
 				final values:Map<String, Bool> = [];
 				for (index => item in cases) {
 					validateConstant(item.value, '$path.case:$index.value', source);
+					if (switchType != null)
+						validateFixedWidthIntegerConstant(item.value, switchType, '$path.case:$index.value', source);
 					if (switchType != null && !constantMatchesType(item.value, switchType)) {
 						add(path, 'switch case $index literal family does not match its subject type', source);
 					}
@@ -6505,6 +6570,45 @@ private class HxcIRValidationState {
 			case IRCNativeConstant(constantId):
 				validateStableId(constantId, '$path.nativeConstant', source);
 		}
+	}
+
+	/** Reject an integer literal that its declared fixed-width carrier cannot hold. */
+	function validateFixedWidthIntegerConstant(value:HxcIRConstant, type:HxcIRTypeRef, path:String, source:HxcSourceSpan):Void {
+		switch value {
+			case IRCInt(text):
+				switch type {
+					case IRTInt(width, signed) if (!fixedWidthIntegerConstantFits(text, width, signed)):
+						add(path, 'integer constant `$text` is outside the ${signed ? "signed" : "unsigned"} $width-bit range', source);
+					case _:
+				}
+			case _:
+		}
+	}
+
+	/** Compare canonical decimal text with one fixed-width range without a host integer parser. */
+	static function fixedWidthIntegerConstantFits(text:String, width:Int, signed:Bool):Bool {
+		if (!~/^-?(0|[1-9][0-9]*)$/.match(text))
+			return true;
+		final negative = text.charAt(0) == "-";
+		if (!signed && negative)
+			return false;
+		final magnitude = negative ? text.substr(1) : text;
+		final maximum = switch [width, signed, negative] {
+			case [8, true, true]: "128";
+			case [8, true, false]: "127";
+			case [8, false, _]: "255";
+			case [16, true, true]: "32768";
+			case [16, true, false]: "32767";
+			case [16, false, _]: "65535";
+			case [32, true, true]: "2147483648";
+			case [32, true, false]: "2147483647";
+			case [32, false, _]: "4294967295";
+			case [64, true, true]: "9223372036854775808";
+			case [64, true, false]: "9223372036854775807";
+			case [64, false, _]: "18446744073709551615";
+			case _: return true;
+		};
+		return magnitude.length < maximum.length || magnitude.length == maximum.length && magnitude <= maximum;
 	}
 
 	function constantMatchesType(value:HxcIRConstant, type:HxcIRTypeRef):Bool {

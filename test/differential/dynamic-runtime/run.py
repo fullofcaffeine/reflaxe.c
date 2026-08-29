@@ -593,6 +593,11 @@ def run_negative_cases(root: Path, endpoint: str) -> None:
             "Dynamic(box-unsupported-exact-type:haxe-enum:",
         ),
         (
+            "arithmetic",
+            NEGATIVE / "arithmetic",
+            "TBinop(OpDiv:left-type):closed-record-not-admitted-in-primitive-operation",
+        ),
+        (
             "dynamic-map-key",
             MAP_KEY,
             "object-map-key-not-admitted:haxe-dynamic",

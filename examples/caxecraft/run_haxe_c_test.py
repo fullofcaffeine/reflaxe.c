@@ -1281,6 +1281,20 @@ CASES = {
         forbidden_source_markers=("goto ", "malloc(", "calloc("),
         output_line_count=1,
         success_line="0",
+        split_source_checks=(
+            GeneratedSourceCheck(
+                path="src/modules/caxecraft/app/TerrainChunkLayout.c",
+                required_markers=(
+                    "TerrainChunkLayout_chunkFor",
+                    "TerrainChunkLayout_chunkOriginZ",
+                    "TerrainChunkLayout_unpackKind",
+                ),
+                forbidden_markers=(
+                    "hxc_f64_divide",
+                    "hxc_f64_to_i32",
+                ),
+            ),
+        ),
     ),
 }
 

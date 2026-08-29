@@ -216,6 +216,8 @@ class CStaticFunctionProjectEmitter {
 	public function planWithLayout(lowered:CBodyLoweringResult, entryFunctionId:String, entryName:CIdentifier, layout:CProjectLayoutPlan,
 			headerGuards:Map<String, CIdentifier>, ?initializerFunctionIds:Array<String>, ?initializationName:CIdentifier,
 			?runtimeAbiMajor:Int):CStaticFunctionDeclarationPlan {
+		for (fn in lowered.functions)
+			lowered.program.requireOwnedFunction(fn.ir);
 		final entry = findFunction(lowered.functions, entryFunctionId);
 		if (entry.ir.parameters.length != 0 || entry.ir.returnType != IRTVoid) {
 			throw new ProjectEmissionError('Haxe executable entry `${entry.ir.id}` must have signature `static function main():Void`');

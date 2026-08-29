@@ -528,7 +528,8 @@ class CBodyEmitter {
 		successful request's already-validated plan; direct structural probes use
 		the ordinary planner by passing no key.
 	**/
-	public static function resolveControlFlow(fn:HxcIRFunction, canonicalFunction:Null<String>):CBodyControlFlowPlanResolution {
+	@:allow(reflaxe.c.lowering.CBodyLowering)
+	private static function resolveControlFlow(fn:HxcIRFunction, canonicalFunction:Null<String>):CBodyControlFlowPlanResolution {
 		final controlFlowTimer = CPhaseTiming.startDetail(CDTBodyControlFlowPlanning, fn.id);
 		final resolution = canonicalFunction == null ? new CBodyControlFlowPlanResolution(new CBodyControlFlowPlanner().planWithWorkReport(fn),
 			false) : CBodyControlFlowPlanCache.resolve(fn.id, canonicalFunction, () -> new CBodyControlFlowPlanner().planWithWorkReport(fn));
@@ -560,7 +561,16 @@ class CBodyEmitter {
 		return resolution;
 	}
 
-	public function emitBody(fn:HxcIRFunction, parameterNames:Map<String, CIdentifier>, localNames:Map<String, CIdentifier>,
+	/**
+		Emit raw function HxcIR only for the two owners that present a validated
+		program, plus focused structural-C fixtures. Production callers must first
+		prove function identity with `ValidatedHxcIRProgram.requireOwnedFunction`.
+	**/
+	@:allow(reflaxe.c.lowering.CBodyLowering)
+	@:allow(reflaxe.c.emit.CStaticFunctionProjectEmitter)
+	@:allow(EvaluationOrderProbe)
+	@:allow(GeneratedRootFrameProbe)
+	private function emitBody(fn:HxcIRFunction, parameterNames:Map<String, CIdentifier>, localNames:Map<String, CIdentifier>,
 			temporaryNames:Map<String, CIdentifier>, functionNames:Map<String, CIdentifier>, globalNames:Map<String, CIdentifier>,
 			helperNames:Map<String, CIdentifier>, lineDirectives:Bool, tailArgumentNames:Map<String, Array<CIdentifier>>, labelNames:Map<String, CIdentifier>,
 			?nonReturningFunctionIds:Map<String, Bool>, ?spanLengthNames:Map<String, CIdentifier>, ?boundsAbortName:CIdentifier,
@@ -3515,6 +3525,7 @@ class CBodyEmitter {
 		return switch operationId {
 			case "hxc.size.add-one.span-index-proven": EBinary(Add, left, right);
 			case "hxc.size.less.span-index": EBinary(Less, left, right);
+			case "haxe.i32.divide.positive-constant": EBinary(Divide, left, right);
 			case "haxe.u32.add": widenedUInt32Binary(Add, left, right);
 			case "haxe.u32.subtract": widenedUInt32Binary(Subtract, left, right);
 			case "haxe.u32.multiply": widenedUInt32Binary(Multiply, left, right);

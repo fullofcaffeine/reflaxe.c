@@ -739,6 +739,7 @@ class CBodyLowering {
 			loweredStringMaps, loweredTypedMaps, preparedBytes, loweredOptionals, loweredDispatch, loweredImports, managedProgram, loweredDynamicPlan);
 		final lowered:Array<CLoweredBodyFunction> = [];
 		for (item in built) {
+			validatedProgram.requireOwnedFunction(item.ir);
 			final controlFlow = CBodyEmitter.resolveControlFlow(item.ir, canonicalFunctions.get(item.ir.id));
 			final parameterNames:Map<String, CIdentifier> = [];
 			for (parameterId => request in item.prepared.parameterRequests) {
@@ -13053,6 +13054,9 @@ private class FunctionBuilder {
 			if (call.arguments.length != 1) {
 				return unsupported(expression, 'TCall(Std.int:argument-count=${call.arguments.length})');
 			}
+			final directIntegralDivision = tryLowerPositiveConstantStdIntDivision(expression, call.arguments[0]);
+			if (directIntegralDivision != null)
+				return directIntegralDivision;
 			final rawSource = lowerValue(call.arguments[0]);
 			final sourceOptional = rawSource.mapping.optionalValue();
 			final source = sourceOptional == null ? rawSource : coerce(rawSource, sourceOptional.payload, call.arguments[0].pos,
@@ -13226,6 +13230,86 @@ private class FunctionBuilder {
 		if (returnedOptional != null && returnedOptional.managedLifetime)
 			freshManagedOptionalValueIds.set(result.id, true);
 		return {id: result.id, type: result.type, mapping: target.returnMapping};
+	}
+
+	/**
+		Keep `Std.int(Int / positiveConstant)` as one exact integral operation.
+
+		Every Haxe `Int` converts exactly to binary64. For a positive Int divisor,
+		the correctly rounded quotient remains more than two million binary64
+		steps from the neighboring integer unless the quotient is already exact.
+		It therefore cannot cross the truncation boundary used by `Std.int`.
+		C11 signed division has the same truncation direction, and a positive
+		divisor excludes both division by zero and `INT32_MIN / -1` overflow.
+
+		Zero, negative, nonconstant, nullable, UInt, Dynamic, and Float operands
+		return `null` so their pre-existing general lowering owns the result,
+		including its fail-closed unsupported boundaries.
+	**/
+	function tryLowerPositiveConstantStdIntDivision(expression:TypedExpr, argument:TypedExpr):Null<LoweredValue> {
+		final division = directStdIntDivisionArgument(argument);
+		if (division == null || ordinaryHaxeFloatMapping(argument.t) == null || ordinaryHaxeFloatMapping(division.expression.t) == null)
+			return null;
+		final divisor = directPositiveIntConstant(division.right);
+		if (divisor == null)
+			return null;
+		final leftMapping = ordinaryHaxeIntMapping(division.left.t);
+		final rightMapping = ordinaryHaxeIntMapping(division.right.t);
+		final resultMapping = ordinaryHaxeIntMapping(expression.t);
+		if (leftMapping == null || rightMapping == null || resultMapping == null)
+			return null;
+		final leftType = CBodyValueType.primitive(leftMapping);
+		final rightType = CBodyValueType.primitive(rightMapping);
+		final left = coerce(lowerValue(division.left, leftType), leftType, division.left.pos, "TCall(Std.int:exact-division-left)");
+		final right = coerce(lowerValue(division.right, rightType), rightType, division.right.pos, "TCall(Std.int:exact-division-right)");
+		final result:HxcIRResult = {id: nextValueId(), type: resultMapping.irType};
+		appendInstruction(result, IRIOBinary("haxe.i32.divide.positive-constant", left.id, right.id, IRIStatic), sourceSpan(expression.pos),
+			"std-int-exact-division");
+		return {id: result.id, type: result.type, mapping: CBodyValueType.primitive(resultMapping)};
+	}
+
+	/** Find the exact Float division argument without removing a semantic cast. */
+	function directStdIntDivisionArgument(expression:TypedExpr):Null<{expression:TypedExpr, left:TypedExpr, right:TypedExpr}> {
+		return switch expression.expr {
+			case TBinop(OpDiv, left, right): {expression: expression, left: left, right: right};
+			case TParenthesis(inner) | TMeta(_, inner): directStdIntDivisionArgument(inner);
+			case _:
+				null;
+		};
+	}
+
+	/**
+		Read one positive literal whose normal lowering remains a direct Int constant.
+
+		Parentheses and metadata do not add runtime work. Casts and unary arithmetic
+		are not folded here because their HxcIR site is not the direct constant that
+		the operation validator requires.
+	**/
+	function directPositiveIntConstant(expression:TypedExpr):Null<Int> {
+		return switch expression.expr {
+			case TConst(TInt(value)): value > 0 ? value : null;
+			case TParenthesis(inner) | TMeta(_, inner): directPositiveIntConstant(inner);
+			case _:
+				null;
+		};
+	}
+
+	/** Return the ordinary non-null Haxe Float mapping without emitting a diagnostic. */
+	function ordinaryHaxeFloatMapping(type:Type):Null<CPrimitiveTypeMapping> {
+		return switch CPrimitiveTypeMapper.map(applyCurrentSpecialization(type), context.profile) {
+			case CTPrimitive(mapping) if (mapping.sourceType == CPHaxeFloat && mapping.nullability == CPNonNullable): mapping;
+			case _:
+				null;
+		};
+	}
+
+	/** Return the ordinary non-null Haxe Int mapping without emitting a diagnostic. */
+	function ordinaryHaxeIntMapping(type:Type):Null<CPrimitiveTypeMapping> {
+		return switch CPrimitiveTypeMapper.map(applyCurrentSpecialization(type), context.profile) {
+			case CTPrimitive(mapping) if (mapping.sourceType == CPHaxeInt && mapping.nullability == CPNonNullable): mapping;
+			case _:
+				null;
+		};
 	}
 
 	/** Call one exact non-capturing function stored in Dynamic. */

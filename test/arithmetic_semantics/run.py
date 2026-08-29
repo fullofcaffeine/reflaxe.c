@@ -30,7 +30,8 @@ EXPECTED = Path(__file__).with_name("expected")
 REPORT_PREFIX = "HXC_ARITHMETIC_SEMANTICS="
 EXPECTED_ORACLE = (
     "-2147483648,2147483647,-2,-2147483648,2147483648,0,-2147483648,-1,1,"
-    "85,95,90,-1,-1,3,0,1,1,1,1,5,3,0,2147483647,-2147483648,1,18,6\n"
+    "85,95,90,-1,-1,3,0,1,1,1,1,5,3,268435455,-268435456,357913941,"
+    "-357913941,0,-1,2147483647,71,5,-1,-2147483648,5,5,0,2147483647,-2147483648,1,18,6\n"
 )
 STRICT_FLAGS = (
     "-std=c11",
@@ -292,6 +293,40 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
         hxcir,
     ) is None:
         raise ArithmeticSemanticsFailure("HxcIR lost the UB-safe Std.int conversion")
+    for field in (
+        "intQuotientByEight",
+        "intQuotientBySix",
+        "intQuotientByMaximum",
+        "intQuotientByOne",
+        "intQuotientSideEffect",
+    ):
+        marker = (
+            rf'function "function\.ArithmeticFixture\.{field}"[\s\S]+?'
+            r'operation="haxe\.i32\.divide\.positive-constant"[^\n]+'
+            r'implementation=static[\s\S]+?'
+            rf'end function "function\.ArithmeticFixture\.{field}"'
+        )
+        if re.search(marker, hxcir) is None:
+            raise ArithmeticSemanticsFailure(
+                f"{field} lost its proven direct integral division in HxcIR"
+            )
+    for field in (
+        "intQuotientByVariable",
+        "intQuotientByZero",
+        "intQuotientByNegativeOne",
+        "floatQuotientByEight",
+        "intQuotientThroughFloatCast",
+    ):
+        marker = (
+            rf'function "function\.ArithmeticFixture\.{field}"[\s\S]+?'
+            r'operation="haxe\.f64\.divide"[^\n]+'
+            r'program-local\("hxc\.f64\.divide\.zero-safe"\)[\s\S]+?'
+            rf'end function "function\.ArithmeticFixture\.{field}"'
+        )
+        if re.search(marker, hxcir) is None:
+            raise ArithmeticSemanticsFailure(
+                f"{field} incorrectly left the general floating division path"
+            )
     required_conversion_ir = (
         ("literalToU8", "numeric-wrapping", "u8"),
         ("i32ToU8", "numeric-wrapping", "u8"),
@@ -379,6 +414,30 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
         if cast_spelling not in body or "hxc_primitive" in body:
             raise ArithmeticSemanticsFailure(
                 f"{field} stopped lowering to one structural direct C cast"
+            )
+    for field in (
+        "intQuotientByEight",
+        "intQuotientBySix",
+        "intQuotientByMaximum",
+        "intQuotientByOne",
+        "intQuotientSideEffect",
+    ):
+        body = function_body(source, function_c_name(symbols, field))
+        if " / " not in body or "hxc_f64_divide" in body or "hxc_f64_to_i32" in body:
+            raise ArithmeticSemanticsFailure(
+                f"{field} stopped emitting one readable direct C integer division"
+            )
+    for field in (
+        "intQuotientByVariable",
+        "intQuotientByZero",
+        "intQuotientByNegativeOne",
+        "floatQuotientByEight",
+        "intQuotientThroughFloatCast",
+    ):
+        body = function_body(source, function_c_name(symbols, field))
+        if "hxc_f64_divide" not in body or "hxc_f64_to_i32" not in body:
+            raise ArithmeticSemanticsFailure(
+                f"{field} stopped emitting the complete general Float conversion path"
             )
 
 
@@ -511,7 +570,10 @@ def harness_source(symbols: dict[str, object]) -> str:
         for field in (
             "iadd", "isub", "imul", "ineg", "idiv", "imod", "ishl", "ishr",
             "iushr", "iand", "ior", "ixor", "inot", "iless", "fadd", "fsub",
-            "fmul", "fneg", "fdiv", "fmod", "fsqrt", "fint", "fequal", "uadd", "umod", "ushl",
+            "fmul", "fneg", "fdiv", "fmod", "fsqrt", "fint", "intQuotientByEight",
+            "intQuotientBySix", "intQuotientByMaximum", "intQuotientByOne", "intQuotientSideEffect",
+            "intQuotientByVariable", "intQuotientByZero", "intQuotientByNegativeOne",
+            "floatQuotientByEight", "intQuotientThroughFloatCast", "fequal", "uadd", "umod", "ushl",
             "ushr", "literalToU8", "i32ToU8", "u8ToI32", "i64ToU16",
             "u32ToU64", "u32ToU8", "u8ToI16", "update", "updateParameter",
         )
@@ -572,6 +634,19 @@ int main(void)
   if ({names["fint"]}(-2147483649.0) != INT32_MIN) return 34;
   if ({names["fint"]}(-3.75) != -INT32_C(3)) return 35;
   if ({names["fint"]}(-0.0) != INT32_C(0)) return 36;
+  if ({names["intQuotientByEight"]}(INT32_MAX) != INT32_C(268435455)) return 63;
+  if ({names["intQuotientByEight"]}(INT32_MIN) != -INT32_C(268435456)) return 64;
+  if ({names["intQuotientBySix"]}(INT32_MAX) != INT32_C(357913941)) return 65;
+  if ({names["intQuotientBySix"]}(INT32_MIN) != -INT32_C(357913941)) return 66;
+  if ({names["intQuotientByMaximum"]}(INT32_MAX - INT32_C(1)) != INT32_C(0)) return 71;
+  if ({names["intQuotientByMaximum"]}(INT32_MIN) != -INT32_C(1)) return 72;
+  if ({names["intQuotientByOne"]}(INT32_MAX) != INT32_MAX) return 73;
+  if ({names["intQuotientSideEffect"]}(INT32_C(47)) != INT32_C(71)) return 74;
+  if ({names["intQuotientByVariable"]}(INT32_C(47), INT32_C(8)) != INT32_C(5)) return 70;
+  if ({names["intQuotientByZero"]}(INT32_C(1)) != INT32_MAX) return 67;
+  if ({names["intQuotientByNegativeOne"]}(INT32_MIN) != INT32_MAX) return 68;
+  if ({names["floatQuotientByEight"]}(47.0) != INT32_C(5)) return 69;
+  if ({names["intQuotientThroughFloatCast"]}(INT32_C(47)) != INT32_C(5)) return 75;
   if ({names["fequal"]}(NAN, NAN)) return 37;
   if ({names["uadd"]}(UINT32_MAX, UINT32_C(1)) != UINT32_C(0)) return 38;
   if ({names["umod"]}(UINT32_MAX, UINT32_C(0)) != UINT32_C(0)) return 39;

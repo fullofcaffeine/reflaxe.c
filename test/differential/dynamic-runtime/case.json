@@ -17,6 +17,7 @@
     "runtime/hxrt/src/dynamic.c",
     "src/reflaxe/c/lowering/CBodyDynamic.hx",
     "test/differential/dynamic-runtime/fixtures/Main.hx",
+    "test/differential/dynamic-runtime/negative/arithmetic/Main.hx",
     "test/differential/dynamic-runtime/negative/bound-method/Main.hx",
     "test/differential/dynamic-runtime/negative/computed-name/Main.hx",
     "test/differential/dynamic-runtime/negative/global/Main.hx",

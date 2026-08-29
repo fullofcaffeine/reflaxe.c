@@ -127,6 +127,7 @@ class HxcIRGolden {
 			throw "HxcIR traversal schema sentinel was not reviewed with the validator schema";
 		final semantic = semanticProgram(false);
 		final validatedSemantic = validator.requireValid(semantic, PROFILE);
+		requireValidatedFunctionOwnershipBoundary(validatedSemantic, semantic);
 		final semanticDump = dumper.dump(validatedSemantic);
 		verifyDumpSnapshot(dumper, validatedSemantic, semanticDump);
 		final reorderedDump = dumper.dump(validator.requireValid(semanticProgram(true), PROFILE));
@@ -153,6 +154,56 @@ class HxcIRGolden {
 		requireInvalidMarker(containedExceptionWithoutRegionProgram(), "requires an explicit region or unwind terminator",
 			"contained exception without an owner");
 		requireInvalidMarker(unknownExceptionRegionProgram(), "unknown region", "unknown exception frame operation");
+		validator.requireValid(integralDivisionProgram("6"), PROFILE);
+		validator.requireValid(integralDivisionProgram("2147483647"), PROFILE);
+		for (sample in [
+			{text: "-128", width: 8, signed: true},
+			{text: "127", width: 8, signed: true},
+			{text: "255", width: 8, signed: false},
+			{text: "-32768", width: 16, signed: true},
+			{text: "32767", width: 16, signed: true},
+			{text: "65535", width: 16, signed: false},
+			{text: "-2147483648", width: 32, signed: true},
+			{text: "2147483647", width: 32, signed: true},
+			{text: "4294967295", width: 32, signed: false},
+			{text: "-9223372036854775808", width: 64, signed: true},
+			{text: "9223372036854775807", width: 64, signed: true},
+			{text: "18446744073709551615", width: 64, signed: false},
+		])
+			validator.requireValid(fixedWidthConstantProgram(sample.text, sample.width, sample.signed), PROFILE);
+		for (sample in [
+			{text: "-129", width: 8, signed: true},
+			{text: "128", width: 8, signed: true},
+			{text: "256", width: 8, signed: false},
+			{text: "-32769", width: 16, signed: true},
+			{text: "32768", width: 16, signed: true},
+			{text: "65536", width: 16, signed: false},
+			{text: "-2147483649", width: 32, signed: true},
+			{text: "2147483648", width: 32, signed: true},
+			{text: "4294967296", width: 32, signed: false},
+			{text: "-9223372036854775809", width: 64, signed: true},
+			{text: "9223372036854775808", width: 64, signed: true},
+			{text: "18446744073709551616", width: 64, signed: false},
+			{text: "-1", width: 32, signed: false},
+			{text: "9999999999999999999999999999999999999999", width: 64, signed: false},
+		])
+			requireInvalidMarker(fixedWidthConstantProgram(sample.text, sample.width, sample.signed),
+				'integer constant `${sample.text}` is outside the ${sample.signed ? "signed" : "unsigned"} ${sample.width}-bit range',
+				"fixed-width integer constant range");
+		requireInvalidMarker(fixedWidthGlobalConstantProgram("2147483648"), "integer constant `2147483648` is outside the signed 32-bit range",
+			"fixed-width global integer constant range");
+		requireInvalidMarker(fixedWidthSwitchConstantProgram("2147483648"), "integer constant `2147483648` is outside the signed 32-bit range",
+			"fixed-width switch integer constant range");
+		requireInvalidMarker(integralDivisionProgram("0"), "requires two Int operands, a direct positive constant divisor", "zero integral division proof");
+		requireInvalidMarker(integralDivisionProgram("-1"), "requires two Int operands, a direct positive constant divisor", "forged integral division proof");
+		requireInvalidMarker(integralDivisionProgram("4294967297"), "integer constant `4294967297` is outside the signed 32-bit range",
+			"out-of-range integral division proof");
+		requireInvalidMarker(integralDivisionProgram("6", "value.updated"), "requires two Int operands, a direct positive constant divisor",
+			"indirect integral division proof");
+		requireInvalidMarker(integralDivisionProgram("6", null, IRIRuntime("runtime-base")), "requires two Int operands, a direct positive constant divisor",
+			"runtime integral division proof");
+		requireInvalidMarker(integralDivisionProgram("6", null, null, IRTInt(64, true)), "requires two Int operands, a direct positive constant divisor",
+			"wrong-result integral division proof");
 		validator.requireValid(nativeConstantAggregateProgram(), PROFILE);
 		validator.requireValid(borrowedClassAliasProgram(), PROFILE);
 		validator.requireValid(borrowedClassOwnedFieldReleaseProgram(), PROFILE);
@@ -542,6 +593,70 @@ class HxcIRGolden {
 			],
 			source: span(MAIN_SOURCE, 12, 24)
 		};
+	}
+
+	/** Build one valid or forged direct integral-division proof. */
+	static function integralDivisionProgram(divisor:String, ?rightValueId:String, ?implementation:HxcIRImplementation,
+			?quotientType:HxcIRTypeRef):HxcIRProgram {
+		final program = semanticProgram(false);
+		final entry = program.modules[0].functions[0].blocks[0];
+		final selectedRight = rightValueId == null ? "value.divisor" : rightValueId;
+		if (rightValueId == null)
+			entry.instructions.push(instruction("i08.divisor", result(selectedRight, IRTInt(32, true)), IRIOConstant(IRCInt(divisor)), MAIN_SOURCE, 19));
+		entry.instructions.push(instruction("i09.integral-division", result("value.quotient", quotientType == null ? IRTInt(32, true) : quotientType),
+			IRIOBinary("haxe.i32.divide.positive-constant", "value.updated", selectedRight, implementation == null ? IRIStatic : implementation), MAIN_SOURCE,
+			19));
+		return program;
+	}
+
+	/** Build one fixed-width constant at its independent validation boundary. */
+	static function fixedWidthConstantProgram(text:String, width:Int, signed:Bool):HxcIRProgram {
+		final program = semanticProgram(false);
+		final entry = program.modules[0].functions[0].blocks[0];
+		entry.instructions.push(instruction("i08.fixed-width", result("value.fixed-width", IRTInt(width, signed)), IRIOConstant(IRCInt(text)), MAIN_SOURCE,
+			19));
+		return program;
+	}
+
+	/** Put one forged signed-32 literal at the global-initialization boundary. */
+	static function fixedWidthGlobalConstantProgram(text:String):HxcIRProgram {
+		final program = semanticProgram(false);
+		program.modules[0].globals[0] = {
+			id: "global.calls",
+			type: IRTInt(32, true),
+			mutable: true,
+			initialization: IRGIConstant(IRCInt(text)),
+			source: span(MAIN_SOURCE, 10)
+		};
+		return program;
+	}
+
+	/** Put one forged signed-32 literal at the switch-case boundary. */
+	static function fixedWidthSwitchConstantProgram(text:String):HxcIRProgram {
+		final file = "test/negative/FixedWidthSwitchConstant.hx";
+		final loopEdge:HxcIRBlockEdge = {targetBlockId: "entry", arguments: [], cleanup: []};
+		return minimalProgram("invalid.FixedWidthSwitchConstant", [
+			instruction("switch.subject", result("value.subject", IRTInt(32, true)), IRIOConstant(IRCInt("0")), file, 2)
+		], terminator(IRTSwitch("value.subject", [
+			{
+				value: IRCInt(text),
+				edge: loopEdge
+			}
+			], loopEdge), file, 3), [], [], file);
+	}
+
+	/** Prove that a matching function ID from another raw graph cannot reuse a proof. */
+	static function requireValidatedFunctionOwnershipBoundary(validated:ValidatedHxcIRProgram, program:HxcIRProgram):Void {
+		validated.requireOwnedFunction(program.modules[0].functions[0]);
+		final foreign = semanticProgram(false).modules[0].functions[0];
+		var rejected = false;
+		try {
+			validated.requireOwnedFunction(foreign);
+		} catch (error:String) {
+			rejected = error.indexOf("does not belong to this program") != -1;
+		}
+		if (!rejected)
+			throw "validated HxcIR accepted a foreign raw function with a matching ID";
 	}
 
 	static function fullCleanupPath():Array<HxcIRCleanupStep> {
