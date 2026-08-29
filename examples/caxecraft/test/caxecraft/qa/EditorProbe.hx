@@ -887,7 +887,8 @@ final class EditorProbe {
 		final session = open(defaultEditorSettings());
 		expectApplied(session.apply(ResizeWorld({width: 4, height: 3, depth: 4})), WorldShape, "prepare browser placement world");
 		final worldSize:VoxelSize = {width: 4, height: 3, depth: 4};
-		final command = switch objectRecipeTemplate(recipe, {x: 1, y: 0, z: 2}, worldSize, session.draftSnapshot().objects, [], []) {
+		final command = switch objectRecipeTemplate(recipe, {x: 1, y: 0, z: 2},
+			templateContext(session.draftSnapshot().id, worldSize, session.draftSnapshot().objects, [], [])) {
 			case ObjectTemplateRejected(error): throw 'catalog placement rejected a stateful recipe: $error';
 			case ObjectTemplateReady(value):
 				require(value.commands.length == 1, "stateful catalog placement invented extra behavior");
@@ -928,13 +929,14 @@ final class EditorProbe {
 			lines: [{speaker: null, text: Message(DIALOGUE_MESSAGE)}]
 		})), Dialogue, "prepare browser NPC dialogue");
 		final npcRecipe = new EditorObjectRecipe("npc", "NPC", "PNJ", EditorNpc(content("caxecraft:ivvy")));
-		switch objectRecipeTemplate(npcRecipe, point, worldSize, [], [], []) {
+		switch objectRecipeTemplate(npcRecipe, point, templateContext(session.draftSnapshot().id, worldSize, [], [], [])) {
 			case ObjectTemplateRejected(MissingEditorDialogue):
 			case _:
 				throw "NPC browser recipe invented a missing dialogue reference";
 		}
 		final occupiedRule = id("editor.rule.npc.n1");
-		final readyNpcTemplate = switch objectRecipeTemplate(npcRecipe, point, worldSize, session.draftSnapshot().objects, [DIALOGUE], [occupiedRule]) {
+		final readyNpcTemplate = switch objectRecipeTemplate(npcRecipe, point,
+			templateContext(session.draftSnapshot().id, worldSize, session.draftSnapshot().objects, [DIALOGUE], [occupiedRule])) {
 			case ObjectTemplateRejected(error): throw 'NPC browser rejected an authored dialogue: $error';
 			case ObjectTemplateReady(value): value;
 		};
@@ -981,13 +983,14 @@ final class EditorProbe {
 			initialState: content("caxecraft:idle"),
 			activeState: content("caxecraft:active")
 		}));
-		switch objectRecipeTemplate(bridgeRecipe, {x: 0, y: 0, z: 0}, {width: 1, height: 3, depth: 1}, [], [], []) {
+		switch objectRecipeTemplate(bridgeRecipe, {x: 0, y: 0, z: 0},
+			templateContext(session.draftSnapshot().id, {width: 1, height: 3, depth: 1}, [], [], [])) {
 			case ObjectTemplateRejected(EditorTemplateNeedsAdjacentCell):
 			case _:
 				throw "linked template did not reject a world without a neighboring cell";
 		}
-		final readyBridgeTemplate = switch objectRecipeTemplate(bridgeRecipe, {x: 0, y: 0, z: 0}, worldSize, session.draftSnapshot().objects, [],
-			[id("editor.rule.bridge-switch.n1")]) {
+		final readyBridgeTemplate = switch objectRecipeTemplate(bridgeRecipe, {x: 0, y: 0, z: 0},
+			templateContext(session.draftSnapshot().id, worldSize, session.draftSnapshot().objects, [], [id("editor.rule.bridge-switch.n1")])) {
 			case ObjectTemplateRejected(error): throw 'bridge template rejected admitted data: $error';
 			case ObjectTemplateReady(value): value;
 		};
@@ -1052,6 +1055,87 @@ final class EditorProbe {
 				throw 'bridge template commit failed: $other';
 		}
 
+		final waveRecipe = new EditorObjectRecipe("enemy-wave-entity", "ENTITY WAVE", "OLEADA DE ENTIDADES", EditorEnemyWave(content("caxecraft:entity")));
+		switch objectRecipeTemplate(waveRecipe, {x: 0, y: 0, z: 0}, templateContext(session.draftSnapshot().id, {width: 1, height: 3, depth: 1}, [], [], [])) {
+			case ObjectTemplateRejected(EditorEnemyWaveNeedsSpace):
+			case _:
+				throw "enemy-wave template did not reject a world without three surrounding cells";
+		}
+		final readyWaveTemplate = switch objectRecipeTemplate(waveRecipe, {x: 2, y: 1, z: 3},
+			templateContext(session.draftSnapshot().id, worldSize, session.draftSnapshot().objects, [], [id("editor.rule.enemy-wave-entity.hide.n1")])) {
+			case ObjectTemplateRejected(error): throw 'enemy-wave template rejected admitted data: $error';
+			case ObjectTemplateReady(value): value;
+		};
+		switch readyWaveTemplate.commands {
+			case [
+				PutObject({id: zoneId, placement: TriggerZone(zone)}),
+				PutObject({id: enemy1, placement: Entity(type1, position1)}),
+				PutObject({id: enemy2, placement: Entity(type2, position2)}),
+				PutObject({id: enemy3, placement: Entity(type3, position3)}),
+				PutRule(hideRule),
+				PutRule(spawnRule)
+			]:
+				require(readyWaveTemplate.objectId.text() == "editor.enemy-wave-entity.zone.n2"
+					&& zoneId.text() == readyWaveTemplate.objectId.text()
+					&& zone.origin.x == 2
+					&& zone.origin.y == 1
+					&& zone.origin.z == 3
+					&& enemy1.text() == "editor.enemy-wave-entity.enemy.n2.i1"
+					&& enemy2.text() == "editor.enemy-wave-entity.enemy.n2.i2"
+					&& enemy3.text() == "editor.enemy-wave-entity.enemy.n2.i3"
+					&& type1.text() == "caxecraft:entity"
+					&& type2.text() == "caxecraft:entity"
+					&& type3.text() == "caxecraft:entity"
+					&& position1.xMilli == 1500
+					&& position1.zMilli == 2500
+					&& position2.xMilli == 2500
+					&& position2.zMilli == 2500
+					&& position3.xMilli == 3500
+					&& position3.zMilli == 2500,
+					"enemy-wave template changed its collision-safe identities or nearest-cell layout");
+				switch hideRule.event {
+					case LevelEntered(level):
+						require(level.text() == session.draftSnapshot().id.text()
+							&& hideRule.id.text() == "editor.rule.enemy-wave-entity.hide.n2"
+							&& hideRule.priority == 0
+							&& hideRule.repeat == Once,
+							"enemy-wave setup rule changed its level, identity, priority, or policy");
+					case _: throw "enemy-wave setup rule emitted the wrong WHEN card";
+				}
+				switch hideRule.actions {
+					case [Despawn(hidden1), Despawn(hidden2), Despawn(hidden3)]:
+						require(hidden1.text() == enemy1.text() && hidden2.text() == enemy2.text() && hidden3.text() == enemy3.text(),
+							"enemy-wave setup rule did not hide every authored enemy in order");
+					case _: throw "enemy-wave setup rule emitted the wrong DO cards";
+				}
+				switch spawnRule.event {
+					case EnterZone(actualZone):
+						require(actualZone.text() == zoneId.text()
+							&& spawnRule.id.text() == "editor.rule.enemy-wave-entity.spawn.n2"
+							&& spawnRule.priority == 0
+							&& spawnRule.repeat == Once,
+							"enemy-wave trigger rule changed its zone, identity, priority, or policy");
+					case _: throw "enemy-wave trigger rule emitted the wrong WHEN card";
+				}
+				switch spawnRule.actions {
+					case [Spawn(spawned1), Spawn(spawned2), Spawn(spawned3)]:
+						require(spawned1.text() == enemy1.text() && spawned2.text() == enemy2.text() && spawned3.text() == enemy3.text(),
+							"enemy-wave trigger rule did not reveal every authored enemy in order");
+					case _: throw "enemy-wave trigger rule emitted the wrong DO cards";
+				}
+			case _:
+				throw "enemy-wave template did not produce one trigger, three enemies, and two rules";
+		}
+		final beforeWaveHistory = session.historyEntries();
+		switch session.mutate({baseRevision: session.revision(), mutation: ApplyBatch(readyWaveTemplate.commands)}) {
+			case MutationApplied(families, _, _, _, undoDepth, redoDepth):
+				require(families.length == 6 && families[0] == Placement && families[1] == Placement && families[2] == Placement
+					&& families[3] == Placement && families[4] == Rule && families[5] == Rule && undoDepth == beforeWaveHistory + 1 && redoDepth == 0,
+					"enemy-wave template did not commit as one reversible transaction");
+			case other:
+				throw 'enemy-wave template commit failed: $other';
+		}
+
 		final enemyCommand = requiredRecipeCommand(new EditorObjectRecipe("enemy", "ENEMY", "ENEMIGO", EditorEnemy(content("caxecraft:entity"))), point,
 			session.draftSnapshot().objects, []);
 		switch enemyCommand {
@@ -1068,6 +1152,50 @@ final class EditorProbe {
 			case null: throw "NPC dialogue template Test Play did not start";
 			case value: value;
 		};
+		final waveSetupTick = testPlay.runTick({
+			events: [flowEventOccurrence(LevelEntered(session.draftSnapshot().id))],
+			positions: []
+		});
+		switch waveSetupTick.presentation {
+			case [ObjectDespawned(enemy1), ObjectDespawned(enemy2), ObjectDespawned(enemy3)]:
+				require(enemy1.text() == "editor.enemy-wave-entity.enemy.n2.i1"
+					&& enemy2.text() == "editor.enemy-wave-entity.enemy.n2.i2"
+					&& enemy3.text() == "editor.enemy-wave-entity.enemy.n2.i3",
+					"enemy-wave setup hid the wrong Test Play objects");
+			case _:
+				throw "enemy-wave setup did not hide its enemies in Test Play";
+		}
+		require(!testPlay.objectActive(id("editor.enemy-wave-entity.enemy.n2.i1"))
+			&& !testPlay.objectActive(id("editor.enemy-wave-entity.enemy.n2.i2"))
+			&& !testPlay.objectActive(id("editor.enemy-wave-entity.enemy.n2.i3")),
+			"enemy-wave setup left an enemy active before entry");
+		final waveSpawnTick = testPlay.runTick({
+			events: [
+				flowEventOccurrence(EnterZone(readyWaveTemplate.objectId), SpatialEventContext(PLAYER, {
+					xMilli: 1500,
+					yMilli: 1000,
+					zMilli: 3500
+				}, {
+					xMilli: 2500,
+					yMilli: 1000,
+					zMilli: 3500
+				}, false))
+			],
+			positions: []
+		});
+		switch waveSpawnTick.presentation {
+			case [ObjectSpawned(enemy1), ObjectSpawned(enemy2), ObjectSpawned(enemy3)]:
+				require(enemy1.text() == "editor.enemy-wave-entity.enemy.n2.i1"
+					&& enemy2.text() == "editor.enemy-wave-entity.enemy.n2.i2"
+					&& enemy3.text() == "editor.enemy-wave-entity.enemy.n2.i3",
+					"enemy-wave trigger revealed the wrong Test Play objects");
+			case _:
+				throw "enemy-wave trigger did not reveal its enemies in Test Play";
+		}
+		require(testPlay.objectActive(id("editor.enemy-wave-entity.enemy.n2.i1"))
+			&& testPlay.objectActive(id("editor.enemy-wave-entity.enemy.n2.i2"))
+			&& testPlay.objectActive(id("editor.enemy-wave-entity.enemy.n2.i3")),
+			"enemy-wave trigger did not retain all active enemies");
 		final npcTick = testPlay.runTick({
 			events: [
 				flowEventOccurrence(Interact(readyNpcTemplate.objectId), ActorEventContext(PLAYER))
@@ -1109,12 +1237,37 @@ final class EditorProbe {
 	/** Require one browser recipe to produce an ordinary canonical command. */
 	static function requiredRecipeCommand(recipe:EditorObjectRecipe, point:VoxelPoint, objects:Array<ScenarioObject>,
 			dialogueIds:Array<ScenarioId>):EditorCommand
-		return switch objectRecipeTemplate(recipe, point, {width: 4, height: 3, depth: 4}, objects, dialogueIds, []) {
+		return switch objectRecipeTemplate(recipe, point, templateContext(id("editor.qa"), {width: 4, height: 3, depth: 4}, objects, dialogueIds, [])) {
 			case ObjectTemplateRejected(error): throw 'browser recipe ${recipe.id} was rejected: $error';
 			case ObjectTemplateReady(value):
 				if (value.commands.length != 1)
 					throw 'browser recipe ${recipe.id} unexpectedly required a command batch';
 				value.commands[0];
+		};
+
+	/** Build named recipe facts for tests without repeating positional payloads. */
+	static function templateContext(scenarioId:ScenarioId, worldSize:VoxelSize, objects:Array<ScenarioObject>, dialogueIds:Array<ScenarioId>,
+			ruleIds:Array<ScenarioId>):caxecraft.editor.EditorPlacement.EditorObjectTemplateContext
+		return {
+			scenarioId: scenarioId,
+			worldSize: worldSize,
+			objects: objects,
+			dialogueIds: dialogueIds,
+			ruleIds: ruleIds
+		};
+
+	/** Build the viewport's named draft facts with the focused probe palette. */
+	static function viewportToolContext(worldSize:VoxelSize, selection:Null<VoxelBounds>, objects:Array<ScenarioObject>, ruleIds:Array<ScenarioId>,
+			dialogueIds:Array<ScenarioId>, recipe:Null<EditorObjectRecipe>):caxecraft.editor.EditorViewport.EditorToolContext
+		return {
+			scenarioId: id("editor.viewport"),
+			worldSize: worldSize,
+			paletteCode: 1,
+			selection: selection,
+			objects: objects,
+			ruleIds: ruleIds,
+			dialogueIds: dialogueIds,
+			recipe: recipe
 		};
 
 	/** Prove one selected object becomes a distinct canonical copy with the same payload. */
@@ -2935,7 +3088,7 @@ final class EditorProbe {
 
 		final point:VoxelPoint = {x: 2, y: 1, z: 1};
 		final worldSize:VoxelSize = {width: 4, height: 3, depth: 4};
-		switch commandForTool(SelectTool, point, worldSize, 1, null, [], [], [], null) {
+		switch commandForTool(SelectTool, point, viewportToolContext(worldSize, null, [], [], [], null)) {
 			case ToolSelectionReady(bounds):
 				require(bounds.origin.x == 2 && bounds.origin.y == 1 && bounds.origin.z == 1 && bounds.size.width == 1 && bounds.size.height == 1
 					&& bounds.size.depth == 1,
@@ -2943,32 +3096,32 @@ final class EditorProbe {
 			case _:
 				throw "select tool did not produce workspace bounds";
 		}
-		switch commandForTool(PaintTool, point, worldSize, 1, null, [], [], [], null) {
+		switch commandForTool(PaintTool, point, viewportToolContext(worldSize, null, [], [], [], null)) {
 			case ToolCommandReady(PaintVoxel(actual, 1)):
 				require(actual.x == point.x && actual.y == point.y && actual.z == point.z, "paint tool changed the pointed voxel");
 			case _:
 				throw "paint tool did not produce a PaintVoxel command";
 		}
-		switch commandForTool(EraseTool, point, worldSize, 1, null, [], [], [], null) {
+		switch commandForTool(EraseTool, point, viewportToolContext(worldSize, null, [], [], [], null)) {
 			case ToolCommandReady(EraseVoxel(actual)):
 				require(actual.x == point.x && actual.y == point.y && actual.z == point.z, "erase tool changed the pointed voxel");
 			case _:
 				throw "erase tool did not produce an EraseVoxel command";
 		}
-		switch commandForTool(FillTool, point, worldSize, 1, null, [], [], [], null) {
+		switch commandForTool(FillTool, point, viewportToolContext(worldSize, null, [], [], [], null)) {
 			case ToolCommandRejected(NoSelection):
 			case _:
 				throw "fill tool did not reject a missing selection exactly";
 		}
 		final selected:VoxelBounds = {origin: {x: 1, y: 0, z: 1}, size: {width: 2, height: 1, depth: 2}};
-		switch commandForTool(FillTool, point, worldSize, 1, selected, [], [], [], null) {
+		switch commandForTool(FillTool, point, viewportToolContext(worldSize, selected, [], [], [], null)) {
 			case ToolCommandReady(FillBounds(bounds, 1)):
 				require(bounds.origin.x == 1 && bounds.origin.z == 1 && bounds.size.width == 2 && bounds.size.depth == 2,
 					"fill tool changed its explicit workspace bounds");
 			case _:
 				throw "fill tool did not carry explicit typed bounds";
 		}
-		switch commandForTool(CheckpointTool, point, worldSize, 1, null, [], [], [], null) {
+		switch commandForTool(CheckpointTool, point, viewportToolContext(worldSize, null, [], [], [], null)) {
 			case ToolBatchReady(commands, selectedObject):
 				require(commands.length == 2 && selectedObject.text() == "editor.checkpoint.n1",
 					"checkpoint tool did not produce one selectable atomic template");
@@ -2976,12 +3129,12 @@ final class EditorProbe {
 				throw "checkpoint tool did not produce a canonical command batch";
 		}
 		final npcRecipe = new EditorObjectRecipe("npc", "NPC", "PNJ", EditorNpc(content("caxecraft:ivvy")));
-		switch commandForTool(CatalogObjectTool, point, worldSize, 1, null, [], [], [], npcRecipe) {
+		switch commandForTool(CatalogObjectTool, point, viewportToolContext(worldSize, null, [], [], [], npcRecipe)) {
 			case ToolCommandRejected(MissingEditorDialogue):
 			case _:
 				throw "catalog tool did not reject an NPC template without authored dialogue";
 		}
-		switch commandForTool(CatalogObjectTool, point, worldSize, 1, null, [], [id("editor.rule.npc.n1")], [DIALOGUE], npcRecipe) {
+		switch commandForTool(CatalogObjectTool, point, viewportToolContext(worldSize, null, [], [id("editor.rule.npc.n1")], [DIALOGUE], npcRecipe)) {
 			case ToolBatchReady(commands, selectedObject):
 				require(commands.length == 2 && selectedObject.text() == "editor.npc.n2",
 					"catalog tool did not expose the NPC dialogue template as one selectable batch");
@@ -2997,19 +3150,32 @@ final class EditorProbe {
 			initialState: content("caxecraft:idle"),
 			activeState: content("caxecraft:active")
 		}));
-		switch commandForTool(CatalogObjectTool, {x: 0, y: 0, z: 0}, {width: 1, height: 3, depth: 1}, 1, null, [], [], [], bridgeRecipe) {
+		switch commandForTool(CatalogObjectTool, {x: 0, y: 0, z: 0}, viewportToolContext({width: 1, height: 3, depth: 1}, null, [], [], [], bridgeRecipe)) {
 			case ToolCommandRejected(EditorTemplateNeedsAdjacentCell):
 			case _:
 				throw "catalog tool did not explain a linked template that cannot fit";
 		}
-		switch commandForTool(CatalogObjectTool, point, worldSize, 1, null, [], [], [], bridgeRecipe) {
+		switch commandForTool(CatalogObjectTool, point, viewportToolContext(worldSize, null, [], [], [], bridgeRecipe)) {
 			case ToolBatchReady(commands, selectedObject):
 				require(commands.length == 3 && selectedObject.text() == "editor.bridge-switch.source.n1",
 					"catalog tool did not expose the bridge switch as one selectable batch");
 			case _:
 				throw "catalog tool did not route the linked stateful recipe through its template";
 		}
-		switch commandForTool(TriggerZoneTool, point, worldSize, 1, null, [], [], [], null) {
+		final waveRecipe = new EditorObjectRecipe("enemy-wave-entity", "ENTITY WAVE", "OLEADA DE ENTIDADES", EditorEnemyWave(content("caxecraft:entity")));
+		switch commandForTool(CatalogObjectTool, {x: 0, y: 0, z: 0}, viewportToolContext({width: 1, height: 3, depth: 1}, null, [], [], [], waveRecipe)) {
+			case ToolCommandRejected(EditorEnemyWaveNeedsSpace):
+			case _:
+				throw "catalog tool did not explain an enemy wave that cannot fit";
+		}
+		switch commandForTool(CatalogObjectTool, point, viewportToolContext(worldSize, null, [], [], [], waveRecipe)) {
+			case ToolBatchReady(commands, selectedObject):
+				require(commands.length == 6 && selectedObject.text() == "editor.enemy-wave-entity.zone.n1",
+					"catalog tool did not expose the enemy wave as one selectable batch");
+			case _:
+				throw "catalog tool did not route the enemy-wave recipe through its template";
+		}
+		switch commandForTool(TriggerZoneTool, point, viewportToolContext(worldSize, null, [], [], [], null)) {
 			case ToolCommandReady(PutObject(object)):
 				require(object.id.text() == "editor.trigger.n1", "trigger tool changed its deterministic object ID");
 				switch object.placement {

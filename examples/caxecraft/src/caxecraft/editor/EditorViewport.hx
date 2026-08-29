@@ -6,6 +6,7 @@ import caxecraft.content.EditorObjectCatalog.EditorObjectRecipe;
 import caxecraft.editor.EditorPlacement.checkpointTemplate;
 import caxecraft.editor.EditorPlacement.objectRecipeTemplate;
 import caxecraft.editor.EditorPlacement.EditorObjectTemplateResult;
+import caxecraft.editor.EditorPlacement.EditorObjectTemplateContext;
 import caxecraft.editor.EditorPlacement.triggerZoneCommand;
 import caxecraft.editor.EditorWorldGrid.decode as decodeWorld;
 import caxecraft.editor.EditorWorldViewport.EditorWorldProjection;
@@ -75,6 +76,18 @@ enum EditorToolCommandResult {
 	ToolBatchReady(commands:Array<EditorCommand>, selectedObject:ScenarioId);
 
 	ToolCommandRejected(error:EditorError);
+}
+
+/** Named draft facts used by tool gestures, kept explicit as the editor grows. */
+typedef EditorToolContext = {
+	final scenarioId:ScenarioId;
+	final worldSize:VoxelSize;
+	final paletteCode:Int;
+	final selection:Null<VoxelBounds>;
+	final objects:Array<ScenarioObject>;
+	final ruleIds:Array<ScenarioId>;
+	final dialogueIds:Array<ScenarioId>;
+	final recipe:Null<EditorObjectRecipe>;
 }
 
 /**
@@ -259,8 +272,7 @@ function toolFromIndex(index:Int):Null<EditorTool> {
 	Object tools read existing IDs and create one reloadable record or one atomic
 	template. The UI never mutates a projection directly.
 **/
-function commandFor(tool:EditorTool, point:VoxelPoint, worldSize:VoxelSize, paletteCode:Int, selection:Null<VoxelBounds>, objects:Array<ScenarioObject>,
-		ruleIds:Array<ScenarioId>, dialogueIds:Array<ScenarioId>, recipe:Null<EditorObjectRecipe>):EditorToolCommandResult {
+function commandFor(tool:EditorTool, point:VoxelPoint, context:EditorToolContext):EditorToolCommandResult {
 	return switch tool {
 		case SelectTool:
 			ToolSelectionReady({
@@ -268,23 +280,30 @@ function commandFor(tool:EditorTool, point:VoxelPoint, worldSize:VoxelSize, pale
 				size: {width: 1, height: 1, depth: 1}
 			});
 		case PaintTool:
-			ToolCommandReady(PaintVoxel(point, paletteCode));
+			ToolCommandReady(PaintVoxel(point, context.paletteCode));
 		case EraseTool:
 			ToolCommandReady(EraseVoxel(point));
 		case FillTool:
-			if (selection == null) ToolCommandRejected(NoSelection); else ToolCommandReady(FillBounds(selection, paletteCode));
+			if (context.selection == null) ToolCommandRejected(NoSelection); else ToolCommandReady(FillBounds(context.selection, context.paletteCode));
 		case CheckpointTool:
-			final template = checkpointTemplate(point, objects, ruleIds);
+			final template = checkpointTemplate(point, context.objects, context.ruleIds);
 			ToolBatchReady(template.commands, template.objectId);
 		case CatalogObjectTool:
-			if (recipe == null) ToolCommandRejected(MissingEditorObjectRecipe); else {
-				switch objectRecipeTemplate(recipe, point, worldSize, objects, dialogueIds, ruleIds) {
+			if (context.recipe == null) ToolCommandRejected(MissingEditorObjectRecipe); else {
+				final templateContext:EditorObjectTemplateContext = {
+					scenarioId: context.scenarioId,
+					worldSize: context.worldSize,
+					objects: context.objects,
+					dialogueIds: context.dialogueIds,
+					ruleIds: context.ruleIds
+				};
+				switch objectRecipeTemplate(context.recipe, point, templateContext) {
 					case ObjectTemplateRejected(error): ToolCommandRejected(error);
 					case ObjectTemplateReady(template) if (template.commands.length == 1): ToolCommandReady(template.commands[0]);
 					case ObjectTemplateReady(template): ToolBatchReady(template.commands, template.objectId);
 				}
 			}
 		case TriggerZoneTool:
-			ToolCommandReady(triggerZoneCommand(point, objects));
+			ToolCommandReady(triggerZoneCommand(point, context.objects));
 	};
 }

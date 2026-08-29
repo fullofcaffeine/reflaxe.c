@@ -95,8 +95,10 @@ function availableEditorAssets(registry:RuntimeContentRegistry, catalog:RuntimeU
 	}
 	for (index in 0...registry.enemyCount()) {
 		final id = registry.enemyIdAt(index);
-		if (id != null)
+		if (id != null) {
 			result.push(contentObjectEntry(catalog, EnemyAssets, id, EditorEnemy(id), "enemy-" + localId(id)));
+			result.push(enemyWaveEntry(catalog, id));
+		}
 	}
 	for (index in 0...registry.editorObjectCount()) {
 		final recipe = registry.editorObjectAt(index);
@@ -173,6 +175,26 @@ private function contentObjectEntry(catalog:RuntimeUiCatalog, category:EditorAss
 		helpEn: categoryHelp(catalog, category, LocaleCursor.Locale0),
 		helpEsMx: categoryHelp(catalog, category, LocaleCursor.Locale1),
 		use: PlaceObjectAsset(new EditorObjectRecipe(entryId, labelEn, labelEsMx, kind))
+	};
+}
+
+/** Derive one localized wave template from an admitted enemy, not a second catalog. */
+private function enemyWaveEntry(catalog:RuntimeUiCatalog, contentId:ContentId):EditorAssetEntry {
+	final baseEn = label(catalog, contentId, LocaleCursor.Locale0);
+	final baseEsMx = label(catalog, contentId, LocaleCursor.Locale1);
+	final labelEn = catalog.format(LocaleCursor.Locale0, new MessageId("editor.asset.enemy-wave.label"), [baseEn]);
+	final labelEsMx = catalog.format(LocaleCursor.Locale1, new MessageId("editor.asset.enemy-wave.label"), [baseEsMx]);
+	final entryId = "enemy-wave-" + localId(contentId);
+	return {
+		id: entryId,
+		category: EnemyAssets,
+		labelEn: labelEn,
+		labelEsMx: labelEsMx,
+		searchEn: labelEn.toLowerCase(),
+		searchEsMx: labelEsMx.toLowerCase(),
+		helpEn: catalog.format(LocaleCursor.Locale0, new MessageId("editor.asset.enemy-wave.help"), []),
+		helpEsMx: catalog.format(LocaleCursor.Locale1, new MessageId("editor.asset.enemy-wave.help"), []),
+		use: PlaceObjectAsset(new EditorObjectRecipe(entryId, labelEn, labelEsMx, EditorEnemyWave(contentId)))
 	};
 }
 

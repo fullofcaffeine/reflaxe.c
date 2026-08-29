@@ -139,6 +139,7 @@ function selfCheck():Int {
 	var itemAssets = 0;
 	var npcAssets = 0;
 	var enemyAssets = 0;
+	var enemyWaveAssets = 0;
 	var mechanismAssets = 0;
 	var editorObjectLabelsMatch = true;
 	for (left in 0...assets.length) {
@@ -168,6 +169,7 @@ function selfCheck():Int {
 				enemyAssets++;
 				switch entry.use {
 					case PlaceObjectAsset({kind: EditorEnemy(_)}):
+					case PlaceObjectAsset({kind: EditorEnemyWave(_)}): enemyWaveAssets++;
 					case _: return 76;
 				}
 			case MechanismAssets:
@@ -203,11 +205,12 @@ function selfCheck():Int {
 		- 1
 		+ registry.itemCount()
 		+ registry.npcCount()
-		+ registry.enemyCount()
+		+ registry.enemyCount() * 2
 		+ registry.editorObjectCount() || terrainAssets != registry.blockCount() - 1
 		|| itemAssets != registry.itemCount()
 		|| npcAssets != registry.npcCount()
-		|| enemyAssets != registry.enemyCount()
+		|| enemyAssets != registry.enemyCount() * 2
+		|| enemyWaveAssets != registry.enemyCount()
 		|| mechanismAssets != registry.editorObjectCount()
 		|| !editorObjectLabelsMatch
 		|| !foundFirstItem
@@ -365,7 +368,7 @@ function matchesStatefulEditorRecipe(recipe:EditorObjectRecipe, expectedObjectTy
 		return false;
 	return switch recipe.kind {
 		case EditorStatefulObject(objectType, initialState): objectType.text() == expectedObjectType && initialState.text() == "caxecraft:waiting";
-		case EditorItem(_, _) | EditorNpc(_) | EditorEnemy(_) | EditorLinkedStatefulPair(_, _): false;
+		case EditorItem(_, _) | EditorNpc(_) | EditorEnemy(_) | EditorEnemyWave(_) | EditorLinkedStatefulPair(_, _): false;
 	};
 }
 

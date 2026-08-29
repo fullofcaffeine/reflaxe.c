@@ -26,6 +26,9 @@ enum EditorObjectRecipeKind {
 	/** Place one ordinary hostile or ambient entity. */
 	EditorEnemy(entityType:ContentId);
 
+	/** Place a hidden three-enemy group that appears when its trigger is entered. */
+	EditorEnemyWave(entityType:ContentId);
+
 	/** Place one stateful object with a pack-validated initial state. */
 	EditorStatefulObject(objectType:ContentId, initialState:ContentId);
 

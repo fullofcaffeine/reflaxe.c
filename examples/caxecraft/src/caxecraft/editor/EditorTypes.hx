@@ -241,6 +241,9 @@ enum EditorError {
 	/** A linked placement needs a neighboring world cell for its second object. */
 	EditorTemplateNeedsAdjacentCell;
 
+	/** An enemy wave needs three distinct cells around its trigger. */
+	EditorEnemyWaveNeedsSpace;
+
 	InvalidSetting(setting:EditorSetting, minimum:Int, maximum:Int);
 	UnsupportedFormatVersion(actual:Int, supported:Int);
 	SnapshotRejected(diagnostics:Array<ScenarioDiagnostic>);

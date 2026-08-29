@@ -115,6 +115,7 @@ import caxecraft.editor.EditorViewport.EditorViewportLayout;
 import caxecraft.editor.EditorViewport.EditorViewportProjection;
 import caxecraft.editor.EditorViewport.EditorTool;
 import caxecraft.editor.EditorViewport.EditorToolCommandResult;
+import caxecraft.editor.EditorViewport.EditorToolContext;
 import caxecraft.editor.EditorViewport.boundsIntersectLayer;
 import caxecraft.editor.EditorViewport.clampLayer;
 import caxecraft.editor.EditorViewport.commandFor as commandForTool;
@@ -3261,8 +3262,7 @@ final class CaxecraftEditorScreen {
 			previewAllowed = false;
 			return;
 		}
-		previewAllowed = switch commandForTool(tool, point, draft.world.size, paletteCode, current.selectedBounds(), draft.objects, draft.ruleIds,
-			draft.dialogueIds, activeRecipeFor(tool)) {
+		previewAllowed = switch commandForTool(tool, point, toolContextFor(tool, draft, paletteCode)) {
 			case ToolCommandRejected(_): false;
 			case ToolSelectionReady(_): true;
 			case ToolCommandReady(_) | ToolBatchReady(_, _): true;
@@ -3279,6 +3279,23 @@ final class CaxecraftEditorScreen {
 		return switch selected.use {
 			case PlaceObjectAsset(recipe): recipe;
 			case PaintTerrainAsset(_): null;
+		};
+	}
+
+	/** Gather one named tool snapshot so new templates do not grow positional calls. */
+	function toolContextFor(tool:EditorTool, draft:EditorPresentationSnapshot, paletteCode:Int):EditorToolContext {
+		final current = session;
+		if (current == null)
+			throw "editor tool context requested without an active session";
+		return {
+			scenarioId: draft.id,
+			worldSize: draft.world.size,
+			paletteCode: paletteCode,
+			selection: current.selectedBounds(),
+			objects: draft.objects,
+			ruleIds: draft.ruleIds,
+			dialogueIds: draft.dialogueIds,
+			recipe: activeRecipeFor(tool)
 		};
 	}
 
@@ -3743,8 +3760,7 @@ final class CaxecraftEditorScreen {
 				return false;
 			}
 		}
-		final toolResult = commandForTool(tool, point, draft.world.size, paletteCode, current.selectedBounds(), draft.objects, draft.ruleIds,
-			draft.dialogueIds, activeRecipeFor(tool));
+		final toolResult = commandForTool(tool, point, toolContextFor(tool, draft, paletteCode));
 		return switch toolResult {
 			case ToolCommandRejected(_):
 				notice = Invalid;
@@ -3943,6 +3959,7 @@ final class CaxecraftEditorScreen {
 	/** Combine copied non-terrain details with the retained world projection. */
 	function presentationWithProjection(details:EditorPresentationDetails, retained:Null<EditorWorldProjection>):EditorPresentationSnapshot {
 		return {
+			id: details.id,
 			title: details.title,
 			environment: details.environment,
 			world: details.world,

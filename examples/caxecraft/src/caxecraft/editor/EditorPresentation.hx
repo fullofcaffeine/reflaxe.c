@@ -36,6 +36,7 @@ typedef EditorPresentationWorld = {
 
 /** Copy-owned visual and placement values that do not project terrain cells. */
 typedef EditorPresentationDetails = {
+	final id:ScenarioId;
 	final title:ScenarioText;
 	final environment:Null<ScenarioEnvironment>;
 	final world:EditorPresentationWorld;
@@ -50,6 +51,7 @@ typedef EditorPresentationDetails = {
 
 /** One complete revision-independent visual view of the current typed draft. */
 typedef EditorPresentationSnapshot = {
+	final id:ScenarioId;
 	final title:ScenarioText;
 	final environment:Null<ScenarioEnvironment>;
 	final world:EditorPresentationWorld;
@@ -72,6 +74,7 @@ typedef EditorPresentationSnapshot = {
 function project(scenario:Scenario):EditorPresentationSnapshot {
 	final details = projectDetails(scenario);
 	return {
+		id: details.id,
 		title: details.title,
 		environment: details.environment,
 		world: details.world,
@@ -89,6 +92,7 @@ function project(scenario:Scenario):EditorPresentationSnapshot {
 /** Copy the visual values for an edit that cannot change terrain. */
 function projectDetails(scenario:Scenario):EditorPresentationDetails {
 	return {
+		id: scenario.id,
 		title: scenario.title,
 		environment: copyEnvironment(scenario.environment),
 		world: {

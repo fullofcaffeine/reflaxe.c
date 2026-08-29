@@ -1284,6 +1284,20 @@
       }
     },
     {
+      "id": "editor.asset.enemy-wave.help",
+      "text": {
+        "en": "Place a trigger that reveals a small enemy group when a player enters.",
+        "es-MX": "Coloca un activador que revela un grupo pequeño de enemigos cuando entra un jugador."
+      }
+    },
+    {
+      "id": "editor.asset.enemy-wave.label",
+      "text": {
+        "en": "{0} WAVE",
+        "es-MX": "OLEADA DE {0}"
+      }
+    },
+    {
       "id": "editor.event.block-changed.help",
       "text": {
         "en": "Run when a block in this zone changes to this material.",
