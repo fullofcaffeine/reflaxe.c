@@ -37,6 +37,15 @@ from scripts.raylib.core_binding import (
 
 
 class RaylibCoreBindingTests(unittest.TestCase):
+    def test_runtime_text_facade_avoids_unconditional_per_draw_copy(self) -> None:
+        facade = (ROOT / "src/raylib/Raylib.hx").read_text(encoding="utf-8")
+        start = facade.index("public static inline function DrawTextString")
+        end = facade.index("public static inline function DrawFPS", start)
+        implementation = facade[start:end]
+        self.assertIn("c.CStringArg.to(text)", implementation)
+        self.assertNotIn("new StringBuf", implementation)
+        self.assertNotIn("c.CStringRef.to", implementation)
+
     def test_repository_lock_and_generated_raw_files_are_current(self) -> None:
         lock = load_lock()
         first = render_files(lock)

@@ -982,8 +982,10 @@ static int hxc_test_cstrings(
   const hxc_string whole = HXC_STRING_LITERAL("slice");
   hxc_string interior = HXC_STRING_INITIALIZER;
   hxc_borrowed_cstring borrowed = HXC_BORROWED_CSTRING_INITIALIZER;
+  hxc_call_cstring call_text = HXC_CALL_CSTRING_INITIALIZER;
   hxc_owned_cstring owned = HXC_OWNED_CSTRING_INITIALIZER;
   size_t allocations = arena->allocation_count;
+  size_t releases = arena->release_count;
 
   HXC_TEST_CHECK(
     hxc_string_borrow_cstring(&stable, &borrowed) == HXC_STATUS_OK
@@ -992,6 +994,15 @@ static int hxc_test_cstrings(
   HXC_TEST_CHECK(borrowed.byte_length == stable.byte_length);
   HXC_TEST_CHECK(borrowed.data[borrowed.byte_length] == '\0');
   HXC_TEST_CHECK(arena->allocation_count == allocations);
+  HXC_TEST_CHECK(
+    hxc_string_prepare_call_cstring(&stable, *allocator, &call_text)
+      == HXC_STATUS_OK
+  );
+  HXC_TEST_CHECK(call_text.owner == &stable);
+  HXC_TEST_CHECK(call_text.temporary.memory == NULL);
+  HXC_TEST_CHECK(arena->allocation_count == allocations);
+  HXC_TEST_CHECK(hxc_call_cstring_dispose(&call_text) == HXC_STATUS_OK);
+  HXC_TEST_CHECK(arena->release_count == releases);
 
   borrowed = (hxc_borrowed_cstring)HXC_BORROWED_CSTRING_INITIALIZER;
   HXC_TEST_CHECK(
@@ -999,6 +1010,10 @@ static int hxc_test_cstrings(
   );
   HXC_TEST_CHECK(
     hxc_string_to_cstring_owned(&embedded, allocator, &owned)
+      == HXC_STATUS_EMBEDDED_NUL
+  );
+  HXC_TEST_CHECK(
+    hxc_string_prepare_call_cstring(&embedded, *allocator, &call_text)
       == HXC_STATUS_EMBEDDED_NUL
   );
   HXC_TEST_CHECK(arena->allocation_count == allocations);
@@ -1010,9 +1025,20 @@ static int hxc_test_cstrings(
       == HXC_STATUS_BORROW_UNAVAILABLE
   );
   HXC_TEST_CHECK(
-    hxc_string_to_cstring_owned(&interior, allocator, &owned) == HXC_STATUS_OK
+    hxc_string_prepare_call_cstring(&interior, *allocator, &call_text)
+      == HXC_STATUS_OK
   );
   HXC_TEST_CHECK(arena->allocation_count == allocations + 1u);
+  HXC_TEST_CHECK(call_text.owner == NULL);
+  HXC_TEST_CHECK(
+    call_text.byte_length == 4u && call_text.data[4] == '\0'
+  );
+  HXC_TEST_CHECK(hxc_call_cstring_dispose(&call_text) == HXC_STATUS_OK);
+  HXC_TEST_CHECK(arena->release_count == releases + 1u);
+  HXC_TEST_CHECK(
+    hxc_string_to_cstring_owned(&interior, allocator, &owned) == HXC_STATUS_OK
+  );
+  HXC_TEST_CHECK(arena->allocation_count == allocations + 2u);
   HXC_TEST_CHECK(owned.byte_length == 4u && owned.data[4] == '\0');
   HXC_TEST_CHECK(hxc_allocator_same_identity(allocator, &owned.storage.allocator));
   HXC_TEST_CHECK(hxc_owned_cstring_dispose(&owned) == HXC_STATUS_OK);

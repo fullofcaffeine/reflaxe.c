@@ -1836,25 +1836,33 @@ private class HxcIRValidationState {
 				add(valuePath, 'a call-scoped $label has no checked borrow producer', fn.source);
 				continue;
 			}
-			final validOrigin = switch origin.instruction.kind {
+			final preparedOrigin:Null<Bool> = switch origin.instruction.kind {
 				case IRIOCall({
 					dispatch: IRCDRuntime("bytes", "borrow-mutable-cstring"),
 					arguments: [_],
 					returnType: IRTMutableCStringBuffer
-				}): true;
+				}): false;
 				case IRIOCall({
 					dispatch: IRCDRuntime("string", "borrow-cstring"),
 					arguments: [_],
 					returnType: IRTCallScopedCString
+				}): false;
+				case IRIOCall({
+					dispatch: IRCDRuntime("string", "prepare-cstring"),
+					arguments: [_],
+					returnType: IRTCallScopedCString
 				}): true;
-				case _: false;
+				case _: null;
 			};
-			if (!validOrigin)
+			if (preparedOrigin == null)
 				add(valuePath, 'a call-scoped $label must originate at its checked borrow operation', origin.instruction.source);
 
 			var nativeUses = 0;
+			var disposeUses = 0;
+			var nativeInstructionIndex = -1;
+			var disposeInstructionIndex = -1;
 			for (block in fn.blocks) {
-				for (instruction in block.instructions) {
+				for (instructionIndex => instruction in block.instructions) {
 					switch instruction.kind {
 						case IRIOCall(call):
 							for (index => argument in call.arguments)
@@ -1862,8 +1870,14 @@ private class HxcIRValidationState {
 									switch call.dispatch {
 										case IRCDNative(_):
 											nativeUses++;
+											nativeInstructionIndex = instructionIndex;
 											if (block.id != origin.block.id) add(valuePath,
 												"the native consumer must remain in the borrow producer's basic block", instruction.source);
+										case IRCDRuntime("string", "dispose-cstring") if (preparedOrigin == true):
+											disposeUses++;
+											disposeInstructionIndex = instructionIndex;
+											if (block.id != origin.block.id) add(valuePath,
+												"the temporary disposer must remain in the prepare producer's basic block", instruction.source);
 										case _:
 											add(valuePath, 'call-scoped $label escapes through a non-native call argument $index', instruction.source);
 									}
@@ -1888,6 +1902,14 @@ private class HxcIRValidationState {
 			}
 			if (nativeUses != 1)
 				add(valuePath, 'call-scoped $label requires exactly one direct native consumer; found $nativeUses', origin.instruction.source);
+			if (preparedOrigin == true) {
+				if (disposeUses != 1)
+					add(valuePath, 'a prepared call-scoped $label requires exactly one disposer; found $disposeUses', origin.instruction.source);
+				if (nativeInstructionIndex < 0 || disposeInstructionIndex <= nativeInstructionIndex)
+					add(valuePath, "a prepared call-scoped immutable C string must be disposed after its native consumer", origin.instruction.source);
+			} else if (disposeUses != 0) {
+				add(valuePath, "a zero-copy borrowed C string must not use the temporary disposer", origin.instruction.source);
+			}
 		}
 	}
 
@@ -4752,6 +4774,14 @@ private class HxcIRValidationState {
 				final sourceType = argumentTypes.length == 1 ? argumentTypes[0] : null;
 				if ((sourceType != IRTString && sourceType != IRTManagedString) || call.returnType != IRTCallScopedCString)
 					add(path, "C-string borrowing requires one Haxe String owner and returns one call-scoped immutable C string", source);
+			case "prepare-cstring":
+				final sourceType = argumentTypes.length == 1 ? argumentTypes[0] : null;
+				if ((sourceType != IRTString && sourceType != IRTManagedString) || call.returnType != IRTCallScopedCString)
+					add(path, "C-string preparation requires one Haxe String owner and returns one call-scoped immutable C string", source);
+			case "dispose-cstring":
+				final sourceType = argumentTypes.length == 1 ? argumentTypes[0] : null;
+				if (sourceType != IRTCallScopedCString || call.returnType != IRTVoid)
+					add(path, "C-string disposal requires one prepared call-scoped immutable C string and returns Void", source);
 			case _:
 				add(path, 'string runtime call names unsupported operation `$operationId`', source);
 		}

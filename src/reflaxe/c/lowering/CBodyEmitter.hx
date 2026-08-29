@@ -8222,6 +8222,17 @@ class CBodyEmitter {
 			case IRCDRuntime("string-float", value): value;
 			case _: return fail('managed String emitter received a non-String call in `${fn.id}`');
 		};
+		if (operation == "dispose-cstring") {
+			if (instruction.result != null || call.returnType != IRTVoid || call.arguments.length != 1)
+				return fail('String C disposal `${instruction.id}` in `${fn.id}` lost its call-scoped contract');
+			final temporary = temporaryNames.get(call.arguments[0]);
+			if (temporary == null)
+				return fail('String C disposal `${instruction.id}` in `${fn.id}` cannot resolve its prepared temporary');
+			addLineDirective(statements, instruction.source, lineDirectives);
+			emitStatusAbort(statements, ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNCallCStringDispose)), [EUnary(AddressOf, EIdentifier(temporary))]),
+				boundsAbortName, instruction.id, fn.id);
+			return;
+		}
 		final result = requireResult(instruction, fn.id);
 		if (operation == "borrow-cstring") {
 			if (result.type != IRTCallScopedCString || call.returnType != IRTCallScopedCString || call.arguments.length != 1)
@@ -8243,6 +8254,30 @@ class CBodyEmitter {
 				ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNStringBorrowCString)),
 					[EUnary(AddressOf, owner), EUnary(AddressOf, EIdentifier(temporary))]),
 				boundsAbortName, instruction.id, fn.id);
+			values.set(result.id, EMember(EIdentifier(temporary), CBodyRuntimeNames.identifier(CBRNBorrowedCStringData), false));
+			return;
+		}
+		if (operation == "prepare-cstring") {
+			if (result.type != IRTCallScopedCString || call.returnType != IRTCallScopedCString || call.arguments.length != 1)
+				return fail('String C preparation `${instruction.id}` in `${fn.id}` lost its call-scoped type');
+			final temporary = temporaryNames.get(result.id);
+			if (temporary == null)
+				return fail('String C preparation `${instruction.id}` in `${fn.id}` has no finalized result temporary');
+			statements.push(SDecl({
+				storage: [],
+				alignments: [],
+				type: new CType(TNamed(CBodyRuntimeNames.identifier(CBRNCallCStringType))),
+				declarator: DName(temporary),
+				initializer: IExpr(EIdentifier(CBodyRuntimeNames.identifier(CBRNCallCStringInitializer))),
+				attributes: []
+			}));
+			final owner = requireValue(values, call.arguments[0], fn.id);
+			addLineDirective(statements, instruction.source, lineDirectives);
+			emitStatusAbort(statements, ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNStringPrepareCallCString)), [
+				EUnary(AddressOf, owner),
+				ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNDefaultAllocator)), []),
+				EUnary(AddressOf, EIdentifier(temporary))
+			]), boundsAbortName, instruction.id, fn.id);
 			values.set(result.id, EMember(EIdentifier(temporary), CBodyRuntimeNames.identifier(CBRNBorrowedCStringData), false));
 			return;
 		}

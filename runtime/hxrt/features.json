@@ -1218,6 +1218,11 @@
             "kind": "hxc-ir-operation"
           },
           {
+            "description": "A prepared C-string argument releases its optional temporary storage immediately after the direct native call returns.",
+            "id": "dispose-cstring",
+            "kind": "hxc-ir-operation"
+          },
+          {
             "description": "A reachable Std.string(Int) whose decimal spelling depends on a run-time value.",
             "id": "from-int",
             "kind": "hxc-ir-operation"
@@ -1225,6 +1230,11 @@
           {
             "description": "A reachable ordinary Haxe String.fromCharCode whose scalar is known only at run time.",
             "id": "from-scalar",
+            "kind": "hxc-ir-operation"
+          },
+          {
+            "description": "A reachable direct C import borrows already terminated text or creates one bounded temporary copy for an interior String view.",
+            "id": "prepare-cstring",
             "kind": "hxc-ir-operation"
           },
           {
@@ -1255,6 +1265,7 @@
       "availability": "compiler-selectable",
       "symbols": [
         "hxc_byte_view_from_cstring",
+        "hxc_call_cstring_dispose",
         "hxc_owned_cstring_dispose",
         "hxc_owned_string_dispose",
         "hxc_string_borrow_cstring",
@@ -1273,6 +1284,7 @@
         "hxc_string_from_scalar",
         "hxc_string_from_utf8_checked",
         "hxc_string_from_utf8_lossy",
+        "hxc_string_prepare_call_cstring",
         "hxc_string_release",
         "hxc_string_release_slot",
         "hxc_string_retain",
@@ -1280,13 +1292,13 @@
       ],
       "artifacts": [
         {
-          "sourceSha256": "cd6d27f1f2722a3ecad127ddd07827721f42a7de5ea547024c9e1564822427c6",
+          "sourceSha256": "fe4b3130433bf6b64d27da5b1acf0bb477763acce0644a7882c15bb67226d77f",
           "kind": "runtime-header",
           "outputPath": "runtime/include/hxrt/string.h",
           "sourcePath": "runtime/hxrt/include/hxrt/string.h"
         },
         {
-          "sourceSha256": "62659b0ca0bd92acc7ab2c2bef9b86c9b0ddb1431e2ec81f71b76e6bc8ea28a2",
+          "sourceSha256": "07fb06813ca533677bf00f8580f874bd3c05a41a5bd1b647f45598b0d3e3c8c1",
           "kind": "runtime-source",
           "outputPath": "runtime/src/string.c",
           "sourcePath": "runtime/hxrt/src/string.c"
@@ -1801,7 +1813,7 @@
     "version": {
       "major": 0,
       "patch": 0,
-      "minor": 19
+      "minor": 20
     },
     "publicBoundary": {
       "applicationAbiStatus": "unsupported",
@@ -1814,6 +1826,7 @@
         "hxc_borrowed_cstring",
         "hxc_byte_view",
         "hxc_bytes_ref",
+        "hxc_call_cstring",
         "hxc_dynamic_type",
         "hxc_exception_cleanup",
         "hxc_exception_frame",
@@ -1848,7 +1861,7 @@
     "releaseProvenance": {
       "runtimeCStandard": "c11",
       "sourceHashAlgorithm": "sha256",
-      "sourceSetSha256": "c5bc6a8c867e4421e6b507d3d4497c5a5cdd098ac24ef24e03c53b2c91c27c38",
+      "sourceSetSha256": "fd7fe0355848192ad8bdd6a95864cf8fba5ace14bcc9ae495d2a10bb98e56a81",
       "publicHeaderCppStandard": "c++17"
     },
     "generatedCodeCompatibility": "same-major",

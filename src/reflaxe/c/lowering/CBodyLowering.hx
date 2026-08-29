@@ -13040,6 +13040,8 @@ private class FunctionBuilder {
 			return unsupported(expression, "TCall(c.CStringBufferRef.to:requires-direct-import-argument)");
 		if (isAbstractMethod(call.callee, "c.CStringRef", "to"))
 			return unsupported(expression, "TCall(c.CStringRef.to:requires-direct-import-argument)");
+		if (isAbstractMethod(call.callee, "c.CStringArg", "to"))
+			return unsupported(expression, "TCall(c.CStringArg.to:requires-direct-import-argument)");
 		final bytesStaticMethod = coreBytesStaticMethod(call.callee);
 		if (bytesStaticMethod != null)
 			return lowerManagedBytesStaticCall(expression, bytesStaticMethod, call.arguments);
@@ -13648,19 +13650,32 @@ private class FunctionBuilder {
 			return invalidAbi(expression,
 				'Imported C function `${target.haxePath}` expects ${target.parameters.length} argument(s), received ${argumentExpressions.length}.');
 		final stagedArguments:Array<StagedFlowValue> = [];
+		final prepareCStringArguments:Array<Bool> = [];
 		for (index in 0...argumentExpressions.length) {
 			final argument = argumentExpressions[index];
 			final expected = target.parameters[index];
+			final prepareCString = isCStringArgExpression(argument);
 			final value = switch expected.kind {
 				case CBVKNativeRef(pointee): lowerNativeRefArgument(argument, expected, pointee, target, index);
 				case CBVKCStringBufferRef: lowerCStringBufferRefArgument(argument, expected, target, index);
-				case CBVKCStringRef: lowerCStringRefArgument(argument, expected, target, index);
+				case CBVKCStringRef: prepareCString ? lowerCStringArgOwner(argument, target,
+						index) : lowerCStringRefArgument(argument, expected, target, index);
 				case _: expected.isCString() ? lowerBorrowedCString(argument, target,
 						index) : coerce(lowerValue(argument, expected), expected, argument.pos, 'native-call:${target.id}:argument:$index');
 			};
 			stagedArguments.push(stageFlowValue(value, argument, laterExpressionCreatesFlow(argumentExpressions, index), 'native-call-argument-$index'));
+			prepareCStringArguments.push(prepareCString);
 		}
-		final arguments = restoreCallArguments(stagedArguments, "native-call-argument");
+		final arguments:Array<String> = [];
+		final preparedCStringIds:Array<String> = [];
+		for (index => staged in stagedArguments) {
+			var value = restoreStagedLoweredValue(staged, 'native-call-argument-$index-load');
+			if (prepareCStringArguments[index]) {
+				value = prepareCStringArgument(value, target.parameters[index], argumentExpressions[index].pos, target, index);
+				preparedCStringIds.push(value.id);
+			}
+			arguments.push(value.id);
+		}
 		final source = sourceSpan(expression.pos);
 		if (target.returnType.irType == IRTVoid) {
 			appendInstruction(null, IRIOCall({
@@ -13669,6 +13684,7 @@ private class FunctionBuilder {
 				returnType: IRTVoid,
 				failure: null
 			}), source, "native-call");
+			disposePreparedCStringArguments(preparedCStringIds, source, expression.pos);
 			return null;
 		}
 		final result:HxcIRResult = {id: nextValueId(), type: target.returnType.irType};
@@ -13678,9 +13694,69 @@ private class FunctionBuilder {
 			returnType: result.type,
 			failure: null
 		}), source, "native-call");
+		disposePreparedCStringArguments(preparedCStringIds, source, expression.pos);
 		if (materializeResult)
 			registerValueTemporary(result.id, "native-call-result");
 		return {id: result.id, type: result.type, mapping: target.returnType};
+	}
+
+	/** Recognize the explicit borrow-or-copy adapter before its source type is erased to the shared C ABI carrier. */
+	static function isCStringArgExpression(expression:TypedExpr):Bool {
+		return switch unwrapExpression(expression).expr {
+			case TCall(callee, _) if (isAbstractMethod(callee, "c.CStringArg", "to")): true;
+			case _: false;
+		};
+	}
+
+	/** Evaluate and retain one String owner before any call-scoped allocation begins. */
+	function lowerCStringArgOwner(expression:TypedExpr, target:CPreparedImportFunction, argumentIndex:Int):LoweredValue {
+		final ownerExpression = switch unwrapExpression(expression).expr {
+			case TCall(callee, [value]) if (isAbstractMethod(callee, "c.CStringArg", "to")): value;
+			case TCall(callee, _) if (isAbstractMethod(callee, "c.CStringArg", "to")):
+				return invalidAbi(expression,
+					'Imported C function `${target.haxePath}` argument $argumentIndex requires c.CStringArg.to with exactly one String owner.');
+			case _:
+				return invalidAbi(expression,
+					'Imported C function `${target.haxePath}` argument $argumentIndex requires an explicit c.CStringArg.to(text) call.');
+		};
+		final ownerMapping = bodyValueType(ownerExpression.t, ownerExpression.pos, "TCall(c.CStringArg.to:owner-type)");
+		if (ownerMapping.staticStringIdentity() == null)
+			return invalidAbi(ownerExpression, 'Imported C function `${target.haxePath}` argument $argumentIndex requires a Haxe String owner.');
+		var owner = coerce(lowerValue(ownerExpression, ownerMapping), ownerMapping, ownerExpression.pos, "TCall(c.CStringArg.to:owner)");
+		return stabilizeFreshManagedString(owner, ownerExpression.pos, "cstring-arg-owner");
+	}
+
+	/** Prepare one already-evaluated String immediately before its native consumer. */
+	function prepareCStringArgument(owner:LoweredValue, expected:CBodyValueType, position:Position, target:CPreparedImportFunction,
+			argumentIndex:Int):LoweredValue {
+		final source = sourceSpan(position);
+		final result:HxcIRResult = {id: nextValueId(), type: expected.irType};
+		appendInstruction(result, IRIOCall({
+			dispatch: IRCDRuntime("string", "prepare-cstring"),
+			arguments: [owner.id],
+			returnType: expected.irType,
+			failure: managedStringBorrowFailure()
+		}), source, "string-prepare-cstring");
+		registerValueTemporary(result.id, "string-prepare-cstring-result");
+		runtimeRequirements.push(new CBodyRuntimeRequirement("string", "prepare-cstring",
+			'call-scoped immutable C text prepared for `${target.haxePath}` argument $argumentIndex', source, position));
+		return {id: result.id, type: result.type, mapping: expected};
+	}
+
+	/** Dispose optional C-string copies in reverse argument order after the native call. */
+	function disposePreparedCStringArguments(valueIds:Array<String>, source:HxcSourceSpan, position:Position):Void {
+		var index = valueIds.length;
+		while (index > 0) {
+			index--;
+			appendInstruction(null, IRIOCall({
+				dispatch: IRCDRuntime("string", "dispose-cstring"),
+				arguments: [valueIds[index]],
+				returnType: IRTVoid,
+				failure: managedStringBorrowFailure()
+			}), source, "string-dispose-cstring");
+			runtimeRequirements.push(new CBodyRuntimeRequirement("string", "dispose-cstring",
+				"release optional call-scoped C-string storage after its direct native consumer", source, position));
+		}
 	}
 
 	/** Borrow one immutable Haxe String only for this direct imported-C call. */

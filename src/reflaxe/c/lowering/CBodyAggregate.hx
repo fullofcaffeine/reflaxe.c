@@ -1148,12 +1148,13 @@ class CBodyAggregateRegistry {
 		};
 	}
 
-	/** Recognize the one call-scoped immutable `const char *` carrier. */
+	/** Recognize the two source policies that share one call-scoped `const char *` carrier. */
 	static function cStringRefValueType(type:Type):Null<CBodyValueType> {
 		return switch type {
-			case TAbstract(reference, parameters) if (parameters.length == 0
-				&& reference.get().pack.join(".") == "c"
-				&& reference.get().name == "CStringRef"):
+			case TAbstract(reference, parameters)
+				if (parameters.length == 0
+					&& reference.get().pack.join(".") == "c"
+					&& (reference.get().name == "CStringRef" || reference.get().name == "CStringArg")):
 				CBodyValueType.cStringRef();
 			case _: null;
 		};

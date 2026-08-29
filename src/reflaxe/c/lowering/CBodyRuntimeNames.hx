@@ -32,6 +32,10 @@ enum CBodyRuntimeName {
 	CBRNBorrowedCStringInitializer;
 	CBRNStringBorrowCString;
 	CBRNBorrowedCStringData;
+	CBRNCallCStringType;
+	CBRNCallCStringInitializer;
+	CBRNStringPrepareCallCString;
+	CBRNCallCStringDispose;
 	CBRNPrintln;
 	CBRNDateTimeWallMilliseconds;
 	CBRNDateTimeMonotonicSeconds;
@@ -239,6 +243,10 @@ class CBodyRuntimeNames {
 			case CBRNBorrowedCStringInitializer: "HXC_BORROWED_CSTRING_INITIALIZER";
 			case CBRNStringBorrowCString: "hxc_string_borrow_cstring";
 			case CBRNBorrowedCStringData: "data";
+			case CBRNCallCStringType: "hxc_call_cstring";
+			case CBRNCallCStringInitializer: "HXC_CALL_CSTRING_INITIALIZER";
+			case CBRNStringPrepareCallCString: "hxc_string_prepare_call_cstring";
+			case CBRNCallCStringDispose: "hxc_call_cstring_dispose";
 			case CBRNPrintln: "hxc_io_println";
 			case CBRNDateTimeWallMilliseconds: "hxc_date_time_wall_milliseconds";
 			case CBRNDateTimeMonotonicSeconds: "hxc_date_time_monotonic_seconds";

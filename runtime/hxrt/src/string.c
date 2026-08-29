@@ -422,6 +422,27 @@ static bool hxc_borrowed_cstring_slot_is_empty(
     && value->owner == NULL;
 }
 
+static bool hxc_call_cstring_slot_is_empty(const hxc_call_cstring *value) {
+  return value != NULL
+    && value->data == NULL
+    && value->byte_length == 0u
+    && value->owner == NULL
+    && value->temporary.memory == NULL
+    && value->temporary.size == 0u
+    && value->temporary.alignment == 0u
+    && value->temporary.allocator.context == NULL
+    && value->temporary.allocator.allocate == NULL
+    && value->temporary.allocator.reallocate == NULL
+    && value->temporary.allocator.release == NULL;
+}
+
+static void hxc_call_cstring_clear(hxc_call_cstring *value) {
+  value->data = NULL;
+  value->byte_length = 0u;
+  value->owner = NULL;
+  value->temporary = (hxc_allocation)HXC_ALLOCATION_INITIALIZER;
+}
+
 static bool hxc_owned_cstring_slot_is_empty(const hxc_owned_cstring *value) {
   return value != NULL
     && value->data == NULL
@@ -969,6 +990,97 @@ hxc_status hxc_string_borrow_cstring(
   value.byte_length = source->byte_length;
   value.owner = source;
   *out_cstring = value;
+  return HXC_STATUS_OK;
+}
+
+hxc_status hxc_string_prepare_call_cstring(
+  const hxc_string *source,
+  hxc_allocator allocator,
+  hxc_call_cstring *out_cstring
+) {
+  hxc_call_cstring value = HXC_CALL_CSTRING_INITIALIZER;
+  size_t allocation_size;
+  uint8_t *destination;
+  hxc_status status;
+  if (source == NULL || !hxc_call_cstring_slot_is_empty(out_cstring)) {
+    return HXC_STATUS_INVALID_ARGUMENT;
+  }
+  if (!hxc_string_is_valid(*source)) {
+    return HXC_STATUS_INVALID_UTF8;
+  }
+  if (hxc_string_contains_nul(*source)) {
+    return HXC_STATUS_EMBEDDED_NUL;
+  }
+  if (source->has_trailing_nul) {
+    value.data = (const char *)source->data;
+    value.byte_length = source->byte_length;
+    value.owner = source;
+    *out_cstring = value;
+    return HXC_STATUS_OK;
+  }
+  if (!hxc_allocator_is_valid(&allocator)) {
+    return HXC_STATUS_INVALID_ARGUMENT;
+  }
+  status = hxc_size_add(source->byte_length, 1u, &allocation_size);
+  if (status != HXC_STATUS_OK) {
+    return status;
+  }
+  status = hxc_allocation_allocate(
+    &allocator,
+    allocation_size,
+    1u,
+    HXC_ALIGNOF(uint8_t),
+    &value.temporary
+  );
+  if (status != HXC_STATUS_OK) {
+    return status;
+  }
+  destination = (uint8_t *)value.temporary.memory;
+  hxc_copy_bytes(destination, source->data, source->byte_length);
+  destination[source->byte_length] = UINT8_C(0);
+  value.data = (const char *)destination;
+  value.byte_length = source->byte_length;
+  *out_cstring = value;
+  return HXC_STATUS_OK;
+}
+
+hxc_status hxc_call_cstring_dispose(hxc_call_cstring *value) {
+  size_t required;
+  hxc_status status;
+  if (value == NULL) {
+    return HXC_STATUS_INVALID_ARGUMENT;
+  }
+  if (hxc_call_cstring_slot_is_empty(value)) {
+    return HXC_STATUS_OK;
+  }
+  if (value->data == NULL
+    || hxc_size_add(value->byte_length, 1u, &required) != HXC_STATUS_OK) {
+    return HXC_STATUS_INVALID_ARGUMENT;
+  }
+  if (value->temporary.memory == NULL) {
+    if (value->owner == NULL
+      || !hxc_string_is_valid(*value->owner)
+      || !value->owner->has_trailing_nul
+      || value->data != (const char *)value->owner->data
+      || value->byte_length != value->owner->byte_length
+      || value->data[value->byte_length] != '\0') {
+      return HXC_STATUS_INVALID_ARGUMENT;
+    }
+    hxc_call_cstring_clear(value);
+    return HXC_STATUS_OK;
+  }
+  if (value->owner != NULL
+    || !hxc_allocation_is_valid(&value->temporary)
+    || value->data != (const char *)value->temporary.memory
+    || value->temporary.size != required
+    || value->data[value->byte_length] != '\0') {
+    return HXC_STATUS_INVALID_ARGUMENT;
+  }
+  status = hxc_allocation_dispose(&value->temporary);
+  if (status != HXC_STATUS_OK) {
+    return status;
+  }
+  hxc_call_cstring_clear(value);
   return HXC_STATUS_OK;
 }
 

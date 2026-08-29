@@ -765,7 +765,10 @@ See [string runtime](string-runtime.md) and
 
 Compiler-selectable owned UTF-8 construction, reference-counted aliases,
 builders, lossy decoding, locale-independent signed 32-bit decimal formatting,
-and explicit CString conversion above `string-scalar`. The integer formatter
+and explicit CString conversion above `string-scalar`. A direct native call can
+borrow already terminated text or receive one temporary terminated copy for an
+interior view; generated code disposes that copy as soon as the call returns.
+The integer formatter
 is selected by the `from-int` HxcIR root used for `Std.string(Int)` and integer
 interpolation; it preserves the existing allocator, failure-atomic output, and
 owned String lifetime contracts. Literal emission, `Std.string(Bool)`,

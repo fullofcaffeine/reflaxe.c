@@ -13,7 +13,7 @@ import reflaxe.c.runtime.RuntimeFeatureModel.RuntimePublicExportTypePolicy;
 /** One internal runtime compatibility contract shared by headers, manifests, and generated C. */
 class RuntimeAbiContract {
 	public static inline final MAJOR = 0;
-	public static inline final MINOR = 19;
+	public static inline final MINOR = 20;
 	public static inline final PATCH = 0;
 	public static inline final MAJOR_MACRO = "HXC_RUNTIME_ABI_MAJOR";
 	public static inline final MAJOR_CHECK_TYPE = "hxc_runtime_abi_major_must_match";
@@ -30,6 +30,7 @@ class RuntimeAbiContract {
 		"hxc_borrowed_cstring",
 		"hxc_byte_view",
 		"hxc_bytes_ref",
+		"hxc_call_cstring",
 		"hxc_dynamic_type",
 		"hxc_exception_cleanup",
 		"hxc_exception_frame",

@@ -867,7 +867,7 @@ class CProjectEmitter {
 						case _: false;
 					}):
 				case "string" if ((reason.kind == "runtime-operation" && switch reason.operationId {
-					case "borrow-cstring" | "cleanup-release" | "concat" | "from-int" | "from-scalar" | "retain": true;
+					case "borrow-cstring" | "cleanup-release" | "concat" | "dispose-cstring" | "from-int" | "from-scalar" | "prepare-cstring" | "retain": true;
 					case _: false;
 				}) || (reason.kind == "runtime-representation" && reason.operationId == "type-carrier")):
 				case "string-lower-case" if (reason.kind == "runtime-operation" && reason.operationId == "to-lower-case"):

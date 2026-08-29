@@ -596,6 +596,8 @@ class RuntimeFeatureCatalog {
 					"hxc_string_buffer_finish_ref",
 					"hxc_string_buffer_dispose",
 					"hxc_string_borrow_cstring",
+					"hxc_string_prepare_call_cstring",
+					"hxc_call_cstring_dispose",
 					"hxc_string_to_cstring_owned",
 					"hxc_owned_cstring_dispose"
 				],
@@ -610,6 +612,10 @@ class RuntimeFeatureCatalog {
 							"A reachable ordinary Haxe String concatenation whose result bytes are not compile-time constants."),
 						new RuntimeFeatureSelectionRoot("borrow-cstring", RuntimeFeatureSelectionRootKind.HxcIrOperation,
 							"A reachable direct C import borrows one validated Haxe String as immutable NUL-terminated text only until that call returns."),
+						new RuntimeFeatureSelectionRoot("prepare-cstring", RuntimeFeatureSelectionRootKind.HxcIrOperation,
+							"A reachable direct C import borrows already terminated text or creates one bounded temporary copy for an interior String view."),
+						new RuntimeFeatureSelectionRoot("dispose-cstring", RuntimeFeatureSelectionRootKind.HxcIrOperation,
+							"A prepared C-string argument releases its optional temporary storage immediately after the direct native call returns."),
 						new RuntimeFeatureSelectionRoot("retain", RuntimeFeatureSelectionRootKind.HxcIrOperation,
 							"A reachable managed String copy must keep its optional backing owner alive."),
 						new RuntimeFeatureSelectionRoot("cleanup-release", RuntimeFeatureSelectionRootKind.HxcIrOperation,
@@ -784,7 +790,7 @@ class RuntimeFeatureCatalog {
 			case "object.h": "779b452097e4c58c7971b90743ace19a2dc6c91e381557abc84fbd5f9b30f1e5";
 			case "status.h": "6bf20f5d82594014ad0f2b79a25cb81417791bd9c07375d2fb89835e415be1c4";
 			case "status_name.h": "64bf3917787ffcf924369c8e1c0a525cf10902d004d5bb4b898f2af46a7456cc";
-			case "string.h": "cd6d27f1f2722a3ecad127ddd07827721f42a7de5ea547024c9e1564822427c6";
+			case "string.h": "fe4b3130433bf6b64d27da5b1acf0bb477763acce0644a7882c15bb67226d77f";
 			case "string_lower_case.h": "c2fb77f0f59ba1b8804e308ca769c75fac2fde81a6faf52056424c8f6c7e490a";
 			case "string_lower_case_data.h": "b069c988dec0cd7f7cfc5b116ec0c534136f022d80c71684efd9294290ea9961";
 			case "string_decode.h": "aa93ea7f132aff625adfdcc7498532b139f621196deab4c0e9ecb5de2934fd48";
@@ -815,7 +821,7 @@ class RuntimeFeatureCatalog {
 			case "iterator.c": "a4f3da3f7e3a3fb5ad2f24497b00d77eae1b11c600167b8f5553b656623dba6b";
 			case "object.c": "0e7fc6a55b562eaaf03fe63eca743dd73248f0bee1c09e21b79464917e8c89c0";
 			case "status.c": "0695ab2528db6e29d5cf29d905ad736b7c1a3a79333082347ec18faea2d4e6d8";
-			case "string.c": "62659b0ca0bd92acc7ab2c2bef9b86c9b0ddb1431e2ec81f71b76e6bc8ea28a2";
+			case "string.c": "07fb06813ca533677bf00f8580f874bd3c05a41a5bd1b647f45598b0d3e3c8c1";
 			case "string_lower_case.c": "55a692cfd855f71f1a1fa4f90f311f1653ec0638797ecfb024764e23a66680c8";
 			case "string_float.c": "60e5189e7f7304ccbc1f69136b7393e4eea35760cde590853ebced414bf39267";
 			case "string_map.c": "c637ffdce4e990fe7436f88e7445376722ee0b28dec10cf57db860a5120706e9";

@@ -193,8 +193,8 @@ when lifetime and representation are statically known.
 
 ## CString boundary
 
-`hxc_borrowed_cstring` and `hxc_owned_cstring` are deliberately different
-records.
+`hxc_borrowed_cstring`, `hxc_call_cstring`, and `hxc_owned_cstring` express
+three different lifetime policies.
 
 A borrowed conversion succeeds only when:
 
@@ -209,10 +209,17 @@ is disposed or when a mutable builder view is changed.
 
 Owned conversion also rejects embedded NUL, then allocates exact terminated
 storage and retains the selected allocator identity until explicit disposal.
-Neither path truncates at embedded NUL. The implemented `c.CStringRef.to(text)`
-surface exposes only the borrowed form to one direct, non-retaining imported C
-call. Its distinct HxcIR carrier keeps the source owner alive and forbids
+The call-scoped conversion accepts either representation. It borrows when the
+view already owns its following NUL byte. For an interior view, it allocates
+exactly `byte_length + 1` bytes and disposes that temporary immediately after
+the native consumer returns.
+
+No path truncates at embedded NUL. `c.CStringRef.to(text)` exposes only the
+allocation-free borrowed form. `c.CStringArg.to(text)` selects the
+borrow-or-copy form. Both work only as an argument to one direct, non-retaining
+imported C call. Their HxcIR carrier keeps the source owner alive and forbids
 storage, returns, forwarding, control-flow edges, indirect calls, or a second
+native consumer. The `CStringArg` form also requires one disposer after that
 consumer. General borrowed values and owned CString conversion remain future
 typed surfaces.
 
