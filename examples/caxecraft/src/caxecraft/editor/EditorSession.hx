@@ -85,6 +85,12 @@ private enum EditorImageValidation {
 	ImageUnreadable(error:EditorError);
 }
 
+/** One recent private draft image that Undo or Redo can restore without parsing. */
+private typedef EditorCachedHistoryImage = {
+	final stateIdentity:Int;
+	final image:EditorScenarioImage;
+}
+
 /**
 	Renderer-independent editing, validation, history, and test-play state.
 
@@ -102,6 +108,9 @@ private enum EditorImageValidation {
 	on the drawing path.
 **/
 final class EditorSession {
+	/** Keep the common edit/undo/redo window responsive without retaining every typed draft. */
+	static inline final HISTORY_IMAGE_CACHE_ENTRIES:Int = 8;
+
 	final registry:ScenarioContentRegistry;
 	final settings:EditorSettings;
 	final history:EditorHistory;
@@ -116,6 +125,7 @@ final class EditorSession {
 	var currentRevision:Int;
 	var currentStateIdentity:Int;
 	var nextStateIdentity:Int;
+	final historyImageCache:Array<EditorCachedHistoryImage>;
 
 	function new(image:EditorScenarioImage, registry:ScenarioContentRegistry, settings:EditorSettings, validateInitial:Bool) {
 		this.registry = registry;
@@ -129,6 +139,7 @@ final class EditorSession {
 		this.currentRevision = 0;
 		this.currentStateIdentity = 0;
 		this.nextStateIdentity = 0;
+		this.historyImageCache = [{stateIdentity: 0, image: image}];
 	}
 
 	/** Open even a semantically invalid draft so the editor can repair it. */
@@ -391,6 +402,12 @@ final class EditorSession {
 	public inline function stateIdentity():Int
 		return currentStateIdentity;
 
+	#if caxecraft_editor_probe
+	/** Return the retained typed-image count for the focused bounded-cache probe. */
+	public inline function historyImageCacheCount():Int
+		return historyImageCache.length;
+	#end
+
 	/**
 		Stage a bounded command list and commit it as one reversible edit.
 
@@ -583,7 +600,7 @@ final class EditorSession {
 		final entry = history.takeUndo();
 		if (entry == null)
 			return HistoryRejected(NothingToUndo);
-		return switch restoreScenario(entry.before) {
+		return switch restoreHistoryImage(entry.beforeStateIdentity, entry.before) {
 			case ImageRejected(error):
 				history.takeRedo();
 				HistoryRejected(error);
@@ -610,7 +627,7 @@ final class EditorSession {
 		final entry = history.takeRedo();
 		if (entry == null)
 			return HistoryRejected(NothingToRedo);
-		return switch restoreScenario(entry.after) {
+		return switch restoreHistoryImage(entry.afterStateIdentity, entry.after) {
 			case ImageRejected(error):
 				history.takeUndo();
 				HistoryRejected(error);
@@ -783,12 +800,43 @@ final class EditorSession {
 			byteCost: byteCost
 		};
 		history.record(entry);
+		rememberHistoryImage(currentStateIdentity, before);
+		rememberHistoryImage(nextStateIdentity + 1, after);
 		draftImage = after;
 		selection = selectionForScenario(selection, draftImage.scenario);
 		nextStateIdentity++;
 		currentStateIdentity = nextStateIdentity;
 		advanceRevision();
 		return EditApplied(family, changes.copy(), terrain.redo, history.undoDepth(), history.redoDepth());
+	}
+
+	/**
+		Restore a recent state directly and parse only when walking deeper history.
+
+		Every cached image is private and immutable after publication. The history
+		entry still owns canonical bytes, so eviction changes latency only and cannot
+		change Undo or Redo behavior.
+	**/
+	function restoreHistoryImage(stateIdentity:Int, bytes:Bytes):EditorScenarioImageResult {
+		for (cached in historyImageCache)
+			if (cached.stateIdentity == stateIdentity)
+				return ImageReady(cached.image);
+		return switch restoreScenario(bytes) {
+			case ImageRejected(error): ImageRejected(error);
+			case ImageReady(image):
+				rememberHistoryImage(stateIdentity, image);
+				ImageReady(image);
+		}
+	}
+
+	/** Retain a fixed-size recent-state window without changing history limits. */
+	function rememberHistoryImage(stateIdentity:Int, image:EditorScenarioImage):Void {
+		for (cached in historyImageCache)
+			if (cached.stateIdentity == stateIdentity)
+				return;
+		historyImageCache.push({stateIdentity: stateIdentity, image: image});
+		if (historyImageCache.length > HISTORY_IMAGE_CACHE_ENTRIES)
+			historyImageCache.shift();
 	}
 
 	/**

@@ -3870,6 +3870,7 @@ final class EditorProbe {
 			expectApplied(session.apply(SetTitle(Literal('History $index'))), DocumentMetadata, "bounded document history");
 		require(session.historyEntries() == 3 && session.undoDepth() == 3, "history did not evict to its exact entry bound");
 		require(session.historyBytes() <= settings.historyBytes, "history exceeded its byte bound");
+		require(session.historyImageCacheCount() <= 8, "recent typed history images exceeded their fixed bound");
 		expectSelectionRejected(session.select({
 			baseRevision: session.revision(),
 			selection: VoxelSelection({origin: {x: 0, y: 0, z: 0}, size: {width: 3, height: 1, depth: 2}})
@@ -3900,6 +3901,24 @@ final class EditorProbe {
 			case _: false;
 		}, "history byte budget");
 		require(tiny.canonicalDraft().compare(before) == 0, "rejected history entry changed the draft");
+
+		final deepHistory = open({
+			historyEntries: 12,
+			historyBytes: 1048576,
+			selectionCells: 4,
+			transactionCommands: 3
+		});
+		final deepBefore = deepHistory.canonicalDraft();
+		for (index in 0...10)
+			expectApplied(deepHistory.apply(SetTitle(Literal('Deep history $index'))), DocumentMetadata, "deep cached history");
+		require(deepHistory.historyImageCacheCount() == 8, "recent typed history cache did not reach its exact bound");
+		for (_ in 0...10)
+			expectHistory(deepHistory.undo(), DocumentMetadata, "deep history undo");
+		require(deepHistory.canonicalDraft().compare(deepBefore) == 0, "deep history fallback did not restore initial bytes");
+		require(deepHistory.historyImageCacheCount() == 8, "deep history fallback exceeded the typed-image bound");
+		for (_ in 0...10)
+			expectHistory(deepHistory.redo(), DocumentMetadata, "deep history redo");
+		require(deepHistory.historyImageCacheCount() == 8, "deep history redo exceeded the typed-image bound");
 
 		final invalidSettings:EditorSettings = {
 			historyEntries: MAX_HISTORY_ENTRIES + 1,
