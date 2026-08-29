@@ -12,6 +12,7 @@ import reflaxe.c.frontend.TypedProgramInput.TypedAstField;
 import reflaxe.c.frontend.TypedProgramInput.TypedAstMetadata;
 import reflaxe.c.frontend.TypedProgramInput.TypedAstModule;
 import reflaxe.c.frontend.NamedRecordSourceProvenance;
+import reflaxe.c.frontend.TypedFunctionSourceProvenance;
 
 /** Converts Haxe compiler objects into a stable whole-program input model. */
 class TypedAstNormalizer {
@@ -101,7 +102,9 @@ class TypedAstNormalizer {
 						fieldName: field.name,
 						sourceOrder: sourceOrder,
 						fieldType: field.type,
-						expression: fieldExpression
+						expression: fieldExpression,
+						declarationPosition: field.pos,
+						sourcePositionOverrides: TypedFunctionSourceProvenance.plan(declarationPath(owner), field.name, field.pos, fieldExpression)
 					};
 				}
 			case TParenthesis(inner) | TMeta(_, inner) | TCast(inner, _): captureEntryFunction(inner);
@@ -201,6 +204,10 @@ class TypedAstNormalizer {
 				expression: expression
 			});
 		}
+		final sourcePositionOverrides:Map<String, haxe.macro.Expr.Position> = expression == null ? [] : switch expression.expr {
+			case TFunction(_): TypedFunctionSourceProvenance.plan(ownerDeclarationPath, field.name, field.pos, expression);
+			case _: [];
+		};
 		return {
 			sourceOrder: sourceOrder,
 			name: field.name,
@@ -212,6 +219,7 @@ class TypedAstNormalizer {
 			isExtern: field.isExtern == true,
 			metadata: normalizeMetadata(field.meta.get()),
 			expression: expression,
+			sourcePositionOverrides: sourcePositionOverrides,
 			rawClassField: field,
 			rawEnumField: null
 		};
@@ -229,6 +237,7 @@ class TypedAstNormalizer {
 			isExtern: false,
 			metadata: normalizeMetadata(field.meta.get()),
 			expression: null,
+			sourcePositionOverrides: [],
 			rawClassField: null,
 			rawEnumField: field
 		};

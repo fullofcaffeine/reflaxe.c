@@ -814,6 +814,8 @@ class CCompiler {
 			sourceOrder: target.sourceOrder,
 			fieldType: target.fieldType,
 			expression: target.expression,
+			declarationPosition: target.declarationPosition,
+			sourcePositionOverrides: target.sourcePositionOverrides,
 			typeParameters: [],
 			specialization: null
 		};
@@ -836,6 +838,8 @@ class CCompiler {
 					case raw: raw.type;
 				},
 				expression: field.expression,
+				declarationPosition: field.rawClassField.pos,
+				sourcePositionOverrides: field.sourcePositionOverrides,
 				typeParameters: switch field.rawClassField {
 					case null: throw "normalized static main field lost its typed ClassField";
 					case raw: raw.params;

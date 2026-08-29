@@ -423,6 +423,8 @@ class CBodyDispatchCatalog {
 							sourceOrder: field.sourceOrder,
 							fieldType: field.rawClassField.type,
 							expression: field.expression,
+							declarationPosition: field.rawClassField.pos,
+							sourcePositionOverrides: field.sourcePositionOverrides,
 							typeParameters: field.rawClassField.params,
 							ownerTypeParameters: classReference.get().params,
 							specialization: null,

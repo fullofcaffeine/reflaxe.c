@@ -20,6 +20,7 @@ import reflaxe.c.ast.CAST;
 import reflaxe.c.contract.TypedCContract.TypedCBuildFact;
 import reflaxe.c.contract.TypedCContract.TypedCContractSnapshot;
 import reflaxe.c.frontend.TypedProgramInput;
+import reflaxe.c.frontend.TypedFunctionSourceProvenance;
 import reflaxe.c.ir.HxcIR;
 import reflaxe.c.ir.HxcIRFixedArrayPolicy;
 import reflaxe.c.ir.HxcIRFixedArrayPolicy.HxcIRFixedArrayStorageDecision;
@@ -116,6 +117,20 @@ typedef CBodyFunctionInput = {
 	final sourceOrder:Int;
 	final fieldType:Type;
 	final expression:TypedExpr;
+
+	/**
+		The declaration owned by this function, independent of its typed body.
+
+		Haxe's compiler server can rebuild the outer `TFunction` position from a
+		cached one-expression body. Production collection therefore supplies the
+		owning `ClassField.pos`; focused lowering probes that construct an input
+		directly may omit it and retain the expression position as their anchor.
+	**/
+	final ?declarationPosition:Position;
+
+	/** Current compiler positions mapped to content-verified authored positions. */
+	final ?sourcePositionOverrides:Map<String, Position>;
+
 	final ?typeParameters:Array<TypeParameter>;
 
 	/** Declaring class or abstract parameters closed before method parameters. */
@@ -926,30 +941,8 @@ class CBodyLowering {
 		types remain in the structural text.
 	**/
 	@:noCompletion
-	public static function canonicalTypedExpressionText(expression:TypedExpr):String {
-		final variableIds:Map<String, Int> = [];
-		var nextVariableId = 0;
-		function stable(originalId:String):Int {
-			var stableId = variableIds.get(originalId);
-			if (stableId == null) {
-				stableId = nextVariableId++;
-				variableIds.set(originalId, stableId);
-			}
-			return stableId;
-		}
-		// Haxe 5's structural printer uses `name<id>(flags)`, while the pinned
-		// Haxe 4 reference uses `name(id)`. Supporting both keeps the target key
-		// stable across the documented frontend pins without erasing any other
-		// typed-tree field.
-		final angleMarker = ~/\[(Arg|Local|Var) ([^<\r\n]+)<([0-9]+)>/g;
-		final angleCanonical = angleMarker.map(TypedExprTools.toString(expression, false), marker -> {
-			return '[${marker.matched(1)} ${marker.matched(2)}<${stable(marker.matched(3))}>';
-		});
-		final parenthesizedMarker = ~/\[(Local|Var) ([^(\r\n]+)\(([0-9]+)\):/g;
-		return parenthesizedMarker.map(angleCanonical, marker -> {
-			return '[${marker.matched(1)} ${marker.matched(2)}(${stable(marker.matched(3))}):';
-		});
-	}
+	public static function canonicalTypedExpressionText(expression:TypedExpr):String
+		return TypedFunctionSourceProvenance.canonicalTypedExpressionText(expression);
 
 	static inline function replayPart(value:String):String
 		return '${value.length}:$value';
@@ -2041,6 +2034,8 @@ private typedef PreparedBodyFunction = {
 	final fieldName:String;
 	final specialization:Null<CGenericFunctionSpecialization>;
 	final sourceExpression:TypedExpr;
+	final sourcePosition:Position;
+	final sourcePositionOverrides:Map<String, Position>;
 	final bodyExpression:TypedExpr;
 	final role:PreparedBodyRole;
 	final irId:String;
@@ -2404,6 +2399,8 @@ private class EnumConstructorAdapterRegistry {
 			fieldName: closure == null ? field.name : '${field.name}.synchronous-callback-adapter',
 			specialization: null,
 			sourceExpression: expression,
+			sourcePosition: expression.pos,
+			sourcePositionOverrides: [],
 			bodyExpression: expression,
 			role: PBRFunction,
 			irId: id,
@@ -2753,6 +2750,8 @@ private class FunctionLiteralRegistry {
 			fieldName: '${owner.fieldName}.lambda.$mode.${info.min}',
 			specialization: null,
 			sourceExpression: expression,
+			sourcePosition: expression.pos,
+			sourcePositionOverrides: [],
 			bodyExpression: value.expr,
 			role: PBRFunction,
 			irId: 'function.lambda.${owner.irId}.$mode.${info.min}.${info.max}',
@@ -2881,6 +2880,8 @@ private class FunctionLiteralRegistry {
 			fieldName: '${target.fieldName}.synchronous-callback-adapter',
 			specialization: null,
 			sourceExpression: target.sourceExpression,
+			sourcePosition: target.sourcePosition,
+			sourcePositionOverrides: target.sourcePositionOverrides,
 			bodyExpression: target.bodyExpression,
 			role: PBRFunction,
 			irId: id,
@@ -3524,7 +3525,8 @@ private class FunctionPreparer {
 				}
 			}
 			final parameterId = 'parameter.$index';
-			final source = HaxeSourceSpan.fromPosition(input.expression.pos, input.sourcePath);
+			final declarationPosition = input.declarationPosition == null ? input.expression.pos : input.declarationPosition;
+			final source = HaxeSourceSpan.fromPosition(declarationPosition, input.sourcePath);
 			final mutableAggregateBorrow = this.mutableAggregateBorrowParameterIds.exists(argument.v.id);
 			if (mutableAggregateBorrow) {
 				if (mapping.aggregateValue() == null)
@@ -3579,7 +3581,11 @@ private class FunctionPreparer {
 			final selfMapping = CBodyValueType.classReference(selfClass, true);
 			selfParameter = {
 				compilerId: -1,
-				ir: {id: "parameter.self", type: selfMapping.irType, source: HaxeSourceSpan.fromPosition(input.expression.pos, input.sourcePath)},
+				ir: {
+					id: "parameter.self",
+					type: selfMapping.irType,
+					source: HaxeSourceSpan.fromPosition(input.declarationPosition == null ? input.expression.pos : input.declarationPosition, input.sourcePath)
+				},
 				mapping: selfMapping,
 				passing: PPValue,
 				borrowedReference: !selfClass.managedByCollector,
@@ -3622,6 +3628,8 @@ private class FunctionPreparer {
 			fieldName: input.fieldName,
 			specialization: input.specialization,
 			sourceExpression: input.expression,
+			sourcePosition: input.declarationPosition == null ? input.expression.pos : input.declarationPosition,
+			sourcePositionOverrides: input.sourcePositionOverrides == null ? [] : input.sourcePositionOverrides,
 			bodyExpression: functionValue.expr,
 			role: PBRFunction,
 			irId: CBodyLowering.functionInputId(input),
@@ -4023,6 +4031,8 @@ private class BorrowContractRefiner {
 			fieldName: fn.fieldName,
 			specialization: fn.specialization,
 			sourceExpression: fn.sourceExpression,
+			sourcePosition: fn.sourcePosition,
+			sourcePositionOverrides: fn.sourcePositionOverrides,
 			bodyExpression: fn.bodyExpression,
 			role: fn.role,
 			irId: fn.irId,
@@ -4097,7 +4107,7 @@ private class ConstructorPreparer {
 				ir: {
 					id: 'parameter.$index',
 					type: mapping.irType,
-					source: HaxeSourceSpan.fromPosition(input.expression.pos, input.sourcePath)
+					source: HaxeSourceSpan.fromPosition(input.declarationPosition == null ? input.expression.pos : input.declarationPosition, input.sourcePath)
 				},
 				mapping: mapping,
 				passing: PPValue,
@@ -4130,7 +4140,7 @@ private class ConstructorPreparer {
 		final functionRequest = new CSymbolRequest(CSKMethod, ["compiler", "constructor"].concat(input.declarationPath.split(".")),
 			CNSOrdinary("translation-unit"), CSVInternal, null, overloadSignature, specializationArguments, input.sourceOrder);
 		context.symbols.register(functionRequest);
-		final source = HaxeSourceSpan.fromPosition(input.expression.pos, input.sourcePath);
+		final source = HaxeSourceSpan.fromPosition(input.declarationPosition == null ? input.expression.pos : input.declarationPosition, input.sourcePath);
 		final self:PreparedParameter = {
 			compilerId: -1,
 			ir: {id: "parameter.self", type: signature.selfMapping.irType, source: source},
@@ -4161,6 +4171,8 @@ private class ConstructorPreparer {
 			fieldName: "new",
 			specialization: input.specialization,
 			sourceExpression: input.expression,
+			sourcePosition: input.declarationPosition == null ? input.expression.pos : input.declarationPosition,
+			sourcePositionOverrides: input.sourcePositionOverrides == null ? [] : input.sourcePositionOverrides,
 			bodyExpression: functionValue.expr,
 			role: PBRConstructor(signature),
 			irId: input.id,
@@ -4285,6 +4297,8 @@ private class InitializerPreparer {
 			fieldName: input.displayName,
 			specialization: null,
 			sourceExpression: input.expression,
+			sourcePosition: input.expression.pos,
+			sourcePositionOverrides: [],
 			bodyExpression: input.expression,
 			role: role,
 			irId: input.id,
@@ -4482,11 +4496,11 @@ private class FunctionBuilder {
 		this.dispatch = dispatch;
 		this.functionContext = 'function ${input.declarationPath}.${input.displayName} body';
 		this.collectProfileWork = CPhaseTiming.collectsWork();
-		this.sourceSpans = new HaxeSourceSpanResolver(input.sourcePath, collectProfileWork);
+		this.sourceSpans = new HaxeSourceSpanResolver(input.sourcePath, collectProfileWork, prepared.sourcePositionOverrides);
 		for (compilerId in prepared.mutableAggregateIdentityIds)
 			mutableAggregateIdentityIds.set(compilerId, true);
 		this.localOrdinal = prepared.parameters.length;
-		this.currentBlock = createEntryBlock(sourceSpan(prepared.bodyExpression.pos));
+		this.currentBlock = createEntryBlock(sourceSpan(prepared.sourcePosition));
 		if (prepared.borrowedSpanReturn != null) {
 			final request = new CSymbolRequest(CSKLocal, input.declarationPath.split(".").concat([input.fieldName, "returned-span-length"]),
 				CNSOrdinary(prepared.functionRequest.stableKey()), CSVInternal, null, [], [], localOrdinal++);
@@ -5459,6 +5473,8 @@ private class FunctionBuilder {
 	function replayIdentity():CBodyFunctionReplayIdentity {
 		final positionsBySource:Map<String, Position> = [];
 		final spans:Array<String> = [];
+		final functionSpan = sourceSpans.resolve(prepared.sourcePosition);
+		positionsBySource.set(functionSpan.display(), prepared.sourcePosition);
 		function visit(expression:TypedExpr):Void {
 			final span = sourceSpans.resolve(expression.pos);
 			final key = span.display();
@@ -5474,6 +5490,7 @@ private class FunctionBuilder {
 			'module=${prepared.modulePath}',
 			'declaration=${prepared.declarationPath}',
 			'source=${prepared.sourcePath}',
+			'declaration-span=${functionSpan.display()}',
 			"typed-expression",
 			CBodyLowering.canonicalTypedExpressionText(prepared.sourceExpression),
 			"source-spans",
@@ -5627,7 +5644,7 @@ private class FunctionBuilder {
 				source: sourceSpan(bodyExpression.pos)
 			};
 		}
-		final functionSpan = sourceSpan(input.sourceExpression.pos);
+		final functionSpan = sourceSpan(input.sourcePosition);
 		final borrowedClassLocals = [for (localId in borrowedClassLocalIds.keys()) localId];
 		borrowedClassLocals.sort((left, right) -> left < right ? -1 : left > right ? 1 : 0);
 		final borrowedInterfaceLocals = [for (localId in borrowedInterfaceLocalIds.keys()) localId];
