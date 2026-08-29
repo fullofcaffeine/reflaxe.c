@@ -438,7 +438,11 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
         raise EvaluationOrderFailure("value-coalescing adversarial proof drifted")
     control_flow_proof = required_text(report, "controlFlowPlanProof")
     if control_flow_proof != (
-        "typed-region-plan:reducible-diamond-normal-joins-loop-break-return-converging-abrupt-escapes-inverted-pre-post-and-bounded-switch-escape-structured;"
+        # Closed exception regions now report their direct continuation before
+        # the older structural-plan facts. Keep the complete value exact so a
+        # missing exception or control-flow proof still fails this owner.
+        "typed-region-plan:direct-exception-continuation-reported;"
+        "reducible-diamond-normal-joins-loop-break-return-converging-abrupt-escapes-inverted-pre-post-and-bounded-switch-escape-structured;"
         "maximal-and-nested-irreducible-fallback;"
         "malformed-unreachable-cleanup-and-instruction-failure-region-edge-mapping-and-sequence-order-rejected"
     ):
