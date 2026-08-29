@@ -252,6 +252,7 @@ DIRECT_RECEIVER_NATIVE_COVERAGE = frozenset(
         "constructor-direct-receiver-managed-cleanup",
         "constructor-direct-receiver-nested-argument",
         "constructor-direct-receiver-argument-flow-staging",
+        "constructor-private-helper-loop-receiver-proof",
         "constructor-direct-receiver-restored-null-guard",
         "constructor-direct-receiver-result-transfer",
     }
@@ -1044,6 +1045,16 @@ def validate_direct_receiver_project(output: Path) -> None:
     nested_body = source[nested_start:this_string_start]
     this_string_body = source[this_string_start:values_start]
     chosen_label_body = source[chosen_label_start:read_offset_start]
+    private_helper_call = chosen_label_body.find(
+        "hxc_NumberReader_privateContribution("
+    )
+    restored_receiver_checks = [
+        match.start()
+        for match in re.finditer(
+            r"if \(hxc_l_tmp_instance_call_receiver_load_result_[A-Za-z0-9_]* == NULL\)",
+            chosen_label_body,
+        )
+    ]
     if (
         source.count("struct hxc_NumberReader hxc_l_tmp_object_storage_") != 5
         or source.count(" = { 0 };") < 5
@@ -1084,6 +1095,11 @@ def validate_direct_receiver_project(output: Path) -> None:
         <= chosen_label_body.find(
             "if (hxc_l_tmp_instance_call_receiver_load_result_"
         )
+        or private_helper_call < 0
+        or chosen_label_body.find("while (") < 0
+        or chosen_label_body.find("while (") >= private_helper_call
+        or len(restored_receiver_checks) < 2
+        or restored_receiver_checks[-1] >= private_helper_call
         or "hxc_array_ref_retain(" in parse_body
         or "hxc_array_ref_retain(" in conditional_body
         or "hxc_array_ref_retain(" in fresh_body
