@@ -13,6 +13,10 @@ import reflaxe.c.emit.CProjectLayout.CProjectPackageLayout;
 import reflaxe.c.emit.CProjectLayout.CProjectLayoutPlanner;
 import reflaxe.c.emit.GeneratedFile.GeneratedFileKind;
 import reflaxe.c.ir.HxcIR;
+import reflaxe.c.ir.HxcIRTraversal.HxcIRTraversalSite;
+import reflaxe.c.ir.HxcIRTraversal.HxcIRTraversalVisitor;
+import reflaxe.c.ir.HxcIRTraversal.walkHxcIR;
+import reflaxe.c.ir.HxcIRValidator.ValidatedHxcIRProgram;
 import reflaxe.c.lowering.CBodyAggregate.CLoweredBodyAggregate;
 import reflaxe.c.lowering.CBodyClass.CLoweredBodyClass;
 import reflaxe.c.lowering.CBodyEmitter;
@@ -170,6 +174,25 @@ private class CStaticFunctionSemanticPlan {
 		this.globalDefinitions = globalDefinitions.copy();
 		this.functions = functions.copy();
 		this.entry = entry.copy();
+	}
+}
+
+/** Detect the exact binary32 carrier through the shared structural traversal. */
+private class CFloat32UseVisitor extends HxcIRTraversalVisitor {
+	public var found(default, null) = false;
+
+	public function new() {
+		super();
+	}
+
+	override public function onTypeRef(type:HxcIRTypeRef, site:HxcIRTraversalSite):Void {
+		switch type {
+			case IRTFloat(32):
+				found = true;
+			case IRTBool | IRTInt(_, _) | IRTAbiInteger(_) | IRTFloat(_) | IRTString | IRTManagedString | IRTCString | IRTCallScopedCString |
+				IRTMutableCStringBuffer | IRTVoid | IRTInstance(_) | IRTPointer(_, _) | IRTNullable(_, _) | IRTFunction(_, _) | IRTFixedArray(_, _, _) |
+				IRTSpan(_, _) | IRTDynamic:
+		}
 	}
 }
 
@@ -1368,120 +1391,10 @@ class CStaticFunctionProjectEmitter {
 		];
 	}
 
-	static function programUsesFloat32(program:HxcIRProgram):Bool {
-		for (slot in program.dispatch.slots) {
-			if (typesUseFloat32(slot.parameterTypes) || typeUsesFloat32(slot.returnType)) {
-				return true;
-			}
-		}
-		for (module in program.modules) {
-			for (declaration in module.types) {
-				if (typeKindUsesFloat32(declaration.kind)) {
-					return true;
-				}
-			}
-			for (instance in module.typeInstances) {
-				if (typesUseFloat32(instance.arguments)) {
-					return true;
-				}
-			}
-			for (global in module.globals) {
-				if (typeUsesFloat32(global.type)) {
-					return true;
-				}
-			}
-			for (fn in module.functions) {
-				if (functionUsesFloat32(fn)) {
-					return true;
-				}
-			}
-		}
-		return false;
-	}
-
-	static function functionUsesFloat32(fn:HxcIRFunction):Bool {
-		if (typeUsesFloat32(fn.returnType)) {
-			return true;
-		}
-		for (parameter in fn.parameters) {
-			if (typeUsesFloat32(parameter.type)) {
-				return true;
-			}
-		}
-		for (local in fn.locals) {
-			if (typeUsesFloat32(local.type)) {
-				return true;
-			}
-		}
-		for (block in fn.blocks) {
-			for (parameter in block.parameters) {
-				if (typeUsesFloat32(parameter.type)) {
-					return true;
-				}
-			}
-			for (instruction in block.instructions) {
-				if (instruction.result != null && typeUsesFloat32(instruction.result.type)) {
-					return true;
-				}
-				switch instruction.kind {
-					case IRIOConvert(_, _, targetType, _, _) | IRIOAllocate(targetType, _, _, _):
-						if (typeUsesFloat32(targetType))
-							return true;
-					case IRIOCall(call):
-						if (typeUsesFloat32(call.returnType))
-							return true;
-					case _:
-				}
-			}
-		}
-		return false;
-	}
-
-	static function typeKindUsesFloat32(kind:HxcIRTypeKind):Bool {
-		return switch kind {
-			case IRTKAggregate(fields): fieldsUseFloat32(fields);
-			case IRTKTaggedUnion(cases):
-				var found = false;
-				for (tagCase in cases) {
-					for (payload in tagCase.payload) {
-						if (typeUsesFloat32(payload.type)) {
-							found = true;
-							break;
-						}
-					}
-					if (found)
-						break;
-				}
-				found;
-			case IRTKClass(layout): fieldsUseFloat32(layout.fields);
-			case IRTKPrimitive | IRTKReference | IRTKFunction | IRTKExtern: false;
-		}
-	}
-
-	static function fieldsUseFloat32(fields:Array<HxcIRTypeField>):Bool {
-		for (field in fields) {
-			if (typeUsesFloat32(field.type))
-				return true;
-		}
-		return false;
-	}
-
-	static function typesUseFloat32(types:Array<HxcIRTypeRef>):Bool {
-		for (type in types) {
-			if (typeUsesFloat32(type))
-				return true;
-		}
-		return false;
-	}
-
-	static function typeUsesFloat32(type:HxcIRTypeRef):Bool {
-		return switch type {
-			case IRTFloat(32): true;
-			case IRTPointer(pointee, _) | IRTNullable(pointee, _) | IRTFixedArray(pointee, _, _) | IRTSpan(pointee, _):
-				typeUsesFloat32(pointee);
-			case IRTFunction(parameters, result): typesUseFloat32(parameters) || typeUsesFloat32(result);
-			case _: false;
-		}
+	static function programUsesFloat32(program:ValidatedHxcIRProgram):Bool {
+		final visitor = new CFloat32UseVisitor();
+		walkHxcIR(program, visitor);
+		return visitor.found;
 	}
 
 	/**

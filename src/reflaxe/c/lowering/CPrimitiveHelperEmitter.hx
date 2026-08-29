@@ -5,6 +5,10 @@ import haxe.io.Bytes;
 import reflaxe.c.ast.CAST;
 import reflaxe.c.contract.TypedCContract.TypedCBuildFact;
 import reflaxe.c.ir.HxcIR;
+import reflaxe.c.ir.HxcIRTraversal.HxcIRTraversalSite;
+import reflaxe.c.ir.HxcIRTraversal.HxcIRTraversalVisitor;
+import reflaxe.c.ir.HxcIRTraversal.walkHxcIR;
+import reflaxe.c.ir.HxcIRValidator.ValidatedHxcIRProgram;
 import reflaxe.c.naming.CSymbolRegistry;
 import reflaxe.c.naming.CSymbolRequest;
 import reflaxe.c.semantics.CPrimitiveSemantics;
@@ -13,6 +17,33 @@ import reflaxe.c.semantics.CPrimitiveTypes.CPrimitiveHelperKind;
 private typedef StandardSymbol = {
 	final name:String;
 	final preprocessor:Bool;
+}
+
+private typedef PrimitiveHelperUse = {
+	final helperId:String;
+	final ownerModule:String;
+}
+
+/** Collect exact primitive-helper uses while the shared walker owns recursion. */
+private class PrimitiveHelperUseVisitor extends HxcIRTraversalVisitor {
+	public final uses:Array<PrimitiveHelperUse> = [];
+
+	public function new() {
+		super();
+	}
+
+	override public function onInstruction(instruction:HxcIRInstruction, site:HxcIRTraversalSite):Void {
+		final helperId = switch instruction.kind {
+			case IRIOUnary(_, _, IRIProgramLocal(id)) | IRIOBinary(_, _, _, IRIProgramLocal(id)) | IRIOConvert(_, _, _, IRIProgramLocal(id), null): id;
+			case _: return;
+		};
+		if (CPrimitiveSemantics.helperKind(helperId) == null)
+			throw new CBodyEmissionError('HxcIR selected unknown primitive program-local helper `$helperId`');
+		final ownerModule = site.moduleId;
+		if (ownerModule == null)
+			throw new CBodyEmissionError('primitive helper `$helperId` lost its source-module traversal owner');
+		uses.push({helperId: helperId, ownerModule: ownerModule});
+	}
 }
 
 /** One selected compiler-owned helper after every emitted identifier is finalized. */
@@ -49,21 +80,11 @@ class CPrimitiveHelperSelection {
 
 	public function new() {}
 
-	public function collect(program:HxcIRProgram):Void {
-		for (module in program.modules) {
-			for (fn in module.functions) {
-				for (block in fn.blocks) {
-					for (instruction in block.instructions) {
-						switch instruction.kind {
-							case IRIOUnary(_, _, IRIProgramLocal(helperId)) | IRIOBinary(_, _, _, IRIProgramLocal(helperId)) |
-								IRIOConvert(_, _, _, IRIProgramLocal(helperId), null):
-								selectId(helperId, module.id);
-							case _:
-						}
-					}
-				}
-			}
-		}
+	public function collect(program:ValidatedHxcIRProgram):Void {
+		final visitor = new PrimitiveHelperUseVisitor();
+		walkHxcIR(program, visitor);
+		for (use in visitor.uses)
+			selectId(use.helperId, use.ownerModule);
 	}
 
 	public function register(symbols:CSymbolRegistry):Void {

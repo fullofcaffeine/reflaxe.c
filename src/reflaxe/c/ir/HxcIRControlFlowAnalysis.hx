@@ -1,6 +1,7 @@
 package reflaxe.c.ir;
 
 import reflaxe.c.ir.HxcIR;
+import reflaxe.c.ir.HxcIRTraversal.instructionFailureEdge;
 
 /**
 	Immutable control-flow facts for one HxcIR function.
@@ -249,7 +250,7 @@ class HxcIRControlFlowAnalysis {
 				result.push(target);
 		}
 		for (instruction in block.instructions) {
-			final failure = instructionFailure(instruction.kind);
+			final failure = instructionFailureEdge(instruction.kind);
 			if (failure != null)
 				switch failure.target {
 					case IRFTBlock(target):
@@ -285,7 +286,7 @@ class HxcIRControlFlowAnalysis {
 
 	static function blockHasInstructionFailureJump(block:HxcIRBlock):Bool {
 		for (instruction in block.instructions) {
-			final failure = instructionFailure(instruction.kind);
+			final failure = instructionFailureEdge(instruction.kind);
 			if (failure != null)
 				switch failure.target {
 					case IRFTBlock(_):
@@ -295,19 +296,6 @@ class HxcIRControlFlowAnalysis {
 		}
 		return false;
 	}
-
-	static function instructionFailure(kind:HxcIRInstructionKind):Null<HxcIRFailureEdge>
-		return switch kind {
-			case IRIOCall(call): call.failure;
-			case IRIOConvert(_, _, _, _, failure) | IRIOAllocate(_, _, _, failure): failure;
-			case IRIODynamic(operation): switch operation {
-					case IRDUnbox(_, _,
-						failure) | IRDGet(_, _, failure) | IRDSet(_, _, _, failure) | IRDCall(_, _, _, failure) | IRDInvoke(_, _, _, failure): failure;
-					case IRDBox(_, _) | IRDBoxNull(_) | IRDBoxTypeToken(_) | IRDEqual(_, _, _): null;
-				};
-			case IRIOException(_): null;
-			case _: null;
-		};
 
 	static function compareUtf8(left:String, right:String):Int {
 		return reflaxe.c.CUtf8Order.compare(left, right);

@@ -2,7 +2,12 @@ import haxe.Json;
 import reflaxe.c.ir.HxcIR;
 import reflaxe.c.ir.HxcIRDiagnostic;
 import reflaxe.c.ir.HxcIRDumper;
+import reflaxe.c.ir.HxcIRTraversal.HxcIRTraversalSite;
+import reflaxe.c.ir.HxcIRTraversal.HxcIRTraversalVisitor;
+import reflaxe.c.ir.HxcIRTraversal.HXC_IR_TRAVERSAL_SCHEMA_VERSION;
+import reflaxe.c.ir.HxcIRTraversal.walkHxcIR;
 import reflaxe.c.ir.HxcIRValidator;
+import reflaxe.c.ir.HxcIRValidator.ValidatedHxcIRProgram;
 import reflaxe.c.ir.HxcSourceSpan;
 import reflaxe.c.lowering.CBodyNullCheckCoalescing;
 
@@ -22,6 +27,90 @@ private enum MutableAggregateBorrowMutation {
 	MutableBorrowReturnEscape;
 }
 
+/** Count each typed visitor family without taking ownership of recursion. */
+private class HxcIRTraversalSentinel extends HxcIRTraversalVisitor {
+	public var programs(default, null) = 0;
+	public var modules(default, null) = 0;
+	public var declarations(default, null) = 0;
+	public var typeRefs(default, null) = 0;
+	public var functions(default, null) = 0;
+	public var blocks(default, null) = 0;
+	public var instructions(default, null) = 0;
+	public var places(default, null) = 0;
+	public var implementations(default, null) = 0;
+	public var failures(default, null) = 0;
+	public var cleanupSteps(default, null) = 0;
+	public var blockEdges(default, null) = 0;
+	public var cleanupActions(default, null) = 0;
+	public var terminators(default, null) = 0;
+	public var boundsPolicies(default, null) = 0;
+	public var nullPolicies(default, null) = 0;
+	public var tagPolicies(default, null) = 0;
+	public var managedRoots(default, null) = 0;
+	public var managedRootProjections(default, null) = 0;
+
+	public function new() {
+		super();
+	}
+
+	override public function onProgram(program:ValidatedHxcIRProgram):Void
+		programs++;
+
+	override public function onModule(module:HxcIRModule, site:HxcIRTraversalSite):Void
+		modules++;
+
+	override public function onTypeDeclaration(declaration:HxcIRTypeDeclaration, site:HxcIRTraversalSite):Void
+		declarations++;
+
+	override public function onTypeRef(type:HxcIRTypeRef, site:HxcIRTraversalSite):Void
+		typeRefs++;
+
+	override public function onFunction(fn:HxcIRFunction, site:HxcIRTraversalSite):Void
+		functions++;
+
+	override public function onBlock(block:HxcIRBlock, site:HxcIRTraversalSite):Void
+		blocks++;
+
+	override public function onInstruction(instruction:HxcIRInstruction, site:HxcIRTraversalSite):Void
+		instructions++;
+
+	override public function onPlace(place:HxcIRPlace, site:HxcIRTraversalSite):Void
+		places++;
+
+	override public function onImplementation(implementation:HxcIRImplementation, site:HxcIRTraversalSite):Void
+		implementations++;
+
+	override public function onFailureEdge(edge:HxcIRFailureEdge, site:HxcIRTraversalSite):Void
+		failures++;
+
+	override public function onCleanupStep(step:HxcIRCleanupStep, site:HxcIRTraversalSite):Void
+		cleanupSteps++;
+
+	override public function onBlockEdge(edge:HxcIRBlockEdge, site:HxcIRTraversalSite):Void
+		blockEdges++;
+
+	override public function onCleanupAction(action:HxcIRCleanupAction, site:HxcIRTraversalSite):Void
+		cleanupActions++;
+
+	override public function onTerminator(terminator:HxcIRTerminator, site:HxcIRTraversalSite):Void
+		terminators++;
+
+	override public function onBoundsPolicy(policy:HxcIRBoundsPolicy, site:HxcIRTraversalSite):Void
+		boundsPolicies++;
+
+	override public function onNullCheckPolicy(policy:HxcIRNullCheckPolicy, site:HxcIRTraversalSite):Void
+		nullPolicies++;
+
+	override public function onTagCheckPolicy(policy:HxcIRTagCheckPolicy, site:HxcIRTraversalSite):Void
+		tagPolicies++;
+
+	override public function onManagedRoot(root:HxcIRManagedRoot, site:HxcIRTraversalSite):Void
+		managedRoots++;
+
+	override public function onManagedRootProjection(projection:HxcIRManagedRootProjection, site:HxcIRTraversalSite):Void
+		managedRootProjections++;
+}
+
 /** Builds deterministic semantic IR fixtures without invoking C emission. */
 class HxcIRGolden {
 	static inline final REPORT_PREFIX = "HXC_IR_REPORT=";
@@ -34,18 +123,28 @@ class HxcIRGolden {
 		HxcIRControlFlowGolden.run();
 		final validator = new HxcIRValidator();
 		final dumper = new HxcIRDumper();
+		if (HXC_IR_TRAVERSAL_SCHEMA_VERSION != HxcIRValidator.SCHEMA_VERSION)
+			throw "HxcIR traversal schema sentinel was not reviewed with the validator schema";
 		final semantic = semanticProgram(false);
-		validator.requireValid(semantic, PROFILE);
-		final semanticDump = dumper.dump(semantic);
-		verifyDumpSnapshot(dumper, semantic, semanticDump);
-		final reorderedDump = dumper.dump(semanticProgram(true));
+		final validatedSemantic = validator.requireValid(semantic, PROFILE);
+		final semanticDump = dumper.dump(validatedSemantic);
+		verifyDumpSnapshot(dumper, validatedSemantic, semanticDump);
+		final reorderedDump = dumper.dump(validator.requireValid(semanticProgram(true), PROFILE));
 		if (semanticDump != reorderedDump) {
 			throw "HxcIR dump changed when unordered program collections were reversed";
 		}
 
 		final coverage = coverageProgram();
-		validator.requireValid(coverage, PROFILE);
-		validator.requireValid(dynamicContractProgram(), PROFILE);
+		final validatedCoverage = validator.requireValid(coverage, PROFILE);
+		final coverageBeforeTraversal = dumper.dump(validatedCoverage);
+		verifyTraversalSentinel([
+			validatedSemantic,
+			validatedCoverage,
+			validator.requireValid(managedRootProgram(false), PROFILE),
+			validator.requireValid(dynamicContractProgram(), PROFILE)
+		]);
+		if (dumper.dump(validatedSemantic) != semanticDump || dumper.dump(validatedCoverage) != coverageBeforeTraversal)
+			throw "HxcIR traversal mutated its validated read-only input";
 		requireInvalidMarker(dynamicContractWrongOperationProgram(), "requires a box operation", "mismatched Dynamic operation");
 		requireInvalidMarker(dynamicContractMissingRootProgram(), "missing exact root path `dynamic-payload`", "unrooted Dynamic payload");
 		requireInvalidMarker(dynamicContractWrongFailureProgram(), "requires a result-error edge", "Dynamic failure kind");
@@ -85,7 +184,7 @@ class HxcIRGolden {
 		validator.requireValid(managedAggregateCarrierValidationProgram(false), PROFILE);
 		validator.requireValid(interfaceUpcastProgram(null), PROFILE);
 		verifyReceiverReassignmentCoalescing(validator);
-		final coverageDump = dumper.dump(coverage);
+		final coverageDump = coverageBeforeTraversal;
 
 		Sys.println(REPORT_PREFIX + Json.stringify({
 			semantic: semanticDump,
@@ -205,6 +304,33 @@ class HxcIRGolden {
 		}));
 	}
 
+	/** Prove the coverage corpus reaches every public structural visitor family. */
+	static function verifyTraversalSentinel(programs:Array<ValidatedHxcIRProgram>):Void {
+		final sentinel = new HxcIRTraversalSentinel();
+		for (program in programs)
+			walkHxcIR(program, sentinel);
+		if (sentinel.programs != programs.length
+			|| sentinel.modules == 0
+			|| sentinel.declarations == 0
+			|| sentinel.typeRefs == 0
+			|| sentinel.functions == 0
+			|| sentinel.blocks == 0
+			|| sentinel.instructions == 0
+			|| sentinel.places == 0
+			|| sentinel.implementations == 0
+			|| sentinel.failures == 0
+			|| sentinel.cleanupSteps == 0
+			|| sentinel.blockEdges == 0
+			|| sentinel.cleanupActions == 0
+			|| sentinel.terminators == 0
+			|| sentinel.boundsPolicies == 0
+			|| sentinel.nullPolicies == 0
+			|| sentinel.tagPolicies == 0
+			|| sentinel.managedRoots == 0
+			|| sentinel.managedRootProjections == 0)
+			throw 'HxcIR traversal sentinel lost one structural visitor family: cleanupSteps=${sentinel.cleanupSteps}, blockEdges=${sentinel.blockEdges}, managedRootProjections=${sentinel.managedRootProjections}';
+	}
+
 	/**
 		Prove one exhaustive rendering can serve both reports and function keys.
 
@@ -213,7 +339,7 @@ class HxcIRGolden {
 		child. This check also proves key-only mode does not retain the full
 		program string.
 	**/
-	static function verifyDumpSnapshot(dumper:HxcIRDumper, program:HxcIRProgram, expectedComplete:String):Void {
+	static function verifyDumpSnapshot(dumper:HxcIRDumper, program:reflaxe.c.ir.HxcIRValidator.ValidatedHxcIRProgram, expectedComplete:String):Void {
 		final complete = dumper.dumpSnapshot(program, true);
 		if (complete.complete != expectedComplete)
 			throw "complete HxcIR snapshot differed from the canonical dump";

@@ -2,6 +2,7 @@ package reflaxe.c.ir;
 
 import haxe.io.Bytes;
 import reflaxe.c.ir.HxcIR;
+import reflaxe.c.ir.HxcIRValidator.ValidatedHxcIRProgram;
 
 /** Canonical, source-aware text dump for semantic review and golden tests. */
 class HxcIRDumper {
@@ -11,11 +12,27 @@ class HxcIRDumper {
 	public function new() {}
 
 	/** Render the complete canonical program text used by reports and snapshots. */
-	public function dump(program:HxcIRProgram):String {
+	public function dump(program:ValidatedHxcIRProgram):String {
 		final snapshot = dumpSnapshot(program, true);
 		final complete = snapshot.complete;
 		if (complete == null)
 			throw new haxe.Exception("complete HxcIR dump was not captured");
+		return complete;
+	}
+
+	/**
+		Render the function-free raw program used while constructing replay keys.
+
+		This is a builder-only exception to the validated freeze boundary. The
+		caller owns a deliberately incomplete program before function construction,
+		so it cannot pass validation yet. Production reports, analyses, and emission
+		must use `dump` or `dumpSnapshot` with `ValidatedHxcIRProgram`.
+	**/
+	public function dumpBuilderProgram(program:HxcIRProgram):String {
+		final snapshot = dumpProgram(program.schemaVersion, program.dynamicPlan, program.dispatch, program.modules, true);
+		final complete = snapshot.complete;
+		if (complete == null)
+			throw new haxe.Exception("complete builder HxcIR dump was not captured");
 		return complete;
 	}
 
@@ -27,17 +44,19 @@ class HxcIRDumper {
 		the ordinary dump gives both consumers one exhaustive HxcIR traversal
 		instead of inventing a second hash walker or rendering the program again.
 	**/
-	public function dumpSnapshot(program:HxcIRProgram, includeComplete:Bool):HxcIRDumpSnapshot {
-		output = ['hxcir schema=${program.schemaVersion}'];
+	public function dumpSnapshot(program:ValidatedHxcIRProgram, includeComplete:Bool):HxcIRDumpSnapshot {
+		return dumpProgram(program.schemaVersion, program.dynamicPlan, program.dispatch, program.modules, includeComplete);
+	}
+
+	function dumpProgram(schemaVersion:Int, dynamicPlan:HxcIRDynamicPlan, dispatch:HxcIRDispatchPlan, modules:Array<HxcIRModule>,
+			includeComplete:Bool):HxcIRDumpSnapshot {
+		output = ['hxcir schema=$schemaVersion'];
 		functionRanges = [];
-		if (program.dynamicPlan.types.length > 0
-			|| program.dynamicPlan.members.length > 0
-			|| program.dynamicPlan.callShapes.length > 0
-			|| program.dynamicPlan.operations.length > 0)
-			dumpDynamic(program.dynamicPlan);
-		if (program.dispatch.layouts.length > 0 || program.dispatch.slots.length > 0 || program.dispatch.tables.length > 0)
-			dumpDispatch(program.dispatch);
-		for (module in sorted(program.modules, item -> item.id)) {
+		if (dynamicPlan.types.length > 0 || dynamicPlan.members.length > 0 || dynamicPlan.callShapes.length > 0 || dynamicPlan.operations.length > 0)
+			dumpDynamic(dynamicPlan);
+		if (dispatch.layouts.length > 0 || dispatch.slots.length > 0 || dispatch.tables.length > 0)
+			dumpDispatch(dispatch);
+		for (module in sorted(modules, item -> item.id)) {
 			dumpModule(module);
 		}
 		final functions:Array<HxcIRFunctionDump> = [];

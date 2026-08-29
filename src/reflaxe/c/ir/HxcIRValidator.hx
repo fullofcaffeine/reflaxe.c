@@ -42,6 +42,52 @@ private enum HxcIRDispatchLayoutKind {
 	IRDLInterface(interfaceType:HxcIRTypeInstance);
 }
 
+/**
+	Owns one HxcIR program after every semantic invariant has passed validation.
+
+	Builders may mutate the raw program while they assemble roots and simplify
+	checks. Validation is the freeze boundary: downstream code receives this
+	nominal owner instead of the raw typedef and must treat every returned array
+	as a borrowed read-only view. The wrapper does not copy the complete graph;
+	the lowering pipeline relinquishes mutation when this value is created.
+
+	The private constructor is module-owned so `HxcIRValidator` is the only
+	production path that can create the proof. Malformed fixtures can still build
+	raw `HxcIRProgram` values and pass them to `validate`.
+**/
+class ValidatedHxcIRProgram {
+	final value:HxcIRProgram;
+
+	@:allow(reflaxe.c.ir.HxcIRValidator)
+	private function new(value:HxcIRProgram) {
+		this.value = value;
+	}
+
+	/** The validated schema version. */
+	public var schemaVersion(get, never):Int;
+
+	inline function get_schemaVersion():Int
+		return value.schemaVersion;
+
+	/** The validated closed-world Dynamic plan; callers must not mutate it. */
+	public var dynamicPlan(get, never):HxcIRDynamicPlan;
+
+	inline function get_dynamicPlan():HxcIRDynamicPlan
+		return value.dynamicPlan;
+
+	/** The validated dispatch plan; callers must not mutate it. */
+	public var dispatch(get, never):HxcIRDispatchPlan;
+
+	inline function get_dispatch():HxcIRDispatchPlan
+		return value.dispatch;
+
+	/** Source-ordered validated modules; callers must not mutate this array. */
+	public var modules(get, never):Array<HxcIRModule>;
+
+	inline function get_modules():Array<HxcIRModule>
+		return value.modules;
+}
+
 /** Validates the semantic invariants required before any HxcIR reaches C AST lowering. */
 class HxcIRValidator {
 	public static inline final SCHEMA_VERSION = 27;
@@ -51,11 +97,13 @@ class HxcIRValidator {
 	public function validate(program:HxcIRProgram, profile:String):Array<HxcIRDiagnostic>
 		return new HxcIRValidationState(program, profile).validate();
 
-	public function requireValid(program:HxcIRProgram, profile:String):Void {
+	/** Validate and freeze one complete program for downstream analysis and emission. */
+	public function requireValid(program:HxcIRProgram, profile:String):ValidatedHxcIRProgram {
 		final diagnostics = validate(program, profile);
 		if (diagnostics.length > 0) {
 			throw new HxcIRValidationError(diagnostics);
 		}
+		return new ValidatedHxcIRProgram(program);
 	}
 }
 

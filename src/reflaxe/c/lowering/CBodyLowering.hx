@@ -27,7 +27,11 @@ import reflaxe.c.ir.HxcIRFixedArrayPolicy.HxcIRFixedArrayStorageDecision;
 import reflaxe.c.ir.HxcIRDiagnostic;
 import reflaxe.c.ir.HxcIRDumper;
 import reflaxe.c.ir.HxcIRValidator;
+import reflaxe.c.ir.HxcIRValidator.ValidatedHxcIRProgram;
 import reflaxe.c.ir.HxcIRManagedRootPlanner;
+import reflaxe.c.ir.HxcIRTraversal.HxcIRTraversalSite;
+import reflaxe.c.ir.HxcIRTraversal.HxcIRTraversalVisitor;
+import reflaxe.c.ir.HxcIRTraversal.walkHxcIR;
 import reflaxe.c.ir.HxcUtf8;
 import reflaxe.c.ir.HxcSourceSpan;
 import reflaxe.c.lowering.HaxeSourceSpan;
@@ -323,9 +327,61 @@ private typedef CManagedProgramRequests = {
 	final rootExceptionCleanups:Map<String, CSymbolRequest>;
 }
 
+/** Find every semantic path that requires the generated fail-stop symbol. */
+private class CAbortRequirementVisitor extends HxcIRTraversalVisitor {
+	public var required(default, null) = false;
+
+	public function new() {
+		super();
+	}
+
+	override public function onManagedRoot(root:HxcIRManagedRoot, site:HxcIRTraversalSite):Void
+		required = true;
+
+	override public function onBoundsPolicy(policy:HxcIRBoundsPolicy, site:HxcIRTraversalSite):Void {
+		switch policy {
+			case IRBPCheckedAbort(_, _):
+				required = true;
+			case IRBPStaticProof(_, _) | IRBPLoopGuarded(_, _, _):
+		}
+	}
+
+	override public function onNullCheckPolicy(policy:HxcIRNullCheckPolicy, site:HxcIRTraversalSite):Void
+		required = true;
+
+	override public function onTagCheckPolicy(policy:HxcIRTagCheckPolicy, site:HxcIRTraversalSite):Void
+		required = true;
+
+	override public function onFailureEdge(edge:HxcIRFailureEdge, site:HxcIRTraversalSite):Void {
+		switch edge.target {
+			case IRFTAbort:
+				required = true;
+			case IRFTBlock(_) | IRFTPropagate | IRFTUnwind:
+		}
+	}
+
+	override public function onInstruction(instruction:HxcIRInstruction, site:HxcIRTraversalSite):Void {
+		switch instruction.kind {
+			case IRIODynamic(_) | IRIOException(_):
+				required = true;
+			case _:
+		}
+	}
+
+	override public function onTerminator(terminator:HxcIRTerminator, site:HxcIRTraversalSite):Void {
+		switch terminator.kind {
+			case IRTUnreachable | IRTTagSwitch(_, _, null):
+				required = true;
+			case IRTJump(_) | IRTBranch(_, _, _) | IRTSwitch(_, _, _) | IRTTagSwitch(_, _, _) | IRTReturn(_, _) | IRTThrow(_, _):
+		}
+	}
+}
+
 /** Complete deterministic result for the admitted body subset. */
 class CBodyLoweringResult {
-	public final program:HxcIRProgram;
+	/** Validated frozen HxcIR required by every downstream consumer. */
+	public final program:ValidatedHxcIRProgram;
+
 	public final functions:Array<CLoweredBodyFunction>;
 	public final globals:Array<CLoweredBodyGlobal>;
 	public final aggregates:Array<CLoweredBodyAggregate>;
@@ -350,7 +406,7 @@ class CBodyLoweringResult {
 	public final managedProgram:Null<CManagedProgramNames>;
 	public final hxcirDump:Null<String>;
 
-	public function new(program:HxcIRProgram, functions:Array<CLoweredBodyFunction>, globals:Array<CLoweredBodyGlobal>,
+	public function new(program:ValidatedHxcIRProgram, functions:Array<CLoweredBodyFunction>, globals:Array<CLoweredBodyGlobal>,
 			aggregates:Array<CLoweredBodyAggregate>, enums:Array<CLoweredBodyEnum>, classes:Array<CLoweredBodyClass>, arrays:Array<CLoweredBodyArray>,
 			iterators:Array<CPreparedBodyIterator>, intMaps:Array<CPreparedBodyIntMap>, stringMaps:Array<CLoweredBodyStringMap>,
 			typedMaps:Array<CLoweredBodyTypedMap>, bytes:Array<CPreparedBodyBytes>, optionals:Array<CLoweredBodyOptional>,
@@ -608,12 +664,12 @@ class CBodyLowering {
 		CPhaseTiming.setCounter(CPCounterHxcIRExactNominalCacheMisses, aggregateRegistry.exactNominalMisses());
 		CPhaseTiming.stop(hxcIRConstructionTimer);
 		final hxcIRValidationTimer = CPhaseTiming.start(CPHxcIRValidation);
-		new HxcIRValidator().requireValid(program, Std.string(context.profile));
+		final validatedProgram = new HxcIRValidator().requireValid(program, Std.string(context.profile));
 		CPhaseTiming.stop(hxcIRValidationTimer);
 		final canonicalFunctions:Map<String, String> = [];
 		var completeHxcIRDump:Null<String> = null;
 		if (captureHxcIRDump || CBodyControlFlowPlanCache.needsFunctionKeys()) {
-			final snapshot = new HxcIRDumper().dumpSnapshot(program, captureHxcIRDump);
+			final snapshot = new HxcIRDumper().dumpSnapshot(validatedProgram, captureHxcIRDump);
 			completeHxcIRDump = snapshot.complete;
 			for (fn in snapshot.functions)
 				// The function fragment deliberately omits the program header so reports
@@ -625,12 +681,12 @@ class CBodyLowering {
 		final analysisTimer = CPhaseTiming.start(CPSemanticAnalysesAndNaming);
 		final helperSelectionTimer = CPhaseTiming.startDetail(CDTSemanticHelperSelection);
 		final helperSelection = new CPrimitiveHelperSelection();
-		helperSelection.collect(program);
+		helperSelection.collect(validatedProgram);
 		helperSelection.register(context.symbols);
 		CPhaseTiming.stopDetail(helperSelectionTimer);
 		final nameRegistrationTimer = CPhaseTiming.startDetail(CDTSemanticNameRegistration);
-		final boundsAbortRequest = registerBoundsAbort(program);
-		final managedProgramRequests = registerManagedProgramNames(program, preparedById);
+		final boundsAbortRequest = registerBoundsAbort(validatedProgram);
+		final managedProgramRequests = registerManagedProgramNames(validatedProgram, preparedById);
 		CPhaseTiming.stopDetail(nameRegistrationTimer);
 		final symbolFinalizationTimer = CPhaseTiming.startDetail(CDTSymbolFinalization);
 		final symbolTable = context.symbols.finalizeSymbols();
@@ -765,7 +821,7 @@ class CBodyLowering {
 			runtimeRequirements.push(new CBodyRuntimeRequirement("bytes", "managed-type-representation",
 				"ordinary haxe.io.Bytes shared fixed-length binary storage", bytes.source, bytes.position));
 		collectDeclarationRuntimeRequirements(runtimeRequirements, preparedAggregates, preparedEnums, preparedClasses);
-		for (module in program.modules)
+		for (module in validatedProgram.modules)
 			for (fn in module.functions) {
 				final roots = fn.managedRoots == null ? [] : fn.managedRoots;
 				for (root in roots)
@@ -773,10 +829,10 @@ class CBodyLowering {
 			}
 		runtimeRequirements.sort(compareRuntimeRequirements);
 		CPhaseTiming.setCounter(CPCounterRuntimeRequirements, runtimeRequirements.length);
-		return new CBodyLoweringResult(program, lowered, loweredGlobals, loweredAggregates, loweredEnums, loweredClasses, loweredArrays, preparedIterators,
-			preparedIntMaps, loweredStringMaps, loweredTypedMaps, preparedBytes, loweredOptionals, loweredDynamicPlan, loweredConstructors, loweredDispatch,
-			loweredImports, helpers, helperSelection.buildFacts().concat(loweredImports.buildFacts), symbolTable, boundsAbortName, runtimeRequirements,
-			managedProgram, completeHxcIRDump);
+		return new CBodyLoweringResult(validatedProgram, lowered, loweredGlobals, loweredAggregates, loweredEnums, loweredClasses, loweredArrays,
+			preparedIterators, preparedIntMaps, loweredStringMaps, loweredTypedMaps, preparedBytes, loweredOptionals, loweredDynamicPlan, loweredConstructors,
+			loweredDispatch, loweredImports, helpers, helperSelection.buildFacts().concat(loweredImports.buildFacts), symbolTable, boundsAbortName,
+			runtimeRequirements, managedProgram, completeHxcIRDump);
 	}
 
 	/**
@@ -841,7 +897,7 @@ class CBodyLowering {
 			'profile=${replayPart(Std.string(context.profile))}',
 			'build-mode=${replayPart(Std.string(context.buildMode))}',
 			"shared-program",
-			new HxcIRDumper().dump(sharedProgram),
+			new HxcIRDumper().dumpBuilderProgram(sharedProgram),
 			"callables"
 		];
 		final functionIds = [for (id in functionsById.keys()) id];
@@ -1112,7 +1168,7 @@ class CBodyLowering {
 		CPhaseTiming.setCounter(CPCounterHxcIRManagedRoots, managedRootCount);
 	}
 
-	function registerManagedProgramNames(program:HxcIRProgram, preparedById:Map<String, PreparedBodyFunction>):Null<CManagedProgramRequests> {
+	function registerManagedProgramNames(program:ValidatedHxcIRProgram, preparedById:Map<String, PreparedBodyFunction>):Null<CManagedProgramRequests> {
 		var required = false;
 		for (module in program.modules)
 			for (fn in module.functions)
@@ -1176,48 +1232,14 @@ class CBodyLowering {
 			exceptionCleanups);
 	}
 
-	function registerBoundsAbort(program:HxcIRProgram):Null<CSymbolRequest> {
-		for (module in program.modules) {
-			for (fn in module.functions) {
-				if (fn.managedRoots != null && fn.managedRoots.length > 0) {
-					final request = new CSymbolRequest(CSKMethod, ["c-standard-library", "abort"], CNSOrdinary("translation-unit"), CSVExternal, "abort");
-					context.symbols.register(request);
-					return request;
-				}
-				for (block in fn.blocks) {
-					for (instruction in block.instructions) {
-						switch instruction.kind {
-							case IRIOBoundsCheck(_, _, IRBPCheckedAbort(_, _)) | IRIOProjectTag(_, _, _, IRTCPCheckedAbort(_, _)) |
-								IRIONullCheck(_, IRNCPCheckedAbort(_, _)) | IRIODynamic(_) | IRIOException(_):
-								// Dynamic carriers use checked status-returning runtime entry points
-								// even in their allocation-free scalar slice. Register abort from
-								// semantic HxcIR instead of relying on a managed-root side effect.
-								final request = new CSymbolRequest(CSKMethod, ["c-standard-library", "abort"], CNSOrdinary("translation-unit"), CSVExternal,
-									"abort");
-								context.symbols.register(request);
-								return request;
-							case IRIOCall({failure: {target: IRFTAbort}}):
-								final request = new CSymbolRequest(CSKMethod, ["c-standard-library", "abort"], CNSOrdinary("translation-unit"), CSVExternal,
-									"abort");
-								context.symbols.register(request);
-								return request;
-							case _:
-						}
-					}
-					if (block.terminator != null) {
-						switch block.terminator.kind {
-							case IRTThrow(_, {target: IRFTAbort}) | IRTUnreachable | IRTTagSwitch(_, _, null):
-								final request = new CSymbolRequest(CSKMethod, ["c-standard-library", "abort"], CNSOrdinary("translation-unit"), CSVExternal,
-									"abort");
-								context.symbols.register(request);
-								return request;
-							case _:
-						}
-					}
-				}
-			}
-		}
-		return null;
+	function registerBoundsAbort(program:ValidatedHxcIRProgram):Null<CSymbolRequest> {
+		final visitor = new CAbortRequirementVisitor();
+		walkHxcIR(program, visitor);
+		if (!visitor.required)
+			return null;
+		final request = new CSymbolRequest(CSKMethod, ["c-standard-library", "abort"], CNSOrdinary("translation-unit"), CSVExternal, "abort");
+		context.symbols.register(request);
+		return request;
 	}
 
 	static function buildProgram(functions:Array<BuiltBodyFunction>, globals:Array<PreparedBodyGlobal>, aggregates:Array<CPreparedBodyAggregate>,

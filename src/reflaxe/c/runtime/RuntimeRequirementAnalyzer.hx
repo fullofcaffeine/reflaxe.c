@@ -2,7 +2,10 @@ package reflaxe.c.runtime;
 
 import reflaxe.c.CDiagnostic.CDiagnosticId;
 import reflaxe.c.ir.HxcIR;
-import reflaxe.c.ir.HxcIRValidator;
+import reflaxe.c.ir.HxcIRTraversal.HxcIRTraversalSite;
+import reflaxe.c.ir.HxcIRTraversal.HxcIRTraversalVisitor;
+import reflaxe.c.ir.HxcIRTraversal.walkHxcIR;
+import reflaxe.c.ir.HxcIRValidator.ValidatedHxcIRProgram;
 import reflaxe.c.ir.HxcSourceSpan;
 import reflaxe.c.runtime.RuntimeFeatureModel.RuntimeFeatureId;
 import reflaxe.c.runtime.RuntimeFeatureModel.RuntimeReachabilityEvidence;
@@ -57,6 +60,38 @@ private class RuntimeCandidateEntry {
 	}
 }
 
+/** Retain runtime-bearing nodes while the shared traversal owns recursion. */
+private class RuntimeReachabilityVisitor extends HxcIRTraversalVisitor {
+	public final instructions:Array<HxcIRInstruction> = [];
+	public final terminators:Array<HxcIRTerminator> = [];
+	public final cleanupActions:Array<HxcIRCleanupAction> = [];
+	public final managedRoots:Array<HxcIRManagedRoot> = [];
+	public var functionCount(default, null) = 0;
+	public var blockCount(default, null) = 0;
+
+	public function new() {
+		super();
+	}
+
+	override public function onFunction(fn:HxcIRFunction, site:HxcIRTraversalSite):Void
+		functionCount++;
+
+	override public function onBlock(block:HxcIRBlock, site:HxcIRTraversalSite):Void
+		blockCount++;
+
+	override public function onInstruction(instruction:HxcIRInstruction, site:HxcIRTraversalSite):Void
+		instructions.push(instruction);
+
+	override public function onTerminator(terminator:HxcIRTerminator, site:HxcIRTraversalSite):Void
+		terminators.push(terminator);
+
+	override public function onCleanupAction(action:HxcIRCleanupAction, site:HxcIRTraversalSite):Void
+		cleanupActions.push(action);
+
+	override public function onManagedRoot(root:HxcIRManagedRoot, site:HxcIRTraversalSite):Void
+		managedRoots.push(root);
+}
+
 /**
  * Proves that source-level runtime reasons describe work that survived in HxcIR.
  *
@@ -77,16 +112,12 @@ class RuntimeRequirementAnalyzer {
 
 	public function new() {}
 
-	public function analyze(program:HxcIRProgram, input:Array<RuntimeRequirementCandidate>):RuntimeRequirementAnalysis {
-		if (program.schemaVersion != HxcIRValidator.SCHEMA_VERSION) {
-			internal('runtime requirement analysis needs validated schema-${HxcIRValidator.SCHEMA_VERSION} HxcIR; found `${program.schemaVersion}`');
-		}
+	public function analyze(program:ValidatedHxcIRProgram, input:Array<RuntimeRequirementCandidate>):RuntimeRequirementAnalysis {
 		final observations:Array<RuntimeIntentObservation> = [];
 		var typeInstanceCount = 0;
-		var functionCount = 0;
-		var blockCount = 0;
-		var instructionCount = 0;
-		var cleanupActionCount = 0;
+		// Stored declaration carriers are deliberately scoped: instruction result
+		// types do not by themselves select a runtime representation. The shared
+		// traversal below owns all executable, failure, cleanup, and root recursion.
 		for (module in program.modules) {
 			for (declaration in module.types) {
 				switch declaration.kind {
@@ -126,32 +157,21 @@ class RuntimeRequirementAnalyzer {
 					case _:
 				}
 			}
-			functionCount += module.functions.length;
-			for (fn in module.functions) {
-				if (fn.managedRoots != null)
-					for (root in fn.managedRoots)
-						observations.push(new RuntimeIntentObservation("gc", "root-frame", root.source));
-				blockCount += fn.blocks.length;
-				for (block in fn.blocks) {
-					instructionCount += block.instructions.length;
-					for (instruction in block.instructions) {
-						collectInstruction(instruction, program.dynamicPlan, observations);
-					}
-					if (block.terminator != null)
-						switch block.terminator.kind {
-							case IRTThrow(_, {target: IRFTUnwind}):
-								observations.push(new RuntimeIntentObservation("exception", "general-exception-region", block.terminator.source));
-							case _:
-						}
-				}
-				for (region in fn.cleanupRegions) {
-					cleanupActionCount += region.actions.length;
-					for (action in region.actions) {
-						collectCleanup(action, observations);
-					}
-				}
-			}
 		}
+		final reachability = new RuntimeReachabilityVisitor();
+		walkHxcIR(program, reachability);
+		for (root in reachability.managedRoots)
+			observations.push(new RuntimeIntentObservation("gc", "root-frame", root.source));
+		for (instruction in reachability.instructions)
+			collectInstruction(instruction, program.dynamicPlan, observations);
+		for (terminator in reachability.terminators)
+			switch terminator.kind {
+				case IRTThrow(_, {target: IRFTUnwind}):
+					observations.push(new RuntimeIntentObservation("exception", "general-exception-region", terminator.source));
+				case _:
+			}
+		for (action in reachability.cleanupActions)
+			collectCleanup(action, observations);
 
 		final candidates = canonicalCandidates(input);
 		final uniqueObservations = canonicalObservations(observations);
@@ -190,8 +210,8 @@ class RuntimeRequirementAnalyzer {
 			}
 		}
 		return new RuntimeRequirementAnalysis(reasons,
-			new RuntimeReachabilityEvidence(program.modules.length, typeInstanceCount, functionCount, blockCount, instructionCount, cleanupActionCount,
-				observations.length));
+			new RuntimeReachabilityEvidence(program.modules.length, typeInstanceCount, reachability.functionCount, reachability.blockCount,
+				reachability.instructions.length, reachability.cleanupActions.length, observations.length));
 	}
 
 	/**

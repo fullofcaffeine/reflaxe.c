@@ -1,7 +1,7 @@
 # HxcIR semantic contract
 
 `HxcIR` is the target-owned semantic layer between normalized Haxe input and
-the structural C AST. Its schema is internal to the compiler: schema version 23
+the structural C AST. Its schema is internal to the compiler: schema version 27
 is deterministic and validation-backed, but it is not a public file format or
 ABI promise.
 
@@ -308,6 +308,53 @@ or independently testable decision, the default is to keep the analysis at the
 typed-AST boundary. Conversely, if removing an HxcIR operation would recreate
 several loosely synchronized side tables or force the C emitter to infer Haxe
 meaning, the explicit semantic form is earning its cost.
+
+### Linear construction and freeze boundary
+
+HxcIR has one linear ownership path:
+
+```text
+typed Haxe -> raw HxcIR builder -> root/null-check mutation -> validation
+           -> ValidatedHxcIRProgram -> analysis and C emission
+```
+
+Only builders, pre-validation mutation passes, the validator, and malformed
+validation fixtures receive the raw `HxcIRProgram` record. Successful
+validation returns `ValidatedHxcIRProgram`. This nominal wrapper is the proof
+that all semantic checks passed. It borrows the completed graph without copying
+it, and every returned array is read-only by contract. The lowering pipeline
+must not mutate the raw graph after it creates this wrapper. Production dumps,
+runtime planning, helper selection, failure-symbol selection, and C generation
+accept the wrapper, so a schema-number check cannot impersonate validation.
+
+`HxcIRTraversal` owns deterministic structural recursion through a validated
+program. It visits structural children in authored order and treats string IDs
+as references, not child nodes. Visitors can observe selected typed node
+families, but cannot suppress recursion by ignoring a parent. Every switch over
+a closed HxcIR enum in the walker lists all constructors without a catch-all,
+so a new constructor fails compilation until its child policy is explicit.
+The pre-validation control-flow analyzer shares the walker's exhaustive
+instruction-failure projection because null-check coalescing still needs those
+edges before the graph freezes. It does not gain general raw traversal access.
+
+The traversal also owns an independent schema-27 sentinel. A schema change must
+update both validator and traversal constants and exercise each affected child
+family before the focused HxcIR fixture can compile and run.
+
+Before admitting a new node or field, answer these questions:
+
+- Is it a structurally owned child or a semantic reference to another owner?
+- Which typed visitor callback must observe it?
+- Does the traversal coverage fixture reach its constructor and child family?
+- Which validator rule proves its references, types, ownership, and failure
+  behavior before the freeze boundary?
+- Which focused snapshot and generated/native path prove deterministic,
+  byte-identical output?
+
+An optional child also needs a sentinel fixture because adding an optional
+record field does not make old fixture construction fail. A general pass
+manager, shared analysis cache, and CAST traversal remain deferred: this
+boundary centralizes HxcIR ownership without creating those unrelated systems.
 
 ## Sibling Reflaxe architectures
 

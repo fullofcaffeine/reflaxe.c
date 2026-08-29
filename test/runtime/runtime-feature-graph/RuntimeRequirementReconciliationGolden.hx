@@ -1,5 +1,6 @@
 import reflaxe.c.ir.HxcIR;
 import reflaxe.c.ir.HxcIRValidator;
+import reflaxe.c.ir.HxcIRValidator.ValidatedHxcIRProgram;
 import reflaxe.c.ir.HxcSourceSpan;
 import reflaxe.c.runtime.RuntimeFeatureModel.RuntimeFeatureId;
 import reflaxe.c.runtime.RuntimeFeatureModel.RuntimeRequirementCandidate;
@@ -45,9 +46,10 @@ class RuntimeRequirementReconciliationGolden {
 		final source = new HxcSourceSpan("test/runtime/runtime-feature-graph/ReconciliationFixture.hx", 1, 1, FIXTURE_SIZE + 1, 1);
 		final program = programWith(instructions, source);
 		final analyzer = new RuntimeRequirementAnalyzer();
-		final forward = analyzer.analyze(program, candidates);
+		final validatedProgram = validate(program);
+		final forward = analyzer.analyze(validatedProgram, candidates);
 		candidates.reverse();
-		final reversed = analyzer.analyze(program, candidates);
+		final reversed = analyzer.analyze(validatedProgram, candidates);
 		if (forward.reasons.length != FIXTURE_SIZE
 			|| reversed.reasons.length != FIXTURE_SIZE
 			|| forward.reachability.runtimeIntentCount != FIXTURE_SIZE
@@ -90,7 +92,7 @@ class RuntimeRequirementReconciliationGolden {
 			representation: IRRManaged("string-map"),
 			source: source
 		});
-		final analysis = analyzer.analyze(program, [
+		final analysis = analyzer.analyze(validate(program), [
 			new RuntimeRequirementCandidate(RuntimeFeatureId.parse("string-map"), "managed-type-representation", "runtime-representation",
 				"ordinary Haxe StringMap", source),
 			new RuntimeRequirementCandidate(RuntimeFeatureId.parse("string"), "type-carrier", "runtime-representation",
@@ -121,32 +123,32 @@ class RuntimeRequirementReconciliationGolden {
 			{
 				id: "retain.local",
 				result: null,
-				kind: IRIORetain(IRPLocal("local.alias"), IRIRuntime("array")),
+				kind: IRIORetain(IRPLocal("local.alias"), IRIRuntime("string")),
 				source: source
 			},
 			{
 				id: "retain.record",
 				result: null,
-				kind: IRIORetain(IRPLocal("local.record-field"), IRIRuntime("array")),
+				kind: IRIORetain(IRPLocal("local.record-field"), IRIRuntime("string")),
 				source: source
 			}
 		];
-		final first = new RuntimeRequirementCandidate(RuntimeFeatureId.parse("array"), "retain", "runtime-operation", "ordinary Haxe Array local alias",
+		final first = new RuntimeRequirementCandidate(RuntimeFeatureId.parse("string"), "retain", "runtime-operation", "ordinary Haxe String local alias",
 			source);
-		final second = new RuntimeRequirementCandidate(RuntimeFeatureId.parse("array"), "retain", "runtime-operation",
-			"managed Array captured by a closed record", source);
+		final second = new RuntimeRequirementCandidate(RuntimeFeatureId.parse("string"), "retain", "runtime-operation",
+			"managed String captured by a closed record", source);
 		final candidates = [second, first, first];
-		final analysis = analyzer.analyze(programWith(observations, source), candidates);
+		final analysis = analyzer.analyze(validate(programWith(observations, source)), candidates);
 		if (analysis.reasons.length != 2
 			|| analysis.reachability.runtimeIntentCount != 2
-			|| analysis.reasons[0].surface != "managed Array captured by a closed record"
-			|| analysis.reasons[1].surface != "ordinary Haxe Array local alias") {
+			|| analysis.reasons[0].surface != "managed String captured by a closed record"
+			|| analysis.reasons[1].surface != "ordinary Haxe String local alias") {
 			throw "same-span runtime reconciliation lost distinct reasons, exact deduplication, or canonical order";
 		}
 
 		var rejected = false;
 		try {
-			analyzer.analyze(programWith([observations[0]], source), candidates);
+			analyzer.analyze(validate(programWith([observations[0]], source)), candidates);
 		} catch (error:RuntimeFeatureError) {
 			rejected = error.message.indexOf("2 distinct runtime source reasons describe only 1 reachable `retain` operation") >= 0;
 		}
@@ -185,7 +187,7 @@ class RuntimeRequirementReconciliationGolden {
 			]),
 			source: directSource
 		});
-		final analysis = analyzer.analyze(program, [
+		final analysis = analyzer.analyze(validate(program), [
 			new RuntimeRequirementCandidate(RuntimeFeatureId.parse("string-literal"), "type-carrier", "runtime-representation",
 				"closed Haxe record field `direct`", directSource),
 			new RuntimeRequirementCandidate(RuntimeFeatureId.parse("string"), "type-carrier", "runtime-representation", "closed Haxe record field `managed`",
@@ -203,6 +205,29 @@ class RuntimeRequirementReconciliationGolden {
 
 	/** Build the smallest HxcIR program needed by reconciliation-only tests. */
 	static function programWith(instructions:Array<HxcIRInstruction>, source:HxcSourceSpan):HxcIRProgram {
+		var needsManagedStringPlace = false;
+		for (instruction in instructions)
+			switch instruction.kind {
+				case IRIORetain(_, IRIRuntime("string")):
+					needsManagedStringPlace = true;
+				case _:
+			}
+		final locals:Array<HxcIRLocal> = needsManagedStringPlace ? [
+			{
+				id: "local.alias",
+				type: IRTManagedString,
+				storage: IRLSAutomatic,
+				initialState: IRISInitialized,
+				source: source
+			},
+			{
+				id: "local.record-field",
+				type: IRTManagedString,
+				storage: IRLSAutomatic,
+				initialState: IRISInitialized,
+				source: source
+			}
+		] : [];
 		return {
 			schemaVersion: HxcIRValidator.SCHEMA_VERSION,
 			dynamicPlan: {
@@ -228,7 +253,7 @@ class RuntimeRequirementReconciliationGolden {
 							borrowedClassLocalIds: [],
 							borrowedInterfaceLocalIds: [],
 							managedRoots: [],
-							locals: [],
+							locals: locals,
 							returnType: IRTVoid,
 							borrowedSpanReturn: null,
 							failureConvention: IRFCInfallible,
@@ -251,4 +276,8 @@ class RuntimeRequirementReconciliationGolden {
 			]
 		};
 	}
+
+	/** Cross the same validated freeze boundary as production analysis. */
+	static function validate(program:HxcIRProgram):ValidatedHxcIRProgram
+		return new HxcIRValidator().requireValid(program, "portable");
 }

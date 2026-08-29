@@ -47,7 +47,7 @@ import reflaxe.c.lowering.CStaticFunctionGraph;
 import reflaxe.c.lowering.CStaticFunctionGraph.CStaticFunctionGraphCollector;
 import reflaxe.c.macros.TypedCContractMacro;
 import reflaxe.c.ir.HxcIRValidationError;
-import reflaxe.c.ir.HxcIR.HxcIRProgram;
+import reflaxe.c.ir.HxcIRValidator.ValidatedHxcIRProgram;
 import reflaxe.c.naming.CSymbolRequest;
 import reflaxe.c.plan.CStaticInitializationError;
 import reflaxe.c.plan.CStaticInitializationPlanner;
@@ -436,7 +436,7 @@ class CCompiler {
 	}
 
 	function directRuntimePlan(configuration:ResolvedProjectConfiguration, helperIds:Array<String>,
-			staticInitialization:reflaxe.c.plan.CStaticInitializationModel.CStaticInitializationSnapshot, program:HxcIRProgram,
+			staticInitialization:reflaxe.c.plan.CStaticInitializationModel.CStaticInitializationSnapshot, program:ValidatedHxcIRProgram,
 			runtimeRequirements:Array<CBodyRuntimeRequirement>, aggregateCount:Int, enumCount:Int, classCount:Int, constructorCount:Int,
 			genericFunctionCount:Int, genericTypeCount:Int, virtualInstanceCallCount:Int, interfaceInstanceCallCount:Int, importOperationCount:Int,
 			registry:reflaxe.c.runtime.RuntimeFeatureRegistry):RuntimeFeaturePlanSnapshot {

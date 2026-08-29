@@ -22,6 +22,10 @@ from scripts.test.bounded_process import run as run_bounded_process  # noqa: E40
 HXML = Path(__file__).with_name("hxc_ir.hxml")
 ORACLE_HXML = Path(__file__).with_name("oracle.hxml")
 DYNAMIC_ORACLE_HXML = Path(__file__).with_name("dynamic_oracle.hxml")
+RAW_PROGRAM_CONSUMER_HXML = Path(__file__).with_name("raw_program_consumer.hxml")
+VALIDATED_PROGRAM_CONSTRUCTOR_CONSUMER_HXML = Path(__file__).with_name(
+    "validated_program_constructor_consumer.hxml"
+)
 EXPECTED = Path(__file__).with_name("expected")
 REPORT_PREFIX = "HXC_IR_REPORT="
 
@@ -104,6 +108,48 @@ def check_dynamic_oracle() -> None:
     if result.returncode != 0 or result.stdout != expected or result.stderr:
         raise HxcIRFailure(
             "Haxe Dynamic semantic oracle drifted\n"
+            f"exit: {result.returncode}\nstdout:\n{result.stdout}\nstderr:\n{result.stderr}"
+        )
+
+
+def check_raw_program_boundary() -> None:
+    """Prove downstream analysis rejects a raw program before execution."""
+    environment = os.environ.copy()
+    environment["HAXE_NO_SERVER"] = "1"
+    result = run_bounded_process(
+        [development_tool("haxe"), str(RAW_PROGRAM_CONSUMER_HXML)],
+        cwd=ROOT,
+        env=environment,
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    output = result.stdout + result.stderr
+    if result.returncode == 0 or "ValidatedHxcIRProgram" not in output:
+        raise HxcIRFailure(
+            "raw HxcIR crossed the validated production boundary\n"
+            f"exit: {result.returncode}\nstdout:\n{result.stdout}\nstderr:\n{result.stderr}"
+        )
+
+
+def check_validated_program_constructor_boundary() -> None:
+    """Prove production code cannot forge the validator-owned proof wrapper."""
+    environment = os.environ.copy()
+    environment["HAXE_NO_SERVER"] = "1"
+    result = run_bounded_process(
+        [development_tool("haxe"), str(VALIDATED_PROGRAM_CONSTRUCTOR_CONSUMER_HXML)],
+        cwd=ROOT,
+        env=environment,
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    output = result.stdout + result.stderr
+    if result.returncode == 0 or "Cannot access private constructor" not in output:
+        raise HxcIRFailure(
+            "production code forged the validator-owned HxcIR proof\n"
             f"exit: {result.returncode}\nstdout:\n{result.stdout}\nstderr:\n{result.stderr}"
         )
 
@@ -272,6 +318,8 @@ def main() -> int:
     try:
         check_oracle()
         check_dynamic_oracle()
+        check_raw_program_boundary()
+        check_validated_program_constructor_boundary()
         first_payload, first = render("first HxcIR render")
         second_payload, _ = render("second HxcIR render")
         if first_payload != second_payload:
