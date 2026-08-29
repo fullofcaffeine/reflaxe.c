@@ -3261,8 +3261,8 @@ final class CaxecraftEditorScreen {
 			previewAllowed = false;
 			return;
 		}
-		previewAllowed = switch commandForTool(tool, point, paletteCode, current.selectedBounds(), draft.objects, draft.ruleIds, draft.dialogueIds,
-			activeRecipeFor(tool)) {
+		previewAllowed = switch commandForTool(tool, point, draft.world.size, paletteCode, current.selectedBounds(), draft.objects, draft.ruleIds,
+			draft.dialogueIds, activeRecipeFor(tool)) {
 			case ToolCommandRejected(_): false;
 			case ToolSelectionReady(_): true;
 			case ToolCommandReady(_) | ToolBatchReady(_, _): true;
@@ -3743,8 +3743,8 @@ final class CaxecraftEditorScreen {
 				return false;
 			}
 		}
-		final toolResult = commandForTool(tool, point, paletteCode, current.selectedBounds(), draft.objects, draft.ruleIds, draft.dialogueIds,
-			activeRecipeFor(tool));
+		final toolResult = commandForTool(tool, point, draft.world.size, paletteCode, current.selectedBounds(), draft.objects, draft.ruleIds,
+			draft.dialogueIds, activeRecipeFor(tool));
 		return switch toolResult {
 			case ToolCommandRejected(_):
 				notice = Invalid;

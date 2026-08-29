@@ -238,6 +238,9 @@ enum EditorError {
 	/** An NPC recipe needs one authored dialogue before it can become playable. */
 	MissingEditorDialogue;
 
+	/** A linked placement needs a neighboring world cell for its second object. */
+	EditorTemplateNeedsAdjacentCell;
+
 	InvalidSetting(setting:EditorSetting, minimum:Int, maximum:Int);
 	UnsupportedFormatVersion(actual:Int, supported:Int);
 	SnapshotRejected(diagnostics:Array<ScenarioDiagnostic>);

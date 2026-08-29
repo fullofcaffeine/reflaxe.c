@@ -88,7 +88,7 @@ function selfCheck():Int {
 	if (retained.generationId().value() != 1
 		|| retained.registry().semanticProof() != 132089
 		|| retained.catalog().text(LocaleCursor.Locale1, UiMessage.MenuAdventure) != "AVENTURA"
-		|| retained.level().generation().semanticTrace().worldState != 454073574)
+		|| retained.level().generation().semanticTrace().worldState != -1465000778)
 		return 14;
 
 	switch active.publish(first) {
@@ -107,7 +107,7 @@ function selfCheck():Int {
 	tracePack = selected.registry().semanticProof();
 	traceUi = selected.catalog().text(LocaleCursor.Locale1, UiMessage.MenuAdventure).length;
 	traceWorld = selected.level().generation().semanticTrace().worldState;
-	return tracePack == 132089 && traceUi == 8 && traceWorld == 454073574 ? 0 : 13;
+	return tracePack == 132089 && traceUi == 8 && traceWorld == -1465000778 ? 0 : 13;
 }
 
 /** Load one complete real-package candidate with a selected sequence. */
@@ -146,6 +146,6 @@ function activeMatches(active:ActiveRuntimeContent, generation:Int, publications
 		&& active.publicationCount() == publications
 		&& selected.registry().semanticProof() == 132089
 		&& selected.catalog().text(LocaleCursor.Locale1, UiMessage.MenuAdventure) == "AVENTURA"
-		&& selected.level().generation().semanticTrace().worldState == 454073574
-		&& receipt.generationSha256 == "b0b99b2a21d0c6d2a4b527183cf8473c9ba1db366954ffd6d84d9178f9641101";
+		&& selected.level().generation().semanticTrace().worldState == -1465000778
+		&& receipt.generationSha256 == "bb1afc27505b99e32098d815a6e5e06de3579cd5c2aa8970461532109bbd2f10";
 }

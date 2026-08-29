@@ -3,8 +3,10 @@ package caxecraft.editor;
 import caxecraft.content.EditorObjectCatalog.EditorObjectRecipe;
 import caxecraft.content.EditorObjectCatalog.EditorObjectRecipeKind;
 import caxecraft.editor.EditorTypes.EditorCommand;
+import caxecraft.editor.EditorTypes.EditorError;
 import caxecraft.scenario.ScenarioGeometry.ScenarioTransform;
 import caxecraft.scenario.ScenarioGeometry.VoxelPoint;
+import caxecraft.scenario.ScenarioGeometry.VoxelSize;
 import caxecraft.scenario.ScenarioId;
 import caxecraft.scenario.ScenarioObject;
 import caxecraft.scenario.ScenarioObject.ObjectPlacement;
@@ -19,6 +21,12 @@ typedef EditorCheckpointTemplate = {
 typedef EditorObjectTemplate = {
 	final objectId:ScenarioId;
 	final commands:Array<EditorCommand>;
+}
+
+/** Exact outcome of expanding one validated asset-browser recipe. */
+enum EditorObjectTemplateResult {
+	ObjectTemplateReady(template:EditorObjectTemplate);
+	ObjectTemplateRejected(error:EditorError);
 }
 
 /**
@@ -98,25 +106,20 @@ function triggerZoneCommand(point:VoxelPoint, objects:Array<ScenarioObject>):Edi
 /**
 	Create one pack-defined object and its required content logic atomically.
 
-	Items, enemies, and mechanisms need one placement command. An NPC also needs
-	an interaction rule because gameplay publishes `Interact` events and CaxeFlow
-	owns the resulting dialogue action. Both values use the first free shared
-	suffix, so the template cannot replace an authored object or rule.
+	Items, enemies, and simple mechanisms need one placement command. NPC and
+	linked-object recipes also create the CaxeFlow rules that make them immediately
+	playable. Every multi-record recipe uses one free shared suffix, so a template
+	cannot replace an authored object or rule.
 **/
-function objectRecipeTemplate(recipe:EditorObjectRecipe, point:VoxelPoint, objects:Array<ScenarioObject>, dialogueIds:Array<ScenarioId>,
-		ruleIds:Array<ScenarioId>):Null<EditorObjectTemplate> {
-	final transform:ScenarioTransform = {
-		xMilli: point.x * 1000 + 500,
-		yMilli: point.y * 1000,
-		zMilli: point.z * 1000 + 500,
-		yawDegrees: 0
-	};
+function objectRecipeTemplate(recipe:EditorObjectRecipe, point:VoxelPoint, worldSize:VoxelSize, objects:Array<ScenarioObject>, dialogueIds:Array<ScenarioId>,
+		ruleIds:Array<ScenarioId>):EditorObjectTemplateResult {
+	final transform = transformAt(point);
 	return switch recipe.kind {
 		case EditorNpc(npcType):
-			if (dialogueIds.length == 0) null; else {
+			if (dialogueIds.length == 0) ObjectTemplateRejected(MissingEditorDialogue); else {
 				final number = nextRecipeTemplateNumber(recipe.id, objects, ruleIds);
 				final objectId = new ScenarioId('editor.${recipe.id}.n$number');
-				{
+				ObjectTemplateReady({
 					objectId: objectId,
 					commands: [
 						putRecipeObject(objectId, Npc(npcType, dialogueIds[0], transform)),
@@ -129,13 +132,66 @@ function objectRecipeTemplate(recipe:EditorObjectRecipe, point:VoxelPoint, objec
 							actions: [ShowDialogue(dialogueIds[0])]
 						})
 					]
-				};
+				});
 			}
-		case EditorItem(itemType, quantity): singleObjectTemplate(nextRecipeId(recipe.id, objects), Item(itemType, quantity, transform));
-		case EditorEnemy(entityType): singleObjectTemplate(nextRecipeId(recipe.id, objects), Entity(entityType, transform));
+		case EditorItem(itemType, quantity):
+			ObjectTemplateReady(singleObjectTemplate(nextRecipeId(recipe.id, objects), Item(itemType, quantity, transform)));
+		case EditorEnemy(entityType):
+			ObjectTemplateReady(singleObjectTemplate(nextRecipeId(recipe.id, objects), Entity(entityType, transform)));
 		case EditorStatefulObject(objectType, initialState):
-			singleObjectTemplate(nextRecipeId(recipe.id, objects), StatefulObject(objectType, initialState, transform));
+			ObjectTemplateReady(singleObjectTemplate(nextRecipeId(recipe.id, objects), StatefulObject(objectType, initialState, transform)));
+		case EditorLinkedStatefulPair(source, target):
+			final targetPoint = adjacentPoint(point, worldSize);
+			if (targetPoint == null) ObjectTemplateRejected(EditorTemplateNeedsAdjacentCell); else {
+				final number = nextLinkedRecipeTemplateNumber(recipe.id, objects, ruleIds);
+				final sourceId = new ScenarioId('editor.${recipe.id}.source.n$number');
+				final targetId = new ScenarioId('editor.${recipe.id}.target.n$number');
+				ObjectTemplateReady({
+					objectId: sourceId,
+					commands: [
+						putRecipeObject(sourceId, StatefulObject(source.objectType, source.initialState, transform)),
+						putRecipeObject(targetId, StatefulObject(target.objectType, target.initialState, transformAt(targetPoint))),
+						PutRule({
+							id: new ScenarioId('editor.rule.${recipe.id}.n$number'),
+							priority: 0,
+							repeat: Repeat,
+							event: Interact(sourceId),
+							predicate: All([
+								ObjectStateIs(sourceId, source.initialState),
+								ObjectStateIs(targetId, target.initialState)
+							]),
+							actions: [
+								SetObjectState(sourceId, source.activeState),
+								SetObjectState(targetId, target.activeState)
+							]
+						})
+					]
+				});
+			}
 	};
+}
+
+/** Convert one snapped cell to the canonical centered object transform. */
+private function transformAt(point:VoxelPoint):ScenarioTransform {
+	return {
+		xMilli: point.x * 1000 + 500,
+		yMilli: point.y * 1000,
+		zMilli: point.z * 1000 + 500,
+		yawDegrees: 0
+	};
+}
+
+/** Choose a deterministic neighboring cell while staying inside the finite world. */
+private function adjacentPoint(point:VoxelPoint, size:VoxelSize):Null<VoxelPoint> {
+	if (point.z + 1 < size.depth)
+		return {x: point.x, y: point.y, z: point.z + 1};
+	if (point.z > 0)
+		return {x: point.x, y: point.y, z: point.z - 1};
+	if (point.x + 1 < size.width)
+		return {x: point.x + 1, y: point.y, z: point.z};
+	if (point.x > 0)
+		return {x: point.x - 1, y: point.y, z: point.z};
+	return null;
 }
 
 /** Wrap one ordinary placement in the same template result used by NPCs. */
@@ -165,6 +221,19 @@ private function nextRecipeTemplateNumber(recipeId:String, objects:Array<Scenari
 	final rulePrefix = 'editor.rule.$recipeId.n';
 	var number = 1;
 	while (hasObjectId(objects, objectPrefix + number) || hasRuleId(ruleIds, rulePrefix + number))
+		number++;
+	return number;
+}
+
+/** Find one linked-pair suffix absent from both object roles and the rule. */
+private function nextLinkedRecipeTemplateNumber(recipeId:String, objects:Array<ScenarioObject>, ruleIds:Array<ScenarioId>):Int {
+	final sourcePrefix = 'editor.$recipeId.source.n';
+	final targetPrefix = 'editor.$recipeId.target.n';
+	final rulePrefix = 'editor.rule.$recipeId.n';
+	var number = 1;
+	while (hasObjectId(objects, sourcePrefix + number)
+		|| hasObjectId(objects, targetPrefix + number)
+		|| hasRuleId(ruleIds, rulePrefix + number))
 		number++;
 	return number;
 }

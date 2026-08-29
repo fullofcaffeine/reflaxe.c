@@ -448,7 +448,11 @@
         "es-MX": "ROCA MUSGOSA DE LÍMITE"
       },
       "objectType": "caxecraft:boundary-boulder",
-      "initialState": "caxecraft:waiting"
+      "initialState": "caxecraft:waiting",
+      "activeState": null,
+      "targetObjectType": null,
+      "targetInitialState": null,
+      "targetActiveState": null
     },
     {
       "id": "boundary-root",
@@ -458,7 +462,11 @@
         "es-MX": "RAÍZ ENREDADA DE LÍMITE"
       },
       "objectType": "caxecraft:boundary-root",
-      "initialState": "caxecraft:waiting"
+      "initialState": "caxecraft:waiting",
+      "activeState": null,
+      "targetObjectType": null,
+      "targetInitialState": null,
+      "targetActiveState": null
     },
     {
       "id": "boundary-thicket",
@@ -468,7 +476,25 @@
         "es-MX": "MATORRAL DENSO DE LÍMITE"
       },
       "objectType": "caxecraft:boundary-thicket",
-      "initialState": "caxecraft:waiting"
+      "initialState": "caxecraft:waiting",
+      "activeState": null,
+      "targetObjectType": null,
+      "targetInitialState": null,
+      "targetActiveState": null
+    },
+    {
+      "id": "bridge-switch",
+      "kind": "linked-stateful-pair",
+      "label": {
+        "en": "BRIDGE + SWITCH",
+        "es-MX": "PUENTE + INTERRUPTOR"
+      },
+      "objectType": "caxecraft:gate-relay",
+      "initialState": "caxecraft:waiting",
+      "activeState": "caxecraft:entered",
+      "targetObjectType": "caxecraft:editor-bridge",
+      "targetInitialState": "caxecraft:raised",
+      "targetActiveState": "caxecraft:lowered"
     },
     {
       "id": "forge-relay",
@@ -478,7 +504,11 @@
         "es-MX": "RELÉ DE FORJA"
       },
       "objectType": "caxecraft:gate-relay",
-      "initialState": "caxecraft:waiting"
+      "initialState": "caxecraft:waiting",
+      "activeState": null,
+      "targetObjectType": null,
+      "targetInitialState": null,
+      "targetActiveState": null
     }
   ],
   "prefabs": [],
@@ -610,6 +640,32 @@
         ],
               "cellsPerAxis": 32
             }
+          }
+        }
+      ]
+    },
+    {
+      "id": "caxecraft:editor-bridge",
+      "interaction": "none",
+      "interactionRadiusMilli": 0,
+      "bounds": { "widthMilli": 3000, "heightMilli": 250, "depthMilli": 1000 },
+      "states": [
+        {
+          "id": "caxecraft:lowered",
+          "collision": "solid",
+          "render": "visible",
+          "presentation": {
+            "asset": "adventure-items",
+            "cell": "bridge-input"
+          }
+        },
+        {
+          "id": "caxecraft:raised",
+          "collision": "passable",
+          "render": "hidden",
+          "presentation": {
+            "asset": "adventure-items",
+            "cell": "bridge-input"
           }
         }
       ]
@@ -895,7 +951,9 @@
   ],
   "states": [
     "caxecraft:entered",
+    "caxecraft:lowered",
     "caxecraft:open",
+    "caxecraft:raised",
     "caxecraft:sealed",
     "caxecraft:waiting"
   ],

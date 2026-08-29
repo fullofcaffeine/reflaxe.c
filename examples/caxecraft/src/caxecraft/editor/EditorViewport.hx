@@ -5,12 +5,14 @@ import caxecraft.editor.EditorTypes.EditorError;
 import caxecraft.content.EditorObjectCatalog.EditorObjectRecipe;
 import caxecraft.editor.EditorPlacement.checkpointTemplate;
 import caxecraft.editor.EditorPlacement.objectRecipeTemplate;
+import caxecraft.editor.EditorPlacement.EditorObjectTemplateResult;
 import caxecraft.editor.EditorPlacement.triggerZoneCommand;
 import caxecraft.editor.EditorWorldGrid.decode as decodeWorld;
 import caxecraft.editor.EditorWorldViewport.EditorWorldProjection;
 import caxecraft.scenario.ContentId;
 import caxecraft.scenario.ScenarioGeometry.VoxelBounds;
 import caxecraft.scenario.ScenarioGeometry.VoxelPoint;
+import caxecraft.scenario.ScenarioGeometry.VoxelSize;
 import caxecraft.scenario.ScenarioWorld;
 import caxecraft.scenario.ScenarioWorld.BlockPaletteEntry;
 import caxecraft.scenario.ScenarioObject;
@@ -257,8 +259,8 @@ function toolFromIndex(index:Int):Null<EditorTool> {
 	Object tools read existing IDs and create one reloadable record or one atomic
 	template. The UI never mutates a projection directly.
 **/
-function commandFor(tool:EditorTool, point:VoxelPoint, paletteCode:Int, selection:Null<VoxelBounds>, objects:Array<ScenarioObject>, ruleIds:Array<ScenarioId>,
-		dialogueIds:Array<ScenarioId>, recipe:Null<EditorObjectRecipe>):EditorToolCommandResult {
+function commandFor(tool:EditorTool, point:VoxelPoint, worldSize:VoxelSize, paletteCode:Int, selection:Null<VoxelBounds>, objects:Array<ScenarioObject>,
+		ruleIds:Array<ScenarioId>, dialogueIds:Array<ScenarioId>, recipe:Null<EditorObjectRecipe>):EditorToolCommandResult {
 	return switch tool {
 		case SelectTool:
 			ToolSelectionReady({
@@ -276,13 +278,11 @@ function commandFor(tool:EditorTool, point:VoxelPoint, paletteCode:Int, selectio
 			ToolBatchReady(template.commands, template.objectId);
 		case CatalogObjectTool:
 			if (recipe == null) ToolCommandRejected(MissingEditorObjectRecipe); else {
-				final template = objectRecipeTemplate(recipe, point, objects, dialogueIds, ruleIds);
-				if (template == null)
-					ToolCommandRejected(MissingEditorDialogue);
-				else if (template.commands.length == 1)
-					ToolCommandReady(template.commands[0]);
-				else
-					ToolBatchReady(template.commands, template.objectId);
+				switch objectRecipeTemplate(recipe, point, worldSize, objects, dialogueIds, ruleIds) {
+					case ObjectTemplateRejected(error): ToolCommandRejected(error);
+					case ObjectTemplateReady(template) if (template.commands.length == 1): ToolCommandReady(template.commands[0]);
+					case ObjectTemplateReady(template): ToolBatchReady(template.commands, template.objectId);
+				}
 			}
 		case TriggerZoneTool:
 			ToolCommandReady(triggerZoneCommand(point, objects));

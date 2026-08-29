@@ -2,6 +2,13 @@ package caxecraft.content;
 
 import caxecraft.scenario.ContentId;
 
+/** One named state transition used by a linked creator recipe. */
+typedef EditorStatefulTransitionRecipe = {
+	final objectType:ContentId;
+	final initialState:ContentId;
+	final activeState:ContentId;
+}
+
 /**
 	Describes pack-owned objects that a creator may place in a level.
 
@@ -21,6 +28,9 @@ enum EditorObjectRecipeKind {
 
 	/** Place one stateful object with a pack-validated initial state. */
 	EditorStatefulObject(objectType:ContentId, initialState:ContentId);
+
+	/** Place two stateful objects and connect their admitted state changes. */
+	EditorLinkedStatefulPair(source:EditorStatefulTransitionRecipe, target:EditorStatefulTransitionRecipe);
 }
 
 /** One child-readable catalog entry with a stable authoring identity. */

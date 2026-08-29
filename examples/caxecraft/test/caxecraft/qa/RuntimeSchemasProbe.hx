@@ -115,6 +115,7 @@ function selfCheck():Int {
 	var foundBoundaryBoulder = false;
 	var foundBoundaryRoot = false;
 	var foundBoundaryThicket = false;
+	var foundBridgeSwitch = false;
 	for (index in 0...registry.editorObjectCount()) {
 		final recipe = registry.editorObjectAt(index);
 		if (recipe == null)
@@ -126,10 +127,12 @@ function selfCheck():Int {
 				foundBoundaryRoot = matchesStatefulEditorRecipe(recipe, "caxecraft:boundary-root");
 			case "boundary-thicket":
 				foundBoundaryThicket = matchesStatefulEditorRecipe(recipe, "caxecraft:boundary-thicket");
+			case "bridge-switch":
+				foundBridgeSwitch = matchesBridgeSwitchRecipe(recipe);
 			case _:
 		}
 	}
-	if (!foundBoundaryBoulder || !foundBoundaryRoot || !foundBoundaryThicket)
+	if (!foundBoundaryBoulder || !foundBoundaryRoot || !foundBoundaryThicket || !foundBridgeSwitch)
 		return 58;
 	final assets = availableEditorAssets(registry, catalog);
 	var terrainAssets = 0;
@@ -172,7 +175,7 @@ function selfCheck():Int {
 				switch entry.use {
 					case PlaceObjectAsset(recipe):
 						switch recipe.kind {
-							case EditorStatefulObject(_, _):
+							case EditorStatefulObject(_, _) | EditorLinkedStatefulPair(_, _):
 								if (entry.labelEn != recipe.labelEn || entry.labelEsMx != recipe.labelEsMx) editorObjectLabelsMatch = false;
 							case _: return 76;
 						}
@@ -362,7 +365,22 @@ function matchesStatefulEditorRecipe(recipe:EditorObjectRecipe, expectedObjectTy
 		return false;
 	return switch recipe.kind {
 		case EditorStatefulObject(objectType, initialState): objectType.text() == expectedObjectType && initialState.text() == "caxecraft:waiting";
-		case EditorItem(_, _) | EditorNpc(_) | EditorEnemy(_): false;
+		case EditorItem(_, _) | EditorNpc(_) | EditorEnemy(_) | EditorLinkedStatefulPair(_, _): false;
+	};
+}
+
+/** Verify the bridge template exposes only references admitted by its data record. */
+function matchesBridgeSwitchRecipe(recipe:EditorObjectRecipe):Bool {
+	return switch recipe.kind {
+		case EditorLinkedStatefulPair(source, target):
+			source.objectType.text() == "caxecraft:gate-relay"
+			&& source.initialState.text() == "caxecraft:waiting"
+			&& source.activeState.text() == "caxecraft:entered"
+			&& target.objectType.text() == "caxecraft:editor-bridge"
+			&& target.initialState.text() == "caxecraft:raised"
+			&& target.activeState.text() == "caxecraft:lowered";
+		case _:
+			false;
 	};
 }
 
@@ -573,6 +591,11 @@ function negativeChecks():Int {
 		return 61;
 	if (!rejectsParsedPack(parsed, replaceValue([field("editorObjects"), index(0), field("initialState")], JsonString("caxecraft:other")), InvalidInvariant))
 		return 62;
+	if (!rejectsParsedPack(parsed, replaceValue([field("editorObjects"), index(3), field("targetObjectType")], JsonString("caxecraft:missing")),
+		UnresolvedReference))
+		return 77;
+	if (!rejectsParsedPack(parsed, replaceValue([field("editorObjects"), index(3), field("activeState")], JsonString("caxecraft:lowered")), InvalidInvariant))
+		return 78;
 	return uiNegativeChecks(minimalUiCatalog());
 }
 
@@ -613,7 +636,8 @@ function minimalPack():String
 		+ '"drops":[{"id":"caxecraft:drop","item":"caxecraft:item","quantity":1,"pickupRadiusMilli":1500,"presentation":{"asset":"items","cell":"berries"}}],'
 		+ '"effects":[{"id":"caxecraft:feedback","profile":"pickup-feedback"}],'
 		+ '"editorObjects":[{"id":"glyph-control","kind":"stateful-object","label":{"en":"GLYPH CONTROL","es-MX":"CONTROL DE GLIFO"},'
-		+ '"objectType":"caxecraft:glyph-control","initialState":"caxecraft:idle"}],"prefabs":[],'
+		+ '"objectType":"caxecraft:glyph-control","initialState":"caxecraft:idle","activeState":null,"targetObjectType":null,'
+		+ '"targetInitialState":null,"targetActiveState":null}],"prefabs":[],'
 		+ '"statefulObjects":[{"id":"caxecraft:glyph-control","interaction":"activate","interactionRadiusMilli":2500,'
 		+ '"bounds":{"widthMilli":1000,"heightMilli":1000,"depthMilli":1000},'
 		+ '"states":[{"id":"caxecraft:active","collision":"solid","render":"visible","presentation":{"asset":"adventure-items","cell":"glyph-leaf",'
