@@ -8,6 +8,7 @@ import copy
 import difflib
 import json
 import os
+import re
 import signal
 import shutil
 import subprocess
@@ -852,7 +853,7 @@ def static_hxcir(result: subprocess.CompletedProcess[str]) -> str:
 
 
 def check_borrowed_child(*, requested_toolchain: str) -> None:
-    """Prove one synthetic child alias remains a bounded typed borrow."""
+    """Prove bounded child borrows and collector-managed child returns."""
 
     for label in ("first", "second"):
         oracle = run_bounded_process(
@@ -877,7 +878,7 @@ def check_borrowed_child(*, requested_toolchain: str) -> None:
         first = custom_target(BORROWED_CHILD, first_output, main="Main", report=True)
         second = custom_target(BORROWED_CHILD, second_output, main="Main", report=True)
         expected_summary = (
-            "HXC2001: hxrt selected 7 dependency-closed feature(s) for 16 typed "
+            "HXC2001: hxrt selected 7 dependency-closed feature(s) for 34 typed "
             "runtime root(s): runtime-base, status, alloc, array, object, gc, string-literal."
         )
         for label, result in (("first", first), ("second", second)):
@@ -897,6 +898,57 @@ def check_borrowed_child(*, requested_toolchain: str) -> None:
             raise ClassLayoutFailure("borrowed-child production output was not deterministic")
 
         hxcir = static_hxcir(first)
+        main_start = hxcir.find('function "function.Main.main"')
+        main_end = hxcir.find("\n  function ", main_start + 1)
+        main_text = hxcir[main_start : None if main_end < 0 else main_end]
+        returned_results = re.findall(
+            r'instruction "[^"]+\.instance-call" result="([^"]+)"[^\n]+'
+            r'dispatch=direct\("method\._Main\.CounterOwner\.escapedChild"\)',
+            main_text,
+        )
+        if main_start < 0 or len(returned_results) != 2 or any(
+            not re.search(rf'managed-root "[^"]+" value="{result}" path=""', main_text)
+            for result in returned_results
+        ):
+            raise ClassLayoutFailure(
+                "borrowed-child call results lost their exact managed roots"
+            )
+
+        returned_method_start = hxcir.find('function "method._Main.CounterOwner.escapedChild"')
+        returned_method_end = hxcir.find("\n  function ", returned_method_start + 1)
+        returned_method = hxcir[
+            returned_method_start : None if returned_method_end < 0 else returned_method_end
+        ]
+        if (
+            returned_method_start < 0
+            or returned_method.count("managed-root ") != 2
+            or 'managed-root "root.0" value="parameter.self" path=""' not in returned_method
+            or 'load place=field(dereference("parameter.self"),"child")' not in returned_method
+            or 'terminator return value=' not in returned_method
+            or " allocate " in returned_method
+            or " retain " in returned_method
+        ):
+            raise ClassLayoutFailure(
+                "borrowed-child method lost its collector-managed return contract"
+            )
+
+        source = (first_output / "src/program.c").read_text(encoding="utf-8")
+        return_temporaries = re.findall(
+            r"struct hxc_Main_ChildCounter \*(hxc_l_tmp_instance_call_result_n\d+) "
+            r"= hxc_Main_CounterOwner_escapedChild\(",
+            source,
+        )
+        if len(return_temporaries) != 2 or any(
+            not re.search(
+                rf"hxc_l_gc_roots\[\d+\] = \(const void \*\){temporary};",
+                source,
+            )
+            for temporary in return_temporaries
+        ):
+            raise ClassLayoutFailure(
+                "generated C did not root both typed managed-child call results"
+            )
+
         function_start = hxcir.find('function "method._Main.CounterOwner.total"')
         function_end = hxcir.find("\n  function ", function_start + 1)
         function_text = hxcir[function_start : None if function_end < 0 else function_end]
@@ -1141,8 +1193,8 @@ def main(arguments: Iterable[str] = ()) -> int:
         if args.borrowed_child_only:
             check_borrowed_child(requested_toolchain=args.toolchain)
             print(
-                "class-layout: OK: nonescaping owned-child aliases remain typed "
-                "borrows and escape attempts fail closed"
+                "class-layout: OK: nonescaping child aliases stay borrowed, "
+                "managed child returns stay rooted, and escape attempts fail closed"
             )
             return 0
         if args.native_only:

@@ -15644,7 +15644,7 @@ private class FunctionBuilder {
 			registerTailArguments(targetId, callInstruction.id, callArguments.length);
 		if (constructedObjects.length > callConstructionCount)
 			finishCallBoundedOwners(callCleanupDepth);
-		if (materializeResult) {
+		if (materializeResult || collectorManagedClassResult(returnMapping)) {
 			final ordinal = temporaryOrdinal++;
 			final request = new CSymbolRequest(CSKTemporary, input.declarationPath.split(".").concat([input.fieldName, "instance-call-result"]),
 				CNSOrdinary(prepared.functionRequest.stableKey()), CSVInternal, null, [], [], ordinal);
@@ -16088,6 +16088,18 @@ private class FunctionBuilder {
 		final request = new CSymbolRequest(CSKTemporary, input.declarationPath.split(".").concat([input.fieldName, role]),
 			CNSOrdinary(prepared.functionRequest.stableKey()), CSVInternal, null, [], [], ordinal);
 		temporaryRequests.set(valueId, request);
+	}
+
+	/**
+		Report whether an ignored instance-call result needs addressable C storage.
+
+		The exact-root planner publishes every collector-managed class result after
+		its defining call. Reserving the temporary during lowering gives that later
+		root update a stable address without changing non-managed call results.
+	**/
+	static function collectorManagedClassResult(mapping:CBodyValueType):Bool {
+		final classValue = mapping.classValue();
+		return classValue != null && classValue.managedByCollector;
 	}
 
 	/** Stable pseudo-value key used for the hidden returned-span length parameter. */
