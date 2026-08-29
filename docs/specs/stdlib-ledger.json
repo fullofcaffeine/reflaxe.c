@@ -2604,10 +2604,11 @@
       ],
       "tests": [
         "test/differential/array-runtime/generated/Main.hx",
+        "test/differential/array-runtime/generated-function/Main.hx",
         "test/differential/array-runtime/array_runtime.c",
         "test/differential/array-runtime/run.py"
       ],
-      "notes": "The C target keeps admitted Array elements unboxed in exact typed specializations while preserving shared mutable identity, checked failure, and representation-specific ownership. Unsupported element and ownership shapes remain fail-closed."
+      "notes": "The C target keeps admitted Array elements unboxed in exact typed specializations while preserving shared mutable identity, checked failure, and representation-specific ownership. Exact non-capturing function signatures use trivial function-pointer storage without a universal callable box. Capturing function environments and other unsupported ownership shapes remain fail-closed."
     },
     {
       "id": "array-constructor-partial",
@@ -3353,10 +3354,11 @@
       "tests": [
         "test/differential/array-runtime/array_runtime.c",
         "test/differential/array-runtime/generated/Main.hx",
+        "test/differential/array-runtime/generated-function/Main.hx",
         "test/differential/array-runtime/negative/sort_capturing_comparator/Main.hx",
         "test/differential/array-runtime/run.py"
       ],
-      "notes": "The admitted Array specializations sort in place through one exact non-capturing `(T, T) -> Int` comparator. Receiver and comparator evaluation happen once, aliases observe the reorder, and allocation-free slot relocation preserves managed element ownership. Haxe does not promise a stable Array.sort; capturing closures and unsupported element representations remain source-positioned failures."
+      "notes": "The admitted Array specializations sort in place through one exact non-capturing `(T, T) -> Int` comparator. Receiver and comparator evaluation happen once, aliases observe the reorder, and allocation-free slot relocation preserves managed element ownership. Exact function-pointer elements remain typed when the comparator receives them. Haxe does not promise a stable Array.sort; capturing closures and unsupported element representations remain source-positioned failures."
     },
     {
       "id": "array-shift-partial",
@@ -5440,10 +5442,11 @@
       ],
       "tests": [
         "test/differential/array-runtime/generated/Main.hx",
+        "test/differential/array-runtime/generated-function/Main.hx",
         "test/differential/array-runtime/array_runtime.c",
         "test/differential/array-runtime/run.py"
       ],
-      "notes": "The C target keeps admitted Array elements unboxed in exact typed specializations while preserving shared mutable identity, checked failure, and representation-specific ownership. Unsupported element and ownership shapes remain fail-closed.",
+      "notes": "The C target keeps admitted Array elements unboxed in exact typed specializations while preserving shared mutable identity, checked failure, and representation-specific ownership. Exact non-capturing function signatures use trivial function-pointer storage without a universal callable box. Capturing function environments and other unsupported ownership shapes remain fail-closed.",
       "ruleId": "array-type-partial"
     },
     {
@@ -6231,10 +6234,11 @@
       "tests": [
         "test/differential/array-runtime/array_runtime.c",
         "test/differential/array-runtime/generated/Main.hx",
+        "test/differential/array-runtime/generated-function/Main.hx",
         "test/differential/array-runtime/negative/sort_capturing_comparator/Main.hx",
         "test/differential/array-runtime/run.py"
       ],
-      "notes": "The admitted Array specializations sort in place through one exact non-capturing `(T, T) -> Int` comparator. Receiver and comparator evaluation happen once, aliases observe the reorder, and allocation-free slot relocation preserves managed element ownership. Haxe does not promise a stable Array.sort; capturing closures and unsupported element representations remain source-positioned failures.",
+      "notes": "The admitted Array specializations sort in place through one exact non-capturing `(T, T) -> Int` comparator. Receiver and comparator evaluation happen once, aliases observe the reorder, and allocation-free slot relocation preserves managed element ownership. Exact function-pointer elements remain typed when the comparator receives them. Haxe does not promise a stable Array.sort; capturing closures and unsupported element representations remain source-positioned failures.",
       "ruleId": "array-sort-partial"
     },
     {

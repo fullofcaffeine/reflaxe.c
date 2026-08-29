@@ -1079,8 +1079,12 @@ class CBodyAggregateRegistry {
 		Map one exact non-capturing callable signature without erasing its values.
 
 		Optional and rest-style indirect calls need their own argument-completion
-		contract, so this first direct-function-pointer slice rejects them instead
-		of silently giving C a different calling convention.
+		contract, so this direct-function-pointer slice rejects them instead of
+		silently giving C a different calling convention. An exact direct function
+		parameter remains one plain C function pointer; this is required when an
+		`Array<Function>` comparator receives two stored elements. Function-valued
+		results remain closed because returning a callable needs a separate escape
+		and closure-environment contract.
 	**/
 	function directFunctionValueType(type:Type, position:Position, ownerModule:String, sourcePath:String, fail:(Position, String) -> Void,
 			node:String):Null<CBodyValueType> {
@@ -1095,8 +1099,6 @@ class CBodyAggregateRegistry {
 						return rejected(fail, position, '$node.function-argument-$index:Void');
 					if (parameter.spanElement() != null)
 						return rejected(fail, position, '$node.function-argument-$index:borrowed-span-indirect-call-not-admitted');
-					if (parameter.functionValue() != null)
-						return rejected(fail, position, '$node.function-argument-$index:nested-function-value-not-admitted');
 					parameters.push(parameter);
 				}
 				final result = valueType(resultType, position, ownerModule, sourcePath, fail, '$node.function-result');

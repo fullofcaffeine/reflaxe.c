@@ -5596,12 +5596,25 @@ class CBodyEmitter {
 		is const, not the Array object it points at. Putting `const` on the base
 		struct would instead create `const ArrayRef **`, which both changes the
 		pointee contract and triggers Clang's `-Wcast-qual` diagnostic.
+		A stored function pointer follows the same rule: the slot is
+		`Result (* const *)(Arguments)`, not a function that returns `const Result *`.
 
 		The extra outer `DPointer` represents the address of the container slot.
 		C declarator qualifiers live on that pointer when the stored value already
 		has pointer shape; direct values keep the qualifier on their base type.
 	**/
 	static function storagePointerDeclarator(value:CTypedDeclarator, readOnly:Bool):CTypedDeclarator {
+		switch value.declarator {
+			case DFunction(DGroup(DPointer(inner, qualifiers)), parameters):
+				// Insert the slot-address pointer inside the function declarator's
+				// required group. Wrapping the complete declarator would change the
+				// function's result type instead of adding one pointer level.
+				return {
+					type: value.type,
+					declarator: DFunction(DGroup(DPointer(DPointer(inner, qualifiers), readOnly ? [QConst] : [])), parameters)
+				};
+			case _:
+		}
 		if (!readOnly)
 			return {type: value.type, declarator: DPointer(value.declarator, [])};
 		return switch value.declarator {

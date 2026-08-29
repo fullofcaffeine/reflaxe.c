@@ -56,6 +56,16 @@ pointer such as `int32_t (*operation)(int32_t)`. Calling that value uses the
 pointer directly; it does not box arguments, erase them to `void *`, or select a
 runtime feature.
 
+An `Array` can store these exact bare function pointers as unboxed elements.
+The complete parameter and result signature belongs to the Array
+specialization key, so `Array<Int -> Int>` cannot share storage with
+`Array<(Int, Int) -> Int>`. Construction, indexed calls, replacement, growth,
+copying, iteration, and sorting use the ordinary typed Array operations. A
+non-capturing sort comparator can receive two stored pointers directly. The
+elements have no cleanup callback because a bare function pointer owns no
+environment. A capturing function still fails before output because its
+environment has no Array-owned lifetime.
+
 The same bare function pointer can cross ordinary typed control flow. An `if`
 or `switch` expression stores the selected function in one exact local, and
 HxcIR proves that every path assigns that local before its first read. A

@@ -44,6 +44,7 @@ JOIN_SOURCES = (
 EXPECTED_TRACE = "5:1,3,1,1,0\n"
 GENERATED = CASE / "generated"
 GENERATED_CLASS = CASE / "generated-class"
+GENERATED_FUNCTION = CASE / "generated-function"
 GENERATED_CLASS_GC_DRIVER = ROOT / "test/native/array_class_gc_driver.c"
 NEGATIVE = CASE / "negative"
 REPORT_PREFIX = "HXC_STATIC_INITIALIZATION="
@@ -1278,6 +1279,151 @@ def render_managed_class_pair(root: Path) -> Path:
     return normal_split
 
 
+def validate_function_array_hxcir(hxcir: str) -> None:
+    """Prove that callable signatures and Array operations remain typed in HxcIR."""
+    for marker in (
+        'function(i32)->i32',
+        'function(i32,i32)->i32',
+        'runtime(feature="array",operation="create-literal")',
+        'runtime(feature="array",operation="push")',
+        'runtime(feature="array",operation="set")',
+        'runtime(feature="array",operation="copy")',
+        'runtime(feature="array",operation="get-checked")',
+        'runtime(feature="array",operation="sort")',
+        'function-reference target="function.Main.increment"',
+        'function-reference target="function.Main.multiply"',
+        'function-reference target="function.lambda.function.Main.main.',
+    ):
+        if marker not in hxcir:
+            raise ArrayRuntimeFailure(f"function-valued Array HxcIR omitted {marker}")
+    if " raw" in hxcir or str(ROOT) in hxcir:
+        raise ArrayRuntimeFailure(
+            "function-valued Array HxcIR used raw syntax or leaked a local path"
+        )
+
+
+def validate_function_array_project(output: Path) -> None:
+    """Check the unboxed layout, exact runtime closure, and strict C declarators."""
+    plan = json.loads((output / "hxc.runtime-plan.json").read_text(encoding="utf-8"))
+    if plan.get("features") != [
+        "runtime-base",
+        "status",
+        "alloc",
+        "array",
+        "string-literal",
+    ]:
+        raise ArrayRuntimeFailure(
+            "function-valued Array selected an unrelated callable runtime"
+        )
+    operations = {
+        reason.get("operationId")
+        for reason in plan.get("rootReasons", [])
+        if isinstance(reason, dict) and reason.get("featureId") == "array"
+    }
+    expected_operations = {
+        "cleanup-release",
+        "copy",
+        "create-literal",
+        "get-checked",
+        "length",
+        "managed-type-representation",
+        "push",
+        "set",
+        "sort",
+    }
+    if operations != expected_operations:
+        raise ArrayRuntimeFailure(
+            "function-valued Array operations drifted: "
+            f"{sorted(operations)!r}"
+        )
+
+    application = "\n".join(
+        path.read_text(encoding="utf-8")
+        for path in sorted((output / "src").rglob("*.c"))
+    )
+    for marker in (
+        "hxc_array_ref_create_trivial",
+        "sizeof(int32_t (*)(int32_t))",
+        "sizeof(int32_t (*)(int32_t, int32_t))",
+        "_Alignof(int32_t (*)(int32_t))",
+        "_Alignof(int32_t (*)(int32_t, int32_t))",
+        "int32_t (*const *)(int32_t)",
+        "int32_t (*const *)(int32_t, int32_t)",
+    ):
+        if marker not in application:
+            raise ArrayRuntimeFailure(f"function-valued Array C omitted {marker}")
+    for forbidden in (
+        "_element_copy(",
+        "_element_assign(",
+        "_element_destroy(",
+        "hxc_dynamic",
+        "stack_closure",
+    ):
+        if forbidden in application:
+            raise ArrayRuntimeFailure(
+                f"function-valued Array C gained forbidden carrier {forbidden}"
+            )
+
+
+def render_function_array_pair(root: Path) -> Path:
+    """Render one reversed-discovery pair and keep the split project as evidence."""
+    normal = root / "generated-function-split-normal"
+    reverse = root / "generated-function-split-reverse"
+    first = compile_generated_haxe(GENERATED_FUNCTION, normal, report=True)
+    second = compile_generated_haxe(GENERATED_FUNCTION, reverse, reverse=True)
+    for label, result in (("normal", first), ("reverse", second)):
+        if result.returncode != 0:
+            raise ArrayRuntimeFailure(
+                f"{label} function-valued Array compile failed\n"
+                f"stdout={result.stdout!r}\nstderr={result.stderr!r}"
+            )
+    if generated_tree(normal) != generated_tree(reverse):
+        raise ArrayRuntimeFailure(
+            "function-valued Array project changed under reversed discovery"
+        )
+    validate_function_array_hxcir(extract_hxcir(first))
+    validate_function_array_project(normal)
+    oracle = run_bounded_process(
+        [development_tool("haxe"), "oracle.hxml"],
+        cwd=GENERATED_FUNCTION,
+        env=haxe_environment(),
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    if oracle.returncode != 0 or oracle.stdout or oracle.stderr:
+        raise ArrayRuntimeFailure(
+            "function-valued Array Eval oracle failed: "
+            f"exit={oracle.returncode} stdout={oracle.stdout!r} "
+            f"stderr={oracle.stderr!r}"
+        )
+    return normal
+
+
+def run_function_array_negative_cases(root: Path) -> None:
+    """Keep captured environments and mismatched signatures fail-closed."""
+    expected = {
+        "function_element_capture": "TFunction(capturing-closure:outer-local:offset)",
+        "function_element_signature_mismatch": (
+            "(left : Int, right : Int) -> Int should be Int -> Int"
+        ),
+    }
+    for name, marker in expected.items():
+        output = root / f"negative-{name}"
+        result = compile_generated_haxe(NEGATIVE / name, output)
+        if result.returncode == 0 or marker not in result.stderr:
+            raise ArrayRuntimeFailure(
+                f"negative function-valued Array case {name} drifted\n"
+                f"exit={result.returncode} stdout={result.stdout!r} "
+                f"stderr={result.stderr!r}"
+            )
+        if output.exists() and any(output.rglob("*")):
+            raise ArrayRuntimeFailure(
+                f"negative function-valued Array case {name} left output"
+            )
+
+
 def run_generated_negative_cases(root: Path) -> None:
     expected = {
         "indirect_fresh_argument": "TCall(indirect-managed-argument-needs-explicit-ownership:0)",
@@ -1641,6 +1787,40 @@ def run_native(
             inspect_symbols(debug, toolchain.family)
 
 
+def run_function_array_lane(toolchains: list[Toolchain]) -> None:
+    """Verify only the exact function-pointer Array specialization slice."""
+    with tempfile.TemporaryDirectory(
+        prefix="reflaxe-c-function-array-runtime-"
+    ) as temporary:
+        root = Path(temporary)
+        generated = render_function_array_pair(root)
+        run_function_array_negative_cases(root)
+        for toolchain in toolchains:
+            build = root / toolchain.family
+            build.mkdir(parents=True)
+            compile_and_run_generated(
+                toolchain,
+                build,
+                generated,
+                ("-O0",),
+                "generated-function-array-o0",
+            )
+            compile_and_run_generated(
+                toolchain,
+                build,
+                generated,
+                ("-O2",),
+                "generated-function-array-o2",
+            )
+            compile_and_run_generated(
+                toolchain,
+                build,
+                generated,
+                SANITIZER_FLAGS,
+                "generated-function-array-sanitized",
+            )
+
+
 def parse_args(argv: Iterable[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--toolchain", choices=("auto", *TOOLCHAINS), default="auto")
@@ -1649,17 +1829,37 @@ def parse_args(argv: Iterable[str]) -> argparse.Namespace:
         action="store_true",
         help="use the checked semantic trace without requiring Haxe",
     )
+    parser.add_argument(
+        "--function-values-only",
+        action="store_true",
+        help="run only the focused function-valued Array compiler and native lane",
+    )
     return parser.parse_args(list(argv))
 
 
 def main(argv: Iterable[str] = ()) -> int:
     args = parse_args(argv)
     try:
+        toolchains = selected_toolchains(args.toolchain)
+        if args.function_values_only:
+            if args.native_only:
+                raise ArrayRuntimeFailure(
+                    "--function-values-only requires generated Haxe and cannot use --native-only"
+                )
+            run_function_array_lane(toolchains)
+            families = ", ".join(toolchain.family for toolchain in toolchains)
+            print(
+                "array-runtime: OK: "
+                f"{families}; exact function-valued Array signatures, unboxed storage, "
+                "runtime operations, determinism, negatives, strict C, and sanitizers passed"
+            )
+            return 0
         expected_trace = EXPECTED_TRACE if args.native_only else run_oracle()
         if not args.native_only:
             run_generated_eval_oracle()
-        toolchains = selected_toolchains(args.toolchain)
         run_native(toolchains, expected_trace, generated_haxe=not args.native_only)
+        if not args.native_only:
+            run_function_array_lane(toolchains)
     except (
         OSError,
         UnicodeError,
@@ -1670,7 +1870,11 @@ def main(argv: Iterable[str] = ()) -> int:
         return 1
     families = ", ".join(toolchain.family for toolchain in toolchains)
     oracle = "checked Array trace" if args.native_only else "pinned Haxe Eval oracle"
-    generated = "" if args.native_only else "generated ordinary-Haxe Array ownership plus "
+    generated = (
+        ""
+        if args.native_only
+        else "generated ordinary-Haxe Array ownership and exact function-valued elements plus "
+    )
     print(
         "array-runtime: OK: "
         f"{families}; {oracle}; {generated}primitive/reference growth, traced class identity, live pressure tracing, cycle reclamation, aliasing, "

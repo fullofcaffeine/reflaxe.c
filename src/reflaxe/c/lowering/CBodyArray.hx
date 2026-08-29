@@ -349,16 +349,22 @@ class CBodyArrayRegistry {
 	/**
 		Choose the smallest complete lifetime rule for one element type.
 
-		Plain scalars need no callbacks. Managed String, Bytes, Array, admitted class,
-		and closed aggregate elements use their exact copy/assign/destroy callbacks,
-		so each logical copy retains its owned storage and each destruction releases
-		it once. A shape whose nested lifetime is not modeled still fails here:
+		Plain scalars and exact non-capturing function pointers need no callbacks.
+		Managed String, Bytes, Array, admitted class, and closed aggregate elements
+		use their exact copy/assign/destroy callbacks, so each logical copy retains
+		its owned storage and each destruction releases it once. A shape whose nested
+		lifetime is not modeled still fails here:
 		admitting it requires a proven ownership and cycle policy, not a byte copy or
 		a generic boxed fallback.
 	**/
 	static function elementLifecycle(element:CBodyValueType):Null<CBodyArrayElementLifecycle>
 		return switch element.kind {
 			case CBVKPrimitive(_): element.irType != IRTVoid && element.irType != IRTString ? CBAELTrivial : null;
+			// A direct function value is one typed C function pointer. It has no
+			// environment or cleanup owner, so Array growth can relocate it as bytes.
+			// Stack closures remain a separate rejected kind until their captured
+			// environment has an Array-owned lifetime contract.
+			case CBVKFunction(_, _): CBAELTrivial;
 			// The bytes behind this view belong to compiler-emitted static literals.
 			// Copying the three scalar fields cannot outlive or double-free that storage.
 			case CBVKStaticString(_): CBAELTrivial;

@@ -2738,7 +2738,10 @@ private class FunctionLiteralRegistry {
 				return reject(owner, expression.pos, 'TFunction(lambda-argument-$index:optional-or-rest-not-admitted)');
 			final mapping = aggregateRegistry.valueType(declaredArgument.t, expression.pos, owner.modulePath, owner.sourcePath,
 				(position, node) -> reject(owner, position, node), 'TFunction(lambda-argument:${argument.v.name})');
-			if (mapping.irType == IRTVoid || mapping.spanElement() != null || mapping.functionValue() != null)
+			// Exact direct function parameters remain plain values. This lets a
+			// non-capturing comparator receive two Array<Function> elements without
+			// inventing closure storage or erasing either signature.
+			if (mapping.irType == IRTVoid || mapping.spanElement() != null)
 				return reject(owner, expression.pos, 'TFunction(lambda-argument-$index:not-direct-value:${mapping.cSpelling})');
 			if (expectedClosure != null
 				&& FunctionBuilder.typeKey(mapping.irType) != FunctionBuilder.typeKey(expectedClosure.parameters[index].irType))

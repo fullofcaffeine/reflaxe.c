@@ -836,7 +836,15 @@ runtime slice to make validation pass.
 Ordinary resizable `Array<T>` is an explicit managed representation, not a C
 pointer guessed by the printer. Its runtime calls name the operation—create,
 length, checked copy, or push—and retain the concrete element type. When
-checked indexing copies an element that owns Bytes fields, HxcIR gives the copy
+`T` is one exact non-capturing function signature, the specialization stores
+that C function pointer directly. Its signature remains visible in HxcIR,
+`sizeof`, `_Alignof`, indexed results, and sort adapters. Relocation is trivial
+because the pointer has no captured environment or cleanup owner. A capturing
+function remains a distinct closure carrier and cannot enter this storage
+without a separately proved environment lifetime.
+
+For a managed element, checked indexing can copy a value that owns Bytes
+fields. HxcIR gives the copy
 a compiler-owned local, exposes only a short-lived borrow to the enclosing
 expression, and attaches the matching program-local typed destroy cleanup.
 Validation proves that the element type encoded by that cleanup matches the
