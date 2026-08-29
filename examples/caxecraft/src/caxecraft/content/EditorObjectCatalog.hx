@@ -13,7 +13,7 @@ enum EditorObjectRecipeKind {
 	/** Place one inventory item with a small validated default quantity. */
 	EditorItem(itemType:ContentId, quantity:Int);
 
-	/** Place one NPC and bind it to the first authored dialogue chosen by the editor. */
+	/** Place one NPC; the editor binds its first dialogue and interaction rule. */
 	EditorNpc(npcType:ContentId);
 
 	/** Place one ordinary hostile or ambient entity. */

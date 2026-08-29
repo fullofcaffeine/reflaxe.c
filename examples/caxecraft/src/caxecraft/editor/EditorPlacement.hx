@@ -7,9 +7,16 @@ import caxecraft.scenario.ScenarioGeometry.ScenarioTransform;
 import caxecraft.scenario.ScenarioGeometry.VoxelPoint;
 import caxecraft.scenario.ScenarioId;
 import caxecraft.scenario.ScenarioObject;
+import caxecraft.scenario.ScenarioObject.ObjectPlacement;
 
 /** One atomic checkpoint template and the object that the editor selects. */
 typedef EditorCheckpointTemplate = {
+	final objectId:ScenarioId;
+	final commands:Array<EditorCommand>;
+}
+
+/** One asset-browser placement and every command needed to make it playable. */
+typedef EditorObjectTemplate = {
 	final objectId:ScenarioId;
 	final commands:Array<EditorCommand>;
 }
@@ -88,29 +95,60 @@ function triggerZoneCommand(point:VoxelPoint, objects:Array<ScenarioObject>):Edi
 	});
 }
 
-/** Create one pack-defined object through the same canonical placement path. */
-function objectRecipeCommand(recipe:EditorObjectRecipe, point:VoxelPoint, objects:Array<ScenarioObject>, dialogueIds:Array<ScenarioId>):Null<EditorCommand> {
-	final id = nextRecipeId(recipe.id, objects);
+/**
+	Create one pack-defined object and its required content logic atomically.
+
+	Items, enemies, and mechanisms need one placement command. An NPC also needs
+	an interaction rule because gameplay publishes `Interact` events and CaxeFlow
+	owns the resulting dialogue action. Both values use the first free shared
+	suffix, so the template cannot replace an authored object or rule.
+**/
+function objectRecipeTemplate(recipe:EditorObjectRecipe, point:VoxelPoint, objects:Array<ScenarioObject>, dialogueIds:Array<ScenarioId>,
+		ruleIds:Array<ScenarioId>):Null<EditorObjectTemplate> {
 	final transform:ScenarioTransform = {
 		xMilli: point.x * 1000 + 500,
 		yMilli: point.y * 1000,
 		zMilli: point.z * 1000 + 500,
 		yawDegrees: 0
 	};
-	final placement = switch recipe.kind {
-		case EditorItem(itemType, quantity): Item(itemType, quantity, transform);
-		case EditorNpc(npcType): dialogueIds.length == 0 ? null : Npc(npcType, dialogueIds[0], transform);
-		case EditorEnemy(entityType): Entity(entityType, transform);
-		case EditorStatefulObject(objectType, initialState): StatefulObject(objectType, initialState, transform);
+	return switch recipe.kind {
+		case EditorNpc(npcType):
+			if (dialogueIds.length == 0) null; else {
+				final number = nextRecipeTemplateNumber(recipe.id, objects, ruleIds);
+				final objectId = new ScenarioId('editor.${recipe.id}.n$number');
+				{
+					objectId: objectId,
+					commands: [
+						putRecipeObject(objectId, Npc(npcType, dialogueIds[0], transform)),
+						PutRule({
+							id: new ScenarioId('editor.rule.${recipe.id}.n$number'),
+							priority: 0,
+							repeat: Repeat,
+							event: Interact(objectId),
+							predicate: Always,
+							actions: [ShowDialogue(dialogueIds[0])]
+						})
+					]
+				};
+			}
+		case EditorItem(itemType, quantity): singleObjectTemplate(nextRecipeId(recipe.id, objects), Item(itemType, quantity, transform));
+		case EditorEnemy(entityType): singleObjectTemplate(nextRecipeId(recipe.id, objects), Entity(entityType, transform));
+		case EditorStatefulObject(objectType, initialState):
+			singleObjectTemplate(nextRecipeId(recipe.id, objects), StatefulObject(objectType, initialState, transform));
 	};
-	if (placement == null)
-		return null;
-	return PutObject({
-		id: id,
-		tags: [],
-		placement: placement
-	});
 }
+
+/** Wrap one ordinary placement in the same template result used by NPCs. */
+private function singleObjectTemplate(objectId:ScenarioId, placement:ObjectPlacement):EditorObjectTemplate {
+	return {
+		objectId: objectId,
+		commands: [putRecipeObject(objectId, placement)]
+	};
+}
+
+/** Build one canonical placement command without retaining caller-owned arrays. */
+private function putRecipeObject(objectId:ScenarioId, placement:ObjectPlacement):EditorCommand
+	return PutObject({id: objectId, tags: [], placement: placement});
 
 /** Find the first valid source-derived identity absent from the draft. */
 private function nextRecipeId(recipeId:String, objects:Array<ScenarioObject>):ScenarioId {
@@ -119,6 +157,16 @@ private function nextRecipeId(recipeId:String, objects:Array<ScenarioObject>):Sc
 	while (hasObjectId(objects, prefix + number))
 		number++;
 	return new ScenarioId(prefix + number);
+}
+
+/** Find one NPC suffix absent from both object and rule namespaces. */
+private function nextRecipeTemplateNumber(recipeId:String, objects:Array<ScenarioObject>, ruleIds:Array<ScenarioId>):Int {
+	final objectPrefix = 'editor.$recipeId.n';
+	final rulePrefix = 'editor.rule.$recipeId.n';
+	var number = 1;
+	while (hasObjectId(objects, objectPrefix + number) || hasRuleId(ruleIds, rulePrefix + number))
+		number++;
+	return number;
 }
 
 /** Find the first positive editor checkpoint number not used by any object. */

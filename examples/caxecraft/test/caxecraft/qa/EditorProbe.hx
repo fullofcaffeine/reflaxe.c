@@ -73,7 +73,7 @@ import caxecraft.editor.EditorPlacement.checkpointTemplate;
 import caxecraft.editor.EditorObjectDuplicate.duplicateObject;
 import caxecraft.editor.EditorObjectDuplicate.duplicateObjectWithConnectedRules;
 import caxecraft.editor.EditorObjectDelete.deleteObjectWithConnectedRules;
-import caxecraft.editor.EditorPlacement.objectRecipeCommand;
+import caxecraft.editor.EditorPlacement.objectRecipeTemplate;
 import caxecraft.editor.EditorPlacement.triggerZoneCommand;
 import caxecraft.editor.EditorObservationPlan.changesFor;
 import caxecraft.editor.EditorPresentation.EditorPresentationWorld;
@@ -167,6 +167,7 @@ import caxecraft.scenario.CaxeFlowPredicateRegistry.validateFlowPredicateDescrip
 import caxecraft.scenario.CaxeFlowRegistry.caxeFlowRegistry;
 import caxecraft.scenario.CaxeFlowRuntime.FlowTraceEntry;
 import caxecraft.scenario.CaxeFlowRuntime.FlowTick;
+import caxecraft.scenario.CaxeFlowRuntime.FlowPresentationEvent;
 import caxecraft.scenario.ContentId;
 import caxecraft.scenario.LogicalPath;
 import caxecraft.scenario.LocaleId;
@@ -884,9 +885,11 @@ final class EditorProbe {
 			EditorStatefulObject(new ContentId("caxecraft:mechanism"), new ContentId("caxecraft:idle")));
 		final session = open(defaultEditorSettings());
 		expectApplied(session.apply(ResizeWorld({width: 4, height: 3, depth: 4})), WorldShape, "prepare browser placement world");
-		final command = switch objectRecipeCommand(recipe, {x: 1, y: 0, z: 2}, session.draftSnapshot().objects, []) {
+		final command = switch objectRecipeTemplate(recipe, {x: 1, y: 0, z: 2}, session.draftSnapshot().objects, [], []) {
 			case null: throw "catalog placement rejected a stateful recipe";
-			case value: value;
+			case value:
+				require(value.commands.length == 1, "stateful catalog placement invented extra behavior");
+				value.commands[0];
 		};
 		switch command {
 			case PutObject(object):
@@ -923,16 +926,45 @@ final class EditorProbe {
 			lines: [{speaker: null, text: Message(DIALOGUE_MESSAGE)}]
 		})), Dialogue, "prepare browser NPC dialogue");
 		final npcRecipe = new EditorObjectRecipe("npc", "NPC", "PNJ", EditorNpc(content("caxecraft:ivvy")));
-		require(objectRecipeCommand(npcRecipe, point, [], []) == null, "NPC browser recipe invented a missing dialogue reference");
-		final npcCommand = requiredRecipeCommand(npcRecipe, point, session.draftSnapshot().objects, [DIALOGUE]);
-		switch npcCommand {
-			case PutObject({placement: Npc(npcType, dialogueId, _)}):
-				require(npcType.text() == "caxecraft:ivvy" && dialogueId.text() == DIALOGUE.text(),
-					"NPC browser recipe did not bind the first authored dialogue");
+		require(objectRecipeTemplate(npcRecipe, point, [], [], []) == null, "NPC browser recipe invented a missing dialogue reference");
+		final occupiedRule = id("editor.rule.npc.n1");
+		final readyNpcTemplate = switch objectRecipeTemplate(npcRecipe, point, session.draftSnapshot().objects, [DIALOGUE], [occupiedRule]) {
+			case null: throw "NPC browser rejected an authored dialogue";
+			case value: value;
+		};
+		switch readyNpcTemplate.commands {
+			case [PutObject({id: objectId, placement: Npc(npcType, dialogueId, _)}), PutRule(rule)]:
+				require(readyNpcTemplate.objectId.text() == "editor.npc.n2"
+					&& objectId.text() == readyNpcTemplate.objectId.text()
+					&& npcType.text() == "caxecraft:ivvy"
+					&& dialogueId.text() == DIALOGUE.text(),
+					"NPC dialogue template changed its collision-free object or content references");
+				require(rule.id.text() == "editor.rule.npc.n2" && rule.repeat == Repeat && rule.priority == 0,
+					"NPC dialogue template changed its collision-free rule identity or policy");
+				switch rule.event {
+					case Interact(interacted): require(interacted.text() == objectId.text(), "NPC dialogue rule targeted the wrong object");
+					case _: throw "NPC dialogue template emitted the wrong WHEN card";
+				}
+				switch rule.predicate {
+					case Always:
+					case _: throw "NPC dialogue template emitted the wrong IF card";
+				}
+				switch rule.actions {
+					case [ShowDialogue(dialogue)]:
+						require(dialogue.text() == DIALOGUE.text(), "NPC dialogue template emitted the wrong DO card");
+					case _: throw "NPC dialogue template emitted the wrong DO card count";
+				}
 			case _:
-				throw "NPC browser recipe emitted the wrong placement role";
+				throw "NPC browser did not create one atomic placement and dialogue rule";
 		}
-		roundTrip(session, npcCommand, Placement);
+		final beforeNpcHistory = session.historyEntries();
+		switch session.mutate({baseRevision: session.revision(), mutation: ApplyBatch(readyNpcTemplate.commands)}) {
+			case MutationApplied(families, _, _, _, undoDepth, redoDepth):
+				require(families.length == 2 && families[0] == Placement && families[1] == Rule && undoDepth == beforeNpcHistory + 1 && redoDepth == 0,
+					"NPC dialogue template did not commit as one reversible transaction");
+			case other:
+				throw 'NPC dialogue template commit failed: $other';
+		}
 
 		final enemyCommand = requiredRecipeCommand(new EditorObjectRecipe("enemy", "ENEMY", "ENEMIGO", EditorEnemy(content("caxecraft:entity"))), point,
 			session.draftSnapshot().objects, []);
@@ -946,6 +978,22 @@ final class EditorProbe {
 		final canonical = expectValid(session, "browser placement kinds");
 		expectCodecRoundTrip(canonical);
 		requireTestStarted(session.enterTestPlay(), "browser placement kinds");
+		final testPlay = switch session.testPlay() {
+			case null: throw "NPC dialogue template Test Play did not start";
+			case value: value;
+		};
+		final npcTick = testPlay.runTick({
+			events: [
+				flowEventOccurrence(Interact(readyNpcTemplate.objectId), ActorEventContext(PLAYER))
+			],
+			positions: []
+		});
+		switch npcTick.presentation {
+			case [DialogueRequested(dialogue)]:
+				require(dialogue.text() == DIALOGUE.text(), "NPC interaction requested the wrong dialogue in Test Play");
+			case _:
+				throw "NPC interaction did not request one dialogue in Test Play";
+		}
 		require(session.leaveTestPlay(), "browser placement Test Play did not return to editing");
 		require(session.canonicalDraft().compare(canonical) == 0, "browser placement Test Play changed the editor draft");
 	}
@@ -953,9 +1001,12 @@ final class EditorProbe {
 	/** Require one browser recipe to produce an ordinary canonical command. */
 	static function requiredRecipeCommand(recipe:EditorObjectRecipe, point:VoxelPoint, objects:Array<ScenarioObject>,
 			dialogueIds:Array<ScenarioId>):EditorCommand
-		return switch objectRecipeCommand(recipe, point, objects, dialogueIds) {
+		return switch objectRecipeTemplate(recipe, point, objects, dialogueIds, []) {
 			case null: throw 'browser recipe ${recipe.id} was rejected';
-			case value: value;
+			case value:
+				if (value.commands.length != 1)
+					throw 'browser recipe ${recipe.id} unexpectedly required a command batch';
+				value.commands[0];
 		};
 
 	/** Prove one selected object becomes a distinct canonical copy with the same payload. */
@@ -2814,6 +2865,19 @@ final class EditorProbe {
 					"checkpoint tool did not produce one selectable atomic template");
 			case _:
 				throw "checkpoint tool did not produce a canonical command batch";
+		}
+		final npcRecipe = new EditorObjectRecipe("npc", "NPC", "PNJ", EditorNpc(content("caxecraft:ivvy")));
+		switch commandForTool(CatalogObjectTool, point, 1, null, [], [], [], npcRecipe) {
+			case ToolCommandRejected(MissingEditorDialogue):
+			case _:
+				throw "catalog tool did not reject an NPC template without authored dialogue";
+		}
+		switch commandForTool(CatalogObjectTool, point, 1, null, [], [id("editor.rule.npc.n1")], [DIALOGUE], npcRecipe) {
+			case ToolBatchReady(commands, selectedObject):
+				require(commands.length == 2 && selectedObject.text() == "editor.npc.n2",
+					"catalog tool did not expose the NPC dialogue template as one selectable batch");
+			case _:
+				throw "catalog tool did not route NPC placement through its dialogue template";
 		}
 		switch commandForTool(TriggerZoneTool, point, 1, null, [], [], [], null) {
 			case ToolCommandReady(PutObject(object)):

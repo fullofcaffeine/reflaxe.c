@@ -4,7 +4,7 @@ import caxecraft.editor.EditorTypes.EditorCommand;
 import caxecraft.editor.EditorTypes.EditorError;
 import caxecraft.content.EditorObjectCatalog.EditorObjectRecipe;
 import caxecraft.editor.EditorPlacement.checkpointTemplate;
-import caxecraft.editor.EditorPlacement.objectRecipeCommand;
+import caxecraft.editor.EditorPlacement.objectRecipeTemplate;
 import caxecraft.editor.EditorPlacement.triggerZoneCommand;
 import caxecraft.editor.EditorWorldGrid.decode as decodeWorld;
 import caxecraft.editor.EditorWorldViewport.EditorWorldProjection;
@@ -276,8 +276,13 @@ function commandFor(tool:EditorTool, point:VoxelPoint, paletteCode:Int, selectio
 			ToolBatchReady(template.commands, template.objectId);
 		case CatalogObjectTool:
 			if (recipe == null) ToolCommandRejected(MissingEditorObjectRecipe); else {
-				final command = objectRecipeCommand(recipe, point, objects, dialogueIds);
-				command == null ? ToolCommandRejected(MissingEditorDialogue) : ToolCommandReady(command);
+				final template = objectRecipeTemplate(recipe, point, objects, dialogueIds, ruleIds);
+				if (template == null)
+					ToolCommandRejected(MissingEditorDialogue);
+				else if (template.commands.length == 1)
+					ToolCommandReady(template.commands[0]);
+				else
+					ToolBatchReady(template.commands, template.objectId);
 			}
 		case TriggerZoneTool:
 			ToolCommandReady(triggerZoneCommand(point, objects));
