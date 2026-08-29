@@ -23,6 +23,7 @@ ROOT = Path(__file__).resolve().parents[2]
 HXML = Path(__file__).with_name("enum_lowering.hxml")
 FIXTURES = Path(__file__).with_name("fixtures")
 POSITIVE = FIXTURES / "positive"
+STATEMENT_EARLY_RETURN = FIXTURES / "statement_early_return"
 NATIVE = Path(__file__).with_name("native")
 EXPECTED = Path(__file__).with_name("expected")
 REPORT_PREFIX = "HXC_ENUM_LOWERING="
@@ -1409,6 +1410,186 @@ def check_string_payload(*, requested_toolchain: str) -> None:
             )
 
 
+def check_statement_early_return(*, requested_toolchain: str) -> None:
+    """Prove a grouped enum switch owns one loop-local exit beside an early return."""
+    eval_result = run_bounded_process(
+        [
+            development_tool("haxe"),
+            "-cp",
+            str(STATEMENT_EARLY_RETURN),
+            "-main",
+            "Main",
+            "--interp",
+        ],
+        cwd=ROOT,
+        env=haxe_environment(),
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    require_compile_success(eval_result, "statement enum early-return Eval oracle")
+
+    with tempfile.TemporaryDirectory(
+        prefix="hxc-enum-statement-early-return-"
+    ) as temporary:
+        root = Path(temporary)
+        first = root / "first"
+        reverse = root / "reverse"
+        first_result = custom_target(
+            STATEMENT_EARLY_RETURN,
+            first,
+            main="Main",
+            report=True,
+        )
+        first_hxcir = extract_static_hxcir(
+            first_result, "statement enum early-return compile"
+        )
+        reverse_result = custom_target(
+            STATEMENT_EARLY_RETURN,
+            reverse,
+            main="Main",
+            reverse=True,
+            report=True,
+        )
+        reverse_hxcir = extract_static_hxcir(
+            reverse_result, "reverse statement enum early-return compile"
+        )
+        if (
+            first_hxcir != reverse_hxcir
+            or generated_tree(first) != generated_tree(reverse)
+        ):
+            raise EnumLoweringFailure(
+                "statement enum early-return artifacts changed with discovery order"
+            )
+
+        valid_hxcir = main_function_section(first_hxcir, "valid")
+        expected_hxcir = (EXPECTED / "statement_early_return.hxcir").read_text(
+            encoding="utf-8"
+        )
+        if valid_hxcir + "\n" != expected_hxcir:
+            raise EnumLoweringFailure(
+                "statement_early_return.hxcir drifted:\n"
+                + difference(
+                    expected_hxcir,
+                    valid_hxcir + "\n",
+                    "statement_early_return.hxcir",
+                )
+            )
+        enum_switch_exits = re.findall(
+            r'^    block "[^"]+\.enum-switch-exit"', valid_hxcir, re.MULTILINE
+        )
+        if len(enum_switch_exits) != 1:
+            raise EnumLoweringFailure(
+                "statement enum switch did not plan exactly one shared normal exit"
+            )
+        if (
+            valid_hxcir.count("terminator return value=") != 2
+            or valid_hxcir.count("constant value=bool(false)") != 1
+            or valid_hxcir.count("constant value=bool(true)") != 1
+        ):
+            raise EnumLoweringFailure(
+                "statement enum switch lost its independent early and final returns"
+            )
+
+        generated_c = b"\n".join(
+            path.read_bytes() for path in sorted(first.rglob("*.c"))
+        ).decode("utf-8")
+        valid_c = c_function_section(generated_c, "hxc_Main_valid")
+        expected_c = (EXPECTED / "statement_early_return.c").read_text(
+            encoding="utf-8"
+        )
+        if valid_c + "\n" != expected_c:
+            raise EnumLoweringFailure(
+                "statement_early_return.c drifted:\n"
+                + difference(
+                    expected_c,
+                    valid_c + "\n",
+                    "statement_early_return.c",
+                )
+            )
+        grouped_tags = (
+            "case hxc_Main_CellState_Empty:",
+            "case hxc_Main_CellState_Solid:",
+            "case hxc_Main_CellState_Water:",
+        )
+        if any(valid_c.count(tag) != 1 for tag in grouped_tags):
+            raise EnumLoweringFailure(
+                "generated C did not preserve the three grouped continuing tags"
+            )
+        if (
+            valid_c.count("case hxc_Main_CellState_InvalidStorage:") != 1
+            or valid_c.count("return false;") != 1
+            or valid_c.count("return true;") != 1
+            or valid_c.count("hxc_i32_add_wrapping") != 1
+        ):
+            raise EnumLoweringFailure(
+                "generated C duplicated or omitted an enum-switch continuation"
+            )
+
+        sources = tuple(
+            path.relative_to(first).as_posix() for path in sorted(first.rglob("*.c"))
+        )
+        headers = tuple(
+            path.relative_to(first).as_posix() for path in sorted(first.rglob("*.h"))
+        )
+        coverage = (
+            "statement-enum-switch",
+            "grouped-continuing-arms",
+            "payload-early-return",
+            "generated-executable",
+        )
+        base_project = CFixtureProject(
+            "enum-statement-early-return",
+            sources,
+            headers,
+            ("include", "runtime/include"),
+            "",
+            coverage,
+        )
+        for optimization in ("-O0", "-O2"):
+            report = run_c_fixture_corpus(
+                suite=f"enum-statement-early-return-{optimization[1:].lower()}",
+                projects=(base_project,),
+                fixture_root=first,
+                build_root=root / f"native-{optimization[1:].lower()}",
+                repository_root=ROOT,
+                requested_toolchain=requested_toolchain,
+                strict_flags=(*C11_STRICT_FLAGS, optimization),
+            )
+            validate_report(report, required_coverage=frozenset(coverage))
+
+        sanitized_coverage = (*coverage, "asan-ubsan")
+        sanitized_project = CFixtureProject(
+            "enum-statement-early-return-sanitized",
+            sources,
+            headers,
+            ("include", "runtime/include"),
+            "",
+            sanitized_coverage,
+            link_arguments=("-fsanitize=address,undefined",),
+        )
+        sanitizer_report = run_c_fixture_corpus(
+            suite="enum-statement-early-return-sanitized",
+            projects=(sanitized_project,),
+            fixture_root=first,
+            build_root=root / "native-sanitized",
+            repository_root=ROOT,
+            requested_toolchain=requested_toolchain,
+            strict_flags=(
+                *C11_STRICT_FLAGS,
+                "-O1",
+                "-g",
+                "-fno-omit-frame-pointer",
+                "-fno-sanitize-recover=all",
+                "-fsanitize=address,undefined",
+            ),
+        )
+        validate_report(
+            sanitizer_report, required_coverage=frozenset(sanitized_coverage)
+        )
+
+
 def check_managed_string_callback(*, requested_toolchain: str) -> None:
     """Prove a synchronous enum-constructor callback retains its String payload."""
     fixture = FIXTURES / "managed_string_callback"
@@ -2189,6 +2370,7 @@ def parse_args(arguments: Iterable[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--toolchain", choices=("auto", "gcc", "clang"), default="auto")
     parser.add_argument("--native-only", action="store_true")
+    parser.add_argument("--statement-early-return-only", action="store_true")
     parser.add_argument("--bytes-payload-only", action="store_true")
     parser.add_argument("--managed-class-payload-only", action="store_true")
     parser.add_argument("--managed-string-callback-only", action="store_true")
@@ -2207,6 +2389,13 @@ def main(arguments: Iterable[str] = ()) -> int:
             validate(report)
             check_native(report, requested_toolchain=args.toolchain)
             print("enum-lowering: OK: required enum native matrix passed")
+            return 0
+        if args.statement_early_return_only:
+            check_statement_early_return(requested_toolchain=args.toolchain)
+            print(
+                "enum-lowering: OK: loop-local grouped enum arms share one "
+                "continuation beside an independent payload early return"
+            )
             return 0
         if args.bytes_payload_only:
             check_bytes_payload(requested_toolchain=args.toolchain)
@@ -2254,6 +2443,7 @@ def main(arguments: Iterable[str] = ()) -> int:
         check_snapshots(first)
         check_native(first, requested_toolchain=args.toolchain)
         check_production(requested_toolchain=args.toolchain)
+        check_statement_early_return(requested_toolchain=args.toolchain)
         check_string_payload(requested_toolchain=args.toolchain)
         check_managed_string_callback(requested_toolchain=args.toolchain)
         check_managed_class_payload(requested_toolchain=args.toolchain)
@@ -2274,6 +2464,7 @@ def main(arguments: Iterable[str] = ()) -> int:
         "specialization, checked exhaustive matches, finite recursive layout, strict "
         "C11 and C++17 agreement, owned recursive records, cold/warm-server and "
         "split/package/unity determinism, ASan/UBSan, literal-backed String payloads, "
+        "loop-local grouped arms beside a payload early return, "
         "exact managed-class enum roots/traces, managed Bytes payload ownership "
         "across layouts, and fail-closed edges passed"
     )
