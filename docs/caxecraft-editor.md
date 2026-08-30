@@ -428,6 +428,11 @@ The native screen does not request a complete scenario copy after an accepted
 edit. It asks `EditorSession` for fresh presentation values from the retained
 draft. Exact history continues to use canonical before-and-after bytes.
 
+Build displays a voxel selection as one exact outer volume. It does not draw a
+separate wire box for every selected cell. A maximum 65,536-cell selection
+therefore keeps one selection draw call per frame instead of making rendering
+work grow with the selected volume.
+
 If history snapshots become the next bottleneck, a later slice can introduce
 typed command-specific inverse data. It must retain bounded paint gestures,
 exact undo bytes, hard memory limits, and the same public commands. A later

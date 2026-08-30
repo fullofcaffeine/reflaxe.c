@@ -132,6 +132,7 @@ import caxecraft.editor.EditorWorldViewport.EditorCameraState;
 import caxecraft.editor.EditorWorldViewport.EditorObjectFacing;
 import caxecraft.editor.EditorWorldViewport.EditorObjectGizmo;
 import caxecraft.editor.EditorWorldViewport.EditorObjectGizmoKind;
+import caxecraft.editor.EditorWorldViewport.EditorSelectionGizmo;
 import caxecraft.editor.EditorWorldViewport.EditorWorldHit;
 import caxecraft.editor.EditorWorldViewport.EditorWorldProjection;
 import caxecraft.editor.EditorWorldViewport.EditorWorldVector;
@@ -146,6 +147,7 @@ import caxecraft.editor.EditorWorldViewport.patchProjectedVoxel;
 import caxecraft.editor.EditorWorldViewport.pickObject;
 import caxecraft.editor.EditorWorldViewport.pickWorld;
 import caxecraft.editor.EditorWorldViewport.projectObjects;
+import caxecraft.editor.EditorWorldViewport.projectSelection;
 import caxecraft.editor.EditorWorldViewport.retargetOrbitCamera;
 import caxecraft.editor.EditorWorldViewport.stepCamera;
 import caxecraft.editor.EditorWorldViewport.surfaceTopAt;
@@ -288,6 +290,7 @@ final class CaxecraftEditorScreen {
 	final flowContentChoices:EditorFlowContentChoices;
 	var camera:Null<EditorCameraState>;
 	var selection:Null<VoxelBounds>;
+	var selectionGizmo:Null<EditorSelectionGizmo>;
 	var focusedControl:EditorFocusTarget;
 	var workspaceView:EditorWorkspaceView;
 	var buildPointerState:EditorBuildPointerState;
@@ -396,6 +399,7 @@ final class CaxecraftEditorScreen {
 		flowContentChoices = editorFlowContentChoices(contentRegistry);
 		camera = null;
 		selection = null;
+		selectionGizmo = null;
 		focusedControl = initialFocus();
 		workspaceView = BuildView;
 		buildPointerState = EditorBuildPointerState.Released;
@@ -2617,7 +2621,7 @@ final class CaxecraftEditorScreen {
 		objectGrab = NoObjectGrab;
 		switch current.select({baseRevision: current.revision(), selection: NodeSelection(ObjectNode(id))}) {
 			case SelectionApplied(_, _) | SelectionUnchanged(_, _):
-				selection = current.selectedBounds();
+				syncSelection(current.selectedBounds());
 				objectList = new GuiListViewState(index);
 				final world = projection;
 				final currentCamera = camera;
@@ -2896,7 +2900,7 @@ final class CaxecraftEditorScreen {
 			case MutationApplied(_, _, _, _, _, _):
 				flowWorldPickMode = NoFlowWorldPick;
 				objectNameTarget = null;
-				selection = current.selectedBounds();
+				syncSelection(current.selectedBounds());
 				objectList = new GuiListViewState(-1);
 				detailsOpen = false;
 				notice = Ready;
@@ -3546,12 +3550,10 @@ final class CaxecraftEditorScreen {
 		if (!terrainPresentation.draw(resources.terrainTexture, resources.terrainTextureReady, resources.adventureTerrainTexture,
 			resources.adventureTerrainTextureReady, currentPose.x, currentPose.z))
 			drawTerrainOverview(current);
-		final selected = selection;
+		final selected = selectionGizmo;
 		if (selected != null)
-			for (z in selected.origin.z...selected.origin.z + selected.size.depth)
-				for (y in selected.origin.y...selected.origin.y + selected.size.height)
-					for (x in selected.origin.x...selected.origin.x + selected.size.width)
-						drawCellOutline(x, y, z, paletteCodeAtWorld(current, x, y, z) != 0, CaxecraftPalette.selection(), 1.05);
+			Raylib.DrawCubeWires(Vector3.fromFloat(selected.x, selected.y, selected.z), c.Float32.fromFloat(selected.width + 0.06),
+				c.Float32.fromFloat(selected.height + 0.06), c.Float32.fromFloat(selected.depth + 0.06), CaxecraftPalette.selection());
 		final selectedObject = selectedObjectIndex();
 		for (index in 0...objectGizmos.length)
 			if (!visualUsesBillboard(objectVisuals[index]))
@@ -3775,7 +3777,7 @@ final class CaxecraftEditorScreen {
 			case ToolSelectionReady(bounds):
 				switch current.select({baseRevision: current.revision(), selection: VoxelSelection(bounds)}) {
 					case SelectionApplied(_, _) | SelectionUnchanged(_, _):
-						selection = current.selectedBounds();
+						syncSelection(current.selectedBounds());
 						detailsOpen = false;
 						invalidatePreview();
 						notice = Ready;
@@ -3857,7 +3859,7 @@ final class CaxecraftEditorScreen {
 			flowOverlaps = [];
 			environment = null;
 			camera = null;
-			selection = null;
+			syncSelection(null);
 			invalidatePreview();
 			notice = Invalid;
 			return;
@@ -3944,7 +3946,7 @@ final class CaxecraftEditorScreen {
 		objectLabels = labels.join(";");
 		if (objectList.activeIndex() < 0 || objectList.activeIndex() >= objectGizmos.length)
 			objectList = new GuiListViewState(-1);
-		selection = current.selectedBounds();
+		syncSelection(current.selectedBounds());
 		invalidatePreview();
 		final next = projection;
 		if (next == null) {
@@ -3973,6 +3975,12 @@ final class CaxecraftEditorScreen {
 				case RefreshAllTerrain:
 			}
 		#end
+	}
+
+	/** Cache one outer selection box so steady frames perform no per-cell work. */
+	function syncSelection(value:Null<VoxelBounds>):Void {
+		selection = value;
+		selectionGizmo = value == null ? null : projectSelection(value);
 	}
 
 	/** Combine copied non-terrain details with the retained world projection. */

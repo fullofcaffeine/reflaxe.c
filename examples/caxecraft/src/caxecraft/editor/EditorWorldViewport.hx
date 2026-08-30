@@ -3,6 +3,7 @@ package caxecraft.editor;
 import caxecraft.editor.EditorWorldGrid.decode as decodeWorld;
 import caxecraft.scenario.ScenarioId;
 import caxecraft.scenario.ScenarioGeometry.ScenarioTransform;
+import caxecraft.scenario.ScenarioGeometry.VoxelBounds;
 import caxecraft.scenario.ScenarioGeometry.VoxelPoint;
 import caxecraft.scenario.ScenarioObject;
 import caxecraft.scenario.ScenarioWorld;
@@ -166,6 +167,21 @@ typedef EditorWorldVector = {
 }
 
 /**
+ * One bounded selection volume prepared for a single renderer draw call.
+ *
+ * A selection can contain up to 65,536 cells. Projecting only its outer box
+ * keeps the authored bounds visible without making frame cost grow per cell.
+ */
+typedef EditorSelectionGizmo = {
+	final x:Float;
+	final y:Float;
+	final z:Float;
+	final width:Float;
+	final height:Float;
+	final depth:Float;
+}
+
+/**
  * The nearest editable coordinate selected by a viewing ray.
  *
  * `placement` is the last empty cell before a solid target. An empty-floor hit
@@ -182,6 +198,18 @@ typedef EditorWorldHit = {
 private typedef EditorRayInterval = {
 	final near:Float;
 	final far:Float;
+}
+
+/** Convert one half-open voxel selection into its exact world-space box. */
+function projectSelection(bounds:VoxelBounds):EditorSelectionGizmo {
+	return {
+		x: bounds.origin.x + bounds.size.width * 0.5,
+		y: bounds.origin.y + bounds.size.height * 0.5,
+		z: bounds.origin.z + bounds.size.depth * 0.5,
+		width: bounds.size.width,
+		height: bounds.size.height,
+		depth: bounds.size.depth
+	};
 }
 
 final CAMERA_SPEED = 8.0;

@@ -142,6 +142,7 @@ import caxecraft.editor.EditorWorldViewport.patchProjectedVoxel;
 import caxecraft.editor.EditorWorldViewport.pickObject;
 import caxecraft.editor.EditorWorldViewport.pickWorld;
 import caxecraft.editor.EditorWorldViewport.projectObjects;
+import caxecraft.editor.EditorWorldViewport.projectSelection;
 import caxecraft.editor.EditorWorldViewport.projectWorld;
 import caxecraft.editor.EditorWorldViewport.retargetOrbitCamera;
 import caxecraft.editor.EditorWorldViewport.surfaceTopAt;
@@ -3432,7 +3433,11 @@ final class EditorProbe {
 			&& gizmoIntersectsLayer(objectGizmos[0], 1)
 			&& !gizmoIntersectsLayer(objectGizmos[0], 2),
 			"Plan object filtering lost exact vertical overlap");
-		return 30;
+		final selection = projectSelection({origin: {x: 4, y: 2, z: 8}, size: {width: 64, height: 16, depth: 64}});
+		require(close(selection.x, 36.0) && close(selection.y, 10.0) && close(selection.z, 40.0) && close(selection.width, 64.0)
+			&& close(selection.height, 16.0) && close(selection.depth, 64.0),
+			"large selections did not collapse to one exact world-space volume");
+		return 31;
 	}
 
 	/** Prove that Plan logic links retain rule order and fail closed. */
