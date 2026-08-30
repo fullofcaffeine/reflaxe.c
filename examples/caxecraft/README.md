@@ -738,6 +738,18 @@ python3 examples/caxecraft/profile_compiler.py \
   --runs 1 --transport cold --workload runtime-content-generation
 ```
 
+To measure the runtime level loader without native compilation, run:
+
+```sh
+python3 examples/caxecraft/profile_compiler.py \
+  --runs 1 --transport both --workload runtime-level-loader
+```
+
+This command records one cold request and one warm request from an owned Haxe
+server. It also requires both requests to produce identical generated C files.
+Do not use a report that labels the host as `contended` for a performance
+budget.
+
 It reads the checked-in receipt first, verifies exact byte counts and SHA-256
 digests, decodes the real pack and UI files, resolves the real CaxeMap through
 that decoded registry, builds two complete candidates, publishes generation 2,

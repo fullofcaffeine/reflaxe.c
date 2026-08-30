@@ -48,6 +48,7 @@ PINNED_HAXE_SOURCE_REVISION = "2c1e544e0a2c7524ef4c8e103f1b0580362ea538"
 PROFILE_WORKLOADS = (
     "runtime-free",
     "runtime-content-generation",
+    "runtime-level-loader",
     "playable",
     "editor-shell",
 )
@@ -2256,9 +2257,13 @@ def workload_arguments(output: Path, workload: str) -> tuple[str, ...]:
             times=True,
             phase_timing=True,
         )
-    elif workload == "runtime-content-generation":
+    elif workload in ("runtime-content-generation", "runtime-level-loader"):
+        hxml = {
+            "runtime-content-generation": "runtime-content-generation-c.hxml",
+            "runtime-level-loader": "runtime-level-loader-c.hxml",
+        }[workload]
         arguments = [
-            "runtime-content-generation-c.hxml",
+            hxml,
             "-D",
             "caxecraft_posix_hosted",
             *(("-D", "caxecraft_posix_darwin") if sys.platform == "darwin" else ()),

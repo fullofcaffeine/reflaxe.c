@@ -720,6 +720,44 @@ class CaxecraftTimingTests(unittest.TestCase):
         profiled_play_arguments.remove("--times")
         self.assertEqual(tuple(profiled_play_arguments), play_arguments)
 
+    def test_compiler_profile_can_match_the_runtime_level_loader_request(
+        self,
+    ) -> None:
+        profiler = load_module(
+            "caxecraft_runtime_level_loader_profile_subject",
+            ROOT / "examples/caxecraft/profile_compiler.py",
+        )
+        output = Path("generated-runtime-level-loader-profile")
+
+        with (
+            mock.patch.object(profiler.sys, "platform", "darwin"),
+            mock.patch.object(
+                profiler,
+                "resolve_haxe_arguments",
+                side_effect=lambda arguments, *, locale: tuple(arguments),
+            ),
+        ):
+            arguments = profiler.workload_arguments(output, "runtime-level-loader")
+
+        self.assertIn("runtime-level-loader", profiler.PROFILE_WORKLOADS)
+        self.assertEqual(
+            arguments,
+            (
+                "runtime-level-loader-c.hxml",
+                "-D",
+                "caxecraft_posix_hosted",
+                "-D",
+                "caxecraft_posix_darwin",
+                "-D",
+                "hxc_project_layout=split",
+                "-D",
+                "reflaxe_c_phase_timing",
+                "--times",
+                "--custom-target",
+                f"c={output}",
+            ),
+        )
+
     def test_pinned_haxe_resolution_uses_the_haxerc_version(self) -> None:
         caxecraft = load_module(
             "caxecraft_pin_subject", ROOT / "examples/caxecraft/run.py"

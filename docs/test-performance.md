@@ -1202,6 +1202,19 @@ compilation, native linking, Raylib, and game execution. Native compile/run
 timing belongs to the separate Caxecraft differential lane, so a slow target
 compiler pass is not confused with native-toolchain work.
 
+The runtime-level-loader workload uses the exact HXML from its focused
+generated-C test. Use it to compare one cold request with one warm request:
+
+```sh
+python3 examples/caxecraft/profile_compiler.py \
+  --runs 1 --transport both --workload runtime-level-loader
+```
+
+The command uses one owned Haxe server for the warm request. It requires the
+cold and warm requests to produce identical generated C files. The report
+separates Haxe frontend time from each Reflaxe.C phase. Do not use a report
+that labels the host as `contended` for a performance budget.
+
 The editor-shell workload matches the Haxe request from the graphical editor
 pilot. It selects the memory renderer, hosted package reader, concise runtime
 report, and compiled editor pilot. Use one cold diagnostic before changing a
