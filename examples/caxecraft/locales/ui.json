@@ -610,6 +610,41 @@
       }
     },
     {
+      "id": "editor_tool_needs_adjacent_cell",
+      "text": {
+        "en": "A NEARBY CELL MUST FIT IN THE WORLD",
+        "es-MX": "DEBE CABER UNA CELDA CERCANA EN EL MUNDO"
+      }
+    },
+    {
+      "id": "editor_tool_needs_asset",
+      "text": {
+        "en": "CHOOSE AN ASSET FIRST",
+        "es-MX": "ELIGE PRIMERO UN RECURSO"
+      }
+    },
+    {
+      "id": "editor_tool_needs_dialogue",
+      "text": {
+        "en": "ADD A DIALOGUE FIRST",
+        "es-MX": "AGREGA PRIMERO UN DIÁLOGO"
+      }
+    },
+    {
+      "id": "editor_tool_needs_selection",
+      "text": {
+        "en": "SELECT AN AREA FIRST",
+        "es-MX": "SELECCIONA PRIMERO UN ÁREA"
+      }
+    },
+    {
+      "id": "editor_tool_needs_wave_space",
+      "text": {
+        "en": "THIS WAVE NEEDS THREE NEARBY CELLS",
+        "es-MX": "ESTA OLEADA NECESITA TRES CELDAS CERCANAS"
+      }
+    },
+    {
       "id": "editor_trigger",
       "text": {
         "en": "TRIGGER",

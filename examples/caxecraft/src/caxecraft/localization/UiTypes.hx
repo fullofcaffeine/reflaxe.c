@@ -39,6 +39,11 @@ enum abstract UiMessage(String) {
 	var EditorAssetShortcut = "editor_asset_shortcut";
 	var EditorCanvasHelp = "editor_canvas_help";
 	var EditorInvalid = "editor_invalid";
+	var EditorToolNeedsAdjacentCell = "editor_tool_needs_adjacent_cell";
+	var EditorToolNeedsAsset = "editor_tool_needs_asset";
+	var EditorToolNeedsDialogue = "editor_tool_needs_dialogue";
+	var EditorToolNeedsSelection = "editor_tool_needs_selection";
+	var EditorToolNeedsWaveSpace = "editor_tool_needs_wave_space";
 	var EditorReady = "editor_ready";
 	var EditorRedo = "editor_redo";
 	var EditorTest = "editor_test";

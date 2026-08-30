@@ -337,6 +337,15 @@ function selfCheck():Int {
 		|| catalog.text(LocaleCursor.Locale1, UiMessage.ConversationHelpGamepad).length == 0
 		|| catalog.text(LocaleCursor.Locale1, UiMessage.InteractionControlGamepad).length == 0)
 		return 77;
+	for (message in [
+		UiMessage.EditorToolNeedsAdjacentCell,
+		UiMessage.EditorToolNeedsAsset,
+		UiMessage.EditorToolNeedsDialogue,
+		UiMessage.EditorToolNeedsSelection,
+		UiMessage.EditorToolNeedsWaveSpace
+	])
+		if (catalog.text(LocaleCursor.Locale0, message).length == 0 || catalog.text(LocaleCursor.Locale1, message).length == 0)
+			return 77;
 	if (gamepadInteractionPrompt("KEY  ACTION", "PAD") != "PAD  ACTION" || gamepadInteractionPrompt("ACTION", "PAD") != "PAD  ACTION")
 		return 77;
 	if (catalog.templateCount() <= 0 || !allRequiredTemplatesExist(catalog))

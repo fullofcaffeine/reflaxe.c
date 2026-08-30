@@ -104,6 +104,7 @@ import caxecraft.editor.EditorPresentation.EditorPresentationSnapshot;
 import caxecraft.editor.EditorPresentation.EditorPresentationDetails;
 import caxecraft.editor.EditorTypes.EditorMutationResult;
 import caxecraft.editor.EditorTypes.EditorCommand;
+import caxecraft.editor.EditorTypes.EditorError;
 import caxecraft.editor.EditorTypes.EditorNodeRef;
 import caxecraft.editor.EditorTypes.EditorObservation;
 import caxecraft.editor.EditorTypes.EditorQuery;
@@ -201,6 +202,7 @@ private enum EditorNotice {
 	Ready;
 	Valid;
 	Invalid;
+	InvalidReason(message:UiMessage);
 	Testing;
 	Saved;
 	SaveFailed;
@@ -812,12 +814,17 @@ final class CaxecraftEditorScreen {
 			case Ready: UiMessage.EditorReady;
 			case Valid: UiMessage.EditorValid;
 			case Invalid: UiMessage.EditorInvalid;
+			case InvalidReason(message): message;
 			case Testing: UiMessage.EditorTesting;
 			case Saved: UiMessage.EditorSaved;
 			case SaveFailed: UiMessage.EditorSaveFailed;
 		};
+		final invalid = switch notice {
+			case Invalid | InvalidReason(_): true;
+			case Ready | Valid | Testing | Saved | SaveFailed: false;
+		};
 		Raylib.DrawTextString(uiCatalog.text(locale, status), left + 12, top + height - 24, 14,
-			notice == Invalid ? Color.rgba(255, 154, 112) : CaxecraftPalette.hudText());
+			invalid ? Color.rgba(255, 154, 112) : CaxecraftPalette.hudText());
 	}
 
 	/** Draw one large tool card with a non-text color mark and selected border. */
@@ -3762,8 +3769,8 @@ final class CaxecraftEditorScreen {
 		}
 		final toolResult = commandForTool(tool, point, toolContextFor(tool, draft, paletteCode));
 		return switch toolResult {
-			case ToolCommandRejected(_):
-				notice = Invalid;
+			case ToolCommandRejected(error):
+				notice = toolErrorNotice(error);
 				false;
 			case ToolSelectionReady(bounds):
 				switch current.select({baseRevision: current.revision(), selection: VoxelSelection(bounds)}) {
@@ -3809,6 +3816,18 @@ final class CaxecraftEditorScreen {
 						notice = Invalid;
 						false;
 				}
+		};
+	}
+
+	/** Select one localized creator hint while keeping all prose in the UI catalog. */
+	function toolErrorNotice(error:EditorError):EditorNotice {
+		return switch error {
+			case MissingEditorObjectRecipe: InvalidReason(UiMessage.EditorToolNeedsAsset);
+			case MissingEditorDialogue: InvalidReason(UiMessage.EditorToolNeedsDialogue);
+			case EditorTemplateNeedsAdjacentCell: InvalidReason(UiMessage.EditorToolNeedsAdjacentCell);
+			case EditorEnemyWaveNeedsSpace: InvalidReason(UiMessage.EditorToolNeedsWaveSpace);
+			case NoSelection: InvalidReason(UiMessage.EditorToolNeedsSelection);
+			case _: Invalid;
 		};
 	}
 
