@@ -76,7 +76,7 @@
     "applicableSourceCount": 183,
     "applicableSourceSha256": "be53a7994b9d58654465038f02792ebc70f5c2d283854ad19d755e4af780aa8a",
     "apiCount": 2311,
-    "apiSurfaceSha256": "313344638c1a5771a3a6734490de6e48a6f40524d2d3ee11f4cf398aaede125e"
+    "apiSurfaceSha256": "092d93a4f7fb4b23644a54c803c9ecca6d5e1c92d2e3276923b7540ea6e74ec0"
   },
   "applicability": {
     "publicSurface": "non-private typed declarations and fields visible to the pinned compiler; @:noCompletion declarations are excluded",
@@ -2572,6 +2572,42 @@
       ],
       "tests": [],
       "notes": "Object identity maps are admitted, but text conversion still needs exact value formatting and Eval-compatible punctuation before it can select the String runtime."
+    },
+    {
+      "id": "array-string-to-string-partial",
+      "selector": {
+        "module": "Array",
+        "type": "Array",
+        "member": "toString",
+        "kind": "inline-method",
+        "isStatic": false,
+        "signature": "() -> String"
+      },
+      "owner": "target-source-override",
+      "runtimeFeatures": [
+        "array-join",
+        "string"
+      ],
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "environments": [
+        "hosted"
+      ],
+      "status": "partial",
+      "ownerBeads": "E5.T03",
+      "testOwnerBeads": "E5.T12",
+      "diagnosticPolicies": [
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
+      ],
+      "tests": [
+        "test/differential/array-runtime/generated-to-string/Main.hx",
+        "test/differential/array-runtime/generated/Main.hx",
+        "test/differential/array-runtime/run.py"
+      ],
+      "notes": "The admitted Array<String> specialization composes the existing typed join result with Eval-compatible brackets. It preserves aliases, Unicode, and embedded NUL bytes without Dynamic or universal boxing; other element representations remain unsupported until their exact Std.string contracts are proven."
     },
     {
       "id": "list-alias-type-partial",
@@ -6385,43 +6421,42 @@
       "ruleId": "array-splice-range-partial"
     },
     {
-      "id": "hxc-stdlib-api-v1:662424a3147c9931b409f420d7e407470f6f414f5b9799779017f4cb638bed35",
+      "id": "hxc-stdlib-api-v1:e494edd5ab635795ecfb81fba70649282e3453cd94904b57d77b4e27be4852c8",
       "module": "Array",
       "source": "Array.hx",
       "sourceSha256": "ea6780139e194a0fdafdff6485640183835df0c5928ccf64b1a562a6b00381e7",
       "probeScope": "c-common",
       "type": "Array",
       "member": "toString",
-      "kind": "method",
+      "kind": "inline-method",
       "signature": "() -> String",
       "isStatic": false,
       "owner": "target-source-override",
       "runtimeFeatures": [
-        "alloc",
-        "array",
-        "gc",
-        "object"
+        "array-join",
+        "string"
       ],
       "profiles": [
         "portable",
         "metal"
       ],
       "environments": [
-        "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "hosted"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T03",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Known element/key/value types should specialize to direct typed storage; allocation and tracing remain explicit reachability decisions.",
-      "ruleId": "collection-storage"
+      "tests": [
+        "test/differential/array-runtime/generated-to-string/Main.hx",
+        "test/differential/array-runtime/generated/Main.hx",
+        "test/differential/array-runtime/run.py"
+      ],
+      "notes": "The admitted Array<String> specialization composes the existing typed join result with Eval-compatible brackets. It preserves aliases, Unicode, and embedded NUL bytes without Dynamic or universal boxing; other element representations remain unsupported until their exact Std.string contracts are proven.",
+      "ruleId": "array-string-to-string-partial"
     },
     {
       "id": "hxc-stdlib-api-v1:82239335c6f06768114c7260da677c9662d5912077797ea9790b01eede63a932",
@@ -36198,14 +36233,14 @@
       "ruleId": "collection-source"
     },
     {
-      "id": "hxc-stdlib-api-v1:e82310ef5968e1409810acc089ce4990cf99dc7da77f95f243accb63a771969d",
+      "id": "hxc-stdlib-api-v1:7e35ec7df8ad35ff8c421ad2f80944a5095dcef5ec9babfcf71fc04d2048d8b1",
       "module": "haxe.ds.ReadOnlyArray",
       "source": "haxe/ds/ReadOnlyArray.hx",
       "sourceSha256": "526484c5a10a575e2dd4aa084583a90a65e745732b31681c2ffcafd21891a81b",
       "probeScope": "c-common",
       "type": "haxe.ds.ReadOnlyArray",
       "member": "toString",
-      "kind": "forwarded-method",
+      "kind": "forwarded-inline-method",
       "signature": "() -> String",
       "isStatic": false,
       "owner": "direct-compiler-lowering",

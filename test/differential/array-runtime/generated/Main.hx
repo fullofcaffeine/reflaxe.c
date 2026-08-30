@@ -165,6 +165,10 @@ final class Main {
 		final joined = labels.join(observedSeparator("|"));
 		final emptyJoined = ([] : Array<String>).join("");
 		final singletonJoined = ["solo"].join("ignored");
+		final labelsAlias = labels;
+		final stringified = labelsAlias.toString();
+		final emptyStringified = ([] : Array<String>).toString();
+		final singletonStringified = [fromCode(0x1F642)].toString();
 		final alias = values;
 		final history = new History();
 		final absentHistory = history.takeNewest();
@@ -402,6 +406,9 @@ final class Main {
 			|| joined != "ready|café|a\u0000b"
 			|| emptyJoined != ""
 			|| singletonJoined != "solo"
+			|| stringified != "[ready,café,a\u0000b]"
+			|| emptyStringified != "[]"
+			|| singletonStringified != "[🙂]"
 			|| mixedLiteral.length != 4
 			|| mixedLiteral[0] != "literal"
 			|| mixedLiteral[1] != "ready"

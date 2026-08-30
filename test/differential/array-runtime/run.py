@@ -45,6 +45,7 @@ EXPECTED_TRACE = "5:1,3,1,1,0\n"
 GENERATED = CASE / "generated"
 GENERATED_CLASS = CASE / "generated-class"
 GENERATED_FUNCTION = CASE / "generated-function"
+GENERATED_TO_STRING = CASE / "generated-to-string"
 GENERATED_CLASS_GC_DRIVER = ROOT / "test/native/array_class_gc_driver.c"
 NEGATIVE = CASE / "negative"
 REPORT_PREFIX = "HXC_STATIC_INITIALIZATION="
@@ -1424,6 +1425,111 @@ def run_function_array_negative_cases(root: Path) -> None:
             )
 
 
+def validate_to_string_project(output: Path) -> None:
+    """Require only the typed Array and String closure used by toString."""
+    plan = json.loads((output / "hxc.runtime-plan.json").read_text(encoding="utf-8"))
+    if plan.get("features") != [
+        "runtime-base",
+        "status",
+        "alloc",
+        "array",
+        "string-literal",
+        "string-scalar",
+        "string",
+        "array-join",
+    ]:
+        raise ArrayRuntimeFailure("Array<String>.toString selected the wrong runtime closure")
+    operations_by_feature = {
+        feature: {
+            reason.get("operationId")
+            for reason in plan.get("rootReasons", [])
+            if isinstance(reason, dict) and reason.get("featureId") == feature
+        }
+        for feature in ("array", "array-join", "string")
+    }
+    if operations_by_feature != {
+        "array": {
+            "cleanup-release",
+            "create-literal",
+            "managed-type-representation",
+            "retain",
+        },
+        "array-join": {"join"},
+        "string": {"cleanup-release", "concat", "from-scalar"},
+    }:
+        raise ArrayRuntimeFailure(
+            "Array<String>.toString runtime roots drifted: "
+            f"{operations_by_feature!r}"
+        )
+    application = (output / "src/modules/Main.c").read_text(encoding="utf-8")
+    if application.count("hxc_array_string_join(") != 3:
+        raise ArrayRuntimeFailure("Array<String>.toString did not emit three typed joins")
+    if application.count("hxc_string_concat_ref(") != 6:
+        raise ArrayRuntimeFailure("Array<String>.toString did not emit bracket composition")
+    for forbidden in ("hxc_dynamic", "void *"):
+        if forbidden in application:
+            raise ArrayRuntimeFailure(
+                f"Array<String>.toString gained forbidden carrier {forbidden}"
+            )
+
+
+def render_to_string_pair(root: Path) -> Path:
+    """Render one deterministic focused pair and compare it with pinned Eval."""
+    normal = root / "generated-to-string-normal"
+    reverse = root / "generated-to-string-reverse"
+    first = compile_generated_haxe(GENERATED_TO_STRING, normal, report=True)
+    second = compile_generated_haxe(GENERATED_TO_STRING, reverse, reverse=True)
+    for label, result in (("normal", first), ("reverse", second)):
+        if result.returncode != 0:
+            raise ArrayRuntimeFailure(
+                f"{label} Array<String>.toString compile failed\n"
+                f"stdout={result.stdout!r}\nstderr={result.stderr!r}"
+            )
+    if generated_tree(normal) != generated_tree(reverse):
+        raise ArrayRuntimeFailure(
+            "Array<String>.toString project changed under reversed discovery"
+        )
+    hxcir = extract_hxcir(first)
+    for marker in (
+        'runtime(feature="array-join",operation="join")',
+        'runtime(feature="string",operation="concat")',
+    ):
+        if marker not in hxcir:
+            raise ArrayRuntimeFailure(f"Array<String>.toString HxcIR omitted {marker}")
+    validate_to_string_project(normal)
+    oracle = run_bounded_process(
+        [development_tool("haxe"), "oracle.hxml"],
+        cwd=GENERATED_TO_STRING,
+        env=haxe_environment(),
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    if oracle.returncode != 0 or oracle.stdout or oracle.stderr:
+        raise ArrayRuntimeFailure(
+            "Array<String>.toString Eval oracle failed: "
+            f"exit={oracle.returncode} stdout={oracle.stdout!r} "
+            f"stderr={oracle.stderr!r}"
+        )
+    return normal
+
+
+def run_to_string_negative_case(root: Path) -> None:
+    """Keep non-String Array element formatting fail-closed."""
+    output = root / "negative-to-string-non-string"
+    result = compile_generated_haxe(NEGATIVE / "to_string_non_string", output)
+    marker = "TCall(Array.join:element-not-managed-String:"
+    if result.returncode == 0 or marker not in result.stderr:
+        raise ArrayRuntimeFailure(
+            "negative Array.toString element contract drifted\n"
+            f"exit={result.returncode} stdout={result.stdout!r} "
+            f"stderr={result.stderr!r}"
+        )
+    if output.exists() and any(output.rglob("*")):
+        raise ArrayRuntimeFailure("negative Array.toString case left output")
+
+
 def run_generated_negative_cases(root: Path) -> None:
     expected = {
         "indirect_fresh_argument": "TCall(indirect-managed-argument-needs-explicit-ownership:0)",
@@ -1431,6 +1537,7 @@ def run_generated_negative_cases(root: Path) -> None:
         "reassignment": "TBinop(OpAssign:managed-Array-reassignment-not-admitted)",
         "resize_no_default": "TCall(Array.resize:element-has-no-exact-static-default:",
         "sort_capturing_comparator": "TFunction(capturing-closure:outer-local:direction)",
+        "to_string_non_string": "TCall(Array.join:element-not-managed-String:",
     }
     for name, marker in expected.items():
         output = root / f"negative-{name}"
@@ -1821,6 +1928,40 @@ def run_function_array_lane(toolchains: list[Toolchain]) -> None:
             )
 
 
+def run_to_string_lane(toolchains: list[Toolchain]) -> None:
+    """Verify only bounded Array<String>.toString composition."""
+    with tempfile.TemporaryDirectory(
+        prefix="reflaxe-c-array-to-string-"
+    ) as temporary:
+        root = Path(temporary)
+        generated = render_to_string_pair(root)
+        run_to_string_negative_case(root)
+        for toolchain in toolchains:
+            build = root / toolchain.family
+            build.mkdir(parents=True)
+            compile_and_run_generated(
+                toolchain,
+                build,
+                generated,
+                ("-O0",),
+                "generated-array-to-string-o0",
+            )
+            compile_and_run_generated(
+                toolchain,
+                build,
+                generated,
+                ("-O2",),
+                "generated-array-to-string-o2",
+            )
+            compile_and_run_generated(
+                toolchain,
+                build,
+                generated,
+                SANITIZER_FLAGS,
+                "generated-array-to-string-sanitized",
+            )
+
+
 def parse_args(argv: Iterable[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--toolchain", choices=("auto", *TOOLCHAINS), default="auto")
@@ -1834,6 +1975,11 @@ def parse_args(argv: Iterable[str]) -> argparse.Namespace:
         action="store_true",
         help="run only the focused function-valued Array compiler and native lane",
     )
+    parser.add_argument(
+        "--to-string-only",
+        action="store_true",
+        help="run only the focused Array<String>.toString compiler and native lane",
+    )
     return parser.parse_args(list(argv))
 
 
@@ -1841,6 +1987,23 @@ def main(argv: Iterable[str] = ()) -> int:
     args = parse_args(argv)
     try:
         toolchains = selected_toolchains(args.toolchain)
+        if args.function_values_only and args.to_string_only:
+            raise ArrayRuntimeFailure(
+                "choose only one focused Array lane"
+            )
+        if args.to_string_only:
+            if args.native_only:
+                raise ArrayRuntimeFailure(
+                    "--to-string-only requires generated Haxe and cannot use --native-only"
+                )
+            run_to_string_lane(toolchains)
+            families = ", ".join(toolchain.family for toolchain in toolchains)
+            print(
+                "array-runtime: OK: "
+                f"{families}; Array<String>.toString Eval parity, typed composition, "
+                "determinism, rejection, strict C, and sanitizers passed"
+            )
+            return 0
         if args.function_values_only:
             if args.native_only:
                 raise ArrayRuntimeFailure(

@@ -92,7 +92,17 @@ extern class Array<T> {
 
 	function sort(f:T->T->Int):Void;
 	function splice(pos:Int, len:Int):Array<T>;
-	function toString():String;
+
+	/**
+	 * Format admitted String elements with Eval-compatible brackets and commas.
+	 *
+	 * Keeping this algorithm in typed Haxe reuses `join` and String composition
+	 * without adding a second runtime formatter. Other element types still stop
+	 * at `join` until their exact `Std.string` conversion is available.
+	 */
+	inline function toString():String {
+		return "[" + join(",") + "]";
+	}
 
 	/** Insert at the front through the same normalized operation as `insert`. */
 	inline function unshift(x:T):Void {

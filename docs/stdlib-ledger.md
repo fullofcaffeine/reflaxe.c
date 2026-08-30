@@ -48,10 +48,10 @@ adapter, memory-model, collector-root, and race evidence.
 At this snapshot the ledger contains 183 source modules and 2,311 public API
 records. Twenty-two rows are `conformant`, including the typed
 `Std.int(Float):Int` row and the bounded Date and timer surfaces with their
-executable evidence. One hundred eighty rows are `partial`, including bounded
+executable evidence. One hundred eighty-one rows are `partial`, including bounded
 Array and iterator, List, Vector, IntMap, StringMap, ObjectMap, EnumValueMap,
 Bytes, String, StringTools, StringBuf, `Std.string`, output, and mathematical
-operations with executable evidence. The other 2,109 rows are `planned`. A
+operations with executable evidence. The other 2,108 rows are `planned`. A
 partial row means only its named operation shapes have executable evidence; it
 does not claim the entire type or neighboring overloads. This deliberately
 preserves the current narrow compiler claim.

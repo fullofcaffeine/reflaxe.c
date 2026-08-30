@@ -10,8 +10,9 @@ provides `concat`, `reverse`, `slice`, `unshift`, `remove`, `contains`,
 `indexOf`, `lastIndexOf`, `map`, and `filter` through those same operations. An
 exact managed
 `Array<String>` also supports
-`join(separator)` with one explicit String separator. Elements may now be
-plain direct values,
+`join(separator)` with one explicit String separator. Its `toString()` method
+reuses that typed join and adds Eval-compatible square brackets. Elements may
+now be plain direct values,
 `haxe.io.Bytes`, another
 managed Array, a tagged enum with managed Array payloads, a closed record
 that recursively contains those values, or a concrete mutable class reference.
@@ -188,7 +189,12 @@ The narrower `Array<String>.join` method reads those owned elements, appends
 every element and separator to one checked UTF-8 builder, then moves that
 allocation into one fresh managed String owner. This makes runtime work linear
 in the output bytes and preserves embedded NUL bytes without repeated
-whole-result copying. Other unsupported managed values remain rejected. A
+whole-result copying. `Array<String>.toString()` is an inline target-Haxe
+algorithm over the same join plus two managed String concatenations. It avoids
+a duplicate runtime formatter and matches Eval for empty, singleton, Unicode,
+embedded-NUL, and aliased Arrays. Other element types remain fail-closed until
+their exact `Std.string` conversions are available. Other unsupported managed
+values remain rejected. A
 class element is admitted only through the exact traced representation: direct
 nonescaping classes remain stack-shaped C values, while every class reachable
 from the admitted `Array<Class>` graph receives stable collector storage and a
@@ -528,6 +534,13 @@ pair of sequential value switches proves that the first joined local is
 released when the second switch returns early. The same source runs under Eval
 and generated native C, while the HxcIR shape check confirms the ownership
 decision is made before CAST and printing.
+
+The narrower
+`python3 test/differential/array-runtime/run.py --to-string-only --toolchain clang`
+lane isolates `Array<String>.toString()`. It compares pinned Eval with normal
+and reversed generated projects, checks the exact Array/String runtime roots,
+runs strict C11 at O0 and O2 plus AddressSanitizer and UndefinedBehaviorSanitizer,
+and proves that a non-String element stops before artifacts.
 
 The Vector/List differential reuses the same registered runtime. It proves the
 unchanged pinned `Vector.toArray()` indexed-append path, including primitive
