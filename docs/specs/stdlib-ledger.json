@@ -75,8 +75,8 @@
     ],
     "applicableSourceCount": 183,
     "applicableSourceSha256": "be53a7994b9d58654465038f02792ebc70f5c2d283854ad19d755e4af780aa8a",
-    "apiCount": 2311,
-    "apiSurfaceSha256": "a7da29e827c90bc189d49e830b15bacb861f7fafcf1f9f7fe7a39b3c38721609"
+    "apiCount": 2312,
+    "apiSurfaceSha256": "ac97e95608289beb2d2693944841a4e2968745804476f354f1d4431f9e8bd394"
   },
   "applicability": {
     "publicSurface": "non-private typed declarations and fields visible to the pinned compiler; @:noCompletion declarations are excluded",
@@ -2577,6 +2577,36 @@
       "notes": "Exact final class keys without custom or inherited toString use Eval-compatible null or package-qualified class names. Bool and Int values use exact scalar spelling, and punctuation follows ObjectMap iteration order. Open classes, custom dispatch, and other value families remain unsupported."
     },
     {
+      "id": "enum-value-map-to-string-partial",
+      "selector": {
+        "module": "haxe.ds.EnumValueMap",
+        "member": "toString"
+      },
+      "owner": "runtime-slice",
+      "runtimeFeatures": [
+        "enum-value-map",
+        "string"
+      ],
+      "profiles": [
+        "portable"
+      ],
+      "environments": [
+        "hosted"
+      ],
+      "status": "partial",
+      "ownerBeads": "E5.T03",
+      "testOwnerBeads": "E5.T12",
+      "diagnosticPolicies": [
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
+      ],
+      "tests": [
+        "test/differential/object-enum-map/to_string/Main.hx",
+        "test/differential/object-enum-map/run.py"
+      ],
+      "notes": "Exact fieldless enum keys use their constructor names, Int values use exact scalar spelling, and punctuation follows EnumValueMap constructor order. Payload enums and other value families remain unsupported until their recursive formatting rules are proven."
+    },
+    {
       "id": "array-string-to-string-partial",
       "selector": {
         "module": "Array",
@@ -3606,13 +3636,15 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [
+        "test/differential/object-enum-map/to_string/Main.hx",
+        "test/differential/object-enum-map/run.py",
         "test/differential/string-runtime/FloatStringOracle.hx",
         "test/differential/string-runtime/generated/Main.hx",
         "test/differential/string-runtime/run.py",
         "test/string_output/fixtures/positive/Main.hx",
         "test/string_output/run.py"
       ],
-      "notes": "When the typed argument is Bool, ordinary Std.string evaluates it once and selects the immutable Haxe spelling `true` or `false` without boxing, allocation, reflection, or a generic Dynamic helper. A typed Int evaluates once and uses a locale-independent managed decimal formatter with exact INT_MIN/INT_MAX behavior; interpolation consumes the same conversion. In a hosted environment, a typed Float evaluates once and uses the first 12-, 15-, or 18-digit spelling that round-trips exactly, including Haxe's non-finite names. A value already typed as String evaluates once and returns the same static or managed carrier: it emits no conversion call or allocation and preserves the existing ownership fact for the surrounding read, store, container, or return. The public Dynamic signature does not broaden this evidence: object, enum, and other source families remain fail-closed until their representation and formatting rules are proven."
+      "notes": "When the typed argument is Bool, ordinary Std.string evaluates it once and selects the immutable Haxe spelling `true` or `false` without boxing, allocation, reflection, or a generic Dynamic helper. A typed Int evaluates once and uses a locale-independent managed decimal formatter with exact INT_MIN/INT_MAX behavior; interpolation consumes the same conversion. In a hosted environment, a typed Float evaluates once and uses the first 12-, 15-, or 18-digit spelling that round-trips exactly, including Haxe's non-finite names. A value already typed as String evaluates once and returns the same static or managed carrier: it emits no conversion call or allocation and preserves the existing ownership fact for the surrounding read, store, container, or return. An exact fieldless enum evaluates once and selects its active constructor name as immutable text. The public Dynamic signature does not broaden this evidence: payload enums, objects, and other source families remain fail-closed until their representation and formatting rules are proven."
     },
     {
       "id": "array-iterator-type-partial",
@@ -10936,13 +10968,15 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [
+        "test/differential/object-enum-map/to_string/Main.hx",
+        "test/differential/object-enum-map/run.py",
         "test/differential/string-runtime/FloatStringOracle.hx",
         "test/differential/string-runtime/generated/Main.hx",
         "test/differential/string-runtime/run.py",
         "test/string_output/fixtures/positive/Main.hx",
         "test/string_output/run.py"
       ],
-      "notes": "When the typed argument is Bool, ordinary Std.string evaluates it once and selects the immutable Haxe spelling `true` or `false` without boxing, allocation, reflection, or a generic Dynamic helper. A typed Int evaluates once and uses a locale-independent managed decimal formatter with exact INT_MIN/INT_MAX behavior; interpolation consumes the same conversion. In a hosted environment, a typed Float evaluates once and uses the first 12-, 15-, or 18-digit spelling that round-trips exactly, including Haxe's non-finite names. A value already typed as String evaluates once and returns the same static or managed carrier: it emits no conversion call or allocation and preserves the existing ownership fact for the surrounding read, store, container, or return. The public Dynamic signature does not broaden this evidence: object, enum, and other source families remain fail-closed until their representation and formatting rules are proven.",
+      "notes": "When the typed argument is Bool, ordinary Std.string evaluates it once and selects the immutable Haxe spelling `true` or `false` without boxing, allocation, reflection, or a generic Dynamic helper. A typed Int evaluates once and uses a locale-independent managed decimal formatter with exact INT_MIN/INT_MAX behavior; interpolation consumes the same conversion. In a hosted environment, a typed Float evaluates once and uses the first 12-, 15-, or 18-digit spelling that round-trips exactly, including Haxe's non-finite names. A value already typed as String evaluates once and returns the same static or managed carrier: it emits no conversion call or allocation and preserves the existing ownership fact for the surrounding read, store, container, or return. An exact fieldless enum evaluates once and selects its active constructor name as immutable text. The public Dynamic signature does not broaden this evidence: payload enums, objects, and other source families remain fail-closed until their representation and formatting rules are proven.",
       "ruleId": "std-string-typed-primitives-partial"
     },
     {
@@ -32396,6 +32430,42 @@
       ],
       "notes": "Admitted finite enum keys compare active constructors and payloads recursively, with class payload identity. Float payloads, recursion, open keys, and other values remain unsupported.",
       "ruleId": "enum-value-map-bounded"
+    },
+    {
+      "id": "hxc-stdlib-api-v1:46158e44b15f4ce12e33c1bd6d91946e46316451a4e2c3553049a47c971c4853",
+      "module": "haxe.ds.EnumValueMap",
+      "source": "haxe/ds/EnumValueMap.hx",
+      "sourceSha256": "2750edd7f97e43b42577d829e736487aeadffcd7745a3f67ebd944a9e28ba6b2",
+      "probeScope": "c-common",
+      "type": "haxe.ds.EnumValueMap",
+      "member": "toString",
+      "kind": "inline-method",
+      "signature": "() -> String",
+      "isStatic": false,
+      "owner": "runtime-slice",
+      "runtimeFeatures": [
+        "enum-value-map",
+        "string"
+      ],
+      "profiles": [
+        "portable"
+      ],
+      "environments": [
+        "hosted"
+      ],
+      "status": "partial",
+      "ownerBeads": "E5.T03",
+      "testOwnerBeads": "E5.T12",
+      "diagnosticPolicies": [
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
+      ],
+      "tests": [
+        "test/differential/object-enum-map/to_string/Main.hx",
+        "test/differential/object-enum-map/run.py"
+      ],
+      "notes": "Exact fieldless enum keys use their constructor names, Int values use exact scalar spelling, and punctuation follows EnumValueMap constructor order. Payload enums and other value families remain unsupported until their recursive formatting rules are proven.",
+      "ruleId": "enum-value-map-to-string-partial"
     },
     {
       "id": "hxc-stdlib-api-v1:273444551d46dda8d006bcad3217aa57895702471edd3f951144ac50ccd8e78b",

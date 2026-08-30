@@ -4768,8 +4768,12 @@ private class HxcIRValidationState {
 				if (argumentTypes.length != 2
 					|| argumentTypes[0] != IRTManagedString
 					|| argumentTypes[1] != IRTManagedString
-					|| call.returnType != IRTManagedString)
-					add(path, "String concatenation requires two managed String carriers and returns a managed String", source);
+					|| call.returnType != IRTManagedString) {
+					final actualArguments = argumentTypes.map(value -> value == null ? "missing" : typeKey(value)).join(", ");
+					add(path,
+						'String concatenation requires two managed String carriers and returns a managed String; actual arguments=[$actualArguments], return=${typeKey(call.returnType)}',
+						source);
+				}
 			case "borrow-cstring":
 				final sourceType = argumentTypes.length == 1 ? argumentTypes[0] : null;
 				if ((sourceType != IRTString && sourceType != IRTManagedString) || call.returnType != IRTCallScopedCString)

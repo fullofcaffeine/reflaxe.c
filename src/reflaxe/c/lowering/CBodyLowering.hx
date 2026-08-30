@@ -1615,10 +1615,7 @@ class CBodyLowering {
 					|| isBytesStringCall(callee)
 					|| isStringBufferToStringCall(callee)
 					|| isMapOwnedStringCall(callee)
-					|| (arguments.length == 1 && isStdStringCall(callee) && switch CPrimitiveTypeMapper.map(arguments[0].t, profile) {
-						case CTPrimitive(mapping): mapping.sourceType == CPHaxeInt && mapping.nullability == CPNonNullable;
-						case _: false;
-					});
+					|| (arguments.length == 1 && isStdStringCall(callee) && stdStringArgumentCreatesOwnedString(arguments[0].t, profile));
 				case TBinop(OpAdd, _, _) | TBinop(OpAssignOp(OpAdd), _, _):
 					CBodyAggregateRegistry.staticStringIdentity(expression.t) != null;
 				case _: false;
@@ -1633,11 +1630,34 @@ class CBodyLowering {
 		return found;
 	}
 
+	/** Identify typed `Std.string` inputs whose admitted result needs ownership. */
+	static function stdStringArgumentCreatesOwnedString(type:Type, profile:CProfile):Bool {
+		final primitiveCreates = switch CPrimitiveTypeMapper.map(type, profile) {
+			case CTPrimitive(mapping): mapping.sourceType == CPHaxeInt && mapping.nullability == CPNonNullable;
+			case _: false;
+		};
+		return primitiveCreates || isEnumStringPlanningType(type);
+	}
+
+	/** Recognize an exact enum or an enum-constrained generic during early planning. */
+	@:noCompletion
+	public static function isEnumStringPlanningType(type:Type):Bool
+		return switch TypeTools.follow(type) {
+			case TEnum(_, _): true;
+			case TAbstract(reference, _): final value = reference.get(); value.pack.length == 0 && value.name == "EnumValue";
+			case TInst(reference, _): switch reference.get().kind {
+					case KTypeParameter(constraints): Lambda.exists(constraints, isEnumStringPlanningType);
+					case _: false;
+				};
+			case _: false;
+		};
+
 	/** Recognize map calls that publish owned String values or String fields. */
 	static function isMapOwnedStringCall(expression:TypedExpr):Bool {
 		return switch expression.expr {
 			case TField(_, FInstance(reference, _, field)): final owner = reference.get(); final method = field.get()
 					.name; owner.pack.join(".") == "haxe.ds" && ((owner.name == "IntMap" && method == "toString")
+					|| ((owner.name == "ObjectMap" || owner.name == "EnumValueMap") && method == "toString")
 					|| (owner.name == "StringMap" && (method == "toString" || method == "keys" || method == "keyValueIterator")));
 			case TParenthesis(inner) | TMeta(_, inner) | TCast(inner, _):
 				isMapOwnedStringCall(inner);
@@ -4371,6 +4391,7 @@ private class FunctionBuilder {
 	final directMutableParameterIds:Map<Int, Bool> = [];
 	final localIdsByCompilerId:Map<Int, String> = [];
 	final localTypesByCompilerId:Map<Int, CBodyValueType> = [];
+	final discoveryTypedMapsByCompilerId:Map<Int, CBodyValueType> = [];
 	final collectionBindingsByCompilerId:Map<Int, BodyCollectionBinding> = [];
 	final localRequests:Map<String, CSymbolRequest> = [];
 	final spanLengthRequests:Map<String, CSymbolRequest> = [];
@@ -5406,19 +5427,34 @@ private class FunctionBuilder {
 		}
 		if (CBodyArrayRecognition.isCoreArrayType(expressionType))
 			bodyValueType(expressionType, expression.pos, "managed-representation-discovery:Array");
-		if (CBodyTypedMapRecognition.familyForMapType(expressionType) != null)
-			bodyValueType(expressionType, expression.pos, "managed-representation-discovery:typed-map");
+		if (CBodyTypedMapRecognition.familyForMapType(expressionType) != null) {
+			final knownLocal = switch expression.expr {
+				case TLocal(variable): discoveryTypedMapsByCompilerId.get(variable.id);
+				case _: null;
+			};
+			final deferredInterfaceLocal = switch expression.expr {
+				case TVar(variable, _): CBodyTypedMapRecognition.isIMapType(applyCurrentSpecialization(variable.t));
+				case _: false;
+			};
+			if (knownLocal == null && !deferredInterfaceLocal)
+				bodyValueType(expressionType, expression.pos, "managed-representation-discovery:typed-map");
+		}
 		if (CBodyDateRecognition.isCoreDateType(expressionType)) {
 			final dateType = bodyValueType(expressionType, expression.pos, "managed-representation-discovery:Date");
 			aggregateRegistry.requireEscapingReturnClasses(dateType);
 		}
 		switch expression.expr {
-			case TVar(variable, _):
+			case TVar(variable, initializer):
 				final variableType = applyCurrentSpecialization(variable.t);
 				if (CBodyArrayRecognition.isCoreArrayType(variableType))
 					bodyValueType(variableType, expression.pos, 'managed-representation-discovery:local:${variable.name}');
-				if (CBodyTypedMapRecognition.familyForMapType(variableType) != null)
-					bodyValueType(variableType, expression.pos, 'managed-representation-discovery:typed-map-local:${variable.name}');
+				if (CBodyTypedMapRecognition.familyForMapType(variableType) != null) {
+					final mapping = CBodyTypedMapRecognition.isIMapType(variableType)
+						&& initializer != null ? discoveryTypedMapInitializerMapping(initializer,
+							'managed-representation-discovery:typed-map-local:${variable.name}') : bodyValueType(variableType, expression.pos,
+							'managed-representation-discovery:typed-map-local:${variable.name}');
+					discoveryTypedMapsByCompilerId.set(variable.id, mapping);
+				}
 				if (CBodyDateRecognition.isCoreDateType(variableType)) {
 					final dateType = bodyValueType(variableType, expression.pos, 'managed-representation-discovery:Date-local:${variable.name}');
 					aggregateRegistry.requireEscapingReturnClasses(dateType);
@@ -5426,6 +5462,18 @@ private class FunctionBuilder {
 			case _:
 		}
 		TypedExprTools.iter(expression, discoverManagedExpression);
+	}
+
+	/** Recover an exact typed map through aliases introduced by standard-library inlining. */
+	function discoveryTypedMapInitializerMapping(expression:TypedExpr, node:String):CBodyValueType {
+		final unwrapped = unwrapExpression(expression);
+		final local = switch unwrapped.expr {
+			case TLocal(variable): discoveryTypedMapsByCompilerId.get(variable.id);
+			case _: null;
+		};
+		if (local != null)
+			return local;
+		return bodyValueType(applyCurrentSpecialization(unwrapped.t), expression.pos, node);
 	}
 
 	/**
@@ -16272,11 +16320,81 @@ private class FunctionBuilder {
 				runtimeRequirements.push(new CBodyRuntimeRequirement("string-float", "from-float", "ordinary Haxe Std.string(Float)", source, expression.pos));
 				{id: result.id, type: result.type, mapping: resultMapping};
 			case _:
-				final classValue = argumentMapping.classValue();
-				classValue == null ? unsupported(expression,
-					'TCall(Std.string:source-not-yet-admitted:${argumentMapping.cSpelling})') : lowerDefaultClassString(expression, argumentMapping,
-					resultMapping, classValue, role);
+				final enumValue = argumentMapping.enumValue();
+				if (enumValue != null) lowerFieldlessEnumString(expression, argumentMapping, resultMapping, enumValue, role); else {
+					final classValue = argumentMapping.classValue();
+					classValue == null ? unsupported(expression,
+						'TCall(Std.string:source-not-yet-admitted:${argumentMapping.cSpelling})') : lowerDefaultClassString(expression, argumentMapping,
+						resultMapping, classValue, role);
+				}
 		};
+	}
+
+	/**
+		Format one exact enum when every constructor is fieldless.
+
+		Eval spells a fieldless enum value as its active constructor name. HxcIR
+		keeps that choice nominal: one checked tag test selects one compiler-owned
+		String literal. Payload enums remain unsupported until their recursive
+		parentheses, separators, and payload conversions have complete evidence.
+	**/
+	function lowerFieldlessEnumString(expression:TypedExpr, argumentMapping:CBodyValueType, resultMapping:CBodyValueType, enumValue:CPreparedBodyEnumInstance,
+			role:String):LoweredValue {
+		for (tagCase in enumValue.cases)
+			if (tagCase.payload.length != 0)
+				return unsupported(expression, 'TCall(Std.string:enum-payload-not-yet-admitted:${enumValue.haxePath}.${tagCase.name})');
+		if (enumValue.cases.length == 0)
+			return unsupported(expression, 'TCall(Std.string:enum-has-no-constructors:${enumValue.haxePath})');
+		if (resultMapping.irType != IRTString && resultMapping.irType != IRTManagedString)
+			return unsupported(expression, 'TCall(Std.string:enum-result-not-String:${resultMapping.cSpelling})');
+
+		final source = sourceSpan(expression.pos);
+		final argument = coerce(lowerValue(expression, argumentMapping), argumentMapping, expression.pos, '$role:enum-argument');
+		final managedResult = resultMapping.irType == IRTManagedString;
+		final resultLocalId = if (managedResult) {
+			final localId = declareFlowLocal(resultMapping, source, "std-string-enum-managed-result");
+			appendInstruction(null, IRIODeclareManagedCarrier(IRPLocal(localId), IRIRuntime("string")), source, "std-string-enum-managed-result-declare");
+			localId;
+		} else {
+			final localId = declareFlowLocal(resultMapping, source, "std-string-enum-result");
+			appendInstruction(null, IRIODeclareUninitialized(IRPLocal(localId)), source, "std-string-enum-result-declare");
+			localId;
+		};
+		final dispatchBlock = currentBlock;
+		final caseBlocks = [
+			for (index in 0...enumValue.cases.length)
+				createGeneratedBlock('std-string-enum-case-$index', source)
+		];
+		final joinBlock = createGeneratedBlock("std-string-enum-join", source);
+
+		for (index in 0...enumValue.cases.length) {
+			currentBlock = caseBlocks[index];
+			final tagCase = enumValue.cases[index];
+			storeDefaultClassStringResult(resultLocalId,
+				compilerStringLiteral(tagCase.name, resultMapping, expression.pos, 'std-string-enum-${tagCase.name}-literal'), resultMapping, managedResult,
+				source, expression.pos, 'std-string-enum-${tagCase.name}');
+			currentBlock.terminator = {kind: IRTJump(edge(joinBlock.id)), source: source};
+		}
+
+		currentBlock = dispatchBlock;
+		for (index in 0...enumValue.cases.length - 1) {
+			final matched:HxcIRResult = {id: nextValueId(), type: IRTBool};
+			appendInstruction(matched, IRIOMatchTag(argument.id, enumValue.cases[index].name), source, 'std-string-enum-match-$index');
+			final nextBlock = createGeneratedBlock('std-string-enum-next-${index + 1}', source);
+			currentBlock.terminator = {kind: IRTBranch(matched.id, edge(caseBlocks[index].id), edge(nextBlock.id)), source: source};
+			currentBlock = nextBlock;
+		}
+		currentBlock.terminator = {kind: IRTJump(edge(caseBlocks[caseBlocks.length - 1].id)), source: source};
+
+		currentBlock = joinBlock;
+		if (!managedResult)
+			return loadPlace({place: IRPLocal(resultLocalId), mapping: resultMapping, mutable: true}, expression.pos, "std-string-enum-result-load");
+		final result:HxcIRResult = {id: nextValueId(), type: IRTManagedString};
+		appendInstruction(result, IRIOMoveManagedCarrier(IRPLocal(resultLocalId)), source, "std-string-enum-managed-result-move");
+		registerValueTemporary(result.id, "std-string-enum-managed-result");
+		freshManagedStringValueIds.set(result.id, true);
+		freshManagedStringValueRoles.set(result.id, role);
+		return {id: result.id, type: result.type, mapping: resultMapping};
 	}
 
 	/**
@@ -17156,7 +17274,7 @@ private class FunctionBuilder {
 			case TField(receiver, _) | TEnumParameter(receiver, _, _) | TEnumIndex(receiver): expressionCreatesFlow(receiver);
 			case TUnop(_, _, operand) | TParenthesis(operand) | TMeta(_, operand) | TCast(operand, _): expressionCreatesFlow(operand);
 			case TBlock(expressions): anyExpressionCreatesFlow(expressions);
-			case TCall(callee, arguments): stdStringClassCallCreatesFlow(callee,
+			case TCall(callee, arguments): stdStringValueCallCreatesFlow(callee,
 					arguments) || expressionCreatesFlow(callee) || anyExpressionCreatesFlow(arguments);
 			case TNew(_, _, arguments) | TArrayDecl(arguments): anyExpressionCreatesFlow(arguments);
 			case TObjectDecl(fields):
@@ -17175,9 +17293,11 @@ private class FunctionBuilder {
 		};
 	}
 
-	/** True when exact class formatting introduces its internal null/name join. */
-	function stdStringClassCallCreatesFlow(callee:TypedExpr, arguments:Array<TypedExpr>):Bool
-		return arguments.length == 1 && isStdString(callee) && exactStdStringClass(arguments[0].t) != null;
+	/** True when bounded class or enum formatting introduces an internal join. */
+	function stdStringValueCallCreatesFlow(callee:TypedExpr, arguments:Array<TypedExpr>):Bool
+		return arguments.length == 1
+			&& isStdString(callee)
+			&& (exactStdStringClass(arguments[0].t) != null || CBodyLowering.isEnumStringPlanningType(arguments[0].t));
 
 	/**
 	 * True when equality must branch to unwrap one present optional scalar.

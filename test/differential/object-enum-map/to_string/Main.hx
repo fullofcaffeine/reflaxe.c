@@ -1,8 +1,8 @@
 /**
- * Provides the focused ordinary-Haxe oracle for ObjectMap text formatting.
+ * Provides the focused ordinary-Haxe oracle for typed-map text formatting.
  *
- * The fixture keeps one exact final object-key class and admitted Int and Bool
- * values. It checks empty, single, multiple, and null-key output without pulling
+ * The fixture keeps one exact final object-key class, one fieldless enum, and
+ * admitted Int and Bool values. It checks each bounded spelling without pulling
  * the exhaustive identity-map and enum-map runtime matrix into this fast lane.
  */
 final class Main {
@@ -38,7 +38,23 @@ final class Main {
 		nullable.set(absent, 10);
 		if (nullable.toString() != "[null => 10]")
 			while (true) {}
+
+		final enumEmpty:Map<FormatKey, Int> = [];
+		if (enumEmpty.toString() != "[]")
+			while (true) {}
+
+		final enumValues:Map<FormatKey, Int> = [];
+		enumValues.set(Second, 2);
+		enumValues.set(First, 1);
+		if (enumValues.toString() != "[First => 1, Second => 2]")
+			while (true) {}
 	}
+}
+
+/** Closed fieldless keys whose constructor order defines tree traversal. */
+enum FormatKey {
+	First;
+	Second;
 }
 
 /** One exact identity-bearing key that keeps Haxe's default class-name text. */

@@ -72,6 +72,7 @@ NEGATIVE_EXPECTED = {
     "dynamic_key": "typed-map-key:the dynamic source semantic type cannot stand in for a primitive",
     "nonfinal_string": "Std.string:class-requires-final-type:OpenKey",
     "custom_to_string": "Std.string:class-custom-toString-requires-dispatch:NamedKey",
+    "enum_string_payload": "Std.string:enum-payload-not-yet-admitted:PayloadKey.Amount",
 }
 BASE_NEGATIVE_NAMES = (
     "enum_float",
@@ -228,9 +229,16 @@ def validate_generated_project(
         'runtime(feature="object-map",operation="create")',
         'runtime(feature="object-map",operation="set")',
         'runtime(feature="object-map",operation="key-value-iterator")',
+        'runtime(feature="enum-value-map",operation="create")',
+        'runtime(feature="enum-value-map",operation="set")',
+        'runtime(feature="enum-value-map",operation="keys")',
+        'runtime(feature="enum-value-map",operation="get")',
         'binary operation="haxe.class-reference.equal"',
+        'match-tag value=',
         'constant value=string-utf8(bytes=4,value="null")',
         'constant value=string-utf8(bytes=10,value="FormatNode")',
+        'constant value=string-utf8(bytes=5,value="First")',
+        'constant value=string-utf8(bytes=6,value="Second")',
         'runtime(feature="string",operation="concat")',
         'runtime(feature="string",operation="from-int")',
         'managed-root "root.',
@@ -275,7 +283,7 @@ def validate_generated_project(
         "gc",
         "iterator",
         "typed-map",
-        *([] if formatting else ["enum-value-map"]),
+        "enum-value-map",
         "object-map",
     ]
     if formatting:
@@ -283,7 +291,10 @@ def validate_generated_project(
     if plan.get("features") != expected_features:
         raise TypedMapFailure(f"typed-map runtime closure drifted: {plan.get('features')!r}")
     expected_operations = (
-        {"object-map": {"create", "key-value-iterator", "set"}}
+        {
+            "object-map": {"create", "key-value-iterator", "set"},
+            "enum-value-map": {"create", "get", "keys", "set"},
+        }
         if formatting
         else {
             "object-map": {
@@ -324,9 +335,8 @@ def validate_generated_project(
         "exact-traced-haxe-object-graph",
         "managed-haxe-iterators",
         "managed-haxe-object-maps",
+        "managed-haxe-enum-value-maps",
     ]
-    if not formatting:
-        required_decisions.append("managed-haxe-enum-value-maps")
     for decision in required_decisions:
         if decision not in decisions:
             raise TypedMapFailure(f"runtime plan omitted {decision}")
@@ -342,6 +352,7 @@ def validate_generated_project(
     expected_modules = (
         [
             "String",
+            "enum-value-map",
             "gc",
             "iterator",
             "object-map",
@@ -358,7 +369,9 @@ def validate_generated_project(
         "cleanup-release",
         "create",
         "has-next",
+        "get",
         "key-value-iterator",
+        "keys",
         "managed-type-representation",
         "next",
         "root-frame",
@@ -390,6 +403,9 @@ def validate_generated_project(
         source_markers.extend(
             [
                 "hxc_typed_map_identity_hash",
+                "hxc_typed_map_hash_mix",
+                "hxc_typed_map_ref_get_copy",
+                "hxc_typed_map_ref_key_iterator",
                 "hxc_string_concat_ref",
                 "hxc_string_from_int32",
             ]
@@ -704,7 +720,7 @@ def run_native(toolchains: list[Toolchain], *, generated_haxe: bool) -> None:
 
 
 def run_to_string_only(toolchains: list[Toolchain]) -> None:
-    """Prove the new formatting slice without repeating unrelated map matrices."""
+    """Prove bounded typed-map formatting without repeating unrelated matrices."""
     with tempfile.TemporaryDirectory(
         prefix="reflaxe-c-object-map-to-string-"
     ) as temporary:
@@ -736,11 +752,11 @@ def run_to_string_only(toolchains: list[Toolchain]) -> None:
                 )
             if generated_tree(normal) != generated_tree(reverse):
                 raise TypedMapFailure(
-                    "ObjectMap.toString output changed under reversed discovery"
+                    "typed-map toString output changed under reversed discovery"
                 )
             run_negative_cases(
                 root,
-                ("nonfinal_string", "custom_to_string"),
+                ("nonfinal_string", "custom_to_string", "enum_string_payload"),
                 runtime_none=False,
                 timeout=600,
                 connect=endpoint,
@@ -809,7 +825,7 @@ def main(argv: Iterable[str] = ()) -> int:
     families = ", ".join(toolchain.family for toolchain in toolchains)
     if args.to_string_only:
         evidence = (
-            "ObjectMap formatting Eval parity, exact class/null HxcIR, diagnostics, "
+            "ObjectMap and bounded EnumValueMap formatting Eval parity, exact HxcIR, diagnostics, "
             "determinism, strict native C, C++, sanitizers, runtime plan, and symbols passed"
         )
     elif args.native_only:
