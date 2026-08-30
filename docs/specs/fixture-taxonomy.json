@@ -1518,7 +1518,9 @@
           "test/enum_lowering/expected/program.h",
           "test/enum_lowering/expected/program.c",
           "test/enum_lowering/expected/enums.json",
-          "test/enum_lowering/expected/symbols.json"
+          "test/enum_lowering/expected/symbols.json",
+          "test/enum_lowering/expected/statement_early_return.hxcir",
+          "test/enum_lowering/expected/statement_early_return.c"
         ],
         "formats": [
           "c",
