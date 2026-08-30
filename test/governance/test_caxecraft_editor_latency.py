@@ -77,6 +77,16 @@ class CaxecraftEditorLatencyContract(unittest.TestCase):
         self.assertIn("terrainPresentation.refreshVoxel", refresh)
         self.assertIn("terrainPresentation.refresh(draft.world", refresh)
 
+    def test_single_voxel_refresh_retains_unrelated_editor_projections(self) -> None:
+        source = EDITOR_SCREEN.read_text(encoding="utf-8")
+        refresh = section(source, "function refreshProjection", "function syncWorldName")
+        voxel = section(refresh, "case RefreshTerrainVoxel(point, paletteCode):", "case RefreshAllTerrain:")
+
+        self.assertIn("retainedPresentation = true", voxel)
+        self.assertNotIn("InspectPresentationDetails", voxel)
+        self.assertIn("patchPlanVoxel", refresh)
+        self.assertIn("if (!retainedPresentation)", refresh)
+
     def test_flow_panels_reuse_one_isolated_draft_per_revision(self) -> None:
         source = EDITOR_SCREEN.read_text(encoding="utf-8")
         draft = section(source, "function currentDraftScenario", "/** Draw every admitted environment")

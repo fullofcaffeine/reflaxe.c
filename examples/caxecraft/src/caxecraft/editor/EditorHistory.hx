@@ -67,8 +67,8 @@ final class EditorHistory {
 	public inline function byteCount():Int
 		return usedBytes;
 
-	#if caxecraft_editor_probe
 	/** Count distinct private byte buffers retained by focused allocation tests. */
+	@:noCompletion
 	public function byteBufferCount():Int {
 		final buffers:Array<Bytes> = [];
 		for (entry in undoEntries) {
@@ -89,7 +89,6 @@ final class EditorHistory {
 				return;
 		buffers.push(candidate);
 	}
-	#end
 
 	public inline function canRecord(byteCost:Int):Bool
 		return byteCost <= settings.historyBytes;

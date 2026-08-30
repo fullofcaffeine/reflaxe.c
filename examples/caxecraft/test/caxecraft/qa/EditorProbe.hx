@@ -119,6 +119,7 @@ import caxecraft.editor.EditorViewport.layout as layoutViewport;
 import caxecraft.editor.EditorViewport.inspectorVisible;
 import caxecraft.editor.EditorViewport.paletteCodeAt;
 import caxecraft.editor.EditorViewport.paletteCodeForBlock;
+import caxecraft.editor.EditorViewport.patchProjectedVoxel as patchPlanVoxel;
 import caxecraft.editor.EditorViewport.pointAt as viewportPointAt;
 import caxecraft.editor.EditorViewport.project as projectViewport;
 import caxecraft.editor.EditorViewport.projectFromCells;
@@ -3058,6 +3059,25 @@ final class EditorProbe {
 			&& reused.cells.join(",") == upper.cells.join(","), "viewport projection changed when it reused the decoded 3D cells");
 		final lower = volume == null ? null : projectFromWorld(volume, 0);
 		require(lower != null && lower.layerY == 0 && paletteCodeAt(lower, 3, 2) == 0, "selected-layer projection reused the wrong horizontal cells");
+		require(patchPlanVoxel(lower, {x: 0, y: 1, z: 0}, 7) && paletteCodeAt(lower, 0, 0) == 0,
+			"another layer invalidated or changed the retained Plan projection");
+		require(patchPlanVoxel(lower, {x: 2, y: 0, z: 1}, 7)
+			&& paletteCodeAt(lower, 2, 1) == 7
+			&& lower.paintedCells.length == 1
+			&& lower.paintedCells[0].x == 2
+			&& lower.paintedCells[0].z == 1,
+			"incremental Plan paint lost its compact ordered row");
+		require(patchPlanVoxel(lower, {x: 3, y: 0, z: 0}, 7)
+			&& lower.paintedCells.length == 2
+			&& lower.paintedCells[0].x == 3
+			&& lower.paintedCells[1].x == 2,
+			"incremental Plan paint lost row-major order");
+		require(patchPlanVoxel(lower, {x: 2, y: 0, z: 1}, 0)
+			&& paletteCodeAt(lower, 2, 1) == 0
+			&& lower.paintedCells.length == 1
+			&& lower.paintedCells[0].x == 3,
+			"incremental Plan erase left a stale painted row");
+		require(!patchPlanVoxel(lower, {x: 4, y: 0, z: 0}, 7), "incremental Plan patch admitted an excluded coordinate");
 		require(volume != null && projectFromWorld(volume, 2) == null, "selected-layer projection admitted a layer outside the cached world");
 		require(projectFromCells(session.draftSnapshot().world, [0], 1) == null, "viewport projection admitted a malformed decoded cell array");
 		require(clampLayer(-1, 2) == 0

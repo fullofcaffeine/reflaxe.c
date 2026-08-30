@@ -200,8 +200,12 @@ Exact voxel cells remain available for picking and edits in both paths. Plan
 reads one exact horizontal slice, so a creator can inspect hidden cells.
 
 A normal displayed frame reads both caches. It does not serialize the CAXEMAP
-draft or allocate a replacement volume. New World, an accepted edit, undo, or
-redo rebuilds both caches from the session's new draft.
+draft or allocate a replacement volume. New World and broad terrain changes
+rebuild the caches from the session's new draft. A one-voxel paint, erase,
+undo, or redo patches that cell in the 3D cache and in the selected Plan layer.
+It does not copy every object, rebuild Flow links, or scan the complete Plan
+layer. If a cache is missing or inconsistent, the editor uses the complete
+rebuild path.
 
 Moving the pointer between cells also reads this cache. The screen translates
 the selected tool into a possible command, but it does not serialize the map or

@@ -402,22 +402,23 @@ final class EditorSession {
 	public inline function stateIdentity():Int
 		return currentStateIdentity;
 
-	#if caxecraft_editor_probe
 	/** Return the retained typed-image count for the focused bounded-cache probe. */
+	@:noCompletion
 	public inline function historyImageCacheCount():Int
 		return historyImageCache.length;
 
 	/** Return distinct canonical byte owners retained by focused history probes. */
+	@:noCompletion
 	public inline function historyByteBufferCount():Int
 		return history.byteBufferCount();
 
 	/** True when the current visual edit has postponed parser-coordinate recovery. */
+	@:noCompletion
 	public function draftDefersParserMetadata():Bool
 		return switch draftImage.parseState {
 			case DeferredScenarioParse: true;
 			case ParsedScenarioImage(_): false;
 		};
-	#end
 
 	/**
 		Stage a bounded command list and commit it as one reversible edit.

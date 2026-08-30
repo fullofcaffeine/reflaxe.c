@@ -124,6 +124,7 @@ import caxecraft.editor.EditorViewport.layout as layoutPlan;
 import caxecraft.editor.EditorViewport.inspectorVisible as shouldShowInspector;
 import caxecraft.editor.EditorViewport.pointAt as pointAtPlan;
 import caxecraft.editor.EditorViewport.paletteCodeForBlock;
+import caxecraft.editor.EditorViewport.patchProjectedVoxel as patchPlanVoxel;
 import caxecraft.editor.EditorViewport.projectFromWorld;
 import caxecraft.editor.EditorWorldViewport.EditorCameraInput;
 import caxecraft.editor.EditorWorldViewport.EditorCameraMode;
@@ -3895,6 +3896,7 @@ final class CaxecraftEditorScreen {
 		#end
 		final previous = projection;
 		var voxelProjectionPatched = false;
+		var retainedPresentation = false;
 		final draft:EditorPresentationSnapshot = switch terrainRefresh {
 			case KeepTerrain:
 				switch current.query(InspectPresentationDetails) {
@@ -3902,14 +3904,14 @@ final class CaxecraftEditorScreen {
 					case _: throw "editor returned the wrong presentation-details observation";
 				}
 			case RefreshTerrainVoxel(point, paletteCode):
-				switch current.query(InspectPresentationDetails) {
-					case PresentationDetailsObserved(_, value):
-						voxelProjectionPatched = previous != null && patchProjectedVoxel(previous, point, paletteCode);
-						if (voxelProjectionPatched) presentationWithProjection(value, previous); else switch current.query(InspectPresentation) {
-							case PresentationObserved(_, complete): complete;
-							case _: throw "editor returned the wrong presentation observation";
-						}
-					case _: throw "editor returned the wrong presentation-details observation";
+				final cached = presentationDraft;
+				voxelProjectionPatched = cached != null && previous != null && patchProjectedVoxel(previous, point, paletteCode);
+				if (voxelProjectionPatched) {
+					retainedPresentation = true;
+					cached;
+				} else switch current.query(InspectPresentation) {
+					case PresentationObserved(_, complete): complete;
+					case _: throw "editor returned the wrong presentation observation";
 				}
 			case RefreshAllTerrain:
 				switch current.query(InspectPresentation) {
@@ -3918,10 +3920,12 @@ final class CaxecraftEditorScreen {
 				}
 		};
 		presentationDraft = draft;
-		groundPaletteCode = normalizeBuildPaletteCode(draft.world.palette, groundPaletteCode,
-			paletteCodeForBlock(draft.world.palette, contentRegistry.defaultEditorBlockId()));
-		syncWorldName(draft.title);
-		environment = draft.environment;
+		if (!retainedPresentation) {
+			groundPaletteCode = normalizeBuildPaletteCode(draft.world.palette, groundPaletteCode,
+				paletteCodeForBlock(draft.world.palette, contentRegistry.defaultEditorBlockId()));
+			syncWorldName(draft.title);
+			environment = draft.environment;
+		}
 		projection = draft.projection;
 		final runtimeProjection = projection;
 		#if caxecraft_pilot
@@ -3955,21 +3959,30 @@ final class CaxecraftEditorScreen {
 				null;
 			case value:
 				editLayerY = clampLayer(editLayerY, value.height);
-				projectFromWorld(value, editLayerY);
+				final retainedPlan = planProjection;
+				switch terrainRefresh {
+					case RefreshTerrainVoxel(point, paletteCode)
+						if (retainedPresentation && retainedPlan != null && patchPlanVoxel(retainedPlan, point, paletteCode)):
+						retainedPlan;
+					case KeepTerrain | RefreshTerrainVoxel(_, _) | RefreshAllTerrain:
+						projectFromWorld(value, editLayerY);
+				}
 		};
-		objectGizmos = projectObjects(draft.objects);
-		objectVisuals = [for (object in draft.objects) objectVisualFor(contentRegistry, object)];
-		flowRuleCount = draft.flowRuleCount;
-		flowRules = draft.flowRules;
-		zoneRuleLinks = draft.zoneRuleLinks;
-		flowOverlaps = draft.flowOverlaps;
-		final labels:Array<String> = [];
-		for (gizmo in objectGizmos)
-			labels.push(gizmo.id.text());
-		objectLabels = labels.join(";");
-		if (objectList.activeIndex() < 0 || objectList.activeIndex() >= objectGizmos.length)
-			objectList = new GuiListViewState(-1);
-		syncSelection(current.selectedBounds());
+		if (!retainedPresentation) {
+			objectGizmos = projectObjects(draft.objects);
+			objectVisuals = [for (object in draft.objects) objectVisualFor(contentRegistry, object)];
+			flowRuleCount = draft.flowRuleCount;
+			flowRules = draft.flowRules;
+			zoneRuleLinks = draft.zoneRuleLinks;
+			flowOverlaps = draft.flowOverlaps;
+			final labels:Array<String> = [];
+			for (gizmo in objectGizmos)
+				labels.push(gizmo.id.text());
+			objectLabels = labels.join(";");
+			if (objectList.activeIndex() < 0 || objectList.activeIndex() >= objectGizmos.length)
+				objectList = new GuiListViewState(-1);
+			syncSelection(current.selectedBounds());
+		}
 		invalidatePreview();
 		final next = projection;
 		if (next == null) {
@@ -3981,7 +3994,7 @@ final class CaxecraftEditorScreen {
 			final mode = previousCamera == null ? EditorCameraMode.WalkCamera : cameraMode(previousCamera);
 			final focus = cameraFocus(next);
 			camera = focusCamera(next, mode, focus.target, focus.orbitDistance);
-		} else {
+		} else if (!retainedPresentation) {
 			final currentCamera = camera;
 			if (currentCamera != null && cameraMode(currentCamera) == EditorCameraMode.OrbitCamera)
 				camera = retargetOrbitCamera(currentCamera, cameraFocus(next).target);

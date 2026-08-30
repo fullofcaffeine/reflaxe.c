@@ -177,6 +177,55 @@ function projectFromWorld(world:EditorWorldProjection, layerY:Int):Null<EditorVi
 	};
 }
 
+/**
+	Patch one accepted voxel into the cached Plan layer without scanning the layer.
+
+	A voxel on another Y layer leaves this projection valid and returns `true`.
+	Malformed coordinates or a painted-cell cache that disagrees with `cells`
+	return `false`, so the screen can rebuild the layer from its complete world
+	projection. The painted rows stay in canonical row-major order.
+**/
+function patchProjectedVoxel(projection:EditorViewportProjection, point:VoxelPoint, paletteCode:Int):Bool {
+	if (point.x < 0 || point.z < 0 || point.x >= projection.width || point.z >= projection.depth)
+		return false;
+	if (projection.cells.length != projection.width * projection.depth)
+		return false;
+	if (point.y != projection.layerY)
+		return true;
+
+	final cellIndex = point.z * projection.width + point.x;
+	final previousCode = projection.cells[cellIndex];
+	var low = 0;
+	var high = projection.paintedCells.length;
+	while (low < high) {
+		final middle = low + Std.int((high - low) / 2);
+		final row = projection.paintedCells[middle];
+		final rowIndex = row.z * projection.width + row.x;
+		if (rowIndex < cellIndex)
+			low = middle + 1;
+		else
+			high = middle;
+	}
+	final hasPaintedRow = low < projection.paintedCells.length
+		&& projection.paintedCells[low].z * projection.width + projection.paintedCells[low].x == cellIndex;
+	if ((previousCode != 0) != hasPaintedRow)
+		return false;
+	if (previousCode == paletteCode)
+		return true;
+
+	projection.cells[cellIndex] = paletteCode;
+	if (paletteCode == 0) {
+		projection.paintedCells.splice(low, 1);
+	} else {
+		final row:EditorViewportCell = {x: point.x, z: point.z, paletteCode: paletteCode};
+		if (hasPaintedRow)
+			projection.paintedCells[low] = row;
+		else
+			projection.paintedCells.insert(low, row);
+	}
+	return true;
+}
+
 /** Collect compact painted rows while preserving exact x/z display order. */
 function collectPaintedCells(cells:Array<Int>, width:Int):Array<EditorViewportCell> {
 	final painted:Array<EditorViewportCell> = [];
