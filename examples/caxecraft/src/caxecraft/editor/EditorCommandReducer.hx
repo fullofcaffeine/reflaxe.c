@@ -8,6 +8,7 @@ import caxecraft.editor.EditorWorldGrid.EditorWorldResult;
 import caxecraft.editor.EditorWorldGrid.fill as fillWorld;
 import caxecraft.editor.EditorWorldGrid.paintMany as paintWorld;
 import caxecraft.editor.EditorWorldGrid.resize as resizeWorld;
+import caxecraft.editor.EditorEnvironment.copyEnvironment;
 import caxecraft.editor.EditorObjectRename.renameScenarioObject;
 import caxecraft.scenario.CaxeFlow.FlowRule;
 import caxecraft.scenario.CaxeFlow.FlowSequence;
@@ -151,7 +152,7 @@ private function withEnvironment(scenario:Scenario, environment:Null<ScenarioEnv
 		messages: scenario.messages,
 		title: scenario.title,
 		mode: scenario.mode,
-		environment: environment,
+		environment: environment == null ? null : copyEnvironment(environment),
 		world: scenario.world,
 		objects: scenario.objects,
 		story: scenario.story,

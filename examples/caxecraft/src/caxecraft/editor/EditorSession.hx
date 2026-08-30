@@ -102,10 +102,10 @@ private typedef EditorCachedHistoryImage = {
 	reuses that image as its unchanged `before` value and creates one new image
 	for the proposed `after` value. Voxel reducers retain no caller-owned records,
 	so their image writes canonical bytes immediately and reconstructs parser
-	coordinates only when validation needs them. Other commands keep the complete
-	codec round trip. Visual queries derive fresh presentation arrays from the
-	retained typed value, so an accepted edit does not cause another CAXEMAP parse
-	on the drawing path.
+	coordinates only when validation needs them. Every reducer detaches mutable
+	command payloads before publication, so visual commands use this same path.
+	Visual queries derive fresh presentation arrays from the retained typed value,
+	so an accepted edit does not cause another CAXEMAP parse on the drawing path.
 **/
 final class EditorSession {
 	/** Keep the common edit/undo/redo window responsive without retaining every typed draft. */
@@ -410,6 +410,13 @@ final class EditorSession {
 	/** Return distinct canonical byte owners retained by focused history probes. */
 	public inline function historyByteBufferCount():Int
 		return history.byteBufferCount();
+
+	/** True when the current visual edit has postponed parser-coordinate recovery. */
+	public function draftDefersParserMetadata():Bool
+		return switch draftImage.parseState {
+			case DeferredScenarioParse: true;
+			case ParsedScenarioImage(_): false;
+		};
 	#end
 
 	/**
@@ -462,7 +469,7 @@ final class EditorSession {
 					switch reduceCommand(staged.scenario, command, settings) {
 						case ReductionRejected(error): return StageRejected(error);
 						case ReductionReady(reduction):
-							switch captureReduction(command, reduction.scenario) {
+							switch captureReduction(reduction.scenario) {
 								case ImageRejected(error): return StageRejected(error);
 								case ImageReady(image):
 									staged = image;
@@ -564,7 +571,7 @@ final class EditorSession {
 				final terrainHistory = terrainHistoryForCommand(before.scenario, command);
 				if (terrainHistory == null)
 					return EditRejected(DraftWorldIsNotEditable);
-				switch captureReduction(command, reduction.scenario) {
+				switch captureReduction(reduction.scenario) {
 					case ImageRejected(error): EditRejected(error);
 					case ImageReady(after):
 						accept(before, after, reduction.family, changesFor(command), terrainHistory);
@@ -575,19 +582,13 @@ final class EditorSession {
 	/**
 	 * Snapshot one reducer result with the narrowest safe ownership boundary.
 	 *
-	 * Voxel commands rebuild complete world arrays. Placement commands rebuild
-	 * or deep-copy every placement record and tag array. Neither group can retain
-	 * mutable input from a caller. Other command payloads keep the general codec
-	 * round trip until their ownership contracts prove parser deferral is safe.
+	 * Each reducer either builds values from immutable scalars or copies every
+	 * mutable command payload that enters the draft. Values shared from the prior
+	 * image remain private and immutable. The writer can therefore publish bytes
+	 * now and recover exact parser coordinates only for validation.
 	 */
-	function captureReduction(command:EditorCommand, scenario:Scenario):EditorScenarioImageResult {
-		return switch command {
-			case PaintVoxel(_, _) | EraseVoxel(_) | PaintVoxels(_, _) | EraseVoxels(_) | FillBounds(_, _) | StampPrefab(_, _, _, _) | PutObject(_) |
-				MoveObjectBy(_, _) | RotateObjectBy(_, _) | ResizeTriggerTo(_, _) | RenameObject(_, _) | RemoveObject(_):
-				captureReducerOwnedEdit(scenario);
-			case _: captureScenario(scenario);
-		}
-	}
+	function captureReduction(scenario:Scenario):EditorScenarioImageResult
+		return captureReducerOwnedEdit(scenario);
 
 	/**
 		Restore the state before the newest history entry.

@@ -77,24 +77,13 @@ class CaxecraftEditorLatencyContract(unittest.TestCase):
         self.assertIn("terrainPresentation.refreshVoxel", refresh)
         self.assertIn("terrainPresentation.refresh(draft.world", refresh)
 
-    def test_copy_owned_commits_defer_parser_metadata_until_validation(self) -> None:
+    def test_all_visual_commits_defer_parser_metadata_until_validation(self) -> None:
         source = EDITOR_SESSION.read_text(encoding="utf-8")
         capture = section(source, "function captureReduction", "/**\n\t\tRestore the state")
         validation = section(source, "function validateImage", "/** Convert the public validator")
 
-        self.assertIn("PaintVoxel(_, _)", capture)
-        self.assertIn("EraseVoxel(_)", capture)
-        self.assertIn("PaintVoxels(_, _)", capture)
-        self.assertIn("EraseVoxels(_)", capture)
-        self.assertIn("FillBounds(_, _)", capture)
-        self.assertIn("StampPrefab(_, _, _, _)", capture)
-        self.assertIn("PutObject(_)", capture)
-        self.assertIn("MoveObjectBy(_, _)", capture)
-        self.assertIn("RotateObjectBy(_, _)", capture)
-        self.assertIn("ResizeTriggerTo(_, _)", capture)
-        self.assertIn("RemoveObject(_)", capture)
-        self.assertIn("captureReducerOwnedEdit(scenario)", capture)
-        self.assertIn("case _: captureScenario(scenario)", capture)
+        self.assertIn("return captureReducerOwnedEdit(scenario)", capture)
+        self.assertNotIn("captureScenario", capture)
         self.assertIn("case DeferredScenarioParse", validation)
         self.assertIn("restoreScenario(image.bytes)", validation)
 

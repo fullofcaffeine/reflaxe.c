@@ -1,5 +1,6 @@
 package caxecraft.editor;
 
+import caxecraft.editor.EditorEnvironment.copyEnvironment;
 import caxecraft.editor.EditorFlowProjection.EditorZoneRuleProjection;
 import caxecraft.editor.EditorFlowProjection.EditorFlowRuleProjection;
 import caxecraft.editor.EditorFlowProjection.EditorTriggerOverlap;
@@ -94,7 +95,7 @@ function projectDetails(scenario:Scenario):EditorPresentationDetails {
 	return {
 		id: scenario.id,
 		title: scenario.title,
-		environment: copyEnvironment(scenario.environment),
+		environment: scenario.environment == null ? null : copyEnvironment(scenario.environment),
 		world: {
 			size: copySize(scenario.world.size),
 			palette: [
@@ -109,25 +110,6 @@ function projectDetails(scenario:Scenario):EditorPresentationDetails {
 		flowRules: projectFlowRules(scenario.flow.rules),
 		zoneRuleLinks: projectZoneRules(scenario.flow.rules, scenario.objects),
 		flowOverlaps: projectTriggerOverlaps(scenario.flow.rules, scenario.objects)
-	};
-}
-
-/** Copy optional sky data because its edge list is a mutable Haxe array. */
-private function copyEnvironment(value:Null<ScenarioEnvironment>):Null<ScenarioEnvironment> {
-	if (value == null)
-		return null;
-	return {
-		profile: value.profile,
-		sky: {red: value.sky.red, green: value.sky.green, blue: value.sky.blue},
-		sun: value.sun == null ? null : {
-			x: value.sun.x,
-			y: value.sun.y,
-			z: value.sun.z,
-			radiusMilli: value.sun.radiusMilli
-		},
-		clouds: {count: value.clouds.count, speedMilli: value.clouds.speedMilli, seed: value.clouds.seed},
-		edges: value.edges.copy(),
-		continueWater: value.continueWater
 	};
 }
 

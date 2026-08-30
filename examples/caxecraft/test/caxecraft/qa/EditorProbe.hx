@@ -1429,8 +1429,9 @@ final class EditorProbe {
 		applyEnvironmentEdit(opened, EditorEnvironmentControl.SouthEdge, EditorEnvironmentDirection.Decrease);
 		applyEnvironmentEdit(opened, EditorEnvironmentControl.ContinueWater, EditorEnvironmentDirection.Increase);
 		final edited = opened.draftSnapshot().environment;
-		require(edited != null
-			&& edited.sky.red == 97
+		if (edited == null)
+			throw "environment controls removed the enabled environment";
+		require(edited.sky.red == 97
 			&& edited.sky.green == 147
 			&& edited.sky.blue == 172
 			&& edited.sun != null
@@ -1477,6 +1478,11 @@ final class EditorProbe {
 		require(reopened.canonicalDraft().compare(editedBytes) == 0, "environment save and reload changed canonical bytes");
 		final playable = open(defaultEditorSettings());
 		expectApplied(playable.apply(SetEnvironment(edited)), DocumentMetadata, "prepare environment Test Play");
+		require(playable.draftDefersParserMetadata(), "environment edit reparsed canonical bytes before validation");
+		edited.edges.push(South);
+		final isolatedEnvironment = playable.draftSnapshot().environment;
+		require(isolatedEnvironment != null
+			&& !hasEnvironmentEdge(isolatedEnvironment.edges, South), "environment edit retained the caller-owned edge array");
 		final playableBytes = playable.canonicalDraft();
 		requireTestStarted(playable.enterTestPlay(), "environment test play");
 		require(playable.leaveTestPlay()
@@ -4529,6 +4535,7 @@ final class EditorProbe {
 		final before = session.canonicalDraft();
 		final beforeSelection = selectionKey(session);
 		expectApplied(session.apply(command), family, "apply command");
+		require(session.draftDefersParserMetadata(), 'visual $family command reparsed canonical bytes before validation');
 		final after = session.canonicalDraft();
 		final afterSelection = selectionKey(session);
 		require(before.compare(after) != 0, "accepted content command changed no authored bytes");
@@ -4537,7 +4544,9 @@ final class EditorProbe {
 			&& selectionKey(session) == beforeSelection, "undo did not restore exact prior state");
 		expectHistory(session.redo(), family, "redo command");
 		require(session.canonicalDraft().compare(after) == 0
-			&& selectionKey(session) == afterSelection, "redo did not restore exact command state");
+			&& selectionKey(session) == afterSelection
+			&& session.draftDefersParserMetadata(),
+			"redo did not restore the deferred exact command state");
 		return 1;
 	}
 

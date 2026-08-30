@@ -211,7 +211,13 @@ private function defaultSun():ScenarioSun
 		radiusMilli: 300
 	};
 
-private function copyEnvironment(value:ScenarioEnvironment):ScenarioEnvironment {
+/**
+	Return one separate environment value for an editor ownership boundary.
+
+	The scalar records are copied for clear ownership. The edge list needs a new
+	array because a caller can resize it after the command returns.
+**/
+function copyEnvironment(value:ScenarioEnvironment):ScenarioEnvironment {
 	return {
 		profile: value.profile,
 		sky: copyRgb(value.sky),
