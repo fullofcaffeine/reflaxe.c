@@ -164,6 +164,7 @@ import caxecraft.scenario.CaxeFlow.FlowRepeatPolicy;
 import caxecraft.scenario.CaxeFlow.FlowRule;
 import caxecraft.scenario.CaxeFlow.FlowScope;
 import caxecraft.scenario.CaxeFlow.FlowValue;
+import caxecraft.scenario.CaxeFlowCopy.copyFlowRule;
 import caxecraft.scenario.CaxeFlowRuntime.FlowTraceEntry;
 import caxecraft.scenario.ScenarioEnvironment;
 import caxecraft.scenario.ScenarioEnvironment.ScenarioHorizonEdge;
@@ -273,6 +274,8 @@ final class CaxecraftEditorScreen {
 	var session:Null<EditorSession>;
 	var notice:EditorNotice;
 	var presentationDraft:Null<EditorPresentationSnapshot>;
+	var flowAuthoringDraft:Null<Scenario>;
+	var flowAuthoringRevision:Int;
 	var projection:Null<EditorWorldProjection>;
 	var planProjection:Null<EditorViewportProjection>;
 	var objectGizmos:Array<EditorObjectGizmo>;
@@ -383,6 +386,8 @@ final class CaxecraftEditorScreen {
 		session = editorPackage.workspace();
 		notice = Ready;
 		presentationDraft = null;
+		flowAuthoringDraft = null;
+		flowAuthoringRevision = -1;
 		projection = null;
 		planProjection = null;
 		objectGizmos = [];
@@ -1635,14 +1640,19 @@ final class CaxecraftEditorScreen {
 				final rule = current != null && current.revision() == revision ? currentFlowRule(ruleId) : null;
 				if (rule == null)
 					staleFlowPick();
-				else
-					switch applyFlowDocumentPick(rule, card, referenceIndex, value, role, current.draftSnapshot()) {
-						case FlowRuleAuthored(next):
-							if (commitFlowRule(zone, next)) flowDocumentPickMode = NoFlowDocumentPanel;
-						case FlowRuleUnchanged:
-							flowDocumentPickMode = NoFlowDocumentPanel;
-						case FlowRuleAuthoringRejected(_): notice = Invalid;
-					}
+				else {
+					final draft = currentDraftScenario();
+					if (draft == null)
+						staleFlowPick();
+					else
+						switch applyFlowDocumentPick(rule, card, referenceIndex, value, role, draft) {
+							case FlowRuleAuthored(next):
+								if (commitFlowRule(zone, next)) flowDocumentPickMode = NoFlowDocumentPanel;
+							case FlowRuleUnchanged:
+								flowDocumentPickMode = NoFlowDocumentPanel;
+							case FlowRuleAuthoringRejected(_): notice = Invalid;
+						}
+				}
 		}
 	}
 
@@ -1654,13 +1664,25 @@ final class CaxecraftEditorScreen {
 	function flowDocumentPickerOpen():Bool
 		return flowDocumentPanelOpen(flowDocumentPickMode);
 
-	/** Read one complete copy-owned draft for typed choice projection. */
+	/**
+	 * Read one isolated Flow-authoring draft at most once per document revision.
+	 *
+	 * An open card or document picker draws across many frames. The editor session
+	 * parses one copy for the first frame after an edit, then this screen reuses
+	 * that private read-only copy until the revision changes.
+	 */
 	function currentDraftScenario():Null<Scenario> {
 		final current = session;
 		if (current == null)
 			return null;
+		final cached = flowAuthoringDraft;
+		if (cached != null && flowAuthoringRevision == current.revision())
+			return cached;
 		return switch current.query(InspectDraft) {
-			case DraftObserved(_, draft): draft;
+			case DraftObserved(revision, draft):
+				flowAuthoringDraft = draft;
+				flowAuthoringRevision = revision;
+				draft;
 			case _: null;
 		};
 	}
@@ -2863,21 +2885,15 @@ final class CaxecraftEditorScreen {
 		};
 	}
 
-	/** Read one copy-owned rule only when a card gesture needs to mutate it. */
+	/** Copy one cached rule only when a card gesture needs to mutate it. */
 	function currentFlowRule(expected:ScenarioId):Null<FlowRule> {
-		final current = session;
-		if (current == null)
+		final draft = currentDraftScenario();
+		if (draft == null)
 			return null;
-		return switch current.query(InspectDraft) {
-			case DraftObserved(_, draft):
-				var found:Null<FlowRule> = null;
-				for (rule in draft.flow.rules)
-					if (rule.id.text() == expected.text())
-						found = rule;
-				found;
-			case _:
-				null;
-		};
+		for (rule in draft.flow.rules)
+			if (rule.id.text() == expected.text())
+				return copyFlowRule(rule);
+		return null;
 	}
 
 	/** True while the next visible object click belongs to a card gesture. */
@@ -2896,7 +2912,12 @@ final class CaxecraftEditorScreen {
 			case NodeSelection(ObjectNode(value)): value;
 			case NoEditorSelection | VoxelSelection(_) | NodeSelection(_): return;
 		};
-		final plan = deleteObjectWithConnectedRules(id, current.draftSnapshot().flow.rules);
+		final draft = currentDraftScenario();
+		if (draft == null) {
+			notice = Invalid;
+			return;
+		}
+		final plan = deleteObjectWithConnectedRules(id, draft.flow.rules);
 		switch current.mutate({baseRevision: current.revision(), mutation: ApplyBatch(plan.commands)}) {
 			case MutationApplied(_, _, _, _, _, _):
 				flowWorldPickMode = NoFlowWorldPick;
@@ -2923,8 +2944,12 @@ final class CaxecraftEditorScreen {
 			case NodeSelection(ObjectNode(value)): value;
 			case NoEditorSelection | VoxelSelection(_) | NodeSelection(_): return;
 		};
-		final canonicalDraft = current.draftSnapshot();
-		final duplicate = duplicateObjectWithConnectedRules(sourceId, draft.objects, canonicalDraft.flow.rules);
+		final authoringDraft = currentDraftScenario();
+		if (authoringDraft == null) {
+			notice = Invalid;
+			return;
+		}
+		final duplicate = duplicateObjectWithConnectedRules(sourceId, draft.objects, authoringDraft.flow.rules);
 		if (duplicate == null) {
 			notice = Invalid;
 			return;

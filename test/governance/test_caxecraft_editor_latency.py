@@ -77,6 +77,18 @@ class CaxecraftEditorLatencyContract(unittest.TestCase):
         self.assertIn("terrainPresentation.refreshVoxel", refresh)
         self.assertIn("terrainPresentation.refresh(draft.world", refresh)
 
+    def test_flow_panels_reuse_one_isolated_draft_per_revision(self) -> None:
+        source = EDITOR_SCREEN.read_text(encoding="utf-8")
+        draft = section(source, "function currentDraftScenario", "/** Draw every admitted environment")
+        rule = section(source, "function currentFlowRule", "/** True while the next visible object")
+
+        self.assertIn("flowAuthoringRevision == current.revision()", draft)
+        self.assertIn("current.query(InspectDraft)", draft)
+        self.assertIn("flowAuthoringDraft = draft", draft)
+        self.assertNotIn("draftSnapshot()", draft)
+        self.assertIn("copyFlowRule(rule)", rule)
+        self.assertNotIn("InspectDraft", rule)
+
     def test_all_visual_commits_defer_parser_metadata_until_validation(self) -> None:
         source = EDITOR_SESSION.read_text(encoding="utf-8")
         capture = section(source, "function captureReduction", "/**\n\t\tRestore the state")
