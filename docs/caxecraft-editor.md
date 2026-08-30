@@ -400,6 +400,9 @@ evicts the oldest undo entries deterministically. If one entry cannot fit the
 configured byte budget, the command is rejected before the draft changes. The
 byte figure counts the exact before/after CAXEMAP payload; the separate entry
 bound also caps the small bookkeeping and selection records around those bytes.
+Adjacent entries share their private immutable state buffer instead of copying
+the same middle state twice. This reduces interaction-time allocation without
+weakening the logical byte budget or exposing mutable history storage.
 Selections have their own 65,536-cell absolute bound. The same setting limits
 the number of points submitted by one batch paint or erase gesture, including
 duplicate points; it is the editor's shared “one gesture” work budget. Smaller

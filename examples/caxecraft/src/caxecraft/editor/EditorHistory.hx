@@ -67,6 +67,30 @@ final class EditorHistory {
 	public inline function byteCount():Int
 		return usedBytes;
 
+	#if caxecraft_editor_probe
+	/** Count distinct private byte buffers retained by focused allocation tests. */
+	public function byteBufferCount():Int {
+		final buffers:Array<Bytes> = [];
+		for (entry in undoEntries) {
+			rememberByteBuffer(buffers, entry.before);
+			rememberByteBuffer(buffers, entry.after);
+		}
+		for (entry in redoEntries) {
+			rememberByteBuffer(buffers, entry.before);
+			rememberByteBuffer(buffers, entry.after);
+		}
+		return buffers.length;
+	}
+
+	/** Add one buffer by object identity so equal snapshots remain distinguishable. */
+	function rememberByteBuffer(buffers:Array<Bytes>, candidate:Bytes):Void {
+		for (buffer in buffers)
+			if (buffer == candidate)
+				return;
+		buffers.push(candidate);
+	}
+	#end
+
 	public inline function canRecord(byteCost:Int):Bool
 		return byteCost <= settings.historyBytes;
 

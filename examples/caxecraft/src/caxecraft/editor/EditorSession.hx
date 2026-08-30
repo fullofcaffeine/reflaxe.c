@@ -406,6 +406,10 @@ final class EditorSession {
 	/** Return the retained typed-image count for the focused bounded-cache probe. */
 	public inline function historyImageCacheCount():Int
 		return historyImageCache.length;
+
+	/** Return distinct canonical byte owners retained by focused history probes. */
+	public inline function historyByteBufferCount():Int
+		return history.byteBufferCount();
 	#end
 
 	/**
@@ -795,8 +799,10 @@ final class EditorSession {
 			redoTerrain: terrain.redo,
 			beforeStateIdentity: currentStateIdentity,
 			afterStateIdentity: nextStateIdentity + 1,
-			before: before.bytes.sub(0, before.bytes.length),
-			after: after.bytes.sub(0, after.bytes.length),
+			// Images are private and immutable after capture. Sharing their byte
+			// owners avoids copying two complete documents for every interaction.
+			before: before.bytes,
+			after: after.bytes,
 			byteCost: byteCost
 		};
 		history.record(entry);

@@ -4231,6 +4231,7 @@ final class EditorProbe {
 		require(session.historyEntries() == 3 && session.undoDepth() == 3, "history did not evict to its exact entry bound");
 		require(session.historyBytes() <= settings.historyBytes, "history exceeded its byte bound");
 		require(session.historyImageCacheCount() <= 8, "recent typed history images exceeded their fixed bound");
+		require(session.historyByteBufferCount() == 4, "three adjacent history entries did not share their four immutable state buffers");
 		expectSelectionRejected(session.select({
 			baseRevision: session.revision(),
 			selection: VoxelSelection({origin: {x: 0, y: 0, z: 0}, size: {width: 3, height: 1, depth: 2}})
@@ -4272,6 +4273,7 @@ final class EditorProbe {
 		for (index in 0...10)
 			expectApplied(deepHistory.apply(SetTitle(Literal('Deep history $index'))), DocumentMetadata, "deep cached history");
 		require(deepHistory.historyImageCacheCount() == 8, "recent typed history cache did not reach its exact bound");
+		require(deepHistory.historyByteBufferCount() == 11, "ten adjacent history entries did not retain exactly eleven immutable state buffers");
 		for (_ in 0...10)
 			expectHistory(deepHistory.undo(), DocumentMetadata, "deep history undo");
 		require(deepHistory.canonicalDraft().compare(deepBefore) == 0, "deep history fallback did not restore initial bytes");
