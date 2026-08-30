@@ -290,6 +290,7 @@ final class CaxecraftEditorScreen {
 	var camera:Null<EditorCameraState>;
 	var selection:Null<VoxelBounds>;
 	var selectionGizmo:Null<EditorSelectionGizmo>;
+	var selectedObjectGizmoIndex:Int;
 	var focusedControl:EditorFocusTarget;
 	var workspaceView:EditorWorkspaceView;
 	var buildPointerState:EditorBuildPointerState;
@@ -399,6 +400,7 @@ final class CaxecraftEditorScreen {
 		camera = null;
 		selection = null;
 		selectionGizmo = null;
+		selectedObjectGizmoIndex = -1;
 		focusedControl = initialFocus();
 		workspaceView = BuildView;
 		buildPointerState = EditorBuildPointerState.Released;
@@ -2939,16 +2941,9 @@ final class CaxecraftEditorScreen {
 		}
 	}
 
-	/** Return the shared selected object's projection index, or `-1`. */
-	function selectedObjectIndex():Int {
-		final current = session;
-		if (current == null)
-			return -1;
-		return switch current.selectionSnapshot() {
-			case NodeSelection(ObjectNode(id)): objectIndex(id);
-			case NoEditorSelection | VoxelSelection(_) | NodeSelection(_): -1;
-		};
-	}
+	/** Return the selected object's index cached at the last workspace change. */
+	inline function selectedObjectIndex():Int
+		return selectedObjectGizmoIndex;
 
 	/** True when the projected object owns a transform-facing quarter turn. */
 	function objectCanTurn(index:Int):Bool {
@@ -3984,6 +3979,16 @@ final class CaxecraftEditorScreen {
 	function syncSelection(value:Null<VoxelBounds>):Void {
 		selection = value;
 		selectionGizmo = value == null ? null : projectSelection(value);
+		selectedObjectGizmoIndex = if (value != null) -1; else {
+			final current = session;
+			if (current == null)
+				-1;
+			else
+				switch current.selectionSnapshot() {
+					case NodeSelection(ObjectNode(id)): objectIndex(id);
+					case NoEditorSelection | VoxelSelection(_) | NodeSelection(_): -1;
+				};
+		};
 	}
 
 	/** Combine copied non-terrain details with the retained world projection. */

@@ -438,6 +438,11 @@ frames draw one empty background, those painted cells, shared grid lines, and
 at most two lines around the complete selection. Empty cells and selected cells
 do not each add their own border calls.
 
+The screen resolves a selected object's stable ID to its projected gizmo index
+when selection or presentation changes. Frame drawing, prompts, and direct
+Build controls reuse that index instead of repeatedly scanning up to 4,096
+objects and copying the same workspace selection.
+
 If history snapshots become the next bottleneck, a later slice can introduce
 typed command-specific inverse data. It must retain bounded paint gestures,
 exact undo bytes, hard memory limits, and the same public commands. A later
