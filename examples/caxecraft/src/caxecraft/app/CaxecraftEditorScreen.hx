@@ -177,6 +177,7 @@ import caxecraft.scenario.ContentId;
 import caxecraft.scenario.ScenarioObject;
 import caxecraft.scenario.ScenarioText;
 import caxecraft.app.EditorObjectRenderer.drawEditorObject;
+import caxecraft.app.EditorObjectRenderer.drawEditorAssetThumbnail;
 import caxecraft.app.EditorObjectRenderer.EditorRenderResources;
 import haxe.io.Bytes;
 import raygui.GuiListViewState;
@@ -537,7 +538,7 @@ final class CaxecraftEditorScreen {
 			return StayInEditor;
 		}
 		if (assetBrowserOpen) {
-			drawAssetBrowser(locale, width, height);
+			drawAssetBrowser(locale, width, height, resources);
 			return StayInEditor;
 		}
 		if (environmentPanelOpen) {
@@ -876,7 +877,7 @@ final class CaxecraftEditorScreen {
 	}
 
 	/** Draw one modal list over the editor without creating a second document. */
-	function drawAssetBrowser(locale:LocaleCursor, width:Int, height:Int):Void {
+	function drawAssetBrowser(locale:LocaleCursor, width:Int, height:Int, resources:EditorRenderResources):Void {
 		final panelWidth = width - 64 < 880 ? width - 64 : 880;
 		final panelHeight = height - 64 < 620 ? height - 64 : 620;
 		final left = Std.int((width - panelWidth) / 2);
@@ -931,7 +932,8 @@ final class CaxecraftEditorScreen {
 					assetSelection = index;
 					chooseAsset(entry);
 				}
-				drawAssetMark(entry.category, left + 36, rowTop + 10, 34);
+				if (!drawEditorAssetThumbnail(entry.thumbnail, left + 36, rowTop + 10, 34, resources))
+					drawAssetMark(entry.category, left + 36, rowTop + 10, 34);
 				Raylib.DrawTextString(editorAssetLabel(entry, locale), left + 84, rowTop + 8, 19, CaxecraftPalette.hudText());
 				Raylib.DrawTextString(editorAssetHelp(entry, locale), left + 84, rowTop + 32, 13, Color.rgba(126, 205, 209));
 				if (assetSelection == index)

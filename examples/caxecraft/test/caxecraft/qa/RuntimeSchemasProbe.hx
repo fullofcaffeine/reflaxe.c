@@ -14,8 +14,10 @@ import caxecraft.content.LevelContentResolver.StatefulObjectCollisionProfile;
 import caxecraft.content.LevelContentResolver.StatefulObjectContentResolution;
 import caxecraft.content.RuntimeContentPack;
 import caxecraft.content.RuntimeContentPack.RuntimeContentPackResult;
+import caxecraft.content.RuntimeContentPack.RuntimeContentRegistry;
 import caxecraft.content.RuntimeContentPack.RuntimeItemUseProfile;
 import caxecraft.content.RuntimeContentPack.RuntimeModelPresentation;
+import caxecraft.content.RuntimeContentPack.RuntimePresentation;
 import caxecraft.content.EditorObjectCatalog.EditorObjectRecipeKind;
 import caxecraft.content.EditorObjectCatalog.EditorObjectRecipe;
 import caxecraft.content.RuntimeSchema.RuntimeSchemaDiagnostic;
@@ -26,6 +28,7 @@ import caxecraft.editor.EditorObjectPresentation.EditorObjectVisual;
 import caxecraft.editor.EditorObjectPresentation.visualFor as editorObjectVisualFor;
 import caxecraft.editor.EditorAssetBrowser.EditorAssetCategory;
 import caxecraft.editor.EditorAssetBrowser.EditorAssetEntry;
+import caxecraft.editor.EditorAssetBrowser.EditorAssetThumbnail;
 import caxecraft.editor.EditorAssetBrowser.EditorAssetUse;
 import caxecraft.editor.EditorAssetBrowser.availableEditorAssets;
 import caxecraft.editor.EditorAssetBrowser.filterEditorAssets;
@@ -144,7 +147,11 @@ function selfCheck():Int {
 	var editorObjectLabelsMatch = true;
 	for (left in 0...assets.length) {
 		final entry = assets[left];
-		if (entry.labelEn.length == 0 || entry.labelEsMx.length == 0 || entry.helpEn.length == 0 || entry.helpEsMx.length == 0)
+		if (entry.labelEn.length == 0
+			|| entry.labelEsMx.length == 0
+			|| entry.helpEn.length == 0
+			|| entry.helpEsMx.length == 0
+			|| !thumbnailMatchesAssetUse(registry, entry))
 			return 76;
 		switch entry.category {
 			case TerrainAssets:
@@ -395,6 +402,39 @@ function matchesBridgeSwitchRecipe(recipe:EditorObjectRecipe):Bool {
 			false;
 	};
 }
+
+/** Prove each cached picture came from the same registry record as its action. */
+function thumbnailMatchesAssetUse(registry:RuntimeContentRegistry, entry:EditorAssetEntry):Bool {
+	return switch [entry.thumbnail, entry.use] {
+		case [TerrainAssetThumbnail(storageCode), PaintTerrainAsset(blockType)]: storageCode > 0 && storageCode == registry.blockStorageCode(blockType);
+		case [AtlasAssetThumbnail(asset, cellIndex), PlaceObjectAsset(recipe)]:
+			thumbnailMatchesRecipe(registry, recipe.kind, asset, cellIndex);
+		case [MissingAssetThumbnail, _] | [TerrainAssetThumbnail(_), PlaceObjectAsset(_)] | [AtlasAssetThumbnail(_, _), PaintTerrainAsset(_)]:
+			false;
+	};
+}
+
+/** Compare one recipe with its validated item, actor, or mechanism visual. */
+function thumbnailMatchesRecipe(registry:RuntimeContentRegistry, kind:EditorObjectRecipeKind, asset:String, cellIndex:Int):Bool {
+	return switch kind {
+		case EditorItem(itemType, _):
+			thumbnailMatchesPresentation(registry.itemPresentation(registry.itemStorageCode(itemType)), asset, cellIndex);
+		case EditorNpc(actorType) | EditorEnemy(actorType) | EditorEnemyWave(actorType):
+			switch registry.resolveActorPresentation(actorType) {
+				case ActorPresentationResolved(expectedAsset, expectedCellIndex): expectedAsset == asset && expectedCellIndex == cellIndex;
+				case UnknownActorPresentation:
+					false;
+			};
+		case EditorStatefulObject(objectType, initialState):
+			thumbnailMatchesPresentation(registry.statefulObjectPresentation(objectType, initialState), asset, cellIndex);
+		case EditorLinkedStatefulPair(source, _):
+			thumbnailMatchesPresentation(registry.statefulObjectPresentation(source.objectType, source.initialState), asset, cellIndex);
+	};
+}
+
+/** Compare one nullable validated presentation with the copied atlas pair. */
+function thumbnailMatchesPresentation(presentation:Null<RuntimePresentation>, asset:String, cellIndex:Int):Bool
+	return presentation != null && presentation.asset == asset && presentation.cellIndex == cellIndex;
 
 /** Remove one placeholder without depending on the owning catalog sentence. */
 function removeFirstOccurrence(source:String, needle:String):String {

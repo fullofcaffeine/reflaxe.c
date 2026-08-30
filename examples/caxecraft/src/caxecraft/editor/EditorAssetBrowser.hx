@@ -2,7 +2,9 @@ package caxecraft.editor;
 
 import caxecraft.content.EditorObjectCatalog.EditorObjectRecipe;
 import caxecraft.content.EditorObjectCatalog.EditorObjectRecipeKind;
+import caxecraft.content.LevelContentResolver.ActorPresentationResolution;
 import caxecraft.content.RuntimeContentPack.RuntimeContentRegistry;
+import caxecraft.content.RuntimeContentPack.RuntimePresentation;
 import caxecraft.localization.RuntimeUiCatalog;
 import caxecraft.localization.UiTypes.LocaleCursor;
 import caxecraft.scenario.ContentId;
@@ -34,6 +36,18 @@ enum EditorAssetUse {
 	PlaceObjectAsset(recipe:EditorObjectRecipe);
 }
 
+/** Cached picture reference resolved while the browser joins validated data. */
+enum EditorAssetThumbnail {
+	/** Draw the top face selected by the existing terrain presentation table. */
+	TerrainAssetThumbnail(storageCode:Int);
+
+	/** Draw one validated cell from a fixed or reloadable atlas. */
+	AtlasAssetThumbnail(asset:String, cellIndex:Int);
+
+	/** Preserve a usable category mark when admitted content has no drawable art. */
+	MissingAssetThumbnail;
+}
+
 /** One immutable localized row projected from authoritative data. */
 typedef EditorAssetEntry = {
 	final id:String;
@@ -44,6 +58,7 @@ typedef EditorAssetEntry = {
 	final searchEsMx:String;
 	final helpEn:String;
 	final helpEsMx:String;
+	final thumbnail:EditorAssetThumbnail;
 	final use:EditorAssetUse;
 }
 
@@ -81,23 +96,24 @@ function availableEditorAssets(registry:RuntimeContentRegistry, catalog:RuntimeU
 	for (index in 0...registry.blockCount()) {
 		final id = registry.blockIdAt(index);
 		if (id != null && id.text() != registry.airBlockId().text())
-			result.push(contentEntry(catalog, TerrainAssets, id, PaintTerrainAsset(id), "terrain-" + localId(id)));
+			result.push(contentEntry(catalog, TerrainAssets, id, TerrainAssetThumbnail(registry.blockStorageCode(id)), PaintTerrainAsset(id),
+				"terrain-" + localId(id)));
 	}
 	for (index in 0...registry.itemCount()) {
 		final id = registry.itemIdAt(index);
 		if (id != null)
-			result.push(contentObjectEntry(catalog, ItemAssets, id, EditorItem(id, 1), "item-" + localId(id)));
+			result.push(contentObjectEntry(registry, catalog, ItemAssets, id, EditorItem(id, 1), "item-" + localId(id)));
 	}
 	for (index in 0...registry.npcCount()) {
 		final id = registry.npcIdAt(index);
 		if (id != null)
-			result.push(contentObjectEntry(catalog, NpcAssets, id, EditorNpc(id), "npc-" + localId(id)));
+			result.push(contentObjectEntry(registry, catalog, NpcAssets, id, EditorNpc(id), "npc-" + localId(id)));
 	}
 	for (index in 0...registry.enemyCount()) {
 		final id = registry.enemyIdAt(index);
 		if (id != null) {
-			result.push(contentObjectEntry(catalog, EnemyAssets, id, EditorEnemy(id), "enemy-" + localId(id)));
-			result.push(enemyWaveEntry(catalog, id));
+			result.push(contentObjectEntry(registry, catalog, EnemyAssets, id, EditorEnemy(id), "enemy-" + localId(id)));
+			result.push(enemyWaveEntry(registry, catalog, id));
 		}
 	}
 	for (index in 0...registry.editorObjectCount()) {
@@ -112,6 +128,7 @@ function availableEditorAssets(registry:RuntimeContentRegistry, catalog:RuntimeU
 				searchEsMx: recipe.labelEsMx.toLowerCase(),
 				helpEn: categoryHelp(catalog, MechanismAssets, LocaleCursor.Locale0),
 				helpEsMx: categoryHelp(catalog, MechanismAssets, LocaleCursor.Locale1),
+				thumbnail: thumbnailForRecipe(registry, recipe.kind),
 				use: PlaceObjectAsset(recipe)
 			});
 	}
@@ -143,7 +160,7 @@ function moveEditorAssetSelection(current:Int, count:Int, direction:Int):Int {
 }
 
 /** Build one terrain row and resolve both validated locales once. */
-private function contentEntry(catalog:RuntimeUiCatalog, category:EditorAssetCategory, contentId:ContentId, use:EditorAssetUse,
+private function contentEntry(catalog:RuntimeUiCatalog, category:EditorAssetCategory, contentId:ContentId, thumbnail:EditorAssetThumbnail, use:EditorAssetUse,
 		entryId:String):EditorAssetEntry {
 	final labelEn = label(catalog, contentId, LocaleCursor.Locale0);
 	final labelEsMx = label(catalog, contentId, LocaleCursor.Locale1);
@@ -156,13 +173,14 @@ private function contentEntry(catalog:RuntimeUiCatalog, category:EditorAssetCate
 		searchEsMx: labelEsMx.toLowerCase(),
 		helpEn: categoryHelp(catalog, category, LocaleCursor.Locale0),
 		helpEsMx: categoryHelp(catalog, category, LocaleCursor.Locale1),
+		thumbnail: thumbnail,
 		use: use
 	};
 }
 
 /** Share one localized name pair between a browser row and its typed recipe. */
-private function contentObjectEntry(catalog:RuntimeUiCatalog, category:EditorAssetCategory, contentId:ContentId, kind:EditorObjectRecipeKind,
-		entryId:String):EditorAssetEntry {
+private function contentObjectEntry(registry:RuntimeContentRegistry, catalog:RuntimeUiCatalog, category:EditorAssetCategory, contentId:ContentId,
+		kind:EditorObjectRecipeKind, entryId:String):EditorAssetEntry {
 	final labelEn = label(catalog, contentId, LocaleCursor.Locale0);
 	final labelEsMx = label(catalog, contentId, LocaleCursor.Locale1);
 	return {
@@ -174,12 +192,13 @@ private function contentObjectEntry(catalog:RuntimeUiCatalog, category:EditorAss
 		searchEsMx: labelEsMx.toLowerCase(),
 		helpEn: categoryHelp(catalog, category, LocaleCursor.Locale0),
 		helpEsMx: categoryHelp(catalog, category, LocaleCursor.Locale1),
+		thumbnail: thumbnailForRecipe(registry, kind),
 		use: PlaceObjectAsset(new EditorObjectRecipe(entryId, labelEn, labelEsMx, kind))
 	};
 }
 
 /** Derive one localized wave template from an admitted enemy, not a second catalog. */
-private function enemyWaveEntry(catalog:RuntimeUiCatalog, contentId:ContentId):EditorAssetEntry {
+private function enemyWaveEntry(registry:RuntimeContentRegistry, catalog:RuntimeUiCatalog, contentId:ContentId):EditorAssetEntry {
 	final baseEn = label(catalog, contentId, LocaleCursor.Locale0);
 	final baseEsMx = label(catalog, contentId, LocaleCursor.Locale1);
 	final labelEn = catalog.format(LocaleCursor.Locale0, new MessageId("editor.asset.enemy-wave.label"), [baseEn]);
@@ -194,7 +213,37 @@ private function enemyWaveEntry(catalog:RuntimeUiCatalog, contentId:ContentId):E
 		searchEsMx: labelEsMx.toLowerCase(),
 		helpEn: catalog.format(LocaleCursor.Locale0, new MessageId("editor.asset.enemy-wave.help"), []),
 		helpEsMx: catalog.format(LocaleCursor.Locale1, new MessageId("editor.asset.enemy-wave.help"), []),
+		thumbnail: actorThumbnail(registry, contentId),
 		use: PlaceObjectAsset(new EditorObjectRecipe(entryId, labelEn, labelEsMx, EditorEnemyWave(contentId)))
+	};
+}
+
+/** Resolve one placement recipe to the same visual record used by play. */
+private function thumbnailForRecipe(registry:RuntimeContentRegistry, kind:EditorObjectRecipeKind):EditorAssetThumbnail {
+	return switch kind {
+		case EditorItem(itemType, _):
+			presentationThumbnail(registry.itemPresentation(registry.itemStorageCode(itemType)));
+		case EditorNpc(actorType) | EditorEnemy(actorType) | EditorEnemyWave(actorType):
+			actorThumbnail(registry, actorType);
+		case EditorStatefulObject(objectType, initialState):
+			presentationThumbnail(registry.statefulObjectPresentation(objectType, initialState));
+		case EditorLinkedStatefulPair(source, _):
+			presentationThumbnail(registry.statefulObjectPresentation(source.objectType, source.initialState));
+	};
+}
+
+/** Copy one validated presentation so browser frames never query the registry. */
+private function presentationThumbnail(presentation:Null<RuntimePresentation>):EditorAssetThumbnail {
+	if (presentation == null)
+		return MissingAssetThumbnail;
+	return AtlasAssetThumbnail(presentation.asset, presentation.cellIndex);
+}
+
+/** Copy one actor presentation without exposing registry storage to the UI. */
+private function actorThumbnail(registry:RuntimeContentRegistry, actorType:ContentId):EditorAssetThumbnail {
+	return switch registry.resolveActorPresentation(actorType) {
+		case ActorPresentationResolved(asset, cellIndex): AtlasAssetThumbnail(asset, cellIndex);
+		case UnknownActorPresentation: MissingAssetThumbnail;
 	};
 }
 

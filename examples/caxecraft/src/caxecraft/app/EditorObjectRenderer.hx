@@ -2,7 +2,11 @@ package caxecraft.app;
 
 #if c
 import caxecraft.editor.EditorObjectPresentation.EditorObjectVisual;
+import caxecraft.editor.EditorAssetBrowser.EditorAssetThumbnail;
 import caxecraft.editor.EditorWorldViewport.EditorObjectGizmo;
+import caxecraft.app.TerrainAtlas.TerrainSheet;
+import caxecraft.app.TerrainAtlas.VoxelFace;
+import caxecraft.domain.World;
 import raylib.Camera3D;
 import raylib.Color;
 import raylib.Raylib;
@@ -35,6 +39,24 @@ typedef EditorRenderResources = {
 
 	/** Reloadable atlases owned by the outer application. */
 	final runtimeTextures:RuntimeTextureAtlasCatalog;
+}
+
+/**
+ * Draw one cached browser picture through the same atlas owners used by play.
+ *
+ * The browser resolves content references only when it opens its immutable
+ * catalog. This frame helper therefore performs texture routing but no registry
+ * lookup. `false` asks the screen to preserve its category-mark fallback.
+ */
+function drawEditorAssetThumbnail(thumbnail:EditorAssetThumbnail, x:Int, y:Int, size:Int, resources:EditorRenderResources):Bool {
+	return switch thumbnail {
+		case TerrainAssetThumbnail(storageCode):
+			drawTerrainThumbnail(storageCode, x, y, size, resources);
+		case AtlasAssetThumbnail(asset, cellIndex):
+			drawAtlasThumbnail(asset, cellIndex, x, y, size, resources);
+		case MissingAssetThumbnail:
+			false;
+	};
 }
 
 /** Draw one resolved visual and return true when validated pack art was used. */
@@ -121,5 +143,44 @@ private function drawBox(asset:String, cellIndex:Int, position:Vector3, width:Fl
 	if (asset == "adventure-terrain" && resources.adventureTerrainTextureReady)
 		return CaxecraftAtlas.drawWorldBox(resources.adventureTerrainTexture, cellIndex, position, width, height, depth);
 	return resources.runtimeTextures.drawBox(asset, cellIndex, position, width, height, depth);
+}
+
+/** Draw the existing top-face terrain picture for one validated storage code. */
+private function drawTerrainThumbnail(storageCode:Int, x:Int, y:Int, size:Int, resources:EditorRenderResources):Bool {
+	final kind = World.kindFromCode(storageCode);
+	if (storageCode <= 0 || World.kindCode(kind) != storageCode)
+		return false;
+	final tile = TerrainAtlas.tile(kind, VoxelFace.Top);
+	final cellIndex = TerrainAtlas.row(tile) * TerrainAtlas.COLUMNS + TerrainAtlas.column(tile);
+	return switch TerrainAtlas.sheet(kind) {
+		case Base:
+			drawFixedAtlasCell(resources.terrainTexture, resources.terrainTextureReady, cellIndex, 4, 4, x, y, size);
+		case Adventure:
+			drawFixedAtlasCell(resources.adventureTerrainTexture, resources.adventureTerrainTextureReady, cellIndex, 4, 4, x, y, size);
+	};
+}
+
+/** Route one cached atlas pair without duplicating content-to-picture facts. */
+private function drawAtlasThumbnail(asset:String, cellIndex:Int, x:Int, y:Int, size:Int, resources:EditorRenderResources):Bool {
+	if (asset == "entities" && resources.shared.entityTextureReady)
+		return CaxecraftAtlas.drawEntityPortrait(resources.shared.entityTexture, cellIndex, x, y, size, size);
+	if (asset == "items")
+		return drawFixedAtlasCell(resources.shared.itemTexture, resources.shared.itemTextureReady, cellIndex, 4, 4, x, y, size);
+	if (asset == "adventure-items")
+		return drawFixedAtlasCell(resources.shared.adventureItemTexture, resources.shared.adventureItemTextureReady, cellIndex, 4, 4, x, y, size);
+	if (asset == "terrain")
+		return drawFixedAtlasCell(resources.terrainTexture, resources.terrainTextureReady, cellIndex, 4, 4, x, y, size);
+	if (asset == "adventure-terrain")
+		return drawFixedAtlasCell(resources.adventureTerrainTexture, resources.adventureTerrainTextureReady, cellIndex, 4, 4, x, y, size);
+	return resources.runtimeTextures.drawCell(asset, cellIndex, x, y, size, size);
+}
+
+/** Draw one checked cell from a loaded regular atlas. */
+private function drawFixedAtlasCell(texture:Texture2D, ready:Bool, cellIndex:Int, columns:Int, rows:Int, x:Int, y:Int, size:Int):Bool {
+	if (!ready || cellIndex < 0 || cellIndex >= columns * rows)
+		return false;
+	CaxecraftTextures.drawAtlasCell(texture, cellIndex % columns, Std.int(cellIndex / columns), columns, rows, x, y, size, size,
+		CaxecraftPalette.textureTint());
+	return true;
 }
 #end
