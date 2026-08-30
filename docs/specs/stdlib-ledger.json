@@ -76,7 +76,7 @@
     "applicableSourceCount": 183,
     "applicableSourceSha256": "be53a7994b9d58654465038f02792ebc70f5c2d283854ad19d755e4af780aa8a",
     "apiCount": 2311,
-    "apiSurfaceSha256": "092d93a4f7fb4b23644a54c803c9ecca6d5e1c92d2e3276923b7540ea6e74ec0"
+    "apiSurfaceSha256": "a7da29e827c90bc189d49e830b15bacb861f7fafcf1f9f7fe7a39b3c38721609"
   },
   "applicability": {
     "publicSurface": "non-private typed declarations and fields visible to the pinned compiler; @:noCompletion declarations are excluded",
@@ -2547,7 +2547,7 @@
       "notes": "Bool and Int values use Eval-compatible punctuation and scalar spelling in map iteration order; managed value formatting remains unsupported."
     },
     {
-      "id": "object-map-to-string-planned",
+      "id": "object-map-to-string-partial",
       "selector": {
         "module": "haxe.ds.ObjectMap",
         "member": "toString"
@@ -2563,15 +2563,18 @@
       "environments": [
         "hosted"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T03",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Object identity maps are admitted, but text conversion still needs exact value formatting and Eval-compatible punctuation before it can select the String runtime."
+      "tests": [
+        "test/differential/object-enum-map/to_string/Main.hx",
+        "test/differential/object-enum-map/run.py"
+      ],
+      "notes": "Exact final class keys without custom or inherited toString use Eval-compatible null or package-qualified class names. Bool and Int values use exact scalar spelling, and punctuation follows ObjectMap iteration order. Open classes, custom dispatch, and other value families remain unsupported."
     },
     {
       "id": "array-string-to-string-partial",
@@ -35573,14 +35576,14 @@
       "ruleId": "object-map-bounded"
     },
     {
-      "id": "hxc-stdlib-api-v1:3950a302b5341fe47f78f02088c0bb51d25c4e5662f02680caf2f59e082256ab",
+      "id": "hxc-stdlib-api-v1:477797e58c9d71979b59f1f9f7e7cb463fef2f086ed5c4115a168668414a3342",
       "module": "haxe.ds.ObjectMap",
       "source": "haxe/ds/ObjectMap.hx",
       "sourceSha256": "da86a7e7fadf0bc8aa7aeadd90c19c491a82f53bbd27a5bc4c3ce10473881292",
       "probeScope": "c-common",
       "type": "haxe.ds.ObjectMap",
       "member": "toString",
-      "kind": "method",
+      "kind": "inline-method",
       "signature": "() -> String",
       "isStatic": false,
       "owner": "runtime-slice",
@@ -35594,16 +35597,19 @@
       "environments": [
         "hosted"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T03",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Object identity maps are admitted, but text conversion still needs exact value formatting and Eval-compatible punctuation before it can select the String runtime.",
-      "ruleId": "object-map-to-string-planned"
+      "tests": [
+        "test/differential/object-enum-map/to_string/Main.hx",
+        "test/differential/object-enum-map/run.py"
+      ],
+      "notes": "Exact final class keys without custom or inherited toString use Eval-compatible null or package-qualified class names. Bool and Int values use exact scalar spelling, and punctuation follows ObjectMap iteration order. Open classes, custom dispatch, and other value families remain unsupported.",
+      "ruleId": "object-map-to-string-partial"
     },
     {
       "id": "hxc-stdlib-api-v1:e18ed22da5bf57ab3ba8ec76018e848bb59e2618c0ed83fa64f9770d3bee787a",

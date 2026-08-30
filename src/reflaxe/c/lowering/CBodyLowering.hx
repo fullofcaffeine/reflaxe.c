@@ -552,10 +552,9 @@ class CBodyLowering {
 			builders.push(new FunctionBuilder(context, fn, preparedById, constructorSignaturesById, globalRegistry, aggregateRegistry, dynamicRegistry,
 				enumConstructorAdapters, functionLiterals, preparedDispatch));
 		CPhaseTiming.stopDetail(functionPreparationTimer);
-		// Representation is a whole-program decision. Discover the narrow
-		// `Array<Class>` graph first so an earlier function cannot choose stack
-		// storage merely because a later function is the first place that mentions
-		// the same class as an Array element.
+		// Representation is a whole-program decision. Discover local typed containers
+		// first so an earlier function cannot choose stack storage merely because a
+		// later body is the first place that retains the same class in an Array or map.
 		final representationTimer = CPhaseTiming.startDetail(CDTHxcIRRepresentationPlanning);
 		for (builder in builders)
 			builder.discoverDynamicSemantics();
@@ -5407,6 +5406,8 @@ private class FunctionBuilder {
 		}
 		if (CBodyArrayRecognition.isCoreArrayType(expressionType))
 			bodyValueType(expressionType, expression.pos, "managed-representation-discovery:Array");
+		if (CBodyTypedMapRecognition.familyForMapType(expressionType) != null)
+			bodyValueType(expressionType, expression.pos, "managed-representation-discovery:typed-map");
 		if (CBodyDateRecognition.isCoreDateType(expressionType)) {
 			final dateType = bodyValueType(expressionType, expression.pos, "managed-representation-discovery:Date");
 			aggregateRegistry.requireEscapingReturnClasses(dateType);
@@ -5416,6 +5417,8 @@ private class FunctionBuilder {
 				final variableType = applyCurrentSpecialization(variable.t);
 				if (CBodyArrayRecognition.isCoreArrayType(variableType))
 					bodyValueType(variableType, expression.pos, 'managed-representation-discovery:local:${variable.name}');
+				if (CBodyTypedMapRecognition.familyForMapType(variableType) != null)
+					bodyValueType(variableType, expression.pos, 'managed-representation-discovery:typed-map-local:${variable.name}');
 				if (CBodyDateRecognition.isCoreDateType(variableType)) {
 					final dateType = bodyValueType(variableType, expression.pos, 'managed-representation-discovery:Date-local:${variable.name}');
 					aggregateRegistry.requireEscapingReturnClasses(dateType);
@@ -11712,6 +11715,8 @@ private class FunctionBuilder {
 	/** Build one owned concatenation after both immutable operands are stable borrows. */
 	function lowerManagedStringConcatValues(expression:TypedExpr, leftValue:LoweredValue, rightValue:LoweredValue, resultMapping:CBodyValueType,
 			role:String):LoweredValue {
+		if (leftValue.type != IRTManagedString || rightValue.type != IRTManagedString)
+			return unsupported(expression, 'TBinop(String-concat:requires-managed-carriers:left=${typeKey(leftValue.type)},right=${typeKey(rightValue.type)})');
 		final source = sourceSpan(expression.pos);
 		final result:HxcIRResult = {id: nextValueId(), type: IRTManagedString};
 		appendInstruction(result, IRIOCall({
@@ -16267,8 +16272,121 @@ private class FunctionBuilder {
 				runtimeRequirements.push(new CBodyRuntimeRequirement("string-float", "from-float", "ordinary Haxe Std.string(Float)", source, expression.pos));
 				{id: result.id, type: result.type, mapping: resultMapping};
 			case _:
-				unsupported(expression, 'TCall(Std.string:source-not-yet-admitted:${argumentMapping.cSpelling})');
+				final classValue = argumentMapping.classValue();
+				classValue == null ? unsupported(expression,
+					'TCall(Std.string:source-not-yet-admitted:${argumentMapping.cSpelling})') : lowerDefaultClassString(expression, argumentMapping,
+					resultMapping, classValue, role);
 		};
+	}
+
+	/**
+		Format one exact final class that keeps Haxe's default object spelling.
+
+		Haxe prints a null reference as `null`; otherwise a class without its own
+		`toString` prints its package-qualified class path. The reference is
+		evaluated once, compared with null through the existing typed identity
+		operation, and then each static spelling enters the normal String ownership
+		join. Non-final classes and any class hierarchy that defines `toString`
+		remain unsupported because their runtime value can require method dispatch.
+	**/
+	function lowerDefaultClassString(expression:TypedExpr, argumentMapping:CBodyValueType, resultMapping:CBodyValueType, classValue:CPreparedBodyClass,
+			role:String):LoweredValue {
+		final reference = exactStdStringClass(expression.t);
+		if (reference == null)
+			return unsupported(expression, 'TCall(Std.string:class-source-not-exact:${argumentMapping.cSpelling})');
+		final definition = reference.get();
+		if (!definition.isFinal)
+			return unsupported(expression, 'TCall(Std.string:class-requires-final-type:${classValue.haxePath})');
+		if (classHierarchyDefinesToString(reference))
+			return unsupported(expression, 'TCall(Std.string:class-custom-toString-requires-dispatch:${classValue.haxePath})');
+		if (resultMapping.irType != IRTString && resultMapping.irType != IRTManagedString)
+			return unsupported(expression, 'TCall(Std.string:class-result-not-String:${resultMapping.cSpelling})');
+
+		final source = sourceSpan(expression.pos);
+		final argument = coerce(lowerValue(expression, argumentMapping), argumentMapping, expression.pos, '$role:class-argument');
+		final nullValue:HxcIRResult = {id: nextValueId(), type: argumentMapping.irType};
+		appendInstruction(nullValue, IRIOConstant(IRCNull), source, "std-string-class-null");
+		final boolMapping = bodyValueType(Context.getType("Bool"), expression.pos, "TCall(Std.string:class-null-result)");
+		if (boolMapping.irType != IRTBool)
+			return unsupported(expression, 'TCall(Std.string:class-null-result-not-Bool:${boolMapping.cSpelling})');
+		final isNull:HxcIRResult = {id: nextValueId(), type: IRTBool};
+		appendInstruction(isNull, IRIOBinary("haxe.class-reference.equal", argument.id, nullValue.id, IRIStatic), source, "std-string-class-null-test");
+
+		final managedResult = resultMapping.irType == IRTManagedString;
+		final resultLocalId = if (managedResult) {
+			final localId = declareFlowLocal(resultMapping, source, "std-string-class-managed-result");
+			appendInstruction(null, IRIODeclareManagedCarrier(IRPLocal(localId), IRIRuntime("string")), source, "std-string-class-managed-result-declare");
+			localId;
+		} else {
+			final localId = declareFlowLocal(resultMapping, source, "std-string-class-result");
+			appendInstruction(null, IRIODeclareUninitialized(IRPLocal(localId)), source, "std-string-class-result-declare");
+			localId;
+		};
+		final nullBlock = createGeneratedBlock("std-string-class-null", source);
+		final classBlock = createGeneratedBlock("std-string-class-name", source);
+		final joinBlock = createGeneratedBlock("std-string-class-join", source);
+		currentBlock.terminator = {kind: IRTBranch(isNull.id, edge(nullBlock.id), edge(classBlock.id)), source: source};
+
+		currentBlock = nullBlock;
+		storeDefaultClassStringResult(resultLocalId, compilerStringLiteral("null", resultMapping, expression.pos, "std-string-class-null-literal"),
+			resultMapping, managedResult, source, expression.pos, "std-string-class-null");
+		currentBlock.terminator = {kind: IRTJump(edge(joinBlock.id)), source: source};
+
+		currentBlock = classBlock;
+		storeDefaultClassStringResult(resultLocalId,
+			compilerStringLiteral(classValue.haxePath, resultMapping, expression.pos, "std-string-class-name-literal"), resultMapping, managedResult, source,
+			expression.pos, "std-string-class-name");
+		currentBlock.terminator = {kind: IRTJump(edge(joinBlock.id)), source: source};
+
+		currentBlock = joinBlock;
+		if (!managedResult)
+			return loadPlace({place: IRPLocal(resultLocalId), mapping: resultMapping, mutable: true}, expression.pos, "std-string-class-result-load");
+		final result:HxcIRResult = {id: nextValueId(), type: IRTManagedString};
+		appendInstruction(result, IRIOMoveManagedCarrier(IRPLocal(resultLocalId)), source, "std-string-class-managed-result-move");
+		registerValueTemporary(result.id, "std-string-class-managed-result");
+		freshManagedStringValueIds.set(result.id, true);
+		freshManagedStringValueRoles.set(result.id, role);
+		return {id: result.id, type: result.type, mapping: resultMapping};
+	}
+
+	/** Store one branch spelling through the result carrier selected above. */
+	function storeDefaultClassStringResult(localId:String, value:LoweredValue, mapping:CBodyValueType, managed:Bool, source:HxcSourceSpan, position:Position,
+			role:String):Void {
+		if (managed)
+			appendManagedCarrierAcquire(localId, value, mapping, null, source, position, role);
+		else
+			appendInstruction(null, IRIOStore(IRPLocal(localId), value.id), source, role);
+	}
+
+	/** Emit compiler-known UTF-8 text through the same reviewed String-literal path as source text. */
+	function compilerStringLiteral(text:String, mapping:CBodyValueType, position:Position, role:String):LoweredValue {
+		final byteLength = HxcUtf8.byteLength(text);
+		if (byteLength == null)
+			return unsupportedAt(position, '$role:malformed-Unicode');
+		final source = sourceSpan(position);
+		final result:HxcIRResult = {id: nextValueId(), type: mapping.irType};
+		appendInstruction(result, IRIOConstant(IRCString(text, byteLength)), source, role);
+		runtimeRequirements.push(new CBodyRuntimeRequirement("string-literal", "static-value", mapping.cSpelling, source, position, "direct-string-value"));
+		return {id: result.id, type: result.type, mapping: mapping};
+	}
+
+	/** Recover the one concrete class identity after typedef and abstract following. */
+	function exactStdStringClass(type:Type):Null<Ref<ClassType>>
+		return switch TypeTools.follow(applyCurrentSpecialization(type)) {
+			case TInst(reference, _) if (!reference.get().isExtern && !reference.get().isInterface): reference;
+			case _: null;
+		};
+
+	/** Report whether this exact class or any base class owns a `toString` member. */
+	static function classHierarchyDefinesToString(reference:Ref<ClassType>):Bool {
+		var current:Null<Ref<ClassType>> = reference;
+		while (current != null) {
+			for (field in current.get().fields.get())
+				if (field.name == "toString")
+					return true;
+			current = current.get().superClass == null ? null : current.get().superClass.t;
+		}
+		return false;
 	}
 
 	function isStdString(callee:TypedExpr):Bool {
@@ -17038,7 +17156,8 @@ private class FunctionBuilder {
 			case TField(receiver, _) | TEnumParameter(receiver, _, _) | TEnumIndex(receiver): expressionCreatesFlow(receiver);
 			case TUnop(_, _, operand) | TParenthesis(operand) | TMeta(_, operand) | TCast(operand, _): expressionCreatesFlow(operand);
 			case TBlock(expressions): anyExpressionCreatesFlow(expressions);
-			case TCall(callee, arguments): expressionCreatesFlow(callee) || anyExpressionCreatesFlow(arguments);
+			case TCall(callee, arguments): stdStringClassCallCreatesFlow(callee,
+					arguments) || expressionCreatesFlow(callee) || anyExpressionCreatesFlow(arguments);
 			case TNew(_, _, arguments) | TArrayDecl(arguments): anyExpressionCreatesFlow(arguments);
 			case TObjectDecl(fields):
 				var createsFlow = false;
@@ -17055,6 +17174,10 @@ private class FunctionBuilder {
 			case TConst(_) | TLocal(_) | TTypeExpr(_) | TIdent(_): false;
 		};
 	}
+
+	/** True when exact class formatting introduces its internal null/name join. */
+	function stdStringClassCallCreatesFlow(callee:TypedExpr, arguments:Array<TypedExpr>):Bool
+		return arguments.length == 1 && isStdString(callee) && exactStdStringClass(arguments[0].t) != null;
 
 	/**
 	 * True when equality must branch to unwrap one present optional scalar.
