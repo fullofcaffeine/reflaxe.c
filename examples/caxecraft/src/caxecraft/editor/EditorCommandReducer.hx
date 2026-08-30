@@ -7,6 +7,7 @@ import caxecraft.editor.EditorTypes.EditorSettings;
 import caxecraft.editor.EditorWorldGrid.EditorWorldResult;
 import caxecraft.editor.EditorWorldGrid.fill as fillWorld;
 import caxecraft.editor.EditorWorldGrid.paintMany as paintWorld;
+import caxecraft.editor.EditorWorldGrid.paint as paintWorldVoxel;
 import caxecraft.editor.EditorWorldGrid.resize as resizeWorld;
 import caxecraft.editor.EditorEnvironment.copyEnvironment;
 import caxecraft.editor.EditorObjectRename.renameScenarioObject;
@@ -46,6 +47,13 @@ typedef EditorReduction = {
 	final family:EditorCommandFamily;
 }
 
+/** Private image facts that make one reducer decision safe and explicit. */
+@:noCompletion
+typedef EditorReductionContext = {
+	final settings:EditorSettings;
+	final worldGridEditable:Bool;
+}
+
 /** Internal typed result for candidate command application. */
 @:noCompletion
 enum EditorReductionResult {
@@ -69,7 +77,7 @@ enum EditorReductionResult {
 	access check or runtime behavior for it.
 **/
 @:noCompletion
-function apply(scenario:Scenario, command:EditorCommand, settings:EditorSettings):EditorReductionResult {
+function apply(scenario:Scenario, command:EditorCommand, context:EditorReductionContext):EditorReductionResult {
 	return switch command {
 		case SetTitle(title):
 			setTitle(scenario, title);
@@ -83,13 +91,13 @@ function apply(scenario:Scenario, command:EditorCommand, settings:EditorSettings
 		case SetPaletteEntry(code, blockType):
 			setPaletteEntry(scenario, code, blockType);
 		case PaintVoxel(point, paletteCode):
-			paint(scenario, [point], paletteCode, settings.selectionCells);
+			paintVoxel(scenario, point, paletteCode, context.settings.selectionCells, context.worldGridEditable);
 		case EraseVoxel(point):
-			paint(scenario, [point], 0, settings.selectionCells);
+			paintVoxel(scenario, point, 0, context.settings.selectionCells, context.worldGridEditable);
 		case PaintVoxels(points, paletteCode):
-			paint(scenario, points, paletteCode, settings.selectionCells);
+			paint(scenario, points, paletteCode, context.settings.selectionCells);
 		case EraseVoxels(points):
-			paint(scenario, points, 0, settings.selectionCells);
+			paint(scenario, points, 0, context.settings.selectionCells);
 		case FillBounds(bounds, paletteCode):
 			fillBounds(scenario, bounds, paletteCode);
 		case PutFluid(fluid):
@@ -465,6 +473,18 @@ private function paint(scenario:Scenario, points:Array<VoxelPoint>, paletteCode:
 	if (!hasPaletteCode(scenario, paletteCode))
 		return ReductionRejected(UnknownPaletteCode(paletteCode));
 	return switch paintWorld(scenario.world, points, paletteCode) {
+		case WorldRejected(error): ReductionRejected(error);
+		case WorldReady(world): ready(withWorld(scenario, world), Voxel);
+	}
+}
+
+/** Apply one trusted chunk-local voxel change through the shared palette gate. */
+private function paintVoxel(scenario:Scenario, point:VoxelPoint, paletteCode:Int, maximumCells:Int, worldGridEditable:Bool):EditorReductionResult {
+	if (maximumCells < 1)
+		return ReductionRejected(VoxelEditTooLarge(1, maximumCells));
+	if (!hasPaletteCode(scenario, paletteCode))
+		return ReductionRejected(UnknownPaletteCode(paletteCode));
+	return switch paintWorldVoxel(scenario.world, point, paletteCode, worldGridEditable) {
 		case WorldRejected(error): ReductionRejected(error);
 		case WorldReady(world): ready(withWorld(scenario, world), Voxel);
 	}

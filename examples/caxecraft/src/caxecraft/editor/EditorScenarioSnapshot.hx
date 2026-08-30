@@ -1,6 +1,7 @@
 package caxecraft.editor;
 
 import caxecraft.editor.EditorTypes.EditorError;
+import caxecraft.editor.EditorWorldGrid.isEditable as isWorldGridEditable;
 import caxecraft.scenario.CaxeFlow.FlowAction;
 import caxecraft.scenario.Scenario;
 import caxecraft.scenario.ScenarioCodecModel.ParsedScenario;
@@ -22,6 +23,9 @@ typedef EditorScenarioImage = {
 	final bytes:Bytes;
 	final scenario:Scenario;
 	final parseState:EditorScenarioParseState;
+
+	/** True after the complete chunk layout passes the editor's exact decoder. */
+	final worldGridEditable:Bool;
 }
 
 /** Whether this image already owns exact source coordinates for its bytes. */
@@ -77,10 +81,12 @@ function capture(scenario:Scenario):EditorScenarioImageResult {
 	the session's private image. This lets the session publish exact canonical
 	bytes and history immediately while deferring source-coordinate reconstruction
 	until validation needs it. Do not use this boundary for a command that can
-	retain caller-owned structured input.
+	retain caller-owned structured input. `worldGridEditable` carries the complete
+	decoder result from the private image that supplied the reducer input; accepted
+	reducers preserve that structural fact.
 **/
 @:noCompletion
-function captureReducerOwnedEdit(scenario:Scenario):EditorScenarioImageResult {
+function captureReducerOwnedEdit(scenario:Scenario, worldGridEditable:Bool):EditorScenarioImageResult {
 	if (scenario.formatVersion != ScenarioWriter.FORMAT_VERSION)
 		return ImageRejected(UnsupportedFormatVersion(scenario.formatVersion, ScenarioWriter.FORMAT_VERSION));
 	if (containsNestedChoice(scenario))
@@ -88,7 +94,8 @@ function captureReducerOwnedEdit(scenario:Scenario):EditorScenarioImageResult {
 	return ImageReady({
 		bytes: ScenarioWriter.write(scenario),
 		scenario: scenario,
-		parseState: DeferredScenarioParse
+		parseState: DeferredScenarioParse,
+		worldGridEditable: worldGridEditable
 	});
 }
 
@@ -103,7 +110,8 @@ function restore(bytes:Bytes):EditorScenarioImageResult {
 				case ReadOk(parsed): ImageReady({
 						bytes: bytes.sub(0, bytes.length),
 						scenario: parsed.candidate,
-						parseState: ParsedScenarioImage(parsed)
+						parseState: ParsedScenarioImage(parsed),
+						worldGridEditable: isWorldGridEditable(parsed.candidate.world)
 					});
 			}
 	}

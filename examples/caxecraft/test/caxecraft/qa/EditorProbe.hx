@@ -125,6 +125,10 @@ import caxecraft.editor.EditorViewport.project as projectViewport;
 import caxecraft.editor.EditorViewport.projectFromCells;
 import caxecraft.editor.EditorViewport.projectFromWorld;
 import caxecraft.editor.EditorViewport.toolFromIndex;
+import caxecraft.editor.EditorWorldGrid.EditorWorldResult;
+import caxecraft.editor.EditorWorldGrid.isEditable as isWorldGridEditable;
+import caxecraft.editor.EditorWorldGrid.paint as paintWorldVoxel;
+import caxecraft.editor.EditorWorldGrid.paintMany as paintWorldMany;
 import caxecraft.editor.EditorWorldViewport.cameraTarget;
 import caxecraft.editor.EditorWorldViewport.cameraMode;
 import caxecraft.editor.EditorWorldViewport.cameraPose;
@@ -237,6 +241,7 @@ final class EditorProbe {
 		final viewportChecks = checkViewport();
 		final worldViewportChecks = checkWorldViewport();
 		final runtimeTerrainChecks = checkRuntimeTerrainProjection() + checkTerrainHistoryFootprints();
+		checkChunkLocalVoxelEditing();
 		checkZoneRuleProjection();
 		checkFlowAuthoring();
 		checkFlowCardLibrary();
@@ -710,6 +715,56 @@ final class EditorProbe {
 		require(worldPaletteCodeAt(session.draftSnapshot().world, {x: 4, y: 0, z: 0}) == null, "compact voxel lookup admitted an excluded coordinate");
 		checks++;
 		return checks;
+	}
+
+	/**
+	 * Compare the trusted one-chunk edit with the complete editing-grid oracle.
+	 *
+	 * The fast path must keep untouched chunk owners, canonical bytes, run
+	 * merging, and malformed-draft rejection identical to the original path.
+	 */
+	static function checkChunkLocalVoxelEditing():Void {
+		final session = open(defaultEditorSettings());
+		expectApplied(session.apply(ResizeWorld({width: 64, height: 1, depth: 1})), WorldShape, "chunk-local world size");
+		expectApplied(session.apply(SetPaletteEntry(7, STONE)), Voxel, "chunk-local palette");
+		final before = session.draftSnapshot();
+		require(before.world.chunks.length == 2 && isWorldGridEditable(before.world), "chunk-local fixture did not create two trusted chunks");
+		final point:VoxelPoint = {x: 31, y: 0, z: 0};
+		final local = readyWorld(paintWorldVoxel(before.world, point, 7, true), "trusted chunk-local paint");
+		final complete = readyWorld(paintWorldMany(before.world, [point], 7), "complete-grid paint oracle");
+		require(local.chunks[0] != before.world.chunks[0] && local.chunks[1] == before.world.chunks[1],
+			"one-voxel paint replaced an unaffected chunk or retained its changed owner");
+		require(ScenarioWriter.write(withWorld(before, local)).compare(ScenarioWriter.write(withWorld(before, complete))) == 0,
+			"chunk-local paint disagreed with the complete-grid canonical oracle");
+		final erased = readyWorld(paintWorldVoxel(local, point, 0, true), "trusted chunk-local erase");
+		require(erased.chunks[0].runs.length == 1 && erased.chunks[0].runs[0].paletteCode == 0 && erased.chunks[0].runs[0].count == 32,
+			"chunk-local erase did not merge equal neighboring runs");
+
+		final malformedWorld:ScenarioWorld = {
+			size: before.world.size,
+			palette: before.world.palette,
+			chunks: [before.world.chunks[0]],
+			fluids: before.world.fluids
+		};
+		require(!isWorldGridEditable(malformedWorld), "missing chunk coverage became a trusted editor grid");
+		final malformed = withWorld(before, malformedWorld);
+		final invalidSession = switch EditorSession.open(malformed, new Registry(), defaultEditorSettings()) {
+			case EditorOpened(value): value;
+			case EditorOpenRejected(error): throw 'repair-mode editor did not open a representable malformed world: $error';
+		};
+		switch invalidSession.apply(PaintVoxel({x: 1, y: 0, z: 0}, 7)) {
+			case EditRejected(DraftWorldIsNotEditable):
+			case _:
+				throw "untrusted one-voxel paint bypassed complete malformed-world rejection";
+		}
+	}
+
+	/** Return one successful internal world edit or fail with its exact label. */
+	static function readyWorld(result:EditorWorldResult, label:String):ScenarioWorld {
+		return switch result {
+			case WorldReady(world): world;
+			case WorldRejected(error): throw '$label was rejected: $error';
+		};
 	}
 
 	/** Apply one expected narrow mutation footprint to a retained projection. */
@@ -4759,6 +4814,25 @@ final class EditorProbe {
 			mode: source.mode,
 			environment: source.environment,
 			world: source.world,
+			objects: source.objects,
+			story: source.story,
+			flow: source.flow,
+			extensions: source.extensions
+		};
+
+	/** Replace only one private scenario's world for focused codec comparisons. */
+	static function withWorld(source:Scenario, world:ScenarioWorld):Scenario
+		return {
+			formatVersion: source.formatVersion,
+			requiredFeatures: source.requiredFeatures,
+			optionalFeatures: source.optionalFeatures,
+			id: source.id,
+			assetPack: source.assetPack,
+			messages: source.messages,
+			title: source.title,
+			mode: source.mode,
+			environment: source.environment,
+			world: world,
 			objects: source.objects,
 			story: source.story,
 			flow: source.flow,

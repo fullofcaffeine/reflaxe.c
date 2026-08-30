@@ -187,7 +187,8 @@ final class EditorSession {
 		return EditorOpened(new EditorSession({
 			bytes: source.sub(0, source.length),
 			scenario: parsed.candidate,
-			parseState: ParsedScenarioImage(parsed)
+			parseState: ParsedScenarioImage(parsed),
+			worldGridEditable: caxecraft.editor.EditorWorldGrid.isEditable(parsed.candidate.world)
 		}, registry, settings, false));
 	}
 
@@ -467,10 +468,10 @@ final class EditorSession {
 							terrain = TerrainChanged;
 					}
 				case _:
-					switch reduceCommand(staged.scenario, command, settings) {
+					switch reduceCommand(staged.scenario, command, {settings: settings, worldGridEditable: staged.worldGridEditable}) {
 						case ReductionRejected(error): return StageRejected(error);
 						case ReductionReady(reduction):
-							switch captureReduction(reduction.scenario) {
+							switch captureReduction(reduction.scenario, staged.worldGridEditable) {
 								case ImageRejected(error): return StageRejected(error);
 								case ImageReady(image):
 									staged = image;
@@ -566,13 +567,13 @@ final class EditorSession {
 				return restorePlayable(before);
 			case _:
 		}
-		return switch reduceCommand(before.scenario, command, settings) {
+		return switch reduceCommand(before.scenario, command, {settings: settings, worldGridEditable: before.worldGridEditable}) {
 			case ReductionRejected(error): EditRejected(error);
 			case ReductionReady(reduction):
 				final terrainHistory = terrainHistoryForCommand(before.scenario, command);
 				if (terrainHistory == null)
 					return EditRejected(DraftWorldIsNotEditable);
-				switch captureReduction(reduction.scenario) {
+				switch captureReduction(reduction.scenario, before.worldGridEditable) {
 					case ImageRejected(error): EditRejected(error);
 					case ImageReady(after):
 						accept(before, after, reduction.family, changesFor(command), terrainHistory);
@@ -588,8 +589,8 @@ final class EditorSession {
 	 * image remain private and immutable. The writer can therefore publish bytes
 	 * now and recover exact parser coordinates only for validation.
 	 */
-	function captureReduction(scenario:Scenario):EditorScenarioImageResult
-		return captureReducerOwnedEdit(scenario);
+	function captureReduction(scenario:Scenario, worldGridEditable:Bool):EditorScenarioImageResult
+		return captureReducerOwnedEdit(scenario, worldGridEditable);
 
 	/**
 		Restore the state before the newest history entry.

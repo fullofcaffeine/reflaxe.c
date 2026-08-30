@@ -216,12 +216,18 @@ format, and history budget before it changes the draft. If one of those checks
 rejects the command, the draft remains unchanged and the editor shows the
 invalid state.
 
-Voxel edits rebuild their changed world arrays from scalar coordinates and
-palette codes. They retain no caller-owned records. The session can therefore
-write canonical bytes and record history without parsing those bytes again on
-the click path. Validate, Save, and Test Play reconstruct exact source
-coordinates from the canonical bytes before they report diagnostics. Commands
-for placement deep-copy each retained record and tag array. These commands also
+Each private editor image records whether its complete chunk layout passed the
+editor decoder. A one-voxel edit on a trusted layout splits or merges runs only
+in the owning chunk. It keeps every other chunk owner and does not expand the
+complete world into a temporary cell array. Repair-mode drafts without that
+evidence still use the complete decoder and fail closed on gaps, overlaps, or
+invalid runs.
+
+Voxel edits retain no caller-owned records. The session can therefore write
+canonical bytes and record history without parsing those bytes again on the
+click path. Validate, Save, and Test Play reconstruct exact source coordinates
+from the canonical bytes before they report diagnostics. Commands for
+placement deep-copy each retained record and tag array. These commands also
 defer the parse. Other structured commands keep the complete write-and-parse
 boundary.
 

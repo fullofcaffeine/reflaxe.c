@@ -30,6 +30,24 @@ EDITOR_AUTOMATION = (
     / "editor"
     / "EditorAutomationProtocol.hx"
 )
+EDITOR_WORLD_GRID = (
+    ROOT
+    / "examples"
+    / "caxecraft"
+    / "src"
+    / "caxecraft"
+    / "editor"
+    / "EditorWorldGrid.hx"
+)
+EDITOR_SNAPSHOT = (
+    ROOT
+    / "examples"
+    / "caxecraft"
+    / "src"
+    / "caxecraft"
+    / "editor"
+    / "EditorScenarioSnapshot.hx"
+)
 
 
 def section(source: str, start: str, end: str) -> str:
@@ -104,10 +122,24 @@ class CaxecraftEditorLatencyContract(unittest.TestCase):
         capture = section(source, "function captureReduction", "/**\n\t\tRestore the state")
         validation = section(source, "function validateImage", "/** Convert the public validator")
 
-        self.assertIn("return captureReducerOwnedEdit(scenario)", capture)
+        self.assertIn("return captureReducerOwnedEdit(scenario, worldGridEditable)", capture)
         self.assertNotIn("captureScenario", capture)
         self.assertIn("case DeferredScenarioParse", validation)
         self.assertIn("restoreScenario(image.bytes)", validation)
+
+    def test_single_voxel_edit_rewrites_only_its_trusted_chunk(self) -> None:
+        grid = EDITOR_WORLD_GRID.read_text(encoding="utf-8")
+        snapshot = EDITOR_SNAPSHOT.read_text(encoding="utf-8")
+        session = EDITOR_SESSION.read_text(encoding="utf-8")
+        paint = section(grid, "function paint", "/** Decode and rewrite")
+        patch = section(grid, "private function patchVoxel", "/** Append one positive run")
+
+        self.assertIn("trustedEditableLayout ? patchVoxel", paint)
+        self.assertIn("world.chunks.copy()", patch)
+        self.assertNotIn("decode(", patch)
+        self.assertNotIn("rewriteChunks", patch)
+        self.assertIn("worldGridEditable", snapshot)
+        self.assertIn("before.worldGridEditable", session)
 
     def test_spatial_queries_reuse_the_copy_owned_presentation(self) -> None:
         source = EDITOR_AUTOMATION.read_text(encoding="utf-8")
