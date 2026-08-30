@@ -3044,6 +3044,8 @@ final class EditorProbe {
 		expectApplied(session.apply(PaintVoxel({x: 3, y: 1, z: 2}, 7)), Voxel, "viewport upper-layer paint");
 		final upper = projectViewport(session.draftSnapshot().world, 1);
 		require(upper != null && upper.width == 4 && upper.depth == 3 && upper.cells.length == 12, "viewport projection lost its exact layer dimensions");
+		require(upper.paintedCells.length == 1 && upper.paintedCells[0].x == 3 && upper.paintedCells[0].z == 2 && upper.paintedCells[0].paletteCode == 7,
+			"viewport did not cache only its painted cells in canonical display order");
 		final volume = projectWorld(session.draftSnapshot().world);
 		final reused = volume == null ? null : projectFromWorld(volume, 1);
 		require(reused != null
@@ -3188,7 +3190,7 @@ final class EditorProbe {
 			case _:
 				throw "trigger tool did not produce one canonical object command";
 		}
-		return 27;
+		return 28;
 	}
 
 	/**

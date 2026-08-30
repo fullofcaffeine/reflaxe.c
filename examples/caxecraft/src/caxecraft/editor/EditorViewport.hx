@@ -51,6 +51,16 @@ typedef EditorViewportProjection = {
 	final depth:Int;
 	final layerY:Int;
 	final cells:Array<Int>;
+
+	/** Non-air cells prepared once so Plan does not scan empty terrain per frame. */
+	final paintedCells:Array<EditorViewportCell>;
+}
+
+/** One non-air Plan cell in canonical row-major order. */
+typedef EditorViewportCell = {
+	final x:Int;
+	final z:Int;
+	final paletteCode:Int;
 }
 
 /**
@@ -111,7 +121,8 @@ function project(world:ScenarioWorld, layerY:Int):Null<EditorViewportProjection>
 		width: world.size.width,
 		depth: world.size.depth,
 		layerY: layerY,
-		cells: cells
+		cells: cells,
+		paintedCells: collectPaintedCells(cells, world.size.width)
 	};
 }
 
@@ -136,7 +147,8 @@ function projectFromCells(world:ScenarioWorld, worldCells:Array<Int>, layerY:Int
 		width: world.size.width,
 		depth: world.size.depth,
 		layerY: layerY,
-		cells: cells
+		cells: cells,
+		paintedCells: collectPaintedCells(cells, world.size.width)
 	};
 }
 
@@ -160,8 +172,20 @@ function projectFromWorld(world:EditorWorldProjection, layerY:Int):Null<EditorVi
 		width: world.width,
 		depth: world.depth,
 		layerY: layerY,
-		cells: cells
+		cells: cells,
+		paintedCells: collectPaintedCells(cells, world.width)
 	};
+}
+
+/** Collect compact painted rows while preserving exact x/z display order. */
+function collectPaintedCells(cells:Array<Int>, width:Int):Array<EditorViewportCell> {
+	final painted:Array<EditorViewportCell> = [];
+	for (index in 0...cells.length) {
+		final paletteCode = cells[index];
+		if (paletteCode != 0)
+			painted.push({x: index % width, z: Std.int(index / width), paletteCode: paletteCode});
+	}
+	return painted;
 }
 
 /** Clamp one presentation-only layer to a finite world height. */

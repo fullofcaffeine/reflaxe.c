@@ -122,7 +122,6 @@ import caxecraft.editor.EditorViewport.clampLayer;
 import caxecraft.editor.EditorViewport.commandFor as commandForTool;
 import caxecraft.editor.EditorViewport.layout as layoutPlan;
 import caxecraft.editor.EditorViewport.inspectorVisible as shouldShowInspector;
-import caxecraft.editor.EditorViewport.paletteCodeAt as paletteCodeAtPlan;
 import caxecraft.editor.EditorViewport.pointAt as pointAtPlan;
 import caxecraft.editor.EditorViewport.paletteCodeForBlock;
 import caxecraft.editor.EditorViewport.projectFromWorld;
@@ -3166,19 +3165,35 @@ final class CaxecraftEditorScreen {
 		}
 
 		Raylib.DrawRectangle(left, top, width, height, Color.rgba(18, 34, 42));
-		for (z in 0...currentPlan.depth)
-			for (x in 0...currentPlan.width) {
-				final paletteCode = paletteCodeAtPlan(currentPlan, x, z);
-				final cellLeft = grid.left + x * grid.cellSize;
-				final cellTop = grid.top + z * grid.cellSize;
-				final color = paletteCode == 0 ? Color.rgba(25, 48, 56) : terrainOverviewColor(paletteCode);
-				Raylib.DrawRectangle(cellLeft + 1, cellTop + 1, grid.cellSize - 2, grid.cellSize - 2, color);
-				Raylib.DrawRectangleLines(cellLeft, cellTop, grid.cellSize, grid.cellSize, Color.rgba(48, 78, 84));
-				if (selectedPlanCell(x, z)) {
-					Raylib.DrawRectangleLines(cellLeft + 1, cellTop + 1, grid.cellSize - 2, grid.cellSize - 2, CaxecraftPalette.selection());
-					Raylib.DrawRectangleLines(cellLeft + 2, cellTop + 2, grid.cellSize - 4, grid.cellSize - 4, CaxecraftPalette.selection());
-				}
+		Raylib.DrawRectangle(grid.left, grid.top, grid.width, grid.height, Color.rgba(25, 48, 56));
+		final cellInset = grid.cellSize > 2 ? 1 : 0;
+		final paintedCellSize = grid.cellSize - cellInset * 2;
+		for (cell in currentPlan.paintedCells) {
+			final cellLeft = grid.left + cell.x * grid.cellSize + cellInset;
+			final cellTop = grid.top + cell.z * grid.cellSize + cellInset;
+			Raylib.DrawRectangle(cellLeft, cellTop, paintedCellSize, paintedCellSize, terrainOverviewColor(cell.paletteCode));
+		}
+		if (grid.cellSize >= 4) {
+			final gridColor = Color.rgba(48, 78, 84);
+			for (x in 0...currentPlan.width + 1) {
+				final lineX = grid.left + x * grid.cellSize;
+				Raylib.DrawLine(lineX, grid.top, lineX, grid.top + grid.height, gridColor);
 			}
+			for (z in 0...currentPlan.depth + 1) {
+				final lineY = grid.top + z * grid.cellSize;
+				Raylib.DrawLine(grid.left, lineY, grid.left + grid.width, lineY, gridColor);
+			}
+		}
+		final selectedBounds = selection;
+		if (selectedBounds != null && boundsIntersectLayer(selectedBounds, editLayerY)) {
+			final selectionLeft = grid.left + selectedBounds.origin.x * grid.cellSize;
+			final selectionTop = grid.top + selectedBounds.origin.z * grid.cellSize;
+			final selectionWidth = selectedBounds.size.width * grid.cellSize;
+			final selectionHeight = selectedBounds.size.depth * grid.cellSize;
+			Raylib.DrawRectangleLines(selectionLeft, selectionTop, selectionWidth, selectionHeight, CaxecraftPalette.selection());
+			if (selectionWidth > 4 && selectionHeight > 4)
+				Raylib.DrawRectangleLines(selectionLeft + 2, selectionTop + 2, selectionWidth - 4, selectionHeight - 4, CaxecraftPalette.selection());
+		}
 		final selectedObject = selectedObjectIndex();
 		for (index in 0...objectGizmos.length) {
 			final gizmo = objectGizmos[index];
@@ -3225,18 +3240,6 @@ final class CaxecraftEditorScreen {
 				return index;
 		}
 		return -1;
-	}
-
-	/** True when the current semantic voxel target covers one Plan column. */
-	function selectedPlanCell(x:Int, z:Int):Bool {
-		final current = selection;
-		if (current == null)
-			return false;
-		return boundsIntersectLayer(current, editLayerY)
-			&& x >= current.origin.x
-			&& z >= current.origin.z
-			&& x < current.origin.x + current.size.width
-			&& z < current.origin.z + current.size.depth;
 	}
 
 	/**

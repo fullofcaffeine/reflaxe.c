@@ -433,6 +433,11 @@ separate wire box for every selected cell. A maximum 65,536-cell selection
 therefore keeps one selection draw call per frame instead of making rendering
 work grow with the selected volume.
 
+Plan caches the non-air cells on its selected layer after an edit. Steady
+frames draw one empty background, those painted cells, shared grid lines, and
+at most two lines around the complete selection. Empty cells and selected cells
+do not each add their own border calls.
+
 If history snapshots become the next bottleneck, a later slice can introduce
 typed command-specific inverse data. It must retain bounded paint gestures,
 exact undo bytes, hard memory limits, and the same public commands. A later
