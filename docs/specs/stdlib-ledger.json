@@ -2574,6 +2574,111 @@
       "notes": "Object identity maps are admitted, but text conversion still needs exact value formatting and Eval-compatible punctuation before it can select the String runtime."
     },
     {
+      "id": "list-alias-type-partial",
+      "selector": {
+        "module": "List",
+        "type": "List",
+        "member": null,
+        "kind": "typedef",
+        "isStatic": true,
+        "signature": "List"
+      },
+      "owner": "direct-compiler-lowering",
+      "runtimeFeatures": [
+        "alloc",
+        "gc",
+        "object",
+        "string"
+      ],
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "environments": [
+        "hosted"
+      ],
+      "status": "partial",
+      "ownerBeads": "E5.T03",
+      "testOwnerBeads": "E5.T12",
+      "diagnosticPolicies": [
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
+      ],
+      "tests": [
+        "test/differential/vector-list/generated/Main.hx",
+        "test/differential/vector-list/run.py"
+      ],
+      "notes": "The root List typedef exposes the same admitted closed Int and collector-managed class specializations as haxe.ds.List. Open or dynamically dispatched owner shapes remain unsupported."
+    },
+    {
+      "id": "int-map-type-partial",
+      "selector": {
+        "module": "haxe.ds.IntMap",
+        "type": "haxe.ds.IntMap",
+        "member": null,
+        "kind": "class",
+        "isStatic": true,
+        "signature": "haxe.ds.IntMap"
+      },
+      "owner": "runtime-slice",
+      "runtimeFeatures": [
+        "int-map"
+      ],
+      "profiles": [
+        "portable"
+      ],
+      "environments": [
+        "hosted"
+      ],
+      "status": "partial",
+      "ownerBeads": "E5.T03",
+      "testOwnerBeads": "E5.T12",
+      "diagnosticPolicies": [
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
+      ],
+      "tests": [
+        "test/differential/int-map/generated/Main.hx",
+        "test/differential/int-map/int_map_runtime.c",
+        "test/differential/int-map/run.py"
+      ],
+      "notes": "The admitted Map<Int, Bool> specialization keeps exact Int keys and unboxed Bool values in one shared typed table. Other value families remain unsupported."
+    },
+    {
+      "id": "string-map-type-partial",
+      "selector": {
+        "module": "haxe.ds.StringMap",
+        "type": "haxe.ds.StringMap",
+        "member": null,
+        "kind": "class",
+        "isStatic": true,
+        "signature": "haxe.ds.StringMap"
+      },
+      "owner": "runtime-slice",
+      "runtimeFeatures": [
+        "string-map"
+      ],
+      "profiles": [
+        "portable"
+      ],
+      "environments": [
+        "hosted"
+      ],
+      "status": "partial",
+      "ownerBeads": "E5.T03",
+      "testOwnerBeads": "E5.T12",
+      "diagnosticPolicies": [
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
+      ],
+      "tests": [
+        "test/differential/string-map/generated/Main.hx",
+        "test/differential/string-map/string_map_runtime.c",
+        "test/differential/string-map/run.py"
+      ],
+      "notes": "Admitted exact value families use copied UTF-8 keys and retain exact unboxed or managed value ownership. Open value families remain unsupported."
+    },
+    {
       "id": "array-type-partial",
       "selector": {
         "module": "Array",
@@ -8756,33 +8861,33 @@
       "kind": "typedef",
       "signature": "List",
       "isStatic": true,
-      "owner": "target-source-override",
+      "owner": "direct-compiler-lowering",
       "runtimeFeatures": [
         "alloc",
-        "array",
         "gc",
-        "object"
+        "object",
+        "string"
       ],
       "profiles": [
         "portable",
         "metal"
       ],
       "environments": [
-        "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "hosted"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T03",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Known element/key/value types should specialize to direct typed storage; allocation and tracing remain explicit reachability decisions.",
-      "ruleId": "collection-storage"
+      "tests": [
+        "test/differential/vector-list/generated/Main.hx",
+        "test/differential/vector-list/run.py"
+      ],
+      "notes": "The root List typedef exposes the same admitted closed Int and collector-managed class specializations as haxe.ds.List. Open or dynamically dispatched owner shapes remain unsupported.",
+      "ruleId": "list-alias-type-partial"
     },
     {
       "id": "hxc-stdlib-api-v1:abc753507f86b735e9ede5df8a97add9c04230551854684812782256adc1ec19",
@@ -33156,33 +33261,30 @@
       "kind": "class",
       "signature": "haxe.ds.IntMap",
       "isStatic": true,
-      "owner": "target-source-override",
+      "owner": "runtime-slice",
       "runtimeFeatures": [
-        "alloc",
-        "array",
-        "gc",
-        "object"
+        "int-map"
       ],
       "profiles": [
-        "portable",
-        "metal"
+        "portable"
       ],
       "environments": [
-        "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "hosted"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T03",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Known element/key/value types should specialize to direct typed storage; allocation and tracing remain explicit reachability decisions.",
-      "ruleId": "collection-storage"
+      "tests": [
+        "test/differential/int-map/generated/Main.hx",
+        "test/differential/int-map/int_map_runtime.c",
+        "test/differential/int-map/run.py"
+      ],
+      "notes": "The admitted Map<Int, Bool> specialization keeps exact Int keys and unboxed Bool values in one shared typed table. Other value families remain unsupported.",
+      "ruleId": "int-map-type-partial"
     },
     {
       "id": "hxc-stdlib-api-v1:9e5a589466c18441eabd8038fe32cc40fe566c4b4cf4014488085eb3759d1291",
@@ -36139,33 +36241,30 @@
       "kind": "class",
       "signature": "haxe.ds.StringMap",
       "isStatic": true,
-      "owner": "target-source-override",
+      "owner": "runtime-slice",
       "runtimeFeatures": [
-        "alloc",
-        "array",
-        "gc",
-        "object"
+        "string-map"
       ],
       "profiles": [
-        "portable",
-        "metal"
+        "portable"
       ],
       "environments": [
-        "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "hosted"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T03",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Known element/key/value types should specialize to direct typed storage; allocation and tracing remain explicit reachability decisions.",
-      "ruleId": "collection-storage"
+      "tests": [
+        "test/differential/string-map/generated/Main.hx",
+        "test/differential/string-map/string_map_runtime.c",
+        "test/differential/string-map/run.py"
+      ],
+      "notes": "Admitted exact value families use copied UTF-8 keys and retain exact unboxed or managed value ownership. Open value families remain unsupported.",
+      "ruleId": "string-map-type-partial"
     },
     {
       "id": "hxc-stdlib-api-v1:05b27d19c19c6b14819b4e3c8de5fb54d6d92a29d1178d331a1fa1c7edb917ea",
