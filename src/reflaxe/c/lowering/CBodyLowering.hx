@@ -4472,11 +4472,19 @@ private class FunctionBuilder {
 	 * A local declared after a completed root-level guard still runs on every
 	 * surviving path and may live until the function exits. A local declared
 	 * inside one control-flow arm is different: the arm can rejoin while the
-	 * object must already be destroyed. The current cleanup model handles only
-	 * managed release actions at such arm exits, so this depth keeps class
-	 * destruction fail-closed until path-scoped destroy actions are admitted.
+	 * object must already be destroyed. This depth distinguishes those scopes
+	 * from the outer sequence and from the exact statement-if arms admitted below.
 	 */
 	var nestedControlBodyDepth = 0;
+
+	/**
+	 * Count nested statement `if` arms with an explicit cleanup boundary.
+	 *
+	 * A class local is path-scoped only when every active nested control body is
+	 * such an arm. This excludes loops, switches, catches, and value-producing
+	 * conditionals until each neighboring shape has its own lifetime proof.
+	 */
+	var conditionalArmBodyDepth = 0;
 
 	final collectProfileWork:Bool;
 	var profileStatementLoweringCalls = 0;
@@ -6710,27 +6718,32 @@ private class FunctionBuilder {
 	 * class from being mistaken for a function-lifetime local merely because its
 	 * typed body contains no explicit `TBlock`.
 	 */
-	function lowerNestedControlStatement(expression:TypedExpr):Void {
+	function lowerNestedControlStatement(expression:TypedExpr, admitsPathScopedClassStorage:Bool = false):Void {
 		nestedControlBodyDepth++;
+		if (admitsPathScopedClassStorage)
+			conditionalArmBodyDepth++;
 		lowerStatement(expression);
+		if (admitsPathScopedClassStorage)
+			conditionalArmBodyDepth--;
 		nestedControlBodyDepth--;
 	}
 
 	/**
-	 * Decide whether a nonescaping class may use function-lifetime C storage.
+	 * Decide whether a nonescaping class has a complete automatic-storage path.
 	 *
-	 * The original one-block case remains valid. The additional case admits a
-	 * declaration in the function's outer statement sequence after earlier
-	 * guards have already branched or returned. Each early exit copied its
-	 * cleanup list before this object existed; every later exit copies the list
-	 * after construction registered the object. HxcIR therefore states exactly
-	 * which paths destroy it, while the C emitter may safely hoist only the
-	 * backing declaration and keep initialization at the original source point.
+	 * Root-sequence objects live to each later function exit. An object in a
+	 * statement `if` arm instead ends before that arm rejoins: the arm emits its
+	 * reverse cleanup and then removes those actions before lowering its sibling.
+	 * Requiring every active nested body to be such an arm keeps loops, switches,
+	 * catches, and typed joins without that cleanup boundary fail-closed. The C
+	 * emitter may hoist the backing declaration, but initialization remains at the
+	 * source `new`.
 	 */
-	function canUseFunctionLifetimeStackStorage():Bool {
+	function canUseProvenStackStorage():Bool {
 		final originalEntryCase = currentBlock.id == "entry" && blocks.length == 1;
 		final outerSequenceAfterControlFlow = statementSequenceDepth == 1 && nestedControlBodyDepth == 0;
-		return originalEntryCase || outerSequenceAfterControlFlow;
+		final conditionalArmScope = nestedControlBodyDepth > 0 && conditionalArmBodyDepth == nestedControlBodyDepth;
+		return originalEntryCase || outerSequenceAfterControlFlow || conditionalArmScope;
 	}
 
 	/**
@@ -7363,7 +7376,7 @@ private class FunctionBuilder {
 
 	function lowerConstructedVariable(variable:TVar, expression:TypedExpr, construction:BodyNewExpression, position:Position, ordinal:Int,
 			localId:String):Void {
-		if (!canUseFunctionLifetimeStackStorage()) {
+		if (!canUseProvenStackStorage()) {
 			unsupported(expression, "TNew(stack-construction-requires-function-lifetime-sequence)");
 		}
 		final classDefinition = construction.classReference.get();
@@ -9697,7 +9710,7 @@ private class FunctionBuilder {
 			currentBlock.terminator = {kind: IRTBranch(conditionValue.id, edge(trueBlock.id), edge(joinBlock.id)), source: source};
 			currentBlock = trueBlock;
 			final trueCleanupDepth = normalCleanupActionIds.length;
-			lowerNestedControlStatement(whenTrue);
+			lowerNestedControlStatement(whenTrue, true);
 			if (currentBlock.terminator == null) {
 				appendScopedCleanupInstructions(trueCleanupDepth);
 				currentBlock.terminator = {kind: IRTJump(edge(joinBlock.id)), source: source};
@@ -9714,7 +9727,7 @@ private class FunctionBuilder {
 
 		currentBlock = trueBlock;
 		final trueCleanupDepth = normalCleanupActionIds.length;
-		lowerNestedControlStatement(whenTrue);
+		lowerNestedControlStatement(whenTrue, true);
 		final trueEnd = currentBlock;
 		if (trueEnd.terminator == null)
 			appendScopedCleanupInstructions(trueCleanupDepth);
@@ -9722,7 +9735,7 @@ private class FunctionBuilder {
 
 		currentBlock = falseBlock;
 		final falseCleanupDepth = normalCleanupActionIds.length;
-		lowerNestedControlStatement(falseExpression);
+		lowerNestedControlStatement(falseExpression, true);
 		final falseEnd = currentBlock;
 		if (falseEnd.terminator == null)
 			appendScopedCleanupInstructions(falseCleanupDepth);

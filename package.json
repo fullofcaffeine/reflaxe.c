@@ -111,6 +111,7 @@
     "test:constructor-direct-argument": "python3 test/constructor_lowering/run.py --direct-argument-only",
     "test:constructor-managed-record-argument": "python3 test/constructor_lowering/run.py --managed-record-argument-only",
     "test:constructor-early-exit": "python3 test/constructor_lowering/run.py --early-exit-only",
+    "test:constructor-path-scoped": "python3 test/constructor_lowering/run.py --path-scoped-only",
     "test:virtual-dispatch": "python3 test/virtual_dispatch/run.py",
     "test:enum-lowering": "python3 test/enum_lowering/run.py",
     "test:enum-managed-class-payload": "python3 test/enum_lowering/run.py --managed-class-payload-only",

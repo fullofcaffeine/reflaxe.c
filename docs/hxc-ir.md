@@ -763,10 +763,16 @@ constructor lowering](constructor-lowering.md).
 A root-level guard may return before that storage is initialized. The return
 edge captures the cleanup actions that exist at that source point, so it cannot
 name the later object. Construction registers its action before subsequent
-statements, and later return or failure edges include it. This permits ordinary
-validation-first Haxe without pretending that a branch-local object has
-function lifetime; nested branch, loop, and switch construction remains
-fail-closed until those body exits can carry class-destruction actions.
+statements, and later return or failure edges include it.
+
+A statement `if` arm may also own nonescaping local objects. The arm emits
+their field releases and destruction in reverse construction order before it
+returns or reaches the join. The sibling arm restores the cleanup depth that
+existed before the branch, so it cannot destroy storage that it never
+initialized. A branch-owned automatic reference cannot be assigned to
+longer-lived storage. Construction in loops, switches, catches, and conditional
+arms nested beneath those unproved scopes remains fail-closed until those
+control-flow families have an equivalent executable lifetime proof.
 
 For E3.T06, the whole-program dispatch plan contains only reachable hierarchy
 slots and tables for constructed concrete dynamic classes. The hierarchy root

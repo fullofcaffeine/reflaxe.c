@@ -47,6 +47,7 @@ DIRECT_ARGUMENT = FIXTURES / "direct_argument"
 OWNED_FALLIBLE = FIXTURES / "owned_fallible"
 FACTORY_RETURN = FIXTURES / "factory_return"
 EARLY_EXIT = FIXTURES / "early_exit"
+CONDITIONAL = FIXTURES / "conditional"
 FINAL_PRIMITIVE_FIELDS = FIXTURES / "final_primitive_fields"
 NATIVE = Path(__file__).with_name("native")
 EXPECTED = Path(__file__).with_name("expected")
@@ -88,7 +89,10 @@ NEGATIVE_CASES = {
         "TNew(stack-reference-escape:static-call-argument:0,"
         "target=function.Main.forward)"
     ),
-    "conditional": "TNew(stack-construction-requires-function-lifetime-sequence)",
+    "conditional_assignment_escape": "TNew(stack-reference-escape:assignment)",
+    "conditional_loop_scope": (
+        "TNew(stack-construction-requires-function-lifetime-sequence)"
+    ),
     "cycle": "TNew(constructor-cycle:CycleA -> CycleB -> CycleA)",
     "default_callable": (
         "TFunction(constructor-argument:callback):"
@@ -297,6 +301,15 @@ EARLY_EXIT_NATIVE_COVERAGE = frozenset(
         "constructor-root-guard-early-exit",
         "constructor-root-guard-stack-storage",
         "constructor-root-guard-cleanup",
+    }
+)
+PATH_SCOPED_NATIVE_COVERAGE = frozenset(
+    {
+        "constructor-path-scoped-sibling",
+        "constructor-path-scoped-fallthrough",
+        "constructor-path-scoped-return",
+        "constructor-path-scoped-reverse-cleanup",
+        "constructor-path-scoped-failure",
     }
 )
 FINAL_PRIMITIVE_NATIVE_COVERAGE = frozenset(
@@ -3088,31 +3101,34 @@ def render_early_exit_project(fixture_root: Path) -> CFixtureProject:
     )
 
 
-def check_conditional_construction_negative() -> None:
-    """Keep truly branch-local automatic class storage fail-closed."""
+def check_path_scoped_negatives() -> None:
+    """Keep loop-scoped construction and longer-lived assignment fail-closed."""
 
     with tempfile.TemporaryDirectory(
-        prefix="hxc-constructor-conditional-negative-"
+        prefix="hxc-constructor-path-scoped-negative-"
     ) as temporary:
-        output = Path(temporary) / "generated"
-        result = custom_target(FIXTURES / "conditional", output)
-        combined = result.stdout + result.stderr
-        expected = NEGATIVE_CASES["conditional"]
-        if (
-            result.returncode == 0
-            or "HXC1001" not in combined
-            or expected not in combined
-            or generated_files(output)
+        root = Path(temporary)
+        for directory in (
+            "conditional_assignment_escape",
+            "conditional_loop_scope",
         ):
-            raise ConstructorLoweringFailure(
-                "branch-local constructor did not retain its exact fail-closed "
-                f"boundary\nstdout:\n{result.stdout}\nstderr:\n{result.stderr}"
-            )
+            output = root / directory
+            result = custom_target(FIXTURES / directory, output)
+            combined = result.stdout + result.stderr
+            expected = NEGATIVE_CASES[directory]
+            if (
+                result.returncode == 0
+                or "HXC1001" not in combined
+                or expected not in combined
+                or generated_files(output)
+            ):
+                raise ConstructorLoweringFailure(
+                    f"{directory} did not retain its exact fail-closed boundary\n"
+                    f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
+                )
 
 
-def check_early_exit_only(
-    *, requested_toolchain: str, include_conditional_negative: bool = True
-) -> None:
+def check_early_exit_only(*, requested_toolchain: str) -> None:
     """Run the complete root-guard constructor slice without older fixtures."""
 
     check_early_exit_oracle()
@@ -3155,8 +3171,197 @@ def check_early_exit_only(
                 strict_flags=(*C11_STRICT_FLAGS, *SANITIZER_FLAGS),
             )
             validate_report(report, required_coverage=required_coverage)
-    if include_conditional_negative:
-        check_conditional_construction_negative()
+
+
+def check_path_scoped_oracle() -> None:
+    """Prove the admitted successful paths first with Haxe's Eval interpreter."""
+
+    result = run_bounded_process(
+        [
+            development_tool("haxe"),
+            "-cp",
+            str(CONDITIONAL),
+            "-main",
+            "Main",
+            "--interp",
+        ],
+        cwd=ROOT,
+        env=haxe_environment(),
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    if result.returncode != 0 or result.stdout or result.stderr:
+        raise ConstructorLoweringFailure(
+            "pinned Haxe path-scoped constructor oracle failed\n"
+            f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
+        )
+
+
+def validate_path_scoped_project(output: Path, report: dict[str, object]) -> None:
+    """Prove sibling paths and each branch exit own the exact cleanup list."""
+
+    hxcir = required_text(report.get("hxcir"), "path-scoped HxcIR")
+    branch_sum = function_section(hxcir, "function.Main.branchSum")
+    branch_failure = function_section(hxcir, "function.Main.branchFailure")
+    sources = "\n".join(
+        path.read_text(encoding="utf-8")
+        for path in sorted((output / "src").rglob("*.c"))
+    )
+    reverse_cleanup = (
+        'cleanup=["cleanup.construction"."construction.1.initialized",'
+        '"cleanup.construction"."construction.0.initialized"]'
+    )
+    if (
+        branch_sum.count('dispatch=direct("constructor.ConditionalValue")') != 2
+        or branch_sum.count("destroy-scoped-class-owner") != 2
+        or reverse_cleanup not in branch_sum
+        or 'terminator return value=' not in branch_sum
+        or "cleanup=[]" not in branch_sum
+        or '"construction.1.partial"' not in branch_failure
+        or '"construction.0.initialized"' not in branch_failure
+        or "target=abort" not in branch_failure
+        or "bounded-stack-construction" not in json.loads(
+            (output / "hxc.runtime-plan.json").read_text(encoding="utf-8")
+        ).get("directDecisions", [])
+        or "goto " in sources
+        or "malloc(" in sources
+        or "calloc(" in sources
+        or "hxrt" in sources.lower()
+    ):
+        raise ConstructorLoweringFailure(
+            "path-scoped constructor lost branch cleanup, failure cleanup, or "
+            "runtime-free automatic storage"
+        )
+
+
+def render_path_scoped_projects(
+    fixture_root: Path,
+) -> tuple[CFixtureProject, CFixtureProject]:
+    """Render the successful branch fixture twice and compare typed-module order."""
+
+    normal = fixture_root / "path-scoped-split"
+    reverse = fixture_root / "path-scoped-split-reverse"
+    reports: list[tuple[str, dict[str, object]]] = []
+    for label, output, reverse_input in (
+        ("path-scoped constructor", normal, False),
+        ("reversed path-scoped constructor", reverse, True),
+    ):
+        result = custom_target(
+            CONDITIONAL,
+            output,
+            reverse=reverse_input,
+            report=True,
+            layout="split",
+            runtime_diagnostics="off",
+        )
+        reports.append(emitted_constructor_report(result, label))
+    if reports[0][0] != reports[1][0] or generated_tree(normal) != generated_tree(
+        reverse
+    ):
+        raise ConstructorLoweringFailure(
+            "path-scoped constructor output changed with typed-module order"
+        )
+    validate_path_scoped_project(normal, reports[0][1])
+    success_sources = tuple(
+        path.relative_to(fixture_root).as_posix()
+        for path in sorted(normal.rglob("*.c"))
+    )
+    success = CFixtureProject(
+        "constructor-path-scoped",
+        success_sources,
+        tuple(
+            path.relative_to(fixture_root).as_posix()
+            for path in sorted((normal / "include").rglob("*.h"))
+        ),
+        tuple(
+            path.relative_to(fixture_root).as_posix()
+            for path in (normal / "include", normal / "runtime" / "include")
+            if path.is_dir()
+        ),
+        "",
+        tuple(sorted((*PATH_SCOPED_NATIVE_COVERAGE, "strict-c11"))),
+    )
+    native_failure = normal / "native" / "path_scoped_failure.c"
+    native_failure.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copyfile(NATIVE / "path_scoped_failure.c", native_failure)
+    generated_main = (normal / "src" / "hxc" / "main.c").relative_to(
+        fixture_root
+    ).as_posix()
+    failure = CFixtureProject(
+        "constructor-path-scoped-failure",
+        tuple(source for source in success_sources if source != generated_main)
+        + (native_failure.relative_to(fixture_root).as_posix(),),
+        success.headers,
+        success.include_directories,
+        "",
+        (
+            "constructor-path-scoped-failure",
+            "strict-c11",
+        ),
+        expected_exit=-signal.SIGABRT,
+    )
+    return success, failure
+
+
+def check_path_scoped_only(
+    *, requested_toolchain: str, include_negatives: bool = True
+) -> None:
+    """Run the complete bounded path-scoped constructor proof."""
+
+    check_path_scoped_oracle()
+    with tempfile.TemporaryDirectory(
+        prefix="hxc-path-scoped-constructor-focused-"
+    ) as temporary:
+        root = Path(temporary)
+        fixture_root = root / "fixture"
+        success, failure = render_path_scoped_projects(fixture_root)
+        projects = (success, failure)
+        required_coverage = PATH_SCOPED_NATIVE_COVERAGE | {"strict-c11"}
+        for optimization in ("-O0", "-O2"):
+            native_report = run_c_fixture_corpus(
+                suite=f"constructor-path-scoped-{optimization[1:].lower()}",
+                projects=projects,
+                fixture_root=fixture_root,
+                build_root=root / f"c-build-{optimization[1:].lower()}",
+                repository_root=ROOT,
+                requested_toolchain=requested_toolchain,
+                strict_flags=(*C11_STRICT_FLAGS, optimization),
+            )
+            validate_report(native_report, required_coverage=required_coverage)
+        available_families = {
+            toolchain.family
+            for toolchain in resolve_toolchains(
+                requested_toolchain, repository_root=ROOT
+            )
+        }
+        if "clang" in available_families:
+            sanitized = tuple(
+                replace(project, link_arguments=("-fsanitize=address,undefined",))
+                for project in projects
+            )
+            native_report = run_c_fixture_corpus(
+                suite="constructor-path-scoped-sanitized",
+                projects=sanitized,
+                fixture_root=fixture_root,
+                build_root=root / "c-build-sanitized",
+                repository_root=ROOT,
+                requested_toolchain="clang",
+                strict_flags=(*C11_STRICT_FLAGS, *SANITIZER_FLAGS),
+            )
+            validate_report(native_report, required_coverage=required_coverage)
+        check_cpp_consumers(
+            root / "cpp-build",
+            requested_toolchain=requested_toolchain,
+            consumers=((
+                "path-scoped",
+                (fixture_root / "path-scoped-split" / "include",),
+                NATIVE / "path_scoped_header_cpp.cpp",
+            ),),
+        )
+    if include_negatives:
+        check_path_scoped_negatives()
 
 
 def check_factory_return_only(*, requested_toolchain: str) -> None:
@@ -4116,6 +4321,7 @@ def parse_args(arguments: Iterable[str]) -> argparse.Namespace:
     parser.add_argument("--owned-fallible-only", action="store_true")
     parser.add_argument("--factory-return-only", action="store_true")
     parser.add_argument("--early-exit-only", action="store_true")
+    parser.add_argument("--path-scoped-only", action="store_true")
     parser.add_argument("--final-primitive-only", action="store_true")
     parser.add_argument("--negative-only", action="store_true")
     return parser.parse_args(list(arguments))
@@ -4202,8 +4408,15 @@ def main(arguments: Iterable[str] = ()) -> int:
             check_early_exit_only(requested_toolchain=args.toolchain)
             print(
                 "constructor-lowering: OK: root guard Eval/C11/sanitizer/"
-                "determinism matrix passed and branch-local construction "
-                "remained fail-closed"
+                "determinism matrix passed"
+            )
+            return 0
+        if args.path_scoped_only:
+            check_path_scoped_only(requested_toolchain=args.toolchain)
+            print(
+                "constructor-lowering: OK: path-scoped statement branches "
+                "preserved Eval/HxcIR/reverse-cleanup/failure/determinism/"
+                "C11/C++17/sanitizer behavior and rejected escaping shapes"
             )
             return 0
         if args.final_primitive_only:
@@ -4243,9 +4456,10 @@ def main(arguments: Iterable[str] = ()) -> int:
                 )
         check_snapshots(first)
         check_eval_oracle()
-        check_early_exit_only(
+        check_early_exit_only(requested_toolchain=args.toolchain)
+        check_path_scoped_only(
             requested_toolchain=args.toolchain,
-            include_conditional_negative=False,
+            include_negatives=False,
         )
         check_minimal_example()
         check_native(first, requested_toolchain=args.toolchain)
