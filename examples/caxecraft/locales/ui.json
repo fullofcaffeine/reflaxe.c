@@ -547,6 +547,13 @@
       }
     },
     {
+      "id": "editor_text_complete",
+      "text": {
+        "en": "COMPLETE",
+        "es-MX": "COMPLETAR"
+      }
+    },
+    {
       "id": "editor_text_delete_line",
       "text": {
         "en": "DELETE LINE",
@@ -563,8 +570,8 @@
     {
       "id": "editor_text_help",
       "text": {
-        "en": "SELECT A LINE, EDIT IT BELOW, THEN APPLY. INVALID TEXT STAYS HERE.",
-        "es-MX": "ELIGE UNA LÍNEA, EDÍTALA ABAJO Y APLICA. EL TEXTO INVÁLIDO SE QUEDA AQUÍ."
+        "en": "EDIT A LINE; RIGHT COMPLETES AND LEFT JUMPS TO ITS OBJECT. INVALID TEXT STAYS HERE.",
+        "es-MX": "EDITA UNA LÍNEA; DERECHA COMPLETA E IZQUIERDA VA A SU OBJETO. EL TEXTO INVÁLIDO SE QUEDA AQUÍ."
       }
     },
     {
@@ -572,6 +579,13 @@
       "text": {
         "en": "FIX THE MARKED SOURCE; THE VISUAL DRAFT DID NOT CHANGE",
         "es-MX": "CORRIGE EL CÓDIGO MARCADO; EL BORRADOR VISUAL NO CAMBIÓ"
+      }
+    },
+    {
+      "id": "editor_text_jump",
+      "text": {
+        "en": "JUMP TO OBJECT",
+        "es-MX": "IR AL OBJETO"
       }
     },
     {

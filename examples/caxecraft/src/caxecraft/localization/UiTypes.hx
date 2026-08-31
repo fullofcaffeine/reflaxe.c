@@ -53,10 +53,12 @@ enum abstract UiMessage(String) {
 	var EditorTextApply = "editor_text_apply";
 	var EditorTextClean = "editor_text_clean";
 	var EditorTextClose = "editor_text_close";
+	var EditorTextComplete = "editor_text_complete";
 	var EditorTextDeleteLine = "editor_text_delete_line";
 	var EditorTextDirty = "editor_text_dirty";
 	var EditorTextHelp = "editor_text_help";
 	var EditorTextInvalid = "editor_text_invalid";
+	var EditorTextJump = "editor_text_jump";
 	var EditorTextReset = "editor_text_reset";
 	var EditorTextStale = "editor_text_stale";
 	var EditorTextTitle = "editor_text_title";

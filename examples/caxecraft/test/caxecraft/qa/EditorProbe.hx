@@ -92,6 +92,9 @@ import caxecraft.editor.EditorSession;
 import caxecraft.editor.EditorTextAuthoring.EditorTextDocument;
 import caxecraft.editor.EditorTextAuthoring.EditorTextDocumentOpenResult;
 import caxecraft.editor.EditorTextAuthoring.EditorTextEditResult;
+import caxecraft.editor.EditorTextAssistance.applyEditorTextCompletion;
+import caxecraft.editor.EditorTextAssistance.editorTextCompletions;
+import caxecraft.editor.EditorTextAssistance.editorTextWorldReferences;
 import caxecraft.editor.EditorTypes.EditorCommand;
 import caxecraft.editor.EditorTypes.EditorCommandFamily;
 import caxecraft.editor.EditorTypes.EditorChangeId;
@@ -400,6 +403,30 @@ final class EditorProbe {
 			extensions: [{feature: extensionFeature, id: id("text.extension"), data: "advanced=true"}]
 		};
 		final expected = ScenarioWriter.write(advanced);
+		final assistanceContent:EditorFlowContentChoices = {
+			blocks: [STONE],
+			items: [content("caxecraft:berry")],
+			states: [content("caxecraft:active")],
+			effects: [content("caxecraft:spark")],
+			signals: [signal]
+		};
+		final actionSyntax = editorTextCompletions("  do spa", advanced, assistanceContent);
+		require(actionSyntax.length == 1 && actionSyntax[0].replacement == "spawn", "advanced completion drifted from the action registry");
+		require(applyEditorTextCompletion("  do spa", actionSyntax[0]) == "  do spawn", "advanced completion changed bytes outside the active token");
+		final eventSyntax = editorTextCompletions("  when int", advanced, assistanceContent);
+		require(eventSyntax.length == 1
+			&& eventSyntax[0].replacement == "interact", "advanced completion drifted from the event registry");
+		final predicateSyntax = editorTextCompletions("  if cou", advanced, assistanceContent);
+		require(predicateSyntax.length == 1
+			&& predicateSyntax[0].replacement == "counter", "advanced completion drifted from the predicate registry");
+		final objectIdentity = editorTextCompletions("  do spawn pla", advanced, assistanceContent);
+		require(objectIdentity.length == 1
+			&& objectIdentity[0].replacement == PLAYER.text(), "advanced completion did not use typed scenario identities");
+		final references = editorTextWorldReferences('  do spawn ${PLAYER.text()}', advanced);
+		require(references.length == 1 && references[0].text() == PLAYER.text(), "advanced world jump did not resolve the typed object identity");
+		require(editorTextWorldReferences('title "${PLAYER.text()}" # ${PLAYER.text()}', advanced).length == 0,
+			"advanced world jump treated quoted prose or a comment as an object reference");
+		require(editorTextCompletions("  do spa # draft note", advanced, assistanceContent).length == 0, "advanced completion rewrote a source comment");
 		final sourceDocument = openTextDocument(expected);
 		expectTextEdit(sourceDocument.insertLineAfter(0, "# retained until successful Apply"), "insert text comment");
 		final destination = open(defaultEditorSettings());

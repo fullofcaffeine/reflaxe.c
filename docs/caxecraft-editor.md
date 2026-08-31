@@ -255,14 +255,24 @@ complete line, then use Apply + Format to publish valid source as one undoable
 document change. Add Line and Delete Line change only the isolated source
 draft. Reset from Visual discards those source-only edits.
 
+Complete replaces only the final bare token on the selected line. Event,
+condition, and action words come from the same typed registries used by the
+parser, cards, validator, and runtime. Compatible IDs come from the current
+typed scenario and validated content registry. The helper never invents a
+second syntax catalog. With keyboard or controller navigation, Right applies
+the first matching completion. Left selects the first world object named by
+the line and returns to the 3D view. Quoted text and comments are not treated
+as object references.
+
 Apply runs the public UTF-8 decoder, lexer, parser, semantic validator, and
 canonical writer. A source-located diagnostic selects the first failing line.
 Malformed, incomplete, oversized, stale, or semantically invalid source stays
 in Text and leaves the visual model, history, selection, and Test Play snapshot
 unchanged. A successful Apply refreshes every visual view from the one typed
 scenario. Syntax colors distinguish structural records, flow events,
-conditions, and actions. Registry completion and jump-to-world references
-remain planned work.
+conditions, and actions. Completion can leave a line incomplete because the
+creator must still fill its typed arguments. Such text remains an isolated
+draft until the ordinary Apply validation succeeds.
 
 Plan is an advanced tool for hidden layers, trigger volumes, logic links, large
 selections, and fast navigation. It is not the default authoring experience.
@@ -520,9 +530,9 @@ icon-and-sentence cards, templates, and world picking. **Advanced visual** mode
 will reveal nested predicates, event context, variables, branches, sequences,
 and timing while preserving those cards. **Text** mode now edits the exact
 bounded CaxeMap/CaxeFlow source. It provides line editing, syntax colors,
-canonical formatting, and source-positioned diagnostics. It is useful for
-experienced creators and automation agents. Shared-registry completion and
-jump-to-world references remain planned.
+canonical formatting, source-positioned diagnostics, shared-registry
+completion, and jump-to-world references. It is useful for experienced
+creators and automation agents.
 
 Moving between views must parse and validate the same model. Text mode cannot
 call a mechanic unavailable to cards, and the visual views cannot flatten or
@@ -538,8 +548,7 @@ fades, choices, and persistent CaxeFlow changes. Normal and skip previews must
 reach the same required persistent state and restore camera and controls. The
 remaining visual depth is tracked under `haxe_c-xge.19.6` and cinematic
 authoring under `haxe_c-xge.20.3`. The current native trigger-card slice does not
-yet provide the complete card library, advanced visual tree, registry-backed
-text completion, jump-to-world references, or cinematic timeline.
+yet provide the complete advanced visual tree or cinematic timeline.
 
 ## Executable evidence
 

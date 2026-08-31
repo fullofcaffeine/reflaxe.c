@@ -40,6 +40,9 @@ import caxecraft.editor.EditorTextAuthoring.EditorTextDocument;
 import caxecraft.editor.EditorTextAuthoring.EditorTextDocumentError;
 import caxecraft.editor.EditorTextAuthoring.EditorTextDocumentOpenResult;
 import caxecraft.editor.EditorTextAuthoring.EditorTextEditResult;
+import caxecraft.editor.EditorTextAssistance.applyEditorTextCompletion;
+import caxecraft.editor.EditorTextAssistance.editorTextCompletions;
+import caxecraft.editor.EditorTextAssistance.editorTextWorldReferences;
 import caxecraft.editor.EditorEnvironment.EditorEnvironmentControl;
 import caxecraft.editor.EditorEnvironment.EditorEnvironmentDirection;
 import caxecraft.editor.EditorEnvironment.editEnvironment;
@@ -1020,9 +1023,15 @@ final class CaxecraftEditorScreen {
 		final lineEditor = textLineEditor;
 		if (lineEditor != null) {
 			Raylib.DrawTextString('${textSelectedLine + 1}', panelLeft + 20, editorTop + 9, 14, Color.rgba(126, 205, 209));
-			final result = lineEditor.draw(Rectangle.fromFloat(panelLeft + 68, editorTop, panelWidth - 88, 34));
+			final result = lineEditor.draw(Rectangle.fromFloat(panelLeft + 68, editorTop, panelWidth - 350, 34));
 			if (result.has(GuiResult.Pressed) && !lineEditor.isEditing())
 				commitTextLine();
+			if (Raygui.ButtonString(Rectangle.fromFloat(panelLeft + panelWidth - 272, editorTop, 116, 34), uiCatalog.text(locale, UiMessage.EditorTextComplete))
+				.has(GuiResult.Pressed))
+				completeTextLine();
+			if (Raygui.ButtonString(Rectangle.fromFloat(panelLeft + panelWidth - 146, editorTop, 126, 34), uiCatalog.text(locale, UiMessage.EditorTextJump))
+				.has(GuiResult.Pressed))
+				jumpToTextWorldReference();
 		}
 		final statusTop = editorTop + 44;
 		final statusMessage = switch textNotice {
@@ -1141,6 +1150,40 @@ final class CaxecraftEditorScreen {
 				textNotice = TextInvalid;
 				false;
 		}
+	}
+
+	/** Complete the final source token from the shared registries or typed draft. */
+	function completeTextLine():Bool {
+		final lineEditor = textLineEditor;
+		final draft = currentDraftScenario();
+		if (lineEditor == null || draft == null)
+			return false;
+		final choices = editorTextCompletions(lineEditor.text(), draft, flowContentChoices);
+		if (choices.length == 0)
+			return false;
+		if (!lineEditor.replace(applyEditorTextCompletion(lineEditor.text(), choices[0]))) {
+			textNotice = TextInvalid;
+			return false;
+		}
+		lineEditor.setEditing(true);
+		return commitTextLine();
+	}
+
+	/** Select the first typed world object named on the current source line. */
+	function jumpToTextWorldReference():Bool {
+		final document = textDocument;
+		final draft = currentDraftScenario();
+		if (document == null || draft == null || !commitTextLine())
+			return false;
+		final line = document.lineAt(textSelectedLine);
+		if (line == null)
+			return false;
+		final references = editorTextWorldReferences(line, draft);
+		if (references.length == 0)
+			return false;
+		closeTextWorkspace();
+		selectObject(references[0]);
+		return selectedObjectIndex() >= 0;
 	}
 
 	/** Insert one blank source line and move editing focus to it. */
@@ -2096,10 +2139,14 @@ final class CaxecraftEditorScreen {
 		if (document == null)
 			return;
 		switch command {
-			case Up | Left:
+			case Up:
 				selectTextLine(textSelectedLine > 0 ? textSelectedLine - 1 : document.lineCount() - 1);
-			case Down | Right:
+			case Down:
 				selectTextLine(textSelectedLine + 1 < document.lineCount() ? textSelectedLine + 1 : 0);
+			case Right:
+				completeTextLine();
+			case Left:
+				jumpToTextWorldReference();
 			case Confirm:
 				final editor = textLineEditor;
 				if (editor != null)
@@ -4130,6 +4177,30 @@ final class CaxecraftEditorScreen {
 			return false;
 		openTextWorkspace();
 		var document = textDocument;
+		if (document == null)
+			return false;
+		final completionLine = pilotTextLineStartingWith(document, "end-map");
+		if (completionLine < 0)
+			return false;
+		selectTextLine(completionLine);
+		if (!lineEditor.replace("  do spa"))
+			return false;
+		lineEditor.setEditing(false);
+		applyTextNavigation(NavigationCommand.Right);
+		if (document.lineAt(completionLine) != "  do spawn" || !resetTextWorkspace())
+			return false;
+		document = textDocument;
+		if (document == null)
+			return false;
+		final objectLine = pilotTextLineStartingWith(document, "object ");
+		if (objectLine < 0)
+			return false;
+		selectTextLine(objectLine);
+		applyTextNavigation(NavigationCommand.Left);
+		if (textWorkspaceOpen || selectedObjectIndex() < 0)
+			return false;
+		openTextWorkspace();
+		document = textDocument;
 		if (document == null)
 			return false;
 		final titleLine = pilotTextLineStartingWith(document, "title ");
