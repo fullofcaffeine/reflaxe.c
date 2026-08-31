@@ -512,12 +512,20 @@ Only trigger volumes show zone connection and overlap controls. The current
 compact controls can switch enter/leave, replace a condition with a picked
 event actor or `Always`, insert a picked-object `Spawn` action, switch `Spawn`
 and `Despawn`, reorder or remove actions, and replace compatible object
-references by selecting the object in the world. The renderer-independent command also
-supports replacing any closed event, predicate, or admitted action plus changing
-priority and repeat policy. Every gesture commits the ordinary `PutRule`
+references by selecting the object in the world. The renderer-independent
+command also supports replacing any closed event, predicate, or admitted action
+plus changing priority and repeat policy. Every gesture commits the ordinary `PutRule`
 command, so Undo, Redo, validation, save, and Advanced mode observe the same
 CaxeFlow data. A world-pick gesture records the document revision and rejects a
 stale target instead of applying it to a changed card.
+
+Card libraries and document-reference pickers share one semantic cursor.
+Up/Left and Down/Right move cyclically, Confirm chooses the highlighted enabled
+row, and Cancel closes the modal. The mouse wheel moves the same cursor, and a
+mouse click returns the same typed result.
+At smaller supported windows, the modal draws only complete rows and follows
+the cursor through the full registry-derived list, so later actions do not clip
+outside the panel.
 
 The shared renderer-independent trace projection bounds and classifies source,
 predicate, action, and deferred-event rows. Native Test Play retains the latest
