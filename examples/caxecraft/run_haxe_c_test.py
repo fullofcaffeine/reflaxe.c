@@ -90,6 +90,7 @@ class HaxeCTestCase:
     native_defines: tuple[str, ...] = ()
     haxe_defines: tuple[str, ...] = ()
     native_runs_from_case_root: bool = False
+    compile_javascript: bool = False
     eval_timeout_seconds: int = 30
     c_build_timeout_seconds: int = 60
     native_timeout_seconds: int = 20
@@ -1215,6 +1216,55 @@ CASES = {
         output_line_count=2,
         success_line="0",
     ),
+    "cross-target-adapter": HaxeCTestCase(
+        case_id="cross-target-adapter",
+        eval_hxml="cross-target-adapter.hxml",
+        c_hxml="cross-target-adapter-c.hxml",
+        native_harness="test/native/cross_target_adapter_harness.c",
+        generated_source="src/modules/caxecraft/adapterprobe/AdapterRules.c",
+        required_source_markers=(
+            "AdapterRules_sourceRootScore",
+            "AdapterRules_interfaceScore",
+            "hxc_l_port.table->",
+            "AdapterRules_conditionalScore",
+            "uint8_t hxc_l_normalized",
+        ),
+        forbidden_source_markers=("malloc(", "hxrt_", "goto "),
+        output_line_count=1,
+        success_line="0",
+        split_source_checks=(
+            GeneratedSourceCheck(
+                path="src/modules/caxecraft/adapterprobe/AdapterArchitectureProbe.c",
+                required_markers=(
+                    "AdapterArchitectureProbe_selfCheck",
+                    "AdapterRules_sourceRootScore",
+                    "hxc_l_tmp_object_storage",
+                ),
+                forbidden_markers=("malloc(", "hxrt_", "goto "),
+            ),
+            GeneratedSourceCheck(
+                path=(
+                    "src/modules/caxecraft/adapterprobe/interfaceport/"
+                    "SelectedNormalizationPort.c"
+                ),
+                required_markers=(
+                    "SelectedNormalizationPort_normalize",
+                    "uint8_t hxc_l_normalized",
+                ),
+                forbidden_markers=("malloc(", "hxrt_", "goto "),
+            ),
+            GeneratedSourceCheck(
+                path="src/modules/caxecraft/adapterprobe/OwnedCarrierProbe.c",
+                required_markers=(
+                    "OwnedCarrierProbe_view",
+                    "hxc_base.hxc_world",
+                    "hxc_l_returned_span_length = 32768",
+                ),
+                forbidden_markers=("malloc(", "hxrt_", "goto "),
+            ),
+        ),
+        compile_javascript=True,
+    ),
     "session": HaxeCTestCase(
         case_id="session",
         eval_hxml="session.hxml",
@@ -1231,6 +1281,8 @@ CASES = {
             "GameSession_reviveLocalPlayerAt",
             "GameSession_useSelectedRecovery",
             "GameSession_view",
+            "hxc_base.hxc_worldStorage",
+            "hxc_base.hxc_authoredItemStorage",
             "hxc_completedTicks",
             "hxc_tickIndex",
         ),
@@ -1259,6 +1311,14 @@ CASES = {
                     "ActorIdentityPlanner_actorEntityId",
                     "ActorIdentityPlanner_planActorIdentities",
                     "ActorIdentityPlanResult_Rejected",
+                ),
+                forbidden_markers=("goto ",),
+            ),
+            GeneratedSourceCheck(
+                path="src/modules/caxecraft/domain/WaterSimulation.c",
+                required_markers=(
+                    "WaterSimulation_tick",
+                    "hxc_base.hxc_pendingStorage",
                 ),
                 forbidden_markers=("goto ",),
             ),
@@ -1620,6 +1680,91 @@ def validate_resolved_level_privacy(test_case: HaxeCTestCase) -> None:
         raise HaxeCTestFailure(
             "private resolved level plan leaked into authoring/editor/package code: "
             + ", ".join(violations)
+        )
+
+
+def validate_cross_target_source_boundary(test_case: HaxeCTestCase) -> None:
+    """Keep ordinary game rules free of target selection and foreign APIs."""
+
+    if test_case.case_id != "cross-target-adapter":
+        return
+    adapter_modules = {
+        "AuthoredItemView.hx",
+        "SessionStorageBase.hx",
+        "WaterStorageBase.hx",
+        "WaterPendingCells.hx",
+        "WaterPendingStorage.hx",
+        "WorldCells.hx",
+        "WorldStorage.hx",
+        "WorldView.hx",
+        "WorldViewStorage.hx",
+    }
+    evidence_modules = {"CaxecraftTrace.hx"}
+    ordinary_sources = [
+        path
+        for path in (CASE_ROOT / "src/caxecraft/domain").glob("*.hx")
+        if path.name not in adapter_modules | evidence_modules
+    ]
+    ordinary_sources.extend(
+        path for path in (CASE_ROOT / "src/caxecraft/scenario").rglob("*.hx")
+    )
+    ordinary_sources.extend(
+        path
+        for path in (CASE_ROOT / "src/caxecraft/localization").rglob("*.hx")
+        if path.name != "LocalizationText.hx"
+    )
+    forbidden = (
+        re.compile(r"^\s*#if\b", re.MULTILINE),
+        re.compile(r"^\s*import\s+(?:c|raylib)\.", re.MULTILINE),
+        re.compile(r"\b(?:c|raylib)\.[A-Z][A-Za-z0-9_]*"),
+    )
+    for source in sorted(ordinary_sources):
+        source_text = source.read_text(encoding="utf-8")
+        for pattern in forbidden:
+            if pattern.search(source_text):
+                raise HaxeCTestFailure(
+                    f"{source.relative_to(CASE_ROOT)} crosses the portable core "
+                    f"boundary: {pattern.pattern}"
+                )
+
+
+def validate_javascript_compile(
+    test_case: HaxeCTestCase, eval_hxml: Path, temporary_root: Path
+) -> None:
+    """Compile the Eval probe's shared source with the official JavaScript target."""
+
+    if not test_case.compile_javascript:
+        return
+    installation = pinned_haxe_installation()
+    verify_pinned_haxe(installation)
+    arguments = list(resolve_haxe_arguments((eval_hxml.name,), locale="C"))
+    if arguments.count("--interp") != 1:
+        raise HaxeCTestFailure(
+            f"{test_case.case_id} expected one --interp argument before JS selection"
+        )
+    arguments.remove("--interp")
+    if arguments.count("-main") != 1:
+        raise HaxeCTestFailure(
+            f"{test_case.case_id} expected one -main argument before JS selection"
+        )
+    main_index = arguments.index("-main")
+    if main_index + 1 >= len(arguments):
+        raise HaxeCTestFailure(
+            f"{test_case.case_id} found -main without a module name"
+        )
+    arguments[main_index + 1] = "caxecraft.adapterprobe.AdapterArchitectureProbe"
+    javascript = temporary_root / f"{test_case.case_id}.js"
+    arguments.extend(("--js", str(javascript)))
+    run(
+        [str(installation.compiler), *arguments],
+        cwd=CASE_ROOT,
+        timeout=test_case.eval_timeout_seconds,
+        label=f"{test_case.case_id} JavaScript compile",
+        environment=pinned_haxe_environment("C", installation),
+    )
+    if not javascript.is_file() or javascript.stat().st_size == 0:
+        raise HaxeCTestFailure(
+            f"{test_case.case_id} JavaScript target emitted no program"
         )
 
 
@@ -2079,6 +2224,7 @@ def execute(
 
     validate_embedded_source(test_case)
     validate_resolved_level_privacy(test_case)
+    validate_cross_target_source_boundary(test_case)
     eval_hxml = checked_case_path(test_case.eval_hxml, "Eval HXML")
     c_hxml = checked_case_path(test_case.c_hxml, "C HXML")
     harness = checked_case_path(test_case.native_harness, "native harness")
@@ -2110,6 +2256,7 @@ def execute(
             ),
         ).stdout
         validate_oracle(test_case, oracle)
+        validate_javascript_compile(test_case, eval_hxml, temporary_root)
         if eval_archive is not None:
             validate_package_zip_archive(eval_archive)
 

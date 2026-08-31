@@ -45,13 +45,16 @@ code imitate C manually. Typed low-level APIs belong at focused boundaries
 where representation really matters, such as Raylib interop, fixed hot-path
 buffers, borrowed views, or measured performance-sensitive world storage.
 
-Today, `WorldCells` and `WorldStorage` form the main-world storage boundary:
-the C build uses a stack-backed `CArray<UInt8>`/`Span<UInt8>` while Eval uses
-`Array<Int>`. The water scheduler uses the same focused pattern for its fixed
-pending-work buffer. Those narrow adapters keep gameplay readable and give the
-compiler realistic, allocation-free C workloads without hiding C behind a
-portability framework. The Raylib-facing application modules separately use
-target conditionals where the foreign ABI requires C-specific value types.
+Today, `SessionStorageBase` selects the session carriers. `WaterStorageBase`
+selects the fixed scheduler marks. `GameSession` and `WaterSimulation` inherit
+these fields and own their lifetime directly.
+
+The C build embeds fixed `CArray` values and lends typed spans. Eval uses
+initialized `Array<Int>` values for the same shared rules. `GameSession`,
+`WaterSimulation`, and `WorldRead` contain no target branches.
+
+These adapters give the compiler realistic, allocation-free C workloads. The
+Raylib-facing application remains a separate C-only adapter.
 Choosing the `metal` profile does not change ordinary Haxe semantics:
 `Array.copy()`, for example, must still produce a distinct shallow-copied Array.
 The source chooses a visible typed `c.*` carrier when it genuinely wants
@@ -242,15 +245,13 @@ gameplay on either side remains normal high-level Haxe.
 
 The current conditionals are deliberately narrow:
 
-- `WorldCells` selects compact borrowed `Span<UInt8>` storage for C and an
-  ordinary `Array<Int>` fallback for the Haxe oracle;
-- `WorldStorage` performs the exact C integer conversions required by that
-  carrier;
+- `WorldCells`, `WorldView`, and `AuthoredItemView` select borrowed view types.
+- `SessionStorageBase` selects the session carriers.
+- `WorldStorage` and `WorldViewStorage` own exact C integer conversions.
 - `CaxecraftTrace` and `DomainProbe` construct fixed C storage or ordinary Haxe
   test storage and choose the appropriate output plumbing;
-- `WaterPendingOwner` selects the live queue embedded in `WaterSimulation`,
-  while `WaterPendingCells`, the tiny storage adapter, and `WaterProbe` select
-  short-lived snapshot/test views over the same deterministic marks.
+- `WaterStorageBase` owns live queue marks, while `WaterPendingCells` and
+  `WaterPendingStorage` own snapshot views and conversion.
 
 Terrain generation, block rules, DDA picking, player collision, and trace
 hashing contain no target conditional. The non-C path is tested under pinned
@@ -267,6 +268,15 @@ target branches throughout gameplay or impose one universal rendering API/IR.
 Only abstractions demonstrated by at least two working adapters should move
 into shared code. The detailed boundary rules, limitations, and migration
 sequence live in [the domain design](../../docs/caxecraft-domain.md).
+
+Run the focused adapter proof from the repository root:
+
+```sh
+npm run test:caxecraft-cross-target-adapter
+```
+
+The command compiles one shared rule with Eval, JavaScript, and generated C.
+It also inspects direct calls, interface dispatch, storage, and runtime use.
 
 A new `#if c` is justified only when a compile-time representation, ABI, native
 resource, or platform service truly differs. It is not a shortcut for missing
