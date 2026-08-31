@@ -398,17 +398,21 @@
       "status": "implemented",
       "disposition": "available",
       "summary": "Thirteen typed diagnostic IDs and deterministic schema-1 records are registry- and drift-checked.",
-      "scope": "Current bootstrap, configuration, lowering, runtime, target-contract, and internal failures use the target-owned catalog.",
+      "scope": "Current bootstrap, configuration, lowering, runtime, target-contract, and internal failures use the target-owned catalog. The hxc response adapts compiler and CLI failures into ordered public events with exact command and attachment facts.",
       "evidence": [
         "docs/specs/diagnostics.json",
+        "docs/adr/0010-hxc-diagnostic-event-framing.md",
+        "schemas/hxc-diagnostic-event.schema.json",
         "scripts/ci/check_diagnostic_policy.py",
-        "test/diagnostics/run.py"
+        "test/diagnostics/run.py",
+        "test/hxc_cli/run.py"
       ],
       "owners": [
-        "E0.T06"
+        "E0.T06",
+        "E8.T09"
       ],
       "limitations": [
-        "The public hxc JSON event stream, command context, and native-tool attachments remain unimplemented."
+        "Future build, test, ABI, and packaged-native commands must adopt the same event adapter when their owning tasks implement those commands."
       ]
     },
     {
@@ -589,7 +593,7 @@
       "area": "cli",
       "status": "implemented",
       "disposition": "available",
-      "summary": "The Eval bootstrap exposes deterministic project templates, stable command routing, help/version behavior, exit categories, schema-1 JSON framing, inspection, and schema-4 Clang semantic and ABI lock capture.",
+      "summary": "The Eval bootstrap exposes deterministic project templates, stable command routing, help/version behavior, exit categories, schema-2 JSON responses with schema-1 diagnostic events, inspection, and schema-4 Clang semantic and ABI lock capture.",
       "scope": "The router creates reviewed app, C export-intent library, and freestanding projects without implicit overwrites, and delegates inspection and bindgen through typed command owners. Bindgen records exact preprocessing inputs, a canonical Clang AST, primitive facts, and target-measured aggregate layouts. Direct Haxe/HXML remains the authoritative compiler path.",
       "evidence": [
         "src/Run.hx",
@@ -600,6 +604,7 @@
         "src/hxc/bindgen/HxcBindgenAbiModel.hx",
         "src/hxc/bindgen/HxcBindgenAggregateModel.hx",
         "docs/hxc-cli.md",
+        "schemas/hxc-diagnostic-event.schema.json",
         "schemas/hxc-cli-response.schema.json",
         "test/hxc_cli/run.py",
         "test/hxc_new/run.py"

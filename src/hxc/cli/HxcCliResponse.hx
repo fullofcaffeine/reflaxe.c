@@ -3,7 +3,7 @@ package hxc.cli;
 import haxe.Json;
 import hxc.cli.HxcCliDiagnostic.HxcCliDiagnosticJson;
 
-/** Schema-1 JSON shape emitted as the only stdout value in JSON mode. */
+/** Schema-2 JSON shape emitted as the only stdout value in JSON mode. */
 typedef HxcCliResponseJson = {
 	final schemaVersion:Int;
 	final command:String;
@@ -23,7 +23,7 @@ typedef HxcCliResponseJson = {
 	extra value to JSON stdout accidentally.
 **/
 class HxcCliResponse {
-	public static inline final SCHEMA_VERSION = 1;
+	public static inline final SCHEMA_VERSION = 2;
 
 	public final json:Bool;
 	public final command:String;

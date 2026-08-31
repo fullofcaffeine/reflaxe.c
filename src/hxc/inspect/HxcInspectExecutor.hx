@@ -2,11 +2,14 @@ package hxc.inspect;
 
 import hxc.cli.HxcCliCommand;
 import hxc.cli.HxcCliDiagnostic;
+import hxc.cli.HxcCliDiagnostic.HxcCliDiagnosticCommand;
+import hxc.cli.HxcCliDiagnostic.HxcCliDiagnosticPhase;
 import hxc.cli.HxcCliExecution;
 import hxc.cli.HxcCliExecutor;
 import hxc.cli.HxcCliExitCategory;
 import hxc.cli.HxcCliRequest;
 import hxc.config.HxcJsonCodec.renderJson;
+import reflaxe.c.CDiagnostic.CDiagnosticSeverity;
 
 /**
 	Own the read-only `hxc inspect` command while later product commands remain unavailable.
@@ -30,9 +33,9 @@ class HxcInspectExecutor implements HxcCliExecutor {
 			final body = renderJson(report, !request.json) + "\n";
 			return new HxcCliExecution(HxcCliExitCategory.Success, 0, body, "");
 		} catch (error:HxcInspectError) {
-			return failure(error.category, error.code, error.message, error.remediation);
+			return failure(request, error.category, error.code, error.message, error.remediation);
 		} catch (error:haxe.Exception) {
-			return failure(HxcCliExitCategory.Internal, "HXC-CLI-0799", "inspection failed before it could produce a trusted report",
+			return failure(request, HxcCliExitCategory.Internal, "HXC-CLI-0799", "inspection failed before it could produce a trusted report",
 				"Check the manifest and filesystem permissions, then retry.");
 		}
 	}
@@ -70,8 +73,17 @@ class HxcInspectExecutor implements HxcCliExecutor {
 	function usage<T>(message:String, remediation:String):T
 		throw new HxcInspectError(HxcCliExitCategory.Usage, "HXC-CLI-0701", message, remediation);
 
-	function failure(category:HxcCliExitCategory, code:String, message:String, remediation:String):HxcCliExecution
-		return new HxcCliExecution(category, category.code(), "", "", null, null, [new HxcCliDiagnostic(code, message, remediation)]);
+	function failure(request:HxcCliRequest, category:HxcCliExitCategory, code:String, message:String, remediation:String):HxcCliExecution
+		return new HxcCliExecution(category, category.code(), "", "", null, null, [
+			new HxcCliDiagnostic({
+				id: code,
+				severity: CDiagnosticSeverity.Error,
+				phase: HxcCliDiagnosticPhase.Cli,
+				message: message,
+				remediation: remediation,
+				commandContext: new HxcCliDiagnosticCommand(request.command, request.arguments)
+			})
+		]);
 
 	function reportRemediation():String
 		return 'Choose one of: ${HxcInspectReport.all().join(", ")}.';

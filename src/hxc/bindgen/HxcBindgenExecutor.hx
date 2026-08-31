@@ -4,10 +4,16 @@ import hxc.bindgen.HxcBindgenOptions.HxcBindgenDefine;
 import hxc.bindgen.HxcBindgenOptions.HxcBindgenLanguage;
 import hxc.cli.HxcCliCommand;
 import hxc.cli.HxcCliDiagnostic;
+import hxc.cli.HxcCliDiagnostic.HxcCliDiagnosticAttachment;
+import hxc.cli.HxcCliDiagnostic.HxcCliDiagnosticAttachmentChannel;
+import hxc.cli.HxcCliDiagnostic.HxcCliDiagnosticAttachmentSource;
+import hxc.cli.HxcCliDiagnostic.HxcCliDiagnosticCommand;
+import hxc.cli.HxcCliDiagnostic.HxcCliDiagnosticPhase;
 import hxc.cli.HxcCliExecution;
 import hxc.cli.HxcCliExecutor;
 import hxc.cli.HxcCliExitCategory;
 import hxc.cli.HxcCliRequest;
+import reflaxe.c.CDiagnostic.CDiagnosticSeverity;
 
 /** Parse and execute the semantic-lock stage of `hxc bindgen`. */
 class HxcBindgenExecutor implements HxcCliExecutor {
@@ -26,15 +32,30 @@ class HxcBindgenExecutor implements HxcCliExecutor {
 			final stdout = request.json || options.dryRun ? result.lockText : 'hxc bindgen: wrote ${result.outputPath}\n';
 			return new HxcCliExecution(HxcCliExitCategory.Success, 0, stdout, result.childStderr);
 		} catch (error:HxcBindgenError) {
-			return new HxcCliExecution(error.category, error.category.code(), "", error.childStderr, null, null,
-				[new HxcCliDiagnostic(error.code, error.message, error.remediation)]);
+			return new HxcCliExecution(error.category, error.category.code(), "", error.childStderr, null, null, [
+				diagnostic(request, error.code, error.message, error.remediation, error.childStderr)
+			]);
 		} catch (_:haxe.Exception) {
 			return new HxcCliExecution(HxcCliExitCategory.Internal, HxcCliExitCategory.Internal.code(), "", "", null, null, [
-				new HxcCliDiagnostic("HXC-CLI-0899", "bindgen failed before it could publish a trusted semantic lock",
-					"Check filesystem permissions and the selected Clang installation, then retry.")
+				diagnostic(request, "HXC-CLI-0899", "bindgen failed before it could publish a trusted semantic lock",
+					"Check filesystem permissions and the selected Clang installation, then retry.", "")
 			]);
 		}
 	}
+
+	/** Preserve exact Clang stderr inside the standalone machine event. */
+	function diagnostic(request:HxcCliRequest, id:String, message:String, remediation:String, childStderr:String):HxcCliDiagnostic
+		return new HxcCliDiagnostic({
+			id: id,
+			severity: CDiagnosticSeverity.Error,
+			phase: HxcCliDiagnosticPhase.Bindgen,
+			message: message,
+			remediation: remediation,
+			commandContext: new HxcCliDiagnosticCommand(request.command, request.arguments),
+			attachments: childStderr == "" ? [] : [
+				new HxcCliDiagnosticAttachment(HxcCliDiagnosticAttachmentSource.Bindgen, HxcCliDiagnosticAttachmentChannel.Stderr, "clang", childStderr)
+			]
+		});
 
 	function parseArguments(arguments:Array<String>):HxcBindgenOptions {
 		if (arguments.length == 0 || StringTools.startsWith(arguments[0], "-"))

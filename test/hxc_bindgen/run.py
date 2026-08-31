@@ -625,6 +625,31 @@ def check_diagnostics_and_input_drift(temporary: Path) -> None:
     envelope = json.loads(result.stdout)
     require(envelope.get("exitCategory") == "command" and "widget.h:19:" in str(envelope.get("stderr")), "source file and line were lost")
     require("widget.h:19:" in result.stderr and "HXC-CLI-0803" in result.stderr, "human diagnostic stream lost Clang context")
+    diagnostics = envelope.get("diagnostics")
+    require(isinstance(diagnostics, list) and len(diagnostics) == 1, "Clang failure did not publish one diagnostic event")
+    diagnostic = diagnostics[0]
+    require(isinstance(diagnostic, dict) and diagnostic.get("schemaVersion") == 1, "Clang diagnostic event schema drifted")
+    require(
+        diagnostic.get("id") == "HXC-CLI-0803"
+        and diagnostic.get("severity") == "error"
+        and diagnostic.get("phase") == "bindgen",
+        "Clang diagnostic identity drifted",
+    )
+    context = diagnostic.get("commandContext")
+    require(
+        isinstance(context, dict)
+        and context.get("command") == "bindgen"
+        and context.get("arguments")
+        == [str(broken), "--include-dir", str(broken_root), "--define", "HXC_WIDGET_FEATURE=1", "--dry-run"],
+        "Clang diagnostic command context was not exact",
+    )
+    attachments = diagnostic.get("attachments")
+    require(
+        isinstance(attachments, list)
+        and attachments
+        == [{"source": "bindgen", "channel": "stderr", "tool": "clang", "text": envelope.get("stderr")}],
+        "Clang stderr was not attached losslessly",
+    )
 
     warning_root = temporary / "warning"
     warning = write_fixture(warning_root, warning=True)

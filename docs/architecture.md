@@ -664,8 +664,10 @@ normalized primary source range, remediation, notes, and related locations.
 Production call sites cannot embed raw ID prefixes. Unsupported source
 (`HXC1001`), the scaffold capability boundary (`HXC1000`), and internal
 compiler failure (`HXC9000`) remain structurally distinct. Public CLI/event
-framing and native-tool attachments remain E8.T09 rather than leaking into the
-compiler core. See [diagnostic contract](diagnostics.md).
+framing adapts these records without changing the compiler core: a schema-2
+`hxc` response contains an ordered stream of schema-1 events, and exact
+native-tool text travels as a typed attachment. See the [diagnostic
+contract](diagnostics.md) and [`hxc` CLI contract](hxc-cli.md).
 
 Repository-owned Haxe is also protected by the [typed boundary
 policy](typed-boundaries.md). Compiler semantics contain no `Dynamic`, `Any`,
