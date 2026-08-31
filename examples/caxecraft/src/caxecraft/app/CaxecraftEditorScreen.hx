@@ -70,6 +70,7 @@ import caxecraft.editor.EditorFlowProjection.EditorFlowTraceProjection;
 import caxecraft.editor.EditorFlowProjection.EditorFlowTraceRow;
 import caxecraft.editor.EditorFlowProjection.EditorTriggerOverlap;
 import caxecraft.editor.EditorFlowProjection.EditorFlowUiMessage;
+import caxecraft.editor.EditorFlowProjection.flowRuleReferencesObject;
 import caxecraft.editor.EditorFlowProjection.retainLatestFlowTrace;
 import caxecraft.editor.EditorFlowAuthoring.EditorFlowAuthoringResult;
 import caxecraft.editor.EditorFlowAuthoring.EditorFlowCardAddress;
@@ -1388,8 +1389,7 @@ final class CaxecraftEditorScreen {
 			if (detailsOpen) {
 				Raylib.DrawTextString('${gizmo.width} x ${gizmo.height} x ${gizmo.depth}', left + 14, cursorTop, 15, CaxecraftPalette.hudText());
 				cursorTop += 28;
-				if (gizmo.kind == TriggerZoneGizmo)
-					cursorTop = drawSelectedTriggerFlowCards(locale, gizmo.id, left + 14, cursorTop, width - 28, top + height - 12);
+				cursorTop = drawSelectedObjectFlowCards(locale, gizmo.id, gizmo.kind == TriggerZoneGizmo, left + 14, cursorTop, width - 28, top + height - 12);
 			}
 		}
 		if (worldListOpen) {
@@ -1406,17 +1406,17 @@ final class CaxecraftEditorScreen {
 		}
 	}
 
-	/** Draw registry-backed WHEN / IF / DO cards connected to one trigger. */
-	function drawSelectedTriggerFlowCards(locale:LocaleCursor, zone:ScenarioId, left:Int, top:Int, width:Int, bottom:Int):Int {
+	/** Draw registry-backed cards for any selected object named by a rule. */
+	function drawSelectedObjectFlowCards(locale:LocaleCursor, objectId:ScenarioId, isZone:Bool, left:Int, top:Int, width:Int, bottom:Int):Int {
 		var cursor = top;
-		if (cursor + 34 < bottom) {
+		if (isZone && cursor + 34 < bottom) {
 			final connectLabel = uiCatalog.format(locale, EditorFlowUiMessage.ConnectObjectMessage.messageId(), []);
 			if (Raygui.ButtonString(Rectangle.fromFloat(left, cursor, width, 30), connectLabel).has(GuiResult.Pressed))
-				beginZoneConnection(zone);
+				beginZoneConnection(objectId);
 			cursor += 38;
 		}
 		for (overlap in flowOverlaps)
-			if (overlap.first.text() == zone.text() || overlap.second.text() == zone.text()) {
+			if (isZone && (overlap.first.text() == objectId.text() || overlap.second.text() == objectId.text())) {
 				if (cursor + 26 >= bottom)
 					return cursor;
 				Raylib.DrawRectangle(left, cursor, width, 22, Color.rgba(71, 48, 15));
@@ -1425,12 +1425,12 @@ final class CaxecraftEditorScreen {
 				cursor += 26;
 			}
 		for (rule in flowRules) {
-			if (!flowRuleUsesZone(rule, zone))
+			if (!flowRuleReferencesObject(rule, objectId))
 				continue;
 			if (cursor + 20 < bottom) {
 				Raylib.DrawTextString(rule.ruleId.text(), left, cursor, 13, Color.rgba(236, 114, 255));
 				if (Raygui.ButtonString(Rectangle.fromFloat(left + width - 26, cursor - 3, 24, 20), "+").has(GuiResult.Pressed)) {
-					flowCardLibraryTarget = InsertDoFlowCardPanel(zone, rule.ruleId, rule.cards.length - 2);
+					flowCardLibraryTarget = InsertDoFlowCardPanel(objectId, rule.ruleId, rule.cards.length - 2);
 					return cursor + 20;
 				}
 				cursor += 20;
@@ -1443,12 +1443,12 @@ final class CaxecraftEditorScreen {
 				Raylib.DrawRectangle(left + 6, cursor + 6, 18, 18, visual.color);
 				Raylib.DrawTextString(visual.keyword, left + 30, cursor + 7, 13, visual.color);
 				Raylib.DrawTextString(visual.summary, left + 88, cursor + 7, 13, CaxecraftPalette.hudText());
-				if (drawFlowCardEditControls(locale, zone, rule.ruleId, card, left, cursor, width))
+				if (drawFlowCardEditControls(locale, objectId, rule.ruleId, card, left, cursor, width))
 					return cursor + 34;
-				drawFlowReferencePickers(zone, rule.ruleId, card, left, cursor, width, flowCardControlWidth(card));
+				drawFlowReferencePickers(objectId, rule.ruleId, card, left, cursor, width, flowCardControlWidth(card));
 				cursor += 34;
 			}
-			cursor = drawNestedFlowCards(locale, zone, rule.ruleId, rule.nestedCards, left, cursor, width, bottom);
+			cursor = drawNestedFlowCards(locale, objectId, rule.ruleId, rule.nestedCards, left, cursor, width, bottom);
 		}
 		return drawFlowTraceOverlay(locale, left, cursor, width, bottom);
 	}
@@ -1603,19 +1603,6 @@ final class CaxecraftEditorScreen {
 			case IfFlowCard(_, _, _): IfCardAddress;
 			case DoFlowCard(index, _, _, _): DoCardAddress(index);
 		};
-
-	/** True when a projected rule's source card points at this trigger. */
-	static function flowRuleUsesZone(rule:EditorFlowRuleProjection, zone:ScenarioId):Bool {
-		for (card in rule.cards)
-			switch card {
-				case WhenFlowCard(_, _, references):
-					for (reference in references)
-						if (reference.id.text() == zone.text())
-							return true;
-				case IfFlowCard(_, _, _) | DoFlowCard(_, _, _, _):
-			}
-		return false;
-	}
 
 	/** Resolve data-owned card prose while retaining descriptor-backed content. */
 	function flowCardVisual(locale:LocaleCursor, card:EditorFlowCard):{final keyword:String; final summary:String; final color:Color;} {
@@ -4606,7 +4593,7 @@ final class CaxecraftEditorScreen {
 		final beforeRules = flowRuleCount;
 		var copiedRuleCount = 0;
 		for (rule in flowRules)
-			if (flowRuleUsesZone(rule, zone.id))
+			if (flowRuleReferencesObject(rule, zone.id))
 				copiedRuleCount++;
 		if (copiedRuleCount < 1)
 			return false;
