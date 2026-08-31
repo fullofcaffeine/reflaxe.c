@@ -37,6 +37,7 @@ import caxecraft.editor.EditorFlowProjection.EditorFlowCard;
 import caxecraft.editor.EditorFlowProjection.EditorFlowNestedCard;
 import caxecraft.editor.EditorFlowReferences.EditorFlowReferenceRole;
 import caxecraft.editor.EditorFlowProjection.EditorFlowTraceRow;
+import caxecraft.editor.EditorFlowProjection.flowRuleReferencesObject;
 import caxecraft.editor.EditorFlowProjection.projectFlowRules;
 import caxecraft.editor.EditorFlowProjection.projectFlowTrace;
 import caxecraft.editor.EditorFlowProjection.projectTriggerOverlaps;
@@ -3981,6 +3982,10 @@ final class EditorProbe {
 			case _:
 				throw "nested action edit flattened its weighted branch";
 		}
+		final objectLinkedProjection = projectFlowRules([nestedRule])[0];
+		require(flowRuleReferencesObject(objectLinkedProjection, PLAYER), "selected object could not discover a nested action that references it");
+		require(flowRuleReferencesObject(objectLinkedProjection, id("zone.library")), "selected trigger could not discover its source rule");
+		require(!flowRuleReferencesObject(objectLinkedProjection, id("checkpoint.library")), "unrelated object discovered another object's Flow cards");
 	}
 
 	/** Validate one card candidate through the same gate that opens playable drafts. */

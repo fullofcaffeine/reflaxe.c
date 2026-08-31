@@ -505,12 +505,14 @@ event source -> conditions -> ordered actions
 ```
 
 A spatial volume is one event source. The world view can place, name, resize,
-duplicate, and select its visible gizmo. A selected volume shows localized
-WHEN/IF/DO cards projected from the canonical typed rule. The current compact
-controls can switch enter/leave, replace a condition with a picked event actor
-or `Always`, insert a picked-object `Spawn` action, switch `Spawn` and
-`Despawn`, reorder or remove actions, and replace compatible object references
-by selecting the object in the world. The renderer-independent command also
+duplicate, and select its visible gizmo. Selecting any world object shows the
+localized WHEN/IF/DO cards for every rule whose visible card tree names that
+object, including references inside nested predicates and weighted actions.
+Only trigger volumes show zone connection and overlap controls. The current
+compact controls can switch enter/leave, replace a condition with a picked
+event actor or `Always`, insert a picked-object `Spawn` action, switch `Spawn`
+and `Despawn`, reorder or remove actions, and replace compatible object
+references by selecting the object in the world. The renderer-independent command also
 supports replacing any closed event, predicate, or admitted action plus changing
 priority and repeat policy. Every gesture commits the ordinary `PutRule`
 command, so Undo, Redo, validation, save, and Advanced mode observe the same
@@ -520,10 +522,10 @@ stale target instead of applying it to a changed card.
 The shared renderer-independent trace projection bounds and classifies source,
 predicate, action, and deferred-event rows. Native Test Play retains the latest
 non-empty bounded trace and draws it under the selected cards after the creator
-returns. A live overlay while the game screen is still open, polished
-registry-driven field forms, filters/enabled controls, and non-world document
-pickers remain planned work. The current screen is a complete minimal spatial
-rule editor, not yet the complete child-facing card library.
+returns. A live overlay while the game screen is still open and polished
+registry-driven field forms with filters and enabled controls remain planned
+work. The current screen is a complete minimal spatial rule editor, not yet the
+complete child-facing card library.
 
 The same typed draft has three authoring depths. **Guided** mode uses large
 icon-and-sentence cards, templates, and world picking. **Advanced visual** mode

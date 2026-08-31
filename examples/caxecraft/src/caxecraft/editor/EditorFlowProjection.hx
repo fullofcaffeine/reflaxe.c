@@ -216,6 +216,31 @@ function projectFlowRules(rules:Array<FlowRule>):Array<EditorFlowRuleProjection>
 	return result;
 }
 
+/** True when any visible card in one projected rule names a world object. */
+function flowRuleReferencesObject(rule:EditorFlowRuleProjection, objectId:ScenarioId):Bool {
+	for (card in rule.cards)
+		for (reference in cardReferences(card))
+			if (reference.id.text() == objectId.text())
+				return true;
+	for (card in rule.nestedCards)
+		for (reference in nestedCardReferences(card))
+			if (reference.id.text() == objectId.text())
+				return true;
+	return false;
+}
+
+/** Return references without exposing a renderer-specific card shape. */
+private function cardReferences(card:EditorFlowCard):Array<EditorFlowReference>
+	return switch card {
+		case WhenFlowCard(_, _, references) | IfFlowCard(_, _, references) | DoFlowCard(_, _, _, references): references;
+	};
+
+/** Return references carried by one nested predicate or weighted action. */
+private function nestedCardReferences(card:EditorFlowNestedCard):Array<EditorFlowReference>
+	return switch card {
+		case NestedIfFlowCard(_, _, _, _, references) | NestedDoFlowCard(_, _, _, _, _, _, references): references;
+	};
+
 /** Add every predicate below the root IF in deterministic depth-first order. */
 private function projectNestedPredicateChildren(predicate:FlowPredicate, path:Array<Int>, depth:Int, result:Array<EditorFlowNestedCard>):Void {
 	switch predicate {
