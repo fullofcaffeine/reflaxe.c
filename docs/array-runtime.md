@@ -21,8 +21,10 @@ the direct, unmanaged `Null<Record>` representation documented in
 [aggregate lowering](aggregate-lowering.md). This is deliberately not
 general collection parity: unsupported callback shapes, escaping element-copy
 ownership, other managed element families, and remaining standard-library
-behavior still fail before C is written. `Array<Class>` is deliberately different from the earlier
-acyclic value families: it uses the precise collector and can reclaim cycles.
+behavior still fail before C is written. An Array uses the precise collector
+when its element-type graph can return to that Array or reach a managed class.
+This includes cycles that pass through records and active enum payloads.
+Structurally acyclic value families keep the smaller reference-counted path.
 
 The original typed storage advanced the provisional same-major runtime
 Application Binary Interface (ABI) from 0.4.0 to 0.5.0. Adding the
@@ -106,12 +108,15 @@ release operations treat `NULL` as a successful no-op, while still rejecting a
 malformed non-null reference. This makes cleanup of a dynamically nullable
 local safe without turning null into an empty Array.
 
-`Array<Class>` cannot use that local reference count. A class can point to an
-Array that points back to the same class, so neither side would ever reach a
-zero count. For this one graph-shaped family, the compiler instead asks the
-precise collector for stable outer Array storage. The resizable backing buffer
-still uses the same checked `hxc_array` implementation. Two matching operations
-make the ownership boundary explicit:
+Some Array type graphs cannot use that local reference count. For example, an
+enum can contain a record whose `next` field is an Array of the same enum.
+Source mutation can connect those values into a cycle, so no reference count
+reaches zero. A class and Array can form the same shape. The compiler walks the
+closed element-type graph before it emits C. If that graph returns to the same
+Array specialization or reaches a managed class, the compiler asks the precise
+collector for stable outer Array storage. The resizable backing buffer still
+uses the same checked `hxc_array` implementation. Two matching operations make
+the ownership boundary explicit:
 
 - `hxc_array_ref_init_in_place` initializes a zeroed Array payload that the
   collector already owns; and
@@ -119,9 +124,10 @@ make the ownership boundary explicit:
   collector sweeps that payload. It never frees the collector-owned outer
   address.
 
-The Array descriptor walks the live pointer slots and reports each non-null
-class base exactly. Pointer relocation during growth therefore moves pointer
-values, not class objects; aliases keep observing the same mutable instances.
+The Array descriptor walks each live element. It follows record fields and
+switches on an enum tag before it reads that tag's payload. It reports only
+the managed references in the active payload. Growth moves pointer values, not
+managed objects, so aliases keep observing the same instances.
 
 Every admitted element representation is byte-relocatable: moving the same live
 value to another correctly aligned address preserves it without invoking a
@@ -378,7 +384,7 @@ and copied value into the compiler's exact closed-record layout; validation
 proves that the fields are aligned, in bounds, and do not overlap before the
 runtime writes them. The iterator and retained Array are released together.
 
-Collector-owned `Array<Class>` cursors remain fail-closed. Their outer Array
+Collector-owned Array cursors remain fail-closed. Their outer Array
 storage is traced rather than reference counted, so retaining that address as a
 normal iterator anchor would use the wrong lifetime protocol. That boundary
 needs a collector-rooted cursor design before it can be admitted.
@@ -444,7 +450,7 @@ transfers it into a cleanup-owned local. A later statement can then return
 early without leaking the earlier Array, even when source code never reads it.
 The HxcIR validator rejects missing, duplicate, mismatched, or abandoned
 ownership before C syntax is selected. This protocol applies to
-reference-counted Arrays; `Array<Class>` uses precise collector roots and does
+reference-counted Arrays. A collector-owned Array uses precise roots and does
 not pretend to have the same retain/release lifecycle.
 
 ## Feature and capability boundary
@@ -464,7 +470,8 @@ in `hxc.runtime-plan.json`; `hxc_runtime=none` rejects those reasons before any
 artifact is written. The fixed-array/span suite continues to prove a positive
 runtime-none plan and zero `hxrt` artifacts or symbols.
 
-An admitted `Array<Class>` graph selects the larger, still exact closure:
+An admitted cyclic Array graph or `Array<Class>` graph selects the larger,
+still exact closure:
 
 ```text
 runtime-base + status + alloc + array + object + gc
@@ -472,7 +479,7 @@ runtime-base + status + alloc + array + object + gc
 
 `object` supplies immutable size/alignment/trace/finalizer descriptors. `gc`
 supplies stable allocation, exact roots, and cycle reclamation. The compiler
-emits neither feature for the direct class fixture or for an ordinary
+emits neither feature for a direct nonescaping class fixture or an acyclic
 `Array<Int>`/record/enum program. `hxc_runtime=none` rejects the traced graph
 before any plausible C project is written.
 
@@ -522,6 +529,17 @@ The fixture proves:
   allocation failure;
 - unchanged logical contents after allocation failure; and
 - absence of string, object, GC, reflection, and dynamic symbol families.
+
+The cycle fixture uses `Array<Enum>` values whose active payload contains a
+record and another Array. It proves self-cycles, mutual cycles, alias mutation,
+cycle breakup, a deep chain, and pressure-triggered collection. Its independent
+native driver removes the final root, forces collection, and requires zero live
+objects. Generated trace functions switch on the enum tag and visit only the
+active payload. A matching acyclic enum/record fixture stays reference counted
+and omits the object and GC runtime features. In the reviewed Clang and GCC
+renders, the cyclic C project was 102745 bytes. The acyclic project was 49476
+bytes. These byte counts show selective packaging. They are not compile-time
+or runtime performance measurements.
 
 The ordinary-Haxe generated fixture additionally constructs empty `Array<Int>`
 and `Array<String>` values with `new Array<T>()`, exercises the target-owned

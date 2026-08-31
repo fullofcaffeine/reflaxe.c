@@ -3,12 +3,21 @@
 
 #include <hxrt/allocator.h>
 #include <hxrt/array.h>
+#include <hxrt/gc.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdlib.h>
 
 typedef char hxc_runtime_abi_major_must_match[HXC_RUNTIME_ABI_MAJOR == 0U ? 1 : -1];
+
+extern struct hxc_gc hxc_program_gc;
+
+extern struct hxc_gc_thread hxc_program_gc_thread;
+
+extern const struct hxc_type_descriptor hxc_array_e4791f3e_descriptor;
+
+extern const struct hxc_type_descriptor hxc_array_eaf5e746_descriptor;
 
 static inline int32_t hxc_u32_to_i32_bits(uint32_t hxc_l_value)
 {
@@ -24,17 +33,9 @@ static inline int32_t hxc_i32_add_wrapping(int32_t hxc_l_left, int32_t hxc_l_rig
   return hxc_u32_to_i32_bits((uint32_t)((uint64_t)(uint32_t)hxc_l_left + (uint64_t)(uint32_t)hxc_l_right));
 }
 
-hxc_status hxc_record_24dfdaa4_retain(void *hxc_l_value);
-
-void hxc_record_24dfdaa4_destroy(void *hxc_l_value);
-
 hxc_status hxc_record_9f230b68_retain(void *hxc_l_value);
 
 void hxc_record_9f230b68_destroy(void *hxc_l_value);
-
-hxc_status hxc_record_ae1876bc_retain(void *hxc_l_value);
-
-void hxc_record_ae1876bc_destroy(void *hxc_l_value);
 
 hxc_status hxc_enum_24936704_retain(void *hxc_l_value);
 
@@ -47,10 +48,6 @@ void hxc_enum_39285fe9_destroy(void *hxc_l_value);
 hxc_status hxc_enum_39285fe9_retain_recursive_clone(void *hxc_enum_39285fe9_retain_recursive_clone_slot);
 
 void hxc_enum_39285fe9_destroy_recursive_destroy(void *hxc_enum_39285fe9_destroy_recursive_destroy_slot);
-
-hxc_status hxc_enum_891dc52d_retain(void *hxc_l_value);
-
-void hxc_enum_891dc52d_destroy(void *hxc_l_value);
 
 hxc_status hxc_enum_d215f611_retain(void *hxc_l_value);
 
@@ -71,18 +68,6 @@ hxc_status hxc_array_84c38722_element_copy(void *hxc_l_context, void *hxc_l_dest
 hxc_status hxc_array_84c38722_element_assign(void *hxc_l_context, void *hxc_l_destination, const void *hxc_l_source);
 
 void hxc_array_84c38722_element_destroy(void *hxc_l_context, void *hxc_l_element);
-
-hxc_status hxc_array_e4791f3e_element_copy(void *hxc_l_context, void *hxc_l_destination, const void *hxc_l_source);
-
-hxc_status hxc_array_e4791f3e_element_assign(void *hxc_l_context, void *hxc_l_destination, const void *hxc_l_source);
-
-void hxc_array_e4791f3e_element_destroy(void *hxc_l_context, void *hxc_l_element);
-
-hxc_status hxc_array_eaf5e746_element_copy(void *hxc_l_context, void *hxc_l_destination, const void *hxc_l_source);
-
-hxc_status hxc_array_eaf5e746_element_assign(void *hxc_l_context, void *hxc_l_destination, const void *hxc_l_source);
-
-void hxc_array_eaf5e746_element_destroy(void *hxc_l_context, void *hxc_l_element);
 
 struct hxc_Option_ha0e4b5dcc139;
 
@@ -136,24 +121,6 @@ struct hxc_StrictCarrier {
 
 struct hxc_StrictCarrierHolder {
   struct hxc_StrictCarrier hxc_value;
-};
-
-enum hxc_Option_tag_h51b3904815c1 {
-  hxc_Option_None_h506b5e6013bd = 0,
-  hxc_Option_Some_ha9454146ff01 = 1
-};
-
-struct hxc_Option_Some_payload_h6fa8fca385dc {
-  int32_t hxc_value;
-};
-
-union hxc_Option_payload_h331368fdb4fc {
-  struct hxc_Option_Some_payload_h6fa8fca385dc hxc_Some;
-};
-
-struct hxc_Option_h95f1c4a28dac {
-  enum hxc_Option_tag_h51b3904815c1 hxc_tag;
-  union hxc_Option_payload_h331368fdb4fc hxc_payload;
 };
 
 struct hxc_EnumFixture_StackClosure {
@@ -247,6 +214,24 @@ union hxc_Option_payload_hbc7d11cfb27e {
 struct hxc_Option_h2a07afaff02e {
   enum hxc_Option_tag_hff067ac061db hxc_tag;
   union hxc_Option_payload_hbc7d11cfb27e hxc_payload;
+};
+
+enum hxc_Option_tag_h51b3904815c1 {
+  hxc_Option_None_h506b5e6013bd = 0,
+  hxc_Option_Some_ha9454146ff01 = 1
+};
+
+struct hxc_Option_Some_payload_h6fa8fca385dc {
+  int32_t hxc_value;
+};
+
+union hxc_Option_payload_h331368fdb4fc {
+  struct hxc_Option_Some_payload_h6fa8fca385dc hxc_Some;
+};
+
+struct hxc_Option_h95f1c4a28dac {
+  enum hxc_Option_tag_h51b3904815c1 hxc_tag;
+  union hxc_Option_payload_h331368fdb4fc hxc_payload;
 };
 
 enum hxc_Mode {

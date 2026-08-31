@@ -43,10 +43,13 @@ JOIN_SOURCES = (
 )
 EXPECTED_TRACE = "5:1,3,1,1,0\n"
 GENERATED = CASE / "generated"
+GENERATED_ACYCLIC = CASE / "generated-acyclic"
 GENERATED_CLASS = CASE / "generated-class"
+GENERATED_CYCLE = CASE / "generated-cycle"
 GENERATED_FUNCTION = CASE / "generated-function"
 GENERATED_TO_STRING = CASE / "generated-to-string"
 GENERATED_CLASS_GC_DRIVER = ROOT / "test/native/array_class_gc_driver.c"
+GENERATED_CYCLE_GC_DRIVER = ROOT / "test/native/array_cycle_gc_driver.c"
 NEGATIVE = CASE / "negative"
 REPORT_PREFIX = "HXC_STATIC_INITIALIZATION="
 TOOLCHAINS = ("gcc", "clang")
@@ -1280,6 +1283,152 @@ def render_managed_class_pair(root: Path) -> Path:
     return normal_split
 
 
+def render_collection_cycle_pair(root: Path) -> tuple[Path, Path, int, int]:
+    """Render cyclic and neighboring acyclic enum/record Array programs."""
+    references: dict[str, Path] = {}
+    reports: dict[str, subprocess.CompletedProcess[str]] = {}
+    for fixture, prefix in (
+        (GENERATED_CYCLE, "generated-cycle"),
+        (GENERATED_ACYCLIC, "generated-acyclic"),
+    ):
+        for layout in ("split", "package", "unity"):
+            normal = root / f"{prefix}-{layout}-normal"
+            reverse = root / f"{prefix}-{layout}-reverse"
+            first = compile_generated_haxe(
+                fixture, normal, report=layout == "split", layout=layout
+            )
+            second = compile_generated_haxe(
+                fixture, reverse, reverse=True, layout=layout
+            )
+            for label, result in (("normal", first), ("reverse", second)):
+                if result.returncode != 0:
+                    raise ArrayRuntimeFailure(
+                        f"{prefix} {layout} {label} compile failed\n"
+                        f"stdout={result.stdout!r}\nstderr={result.stderr!r}"
+                    )
+            if generated_tree(normal) != generated_tree(reverse):
+                raise ArrayRuntimeFailure(
+                    f"{prefix} {layout} changed under reversed discovery"
+                )
+            if layout == "split":
+                references[prefix] = normal
+                reports[prefix] = first
+
+        oracle = run_bounded_process(
+            [development_tool("haxe"), "oracle.hxml"],
+            cwd=fixture,
+            env=haxe_environment(),
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        if oracle.returncode != 0 or oracle.stdout or oracle.stderr:
+            raise ArrayRuntimeFailure(
+                f"{prefix} Eval oracle failed: exit={oracle.returncode} "
+                f"stdout={oracle.stdout!r} stderr={oracle.stderr!r}"
+            )
+
+    cycle = references["generated-cycle"]
+    acyclic = references["generated-acyclic"]
+    cycle_hxcir = extract_hxcir(reports["generated-cycle"])
+    for marker in (
+        'representation=managed("gc")',
+        'path="tag(instance.enum.',
+        '/field(instance.closed-record.',
+        'runtime(feature="array",operation="create-literal")',
+        'managed-root "root.',
+    ):
+        if marker not in cycle_hxcir:
+            raise ArrayRuntimeFailure(
+                f"collection-cycle HxcIR omitted {marker!r}"
+            )
+
+    cycle_plan = json.loads(
+        (cycle / "hxc.runtime-plan.json").read_text(encoding="utf-8")
+    )
+    if cycle_plan.get("features") != [
+        "runtime-base",
+        "status",
+        "alloc",
+        "array",
+        "object",
+        "gc",
+    ] or "exact-traced-haxe-object-graph" not in cycle_plan.get(
+        "directDecisions", []
+    ):
+        raise ArrayRuntimeFailure(
+            "cyclic Array/record/enum graph selected the wrong collector closure"
+        )
+
+    acyclic_plan = json.loads(
+        (acyclic / "hxc.runtime-plan.json").read_text(encoding="utf-8")
+    )
+    if acyclic_plan.get("features") != [
+        "runtime-base",
+        "status",
+        "alloc",
+        "array",
+    ] or "exact-traced-haxe-object-graph" in acyclic_plan.get(
+        "directDecisions", []
+    ):
+        raise ArrayRuntimeFailure(
+            "acyclic enum/record Array lost its smaller selective runtime path"
+        )
+
+    support = (cycle / "src/hxc/support.c").read_text(encoding="utf-8")
+    trace = re.search(
+        r"(static void hxc_array_[0-9a-f]+_trace\(.*?\n\})\n\n"
+        r"static void hxc_array_[0-9a-f]+_finalize",
+        support,
+        re.DOTALL,
+    )
+    if trace is None:
+        raise ArrayRuntimeFailure("collection-cycle C omitted its Array trace function")
+    trace_body = trace.group(1)
+    for marker in (
+        "case hxc_GraphNode_Empty:",
+        "case hxc_GraphNode_Linked:",
+        "case hxc_GraphNode_Marker:",
+        ".hxc_Linked.hxc_edge.hxc_next",
+    ):
+        if marker not in trace_body:
+            raise ArrayRuntimeFailure(
+                f"collection-cycle trace omitted active-tag marker {marker!r}"
+            )
+    if trace_body.count("_trace_visit(") != 1:
+        raise ArrayRuntimeFailure(
+            "collection-cycle trace visited inactive enum union storage"
+        )
+
+    cycle_application = "".join(
+        path.read_text(encoding="utf-8")
+        for path in sorted((cycle / "src").rglob("*.c"))
+    )
+    acyclic_application = "".join(
+        path.read_text(encoding="utf-8")
+        for path in sorted((acyclic / "src").rglob("*.c"))
+    )
+    if "hxc_gc_allocate" not in cycle_application:
+        raise ArrayRuntimeFailure(
+            "collector-owned collection cycle omitted generated GC allocation"
+        )
+    if (
+        "hxc_array_ref_retain" in cycle_application
+        or "hxc_array_ref_release" in cycle_application
+    ):
+        raise ArrayRuntimeFailure(
+            "collector-owned collection cycle retained reference-count operations"
+        )
+    cycle_bytes = sum(path.stat().st_size for path in cycle.rglob("*.c"))
+    acyclic_bytes = sum(path.stat().st_size for path in acyclic.rglob("*.c"))
+    if cycle_bytes <= acyclic_bytes or not acyclic_application:
+        raise ArrayRuntimeFailure(
+            "collection-cycle code-size evidence did not preserve the smaller acyclic path"
+        )
+    return cycle, acyclic, cycle_bytes, acyclic_bytes
+
+
 def validate_function_array_hxcir(hxcir: str) -> None:
     """Prove that callable signatures and Array operations remain typed in HxcIR."""
     for marker in (
@@ -1710,6 +1859,8 @@ def compile_and_run_generated_gc_reclamation(
     generated: Path,
     flags: tuple[str, ...],
     label: str,
+    *,
+    driver: Path = GENERATED_CLASS_GC_DRIVER,
 ) -> None:
     """Use an independent driver to prove the generated cycle is collected."""
     executable = build / label
@@ -1725,7 +1876,7 @@ def compile_and_run_generated_gc_reclamation(
         f"-I{generated / 'include'}",
         f"-I{generated / 'runtime/include'}",
         *(str(source) for source in sources),
-        str(GENERATED_CLASS_GC_DRIVER),
+        str(driver),
         "-o",
         str(executable),
     ]
@@ -1755,6 +1906,48 @@ def compile_and_run_generated_gc_reclamation(
             f"{toolchain.family} {label} reclamation evidence drifted\n"
             f"exit={executed.returncode} stdout={executed.stdout!r} stderr={executed.stderr!r}"
         )
+
+
+def run_collection_cycle_lane(toolchains: list[Toolchain]) -> tuple[int, int]:
+    """Prove composed collection cycles and the neighboring acyclic path."""
+    with tempfile.TemporaryDirectory(
+        prefix="reflaxe-c-array-cycle-runtime-"
+    ) as temporary:
+        root = Path(temporary)
+        cycle, acyclic, cycle_bytes, acyclic_bytes = render_collection_cycle_pair(
+            root
+        )
+        for toolchain in toolchains:
+            build = root / toolchain.family
+            build.mkdir(parents=True)
+            for flags, suffix in (
+                (("-O0",), "o0"),
+                (("-O2",), "o2"),
+                (SANITIZER_FLAGS, "sanitized"),
+            ):
+                compile_and_run_generated(
+                    toolchain,
+                    build,
+                    cycle,
+                    flags,
+                    f"generated-collection-cycle-{suffix}",
+                )
+                compile_and_run_generated_gc_reclamation(
+                    toolchain,
+                    build,
+                    cycle,
+                    flags,
+                    f"generated-collection-cycle-reclamation-{suffix}",
+                    driver=GENERATED_CYCLE_GC_DRIVER,
+                )
+                compile_and_run_generated(
+                    toolchain,
+                    build,
+                    acyclic,
+                    flags,
+                    f"generated-collection-acyclic-{suffix}",
+                )
+        return cycle_bytes, acyclic_bytes
 
 
 def inspect_symbols(executable: Path, family: str) -> None:
@@ -1980,6 +2173,11 @@ def parse_args(argv: Iterable[str]) -> argparse.Namespace:
         action="store_true",
         help="run only the focused Array<String>.toString compiler and native lane",
     )
+    parser.add_argument(
+        "--collection-cycles-only",
+        action="store_true",
+        help="run only Array/record/enum cycle collection and acyclic selectivity",
+    )
     return parser.parse_args(list(argv))
 
 
@@ -1987,10 +2185,32 @@ def main(argv: Iterable[str] = ()) -> int:
     args = parse_args(argv)
     try:
         toolchains = selected_toolchains(args.toolchain)
-        if args.function_values_only and args.to_string_only:
+        focused = sum(
+            (
+                args.function_values_only,
+                args.to_string_only,
+                args.collection_cycles_only,
+            )
+        )
+        if focused > 1:
             raise ArrayRuntimeFailure(
                 "choose only one focused Array lane"
             )
+        if args.collection_cycles_only:
+            if args.native_only:
+                raise ArrayRuntimeFailure(
+                    "--collection-cycles-only requires generated Haxe and cannot use --native-only"
+                )
+            cycle_bytes, acyclic_bytes = run_collection_cycle_lane(toolchains)
+            families = ", ".join(toolchain.family for toolchain in toolchains)
+            print(
+                "array-runtime: OK: "
+                f"{families}; Array/record/enum self, mutual, broken, deep, and "
+                f"pressure cycles collected; active-tag tracing and acyclic "
+                f"selectivity passed (cycle C bytes={cycle_bytes}, "
+                f"acyclic C bytes={acyclic_bytes})"
+            )
+            return 0
         if args.to_string_only:
             if args.native_only:
                 raise ArrayRuntimeFailure(
@@ -2023,6 +2243,7 @@ def main(argv: Iterable[str] = ()) -> int:
         run_native(toolchains, expected_trace, generated_haxe=not args.native_only)
         if not args.native_only:
             run_function_array_lane(toolchains)
+            run_collection_cycle_lane(toolchains)
     except (
         OSError,
         UnicodeError,

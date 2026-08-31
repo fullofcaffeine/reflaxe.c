@@ -1,5 +1,9 @@
 #include "hxc/program.h"
 
+struct hxc_gc hxc_program_gc = HXC_GC_INITIALIZER;
+
+struct hxc_gc_thread hxc_program_gc_thread = HXC_GC_THREAD_INITIALIZER;
+
 _Static_assert(offsetof(struct hxc_RecursiveActionChoice, hxc_actions) == 0, "closed record hxc_RecursiveActionChoice first field begins at offset zero");
 
 _Static_assert(_Alignof(struct hxc_RecursiveActionChoice) >= _Alignof(struct hxc_array_ref *), "closed record hxc_RecursiveActionChoice alignment admits field 0");
@@ -240,21 +244,61 @@ _Static_assert(offsetof(struct hxc_RuleEnvelope_WrappedRule_payload, hxc_rule) =
 
 _Static_assert(_Alignof(struct hxc_RuleEnvelope_WrappedRule_payload) >= _Alignof(struct hxc_Rule), "tagged enum hxc_RuleEnvelope case WrappedRule admits payload 0 alignment");
 
-hxc_status hxc_record_24dfdaa4_retain(void *hxc_l_value)
+static void hxc_array_e4791f3e_trace(const void *hxc_array_e4791f3e_trace_object, hxc_trace_visit_fn hxc_array_e4791f3e_trace_visit, void *hxc_array_e4791f3e_trace_context)
 {
-  hxc_status hxc_l_operation_status;
-  hxc_l_operation_status = hxc_array_ref_retain((*(struct hxc_RecursiveActionChoice *)hxc_l_value).hxc_actions);
-  if (hxc_l_operation_status != HXC_STATUS_OK)
+  const struct hxc_array_ref *hxc_array_e4791f3e_trace_typed = (const struct hxc_array_ref *)hxc_array_e4791f3e_trace_object;
+  size_t hxc_array_e4791f3e_trace_index = 0;
+  while (hxc_array_e4791f3e_trace_index < hxc_array_e4791f3e_trace_typed->value.length)
   {
-    return hxc_l_operation_status;
+    if (((const struct hxc_RecursiveActionChoice *)hxc_array_e4791f3e_trace_typed->value.storage.memory)[hxc_array_e4791f3e_trace_index].hxc_actions != NULL)
+    {
+      hxc_array_e4791f3e_trace_visit(hxc_array_e4791f3e_trace_context, ((const struct hxc_RecursiveActionChoice *)hxc_array_e4791f3e_trace_typed->value.storage.memory)[hxc_array_e4791f3e_trace_index].hxc_actions);
+    }
+    hxc_array_e4791f3e_trace_index++;
   }
-  return HXC_STATUS_OK;
 }
 
-void hxc_record_24dfdaa4_destroy(void *hxc_l_value)
+static void hxc_array_e4791f3e_finalize(void *hxc_array_e4791f3e_finalize_object)
 {
-  (void)hxc_array_ref_release((*(struct hxc_RecursiveActionChoice *)hxc_l_value).hxc_actions);
+  (void)hxc_array_ref_dispose_in_place((struct hxc_array_ref *)hxc_array_e4791f3e_finalize_object);
 }
+
+static void hxc_array_eaf5e746_trace(const void *hxc_array_eaf5e746_trace_object, hxc_trace_visit_fn hxc_array_eaf5e746_trace_visit, void *hxc_array_eaf5e746_trace_context)
+{
+  const struct hxc_array_ref *hxc_array_eaf5e746_trace_typed = (const struct hxc_array_ref *)hxc_array_eaf5e746_trace_object;
+  size_t hxc_array_eaf5e746_trace_index = 0;
+  while (hxc_array_eaf5e746_trace_index < hxc_array_eaf5e746_trace_typed->value.length)
+  {
+    switch (((const struct hxc_RecursiveAction *)hxc_array_eaf5e746_trace_typed->value.storage.memory)[hxc_array_eaf5e746_trace_index].hxc_tag) {
+      case hxc_RecursiveAction_LeafAction:
+        {
+          break;
+        }
+      case hxc_RecursiveAction_ChooseAction:
+        {
+          if (((const struct hxc_RecursiveAction *)hxc_array_eaf5e746_trace_typed->value.storage.memory)[hxc_array_eaf5e746_trace_index].hxc_payload.hxc_ChooseAction.hxc_choices != NULL)
+          {
+            hxc_array_eaf5e746_trace_visit(hxc_array_eaf5e746_trace_context, ((const struct hxc_RecursiveAction *)hxc_array_eaf5e746_trace_typed->value.storage.memory)[hxc_array_eaf5e746_trace_index].hxc_payload.hxc_ChooseAction.hxc_choices);
+          }
+          break;
+        }
+    }
+    hxc_array_eaf5e746_trace_index++;
+  }
+}
+
+static void hxc_array_eaf5e746_finalize(void *hxc_array_eaf5e746_finalize_object)
+{
+  (void)hxc_array_ref_dispose_in_place((struct hxc_array_ref *)hxc_array_eaf5e746_finalize_object);
+}
+
+_Static_assert(sizeof(struct hxc_array_ref) % _Alignof(struct hxc_array_ref) == 0, "descriptor `array.e4791f3ed60810b12b61c8cbc1ceb97c55da777a819f42e55ea69e70c231ec6a` payload size must be a multiple of alignment");
+
+const struct hxc_type_descriptor hxc_array_e4791f3e_descriptor = { .abi_version = HXC_TYPE_DESCRIPTOR_ABI_VERSION, .flags = HXC_TYPE_DESCRIPTOR_HAS_TRACE | HXC_TYPE_DESCRIPTOR_HAS_FINALIZER, .object_size = sizeof(struct hxc_array_ref), .object_alignment = _Alignof(struct hxc_array_ref), .trace = hxc_array_e4791f3e_trace, .finalize = hxc_array_e4791f3e_finalize };
+
+_Static_assert(sizeof(struct hxc_array_ref) % _Alignof(struct hxc_array_ref) == 0, "descriptor `array.eaf5e746484d8e083db4dbe7f227834602df94e65db1ec592bd772f7b757bc3a` payload size must be a multiple of alignment");
+
+const struct hxc_type_descriptor hxc_array_eaf5e746_descriptor = { .abi_version = HXC_TYPE_DESCRIPTOR_ABI_VERSION, .flags = HXC_TYPE_DESCRIPTOR_HAS_TRACE | HXC_TYPE_DESCRIPTOR_HAS_FINALIZER, .object_size = sizeof(struct hxc_array_ref), .object_alignment = _Alignof(struct hxc_array_ref), .trace = hxc_array_eaf5e746_trace, .finalize = hxc_array_eaf5e746_finalize };
 
 hxc_status hxc_record_9f230b68_retain(void *hxc_l_value)
 {
@@ -285,22 +329,6 @@ void hxc_record_9f230b68_destroy(void *hxc_l_value)
   (void)hxc_enum_d215f611_destroy(&(*(struct hxc_Rule *)hxc_l_value).hxc_choices);
   (void)hxc_enum_39285fe9_destroy(&(*(struct hxc_Rule *)hxc_l_value).hxc_chain);
   (void)hxc_array_ref_release((*(struct hxc_Rule *)hxc_l_value).hxc_actions);
-}
-
-hxc_status hxc_record_ae1876bc_retain(void *hxc_l_value)
-{
-  hxc_status hxc_l_operation_status;
-  hxc_l_operation_status = hxc_array_ref_retain((*(struct hxc_RecursiveActionPlan *)hxc_l_value).hxc_actions);
-  if (hxc_l_operation_status != HXC_STATUS_OK)
-  {
-    return hxc_l_operation_status;
-  }
-  return HXC_STATUS_OK;
-}
-
-void hxc_record_ae1876bc_destroy(void *hxc_l_value)
-{
-  (void)hxc_array_ref_release((*(struct hxc_RecursiveActionPlan *)hxc_l_value).hxc_actions);
 }
 
 hxc_status hxc_enum_24936704_retain(void *hxc_l_value)
@@ -406,42 +434,6 @@ void hxc_enum_39285fe9_destroy_recursive_destroy(void *hxc_enum_39285fe9_destroy
   hxc_enum_39285fe9_destroy(hxc_enum_39285fe9_destroy_recursive_destroy_owned);
   (void)hxc_free(&hxc_enum_39285fe9_destroy_recursive_destroy_allocator, hxc_enum_39285fe9_destroy_recursive_destroy_owned, sizeof(struct hxc_Chain), _Alignof(struct hxc_Chain));
   *hxc_enum_39285fe9_destroy_recursive_destroy_typed_slot = NULL;
-}
-
-hxc_status hxc_enum_891dc52d_retain(void *hxc_l_value)
-{
-  hxc_status hxc_l_operation_status;
-  switch ((*(struct hxc_RecursiveAction *)hxc_l_value).hxc_tag) {
-    case hxc_RecursiveAction_LeafAction:
-      {
-        break;
-      }
-    case hxc_RecursiveAction_ChooseAction:
-      {
-        hxc_l_operation_status = hxc_array_ref_retain((*(struct hxc_RecursiveAction *)hxc_l_value).hxc_payload.hxc_ChooseAction.hxc_choices);
-        if (hxc_l_operation_status != HXC_STATUS_OK)
-        {
-          return hxc_l_operation_status;
-        }
-        break;
-      }
-  }
-  return HXC_STATUS_OK;
-}
-
-void hxc_enum_891dc52d_destroy(void *hxc_l_value)
-{
-  switch ((*(struct hxc_RecursiveAction *)hxc_l_value).hxc_tag) {
-    case hxc_RecursiveAction_LeafAction:
-      {
-        break;
-      }
-    case hxc_RecursiveAction_ChooseAction:
-      {
-        (void)hxc_array_ref_release((*(struct hxc_RecursiveAction *)hxc_l_value).hxc_payload.hxc_ChooseAction.hxc_choices);
-        break;
-      }
-  }
 }
 
 hxc_status hxc_enum_d215f611_retain(void *hxc_l_value)
@@ -620,82 +612,6 @@ void hxc_array_84c38722_element_destroy(void *hxc_l_context, void *hxc_l_element
 {
   (void)hxc_l_context;
   hxc_enum_ffce8027_destroy(&*(struct hxc_RuleEnvelope *)hxc_l_element);
-}
-
-hxc_status hxc_array_e4791f3e_element_copy(void *hxc_l_context, void *hxc_l_destination, const void *hxc_l_source)
-{
-  (void)hxc_l_context;
-  hxc_status hxc_l_operation_status;
-  *(struct hxc_RecursiveActionChoice *)hxc_l_destination = *(const struct hxc_RecursiveActionChoice *)hxc_l_source;
-  hxc_l_operation_status = hxc_array_ref_retain((*(struct hxc_RecursiveActionChoice *)hxc_l_destination).hxc_actions);
-  if (hxc_l_operation_status != HXC_STATUS_OK)
-  {
-    return hxc_l_operation_status;
-  }
-  return HXC_STATUS_OK;
-}
-
-hxc_status hxc_array_e4791f3e_element_assign(void *hxc_l_context, void *hxc_l_destination, const void *hxc_l_source)
-{
-  (void)hxc_l_context;
-  if (hxc_l_destination == hxc_l_source)
-  {
-    return HXC_STATUS_OK;
-  }
-  hxc_status hxc_l_operation_status;
-  struct hxc_RecursiveActionChoice hxc_array_e4791f3e_element_assign_replacement = *(const struct hxc_RecursiveActionChoice *)hxc_l_source;
-  hxc_l_operation_status = hxc_array_ref_retain(hxc_array_e4791f3e_element_assign_replacement.hxc_actions);
-  if (hxc_l_operation_status != HXC_STATUS_OK)
-  {
-    return hxc_l_operation_status;
-  }
-  (void)hxc_array_ref_release((*(struct hxc_RecursiveActionChoice *)hxc_l_destination).hxc_actions);
-  *(struct hxc_RecursiveActionChoice *)hxc_l_destination = hxc_array_e4791f3e_element_assign_replacement;
-  return HXC_STATUS_OK;
-}
-
-void hxc_array_e4791f3e_element_destroy(void *hxc_l_context, void *hxc_l_element)
-{
-  (void)hxc_l_context;
-  (void)hxc_array_ref_release((*(struct hxc_RecursiveActionChoice *)hxc_l_element).hxc_actions);
-}
-
-hxc_status hxc_array_eaf5e746_element_copy(void *hxc_l_context, void *hxc_l_destination, const void *hxc_l_source)
-{
-  (void)hxc_l_context;
-  hxc_status hxc_l_operation_status;
-  *(struct hxc_RecursiveAction *)hxc_l_destination = *(const struct hxc_RecursiveAction *)hxc_l_source;
-  hxc_l_operation_status = hxc_enum_891dc52d_retain(&*(struct hxc_RecursiveAction *)hxc_l_destination);
-  if (hxc_l_operation_status != HXC_STATUS_OK)
-  {
-    return hxc_l_operation_status;
-  }
-  return HXC_STATUS_OK;
-}
-
-hxc_status hxc_array_eaf5e746_element_assign(void *hxc_l_context, void *hxc_l_destination, const void *hxc_l_source)
-{
-  (void)hxc_l_context;
-  if (hxc_l_destination == hxc_l_source)
-  {
-    return HXC_STATUS_OK;
-  }
-  hxc_status hxc_l_operation_status;
-  struct hxc_RecursiveAction hxc_array_eaf5e746_element_assign_replacement = *(const struct hxc_RecursiveAction *)hxc_l_source;
-  hxc_l_operation_status = hxc_enum_891dc52d_retain(&hxc_array_eaf5e746_element_assign_replacement);
-  if (hxc_l_operation_status != HXC_STATUS_OK)
-  {
-    return hxc_l_operation_status;
-  }
-  hxc_enum_891dc52d_destroy(&*(struct hxc_RecursiveAction *)hxc_l_destination);
-  *(struct hxc_RecursiveAction *)hxc_l_destination = hxc_array_eaf5e746_element_assign_replacement;
-  return HXC_STATUS_OK;
-}
-
-void hxc_array_eaf5e746_element_destroy(void *hxc_l_context, void *hxc_l_element)
-{
-  (void)hxc_l_context;
-  hxc_enum_891dc52d_destroy(&*(struct hxc_RecursiveAction *)hxc_l_element);
 }
 
 struct hxc_Option_h95f1c4a28dac hxc_EnumFixture_applyOption(int32_t hxc_l_value, struct hxc_EnumFixture_StackClosure hxc_l_constructor)
@@ -1006,6 +922,12 @@ enum hxc_Mode hxc_EnumFixture_identityMode(enum hxc_Mode hxc_l_value)
 
 void hxc_EnumFixture_main(void)
 {
+  const void *volatile hxc_l_gc_roots[2] = { NULL, NULL };
+  struct hxc_gc_root_frame hxc_l_gc_frame = HXC_GC_ROOT_FRAME_INITIALIZER;
+  if (hxc_gc_root_frame_push(&hxc_program_gc_thread, hxc_l_gc_roots, 2, &hxc_l_gc_frame) != HXC_STATUS_OK)
+  {
+    abort();
+  }
   struct hxc_Chain hxc_l_tmp_static_call_argument_0_owner_n39 = { 0 };
   struct hxc_Choices hxc_l_tmp_static_call_argument_1_owner_n41 = { 0 };
   enum hxc_Mode hxc_l_mode = hxc_Mode_On;
@@ -1093,6 +1015,7 @@ void hxc_EnumFixture_main(void)
   struct hxc_array_ref *hxc_l_tmp_call_result_n36 = hxc_EnumFixture_envelopeLiteral(hxc_l_tmp_load_result_n34, hxc_l_copiedEnvelope);
   struct hxc_array_ref *hxc_l_literalEnvelopes = hxc_l_tmp_call_result_n36;
   struct hxc_RecursiveActionPlan hxc_l_tmp_call_result_n37 = hxc_EnumFixture_recursiveActionPlan();
+  hxc_l_gc_roots[0] = (const void *)hxc_l_tmp_call_result_n37.hxc_actions;
   struct hxc_RecursiveActionPlan hxc_l_recursivePlan = hxc_l_tmp_call_result_n37;
   while (1)
   {
@@ -1283,6 +1206,7 @@ void hxc_EnumFixture_main(void)
     bool hxc_l_tmp_short_circuit_result_n44 = hxc_l_tmp_short_circuit_load_result_n115;
     if (hxc_l_tmp_short_circuit_load_result_n115)
     {
+      hxc_l_gc_roots[1] = (const void *)hxc_l_recursivePlan.hxc_actions;
       int32_t hxc_l_tmp_call_result_n117 = hxc_EnumFixture_recursiveActionPlanValue(hxc_l_recursivePlan);
       hxc_l_tmp_short_circuit_result_n44 = hxc_l_tmp_call_result_n117 == 17;
     }
@@ -1302,7 +1226,6 @@ void hxc_EnumFixture_main(void)
       break;
     }
   }
-  hxc_record_ae1876bc_destroy(&hxc_l_recursivePlan);
   if (hxc_array_ref_release(hxc_l_literalEnvelopes) != HXC_STATUS_OK)
   {
     abort();
@@ -1327,6 +1250,10 @@ void hxc_EnumFixture_main(void)
     abort();
   }
   if (hxc_array_ref_release(hxc_l_choices) != HXC_STATUS_OK)
+  {
+    abort();
+  }
+  if (hxc_gc_root_frame_pop(&hxc_l_gc_frame) != HXC_STATUS_OK)
   {
     abort();
   }
@@ -1628,173 +1555,186 @@ int32_t hxc_EnumFixture_pairedIdentityValue(enum hxc_IdentityKind hxc_l_kind, st
 
 struct hxc_RecursiveActionPlan hxc_EnumFixture_recursiveActionPlan(void)
 {
-  struct hxc_RecursiveAction hxc_l_tmp_array_literal_element_0_owner_n0 = (struct hxc_RecursiveAction){ .hxc_tag = hxc_RecursiveAction_LeafAction, .hxc_payload.hxc_LeafAction.hxc_value = 17 };
-  struct hxc_array_ref *hxc_l_tmp_array_create_result_n2 = NULL;
-  if (hxc_array_ref_create(hxc_default_allocator(), (hxc_array_element_ops){ sizeof(struct hxc_RecursiveAction), _Alignof(struct hxc_RecursiveAction), NULL, hxc_array_eaf5e746_element_copy, hxc_array_eaf5e746_element_assign, hxc_array_eaf5e746_element_destroy }, &hxc_l_tmp_array_create_result_n2) != HXC_STATUS_OK)
+  const void *volatile hxc_l_gc_roots[7] = { NULL, NULL, NULL, NULL, NULL, NULL, NULL };
+  struct hxc_gc_root_frame hxc_l_gc_frame = HXC_GC_ROOT_FRAME_INITIALIZER;
+  if (hxc_gc_root_frame_push(&hxc_program_gc_thread, hxc_l_gc_roots, 7, &hxc_l_gc_frame) != HXC_STATUS_OK)
   {
     abort();
   }
-  if (hxc_array_push_copy(&hxc_l_tmp_array_create_result_n2->value, &hxc_l_tmp_array_literal_element_0_owner_n0) != HXC_STATUS_OK)
+  hxc_l_gc_roots[0] = (struct hxc_RecursiveAction){ .hxc_tag = hxc_RecursiveAction_LeafAction, .hxc_payload.hxc_LeafAction.hxc_value = 17 }.hxc_tag == hxc_RecursiveAction_ChooseAction ? (const void *)(struct hxc_RecursiveAction){ .hxc_tag = hxc_RecursiveAction_LeafAction, .hxc_payload.hxc_LeafAction.hxc_value = 17 }.hxc_payload.hxc_ChooseAction.hxc_choices : NULL;
+  struct hxc_array_ref *hxc_l_tmp_array_create_result_n1 = NULL;
+  if (hxc_gc_allocate(&hxc_program_gc, &hxc_array_eaf5e746_descriptor, (void **)&hxc_l_tmp_array_create_result_n1) != HXC_STATUS_OK)
   {
     abort();
   }
-  struct hxc_RecursiveActionChoice hxc_l_tmp_array_literal_element_0_owner_n1 = (struct hxc_RecursiveActionChoice){ .hxc_actions = hxc_l_tmp_array_create_result_n2, .hxc_weight = 1 };
+  if (hxc_array_ref_init_in_place(hxc_default_allocator(), (hxc_array_element_ops){ sizeof(struct hxc_RecursiveAction), _Alignof(struct hxc_RecursiveAction), NULL, NULL, NULL, NULL }, hxc_l_tmp_array_create_result_n1) != HXC_STATUS_OK)
+  {
+    abort();
+  }
+  if (hxc_array_push_copy(&hxc_l_tmp_array_create_result_n1->value, &(struct hxc_RecursiveAction){ .hxc_tag = hxc_RecursiveAction_LeafAction, .hxc_payload.hxc_LeafAction.hxc_value = 17 }) != HXC_STATUS_OK)
+  {
+    abort();
+  }
+  hxc_l_gc_roots[1] = (const void *)hxc_l_tmp_array_create_result_n1;
+  hxc_l_gc_roots[2] = (const void *)(struct hxc_RecursiveActionChoice){ .hxc_actions = hxc_l_tmp_array_create_result_n1, .hxc_weight = 1 }.hxc_actions;
+  struct hxc_array_ref *hxc_l_tmp_array_create_result_n3 = NULL;
+  if (hxc_gc_allocate(&hxc_program_gc, &hxc_array_e4791f3e_descriptor, (void **)&hxc_l_tmp_array_create_result_n3) != HXC_STATUS_OK)
+  {
+    abort();
+  }
+  if (hxc_array_ref_init_in_place(hxc_default_allocator(), (hxc_array_element_ops){ sizeof(struct hxc_RecursiveActionChoice), _Alignof(struct hxc_RecursiveActionChoice), NULL, NULL, NULL, NULL }, hxc_l_tmp_array_create_result_n3) != HXC_STATUS_OK)
+  {
+    abort();
+  }
+  if (hxc_array_push_copy(&hxc_l_tmp_array_create_result_n3->value, &(struct hxc_RecursiveActionChoice){ .hxc_actions = hxc_l_tmp_array_create_result_n1, .hxc_weight = 1 }) != HXC_STATUS_OK)
+  {
+    abort();
+  }
+  hxc_l_gc_roots[3] = (const void *)hxc_l_tmp_array_create_result_n3;
+  hxc_l_gc_roots[4] = (struct hxc_RecursiveAction){ .hxc_tag = hxc_RecursiveAction_ChooseAction, .hxc_payload.hxc_ChooseAction.hxc_choices = hxc_l_tmp_array_create_result_n3 }.hxc_tag == hxc_RecursiveAction_ChooseAction ? (const void *)(struct hxc_RecursiveAction){ .hxc_tag = hxc_RecursiveAction_ChooseAction, .hxc_payload.hxc_ChooseAction.hxc_choices = hxc_l_tmp_array_create_result_n3 }.hxc_payload.hxc_ChooseAction.hxc_choices : NULL;
   struct hxc_array_ref *hxc_l_tmp_array_create_result_n5 = NULL;
-  if (hxc_array_ref_create(hxc_default_allocator(), (hxc_array_element_ops){ sizeof(struct hxc_RecursiveActionChoice), _Alignof(struct hxc_RecursiveActionChoice), NULL, hxc_array_e4791f3e_element_copy, hxc_array_e4791f3e_element_assign, hxc_array_e4791f3e_element_destroy }, &hxc_l_tmp_array_create_result_n5) != HXC_STATUS_OK)
+  if (hxc_gc_allocate(&hxc_program_gc, &hxc_array_eaf5e746_descriptor, (void **)&hxc_l_tmp_array_create_result_n5) != HXC_STATUS_OK)
   {
     abort();
   }
-  if (hxc_array_push_copy(&hxc_l_tmp_array_create_result_n5->value, &hxc_l_tmp_array_literal_element_0_owner_n1) != HXC_STATUS_OK)
+  if (hxc_array_ref_init_in_place(hxc_default_allocator(), (hxc_array_element_ops){ sizeof(struct hxc_RecursiveAction), _Alignof(struct hxc_RecursiveAction), NULL, NULL, NULL, NULL }, hxc_l_tmp_array_create_result_n5) != HXC_STATUS_OK)
   {
     abort();
   }
-  struct hxc_RecursiveAction hxc_l_tmp_array_literal_element_0_owner_n2 = (struct hxc_RecursiveAction){ .hxc_tag = hxc_RecursiveAction_ChooseAction, .hxc_payload.hxc_ChooseAction.hxc_choices = hxc_l_tmp_array_create_result_n5 };
-  struct hxc_array_ref *hxc_l_tmp_array_create_result_n8 = NULL;
-  if (hxc_array_ref_create(hxc_default_allocator(), (hxc_array_element_ops){ sizeof(struct hxc_RecursiveAction), _Alignof(struct hxc_RecursiveAction), NULL, hxc_array_eaf5e746_element_copy, hxc_array_eaf5e746_element_assign, hxc_array_eaf5e746_element_destroy }, &hxc_l_tmp_array_create_result_n8) != HXC_STATUS_OK)
+  if (hxc_array_push_copy(&hxc_l_tmp_array_create_result_n5->value, &(struct hxc_RecursiveAction){ .hxc_tag = hxc_RecursiveAction_ChooseAction, .hxc_payload.hxc_ChooseAction.hxc_choices = hxc_l_tmp_array_create_result_n3 }) != HXC_STATUS_OK)
   {
     abort();
   }
-  if (hxc_array_push_copy(&hxc_l_tmp_array_create_result_n8->value, &hxc_l_tmp_array_literal_element_0_owner_n2) != HXC_STATUS_OK)
+  hxc_l_gc_roots[5] = (const void *)hxc_l_tmp_array_create_result_n5;
+  hxc_l_gc_roots[6] = (const void *)(struct hxc_RecursiveActionPlan){ .hxc_actions = hxc_l_tmp_array_create_result_n5 }.hxc_actions;
+  if (hxc_gc_root_frame_pop(&hxc_l_gc_frame) != HXC_STATUS_OK)
   {
     abort();
   }
-  hxc_enum_891dc52d_destroy(&hxc_l_tmp_array_literal_element_0_owner_n2);
-  hxc_record_24dfdaa4_destroy(&hxc_l_tmp_array_literal_element_0_owner_n1);
-  hxc_enum_891dc52d_destroy(&hxc_l_tmp_array_literal_element_0_owner_n0);
-  return (struct hxc_RecursiveActionPlan){ .hxc_actions = hxc_l_tmp_array_create_result_n8 };
+  return (struct hxc_RecursiveActionPlan){ .hxc_actions = hxc_l_tmp_array_create_result_n5 };
 }
 
 int32_t hxc_EnumFixture_recursiveActionPlanValue(struct hxc_RecursiveActionPlan hxc_l_plan)
 {
-  struct hxc_RecursiveAction hxc_l_a0_hde79160c1991 = { 0 };
-  struct hxc_RecursiveAction hxc_l_tmp_array_element_owner_n12 = { 0 };
-  struct hxc_RecursiveActionChoice hxc_l_a0_h1d4712e82e9d = { 0 };
-  struct hxc_RecursiveActionChoice hxc_l_tmp_array_element_owner_n7 = { 0 };
-  struct hxc_array_ref *hxc_l_actions = { 0 };
+  const void *volatile hxc_l_gc_roots[16] = { NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL };
+  hxc_l_gc_roots[0] = (const void *)hxc_l_plan.hxc_actions;
+  struct hxc_gc_root_frame hxc_l_gc_frame = HXC_GC_ROOT_FRAME_INITIALIZER;
+  if (hxc_gc_root_frame_push(&hxc_program_gc_thread, hxc_l_gc_roots, 16, &hxc_l_gc_frame) != HXC_STATUS_OK)
+  {
+    abort();
+  }
+  hxc_l_gc_roots[1] = (const void *)hxc_l_plan.hxc_actions;
   struct hxc_RecursiveAction hxc_l_tmp_array_get_result_n1;
   if (hxc_array_ref_get_copy(hxc_l_plan.hxc_actions, (size_t)0, &hxc_l_tmp_array_get_result_n1) != HXC_STATUS_OK)
   {
     abort();
   }
-  struct hxc_RecursiveAction hxc_l_tmp_array_element_owner_n2 = hxc_l_tmp_array_get_result_n1;
-  struct hxc_RecursiveAction hxc_l_symbol = hxc_l_tmp_array_element_owner_n2;
-  if (hxc_enum_891dc52d_retain(&hxc_l_symbol) != HXC_STATUS_OK)
+  hxc_l_gc_roots[2] = hxc_l_tmp_array_get_result_n1.hxc_tag == hxc_RecursiveAction_ChooseAction ? (const void *)hxc_l_tmp_array_get_result_n1.hxc_payload.hxc_ChooseAction.hxc_choices : NULL;
+  struct hxc_RecursiveAction hxc_l_symbol = hxc_l_tmp_array_get_result_n1;
+  struct hxc_RecursiveAction hxc_l_tmp_load_result_n2 = hxc_l_symbol;
+  hxc_l_gc_roots[3] = hxc_l_tmp_load_result_n2.hxc_tag == hxc_RecursiveAction_ChooseAction ? (const void *)hxc_l_tmp_load_result_n2.hxc_payload.hxc_ChooseAction.hxc_choices : NULL;
+  int32_t hxc_l_tmp_conditional_result_n2 = 0;
+  if (hxc_l_tmp_load_result_n2.hxc_tag == hxc_RecursiveAction_ChooseAction)
   {
-    abort();
-  }
-  struct hxc_RecursiveAction hxc_l_tmp_load_result_n3 = hxc_l_symbol;
-  int32_t hxc_l_tmp_conditional_result_n3 = 0;
-  if (hxc_l_tmp_load_result_n3.hxc_tag == hxc_RecursiveAction_ChooseAction)
-  {
+    hxc_l_gc_roots[4] = hxc_l_symbol.hxc_tag == hxc_RecursiveAction_ChooseAction ? (const void *)hxc_l_symbol.hxc_payload.hxc_ChooseAction.hxc_choices : NULL;
     if (hxc_l_symbol.hxc_tag != hxc_RecursiveAction_ChooseAction)
     {
       abort();
     }
-    struct hxc_array_ref *hxc_l_tmp_enum_payload_project_n5 = hxc_l_symbol.hxc_payload.hxc_ChooseAction.hxc_choices;
-    struct hxc_array_ref *hxc_l_choices = hxc_l_tmp_enum_payload_project_n5;
-    int32_t hxc_l_tmp_array_length_result_n7;
-    if (hxc_array_ref_length(hxc_l_choices, &hxc_l_tmp_array_length_result_n7) != HXC_STATUS_OK)
+    struct hxc_array_ref *hxc_l_tmp_enum_payload_project_n4 = hxc_l_symbol.hxc_payload.hxc_ChooseAction.hxc_choices;
+    hxc_l_gc_roots[5] = (const void *)hxc_l_tmp_enum_payload_project_n4;
+    struct hxc_array_ref *hxc_l_choices = hxc_l_tmp_enum_payload_project_n4;
+    hxc_l_gc_roots[6] = (const void *)hxc_l_choices;
+    int32_t hxc_l_tmp_array_length_result_n6;
+    if (hxc_array_ref_length(hxc_l_choices, &hxc_l_tmp_array_length_result_n6) != HXC_STATUS_OK)
     {
       abort();
     }
-    int32_t hxc_l_tmp_conditional_result_n5 = 0;
-    if (hxc_l_tmp_array_length_result_n7 == 1)
+    int32_t hxc_l_tmp_conditional_result_n4 = 0;
+    if (hxc_l_tmp_array_length_result_n6 == 1)
     {
-      struct hxc_RecursiveActionChoice hxc_l_tmp_array_get_result_n9;
-      if (hxc_array_ref_get_copy(hxc_l_choices, (size_t)0, &hxc_l_tmp_array_get_result_n9) != HXC_STATUS_OK)
+      hxc_l_gc_roots[7] = (const void *)hxc_l_choices;
+      struct hxc_RecursiveActionChoice hxc_l_tmp_array_get_result_n8;
+      if (hxc_array_ref_get_copy(hxc_l_choices, (size_t)0, &hxc_l_tmp_array_get_result_n8) != HXC_STATUS_OK)
       {
         abort();
       }
-      hxc_l_tmp_array_element_owner_n7 = hxc_l_tmp_array_get_result_n9;
-      hxc_l_a0_h1d4712e82e9d = hxc_l_tmp_array_element_owner_n7;
-      if (hxc_record_24dfdaa4_retain(&hxc_l_a0_h1d4712e82e9d) != HXC_STATUS_OK)
+      hxc_l_gc_roots[8] = (const void *)hxc_l_tmp_array_get_result_n8.hxc_actions;
+      struct hxc_RecursiveActionChoice hxc_l_a0_h20427e845f84 = hxc_l_tmp_array_get_result_n8;
+      struct hxc_RecursiveActionChoice hxc_l_tmp_load_result_n9 = hxc_l_a0_h20427e845f84;
+      hxc_l_gc_roots[9] = (const void *)hxc_l_tmp_load_result_n9.hxc_actions;
+      hxc_l_gc_roots[10] = (const void *)hxc_l_a0_h20427e845f84.hxc_actions;
+      struct hxc_array_ref *hxc_l_actions = hxc_l_a0_h20427e845f84.hxc_actions;
+      int32_t hxc_l_weight = hxc_l_a0_h20427e845f84.hxc_weight;
+      hxc_l_gc_roots[11] = (const void *)hxc_l_actions;
+      int32_t hxc_l_tmp_array_length_result_n13;
+      if (hxc_array_ref_length(hxc_l_actions, &hxc_l_tmp_array_length_result_n13) != HXC_STATUS_OK)
       {
         abort();
       }
-      struct hxc_RecursiveActionChoice hxc_l_tmp_load_result_n11 = hxc_l_a0_h1d4712e82e9d;
-      (void)hxc_l_tmp_load_result_n11;
-      hxc_l_actions = hxc_l_a0_h1d4712e82e9d.hxc_actions;
-      if (hxc_array_ref_retain(hxc_l_actions) != HXC_STATUS_OK)
+      int32_t hxc_l_tmp_conditional_result_n8 = 0;
+      if (hxc_l_tmp_array_length_result_n13 == 1)
       {
-        abort();
-      }
-      int32_t hxc_l_weight = hxc_l_a0_h1d4712e82e9d.hxc_weight;
-      int32_t hxc_l_tmp_array_length_result_n15;
-      if (hxc_array_ref_length(hxc_l_actions, &hxc_l_tmp_array_length_result_n15) != HXC_STATUS_OK)
-      {
-        abort();
-      }
-      int32_t hxc_l_tmp_conditional_result_n10 = 0;
-      if (hxc_l_tmp_array_length_result_n15 == 1)
-      {
-        struct hxc_RecursiveAction hxc_l_tmp_array_get_result_n17;
-        if (hxc_array_ref_get_copy(hxc_l_actions, (size_t)0, &hxc_l_tmp_array_get_result_n17) != HXC_STATUS_OK)
+        hxc_l_gc_roots[12] = (const void *)hxc_l_actions;
+        struct hxc_RecursiveAction hxc_l_tmp_array_get_result_n15;
+        if (hxc_array_ref_get_copy(hxc_l_actions, (size_t)0, &hxc_l_tmp_array_get_result_n15) != HXC_STATUS_OK)
         {
           abort();
         }
-        hxc_l_tmp_array_element_owner_n12 = hxc_l_tmp_array_get_result_n17;
-        hxc_l_a0_hde79160c1991 = hxc_l_tmp_array_element_owner_n12;
-        if (hxc_enum_891dc52d_retain(&hxc_l_a0_hde79160c1991) != HXC_STATUS_OK)
+        hxc_l_gc_roots[13] = hxc_l_tmp_array_get_result_n15.hxc_tag == hxc_RecursiveAction_ChooseAction ? (const void *)hxc_l_tmp_array_get_result_n15.hxc_payload.hxc_ChooseAction.hxc_choices : NULL;
+        struct hxc_RecursiveAction hxc_l_a0_h761ba892ea54 = hxc_l_tmp_array_get_result_n15;
+        struct hxc_RecursiveAction hxc_l_tmp_load_result_n16 = hxc_l_a0_h761ba892ea54;
+        hxc_l_gc_roots[14] = hxc_l_tmp_load_result_n16.hxc_tag == hxc_RecursiveAction_ChooseAction ? (const void *)hxc_l_tmp_load_result_n16.hxc_payload.hxc_ChooseAction.hxc_choices : NULL;
+        int32_t hxc_l_tmp_conditional_result_n10 = 0;
+        if (hxc_l_tmp_load_result_n16.hxc_tag == hxc_RecursiveAction_LeafAction)
         {
-          abort();
-        }
-        struct hxc_RecursiveAction hxc_l_tmp_load_result_n19 = hxc_l_a0_hde79160c1991;
-        int32_t hxc_l_tmp_conditional_result_n13 = 0;
-        if (hxc_l_tmp_load_result_n19.hxc_tag == hxc_RecursiveAction_LeafAction)
-        {
-          if (hxc_l_a0_hde79160c1991.hxc_tag != hxc_RecursiveAction_LeafAction)
+          hxc_l_gc_roots[15] = hxc_l_a0_h761ba892ea54.hxc_tag == hxc_RecursiveAction_ChooseAction ? (const void *)hxc_l_a0_h761ba892ea54.hxc_payload.hxc_ChooseAction.hxc_choices : NULL;
+          if (hxc_l_a0_h761ba892ea54.hxc_tag != hxc_RecursiveAction_LeafAction)
           {
             abort();
           }
-          int32_t hxc_l_tmp_enum_payload_project_n21 = hxc_l_a0_hde79160c1991.hxc_payload.hxc_LeafAction.hxc_value;
-          int32_t hxc_l_value_h3a49a4594f7c = hxc_l_tmp_enum_payload_project_n21;
-          int32_t hxc_l_tmp_load_result_n22 = hxc_l_weight;
-          int32_t hxc_l_tmp_conditional_result_n15 = 0;
-          if (hxc_l_tmp_load_result_n22 == 1)
+          int32_t hxc_l_tmp_enum_payload_project_n18 = hxc_l_a0_h761ba892ea54.hxc_payload.hxc_LeafAction.hxc_value;
+          int32_t hxc_l_value_h8011a7a07e37 = hxc_l_tmp_enum_payload_project_n18;
+          int32_t hxc_l_tmp_load_result_n19 = hxc_l_weight;
+          int32_t hxc_l_tmp_conditional_result_n12 = 0;
+          if (hxc_l_tmp_load_result_n19 == 1)
           {
-            int32_t hxc_l_value_hfcfad9a5a996 = hxc_l_value_h3a49a4594f7c;
-            hxc_l_tmp_conditional_result_n15 = hxc_l_value_hfcfad9a5a996;
+            int32_t hxc_l_value_h875e00836e25 = hxc_l_value_h8011a7a07e37;
+            hxc_l_tmp_conditional_result_n12 = hxc_l_value_h875e00836e25;
           }
           else
           {
-            hxc_l_tmp_conditional_result_n15 = 0;
+            hxc_l_tmp_conditional_result_n12 = 0;
           }
-          hxc_l_tmp_conditional_result_n13 = hxc_l_tmp_conditional_result_n15;
+          hxc_l_tmp_conditional_result_n10 = hxc_l_tmp_conditional_result_n12;
         }
         else
         {
-          hxc_l_tmp_conditional_result_n13 = 0;
+          hxc_l_tmp_conditional_result_n10 = 0;
         }
-        hxc_l_tmp_conditional_result_n10 = hxc_l_tmp_conditional_result_n13;
-        hxc_enum_891dc52d_destroy(&hxc_l_a0_hde79160c1991);
-        hxc_array_eaf5e746_element_destroy(NULL, &hxc_l_tmp_array_element_owner_n12);
+        hxc_l_tmp_conditional_result_n8 = hxc_l_tmp_conditional_result_n10;
       }
       else
       {
-        hxc_l_tmp_conditional_result_n10 = 0;
+        hxc_l_tmp_conditional_result_n8 = 0;
       }
-      hxc_l_tmp_conditional_result_n5 = hxc_l_tmp_conditional_result_n10;
-      if (hxc_array_ref_release(hxc_l_actions) != HXC_STATUS_OK)
-      {
-        abort();
-      }
-      hxc_record_24dfdaa4_destroy(&hxc_l_a0_h1d4712e82e9d);
-      hxc_array_e4791f3e_element_destroy(NULL, &hxc_l_tmp_array_element_owner_n7);
+      hxc_l_tmp_conditional_result_n4 = hxc_l_tmp_conditional_result_n8;
     }
     else
     {
-      hxc_l_tmp_conditional_result_n5 = 0;
+      hxc_l_tmp_conditional_result_n4 = 0;
     }
-    hxc_l_tmp_conditional_result_n3 = hxc_l_tmp_conditional_result_n5;
+    hxc_l_tmp_conditional_result_n2 = hxc_l_tmp_conditional_result_n4;
   }
   else
   {
-    hxc_l_tmp_conditional_result_n3 = 0;
+    hxc_l_tmp_conditional_result_n2 = 0;
   }
-  int32_t hxc_l_tmp_conditional_load_result_n29 = hxc_l_tmp_conditional_result_n3;
-  hxc_enum_891dc52d_destroy(&hxc_l_symbol);
-  hxc_array_eaf5e746_element_destroy(NULL, &hxc_l_tmp_array_element_owner_n2);
-  return hxc_l_tmp_conditional_load_result_n29;
+  if (hxc_gc_root_frame_pop(&hxc_l_gc_frame) != HXC_STATUS_OK)
+  {
+    abort();
+  }
+  return hxc_l_tmp_conditional_result_n2;
 }
 
 int32_t hxc_EnumFixture_recursiveLocal(void)
@@ -2087,6 +2027,22 @@ struct hxc_Option_h95f1c4a28dac hxc_Option_i32_Some_synchronous_callback_adapter
 
 int main(void)
 {
+  if (hxc_gc_init(&(struct hxc_gc_config){ hxc_default_allocator(), 1048576U, NULL, NULL }, &hxc_program_gc) != HXC_STATUS_OK)
+  {
+    abort();
+  }
+  if (hxc_gc_thread_register(&hxc_program_gc, &hxc_program_gc_thread) != HXC_STATUS_OK)
+  {
+    abort();
+  }
   hxc_EnumFixture_main();
+  if (hxc_gc_thread_unregister(&hxc_program_gc_thread) != HXC_STATUS_OK)
+  {
+    abort();
+  }
+  if (hxc_gc_dispose(&hxc_program_gc) != HXC_STATUS_OK)
+  {
+    abort();
+  }
   return 0;
 }

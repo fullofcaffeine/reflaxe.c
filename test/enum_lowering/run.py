@@ -42,9 +42,13 @@ COMMON_PRODUCTION_FILES = {
     "runtime/include/hxrt/allocator.h",
     "runtime/include/hxrt/array.h",
     "runtime/include/hxrt/base.h",
+    "runtime/include/hxrt/gc.h",
+    "runtime/include/hxrt/object.h",
     "runtime/include/hxrt/status.h",
     "runtime/src/allocator.c",
     "runtime/src/array.c",
+    "runtime/src/gc.c",
+    "runtime/src/object.c",
 }
 PRODUCTION_FILES_BY_LAYOUT = {
     "split": COMMON_PRODUCTION_FILES
@@ -72,14 +76,18 @@ PRODUCTION_FILES_BY_LAYOUT = {
     },
 }
 
-RUNTIME_FEATURES = ["runtime-base", "status", "alloc", "array"]
+RUNTIME_FEATURES = ["runtime-base", "status", "alloc", "array", "object", "gc"]
 RUNTIME_ARTIFACTS = [
     "runtime/include/hxrt/allocator.h",
     "runtime/include/hxrt/array.h",
     "runtime/include/hxrt/base.h",
+    "runtime/include/hxrt/gc.h",
+    "runtime/include/hxrt/object.h",
     "runtime/include/hxrt/status.h",
     "runtime/src/allocator.c",
     "runtime/src/array.c",
+    "runtime/src/gc.c",
+    "runtime/src/object.c",
 ]
 BYTES_RUNTIME_FEATURES = ["runtime-base", "status", "alloc", "string-literal", "bytes"]
 BYTES_RUNTIME_ARTIFACTS = [
@@ -595,16 +603,18 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
     )
     if (
         'implementation=program-local("enum-lifecycle:'
-        not in recursive_action_plan_section
+        in recursive_action_plan_section
         or 'dispatch=runtime(feature="array",operation="create-literal")'
         not in recursive_action_plan_section
         or "hxc_array_ref_create_trivial(" in recursive_action_plan_c
-        or "hxc_array_ref_create(" not in recursive_action_plan_c
-        or "_element_copy" not in recursive_action_plan_c
-        or "_element_destroy" not in recursive_action_plan_c
+        or "hxc_array_ref_create(" in recursive_action_plan_c
+        or "hxc_gc_allocate(" not in recursive_action_plan_c
+        or "hxc_array_ref_init_in_place(" not in recursive_action_plan_c
+        or "_element_copy" in recursive_action_plan_c
+        or "_element_destroy" in recursive_action_plan_c
     ):
         raise EnumLoweringFailure(
-            "recursive managed-enum Array literal lost typed element ownership"
+            "recursive managed-enum Array literal lost collector ownership"
         )
     if (
         f"enum {names['mode_tag']} {{" not in header
@@ -796,7 +806,13 @@ def run_harness_matrix(
         ),
         CFixtureProject(
             "generated-program",
-            ("src/program.c", "runtime/src/allocator.c", "runtime/src/array.c"),
+            (
+                "src/program.c",
+                "runtime/src/allocator.c",
+                "runtime/src/array.c",
+                "runtime/src/gc.c",
+                "runtime/src/object.c",
+            ),
             ("include/hxc/program.h",),
             ("include", "runtime/include"),
             "",
@@ -805,6 +821,7 @@ def run_harness_matrix(
                 "exhaustive-tag-switch",
                 "fieldless-enum-equality",
                 "generated-executable",
+                "collector-owned-recursive-array",
                 "managed-record-lifecycle",
                 "recursive-owned-enum",
             ),
@@ -1410,6 +1427,44 @@ def check_string_payload(*, requested_toolchain: str) -> None:
             )
 
 
+def render_statement_early_return(root: Path) -> tuple[str, str, Path]:
+    """Render the deterministic statement-switch snapshots into ``root``."""
+    first = root / "first"
+    reverse = root / "reverse"
+    first_result = custom_target(
+        STATEMENT_EARLY_RETURN,
+        first,
+        main="Main",
+        report=True,
+    )
+    first_hxcir = extract_static_hxcir(
+        first_result, "statement enum early-return compile"
+    )
+    reverse_result = custom_target(
+        STATEMENT_EARLY_RETURN,
+        reverse,
+        main="Main",
+        reverse=True,
+        report=True,
+    )
+    reverse_hxcir = extract_static_hxcir(
+        reverse_result, "reverse statement enum early-return compile"
+    )
+    if (
+        first_hxcir != reverse_hxcir
+        or generated_tree(first) != generated_tree(reverse)
+    ):
+        raise EnumLoweringFailure(
+            "statement enum early-return artifacts changed with discovery order"
+        )
+    valid_hxcir = main_function_section(first_hxcir, "valid")
+    generated_c = b"\n".join(
+        path.read_bytes() for path in sorted(first.rglob("*.c"))
+    ).decode("utf-8")
+    valid_c = c_function_section(generated_c, "hxc_Main_valid")
+    return valid_hxcir + "\n", valid_c + "\n", first
+
+
 def check_statement_early_return(*, requested_toolchain: str) -> None:
     """Prove a grouped enum switch owns one loop-local exit beside an early return."""
     eval_result = run_bounded_process(
@@ -1434,45 +1489,18 @@ def check_statement_early_return(*, requested_toolchain: str) -> None:
         prefix="hxc-enum-statement-early-return-"
     ) as temporary:
         root = Path(temporary)
-        first = root / "first"
-        reverse = root / "reverse"
-        first_result = custom_target(
-            STATEMENT_EARLY_RETURN,
-            first,
-            main="Main",
-            report=True,
-        )
-        first_hxcir = extract_static_hxcir(
-            first_result, "statement enum early-return compile"
-        )
-        reverse_result = custom_target(
-            STATEMENT_EARLY_RETURN,
-            reverse,
-            main="Main",
-            reverse=True,
-            report=True,
-        )
-        reverse_hxcir = extract_static_hxcir(
-            reverse_result, "reverse statement enum early-return compile"
-        )
-        if (
-            first_hxcir != reverse_hxcir
-            or generated_tree(first) != generated_tree(reverse)
-        ):
-            raise EnumLoweringFailure(
-                "statement enum early-return artifacts changed with discovery order"
-            )
+        snapshot_hxcir, snapshot_c, first = render_statement_early_return(root)
+        valid_hxcir = snapshot_hxcir.rstrip("\n")
 
-        valid_hxcir = main_function_section(first_hxcir, "valid")
         expected_hxcir = (EXPECTED / "statement_early_return.hxcir").read_text(
             encoding="utf-8"
         )
-        if valid_hxcir + "\n" != expected_hxcir:
+        if snapshot_hxcir != expected_hxcir:
             raise EnumLoweringFailure(
                 "statement_early_return.hxcir drifted:\n"
                 + difference(
                     expected_hxcir,
-                    valid_hxcir + "\n",
+                    snapshot_hxcir,
                     "statement_early_return.hxcir",
                 )
             )
@@ -1492,19 +1520,16 @@ def check_statement_early_return(*, requested_toolchain: str) -> None:
                 "statement enum switch lost its independent early and final returns"
             )
 
-        generated_c = b"\n".join(
-            path.read_bytes() for path in sorted(first.rglob("*.c"))
-        ).decode("utf-8")
-        valid_c = c_function_section(generated_c, "hxc_Main_valid")
+        valid_c = snapshot_c.rstrip("\n")
         expected_c = (EXPECTED / "statement_early_return.c").read_text(
             encoding="utf-8"
         )
-        if valid_c + "\n" != expected_c:
+        if snapshot_c != expected_c:
             raise EnumLoweringFailure(
                 "statement_early_return.c drifted:\n"
                 + difference(
                     expected_c,
-                    valid_c + "\n",
+                    snapshot_c,
                     "statement_early_return.c",
                 )
             )
