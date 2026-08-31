@@ -1454,6 +1454,10 @@ final class CaxecraftEditorScreen {
 				}
 				cursor += 20;
 			}
+			if (cursor + 18 < bottom) {
+				Raylib.DrawTextString(flowRulePolicyText(locale, rule.priority, rule.repeat), left, cursor, 11, Color.rgba(160, 190, 194));
+				cursor += 18;
+			}
 			for (card in rule.cards) {
 				if (cursor + 34 >= bottom)
 					return cursor;
@@ -1490,7 +1494,7 @@ final class CaxecraftEditorScreen {
 				switch card {
 					case NestedIfFlowCard(path, _, _, _, _):
 						openFlowCardPanel(NestedIfFlowCardPanel(zone, rule, path.copy()));
-					case NestedDoFlowCard(parentActionIndex, choiceIndex, actionIndex, _, _, _, _):
+					case NestedDoFlowCard(parentActionIndex, choiceIndex, actionIndex, _, _, _, _, _):
 						openFlowCardPanel(NestedDoFlowCardPanel(zone, rule, parentActionIndex, choiceIndex, actionIndex));
 				}
 				return cursor + 30;
@@ -1652,12 +1656,26 @@ final class CaxecraftEditorScreen {
 					summary: uiCatalog.format(locale, text.message, text.arguments),
 					color: Color.rgba(84, 191, 205)
 				};
-			case NestedDoFlowCard(_, choiceIndex, actionIndex, depth, _, text, _): {
+			case NestedDoFlowCard(_, choiceIndex, actionIndex, weight, depth, _, text, _): {
 					depth: depth,
-					summary: '${choiceIndex + 1}.${actionIndex + 1}  ${uiCatalog.format(locale, text.message, text.arguments)}',
+					summary: '${choiceIndex + 1} ×$weight · ${actionIndex + 1}  ${uiCatalog.format(locale, text.message, text.arguments)}',
 					color: Color.rgba(111, 174, 91)
 				};
 		};
+	}
+
+	/** Resolve canonical scheduling policy through data-owned UI messages. */
+	function flowRulePolicyText(locale:LocaleCursor, priority:Int, repeat:FlowRepeatPolicy):String {
+		final priorityText = uiCatalog.format(locale, EditorFlowUiMessage.PriorityMessage.messageId(), [Std.string(priority)]);
+		final repeatText = switch repeat {
+			case Once: uiCatalog.format(locale, EditorFlowUiMessage.RepeatOnceMessage.messageId(), []);
+			case Repeat: uiCatalog.format(locale, EditorFlowUiMessage.RepeatMessage.messageId(), []);
+			case Cooldown(ticks): uiCatalog.format(locale, EditorFlowUiMessage.RepeatCooldownMessage.messageId(), [Std.string(ticks)]);
+			case OncePerActor: uiCatalog.format(locale, EditorFlowUiMessage.RepeatOncePerActorMessage.messageId(), []);
+			case CooldownPerActor(ticks):
+				uiCatalog.format(locale, EditorFlowUiMessage.RepeatCooldownPerActorMessage.messageId(), [Std.string(ticks)]);
+		};
+		return '$priorityText · $repeatText';
 	}
 
 	/** Apply one typed palette decision through the canonical rule command. */
