@@ -35,10 +35,10 @@ private typedef GeneratedRootProject = {
 /**
 	Emits a tiny structural-C program fragment for the exact-root native test.
 
-	This fixture deliberately starts from hand-built, typed HxcIR. The semantic
-	validator owns root/type correctness elsewhere; this probe isolates the next
-	boundary and proves that `CBodyEmitter` turns the plan into balanced stack-root
-	operations on both a normal return and an early status-propagation return.
+	The native fragment starts from an already-planned, typed root function and
+	isolates `CBodyEmitter`. The project-layout fragment uses root-free functions
+	and crosses the same validated-program boundary as production lowering. The
+	two parts separately prove balanced root operations and collector lifecycle.
 **/
 class GeneratedRootFrameProbe {
 	#if macro
@@ -101,8 +101,7 @@ class GeneratedRootFrameProbe {
 		header ownership in unity, module-split, and package-coalesced output.
 	**/
 	static function managedProjects():Array<GeneratedRootProject> {
-		final root = rootFunction("fn.project.root", false);
-		root.blocks[0].instructions.resize(0);
+		final root = emptyFunction("fn.project.root");
 		final entry = emptyFunction("fn.project.entry");
 		final rootArrays:Map<String, CIdentifier> = [root.id => new CIdentifier("hxc_project_roots")];
 		final rootFrames:Map<String, CIdentifier> = [root.id => new CIdentifier("hxc_project_frame")];
@@ -110,7 +109,7 @@ class GeneratedRootFrameProbe {
 		final names = new CManagedProgramNames(new CIdentifier("hxc_project_gc"), new CIdentifier("hxc_project_thread"), rootArrays, rootFrames,
 			rootExceptionCleanups);
 		final emitter = new CBodyEmitter(null, null, null, null, null, null, null, null, null, null, null, names);
-		final rootNames:Map<String, CIdentifier> = ["value.object" => new CIdentifier("value_object")];
+		final rootNames:Map<String, CIdentifier> = [];
 		final loweredRoot = loweredFunction(emitter, root, "fixture.ManagedRoots", new CIdentifier("hxc_project_root"), rootNames);
 		final loweredEntry = loweredFunction(emitter, entry, "fixture.ManagedRoots", new CIdentifier("hxc_project_entry"), []);
 		final preparedDispatch = new CPreparedBodyDispatch(CBodyDispatchGraph.empty(), [], [], [], [], [], []);
@@ -135,8 +134,9 @@ class GeneratedRootFrameProbe {
 				}
 			]
 		};
+		final validatedProgram = new HxcIRValidator().requireValid(program, "portable");
 		final dynamicPlan = new CLoweredBodyDynamicPlan(program.dynamicPlan, [], [], [], []);
-		final lowered = new CBodyLoweringResult(program, [loweredRoot, loweredEntry], [], // globals
+		final lowered = new CBodyLoweringResult(validatedProgram, [loweredRoot, loweredEntry], [], // globals
 			[], // aggregates
 			[], // enums
 			[], // classes

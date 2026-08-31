@@ -134,6 +134,7 @@ static int gc_test_primary_contract(hxc_gc *gc) {
   gc_test_node *invalid_root = NULL;
   gc_test_node *invalid_child = NULL;
   gc_test_bad_trace *bad_trace = NULL;
+  int32_t foreign_value = INT32_C(17);
   hxc_gc_stats stats = HXC_GC_STATS_INITIALIZER;
   size_t round;
 
@@ -158,6 +159,11 @@ static int gc_test_primary_contract(hxc_gc *gc) {
   HXC_CHECK(hxc_gc_collect(gc) == HXC_STATUS_OK);
   HXC_CHECK(!hxc_gc_owns_exact(gc, first));
   HXC_CHECK(!hxc_gc_owns_exact(gc, second));
+
+  /* A foreign root is rejected by address alone, without being dereferenced. */
+  main_slots[0] = &foreign_value;
+  HXC_CHECK(hxc_gc_collect(gc) == HXC_STATUS_INVALID_ARGUMENT);
+  main_slots[0] = NULL;
 
   /* Global and second-thread roots participate in the same exact mark. */
   HXC_CHECK(gc_test_allocate_node(gc, &global) == HXC_STATUS_OK);
@@ -224,7 +230,13 @@ static int gc_test_primary_contract(hxc_gc *gc) {
   HXC_CHECK(hxc_gc_get_stats(gc, &stats) == HXC_STATUS_OK);
   HXC_CHECK(stats.current_object_count == 0u);
   HXC_CHECK(stats.live_payload_bytes == 0u);
-  HXC_CHECK(stats.internal_overhead_bytes == 0u);
+  HXC_CHECK(stats.internal_overhead_bytes == stats.exact_index_bytes);
+  HXC_CHECK(stats.exact_index_bytes > 0u);
+  HXC_CHECK(stats.peak_exact_index_bytes >= stats.exact_index_bytes);
+  HXC_CHECK(stats.exact_index_build_count > stats.collection_count);
+  HXC_CHECK(stats.exact_index_fallback_count == UINT64_C(0));
+  HXC_CHECK(stats.exact_lookup_count > UINT64_C(0));
+  HXC_CHECK(stats.exact_probe_count >= stats.exact_lookup_count);
   HXC_CHECK(stats.reclaimed_object_count == stats.allocation_count);
   HXC_CHECK(stats.reclaimed_payload_bytes == stats.allocated_payload_bytes);
   HXC_CHECK(stats.collection_count >= UINT64_C(128));

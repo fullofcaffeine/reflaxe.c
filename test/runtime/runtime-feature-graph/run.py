@@ -1239,7 +1239,7 @@ def run_native(package: dict[str, object], toolchains: list[Toolchain]) -> None:
                 "gc",
                 gc_package,
                 GC_CONSUMER,
-                "gc-contract: OK allocations=265 collections=137 reclaimed=265 pause_ticks=973\n",
+                "gc-contract: OK allocations=265 collections=137 reclaimed=265 pause_ticks=980\n",
                 family_root,
             )
             run_native_case(

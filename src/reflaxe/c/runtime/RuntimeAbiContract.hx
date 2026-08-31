@@ -37,6 +37,7 @@ class RuntimeAbiContract {
 		"hxc_gc",
 		"hxc_gc_allocation",
 		"hxc_gc_config",
+		"hxc_gc_exact_index_entry",
 		"hxc_gc_pin",
 		"hxc_gc_root_frame",
 		"hxc_gc_root_table",

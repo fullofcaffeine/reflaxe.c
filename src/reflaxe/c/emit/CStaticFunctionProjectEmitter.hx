@@ -283,6 +283,12 @@ class CStaticFunctionProjectEmitter {
 				headers.push(header);
 			}
 		}
+		// Collector lifecycle needs both contracts even when no individual
+		// function contains a managed root or allocation operation.
+		if (lowered.managedProgram != null)
+			for (header in ["hxrt/gc.h", "stdlib.h"])
+				if (headers.indexOf(header) == -1)
+					headers.push(header);
 		if (usesFloat32) {
 			for (header in ["float.h", "limits.h"]) {
 				if (headers.indexOf(header) == -1) {
