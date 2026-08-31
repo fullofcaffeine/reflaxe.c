@@ -1,7 +1,7 @@
-  function "function.Main.valid" name="Main.valid" returns=bool failure=infallible exception-strategy=none entry="entry" @"Main.hx":20:53-31:3
-    parameter "parameter.0" type=instance("instance.haxe-array.56c355938f6a38360d1306c8d6948d2ef6b8e31e42b9de67ee48afcec69b9b08") ownership=owned-or-value @"Main.hx":20:53-31:3
+  function "function.Main.valid" name="Main.valid" returns=bool failure=infallible exception-strategy=none entry="entry" @"Main.hx":20:2-31:3
+    parameter "parameter.0" type=instance("instance.haxe-array.56c355938f6a38360d1306c8d6948d2ef6b8e31e42b9de67ee48afcec69b9b08") ownership=owned-or-value @"Main.hx":20:2-31:3
     local "local.1" type=i32 ownership=owned-or-value storage=automatic state=uninitialized @"Main.hx":21:3-21:17
-    block "entry" @"Main.hx":20:53-31:3
+    block "entry" @"Main.hx":20:2-31:3
       instruction "instruction.0.constant" result="value.0":i32 constant value=int(0) @"Main.hx":21:15-21:16
       instruction "instruction.1.initialize" result=- initialize place=local("local.1") value="value.0" transition=uninitialized->initialized @"Main.hx":21:3-21:17
       terminator jump edge(target="block.0.while-condition",arguments=[],cleanup=[]) @"Main.hx":22:3-29:4

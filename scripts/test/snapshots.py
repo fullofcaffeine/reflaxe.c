@@ -725,6 +725,26 @@ def enum_lowering_artifacts() -> list[Artifact]:
                 value,
             )
         )
+    with tempfile.TemporaryDirectory(
+        prefix="hxc-enum-statement-snapshot-"
+    ) as temporary:
+        statement_hxcir, statement_c, _ = module.render_statement_early_return(
+            Path(temporary)
+        )
+    artifacts.extend(
+        (
+            Artifact(
+                Path("test/enum_lowering/expected/statement_early_return.hxcir"),
+                "hxcir",
+                statement_hxcir,
+            ),
+            Artifact(
+                Path("test/enum_lowering/expected/statement_early_return.c"),
+                "c",
+                statement_c,
+            ),
+        )
+    )
     return artifacts
 
 

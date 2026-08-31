@@ -9764,14 +9764,14 @@
       "overloadSignature": [],
       "collisionResolved": false,
       "naming": "generated",
-      "sourceOrdinal": 2,
+      "sourceOrdinal": 1,
       "readableName": [
         "tmp",
         "array-create-result"
       ],
       "requestedName": null,
-      "cName": "hxc_l_tmp_array_create_result_n2",
-      "semanticKey": "9:temporary|100:ordinary:88:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture19:recursiveActionPlan|0:|0:|0:|3:11:EnumFixture19:recursiveActionPlan19:array-create-result|0:|0:|1:2",
+      "cName": "hxc_l_tmp_array_create_result_n1",
+      "semanticKey": "9:temporary|100:ordinary:88:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture19:recursiveActionPlan|0:|0:|0:|3:11:EnumFixture19:recursiveActionPlan19:array-create-result|0:|0:|1:1",
       "escapeReasons": [
         "non-c-identifier-byte",
         "separator-normalized"
@@ -9783,8 +9783,34 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_l_tmp_array_create_result_n2",
-      "sourceSymbol": "EnumFixture.recursiveActionPlan.array-create-result#2"
+      "baseName": "hxc_l_tmp_array_create_result_n1",
+      "sourceSymbol": "EnumFixture.recursiveActionPlan.array-create-result#1"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 3,
+      "readableName": [
+        "tmp",
+        "array-create-result"
+      ],
+      "requestedName": null,
+      "cName": "hxc_l_tmp_array_create_result_n3",
+      "semanticKey": "9:temporary|100:ordinary:88:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture19:recursiveActionPlan|0:|0:|0:|3:11:EnumFixture19:recursiveActionPlan19:array-create-result|0:|0:|1:3",
+      "escapeReasons": [
+        "non-c-identifier-byte",
+        "separator-normalized"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:EnumFixture19:recursiveActionPlan|0:|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_l_tmp_array_create_result_n3",
+      "sourceSymbol": "EnumFixture.recursiveActionPlan.array-create-result#3"
     },
     {
       "overloadSignature": [],
@@ -9811,110 +9837,6 @@
       "specializationArguments": [],
       "baseName": "hxc_l_tmp_array_create_result_n5",
       "sourceSymbol": "EnumFixture.recursiveActionPlan.array-create-result#5"
-    },
-    {
-      "overloadSignature": [],
-      "collisionResolved": false,
-      "naming": "generated",
-      "sourceOrdinal": 8,
-      "readableName": [
-        "tmp",
-        "array-create-result"
-      ],
-      "requestedName": null,
-      "cName": "hxc_l_tmp_array_create_result_n8",
-      "semanticKey": "9:temporary|100:ordinary:88:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture19:recursiveActionPlan|0:|0:|0:|3:11:EnumFixture19:recursiveActionPlan19:array-create-result|0:|0:|1:8",
-      "escapeReasons": [
-        "non-c-identifier-byte",
-        "separator-normalized"
-      ],
-      "namespace": {
-        "scope": "6:method|28:ordinary:16:translation-unit|2:11:EnumFixture19:recursiveActionPlan|0:|0:|0:",
-        "kind": "ordinary"
-      },
-      "visibility": "internal",
-      "kind": "temporary",
-      "specializationArguments": [],
-      "baseName": "hxc_l_tmp_array_create_result_n8",
-      "sourceSymbol": "EnumFixture.recursiveActionPlan.array-create-result#8"
-    },
-    {
-      "overloadSignature": [],
-      "collisionResolved": false,
-      "naming": "generated",
-      "sourceOrdinal": 0,
-      "readableName": [
-        "tmp",
-        "array-literal-element-0-owner"
-      ],
-      "requestedName": null,
-      "cName": "hxc_l_tmp_array_literal_element_0_owner_n0",
-      "semanticKey": "9:temporary|100:ordinary:88:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture19:recursiveActionPlan|0:|0:|0:|3:11:EnumFixture19:recursiveActionPlan29:array-literal-element-0-owner|0:|0:|1:0",
-      "escapeReasons": [
-        "non-c-identifier-byte",
-        "separator-normalized"
-      ],
-      "namespace": {
-        "scope": "6:method|28:ordinary:16:translation-unit|2:11:EnumFixture19:recursiveActionPlan|0:|0:|0:",
-        "kind": "ordinary"
-      },
-      "visibility": "internal",
-      "kind": "temporary",
-      "specializationArguments": [],
-      "baseName": "hxc_l_tmp_array_literal_element_0_owner_n0",
-      "sourceSymbol": "EnumFixture.recursiveActionPlan.array-literal-element-0-owner#0"
-    },
-    {
-      "overloadSignature": [],
-      "collisionResolved": false,
-      "naming": "generated",
-      "sourceOrdinal": 1,
-      "readableName": [
-        "tmp",
-        "array-literal-element-0-owner"
-      ],
-      "requestedName": null,
-      "cName": "hxc_l_tmp_array_literal_element_0_owner_n1",
-      "semanticKey": "9:temporary|100:ordinary:88:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture19:recursiveActionPlan|0:|0:|0:|3:11:EnumFixture19:recursiveActionPlan29:array-literal-element-0-owner|0:|0:|1:1",
-      "escapeReasons": [
-        "non-c-identifier-byte",
-        "separator-normalized"
-      ],
-      "namespace": {
-        "scope": "6:method|28:ordinary:16:translation-unit|2:11:EnumFixture19:recursiveActionPlan|0:|0:|0:",
-        "kind": "ordinary"
-      },
-      "visibility": "internal",
-      "kind": "temporary",
-      "specializationArguments": [],
-      "baseName": "hxc_l_tmp_array_literal_element_0_owner_n1",
-      "sourceSymbol": "EnumFixture.recursiveActionPlan.array-literal-element-0-owner#1"
-    },
-    {
-      "overloadSignature": [],
-      "collisionResolved": false,
-      "naming": "generated",
-      "sourceOrdinal": 2,
-      "readableName": [
-        "tmp",
-        "array-literal-element-0-owner"
-      ],
-      "requestedName": null,
-      "cName": "hxc_l_tmp_array_literal_element_0_owner_n2",
-      "semanticKey": "9:temporary|100:ordinary:88:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture19:recursiveActionPlan|0:|0:|0:|3:11:EnumFixture19:recursiveActionPlan29:array-literal-element-0-owner|0:|0:|1:2",
-      "escapeReasons": [
-        "non-c-identifier-byte",
-        "separator-normalized"
-      ],
-      "namespace": {
-        "scope": "6:method|28:ordinary:16:translation-unit|2:11:EnumFixture19:recursiveActionPlan|0:|0:|0:",
-        "kind": "ordinary"
-      },
-      "visibility": "internal",
-      "kind": "temporary",
-      "specializationArguments": [],
-      "baseName": "hxc_l_tmp_array_literal_element_0_owner_n2",
-      "sourceSymbol": "EnumFixture.recursiveActionPlan.array-literal-element-0-owner#2"
     },
     {
       "overloadSignature": [
@@ -9970,13 +9892,13 @@
       "overloadSignature": [],
       "collisionResolved": true,
       "naming": "generated",
-      "sourceOrdinal": 11,
+      "sourceOrdinal": 5,
       "readableName": [
         "`a0"
       ],
       "requestedName": null,
-      "cName": "hxc_l_a0_hde79160c1991",
-      "semanticKey": "5:local|205:ordinary:192:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture24:recursiveActionPlanValue|1:96:instance:instance.closed-record.ae1876bc8dc0a9ddfc257b11edb212c1b8bbbbe8d961db867ac2fb87ca34e415|0:|0:|3:11:EnumFixture24:recursiveActionPlanValue3:`a0|0:|0:|2:11",
+      "cName": "hxc_l_a0_h20427e845f84",
+      "semanticKey": "5:local|205:ordinary:192:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture24:recursiveActionPlanValue|1:96:instance:instance.closed-record.ae1876bc8dc0a9ddfc257b11edb212c1b8bbbbe8d961db867ac2fb87ca34e415|0:|0:|3:11:EnumFixture24:recursiveActionPlanValue3:`a0|0:|0:|1:5",
       "escapeReasons": [
         "non-c-identifier-byte",
         "separator-normalized"
@@ -9989,19 +9911,19 @@
       "kind": "local",
       "specializationArguments": [],
       "baseName": "hxc_l_a0",
-      "sourceSymbol": "EnumFixture.recursiveActionPlanValue.`a0#11"
+      "sourceSymbol": "EnumFixture.recursiveActionPlanValue.`a0#5"
     },
     {
       "overloadSignature": [],
       "collisionResolved": true,
       "naming": "generated",
-      "sourceOrdinal": 6,
+      "sourceOrdinal": 9,
       "readableName": [
         "`a0"
       ],
       "requestedName": null,
-      "cName": "hxc_l_a0_h1d4712e82e9d",
-      "semanticKey": "5:local|205:ordinary:192:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture24:recursiveActionPlanValue|1:96:instance:instance.closed-record.ae1876bc8dc0a9ddfc257b11edb212c1b8bbbbe8d961db867ac2fb87ca34e415|0:|0:|3:11:EnumFixture24:recursiveActionPlanValue3:`a0|0:|0:|1:6",
+      "cName": "hxc_l_a0_h761ba892ea54",
+      "semanticKey": "5:local|205:ordinary:192:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture24:recursiveActionPlanValue|1:96:instance:instance.closed-record.ae1876bc8dc0a9ddfc257b11edb212c1b8bbbbe8d961db867ac2fb87ca34e415|0:|0:|3:11:EnumFixture24:recursiveActionPlanValue3:`a0|0:|0:|1:9",
       "escapeReasons": [
         "non-c-identifier-byte",
         "separator-normalized"
@@ -10014,19 +9936,19 @@
       "kind": "local",
       "specializationArguments": [],
       "baseName": "hxc_l_a0",
-      "sourceSymbol": "EnumFixture.recursiveActionPlanValue.`a0#6"
+      "sourceSymbol": "EnumFixture.recursiveActionPlanValue.`a0#9"
     },
     {
       "overloadSignature": [],
       "collisionResolved": false,
       "naming": "generated",
-      "sourceOrdinal": 8,
+      "sourceOrdinal": 6,
       "readableName": [
         "`actions"
       ],
       "requestedName": null,
       "cName": "hxc_l_actions",
-      "semanticKey": "5:local|205:ordinary:192:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture24:recursiveActionPlanValue|1:96:instance:instance.closed-record.ae1876bc8dc0a9ddfc257b11edb212c1b8bbbbe8d961db867ac2fb87ca34e415|0:|0:|3:11:EnumFixture24:recursiveActionPlanValue8:`actions|0:|0:|1:8",
+      "semanticKey": "5:local|205:ordinary:192:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture24:recursiveActionPlanValue|1:96:instance:instance.closed-record.ae1876bc8dc0a9ddfc257b11edb212c1b8bbbbe8d961db867ac2fb87ca34e415|0:|0:|3:11:EnumFixture24:recursiveActionPlanValue8:`actions|0:|0:|1:6",
       "escapeReasons": [
         "non-c-identifier-byte",
         "separator-normalized"
@@ -10039,19 +9961,19 @@
       "kind": "local",
       "specializationArguments": [],
       "baseName": "hxc_l_actions",
-      "sourceSymbol": "EnumFixture.recursiveActionPlanValue.`actions#8"
+      "sourceSymbol": "EnumFixture.recursiveActionPlanValue.`actions#6"
     },
     {
       "overloadSignature": [],
       "collisionResolved": false,
       "naming": "generated",
-      "sourceOrdinal": 4,
+      "sourceOrdinal": 3,
       "readableName": [
         "`choices"
       ],
       "requestedName": null,
       "cName": "hxc_l_choices",
-      "semanticKey": "5:local|205:ordinary:192:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture24:recursiveActionPlanValue|1:96:instance:instance.closed-record.ae1876bc8dc0a9ddfc257b11edb212c1b8bbbbe8d961db867ac2fb87ca34e415|0:|0:|3:11:EnumFixture24:recursiveActionPlanValue8:`choices|0:|0:|1:4",
+      "semanticKey": "5:local|205:ordinary:192:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture24:recursiveActionPlanValue|1:96:instance:instance.closed-record.ae1876bc8dc0a9ddfc257b11edb212c1b8bbbbe8d961db867ac2fb87ca34e415|0:|0:|3:11:EnumFixture24:recursiveActionPlanValue8:`choices|0:|0:|1:3",
       "escapeReasons": [
         "non-c-identifier-byte",
         "separator-normalized"
@@ -10064,19 +9986,19 @@
       "kind": "local",
       "specializationArguments": [],
       "baseName": "hxc_l_choices",
-      "sourceSymbol": "EnumFixture.recursiveActionPlanValue.`choices#4"
+      "sourceSymbol": "EnumFixture.recursiveActionPlanValue.`choices#3"
     },
     {
       "overloadSignature": [],
       "collisionResolved": true,
       "naming": "generated",
-      "sourceOrdinal": 14,
+      "sourceOrdinal": 11,
       "readableName": [
         "`value"
       ],
       "requestedName": null,
-      "cName": "hxc_l_value_h3a49a4594f7c",
-      "semanticKey": "5:local|205:ordinary:192:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture24:recursiveActionPlanValue|1:96:instance:instance.closed-record.ae1876bc8dc0a9ddfc257b11edb212c1b8bbbbe8d961db867ac2fb87ca34e415|0:|0:|3:11:EnumFixture24:recursiveActionPlanValue6:`value|0:|0:|2:14",
+      "cName": "hxc_l_value_h8011a7a07e37",
+      "semanticKey": "5:local|205:ordinary:192:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture24:recursiveActionPlanValue|1:96:instance:instance.closed-record.ae1876bc8dc0a9ddfc257b11edb212c1b8bbbbe8d961db867ac2fb87ca34e415|0:|0:|3:11:EnumFixture24:recursiveActionPlanValue6:`value|0:|0:|2:11",
       "escapeReasons": [
         "non-c-identifier-byte",
         "separator-normalized"
@@ -10089,19 +10011,19 @@
       "kind": "local",
       "specializationArguments": [],
       "baseName": "hxc_l_value",
-      "sourceSymbol": "EnumFixture.recursiveActionPlanValue.`value#14"
+      "sourceSymbol": "EnumFixture.recursiveActionPlanValue.`value#11"
     },
     {
       "overloadSignature": [],
       "collisionResolved": false,
       "naming": "generated",
-      "sourceOrdinal": 9,
+      "sourceOrdinal": 7,
       "readableName": [
         "`weight"
       ],
       "requestedName": null,
       "cName": "hxc_l_weight",
-      "semanticKey": "5:local|205:ordinary:192:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture24:recursiveActionPlanValue|1:96:instance:instance.closed-record.ae1876bc8dc0a9ddfc257b11edb212c1b8bbbbe8d961db867ac2fb87ca34e415|0:|0:|3:11:EnumFixture24:recursiveActionPlanValue7:`weight|0:|0:|1:9",
+      "semanticKey": "5:local|205:ordinary:192:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture24:recursiveActionPlanValue|1:96:instance:instance.closed-record.ae1876bc8dc0a9ddfc257b11edb212c1b8bbbbe8d961db867ac2fb87ca34e415|0:|0:|3:11:EnumFixture24:recursiveActionPlanValue7:`weight|0:|0:|1:7",
       "escapeReasons": [
         "non-c-identifier-byte",
         "separator-normalized"
@@ -10114,85 +10036,7 @@
       "kind": "local",
       "specializationArguments": [],
       "baseName": "hxc_l_weight",
-      "sourceSymbol": "EnumFixture.recursiveActionPlanValue.`weight#9"
-    },
-    {
-      "overloadSignature": [],
-      "collisionResolved": false,
-      "naming": "generated",
-      "sourceOrdinal": 12,
-      "readableName": [
-        "tmp",
-        "array-element-owner"
-      ],
-      "requestedName": null,
-      "cName": "hxc_l_tmp_array_element_owner_n12",
-      "semanticKey": "9:temporary|205:ordinary:192:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture24:recursiveActionPlanValue|1:96:instance:instance.closed-record.ae1876bc8dc0a9ddfc257b11edb212c1b8bbbbe8d961db867ac2fb87ca34e415|0:|0:|3:11:EnumFixture24:recursiveActionPlanValue19:array-element-owner|0:|0:|2:12",
-      "escapeReasons": [
-        "non-c-identifier-byte",
-        "separator-normalized"
-      ],
-      "namespace": {
-        "scope": "6:method|28:ordinary:16:translation-unit|2:11:EnumFixture24:recursiveActionPlanValue|1:96:instance:instance.closed-record.ae1876bc8dc0a9ddfc257b11edb212c1b8bbbbe8d961db867ac2fb87ca34e415|0:|0:",
-        "kind": "ordinary"
-      },
-      "visibility": "internal",
-      "kind": "temporary",
-      "specializationArguments": [],
-      "baseName": "hxc_l_tmp_array_element_owner_n12",
-      "sourceSymbol": "EnumFixture.recursiveActionPlanValue.array-element-owner#12"
-    },
-    {
-      "overloadSignature": [],
-      "collisionResolved": false,
-      "naming": "generated",
-      "sourceOrdinal": 2,
-      "readableName": [
-        "tmp",
-        "array-element-owner"
-      ],
-      "requestedName": null,
-      "cName": "hxc_l_tmp_array_element_owner_n2",
-      "semanticKey": "9:temporary|205:ordinary:192:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture24:recursiveActionPlanValue|1:96:instance:instance.closed-record.ae1876bc8dc0a9ddfc257b11edb212c1b8bbbbe8d961db867ac2fb87ca34e415|0:|0:|3:11:EnumFixture24:recursiveActionPlanValue19:array-element-owner|0:|0:|1:2",
-      "escapeReasons": [
-        "non-c-identifier-byte",
-        "separator-normalized"
-      ],
-      "namespace": {
-        "scope": "6:method|28:ordinary:16:translation-unit|2:11:EnumFixture24:recursiveActionPlanValue|1:96:instance:instance.closed-record.ae1876bc8dc0a9ddfc257b11edb212c1b8bbbbe8d961db867ac2fb87ca34e415|0:|0:",
-        "kind": "ordinary"
-      },
-      "visibility": "internal",
-      "kind": "temporary",
-      "specializationArguments": [],
-      "baseName": "hxc_l_tmp_array_element_owner_n2",
-      "sourceSymbol": "EnumFixture.recursiveActionPlanValue.array-element-owner#2"
-    },
-    {
-      "overloadSignature": [],
-      "collisionResolved": false,
-      "naming": "generated",
-      "sourceOrdinal": 7,
-      "readableName": [
-        "tmp",
-        "array-element-owner"
-      ],
-      "requestedName": null,
-      "cName": "hxc_l_tmp_array_element_owner_n7",
-      "semanticKey": "9:temporary|205:ordinary:192:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture24:recursiveActionPlanValue|1:96:instance:instance.closed-record.ae1876bc8dc0a9ddfc257b11edb212c1b8bbbbe8d961db867ac2fb87ca34e415|0:|0:|3:11:EnumFixture24:recursiveActionPlanValue19:array-element-owner|0:|0:|1:7",
-      "escapeReasons": [
-        "non-c-identifier-byte",
-        "separator-normalized"
-      ],
-      "namespace": {
-        "scope": "6:method|28:ordinary:16:translation-unit|2:11:EnumFixture24:recursiveActionPlanValue|1:96:instance:instance.closed-record.ae1876bc8dc0a9ddfc257b11edb212c1b8bbbbe8d961db867ac2fb87ca34e415|0:|0:",
-        "kind": "ordinary"
-      },
-      "visibility": "internal",
-      "kind": "temporary",
-      "specializationArguments": [],
-      "baseName": "hxc_l_tmp_array_element_owner_n7",
-      "sourceSymbol": "EnumFixture.recursiveActionPlanValue.array-element-owner#7"
+      "sourceSymbol": "EnumFixture.recursiveActionPlanValue.`weight#7"
     },
     {
       "overloadSignature": [],
@@ -10224,66 +10068,14 @@
       "overloadSignature": [],
       "collisionResolved": false,
       "naming": "generated",
-      "sourceOrdinal": 17,
-      "readableName": [
-        "tmp",
-        "array-get-result"
-      ],
-      "requestedName": null,
-      "cName": "hxc_l_tmp_array_get_result_n17",
-      "semanticKey": "9:temporary|205:ordinary:192:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture24:recursiveActionPlanValue|1:96:instance:instance.closed-record.ae1876bc8dc0a9ddfc257b11edb212c1b8bbbbe8d961db867ac2fb87ca34e415|0:|0:|3:11:EnumFixture24:recursiveActionPlanValue16:array-get-result|0:|0:|2:17",
-      "escapeReasons": [
-        "non-c-identifier-byte",
-        "separator-normalized"
-      ],
-      "namespace": {
-        "scope": "6:method|28:ordinary:16:translation-unit|2:11:EnumFixture24:recursiveActionPlanValue|1:96:instance:instance.closed-record.ae1876bc8dc0a9ddfc257b11edb212c1b8bbbbe8d961db867ac2fb87ca34e415|0:|0:",
-        "kind": "ordinary"
-      },
-      "visibility": "internal",
-      "kind": "temporary",
-      "specializationArguments": [],
-      "baseName": "hxc_l_tmp_array_get_result_n17",
-      "sourceSymbol": "EnumFixture.recursiveActionPlanValue.array-get-result#17"
-    },
-    {
-      "overloadSignature": [],
-      "collisionResolved": false,
-      "naming": "generated",
-      "sourceOrdinal": 9,
-      "readableName": [
-        "tmp",
-        "array-get-result"
-      ],
-      "requestedName": null,
-      "cName": "hxc_l_tmp_array_get_result_n9",
-      "semanticKey": "9:temporary|205:ordinary:192:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture24:recursiveActionPlanValue|1:96:instance:instance.closed-record.ae1876bc8dc0a9ddfc257b11edb212c1b8bbbbe8d961db867ac2fb87ca34e415|0:|0:|3:11:EnumFixture24:recursiveActionPlanValue16:array-get-result|0:|0:|1:9",
-      "escapeReasons": [
-        "non-c-identifier-byte",
-        "separator-normalized"
-      ],
-      "namespace": {
-        "scope": "6:method|28:ordinary:16:translation-unit|2:11:EnumFixture24:recursiveActionPlanValue|1:96:instance:instance.closed-record.ae1876bc8dc0a9ddfc257b11edb212c1b8bbbbe8d961db867ac2fb87ca34e415|0:|0:",
-        "kind": "ordinary"
-      },
-      "visibility": "internal",
-      "kind": "temporary",
-      "specializationArguments": [],
-      "baseName": "hxc_l_tmp_array_get_result_n9",
-      "sourceSymbol": "EnumFixture.recursiveActionPlanValue.array-get-result#9"
-    },
-    {
-      "overloadSignature": [],
-      "collisionResolved": false,
-      "naming": "generated",
       "sourceOrdinal": 15,
       "readableName": [
         "tmp",
-        "array-length-result"
+        "array-get-result"
       ],
       "requestedName": null,
-      "cName": "hxc_l_tmp_array_length_result_n15",
-      "semanticKey": "9:temporary|205:ordinary:192:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture24:recursiveActionPlanValue|1:96:instance:instance.closed-record.ae1876bc8dc0a9ddfc257b11edb212c1b8bbbbe8d961db867ac2fb87ca34e415|0:|0:|3:11:EnumFixture24:recursiveActionPlanValue19:array-length-result|0:|0:|2:15",
+      "cName": "hxc_l_tmp_array_get_result_n15",
+      "semanticKey": "9:temporary|205:ordinary:192:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture24:recursiveActionPlanValue|1:96:instance:instance.closed-record.ae1876bc8dc0a9ddfc257b11edb212c1b8bbbbe8d961db867ac2fb87ca34e415|0:|0:|3:11:EnumFixture24:recursiveActionPlanValue16:array-get-result|0:|0:|2:15",
       "escapeReasons": [
         "non-c-identifier-byte",
         "separator-normalized"
@@ -10295,21 +10087,21 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_l_tmp_array_length_result_n15",
-      "sourceSymbol": "EnumFixture.recursiveActionPlanValue.array-length-result#15"
+      "baseName": "hxc_l_tmp_array_get_result_n15",
+      "sourceSymbol": "EnumFixture.recursiveActionPlanValue.array-get-result#15"
     },
     {
       "overloadSignature": [],
       "collisionResolved": false,
       "naming": "generated",
-      "sourceOrdinal": 7,
+      "sourceOrdinal": 8,
       "readableName": [
         "tmp",
-        "array-length-result"
+        "array-get-result"
       ],
       "requestedName": null,
-      "cName": "hxc_l_tmp_array_length_result_n7",
-      "semanticKey": "9:temporary|205:ordinary:192:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture24:recursiveActionPlanValue|1:96:instance:instance.closed-record.ae1876bc8dc0a9ddfc257b11edb212c1b8bbbbe8d961db867ac2fb87ca34e415|0:|0:|3:11:EnumFixture24:recursiveActionPlanValue19:array-length-result|0:|0:|1:7",
+      "cName": "hxc_l_tmp_array_get_result_n8",
+      "semanticKey": "9:temporary|205:ordinary:192:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture24:recursiveActionPlanValue|1:96:instance:instance.closed-record.ae1876bc8dc0a9ddfc257b11edb212c1b8bbbbe8d961db867ac2fb87ca34e415|0:|0:|3:11:EnumFixture24:recursiveActionPlanValue16:array-get-result|0:|0:|1:8",
       "escapeReasons": [
         "non-c-identifier-byte",
         "separator-normalized"
@@ -10321,8 +10113,60 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_l_tmp_array_length_result_n7",
-      "sourceSymbol": "EnumFixture.recursiveActionPlanValue.array-length-result#7"
+      "baseName": "hxc_l_tmp_array_get_result_n8",
+      "sourceSymbol": "EnumFixture.recursiveActionPlanValue.array-get-result#8"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 13,
+      "readableName": [
+        "tmp",
+        "array-length-result"
+      ],
+      "requestedName": null,
+      "cName": "hxc_l_tmp_array_length_result_n13",
+      "semanticKey": "9:temporary|205:ordinary:192:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture24:recursiveActionPlanValue|1:96:instance:instance.closed-record.ae1876bc8dc0a9ddfc257b11edb212c1b8bbbbe8d961db867ac2fb87ca34e415|0:|0:|3:11:EnumFixture24:recursiveActionPlanValue19:array-length-result|0:|0:|2:13",
+      "escapeReasons": [
+        "non-c-identifier-byte",
+        "separator-normalized"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:EnumFixture24:recursiveActionPlanValue|1:96:instance:instance.closed-record.ae1876bc8dc0a9ddfc257b11edb212c1b8bbbbe8d961db867ac2fb87ca34e415|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_l_tmp_array_length_result_n13",
+      "sourceSymbol": "EnumFixture.recursiveActionPlanValue.array-length-result#13"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 6,
+      "readableName": [
+        "tmp",
+        "array-length-result"
+      ],
+      "requestedName": null,
+      "cName": "hxc_l_tmp_array_length_result_n6",
+      "semanticKey": "9:temporary|205:ordinary:192:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture24:recursiveActionPlanValue|1:96:instance:instance.closed-record.ae1876bc8dc0a9ddfc257b11edb212c1b8bbbbe8d961db867ac2fb87ca34e415|0:|0:|3:11:EnumFixture24:recursiveActionPlanValue19:array-length-result|0:|0:|1:6",
+      "escapeReasons": [
+        "non-c-identifier-byte",
+        "separator-normalized"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:EnumFixture24:recursiveActionPlanValue|1:96:instance:instance.closed-record.ae1876bc8dc0a9ddfc257b11edb212c1b8bbbbe8d961db867ac2fb87ca34e415|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_l_tmp_array_length_result_n6",
+      "sourceSymbol": "EnumFixture.recursiveActionPlanValue.array-length-result#6"
     },
     {
       "overloadSignature": [],
@@ -10718,32 +10562,6 @@
       "overloadSignature": [],
       "collisionResolved": false,
       "naming": "generated",
-      "sourceOrdinal": 29,
-      "readableName": [
-        "tmp",
-        "conditional-load-result"
-      ],
-      "requestedName": null,
-      "cName": "hxc_l_tmp_conditional_load_result_n29",
-      "semanticKey": "9:temporary|205:ordinary:192:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture24:recursiveActionPlanValue|1:96:instance:instance.closed-record.ae1876bc8dc0a9ddfc257b11edb212c1b8bbbbe8d961db867ac2fb87ca34e415|0:|0:|3:11:EnumFixture24:recursiveActionPlanValue23:conditional-load-result|0:|0:|2:29",
-      "escapeReasons": [
-        "non-c-identifier-byte",
-        "separator-normalized"
-      ],
-      "namespace": {
-        "scope": "6:method|28:ordinary:16:translation-unit|2:11:EnumFixture24:recursiveActionPlanValue|1:96:instance:instance.closed-record.ae1876bc8dc0a9ddfc257b11edb212c1b8bbbbe8d961db867ac2fb87ca34e415|0:|0:",
-        "kind": "ordinary"
-      },
-      "visibility": "internal",
-      "kind": "temporary",
-      "specializationArguments": [],
-      "baseName": "hxc_l_tmp_conditional_load_result_n29",
-      "sourceSymbol": "EnumFixture.recursiveActionPlanValue.conditional-load-result#29"
-    },
-    {
-      "overloadSignature": [],
-      "collisionResolved": false,
-      "naming": "generated",
       "sourceOrdinal": 10,
       "readableName": [
         "tmp",
@@ -10770,14 +10588,14 @@
       "overloadSignature": [],
       "collisionResolved": false,
       "naming": "generated",
-      "sourceOrdinal": 13,
+      "sourceOrdinal": 12,
       "readableName": [
         "tmp",
         "conditional-result"
       ],
       "requestedName": null,
-      "cName": "hxc_l_tmp_conditional_result_n13",
-      "semanticKey": "9:temporary|205:ordinary:192:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture24:recursiveActionPlanValue|1:96:instance:instance.closed-record.ae1876bc8dc0a9ddfc257b11edb212c1b8bbbbe8d961db867ac2fb87ca34e415|0:|0:|3:11:EnumFixture24:recursiveActionPlanValue18:conditional-result|0:|0:|2:13",
+      "cName": "hxc_l_tmp_conditional_result_n12",
+      "semanticKey": "9:temporary|205:ordinary:192:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture24:recursiveActionPlanValue|1:96:instance:instance.closed-record.ae1876bc8dc0a9ddfc257b11edb212c1b8bbbbe8d961db867ac2fb87ca34e415|0:|0:|3:11:EnumFixture24:recursiveActionPlanValue18:conditional-result|0:|0:|2:12",
       "escapeReasons": [
         "non-c-identifier-byte",
         "separator-normalized"
@@ -10789,21 +10607,21 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_l_tmp_conditional_result_n13",
-      "sourceSymbol": "EnumFixture.recursiveActionPlanValue.conditional-result#13"
+      "baseName": "hxc_l_tmp_conditional_result_n12",
+      "sourceSymbol": "EnumFixture.recursiveActionPlanValue.conditional-result#12"
     },
     {
       "overloadSignature": [],
       "collisionResolved": false,
       "naming": "generated",
-      "sourceOrdinal": 15,
+      "sourceOrdinal": 2,
       "readableName": [
         "tmp",
         "conditional-result"
       ],
       "requestedName": null,
-      "cName": "hxc_l_tmp_conditional_result_n15",
-      "semanticKey": "9:temporary|205:ordinary:192:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture24:recursiveActionPlanValue|1:96:instance:instance.closed-record.ae1876bc8dc0a9ddfc257b11edb212c1b8bbbbe8d961db867ac2fb87ca34e415|0:|0:|3:11:EnumFixture24:recursiveActionPlanValue18:conditional-result|0:|0:|2:15",
+      "cName": "hxc_l_tmp_conditional_result_n2",
+      "semanticKey": "9:temporary|205:ordinary:192:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture24:recursiveActionPlanValue|1:96:instance:instance.closed-record.ae1876bc8dc0a9ddfc257b11edb212c1b8bbbbe8d961db867ac2fb87ca34e415|0:|0:|3:11:EnumFixture24:recursiveActionPlanValue18:conditional-result|0:|0:|1:2",
       "escapeReasons": [
         "non-c-identifier-byte",
         "separator-normalized"
@@ -10815,21 +10633,21 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_l_tmp_conditional_result_n15",
-      "sourceSymbol": "EnumFixture.recursiveActionPlanValue.conditional-result#15"
+      "baseName": "hxc_l_tmp_conditional_result_n2",
+      "sourceSymbol": "EnumFixture.recursiveActionPlanValue.conditional-result#2"
     },
     {
       "overloadSignature": [],
       "collisionResolved": false,
       "naming": "generated",
-      "sourceOrdinal": 3,
+      "sourceOrdinal": 4,
       "readableName": [
         "tmp",
         "conditional-result"
       ],
       "requestedName": null,
-      "cName": "hxc_l_tmp_conditional_result_n3",
-      "semanticKey": "9:temporary|205:ordinary:192:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture24:recursiveActionPlanValue|1:96:instance:instance.closed-record.ae1876bc8dc0a9ddfc257b11edb212c1b8bbbbe8d961db867ac2fb87ca34e415|0:|0:|3:11:EnumFixture24:recursiveActionPlanValue18:conditional-result|0:|0:|1:3",
+      "cName": "hxc_l_tmp_conditional_result_n4",
+      "semanticKey": "9:temporary|205:ordinary:192:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture24:recursiveActionPlanValue|1:96:instance:instance.closed-record.ae1876bc8dc0a9ddfc257b11edb212c1b8bbbbe8d961db867ac2fb87ca34e415|0:|0:|3:11:EnumFixture24:recursiveActionPlanValue18:conditional-result|0:|0:|1:4",
       "escapeReasons": [
         "non-c-identifier-byte",
         "separator-normalized"
@@ -10841,21 +10659,21 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_l_tmp_conditional_result_n3",
-      "sourceSymbol": "EnumFixture.recursiveActionPlanValue.conditional-result#3"
+      "baseName": "hxc_l_tmp_conditional_result_n4",
+      "sourceSymbol": "EnumFixture.recursiveActionPlanValue.conditional-result#4"
     },
     {
       "overloadSignature": [],
       "collisionResolved": false,
       "naming": "generated",
-      "sourceOrdinal": 5,
+      "sourceOrdinal": 8,
       "readableName": [
         "tmp",
         "conditional-result"
       ],
       "requestedName": null,
-      "cName": "hxc_l_tmp_conditional_result_n5",
-      "semanticKey": "9:temporary|205:ordinary:192:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture24:recursiveActionPlanValue|1:96:instance:instance.closed-record.ae1876bc8dc0a9ddfc257b11edb212c1b8bbbbe8d961db867ac2fb87ca34e415|0:|0:|3:11:EnumFixture24:recursiveActionPlanValue18:conditional-result|0:|0:|1:5",
+      "cName": "hxc_l_tmp_conditional_result_n8",
+      "semanticKey": "9:temporary|205:ordinary:192:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture24:recursiveActionPlanValue|1:96:instance:instance.closed-record.ae1876bc8dc0a9ddfc257b11edb212c1b8bbbbe8d961db867ac2fb87ca34e415|0:|0:|3:11:EnumFixture24:recursiveActionPlanValue18:conditional-result|0:|0:|1:8",
       "escapeReasons": [
         "non-c-identifier-byte",
         "separator-normalized"
@@ -10867,21 +10685,21 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_l_tmp_conditional_result_n5",
-      "sourceSymbol": "EnumFixture.recursiveActionPlanValue.conditional-result#5"
+      "baseName": "hxc_l_tmp_conditional_result_n8",
+      "sourceSymbol": "EnumFixture.recursiveActionPlanValue.conditional-result#8"
     },
     {
       "overloadSignature": [],
       "collisionResolved": false,
       "naming": "generated",
-      "sourceOrdinal": 21,
+      "sourceOrdinal": 18,
       "readableName": [
         "tmp",
         "enum-payload-project"
       ],
       "requestedName": null,
-      "cName": "hxc_l_tmp_enum_payload_project_n21",
-      "semanticKey": "9:temporary|205:ordinary:192:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture24:recursiveActionPlanValue|1:96:instance:instance.closed-record.ae1876bc8dc0a9ddfc257b11edb212c1b8bbbbe8d961db867ac2fb87ca34e415|0:|0:|3:11:EnumFixture24:recursiveActionPlanValue20:enum-payload-project|0:|0:|2:21",
+      "cName": "hxc_l_tmp_enum_payload_project_n18",
+      "semanticKey": "9:temporary|205:ordinary:192:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture24:recursiveActionPlanValue|1:96:instance:instance.closed-record.ae1876bc8dc0a9ddfc257b11edb212c1b8bbbbe8d961db867ac2fb87ca34e415|0:|0:|3:11:EnumFixture24:recursiveActionPlanValue20:enum-payload-project|0:|0:|2:18",
       "escapeReasons": [
         "non-c-identifier-byte",
         "separator-normalized"
@@ -10893,21 +10711,21 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_l_tmp_enum_payload_project_n21",
-      "sourceSymbol": "EnumFixture.recursiveActionPlanValue.enum-payload-project#21"
+      "baseName": "hxc_l_tmp_enum_payload_project_n18",
+      "sourceSymbol": "EnumFixture.recursiveActionPlanValue.enum-payload-project#18"
     },
     {
       "overloadSignature": [],
       "collisionResolved": false,
       "naming": "generated",
-      "sourceOrdinal": 5,
+      "sourceOrdinal": 4,
       "readableName": [
         "tmp",
         "enum-payload-project"
       ],
       "requestedName": null,
-      "cName": "hxc_l_tmp_enum_payload_project_n5",
-      "semanticKey": "9:temporary|205:ordinary:192:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture24:recursiveActionPlanValue|1:96:instance:instance.closed-record.ae1876bc8dc0a9ddfc257b11edb212c1b8bbbbe8d961db867ac2fb87ca34e415|0:|0:|3:11:EnumFixture24:recursiveActionPlanValue20:enum-payload-project|0:|0:|1:5",
+      "cName": "hxc_l_tmp_enum_payload_project_n4",
+      "semanticKey": "9:temporary|205:ordinary:192:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture24:recursiveActionPlanValue|1:96:instance:instance.closed-record.ae1876bc8dc0a9ddfc257b11edb212c1b8bbbbe8d961db867ac2fb87ca34e415|0:|0:|3:11:EnumFixture24:recursiveActionPlanValue20:enum-payload-project|0:|0:|1:4",
       "escapeReasons": [
         "non-c-identifier-byte",
         "separator-normalized"
@@ -10919,21 +10737,21 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_l_tmp_enum_payload_project_n5",
-      "sourceSymbol": "EnumFixture.recursiveActionPlanValue.enum-payload-project#5"
+      "baseName": "hxc_l_tmp_enum_payload_project_n4",
+      "sourceSymbol": "EnumFixture.recursiveActionPlanValue.enum-payload-project#4"
     },
     {
       "overloadSignature": [],
       "collisionResolved": false,
       "naming": "generated",
-      "sourceOrdinal": 11,
+      "sourceOrdinal": 16,
       "readableName": [
         "tmp",
         "load-result"
       ],
       "requestedName": null,
-      "cName": "hxc_l_tmp_load_result_n11",
-      "semanticKey": "9:temporary|205:ordinary:192:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture24:recursiveActionPlanValue|1:96:instance:instance.closed-record.ae1876bc8dc0a9ddfc257b11edb212c1b8bbbbe8d961db867ac2fb87ca34e415|0:|0:|3:11:EnumFixture24:recursiveActionPlanValue11:load-result|0:|0:|2:11",
+      "cName": "hxc_l_tmp_load_result_n16",
+      "semanticKey": "9:temporary|205:ordinary:192:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture24:recursiveActionPlanValue|1:96:instance:instance.closed-record.ae1876bc8dc0a9ddfc257b11edb212c1b8bbbbe8d961db867ac2fb87ca34e415|0:|0:|3:11:EnumFixture24:recursiveActionPlanValue11:load-result|0:|0:|2:16",
       "escapeReasons": [
         "non-c-identifier-byte",
         "separator-normalized"
@@ -10945,8 +10763,8 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_l_tmp_load_result_n11",
-      "sourceSymbol": "EnumFixture.recursiveActionPlanValue.load-result#11"
+      "baseName": "hxc_l_tmp_load_result_n16",
+      "sourceSymbol": "EnumFixture.recursiveActionPlanValue.load-result#16"
     },
     {
       "overloadSignature": [],
@@ -10978,14 +10796,14 @@
       "overloadSignature": [],
       "collisionResolved": false,
       "naming": "generated",
-      "sourceOrdinal": 22,
+      "sourceOrdinal": 2,
       "readableName": [
         "tmp",
         "load-result"
       ],
       "requestedName": null,
-      "cName": "hxc_l_tmp_load_result_n22",
-      "semanticKey": "9:temporary|205:ordinary:192:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture24:recursiveActionPlanValue|1:96:instance:instance.closed-record.ae1876bc8dc0a9ddfc257b11edb212c1b8bbbbe8d961db867ac2fb87ca34e415|0:|0:|3:11:EnumFixture24:recursiveActionPlanValue11:load-result|0:|0:|2:22",
+      "cName": "hxc_l_tmp_load_result_n2",
+      "semanticKey": "9:temporary|205:ordinary:192:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture24:recursiveActionPlanValue|1:96:instance:instance.closed-record.ae1876bc8dc0a9ddfc257b11edb212c1b8bbbbe8d961db867ac2fb87ca34e415|0:|0:|3:11:EnumFixture24:recursiveActionPlanValue11:load-result|0:|0:|1:2",
       "escapeReasons": [
         "non-c-identifier-byte",
         "separator-normalized"
@@ -10997,21 +10815,21 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_l_tmp_load_result_n22",
-      "sourceSymbol": "EnumFixture.recursiveActionPlanValue.load-result#22"
+      "baseName": "hxc_l_tmp_load_result_n2",
+      "sourceSymbol": "EnumFixture.recursiveActionPlanValue.load-result#2"
     },
     {
       "overloadSignature": [],
       "collisionResolved": false,
       "naming": "generated",
-      "sourceOrdinal": 3,
+      "sourceOrdinal": 9,
       "readableName": [
         "tmp",
         "load-result"
       ],
       "requestedName": null,
-      "cName": "hxc_l_tmp_load_result_n3",
-      "semanticKey": "9:temporary|205:ordinary:192:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture24:recursiveActionPlanValue|1:96:instance:instance.closed-record.ae1876bc8dc0a9ddfc257b11edb212c1b8bbbbe8d961db867ac2fb87ca34e415|0:|0:|3:11:EnumFixture24:recursiveActionPlanValue11:load-result|0:|0:|1:3",
+      "cName": "hxc_l_tmp_load_result_n9",
+      "semanticKey": "9:temporary|205:ordinary:192:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture24:recursiveActionPlanValue|1:96:instance:instance.closed-record.ae1876bc8dc0a9ddfc257b11edb212c1b8bbbbe8d961db867ac2fb87ca34e415|0:|0:|3:11:EnumFixture24:recursiveActionPlanValue11:load-result|0:|0:|1:9",
       "escapeReasons": [
         "non-c-identifier-byte",
         "separator-normalized"
@@ -11023,8 +10841,8 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_l_tmp_load_result_n3",
-      "sourceSymbol": "EnumFixture.recursiveActionPlanValue.load-result#3"
+      "baseName": "hxc_l_tmp_load_result_n9",
+      "sourceSymbol": "EnumFixture.recursiveActionPlanValue.load-result#9"
     },
     {
       "overloadSignature": [],
@@ -11052,13 +10870,13 @@
       "overloadSignature": [],
       "collisionResolved": true,
       "naming": "generated",
-      "sourceOrdinal": 16,
+      "sourceOrdinal": 13,
       "readableName": [
         "value"
       ],
       "requestedName": null,
-      "cName": "hxc_l_value_hfcfad9a5a996",
-      "semanticKey": "5:local|205:ordinary:192:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture24:recursiveActionPlanValue|1:96:instance:instance.closed-record.ae1876bc8dc0a9ddfc257b11edb212c1b8bbbbe8d961db867ac2fb87ca34e415|0:|0:|3:11:EnumFixture24:recursiveActionPlanValue5:value|0:|0:|2:16",
+      "cName": "hxc_l_value_h875e00836e25",
+      "semanticKey": "5:local|205:ordinary:192:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture24:recursiveActionPlanValue|1:96:instance:instance.closed-record.ae1876bc8dc0a9ddfc257b11edb212c1b8bbbbe8d961db867ac2fb87ca34e415|0:|0:|3:11:EnumFixture24:recursiveActionPlanValue5:value|0:|0:|2:13",
       "escapeReasons": [],
       "namespace": {
         "scope": "6:method|28:ordinary:16:translation-unit|2:11:EnumFixture24:recursiveActionPlanValue|1:96:instance:instance.closed-record.ae1876bc8dc0a9ddfc257b11edb212c1b8bbbbe8d961db867ac2fb87ca34e415|0:|0:",
@@ -11068,7 +10886,7 @@
       "kind": "local",
       "specializationArguments": [],
       "baseName": "hxc_l_value",
-      "sourceSymbol": "EnumFixture.recursiveActionPlanValue.value#16"
+      "sourceSymbol": "EnumFixture.recursiveActionPlanValue.value#13"
     },
     {
       "overloadSignature": [],
@@ -14237,6 +14055,335 @@
       "specializationArguments": [],
       "baseName": "main",
       "sourceSymbol": "compiler.executable-entry-point.function.EnumFixture.main"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "readableName": [
+        "array",
+        "e4791f3e",
+        "descriptor"
+      ],
+      "requestedName": null,
+      "cName": "hxc_array_e4791f3e_descriptor",
+      "semanticKey": "15:type-descriptor|28:ordinary:16:translation-unit|5:8:compiler2:gc5:array64:e4791f3ed60810b12b61c8cbc1ceb97c55da777a819f42e55ea69e70c231ec6a10:descriptor|0:|0:|1:0",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "type-descriptor",
+      "specializationArguments": [],
+      "baseName": "hxc_array_e4791f3e_descriptor",
+      "sourceSymbol": "compiler.gc.array.e4791f3ed60810b12b61c8cbc1ceb97c55da777a819f42e55ea69e70c231ec6a.descriptor#0"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 2,
+      "readableName": [
+        "array",
+        "e4791f3e",
+        "finalize"
+      ],
+      "requestedName": null,
+      "cName": "hxc_array_e4791f3e_finalize",
+      "semanticKey": "6:method|28:ordinary:16:translation-unit|5:8:compiler2:gc5:array64:e4791f3ed60810b12b61c8cbc1ceb97c55da777a819f42e55ea69e70c231ec6a8:finalize|0:|0:|1:2",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "method",
+      "specializationArguments": [],
+      "baseName": "hxc_array_e4791f3e_finalize",
+      "sourceSymbol": "compiler.gc.array.e4791f3ed60810b12b61c8cbc1ceb97c55da777a819f42e55ea69e70c231ec6a.finalize#2"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 1,
+      "readableName": [
+        "array",
+        "e4791f3e",
+        "trace"
+      ],
+      "requestedName": null,
+      "cName": "hxc_array_e4791f3e_trace",
+      "semanticKey": "6:method|28:ordinary:16:translation-unit|5:8:compiler2:gc5:array64:e4791f3ed60810b12b61c8cbc1ceb97c55da777a819f42e55ea69e70c231ec6a5:trace|0:|0:|1:1",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "method",
+      "specializationArguments": [],
+      "baseName": "hxc_array_e4791f3e_trace",
+      "sourceSymbol": "compiler.gc.array.e4791f3ed60810b12b61c8cbc1ceb97c55da777a819f42e55ea69e70c231ec6a.trace#1"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "readableName": [
+        "array",
+        "eaf5e746",
+        "descriptor"
+      ],
+      "requestedName": null,
+      "cName": "hxc_array_eaf5e746_descriptor",
+      "semanticKey": "15:type-descriptor|28:ordinary:16:translation-unit|5:8:compiler2:gc5:array64:eaf5e746484d8e083db4dbe7f227834602df94e65db1ec592bd772f7b757bc3a10:descriptor|0:|0:|1:0",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "type-descriptor",
+      "specializationArguments": [],
+      "baseName": "hxc_array_eaf5e746_descriptor",
+      "sourceSymbol": "compiler.gc.array.eaf5e746484d8e083db4dbe7f227834602df94e65db1ec592bd772f7b757bc3a.descriptor#0"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 2,
+      "readableName": [
+        "array",
+        "eaf5e746",
+        "finalize"
+      ],
+      "requestedName": null,
+      "cName": "hxc_array_eaf5e746_finalize",
+      "semanticKey": "6:method|28:ordinary:16:translation-unit|5:8:compiler2:gc5:array64:eaf5e746484d8e083db4dbe7f227834602df94e65db1ec592bd772f7b757bc3a8:finalize|0:|0:|1:2",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "method",
+      "specializationArguments": [],
+      "baseName": "hxc_array_eaf5e746_finalize",
+      "sourceSymbol": "compiler.gc.array.eaf5e746484d8e083db4dbe7f227834602df94e65db1ec592bd772f7b757bc3a.finalize#2"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 1,
+      "readableName": [
+        "array",
+        "eaf5e746",
+        "trace"
+      ],
+      "requestedName": null,
+      "cName": "hxc_array_eaf5e746_trace",
+      "semanticKey": "6:method|28:ordinary:16:translation-unit|5:8:compiler2:gc5:array64:eaf5e746484d8e083db4dbe7f227834602df94e65db1ec592bd772f7b757bc3a5:trace|0:|0:|1:1",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "method",
+      "specializationArguments": [],
+      "baseName": "hxc_array_eaf5e746_trace",
+      "sourceSymbol": "compiler.gc.array.eaf5e746484d8e083db4dbe7f227834602df94e65db1ec592bd772f7b757bc3a.trace#1"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "readableName": [
+        "program",
+        "gc"
+      ],
+      "requestedName": null,
+      "cName": "hxc_program_gc",
+      "semanticKey": "15:runtime-private|28:ordinary:16:translation-unit|3:8:compiler2:gc9:collector|0:|0:|1:0",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "runtime-private",
+      "specializationArguments": [],
+      "baseName": "hxc_program_gc",
+      "sourceSymbol": "compiler.gc.collector#0"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 1,
+      "readableName": [
+        "gc",
+        "frame"
+      ],
+      "requestedName": null,
+      "cName": "hxc_l_gc_frame",
+      "semanticKey": "15:runtime-private|84:ordinary:72:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture4:main|0:|0:|0:|4:8:compiler2:gc25:function.EnumFixture.main5:frame|0:|0:|1:1",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:EnumFixture4:main|0:|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "runtime-private",
+      "specializationArguments": [],
+      "baseName": "hxc_l_gc_frame",
+      "sourceSymbol": "compiler.gc.function.EnumFixture.main.frame#1"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "readableName": [
+        "gc",
+        "roots"
+      ],
+      "requestedName": null,
+      "cName": "hxc_l_gc_roots",
+      "semanticKey": "15:runtime-private|84:ordinary:72:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture4:main|0:|0:|0:|4:8:compiler2:gc25:function.EnumFixture.main5:roots|0:|0:|1:0",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:EnumFixture4:main|0:|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "runtime-private",
+      "specializationArguments": [],
+      "baseName": "hxc_l_gc_roots",
+      "sourceSymbol": "compiler.gc.function.EnumFixture.main.roots#0"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 1,
+      "readableName": [
+        "gc",
+        "frame"
+      ],
+      "requestedName": null,
+      "cName": "hxc_l_gc_frame",
+      "semanticKey": "15:runtime-private|100:ordinary:88:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture19:recursiveActionPlan|0:|0:|0:|4:8:compiler2:gc40:function.EnumFixture.recursiveActionPlan5:frame|0:|0:|1:1",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:EnumFixture19:recursiveActionPlan|0:|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "runtime-private",
+      "specializationArguments": [],
+      "baseName": "hxc_l_gc_frame",
+      "sourceSymbol": "compiler.gc.function.EnumFixture.recursiveActionPlan.frame#1"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "readableName": [
+        "gc",
+        "roots"
+      ],
+      "requestedName": null,
+      "cName": "hxc_l_gc_roots",
+      "semanticKey": "15:runtime-private|100:ordinary:88:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture19:recursiveActionPlan|0:|0:|0:|4:8:compiler2:gc40:function.EnumFixture.recursiveActionPlan5:roots|0:|0:|1:0",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:EnumFixture19:recursiveActionPlan|0:|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "runtime-private",
+      "specializationArguments": [],
+      "baseName": "hxc_l_gc_roots",
+      "sourceSymbol": "compiler.gc.function.EnumFixture.recursiveActionPlan.roots#0"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 1,
+      "readableName": [
+        "gc",
+        "frame"
+      ],
+      "requestedName": null,
+      "cName": "hxc_l_gc_frame",
+      "semanticKey": "15:runtime-private|205:ordinary:192:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture24:recursiveActionPlanValue|1:96:instance:instance.closed-record.ae1876bc8dc0a9ddfc257b11edb212c1b8bbbbe8d961db867ac2fb87ca34e415|0:|0:|4:8:compiler2:gc45:function.EnumFixture.recursiveActionPlanValue5:frame|0:|0:|1:1",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:EnumFixture24:recursiveActionPlanValue|1:96:instance:instance.closed-record.ae1876bc8dc0a9ddfc257b11edb212c1b8bbbbe8d961db867ac2fb87ca34e415|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "runtime-private",
+      "specializationArguments": [],
+      "baseName": "hxc_l_gc_frame",
+      "sourceSymbol": "compiler.gc.function.EnumFixture.recursiveActionPlanValue.frame#1"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "readableName": [
+        "gc",
+        "roots"
+      ],
+      "requestedName": null,
+      "cName": "hxc_l_gc_roots",
+      "semanticKey": "15:runtime-private|205:ordinary:192:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture24:recursiveActionPlanValue|1:96:instance:instance.closed-record.ae1876bc8dc0a9ddfc257b11edb212c1b8bbbbe8d961db867ac2fb87ca34e415|0:|0:|4:8:compiler2:gc45:function.EnumFixture.recursiveActionPlanValue5:roots|0:|0:|1:0",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:EnumFixture24:recursiveActionPlanValue|1:96:instance:instance.closed-record.ae1876bc8dc0a9ddfc257b11edb212c1b8bbbbe8d961db867ac2fb87ca34e415|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "runtime-private",
+      "specializationArguments": [],
+      "baseName": "hxc_l_gc_roots",
+      "sourceSymbol": "compiler.gc.function.EnumFixture.recursiveActionPlanValue.roots#0"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 1,
+      "readableName": [
+        "program",
+        "gc",
+        "thread"
+      ],
+      "requestedName": null,
+      "cName": "hxc_program_gc_thread",
+      "semanticKey": "15:runtime-private|28:ordinary:16:translation-unit|3:8:compiler2:gc6:thread|0:|0:|1:1",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "runtime-private",
+      "specializationArguments": [],
+      "baseName": "hxc_program_gc_thread",
+      "sourceSymbol": "compiler.gc.thread#1"
     },
     {
       "overloadSignature": [],
@@ -19212,12 +19359,12 @@
       },
       "symbols": [
         {
-          "cName": "hxc_l_a0_hde79160c1991",
-          "sourceSymbol": "EnumFixture.recursiveActionPlanValue.`a0#11"
+          "cName": "hxc_l_a0_h20427e845f84",
+          "sourceSymbol": "EnumFixture.recursiveActionPlanValue.`a0#5"
         },
         {
-          "cName": "hxc_l_a0_h1d4712e82e9d",
-          "sourceSymbol": "EnumFixture.recursiveActionPlanValue.`a0#6"
+          "cName": "hxc_l_a0_h761ba892ea54",
+          "sourceSymbol": "EnumFixture.recursiveActionPlanValue.`a0#9"
         }
       ],
       "baseName": "hxc_l_a0"
@@ -19229,12 +19376,12 @@
       },
       "symbols": [
         {
-          "cName": "hxc_l_value_h3a49a4594f7c",
-          "sourceSymbol": "EnumFixture.recursiveActionPlanValue.`value#14"
+          "cName": "hxc_l_value_h8011a7a07e37",
+          "sourceSymbol": "EnumFixture.recursiveActionPlanValue.`value#11"
         },
         {
-          "cName": "hxc_l_value_hfcfad9a5a996",
-          "sourceSymbol": "EnumFixture.recursiveActionPlanValue.value#16"
+          "cName": "hxc_l_value_h875e00836e25",
+          "sourceSymbol": "EnumFixture.recursiveActionPlanValue.value#13"
         }
       ],
       "baseName": "hxc_l_value"

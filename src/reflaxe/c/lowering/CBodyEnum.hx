@@ -604,9 +604,14 @@ class CBodyEnumRegistry {
 		});
 	}
 
-	function recomputeRecursion():Void {
+	/** Recompute recursive, ownership, and exact-tracing facts after type promotion. */
+	public function recomputePreparedFacts():Bool {
+		var changed = false;
 		for (value in byShape) {
+			final previousRecursive = value.recursive;
 			value.recursive = hasRecursiveEdge(value);
+			if (value.recursive != previousRecursive)
+				changed = true;
 			for (tagCase in value.cases) {
 				for (payload in tagCase.payload) {
 					payload.indirect = switch payload.valueType.enumValue() {
@@ -619,13 +624,24 @@ class CBodyEnumRegistry {
 		for (value in byShape)
 			value.scopedLifetime = requiresScopedLifetime(value, []);
 		for (value in byShape) {
+			final previousManagedPayload = value.managedPayload;
+			final previousCollectorPayload = value.collectorPayload;
+			final previousManagedLifetime = value.managedLifetime;
 			value.managedPayload = requiresManagedPayloadLifecycle(value, []);
 			value.collectorPayload = requiresCollectorPayload(value, []);
 			value.managedLifetime = value.managedPayload || value.recursive;
+			if (value.managedPayload != previousManagedPayload
+				|| value.collectorPayload != previousCollectorPayload
+				|| value.managedLifetime != previousManagedLifetime)
+				changed = true;
 			if (value.managedLifetime)
 				registerManagedLifecycle(value);
 		}
+		return changed;
 	}
+
+	function recomputeRecursion():Void
+		recomputePreparedFacts();
 
 	/** Whether a direct finite payload shape contains a tracing-GC reference. */
 	function requiresCollectorPayload(value:CPreparedBodyEnumInstance, visited:Map<String, Bool>):Bool {

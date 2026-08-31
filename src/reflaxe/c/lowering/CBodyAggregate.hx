@@ -1265,6 +1265,17 @@ class CBodyAggregateRegistry {
 
 	/** Settle the selective GC graph before any function chooses stack or heap construction. */
 	public function completeManagedRepresentations(interfaceImplementations:Array<CBodyInterfaceImplementation>):Void {
+		// Array identity cycles are visible only after every enum and record payload
+		// has been prepared. Settle them before class closure so either owner can
+		// trace the other without making ordinary acyclic Arrays collector objects.
+		arrayRegistry.completeManagedRepresentations();
+		var lifetimeChanged = true;
+		while (lifetimeChanged) {
+			lifetimeChanged = recomputeAggregateManagedLifetimes();
+			if (enumRegistry.recomputePreparedFacts())
+				lifetimeChanged = true;
+		}
+		arrayRegistry.completeElementLifetimes();
 		for (map in typedMapRegistry.canonicalMaps()) {
 			classRegistry.requireEscapingReturnClasses(map.key);
 			classRegistry.requireEscapingReturnClasses(map.value);
@@ -1444,12 +1455,33 @@ class CBodyAggregateRegistry {
 
 	static function valueHasManagedLifetime(value:CBodyValueType):Bool
 		return switch value.kind {
-			case CBVKManagedString(_) | CBVKArray(_) | CBVKBytes(_): true;
+			case CBVKManagedString(_) | CBVKBytes(_): true;
+			case CBVKArray(array): !array.managedByCollector;
 			case CBVKEnum(enumValue): enumValue.managedLifetime;
 			case CBVKAggregate(aggregate): aggregate.managedLifetime;
 			case CBVKOptional(optional): optional.managedLifetime;
 			case _: false;
 		};
+
+	/** Settle record retain/release needs after nested Arrays choose GC ownership. */
+	function recomputeAggregateManagedLifetimes():Bool {
+		var changed = false;
+		for (aggregate in canonicalAggregates()) {
+			var managed = false;
+			for (field in aggregate.fields)
+				if (valueHasManagedLifetime(field.type)) {
+					managed = true;
+					break;
+				}
+			if (aggregate.managedLifetime != managed) {
+				aggregate.managedLifetime = managed;
+				changed = true;
+			}
+			if (managed && aggregate.retainRequest == null)
+				registerAggregateLifecycle(aggregate);
+		}
+		return changed;
+	}
 
 	function registerAggregateLifecycle(value:CPreparedBodyAggregate):Void {
 		final root = ["compiler", "closed-record", value.digest, "lifecycle"];

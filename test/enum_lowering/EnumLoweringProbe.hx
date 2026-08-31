@@ -155,14 +155,18 @@ class EnumLoweringProbe {
 			sources: sources,
 			enums: enumRecords,
 			symbols: lowered.symbolTable,
-			runtimeFeatures: ["runtime-base", "status", "alloc", "array"],
+			runtimeFeatures: ["runtime-base", "status", "alloc", "array", "object", "gc"],
 			runtimeArtifacts: [
 				"runtime/include/hxrt/allocator.h",
 				"runtime/include/hxrt/array.h",
 				"runtime/include/hxrt/base.h",
+				"runtime/include/hxrt/gc.h",
+				"runtime/include/hxrt/object.h",
 				"runtime/include/hxrt/status.h",
 				"runtime/src/allocator.c",
-				"runtime/src/array.c"
+				"runtime/src/array.c",
+				"runtime/src/gc.c",
+				"runtime/src/object.c"
 			]
 		};
 		Sys.println(REPORT_PREFIX + Json.stringify(report));
