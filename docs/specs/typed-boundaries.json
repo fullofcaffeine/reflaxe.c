@@ -86,6 +86,21 @@
       ]
     },
     {
+      "path": "test/arithmetic_semantics/fixtures/ArithmeticFixture.hx",
+      "line": 119,
+      "column": 19,
+      "construct": "unchecked-cast",
+      "boundaryKind": "language-semantics-fixture",
+      "symbol": "ArithmeticFixture.intQuotientThroughFloatCast",
+      "typedModel": "Haxe TCast around a Float division before Std.int conversion",
+      "sourceLine": "return Std.int((cast(value / 8) : Float));",
+      "justification": "The arithmetic fixture must keep one cast-wrapped division outside the direct signed-Int quotient proof so the general Float division and conversion path remains observable.",
+      "validation": "The arithmetic suite inspects the exact HxcIR and generated C path, then requires the expected result under strict native C and sanitizer execution.",
+      "testEvidence": [
+        "test/arithmetic_semantics/run.py"
+      ]
+    },
+    {
       "path": "test/diagnostics/DiagnosticGolden.hx",
       "line": 45,
       "column": 27,
@@ -111,6 +126,21 @@
       "sourceLine": "private typedef ReferenceDynamic = Dynamic;",
       "justification": "The differential fixture must use the real Haxe Dynamic type so Eval and generated C exercise the same boxes, casts, member operations, calls, equality, null, and type-value behavior.",
       "validation": "One private alias contains the untyped spelling; the Dynamic differential compares Eval with strict native C, checks forced-collection ownership, verifies closed numeric adapters, and rejects unsupported shapes without output.",
+      "testEvidence": [
+        "test/differential/dynamic-runtime/run.py"
+      ]
+    },
+    {
+      "path": "test/differential/dynamic-runtime/negative/arithmetic/Main.hx",
+      "line": 11,
+      "column": 19,
+      "construct": "dynamic-type",
+      "boundaryKind": "negative-test",
+      "symbol": "Main.main.numerator",
+      "typedModel": "closed HxcIR Dynamic operations without arithmetic admission",
+      "sourceLine": "final numerator:Dynamic = 47;",
+      "justification": "The negative fixture must use a real Dynamic operand to prove that runtime-typed arithmetic does not enter the proven signed-Int division path.",
+      "validation": "The Dynamic differential requires exact source-positioned HXC1001 rejection before artifact emission and keeps runtime arithmetic unsupported until its carrier semantics exist.",
       "testEvidence": [
         "test/differential/dynamic-runtime/run.py"
       ]
