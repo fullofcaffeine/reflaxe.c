@@ -184,6 +184,12 @@ unsupported. A recursive direct call carrying a span fails as
 `TCall(recursive-borrowed-span-target-not-admitted:<function-id>)` rather than
 silently extending the borrow lifetime.
 
+The compiler also rejects a span field stored beside a strong owner reference.
+That reference can keep an object reachable, but it does not preserve a cached
+interior pointer through every storage, copy, and ABI shape. The
+[retained C view research](retained-c-views.md) records the exact failure cases
+and one owner-relative future candidate. That candidate is not implemented.
+
 Borrow and iteration recognition uses the typed declaring abstract, so a
 lookalike method named `span`, `constSpan`, `zero`, or `iterator` cannot
 impersonate a compiler intrinsic.

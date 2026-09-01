@@ -455,6 +455,7 @@ fail-closed.
 - [Explicit Haxe evaluation order](docs/evaluation-order.md)
 - [Deterministic static initialization](docs/static-initialization.md)
 - [Fixed arrays and span-based iteration](docs/span-lowering.md)
+- [Retained C view research](docs/retained-c-views.md)
 - [Typed C authoring contract](docs/typed-c-authoring.md)
 - [Typed Haxe boundary policy](docs/typed-boundaries.md)
 - [Deterministic C symbol naming](docs/symbol-naming.md)
