@@ -61,6 +61,8 @@ class CBodyFunctionReplayCache {
 			misses: 0,
 			missingFunctionMisses: 0,
 			changedFunctionInputMisses: 0,
+			frontendSourcePlanHits: 0,
+			frontendSourcePlanFallbacks: 0,
 			programDecision: BRPDUnsettled
 		};
 	}
@@ -120,6 +122,10 @@ class CBodyFunctionReplayCache {
 			throw new haxe.Exception("body-function replay requires a function identity and canonical typed input");
 		if (request.candidateByFunction.exists(functionId))
 			throw new haxe.Exception('body-function replay received duplicate function `$functionId`');
+		if (identity.frontendSourcePlanReused)
+			request.frontendSourcePlanHits++;
+		else
+			request.frontendSourcePlanFallbacks++;
 
 		if (!request.enabled) {
 			return new CBodyFunctionReplayResolution(build(), false);
@@ -185,6 +191,8 @@ class CBodyFunctionReplayCache {
 			misses: request.misses,
 			missingFunctionMisses: request.missingFunctionMisses,
 			changedFunctionInputMisses: request.changedFunctionInputMisses,
+			frontendSourcePlanHits: request.frontendSourcePlanHits,
+			frontendSourcePlanFallbacks: request.frontendSourcePlanFallbacks,
 			retainedFunctions: retainedFunctions,
 			retainedProgramRevisionCodeUnits: retainedProgramRevisionCodeUnits,
 			retainedInputCodeUnits: retainedInputCodeUnits
@@ -345,14 +353,19 @@ class CBodyFunctionReplayCache {
 **/
 @:noCompletion
 class CBodyFunctionReplayIdentity {
+	/** Complete text that must match before the cache can replay a function. */
 	public final canonicalInput:String;
+
+	/** True when the frontend supplied the typed text and position order for this request. */
+	public final frontendSourcePlanReused:Bool;
 
 	final positionsBySource:Map<String, Position>;
 
 	/** Keep exact reusable text beside current-request positions used only for diagnostics. */
-	public function new(canonicalInput:String, positionsBySource:Map<String, Position>) {
+	public function new(canonicalInput:String, positionsBySource:Map<String, Position>, frontendSourcePlanReused:Bool = false) {
 		this.canonicalInput = canonicalInput;
 		this.positionsBySource = positionsBySource;
+		this.frontendSourcePlanReused = frontendSourcePlanReused;
 	}
 
 	/**
@@ -422,6 +435,8 @@ typedef CBodyFunctionReplayCacheStats = {
 	final misses:Int;
 	final missingFunctionMisses:Int;
 	final changedFunctionInputMisses:Int;
+	final frontendSourcePlanHits:Int;
+	final frontendSourcePlanFallbacks:Int;
 	final retainedFunctions:Int;
 	final retainedProgramRevisionCodeUnits:Float;
 	final retainedInputCodeUnits:Float;
@@ -469,6 +484,8 @@ private typedef BodyFunctionReplayRequest = {
 	var misses:Int;
 	var missingFunctionMisses:Int;
 	var changedFunctionInputMisses:Int;
+	var frontendSourcePlanHits:Int;
+	var frontendSourcePlanFallbacks:Int;
 	var programDecision:CBodyFunctionReplayProgramDecision;
 }
 

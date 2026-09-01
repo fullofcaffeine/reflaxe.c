@@ -15,6 +15,25 @@ private typedef CachedTypedFunctionPosition = {
 }
 
 /**
+	Carries one request's already-computed function identity inputs into lowering.
+
+	Frontend provenance must inspect the complete typed tree to repair positions
+	that Haxe's server can reuse. Body replay needs the same canonical tree text
+	and expression order. Keeping those request-local values together avoids a
+	second print and traversal without making them persistent cache authority.
+**/
+typedef TypedFunctionSourcePlan = {
+	/** The stable typed-tree text that both provenance and replay identity use. */
+	final canonicalTypedExpressionText:String;
+
+	/** The typed tree's positions in deterministic traversal order for this request. */
+	final expressionPositions:Array<Position>;
+
+	/** Maps reused compiler positions to the matching positions in current source bytes. */
+	final positionOverrides:Map<String, Position>;
+}
+
+/**
 	Keeps exact typed-function positions stable across Haxe server cache reuse.
 
 	The pinned frontend can retain the same typed tree while changing positions
@@ -45,25 +64,30 @@ class TypedFunctionSourceProvenance {
 		collapses distinct authored ranges onto the same current position, recovery
 		fails instead of choosing a plausible but incorrect source span.
 	**/
-	public static function plan(declarationPath:String, fieldName:String, declarationPosition:Position, expression:TypedExpr):Map<String, Position> {
-		final declarationInfo = Context.getPosInfos(declarationPosition);
-		final bytes = try {
-			File.getBytes(declarationInfo.file);
-		} catch (_:haxe.Exception) {
-			return [];
-		}
+	public static function plan(declarationPath:String, fieldName:String, declarationPosition:Position, expression:TypedExpr):TypedFunctionSourcePlan {
 		final positions:Array<Position> = [];
 		function visit(value:TypedExpr):Void {
 			positions.push(value.pos);
 			TypedExprTools.iter(value, visit);
 		}
 		visit(expression);
+		final canonicalText = canonicalTypedExpressionText(expression);
+		final declarationInfo = Context.getPosInfos(declarationPosition);
+		final bytes = try {
+			File.getBytes(declarationInfo.file);
+		} catch (_:haxe.Exception) {
+			return {
+				canonicalTypedExpressionText: canonicalText,
+				expressionPositions: positions,
+				positionOverrides: []
+			};
+		}
 		final key = [
 			Std.string(CACHE_SCHEMA),
 			declarationPath,
 			fieldName,
 			Sha256.make(bytes).toHex(),
-			canonicalTypedExpressionText(expression)
+			canonicalText
 		].join("\n");
 		var cached = cacheByContent.get(key);
 		if (cached == null) {
@@ -94,7 +118,11 @@ class TypedFunctionSourceProvenance {
 				throw new haxe.Exception('typed function `$declarationPath.$fieldName` collapsed distinct source positions under Haxe server reuse');
 			result.set(currentKey, position);
 		}
-		return result;
+		return {
+			canonicalTypedExpressionText: canonicalText,
+			expressionPositions: positions,
+			positionOverrides: result
+		};
 	}
 
 	/** Build the exact key used by request-local source-span resolvers. */

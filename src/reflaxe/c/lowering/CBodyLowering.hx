@@ -21,6 +21,7 @@ import reflaxe.c.contract.TypedCContract.TypedCBuildFact;
 import reflaxe.c.contract.TypedCContract.TypedCContractSnapshot;
 import reflaxe.c.frontend.TypedProgramInput;
 import reflaxe.c.frontend.TypedFunctionSourceProvenance;
+import reflaxe.c.frontend.TypedFunctionSourceProvenance.TypedFunctionSourcePlan;
 import reflaxe.c.ir.HxcIR;
 import reflaxe.c.ir.HxcIRFixedArrayPolicy;
 import reflaxe.c.ir.HxcIRFixedArrayPolicy.HxcIRFixedArrayStorageDecision;
@@ -134,6 +135,9 @@ typedef CBodyFunctionInput = {
 
 	/** Current compiler positions mapped to content-verified authored positions. */
 	final ?sourcePositionOverrides:Map<String, Position>;
+
+	/** Request-local canonical text and expression order prepared by the frontend. */
+	final ?functionSourcePlan:TypedFunctionSourcePlan;
 
 	final ?typeParameters:Array<TypeParameter>;
 
@@ -2078,6 +2082,7 @@ private typedef PreparedBodyFunction = {
 	final sourceExpression:TypedExpr;
 	final sourcePosition:Position;
 	final sourcePositionOverrides:Map<String, Position>;
+	final functionSourcePlan:Null<TypedFunctionSourcePlan>;
 	final bodyExpression:TypedExpr;
 	final role:PreparedBodyRole;
 	final irId:String;
@@ -2443,6 +2448,7 @@ private class EnumConstructorAdapterRegistry {
 			sourceExpression: expression,
 			sourcePosition: expression.pos,
 			sourcePositionOverrides: [],
+			functionSourcePlan: null,
 			bodyExpression: expression,
 			role: PBRFunction,
 			irId: id,
@@ -2797,6 +2803,7 @@ private class FunctionLiteralRegistry {
 			sourceExpression: expression,
 			sourcePosition: expression.pos,
 			sourcePositionOverrides: [],
+			functionSourcePlan: null,
 			bodyExpression: value.expr,
 			role: PBRFunction,
 			irId: 'function.lambda.${owner.irId}.$mode.${info.min}.${info.max}',
@@ -2927,6 +2934,7 @@ private class FunctionLiteralRegistry {
 			sourceExpression: target.sourceExpression,
 			sourcePosition: target.sourcePosition,
 			sourcePositionOverrides: target.sourcePositionOverrides,
+			functionSourcePlan: target.functionSourcePlan,
 			bodyExpression: target.bodyExpression,
 			role: PBRFunction,
 			irId: id,
@@ -3675,6 +3683,7 @@ private class FunctionPreparer {
 			sourceExpression: input.expression,
 			sourcePosition: input.declarationPosition == null ? input.expression.pos : input.declarationPosition,
 			sourcePositionOverrides: input.sourcePositionOverrides == null ? [] : input.sourcePositionOverrides,
+			functionSourcePlan: input.functionSourcePlan,
 			bodyExpression: functionValue.expr,
 			role: PBRFunction,
 			irId: CBodyLowering.functionInputId(input),
@@ -4078,6 +4087,7 @@ private class BorrowContractRefiner {
 			sourceExpression: fn.sourceExpression,
 			sourcePosition: fn.sourcePosition,
 			sourcePositionOverrides: fn.sourcePositionOverrides,
+			functionSourcePlan: fn.functionSourcePlan,
 			bodyExpression: fn.bodyExpression,
 			role: fn.role,
 			irId: fn.irId,
@@ -4218,6 +4228,7 @@ private class ConstructorPreparer {
 			sourceExpression: input.expression,
 			sourcePosition: input.declarationPosition == null ? input.expression.pos : input.declarationPosition,
 			sourcePositionOverrides: input.sourcePositionOverrides == null ? [] : input.sourcePositionOverrides,
+			functionSourcePlan: null,
 			bodyExpression: functionValue.expr,
 			role: PBRConstructor(signature),
 			irId: input.id,
@@ -4344,6 +4355,7 @@ private class InitializerPreparer {
 			sourceExpression: input.expression,
 			sourcePosition: input.expression.pos,
 			sourcePositionOverrides: [],
+			functionSourcePlan: null,
 			bodyExpression: input.expression,
 			role: role,
 			irId: input.id,
@@ -5560,15 +5572,26 @@ private class FunctionBuilder {
 		final spans:Array<String> = [];
 		final functionSpan = sourceSpans.resolve(prepared.sourcePosition);
 		positionsBySource.set(functionSpan.display(), prepared.sourcePosition);
-		function visit(expression:TypedExpr):Void {
-			final span = sourceSpans.resolve(expression.pos);
+		final sourcePlan = prepared.functionSourcePlan;
+		final expressionPositions = if (sourcePlan == null) {
+			final positions:Array<Position> = [];
+			function visit(expression:TypedExpr):Void {
+				positions.push(expression.pos);
+				TypedExprTools.iter(expression, visit);
+			}
+			visit(prepared.sourceExpression);
+			positions;
+		} else {
+			sourcePlan.expressionPositions;
+		};
+		for (position in expressionPositions) {
+			final span = sourceSpans.resolve(position);
 			final key = span.display();
 			spans.push(key);
 			if (!positionsBySource.exists(key))
-				positionsBySource.set(key, expression.pos);
-			TypedExprTools.iter(expression, visit);
+				positionsBySource.set(key, position);
 		}
-		visit(prepared.sourceExpression);
+		final canonicalTypedExpression = sourcePlan == null ? CBodyLowering.canonicalTypedExpressionText(prepared.sourceExpression) : sourcePlan.canonicalTypedExpressionText;
 		final canonical = [
 			'body-function-input schema=${CBodyFunctionReplayCache.SCHEMA_VERSION}',
 			'id=${prepared.irId}',
@@ -5577,11 +5600,11 @@ private class FunctionBuilder {
 			'source=${prepared.sourcePath}',
 			'declaration-span=${functionSpan.display()}',
 			"typed-expression",
-			CBodyLowering.canonicalTypedExpressionText(prepared.sourceExpression),
+			canonicalTypedExpression,
 			"source-spans",
 			spans.join("\n")
 		].join("\n");
-		return new CBodyFunctionReplayIdentity(canonical, positionsBySource);
+		return new CBodyFunctionReplayIdentity(canonical, positionsBySource, sourcePlan != null);
 	}
 
 	/** Register every name restored from the prior function in the current request. */

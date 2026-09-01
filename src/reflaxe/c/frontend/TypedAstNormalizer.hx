@@ -83,6 +83,7 @@ class TypedAstNormalizer {
 				if (field.name != "main" || fieldExpression == null) {
 					null;
 				} else {
+					final sourcePlan = TypedFunctionSourceProvenance.plan(declarationPath(owner), field.name, field.pos, fieldExpression);
 					final staticFields = owner.statics.get();
 					var sourceOrder = 0;
 					for (index in 0...staticFields.length) {
@@ -104,7 +105,8 @@ class TypedAstNormalizer {
 						fieldType: field.type,
 						expression: fieldExpression,
 						declarationPosition: field.pos,
-						sourcePositionOverrides: TypedFunctionSourceProvenance.plan(declarationPath(owner), field.name, field.pos, fieldExpression)
+						sourcePositionOverrides: sourcePlan.positionOverrides,
+						functionSourcePlan: sourcePlan
 					};
 				}
 			case TParenthesis(inner) | TMeta(_, inner) | TCast(inner, _): captureEntryFunction(inner);
@@ -204,9 +206,9 @@ class TypedAstNormalizer {
 				expression: expression
 			});
 		}
-		final sourcePositionOverrides:Map<String, haxe.macro.Expr.Position> = expression == null ? [] : switch expression.expr {
+		final functionSourcePlan = expression == null ? null : switch expression.expr {
 			case TFunction(_): TypedFunctionSourceProvenance.plan(ownerDeclarationPath, field.name, field.pos, expression);
-			case _: [];
+			case _: null;
 		};
 		return {
 			sourceOrder: sourceOrder,
@@ -219,7 +221,8 @@ class TypedAstNormalizer {
 			isExtern: field.isExtern == true,
 			metadata: normalizeMetadata(field.meta.get()),
 			expression: expression,
-			sourcePositionOverrides: sourcePositionOverrides,
+			sourcePositionOverrides: functionSourcePlan == null ? [] : functionSourcePlan.positionOverrides,
+			functionSourcePlan: functionSourcePlan,
 			rawClassField: field,
 			rawEnumField: null
 		};
@@ -238,6 +241,7 @@ class TypedAstNormalizer {
 			metadata: normalizeMetadata(field.meta.get()),
 			expression: null,
 			sourcePositionOverrides: [],
+			functionSourcePlan: null,
 			rawClassField: null,
 			rawEnumField: field
 		};

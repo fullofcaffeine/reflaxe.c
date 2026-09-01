@@ -824,6 +824,22 @@ def assert_body_function_replay(
                 f"{label} body-function replay field {field} was "
                 f"{report.get(field)!r}, expected {value!r}: {report!r}"
             )
+    source_plan_hits = report.get("frontendSourcePlanHits")
+    source_plan_fallbacks = report.get("frontendSourcePlanFallbacks")
+    if (
+        not isinstance(source_plan_hits, int)
+        or source_plan_hits <= 0
+        or not isinstance(source_plan_fallbacks, int)
+        or source_plan_fallbacks < 0
+    ):
+        raise TypedAstProbeFailure(
+            f"{label} did not report bounded frontend source-plan reuse: {report!r}"
+        )
+    if enabled and source_plan_hits + source_plan_fallbacks != hits + misses:
+        raise TypedAstProbeFailure(
+            f"{label} source-plan accounting did not cover every resolved body: "
+            f"{report!r}"
+        )
     retained_input_units = report.get("retainedInputCodeUnits")
     retained_revision_units = report.get("retainedProgramRevisionCodeUnits")
     expect_retained_text = retained_functions > 0
