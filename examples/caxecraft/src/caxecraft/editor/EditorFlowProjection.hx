@@ -46,13 +46,26 @@ typedef EditorTriggerOverlap = {
 
 /** Stable catalog keys for the fixed controls around flow cards. */
 enum abstract EditorFlowUiMessage(String) {
+	var ActionsMessage = "editor.flow.actions";
+	var AddActionMessage = "editor.flow.add-action";
+	var AddCounterMessage = "editor.flow.add-counter";
+	var AddFlagMessage = "editor.flow.add-flag";
+	var AddParameterMessage = "editor.flow.add-parameter";
+	var AddSequenceMessage = "editor.flow.add-sequence";
+	var AddStateMessage = "editor.flow.add-state";
 	var CardLibraryMessage = "editor.flow.card-library";
 	var ConnectObjectMessage = "editor.flow.connect-object";
 	var DoMessage = "editor.flow.do";
 	var DocumentPickerMessage = "editor.flow.document-picker";
+	var DefinitionsMessage = "editor.flow.definitions";
+	var DeleteDefinitionMessage = "editor.flow.delete-definition";
 	var DoneMessage = "editor.flow.done";
 	var EditMessage = "editor.flow.edit";
 	var IfMessage = "editor.flow.if";
+	var LocalScopeMessage = "editor.flow.scope-local";
+	var MapScopeMessage = "editor.flow.scope-map";
+	var ParametersMessage = "editor.flow.parameters";
+	var PlayerScopeMessage = "editor.flow.scope-player";
 	var PickObjectMessage = "editor.flow.pick-object";
 	var OverlapMessage = "editor.flow.overlap";
 	var PriorityMessage = "editor.flow.priority";
@@ -61,6 +74,9 @@ enum abstract EditorFlowUiMessage(String) {
 	var RepeatMessage = "editor.flow.repeat";
 	var RepeatOnceMessage = "editor.flow.repeat-once";
 	var RepeatOncePerActorMessage = "editor.flow.repeat-once-per-actor";
+	var QuestScopeMessage = "editor.flow.scope-quest";
+	var SequencesMessage = "editor.flow.sequences";
+	var VariablesMessage = "editor.flow.variables";
 	var WhenMessage = "editor.flow.when";
 	var ToggleEnterLeaveMessage = "editor.flow.toggle-enter-leave";
 	var ToggleSpawnDespawnMessage = "editor.flow.toggle-spawn-despawn";
@@ -74,24 +90,40 @@ enum abstract EditorFlowUiMessage(String) {
 /** Return every fixed flow-card key required by the native editor. */
 function allEditorFlowUiMessages():Array<EditorFlowUiMessage>
 	return [
+		ActionsMessage,
+		AddActionMessage,
+		AddCounterMessage,
+		AddFlagMessage,
+		AddParameterMessage,
+		AddSequenceMessage,
+		AddStateMessage,
 		CardLibraryMessage,
 		ConnectObjectMessage,
 		DoMessage,
 		DocumentPickerMessage,
+		DefinitionsMessage,
+		DeleteDefinitionMessage,
 		DoneMessage,
 		EditMessage,
 		IfMessage,
+		LocalScopeMessage,
+		MapScopeMessage,
 		OverlapMessage,
 		PickObjectMessage,
+		ParametersMessage,
+		PlayerScopeMessage,
 		PriorityMessage,
 		RepeatCooldownMessage,
 		RepeatCooldownPerActorMessage,
 		RepeatMessage,
 		RepeatOnceMessage,
 		RepeatOncePerActorMessage,
+		QuestScopeMessage,
+		SequencesMessage,
 		ToggleEnterLeaveMessage,
 		ToggleSpawnDespawnMessage,
 		UnavailableMessage,
+		VariablesMessage,
 		WhenMessage
 	];
 

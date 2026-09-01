@@ -149,11 +149,12 @@ function predicateCardChoices(scenario:Scenario, event:FlowEvent, content:Editor
 	`insideChoice` keeps the visible inventory lossless while refusing the one
 	constructor that validation forbids inside a weighted branch.
 **/
-function actionCardChoices(scenario:Scenario, owner:ScenarioId, content:EditorFlowContentChoices, insideChoice:Bool = false):Array<EditorFlowActionChoice> {
+function actionCardChoices(scenario:Scenario, owner:ScenarioId, content:EditorFlowContentChoices, insideChoice:Bool = false,
+		?excludedSequence:ScenarioId):Array<EditorFlowActionChoice> {
 	final result:Array<EditorFlowActionChoice> = [];
 	for (descriptor in allFlowActionDescriptors()) {
 		final value = insideChoice
-			&& descriptor.id == FlowActionId.ChooseAction ? null : buildAction(descriptor.id, scenario, owner, content);
+			&& descriptor.id == FlowActionId.ChooseAction ? null : buildAction(descriptor.id, scenario, owner, content, excludedSequence);
 		result.push(value == null ? UnavailableActionChoice(descriptor,
 			unavailableActionReason(descriptor.id, scenario, content, insideChoice)) : ReadyActionChoice(descriptor, value));
 	}
@@ -296,7 +297,8 @@ private function buildPredicate(id:FlowPredicateId, scenario:Scenario, event:Flo
 	};
 }
 
-private function buildAction(id:FlowActionId, scenario:Scenario, owner:ScenarioId, content:EditorFlowContentChoices):Null<FlowAction> {
+private function buildAction(id:FlowActionId, scenario:Scenario, owner:ScenarioId, content:EditorFlowContentChoices,
+		excludedSequence:Null<ScenarioId>):Null<FlowAction> {
 	return switch id {
 		case DialogueAction:
 			final dialogue = firstDialogue(scenario);
@@ -343,10 +345,10 @@ private function buildAction(id:FlowActionId, scenario:Scenario, owner:ScenarioI
 			final signal = firstContent(content.signals);
 			signal == null ? null : EmitSignal(signal);
 		case ScheduleAction:
-			final sequence = firstSequence(scenario);
+			final sequence = firstSequence(scenario, excludedSequence);
 			sequence == null ? null : Schedule(new ScenarioId('editor.timer.${owner.text()}'), 1, sequence.id, argumentsFor(sequence.parameters));
 		case CallAction:
-			final sequence = firstSequence(scenario);
+			final sequence = firstSequence(scenario, excludedSequence);
 			sequence == null ? null : CallSequence(sequence.id, argumentsFor(sequence.parameters));
 		case ChooseAction:
 			final seed = firstVariable(scenario, CounterValue);
@@ -499,8 +501,12 @@ private function firstJournal(scenario:Scenario):Null<ScenarioId>
 private function firstObjective(scenario:Scenario):Null<ScenarioId>
 	return scenario.story.objectives.length == 0 ? null : scenario.story.objectives[0].id;
 
-private function firstSequence(scenario:Scenario):Null<caxecraft.scenario.CaxeFlow.FlowSequence>
-	return scenario.flow.sequences.length == 0 ? null : scenario.flow.sequences[0];
+private function firstSequence(scenario:Scenario, excluded:Null<ScenarioId>):Null<caxecraft.scenario.CaxeFlow.FlowSequence> {
+	for (sequence in scenario.flow.sequences)
+		if (excluded == null || sequence.id.text() != excluded.text())
+			return sequence;
+	return null;
+}
 
 private function firstOwnedTimer(scenario:Scenario):Null<ScenarioId> {
 	for (rule in scenario.flow.rules) {

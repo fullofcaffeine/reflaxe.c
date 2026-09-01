@@ -46,6 +46,8 @@ enum CaxecraftFlowCardPanelTarget {
 	InsertDoFlowCardPanel(zone:ScenarioId, rule:ScenarioId, actionIndex:Int);
 	NestedIfFlowCardPanel(zone:ScenarioId, rule:ScenarioId, path:Array<Int>);
 	NestedDoFlowCardPanel(zone:ScenarioId, rule:ScenarioId, parentActionIndex:Int, choiceIndex:Int, actionIndex:Int);
+	SequenceDoFlowCardPanel(sequence:ScenarioId, actionIndex:Int);
+	InsertSequenceDoFlowCardPanel(sequence:ScenarioId, actionIndex:Int);
 }
 
 /** One complete selection returned to the editor controller. */
@@ -55,6 +57,7 @@ enum CaxecraftFlowCardPanelAction {
 	SelectFlowEvent(zone:ScenarioId, rule:ScenarioId, value:FlowEvent);
 	SelectFlowPredicate(zone:ScenarioId, rule:ScenarioId, path:Null<Array<Int>>, value:FlowPredicate);
 	SelectFlowAction(zone:ScenarioId, rule:ScenarioId, actionIndex:Int, choiceIndex:Int, nestedActionIndex:Int, insert:Bool, value:FlowAction);
+	SelectFlowSequenceAction(sequence:ScenarioId, actionIndex:Int, insert:Bool, value:FlowAction);
 }
 
 /** Three non-text pictures that identify the WHEN, IF, and DO card families. */
@@ -102,6 +105,8 @@ function flowCardPanelChoiceCount(target:CaxecraftFlowCardPanelTarget, draft:Sce
 			current == null ? 0 : predicateCardChoices(draft, current.event, content).length;
 		case DoFlowCardPanel(_, rule, _) | InsertDoFlowCardPanel(_, rule, _): actionCardChoices(draft, rule, content, false).length;
 		case NestedDoFlowCardPanel(_, rule, _, _, _): actionCardChoices(draft, rule, content, true).length;
+		case SequenceDoFlowCardPanel(sequence,
+			_) | InsertSequenceDoFlowCardPanel(sequence, _): actionCardChoices(draft, sequence, content, false, sequence).length;
 	};
 
 /** Convert one highlighted card row into the same typed action as a mouse click. */
@@ -128,6 +133,22 @@ function flowCardPanelActionAt(target:CaxecraftFlowCardPanelTarget, draft:Scenar
 			actionPanelAction(zone, rule, actionIndex, -1, -1, true, false, draft, content, selection);
 		case NestedDoFlowCardPanel(zone, rule, parentActionIndex, choiceIndex, actionIndex):
 			actionPanelAction(zone, rule, parentActionIndex, choiceIndex, actionIndex, false, true, draft, content, selection);
+		case SequenceDoFlowCardPanel(sequence, actionIndex):
+			sequenceActionPanelAction(sequence, actionIndex, false, draft, content, selection);
+		case InsertSequenceDoFlowCardPanel(sequence, actionIndex):
+			sequenceActionPanelAction(sequence, actionIndex, true, draft, content, selection);
+	};
+}
+
+/** Resolve one reusable-sequence action from the same executable registry. */
+private function sequenceActionPanelAction(sequence:ScenarioId, actionIndex:Int, insert:Bool, draft:Scenario, content:EditorFlowContentChoices,
+		selection:Int):CaxecraftFlowCardPanelAction {
+	final choices = actionCardChoices(draft, sequence, content, false, sequence);
+	if (selection >= choices.length)
+		return KeepFlowCardPanel;
+	return switch choices[selection] {
+		case ReadyActionChoice(_, value): SelectFlowSequenceAction(sequence, actionIndex, insert, value);
+		case UnavailableActionChoice(_, _): KeepFlowCardPanel;
 	};
 }
 
@@ -214,6 +235,10 @@ function drawFlowCardPanel(catalog:RuntimeUiCatalog, locale:LocaleCursor, target
 		case NestedDoFlowCardPanel(zone, rule, parentActionIndex, choiceIndex, actionIndex):
 			drawActionRows(catalog, locale, zone, rule, parentActionIndex, choiceIndex, actionIndex, false, draft, content, selection, visibleRows, rowLeft,
 				rowTop, rowWidth);
+		case SequenceDoFlowCardPanel(sequence, actionIndex):
+			drawSequenceActionRows(catalog, locale, sequence, actionIndex, false, draft, content, selection, visibleRows, rowLeft, rowTop, rowWidth);
+		case InsertSequenceDoFlowCardPanel(sequence, actionIndex):
+			drawSequenceActionRows(catalog, locale, sequence, actionIndex, true, draft, content, selection, visibleRows, rowLeft, rowTop, rowWidth);
 	};
 }
 
@@ -308,6 +333,26 @@ private function drawActionRows(catalog:RuntimeUiCatalog, locale:LocaleCursor, z
 				if (drawRow(catalog, locale, left, top + (index - start) * 29, width, catalog.format(locale, text.message, text.arguments),
 					descriptor.editorHelp, DoCardIcon, true, index == selection, Color.rgba(111, 174, 91)))
 					return SelectFlowAction(zone, rule, actionIndex, choiceIndex, nestedActionIndex, insert, value);
+			case UnavailableActionChoice(descriptor, _):
+				drawRow(catalog, locale, left, top + (index - start) * 29, width, descriptor.traceName, descriptor.editorHelp, DoCardIcon, false,
+					index == selection, Color.rgba(111, 174, 91));
+		}
+	return KeepFlowCardPanel;
+}
+
+/** Draw sequence actions from the same registry without pretending a sequence is a rule. */
+private function drawSequenceActionRows(catalog:RuntimeUiCatalog, locale:LocaleCursor, sequence:ScenarioId, actionIndex:Int, insert:Bool, draft:Scenario,
+		content:EditorFlowContentChoices, selection:Int, visibleRows:Int, left:Int, top:Int, width:Int):CaxecraftFlowCardPanelAction {
+	final choices = actionCardChoices(draft, sequence, content, false, sequence);
+	final start = paletteWindowStart(selection, choices.length, visibleRows);
+	final end = minimum(choices.length, start + visibleRows);
+	for (index in start...end)
+		switch choices[index] {
+			case ReadyActionChoice(descriptor, value):
+				final text = actionFlowCardText(value);
+				if (drawRow(catalog, locale, left, top + (index - start) * 29, width, catalog.format(locale, text.message, text.arguments),
+					descriptor.editorHelp, DoCardIcon, true, index == selection, Color.rgba(111, 174, 91)))
+					return SelectFlowSequenceAction(sequence, actionIndex, insert, value);
 			case UnavailableActionChoice(descriptor, _):
 				drawRow(catalog, locale, left, top + (index - start) * 29, width, descriptor.traceName, descriptor.editorHelp, DoCardIcon, false,
 					index == selection, Color.rgba(111, 174, 91));
