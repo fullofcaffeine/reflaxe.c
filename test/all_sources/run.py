@@ -52,7 +52,12 @@ def development_tool(name: str) -> str:
 
 
 def run_haxe(
-    hxml: Path, arguments: list[str], *, expected_code: int, label: str
+    hxml: Path,
+    arguments: list[str],
+    *,
+    expected_code: int,
+    label: str,
+    compiler_progress: bool = False,
 ) -> subprocess.CompletedProcess[str]:
     environment = os.environ.copy()
     environment["HAXE_NO_SERVER"] = "1"
@@ -65,6 +70,7 @@ def run_haxe(
         capture_output=True,
         text=True,
         timeout=30,
+        compiler_progress=compiler_progress,
     )
     if result.returncode != expected_code:
         raise AllSourcesFailure(
@@ -129,9 +135,16 @@ def check_production_boundary() -> None:
         output = Path(temporary) / "generated"
         result = run_haxe(
             HXML,
-            ["--custom-target", f"c={output}", "-v"],
+            [
+                "-D",
+                "reflaxe_c_phase_progress",
+                "--custom-target",
+                f"c={output}",
+                "-v",
+            ],
             expected_code=1,
             label="all-source production boundary",
+            compiler_progress=True,
         )
         combined = result.stdout + result.stderr
         if "Typing macro c.Init.init" not in combined:

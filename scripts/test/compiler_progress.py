@@ -1,4 +1,4 @@
-"""Parse haxe.c phase progress without exposing profiling cost to the launcher."""
+"""Parse lightweight haxe.c phase progress for bounded compiler diagnostics."""
 
 from __future__ import annotations
 

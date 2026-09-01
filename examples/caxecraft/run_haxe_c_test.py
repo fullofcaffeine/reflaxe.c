@@ -1357,6 +1357,7 @@ def run(
     timeout: int,
     label: str,
     environment: dict[str, str] | None = None,
+    compiler_progress: bool = False,
 ) -> subprocess.CompletedProcess[str]:
     """Run one bounded process and preserve stdout and stderr on failure."""
 
@@ -1375,6 +1376,7 @@ def run(
             text=True,
             encoding="utf-8",
             timeout=timeout,
+            compiler_progress=compiler_progress,
         )
     except (OSError, subprocess.TimeoutExpired) as error:
         raise HaxeCTestFailure(f"{label} could not run: {error}") from error
@@ -2189,12 +2191,15 @@ def execute(
                 ),
                 "-D",
                 f"hxc_project_layout={layout}",
+                "-D",
+                "reflaxe_c_phase_progress",
                 "--custom-target",
                 f"c={generated}",
             ],
             cwd=ROOT,
             timeout=test_case.c_build_timeout_seconds,
             label=f"{test_case.case_id} Haxe-to-C build",
+            compiler_progress=True,
         )
         runtime_plan = json.loads(
             (generated / "hxc.runtime-plan.json").read_text(encoding="utf-8")

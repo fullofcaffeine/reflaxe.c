@@ -182,6 +182,44 @@ class BoundedProcessTest(unittest.TestCase):
                         self.fail(f"timeout attempt {attempt} left active PIDs {pids}")
                     time.sleep(0.05)
 
+    def test_compiler_timeout_reports_phase_or_frontend(self) -> None:
+        progress = (
+            'HXC_PHASE_PROGRESS\t{"schemaVersion":1,"state":"phase-started",'
+            '"phase":"semantic lowering","profile":"portable",'
+            '"buildMode":"debug","status":null}'
+        )
+        with self.assertRaisesRegex(
+            bounded_process.ProcessTreeTimeout,
+            r"last active compiler phase: semantic lowering \(portable/debug\)$",
+        ):
+            bounded_process.run(
+                [
+                    sys.executable,
+                    "-c",
+                    "import time; print(%r, flush=True); time.sleep(60)" % progress,
+                ],
+                phase="compiler progress fixture",
+                timeout=1,
+                check=False,
+                capture_output=True,
+                text=True,
+                compiler_progress=True,
+            )
+
+        with self.assertRaisesRegex(
+            bounded_process.ProcessTreeTimeout,
+            r"no haxe\.c phase marker; request remained in Haxe frontend or server startup$",
+        ):
+            bounded_process.run(
+                [sys.executable, "-c", "import time; time.sleep(60)"],
+                phase="compiler frontend fixture",
+                timeout=1,
+                check=False,
+                capture_output=True,
+                text=True,
+                compiler_progress=True,
+            )
+
     def test_haxe_focused_runners_use_the_process_tree_owner(self) -> None:
         runners = [
             path
@@ -197,6 +235,16 @@ class BoundedProcessTest(unittest.TestCase):
             if lines:
                 violations[path.relative_to(ROOT).as_posix()] = lines
         self.assertEqual(violations, {})
+
+    def test_cold_custom_target_lanes_request_phase_progress(self) -> None:
+        for path in (
+            ROOT / "examples/caxecraft/run_haxe_c_test.py",
+            ROOT / "test/all_sources/run.py",
+        ):
+            with self.subTest(path=path.relative_to(ROOT).as_posix()):
+                source = path.read_text(encoding="utf-8")
+                self.assertIn('"reflaxe_c_phase_progress"', source)
+                self.assertIn("compiler_progress=True", source)
 
     def test_windows_termination_targets_the_complete_tree(self) -> None:
         process = mock.Mock()
