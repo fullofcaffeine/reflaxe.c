@@ -4,6 +4,20 @@ set -euo pipefail
 ROOT_DIR="$(git rev-parse --show-toplevel)"
 cd "$ROOT_DIR"
 
+# Keep an explicit local slowdown factor away from governance fixtures with
+# deliberately short deadlines. Only reusable bounded compiler owners receive
+# it through this one helper.
+HXC_LOCAL_TIMEOUT_SCALE="${HXC_TEST_TIMEOUT_SCALE:-}"
+unset HXC_TEST_TIMEOUT_SCALE
+
+run_local_gate() {
+  if [ -n "$HXC_LOCAL_TIMEOUT_SCALE" ]; then
+    HXC_TEST_TIMEOUT_SCALE="$HXC_LOCAL_TIMEOUT_SCALE" npm run --silent test:local-gate -- "$@"
+  else
+    npm run --silent test:local-gate -- "$@"
+  fi
+}
+
 if [ "${BD_GIT_HOOK:-}" = "1" ]; then
   exit 0
 fi
@@ -88,7 +102,7 @@ if [ "$PRE_COMMIT_ROUTE" = "affected" ]; then
     fi
     echo "[pre-commit] Running $owner_script: $owner_reason"
     if [ "$owner_script" = "test:all-sources" ] || [ "$owner_script" = "test:hxc-ir" ] || [ "$owner_script" = "test:project-emitter" ]; then
-      npm run --silent test:local-gate -- --hook "$owner_script"
+      run_local_gate --hook "$owner_script"
     else
       npm run "$owner_script"
     fi
@@ -138,7 +152,7 @@ fi
 
 if printf '%s\n' "$STAGED_FILES" | grep -Eq '^(\.haxerc|haxelib\.json|package(-lock)?\.json|docs/specs/toolchain-lock\.json|scripts/ci/check_toolchain\.py|vendor/reflaxe/|haxe_libraries/|extraParams\.hxml|src/.*\.hx$|std/c/.*\.hx$|test/all_sources/|.*\.hxml$)'; then
 	echo "[pre-commit] Type-checking every target-owned Haxe source..."
-	npm run --silent test:local-gate -- --hook test:all-sources
+	run_local_gate --hook test:all-sources
 fi
 
 if printf '%s\n' "$STAGED_FILES" | grep -Eq '^(\.haxerc|haxelib\.json|package(-lock)?\.json|extraParams\.hxml|haxe_libraries/|vendor/reflaxe/|src/c/Init\.hx|src/reflaxe/c/(BuildDetection|BuildModeResolver|CBuildMode|CCompiler|CompilationContext|CompilerBootstrap|CompilerInit|CProfile|CReflaxeCompiler|ProfileResolver|TargetPlatform)\.hx|src/reflaxe/c/emit/|test/bootstrap/)'; then
@@ -184,7 +198,7 @@ fi
 
 if printf '%s\n' "$STAGED_FILES" | grep -Eq '^(src/reflaxe/c/(CCompiler|CReflaxeCompiler|CompilationContext)\.hx|src/reflaxe/c/(contract|emit|naming|plan)/|test/project_emitter/|haxe_libraries/reflaxe\.c\.hxml|package\.json)'; then
   echo "[pre-commit] Running deterministic multi-file project ownership probes..."
-  npm run --silent test:local-gate -- --hook test:project-emitter
+  run_local_gate --hook test:project-emitter
   npm run test:build-adapters:local
 fi
 
@@ -245,7 +259,7 @@ fi
 
 if printf '%s\n' "$STAGED_FILES" | grep -Eq '^(src/reflaxe/c/ir/|test/hxc_ir/|haxe_libraries/reflaxe\.c\.hxml|package\.json)'; then
   echo "[pre-commit] Running HxcIR semantic invariant and golden probes..."
-  npm run --silent test:local-gate -- --hook test:hxc-ir
+  run_local_gate --hook test:hxc-ir
 fi
 
 if printf '%s\n' "$STAGED_FILES" | grep -Eq '^(src/reflaxe/c/(ir|semantics)/|test/primitive_semantics/|docs/(adr/0008-primitive-representations-and-conversions|primitive-semantics)\.md|docs/specs/primitive-semantics.*\.json|haxe_libraries/reflaxe\.c\.hxml|package\.json)'; then

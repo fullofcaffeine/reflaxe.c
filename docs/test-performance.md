@@ -409,6 +409,24 @@ When a local timeout occurs under unusual load:
    isolated slowness needs phase timing, an owning Beads issue, and an
    optimization or justified containment change.
 
+After that diagnosis, a correctness run may use the shared bounded slowdown
+factor. Set `HXC_TEST_TIMEOUT_SCALE` to an integer from `1` through `30`. The
+factor multiplies deadlines owned by `bounded_process.py`; it does not remove
+process-tree cleanup or change the checked-in defaults. For example:
+
+```sh
+HXC_TEST_TIMEOUT_SCALE=4 taskpolicy -b nice -n 10 npm run test:all-sources
+```
+
+Use the factor only to collect correctness evidence on a known busy host.
+Malformed, fractional, non-positive, and larger values stop before the child
+starts. Do not use scaled results as performance evidence. CI does not set the
+factor. A successful local-gate receipt remains reusable without the factor
+because the deadline changes only how long the runner waits, not its semantic
+inputs or passing output. The pre-commit hook removes the factor from its own
+environment and forwards it only to reusable bounded compiler owners. Short
+governance timeout fixtures therefore keep their ordinary deadlines.
+
 Correctness evidence that completes under contention remains valid. A timeout
 alone is inconclusive, and wall times collected on a saturated host are not
 performance evidence. Hosted and local performance comparisons require the

@@ -100,6 +100,22 @@ def direct_bounded_subprocess_lines(path: Path) -> tuple[int, ...]:
 class BoundedProcessTest(unittest.TestCase):
     """Protect successful results, timeout diagnostics, and platform cleanup."""
 
+    def test_timeout_scale_is_bounded_and_opt_in(self) -> None:
+        with mock.patch.dict(os.environ, {}, clear=True):
+            self.assertEqual(bounded_process.effective_timeout(30), 30)
+        with mock.patch.dict(os.environ, {"HXC_TEST_TIMEOUT_SCALE": "4"}, clear=True):
+            self.assertEqual(bounded_process.effective_timeout(30), 120)
+        with mock.patch.dict(os.environ, {"HXC_TEST_TIMEOUT_SCALE": "30"}, clear=True):
+            self.assertEqual(bounded_process.effective_timeout(30), 900)
+
+        for invalid in ("", "0", "-1", "1.5", "31", "slow"):
+            with self.subTest(invalid=invalid):
+                with mock.patch.dict(
+                    os.environ, {"HXC_TEST_TIMEOUT_SCALE": invalid}, clear=True
+                ):
+                    with self.assertRaisesRegex(ValueError, "integer from 1 through 30"):
+                        bounded_process.effective_timeout(30)
+
     def test_success_and_nonzero_results_match_subprocess_run(self) -> None:
         command = [
             sys.executable,
