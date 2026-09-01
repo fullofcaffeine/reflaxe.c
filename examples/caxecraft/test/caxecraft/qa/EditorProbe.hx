@@ -64,6 +64,7 @@ import caxecraft.editor.EditorFlowDefinitions.editFlowVariable;
 import caxecraft.editor.EditorFlowDefinitions.nextFlowParameter;
 import caxecraft.editor.EditorFlowDefinitions.nextFlowSequence;
 import caxecraft.editor.EditorFlowDefinitions.nextFlowVariable;
+import caxecraft.editor.EditorFlowSequenceSignature.EditorFlowParameterEdit;
 import caxecraft.editor.EditorFlowCardLibrary.EditorFlowActionChoice;
 import caxecraft.editor.EditorFlowCardLibrary.EditorFlowContentChoices;
 import caxecraft.editor.EditorFlowCardLibrary.EditorFlowEventChoice;
@@ -3914,6 +3915,76 @@ final class EditorProbe {
 					throw "visual sequence palette admitted an immediate self-reference";
 				case _:
 			}
+		final signatureSequence = id("sequence.cards");
+		final signatureBefore = id("parameter.before");
+		final signatureAfter = id("parameter.after");
+		expectApplied(supportSession.apply(EditFlowSequenceParameter(signatureSequence, InsertFlowParameter(0, {id: signatureBefore, initial: Flag(false)}))),
+			Rule, "insert visual sequence parameter");
+		expectApplied(supportSession.apply(PutFlowSequence({
+			id: signatureSequence,
+			parameters: [{id: signatureBefore, initial: Flag(false)}],
+			actions: [SetFlag(signatureBefore, true)]
+		})), Rule, "reference visual sequence parameter");
+		expectApplied(supportSession.apply(PutRule({
+			id: id("rule.signature"),
+			priority: 0,
+			repeat: Once,
+			event: StateChanged(id("counter.cards")),
+			predicate: Always,
+			actions: [CallSequence(signatureSequence, [Value(Flag(false))])]
+		})), Rule, "call visual sequence parameter");
+		expectApplied(supportSession.apply(EditFlowSequenceParameter(signatureSequence, ReplaceFlowParameter(0, {id: signatureAfter, initial: Flag(true)}))),
+			Rule, "rename visual sequence parameter");
+		var reboundDraft = switch supportSession.query(InspectDraft) {
+			case DraftObserved(_, draft): draft;
+			case other: throw 'rebound signature draft query failed: $other';
+		};
+		switch reboundDraft.flow.sequences[0].actions[0] {
+			case SetFlag(parameter, true):
+				require(parameter.text() == signatureAfter.text(), "parameter rename left its sequence body stale");
+			case _:
+				throw "parameter rename changed its sequence action shape";
+		}
+		switch reboundDraft.flow.rules[0].actions[0] {
+			case CallSequence(sequence, [Value(Flag(false))]):
+				require(sequence.text() == signatureSequence.text(), "parameter rename changed its caller target");
+			case _:
+				throw "parameter rename did not preserve a compatible caller argument";
+		}
+		switch supportSession.apply(EditFlowSequenceParameter(signatureSequence, ReplaceFlowParameter(0, {id: signatureAfter, initial: Counter(2)}))) {
+			case EditRejected(FlowParameterInUse(parameter)):
+				require(parameter.text() == signatureAfter.text(), "in-use parameter rejection named the wrong input");
+			case other:
+				throw 'parameter kind change did not protect its sequence body: $other';
+		}
+		expectApplied(supportSession.apply(PutFlowSequence({
+			id: signatureSequence,
+			parameters: [{id: signatureAfter, initial: Flag(true)}],
+			actions: []
+		})), Rule, "clear visual sequence parameter use");
+		expectApplied(supportSession.apply(EditFlowSequenceParameter(signatureSequence, ReplaceFlowParameter(0, {id: signatureAfter, initial: Counter(2)}))),
+			Rule, "change unreferenced visual parameter kind");
+		reboundDraft = switch supportSession.query(InspectDraft) {
+			case DraftObserved(_, draft): draft;
+			case other: throw 'type-rebound signature draft query failed: $other';
+		};
+		switch reboundDraft.flow.rules[0].actions[0] {
+			case CallSequence(_, [Value(Counter(2))]):
+			case _:
+				throw "parameter kind change did not install its typed default in the caller";
+		}
+		expectApplied(supportSession.apply(EditFlowSequenceParameter(signatureSequence, RemoveFlowParameter(0))), Rule,
+			"remove unreferenced visual sequence parameter");
+		reboundDraft = switch supportSession.query(InspectDraft) {
+			case DraftObserved(_, draft): draft;
+			case other: throw 'removed signature draft query failed: $other';
+		};
+		switch reboundDraft.flow.rules[0].actions[0] {
+			case CallSequence(_, []):
+			case _:
+				throw "parameter removal did not remove the matching caller argument";
+		}
+		expectApplied(supportSession.apply(RemoveRule(id("rule.signature"))), Rule, "remove visual signature caller");
 
 		expectApplied(supportSession.apply(PutFlowVariable({id: id("counter.cards"), scope: Local(id("sequence.cards")), initial: Counter(0)})), Rule,
 			"make flow variable sequence-local");

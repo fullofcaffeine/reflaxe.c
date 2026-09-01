@@ -13,6 +13,8 @@ import caxecraft.editor.EditorEnvironment.copyEnvironment;
 import caxecraft.editor.EditorObjectRename.renameScenarioObject;
 import caxecraft.editor.EditorFlowDefinitions.flowSequenceIsReferenced;
 import caxecraft.editor.EditorFlowDefinitions.flowVariableIsReferenced;
+import caxecraft.editor.EditorFlowSequenceSignature.EditorFlowSignatureResult;
+import caxecraft.editor.EditorFlowSequenceSignature.editFlowSequenceSignature;
 import caxecraft.scenario.CaxeFlow.FlowRule;
 import caxecraft.scenario.CaxeFlow.FlowSequence;
 import caxecraft.scenario.CaxeFlow.FlowVariable;
@@ -140,6 +142,14 @@ function apply(scenario:Scenario, command:EditorCommand, context:EditorReduction
 			ready(withFlowDefinitions(scenario, scenario.flow.variables, putFlowSequence(scenario.flow.sequences, sequence)), Rule);
 		case RemoveFlowSequence(id):
 			removeFlowSequenceFromScenario(scenario, id);
+		case EditFlowSequenceParameter(sequence, edit):
+			switch editFlowSequenceSignature(scenario, sequence, edit) {
+				case FlowSignatureUpdated(variables, sequences, rules): ready(withFlow(scenario, variables, sequences, rules), Rule);
+				case FlowSignatureMissingSequence(id): ReductionRejected(MissingFlowSequence(id));
+				case FlowSignatureInvalidIndex(id, index): ReductionRejected(InvalidFlowSequenceParameter(id, index));
+				case FlowSignatureDuplicateParameter(id): ReductionRejected(DuplicateFlowParameter(id));
+				case FlowSignatureParameterInUse(id): ReductionRejected(FlowParameterInUse(id));
+			}
 		case SetDefaultLocale(locale):
 			setDefaultLocale(scenario, locale);
 		case PutLocale(locale):
@@ -796,6 +806,10 @@ private function withRules(scenario:Scenario, rules:Array<FlowRule>):Scenario
 
 /** Replace reusable flow definitions while retaining rules and all document data. */
 private function withFlowDefinitions(scenario:Scenario, variables:Array<FlowVariable>, sequences:Array<FlowSequence>):Scenario
+	return withFlow(scenario, variables, sequences, scenario.flow.rules);
+
+/** Replace complete typed Flow arrays after one atomic cross-reference edit. */
+private function withFlow(scenario:Scenario, variables:Array<FlowVariable>, sequences:Array<FlowSequence>, rules:Array<FlowRule>):Scenario
 	return {
 		formatVersion: scenario.formatVersion,
 		requiredFeatures: scenario.requiredFeatures.copy(),
@@ -812,7 +826,7 @@ private function withFlowDefinitions(scenario:Scenario, variables:Array<FlowVari
 		flow: {
 			variables: [for (variable in variables) copyFlowVariable(variable)],
 			sequences: [for (sequence in sequences) copyFlowSequence(sequence)],
-			rules: [for (rule in scenario.flow.rules) copyFlowRule(rule)]
+			rules: [for (rule in rules) copyFlowRule(rule)]
 		},
 		extensions: scenario.extensions.copy()
 	};

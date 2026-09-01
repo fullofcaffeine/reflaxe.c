@@ -531,7 +531,7 @@ final class EditorSession {
 			case SetTitle(_) | SetEnvironment(_) | PutFluid(_) | RemoveFluid(_) | StampPrefab(_, _, _, _) | PutObject(_) | MoveObjectBy(_, _) |
 				RotateObjectBy(_, _) | ResizeTriggerTo(_, _) | RenameObject(_, _) | RemoveObject(_) | PutDialogue(_) | RemoveDialogue(_) | PutObjective(_) |
 				RemoveObjective(_) | PutRule(_) | RemoveRule(_) | PutFlowVariable(_) | RemoveFlowVariable(_) | PutFlowSequence(_) | RemoveFlowSequence(_) |
-				SetDefaultLocale(_) | PutLocale(_) | RemoveLocale(_) | PutMessage(_, _) | RemoveMessage(_, _):
+				EditFlowSequenceParameter(_, _) | SetDefaultLocale(_) | PutLocale(_) | RemoveLocale(_) | PutMessage(_, _) | RemoveMessage(_, _):
 				TerrainUnchanged;
 		};
 	}
@@ -556,7 +556,7 @@ final class EditorSession {
 			case SetTitle(_) | SetEnvironment(_) | PutFluid(_) | RemoveFluid(_) | StampPrefab(_, _, _, _) | PutObject(_) | MoveObjectBy(_, _) |
 				RotateObjectBy(_, _) | ResizeTriggerTo(_, _) | RenameObject(_, _) | RemoveObject(_) | PutDialogue(_) | RemoveDialogue(_) | PutObjective(_) |
 				RemoveObjective(_) | PutRule(_) | RemoveRule(_) | PutFlowVariable(_) | RemoveFlowVariable(_) | PutFlowSequence(_) | RemoveFlowSequence(_) |
-				SetDefaultLocale(_) | PutLocale(_) | RemoveLocale(_) | PutMessage(_, _) | RemoveMessage(_, _):
+				EditFlowSequenceParameter(_, _) | SetDefaultLocale(_) | PutLocale(_) | RemoveLocale(_) | PutMessage(_, _) | RemoveMessage(_, _):
 				{undo: TerrainUnchanged, redo: TerrainUnchanged};
 		};
 	}
