@@ -760,11 +760,12 @@ and receipt; this keeps the lifetime proof while avoiding duplicate hashing and
 JSON decoding inside one test process. Focused in-memory mutations prove
 malformed, unlisted, stale, mismatched, and missing sources cannot create a
 candidate. Expected hashes come from Python `hashlib`, while standard SHA-256
-known vectors independently own the portable digest result. A private Haxe
-digest worker temporarily stands in for `haxe.crypto.Sha256.make` because
-`haxe_c-0h4.4` still owns the standard library's definitely-assigned local
-shape; closing that Bead and passing the same vectors and vertical tracer is
-the bridge's removal condition.
+known vectors independently own the portable digest result. Runtime content now
+calls `haxe.crypto.Sha256.make` through the shared `runtimeSha256` boundary.
+`npm run test:caxecraft-sha256` compares that implementation with `hashlib` on
+Eval and native C. Runtime-content generation calls the same digest boundary
+for package receipts. Its cold Haxe-to-C budget remains owned by
+`haxe_c-w26f`; contended timeouts are not passing performance evidence.
 
 The two-second diagnostic owner for complete publication runs with:
 

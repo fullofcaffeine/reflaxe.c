@@ -329,6 +329,7 @@ class HxcIRGolden {
 				invalidArrayResizeNullProof: invalidDiagnostics(invalidArrayResizeNullProofProgram()),
 				defaultInitializationType: invalidDiagnostics(defaultInitializationTypeProgram()),
 				uninitializedCarrierRead: invalidDiagnostics(uninitializedCarrierReadProgram()),
+				uninitializedCarrierLoopReentryRead: invalidDiagnostics(uninitializedCarrierLoopReentryReadProgram()),
 				uninitializedCarrierReadBeforeBranch: invalidDiagnostics(uninitializedCarrierReadBeforeBranchProgram()),
 				uninitializedSwitchCarrierRead: invalidDiagnostics(uninitializedSwitchCarrierReadProgram()),
 				managedUninitializedCarrier: invalidDiagnostics(managedUninitializedCarrierProgram()),
@@ -3423,6 +3424,30 @@ class HxcIRGolden {
 		fn.blocks.push(block("join", [
 			instruction("bad.load", result("value.result", IRTInstance("instance.record")), IRIOLoad(IRPLocal("local.result")), file, 5)
 		], IRTReturn(null, []), file, 5));
+		return program;
+	}
+
+	/** Reject a loop re-entry that reads the prior iteration's direct carrier. */
+	static function uninitializedCarrierLoopReentryReadProgram():HxcIRProgram {
+		final file = "test/negative/UninitializedCarrierLoopReentryRead.hx";
+		final program = aggregateProgram(file, [], [
+			local("local.result", IRTInstance("instance.record"), IRLSAutomatic, IRISUninitialized, file, 1)
+		], "invalid.UninitializedCarrierLoopReentryRead");
+		final fn = program.modules[0].functions[0];
+		fn.parameters.push(parameter("value.condition", IRTBool, file, 1));
+		fn.parameters.push(parameter("value.record", IRTInstance("instance.record"), file, 1));
+		fn.blocks.splice(0, 1);
+		fn.blocks.push(block("entry", [
+			instruction("entry.initialize", null, IRIOInitialize(IRPLocal("local.result"), "value.record", IRISUninitialized, IRISInitialized), file, 2)
+		], IRTJump(edge("loop")), file, 2));
+		fn.blocks.push(block("loop", [
+			instruction("bad.prior-iteration-load", result("value.prior", IRTInstance("instance.record")), IRIOLoad(IRPLocal("local.result")), file, 3),
+			instruction("loop.declare", null, IRIODeclareUninitialized(IRPLocal("local.result")), file, 4),
+			instruction("loop.store", null, IRIOStore(IRPLocal("local.result"), "value.record"), file, 5)
+		], IRTBranch("value.condition", edge("loop"), edge("exit")), file, 6));
+		fn.blocks.push(block("exit", [
+			instruction("exit.load", result("value.result", IRTInstance("instance.record")), IRIOLoad(IRPLocal("local.result")), file, 7)
+		], IRTReturn(null, []), file, 7));
 		return program;
 	}
 

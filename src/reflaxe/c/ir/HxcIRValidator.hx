@@ -10,10 +10,11 @@ private typedef HxcIRInstructionSite = {
 	final block:HxcIRBlock;
 }
 
-/** One path state used to prove a branch-assigned local before its first read. */
+/** One path state used to prove an empty direct local before each reachable read. */
 private typedef HxcIRCarrierFlowState = {
 	final blockId:String;
 	final assigned:Bool;
+	final instructionIndex:Int;
 }
 
 private enum HxcIRManagedCarrierPhase {
@@ -3455,7 +3456,9 @@ private class HxcIRValidationState {
 							add(path, "uninitialized declaration requires an initially uninitialized local", instruction.source);
 						if (local != null && !isUnmanagedDirectCarrier(local.type))
 							add(path, "uninitialized declaration requires an unmanaged direct-value local", instruction.source);
-						validateConditionalCarrierFlow(localId, block, blocks, path, instruction.source);
+						if (uninitializedCarrierDeclarationCount(localId, blocks) != 1)
+							add(path, "uninitialized direct storage must have exactly one declaration", instruction.source);
+						validateUninitializedCarrierFlow(localId, block, blocks, path, instruction.source);
 					case _:
 						add(path, "uninitialized declaration requires an automatic local place", instruction.source);
 				}
@@ -5621,45 +5624,28 @@ private class HxcIRValidationState {
 	/**
 	 * Prove that every reachable read follows an assignment on that path.
 	 *
-	 * The declaration must end in a real branch or value switch. Walking
-	 * `(block, assigned)` pairs then checks nested conditionals, switch arms, and
-	 * joins without assuming that visiting one path first changes another path's
-	 * state.
+	 * Validation starts immediately after the declaration and walks
+	 * `(block, instruction, assigned)` states through straight-line code,
+	 * branches, loops, switches, and joins. Re-entering the declaration block
+	 * starts a fresh dynamic loop iteration; another static declaration remains
+	 * invalid.
 	 */
-	function validateConditionalCarrierFlow(localId:String, declarationBlock:HxcIRBlock, blocks:Map<String, HxcIRBlock>, path:String,
+	function validateUninitializedCarrierFlow(localId:String, declarationBlock:HxcIRBlock, blocks:Map<String, HxcIRBlock>, path:String,
 			source:HxcSourceSpan):Void {
-		var sawDeclaration = false;
-		for (instruction in declarationBlock.instructions) {
-			if (!sawDeclaration) {
-				sawDeclaration = switch instruction.kind {
-					case IRIODeclareUninitialized(IRPLocal(declaredId)) if (declaredId == localId): true;
-					case _: false;
-				};
-			} else if (instructionTouchesLocalPlace(instruction.kind, localId)) {
-				add(path, "uninitialized declaration must be the last operation that mentions its carrier before the branch", source);
-				return;
+		var declarationIndex = -1;
+		for (index in 0...declarationBlock.instructions.length)
+			switch declarationBlock.instructions[index].kind {
+				case IRIODeclareUninitialized(IRPLocal(declaredId)) if (declaredId == localId):
+					declarationIndex = index;
+				case _:
 			}
-		}
-		final starts:Array<HxcIRCarrierFlowState> = switch declarationBlock.terminator == null ? null : declarationBlock.terminator.kind {
-			case IRTBranch(_, whenTrue, whenFalse): [
-					{blockId: whenTrue.targetBlockId, assigned: false},
-					{blockId: whenFalse.targetBlockId, assigned: false}
-				];
-			case IRTSwitch(_, cases, defaultEdge):
-				cases.map(item -> ({blockId: item.edge.targetBlockId, assigned: false} : HxcIRCarrierFlowState))
-					.concat([{blockId: defaultEdge.targetBlockId, assigned: false}]);
-			case IRTTagSwitch(_, cases, defaultEdge):
-				final result = cases.map(item -> ({blockId: item.edge.targetBlockId, assigned: false} : HxcIRCarrierFlowState));
-				if (defaultEdge != null)
-					result.push({blockId: defaultEdge.targetBlockId, assigned: false});
-				result;
-			case _: [];
-		};
-		if (starts.length == 0) {
-			add(path, "uninitialized declaration must immediately feed a structured branch or switch", source);
+		if (declarationIndex < 0) {
+			add(path, "uninitialized direct flow has no matching declaration", source);
 			return;
 		}
-		final pending = starts.copy();
+		final pending:Array<HxcIRCarrierFlowState> = [
+			{blockId: declarationBlock.id, assigned: false, instructionIndex: declarationIndex + 1}
+		];
 		final visited:Map<String, Bool> = [];
 		var sawStore = false;
 		var sawLoad = false;
@@ -5668,7 +5654,7 @@ private class HxcIRValidationState {
 			final state = pending.pop();
 			if (state == null)
 				continue;
-			final stateKey = state.blockId + (state.assigned ? ":assigned" : ":unassigned");
+			final stateKey = state.blockId + ":" + state.instructionIndex + (state.assigned ? ":assigned" : ":unassigned");
 			if (visited.exists(stateKey))
 				continue;
 			visited.set(stateKey, true);
@@ -5676,7 +5662,14 @@ private class HxcIRValidationState {
 			if (current == null)
 				continue;
 			var assigned = state.assigned;
-			for (instruction in current.instructions) {
+			var instructionIndex = state.instructionIndex;
+			// A back edge enters a fresh dynamic declaration scope. Reset before
+			// scanning any instructions that precede the declaration so a forged
+			// load there cannot inherit the prior iteration's assignment state.
+			if (current.id == declarationBlock.id && instructionIndex == 0)
+				assigned = false;
+			while (instructionIndex < current.instructions.length) {
+				final instruction = current.instructions[instructionIndex++];
 				switch instruction.kind {
 					case IRIODeclareUninitialized(IRPLocal(targetId)) if (targetId == localId):
 						// A compiler carrier declared inside a loop is one static
@@ -5721,11 +5714,24 @@ private class HxcIRValidationState {
 					case IRTReturn(_, _) | IRTThrow(_, _) | IRTUnreachable: [];
 				};
 				for (successor in successors)
-					pending.push({blockId: successor, assigned: assigned});
+					pending.push({blockId: successor, assigned: assigned, instructionIndex: 0});
 			}
 		}
 		if (!sawStore || !sawLoad || unsafeRead)
-			add(path, "uninitialized conditional carrier must be assigned on every path before its first read", source);
+			add(path, "uninitialized direct local must be assigned on every path before each read", source);
+	}
+
+	/** Count the one static declaration that owns an empty direct local. */
+	static function uninitializedCarrierDeclarationCount(localId:String, blocks:Map<String, HxcIRBlock>):Int {
+		var count = 0;
+		for (block in blocks)
+			for (instruction in block.instructions)
+				switch instruction.kind {
+					case IRIODeclareUninitialized(IRPLocal(declaredId)) if (declaredId == localId):
+						count++;
+					case _:
+				}
+		return count;
 	}
 
 	/**
