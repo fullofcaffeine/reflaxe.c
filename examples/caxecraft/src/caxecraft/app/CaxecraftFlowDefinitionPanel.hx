@@ -28,6 +28,7 @@ import caxecraft.scenario.ContentId;
 import caxecraft.scenario.Scenario;
 import caxecraft.scenario.ScenarioId;
 import raygui.GuiResult;
+import raygui.GuiTextBoxState;
 import raygui.Raygui;
 import raylib.Color;
 import raylib.Raylib;
@@ -56,12 +57,23 @@ enum CaxecraftFlowDefinitionRow {
 	SequenceActionDefinitionRow(sequenceIndex:Int, actionIndex:Int, sequence:FlowSequence, action:FlowAction);
 }
 
+/** One declaration whose stable identity is being edited in a temporary field. */
+enum CaxecraftFlowDefinitionRenameTarget {
+	NoFlowDefinitionRename;
+	VariableDefinitionRename(id:ScenarioId);
+	SequenceDefinitionRename(id:ScenarioId);
+	ParameterDefinitionRename(sequence:ScenarioId, parameterIndex:Int, id:ScenarioId);
+}
+
 /** One complete user decision returned to the editor controller. */
 enum CaxecraftFlowDefinitionPanelAction {
 	KeepFlowDefinitionPanel;
 	CloseFlowDefinitionPanel;
 	ApplyFlowDefinition(command:EditorCommand);
 	OpenFlowSequenceAction(sequence:ScenarioId, actionIndex:Int, insert:Bool);
+	BeginFlowDefinitionRename(target:CaxecraftFlowDefinitionRenameTarget);
+	CommitFlowDefinitionRename(target:CaxecraftFlowDefinitionRenameTarget, value:String);
+	CancelFlowDefinitionRename;
 }
 
 /** Project controls and declarations in one deterministic keyboard order. */
@@ -95,23 +107,21 @@ function flowDefinitionActionAt(draft:Scenario, states:Array<ContentId>, selecti
 		case AddCounterDefinitionRow: ApplyFlowDefinition(PutFlowVariable(nextFlowVariable(Counter(0), draft.flow.variables)));
 		case AddStateDefinitionRow: ApplyFlowDefinition(PutFlowVariable(nextFlowVariable(State(states[0]), draft.flow.variables)));
 		case AddSequenceDefinitionRow: ApplyFlowDefinition(PutFlowSequence(nextFlowSequence(draft.flow.sequences)));
-		case VariableDefinitionRow(_, variable):
-			ApplyFlowDefinition(PutFlowVariable(editFlowVariable(variable, NextVariableValue, draft.flow.sequences, states)));
-		case SequenceDefinitionRow(_, _): KeepFlowDefinitionPanel;
+		case VariableDefinitionRow(_, variable): BeginFlowDefinitionRename(VariableDefinitionRename(variable.id));
+		case SequenceDefinitionRow(_, sequence): BeginFlowDefinitionRename(SequenceDefinitionRename(sequence.id));
 		case AddSequenceParameterRow(_, sequence):
 			ApplyFlowDefinition(EditFlowSequenceParameter(sequence.id,
 				InsertFlowParameter(sequence.parameters.length, nextFlowParameter(sequence, draft.flow.variables))));
 		case AddSequenceActionRow(_, sequence): OpenFlowSequenceAction(sequence.id, sequence.actions.length, true);
 		case SequenceParameterDefinitionRow(_, parameterIndex, sequence, parameter):
-			ApplyFlowDefinition(EditFlowSequenceParameter(sequence.id,
-				ReplaceFlowParameter(parameterIndex, editFlowParameter(parameter, NextVariableValue, states))));
+			BeginFlowDefinitionRename(ParameterDefinitionRename(sequence.id, parameterIndex, parameter.id));
 		case SequenceActionDefinitionRow(_, actionIndex, sequence, _): OpenFlowSequenceAction(sequence.id, actionIndex, false);
 	};
 }
 
 /** Draw one bounded modal and return at most one typed command. */
-function drawFlowDefinitionPanel(catalog:RuntimeUiCatalog, locale:LocaleCursor, draft:Scenario, states:Array<ContentId>, selection:Int, width:Int,
-		height:Int):CaxecraftFlowDefinitionPanelAction {
+function drawFlowDefinitionPanel(catalog:RuntimeUiCatalog, locale:LocaleCursor, draft:Scenario, states:Array<ContentId>, selection:Int,
+		renameTarget:CaxecraftFlowDefinitionRenameTarget, renameText:Null<GuiTextBoxState>, width:Int, height:Int):CaxecraftFlowDefinitionPanelAction {
 	Raylib.DrawRectangle(0, 0, width, height, Color.rgba(4, 10, 14, 235));
 	final panelWidth = width >= 980 ? 920 : width - 32;
 	final panelHeight = height >= 660 ? 620 : height - 32;
@@ -122,6 +132,11 @@ function drawFlowDefinitionPanel(catalog:RuntimeUiCatalog, locale:LocaleCursor, 
 		catalog.format(locale, EditorFlowUiMessage.DoneMessage.messageId(), []))
 		.has(GuiResult.Pressed))
 		return CloseFlowDefinitionPanel;
+	switch renameTarget {
+		case NoFlowDefinitionRename:
+		case _:
+			return drawRenamePanel(catalog, locale, renameTarget, renameText, left, top, panelWidth, panelHeight);
+	}
 	final rows = flowDefinitionRows(draft, states);
 	final visible = maximum(1, Std.int((panelHeight - 78) / 36));
 	final start = windowStart(selection, rows.length, visible);
@@ -165,7 +180,7 @@ private function drawDefinitionRow(catalog:RuntimeUiCatalog, locale:LocaleCursor
 			Raygui.ButtonString(Rectangle.fromFloat(left, top, width, 28), catalog.format(locale, EditorFlowUiMessage.AddActionMessage.messageId(), []))
 				.has(GuiResult.Pressed) ? OpenFlowSequenceAction(sequence.id, sequence.actions.length, true) : KeepFlowDefinitionPanel;
 		case SequenceParameterDefinitionRow(_, parameterIndex, sequence, parameter):
-			drawSequenceParameterRow(states, sequence, parameterIndex, parameter, left, top, width);
+			drawSequenceParameterRow(catalog, locale, states, sequence, parameterIndex, parameter, left, top, width);
 		case SequenceActionDefinitionRow(_, actionIndex, sequence, action):
 			drawSequenceActionRow(catalog, locale, sequence, actionIndex, action, left, top, width);
 	};
@@ -181,16 +196,20 @@ private function drawVariableRow(catalog:RuntimeUiCatalog, locale:LocaleCursor, 
 	final locked = flowVariableIsReferenced(draft, variable.id);
 	Raylib.DrawTextString('${variable.id.text()}  ·  ${scopeText(catalog, locale, variable.scope)}  ·  ${valueText(variable.initial)}', left + 4, top + 8, 13,
 		CaxecraftPalette.hudText());
-	final controls = left + width - 178;
-	if (!locked && Raygui.ButtonString(Rectangle.fromFloat(controls, top + 2, 30, 25), "◇").has(GuiResult.Pressed))
+	final controls = left + width - 292;
+	if (Raygui.ButtonString(Rectangle.fromFloat(controls, top + 2, 110, 25), catalog.format(locale, EditorFlowUiMessage.RenameMessage.messageId(), []))
+		.has(GuiResult.Pressed))
+		return BeginFlowDefinitionRename(VariableDefinitionRename(variable.id));
+	final valueControls = controls + 114;
+	if (!locked && Raygui.ButtonString(Rectangle.fromFloat(valueControls, top + 2, 30, 25), "◇").has(GuiResult.Pressed))
 		return ApplyFlowDefinition(PutFlowVariable(editFlowVariable(variable, NextVariableKind, draft.flow.sequences, states)));
-	if (!locked && Raygui.ButtonString(Rectangle.fromFloat(controls + 34, top + 2, 30, 25), "◎").has(GuiResult.Pressed))
+	if (!locked && Raygui.ButtonString(Rectangle.fromFloat(valueControls + 34, top + 2, 30, 25), "◎").has(GuiResult.Pressed))
 		return ApplyFlowDefinition(PutFlowVariable(editFlowVariable(variable, NextVariableScope, draft.flow.sequences, states)));
-	if (Raygui.ButtonString(Rectangle.fromFloat(controls + 68, top + 2, 30, 25), "-").has(GuiResult.Pressed))
+	if (Raygui.ButtonString(Rectangle.fromFloat(valueControls + 68, top + 2, 30, 25), "-").has(GuiResult.Pressed))
 		return ApplyFlowDefinition(PutFlowVariable(editFlowVariable(variable, PreviousVariableValue, draft.flow.sequences, states)));
-	if (Raygui.ButtonString(Rectangle.fromFloat(controls + 102, top + 2, 30, 25), "+").has(GuiResult.Pressed))
+	if (Raygui.ButtonString(Rectangle.fromFloat(valueControls + 102, top + 2, 30, 25), "+").has(GuiResult.Pressed))
 		return ApplyFlowDefinition(PutFlowVariable(editFlowVariable(variable, NextVariableValue, draft.flow.sequences, states)));
-	if (Raygui.ButtonString(Rectangle.fromFloat(controls + 136, top + 2, 42, 25), "X").has(GuiResult.Pressed))
+	if (Raygui.ButtonString(Rectangle.fromFloat(valueControls + 136, top + 2, 42, 25), "X").has(GuiResult.Pressed))
 		return ApplyFlowDefinition(RemoveFlowVariable(variable.id));
 	return KeepFlowDefinitionPanel;
 }
@@ -201,27 +220,35 @@ private function drawSequenceRow(catalog:RuntimeUiCatalog, locale:LocaleCursor, 
 		left
 		+ 4, top
 		+ 8, 13, CaxecraftPalette.hudText());
+	if (Raygui.ButtonString(Rectangle.fromFloat(left + width - 156, top + 2, 110, 25),
+		catalog.format(locale, EditorFlowUiMessage.RenameMessage.messageId(), []))
+		.has(GuiResult.Pressed))
+		return BeginFlowDefinitionRename(SequenceDefinitionRename(sequence.id));
 	if (Raygui.ButtonString(Rectangle.fromFloat(left + width - 42, top + 2, 42, 25), "X").has(GuiResult.Pressed))
 		return ApplyFlowDefinition(RemoveFlowSequence(sequence.id));
 	return KeepFlowDefinitionPanel;
 }
 
-private function drawSequenceParameterRow(states:Array<ContentId>, sequence:FlowSequence, parameterIndex:Int, parameter:FlowParameter, left:Int, top:Int,
-		width:Int):CaxecraftFlowDefinitionPanelAction {
+private function drawSequenceParameterRow(catalog:RuntimeUiCatalog, locale:LocaleCursor, states:Array<ContentId>, sequence:FlowSequence, parameterIndex:Int,
+		parameter:FlowParameter, left:Int, top:Int, width:Int):CaxecraftFlowDefinitionPanelAction {
 	Raylib.DrawTextString('  ${parameterIndex + 1}. ${parameter.id.text()}  ·  ${valueText(parameter.initial)}', left + 4, top + 8, 13,
 		CaxecraftPalette.hudText());
-	final controls = left + width - 144;
+	final controls = left + width - 258;
+	if (Raygui.ButtonString(Rectangle.fromFloat(controls, top + 2, 110, 25), catalog.format(locale, EditorFlowUiMessage.RenameMessage.messageId(), []))
+		.has(GuiResult.Pressed))
+		return BeginFlowDefinitionRename(ParameterDefinitionRename(sequence.id, parameterIndex, parameter.id));
+	final valueControls = controls + 114;
 	if (!flowParameterIsReferenced(sequence, parameter.id)
-		&& Raygui.ButtonString(Rectangle.fromFloat(controls, top + 2, 30, 25), "◇").has(GuiResult.Pressed))
+		&& Raygui.ButtonString(Rectangle.fromFloat(valueControls, top + 2, 30, 25), "◇").has(GuiResult.Pressed))
 		return ApplyFlowDefinition(EditFlowSequenceParameter(sequence.id,
 			ReplaceFlowParameter(parameterIndex, editFlowParameter(parameter, NextVariableKind, states))));
-	if (Raygui.ButtonString(Rectangle.fromFloat(controls + 34, top + 2, 30, 25), "-").has(GuiResult.Pressed))
+	if (Raygui.ButtonString(Rectangle.fromFloat(valueControls + 34, top + 2, 30, 25), "-").has(GuiResult.Pressed))
 		return ApplyFlowDefinition(EditFlowSequenceParameter(sequence.id,
 			ReplaceFlowParameter(parameterIndex, editFlowParameter(parameter, PreviousVariableValue, states))));
-	if (Raygui.ButtonString(Rectangle.fromFloat(controls + 68, top + 2, 30, 25), "+").has(GuiResult.Pressed))
+	if (Raygui.ButtonString(Rectangle.fromFloat(valueControls + 68, top + 2, 30, 25), "+").has(GuiResult.Pressed))
 		return ApplyFlowDefinition(EditFlowSequenceParameter(sequence.id,
 			ReplaceFlowParameter(parameterIndex, editFlowParameter(parameter, NextVariableValue, states))));
-	if (Raygui.ButtonString(Rectangle.fromFloat(controls + 102, top + 2, 42, 25), "X").has(GuiResult.Pressed))
+	if (Raygui.ButtonString(Rectangle.fromFloat(valueControls + 102, top + 2, 42, 25), "X").has(GuiResult.Pressed))
 		return ApplyFlowDefinition(EditFlowSequenceParameter(sequence.id, RemoveFlowParameter(parameterIndex)));
 	return KeepFlowDefinitionPanel;
 }
@@ -248,6 +275,28 @@ private function sequenceEdit(sequence:FlowSequence, edit:EditorFlowSequenceEdit
 		case FlowSequenceAuthored(value): ApplyFlowDefinition(PutFlowSequence(value));
 		case FlowSequenceUnchanged | FlowSequenceAuthoringRejected: KeepFlowDefinitionPanel;
 	};
+
+/** Draw one focused identity field without creating a second document model. */
+private function drawRenamePanel(catalog:RuntimeUiCatalog, locale:LocaleCursor, target:CaxecraftFlowDefinitionRenameTarget, name:Null<GuiTextBoxState>,
+		left:Int, top:Int, width:Int, height:Int):CaxecraftFlowDefinitionPanelAction {
+	final fieldTop = top + Std.int(height * 0.35);
+	Raylib.DrawTextString(catalog.format(locale, EditorFlowUiMessage.RenameMessage.messageId(), []), left + 48, fieldTop - 34, 18, CaxecraftPalette.hudText());
+	if (name != null) {
+		final result = name.draw(Rectangle.fromFloat(left + 48, fieldTop, width - 96, 38));
+		if (result.has(GuiResult.Pressed) && !name.isEditing())
+			return CommitFlowDefinitionRename(target, name.text());
+	}
+	final buttonWidth = Std.int((width - 108) / 2);
+	if (Raygui.ButtonString(Rectangle.fromFloat(left + 48, fieldTop + 56, buttonWidth, 34),
+		catalog.format(locale, EditorFlowUiMessage.ApplyMessage.messageId(), []))
+		.has(GuiResult.Pressed))
+		return CommitFlowDefinitionRename(target, name == null ? "" : name.text());
+	if (Raygui.ButtonString(Rectangle.fromFloat(left + 60 + buttonWidth, fieldTop + 56, buttonWidth, 34),
+		catalog.format(locale, EditorFlowUiMessage.CancelMessage.messageId(), []))
+		.has(GuiResult.Pressed))
+		return CancelFlowDefinitionRename;
+	return KeepFlowDefinitionPanel;
+}
 
 private function scopeText(catalog:RuntimeUiCatalog, locale:LocaleCursor, scope:FlowScope):String
 	return switch scope {

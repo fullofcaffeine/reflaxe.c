@@ -53,6 +53,8 @@ enum abstract EditorFlowUiMessage(String) {
 	var AddParameterMessage = "editor.flow.add-parameter";
 	var AddSequenceMessage = "editor.flow.add-sequence";
 	var AddStateMessage = "editor.flow.add-state";
+	var ApplyMessage = "editor.flow.apply";
+	var CancelMessage = "editor.flow.cancel";
 	var CardLibraryMessage = "editor.flow.card-library";
 	var ConnectObjectMessage = "editor.flow.connect-object";
 	var DoMessage = "editor.flow.do";
@@ -75,6 +77,7 @@ enum abstract EditorFlowUiMessage(String) {
 	var RepeatOnceMessage = "editor.flow.repeat-once";
 	var RepeatOncePerActorMessage = "editor.flow.repeat-once-per-actor";
 	var QuestScopeMessage = "editor.flow.scope-quest";
+	var RenameMessage = "editor.flow.rename";
 	var SequencesMessage = "editor.flow.sequences";
 	var VariablesMessage = "editor.flow.variables";
 	var WhenMessage = "editor.flow.when";
@@ -97,6 +100,8 @@ function allEditorFlowUiMessages():Array<EditorFlowUiMessage>
 		AddParameterMessage,
 		AddSequenceMessage,
 		AddStateMessage,
+		ApplyMessage,
+		CancelMessage,
 		CardLibraryMessage,
 		ConnectObjectMessage,
 		DoMessage,
@@ -119,6 +124,7 @@ function allEditorFlowUiMessages():Array<EditorFlowUiMessage>
 		RepeatOnceMessage,
 		RepeatOncePerActorMessage,
 		QuestScopeMessage,
+		RenameMessage,
 		SequencesMessage,
 		ToggleEnterLeaveMessage,
 		ToggleSpawnDespawnMessage,
