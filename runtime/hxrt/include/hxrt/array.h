@@ -199,6 +199,23 @@ HXC_API hxc_status hxc_array_set_copy(
   const void *element
 );
 
+/**
+ * Assign one slot using Haxe's sparse indexed-assignment growth rule.
+ *
+ * A negative index fails without mutation. An index beyond the current end
+ * grows the Array through that index, copy-constructs each gap from
+ * `default_element`, and copy-constructs the assigned value into the final
+ * slot. Allocation or element-copy failure restores the old logical length
+ * and contents; private capacity may have increased. Both input pointers may
+ * borrow existing Array slots and are reconstructed after storage relocation.
+ */
+HXC_API hxc_status hxc_array_set_grow_copy(
+  hxc_array *array,
+  int32_t index,
+  const void *element,
+  const void *default_element
+);
+
 /** Destroy one element and shift its suffix left without allocation. */
 HXC_API hxc_status hxc_array_remove_at(hxc_array *array, size_t index);
 
@@ -470,6 +487,14 @@ HXC_API hxc_status hxc_array_ref_set_copy(
   hxc_array_ref *array,
   size_t index,
   const void *element
+);
+
+/** Apply sparse Haxe indexed assignment through one shared Array identity. */
+HXC_API hxc_status hxc_array_ref_set_grow_copy(
+  hxc_array_ref *array,
+  int32_t index,
+  const void *element,
+  const void *default_element
 );
 
 /**

@@ -494,6 +494,46 @@ hxc_status hxc_array_set_copy(
   return HXC_STATUS_OK;
 }
 
+hxc_status hxc_array_set_grow_copy(
+  hxc_array *array,
+  int32_t index,
+  const void *element,
+  const void *default_element
+) {
+  size_t old_length;
+  size_t source_index = 0u;
+  bool source_is_slot;
+  hxc_status rollback;
+  hxc_status status;
+  if (index < 0
+      || element == NULL
+      || default_element == NULL
+      || !hxc_array_is_valid(array)) {
+    return HXC_STATUS_INVALID_ARGUMENT;
+  }
+  if ((size_t)index <= array->length) {
+    return hxc_array_set_copy(array, (size_t)index, element);
+  }
+
+  old_length = array->length;
+  source_is_slot = hxc_array_find_source(array, element, &source_index);
+  status = hxc_array_resize(array, (size_t)index, default_element);
+  if (status != HXC_STATUS_OK) {
+    return status;
+  }
+  if (source_is_slot) {
+    element = hxc_array_slot_const(array, source_index);
+  }
+  status = hxc_array_push_copy(array, element);
+  if (status == HXC_STATUS_OK) {
+    return HXC_STATUS_OK;
+  }
+
+  /* Shrinking cannot allocate and destroys only the newly constructed gap. */
+  rollback = hxc_array_resize(array, old_length, NULL);
+  return rollback == HXC_STATUS_OK ? status : rollback;
+}
+
 hxc_status hxc_array_remove_at(hxc_array *array, size_t index) {
   size_t shifted_size;
   if (!hxc_array_is_valid(array)) {
@@ -1186,6 +1226,23 @@ hxc_status hxc_array_ref_set_copy(
     return HXC_STATUS_INVALID_ARGUMENT;
   }
   return hxc_array_set_copy(&array->value, index, element);
+}
+
+hxc_status hxc_array_ref_set_grow_copy(
+  hxc_array_ref *array,
+  int32_t index,
+  const void *element,
+  const void *default_element
+) {
+  if (!hxc_array_ref_is_valid(array)) {
+    return HXC_STATUS_INVALID_ARGUMENT;
+  }
+  return hxc_array_set_grow_copy(
+    &array->value,
+    index,
+    element,
+    default_element
+  );
 }
 
 hxc_status hxc_array_ref_sort(

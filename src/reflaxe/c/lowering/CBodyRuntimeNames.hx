@@ -95,6 +95,7 @@ enum CBodyRuntimeName {
 	CBRNArrayInsertCopy;
 	CBRNArrayPushCopy;
 	CBRNArraySetCopy;
+	CBRNArraySetGrowCopy;
 	CBRNArraySort;
 	CBRNArrayRetain;
 	CBRNArrayRelease;
@@ -306,6 +307,7 @@ class CBodyRuntimeNames {
 			case CBRNArrayInsertCopy: "hxc_array_ref_insert_copy";
 			case CBRNArrayPushCopy: "hxc_array_ref_push_copy";
 			case CBRNArraySetCopy: "hxc_array_ref_set_copy";
+			case CBRNArraySetGrowCopy: "hxc_array_ref_set_grow_copy";
 			case CBRNArraySort: "hxc_array_ref_sort";
 			case CBRNArrayRetain: "hxc_array_ref_retain";
 			case CBRNArrayRelease: "hxc_array_ref_release";

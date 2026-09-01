@@ -4323,6 +4323,21 @@ private class HxcIRValidationState {
 					|| typeKey(call.returnType) != typeKey(receiverElement)) {
 					add(path, "Array indexed assignment requires managed Array + Haxe Int + matching element", source);
 				}
+			case "set-grow":
+				final hasDefault = receiverElement != null && (hasExactNullCarrier(receiverElement) || switch receiverElement {
+					case IRTBool | IRTInt(_, _) | IRTFloat(_): true;
+					case _: false;
+				});
+				if (argumentTypes.length != 3
+					|| receiverElement == null
+					|| secondArgumentType == null
+					|| thirdArgumentType == null
+					|| typeKey(secondArgumentType) != typeKey(IRTInt(32, true))
+					|| typeKey(thirdArgumentType) != typeKey(receiverElement)
+					|| typeKey(call.returnType) != typeKey(receiverElement)
+					|| !hasDefault) {
+					add(path, "sparse Array indexed assignment requires managed Array + Haxe Int + matching element with an exact static default", source);
+				}
 			case "sort":
 				if (argumentTypes.length != 2 || receiverElement == null || secondArgumentType == null || call.returnType != IRTVoid) {
 					add(path, "Array.sort requires one managed Array plus an exact element comparator and returns Void", source);

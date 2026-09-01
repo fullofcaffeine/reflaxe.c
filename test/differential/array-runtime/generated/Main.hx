@@ -98,10 +98,29 @@ final class Main {
 		return values[0].length;
 	}
 
+	/** Grow a primitive Array sparsely and observe its length and assigned slots. */
+	static function sparseIntegerAssignmentTrace():Int {
+		final values:Array<Int> = [];
+		values[4] = 9;
+		values[1] = 5;
+		// Eval keeps primitive gaps as null, while static targets use the exact Int
+		// default. The independent C fixture verifies those native zero-filled gaps.
+		return values.length * 100 + values[1] * 10 + values[4];
+	}
+
+	/** Grow a managed Array sparsely and prove that untouched slots stay null. */
+	static function sparseStringAssignmentTrace():Int {
+		final values:Array<String> = [];
+		values[2] = fromCode(65);
+		return values.length * 10 + (values[0] == null ? 1 : 0) + (values[1] == null ? 2 : 0) + values[2].length;
+	}
+
 	static function main():Void {
 		final values:Array<Int> = [10, 20];
 		final constructedIntegerSum = constructedIntegerArraySum();
 		final constructedStringLength = constructedStringArrayLength();
+		final sparseIntegerTrace = sparseIntegerAssignmentTrace();
+		final sparseStringTrace = sparseStringAssignmentTrace();
 		final freshStaticLength = borrowedLength([2, 3, 5]);
 		final freshInstanceLength = new FreshArrayReader().length([7, 11]);
 		final fieldOwner = new ArrayFieldOwner();
@@ -342,6 +361,8 @@ final class Main {
 			|| constructedIntegerSum != 128
 			|| updateIndexEvaluations != 4
 			|| constructedStringLength != 1
+			|| sparseIntegerTrace != 559
+			|| sparseStringTrace != 34
 			|| freshStaticLength != 3
 			|| freshInstanceLength != 2
 			|| originalFieldValues.length != 1
