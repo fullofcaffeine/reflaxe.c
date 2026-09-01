@@ -53,6 +53,8 @@ import caxecraft.editor.EditorFlowAuthoring.connectZone;
 import caxecraft.editor.EditorFlowAuthoring.editFlowCard;
 import caxecraft.editor.EditorFlowAuthoring.isWorldPickableFlowRole;
 import caxecraft.editor.EditorFlowAuthoring.nextZoneConnectionRuleId;
+import caxecraft.editor.EditorFlowAuthoring.nextFlowRepeatPolicy;
+import caxecraft.editor.EditorFlowAuthoring.stepFlowPriority;
 import caxecraft.editor.EditorFlowAuthoring.worldPickFor;
 import caxecraft.editor.EditorFlowCardLibrary.EditorFlowActionChoice;
 import caxecraft.editor.EditorFlowCardLibrary.EditorFlowContentChoices;
@@ -3780,6 +3782,26 @@ final class EditorProbe {
 		final configured = authoredRule(editFlowCard(authoredRule(editFlowCard(moved, SetPriority(9)), "set card priority"), SetRepeat(Repeat)),
 			"set card repeat");
 		require(configured.priority == 9 && configured.repeat == Repeat, "card configuration lost priority or per-actor repeat policy");
+		require(stepFlowPriority(9, -1) == 8 && stepFlowPriority(9, 1) == 10 && stepFlowPriority(9, 0) == 9,
+			"visual priority steps changed direction or admitted a zero-direction edit");
+		require(stepFlowPriority(-2147483648, -1) == -2147483648 && stepFlowPriority(2147483647, 1) == 2147483647,
+			"visual priority steps overflowed the signed Int boundary");
+		final globalEvent = LevelEntered(id("level.policy"));
+		final actorEvent = Interact(id("npc.policy"));
+		require(nextFlowRepeatPolicy(globalEvent, Once) == Repeat, "repeat control skipped the ordinary repeat policy");
+		switch nextFlowRepeatPolicy(globalEvent, Repeat) {
+			case Cooldown(1):
+			case _:
+				throw "repeat control did not create the smallest valid cooldown";
+		}
+		require(nextFlowRepeatPolicy(globalEvent, Cooldown(7)) == Once, "repeat control offered actor-local history to an event without an actor");
+		require(nextFlowRepeatPolicy(actorEvent, Cooldown(7)) == OncePerActor, "repeat control hid actor-local history from an actor event");
+		switch nextFlowRepeatPolicy(actorEvent, OncePerActor) {
+			case CooldownPerActor(1):
+			case _:
+				throw "repeat control did not create the smallest valid actor cooldown";
+		}
+		require(nextFlowRepeatPolicy(actorEvent, CooldownPerActor(7)) == Once, "repeat control did not close its actor-policy cycle");
 		final replaced = authoredRule(editFlowCard(configured, ReplaceDo(0, EmitSignal(content("caxecraft:authored")))), "replace DO card");
 		final removed = authoredRule(editFlowCard(replaced, RemoveDo(1)), "remove DO card");
 		require(removed.actions.length == 1, "card removal did not preserve the remaining action");

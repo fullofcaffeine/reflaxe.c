@@ -81,6 +81,8 @@ import caxecraft.editor.EditorFlowAuthoring.connectZone;
 import caxecraft.editor.EditorFlowAuthoring.editFlowCard;
 import caxecraft.editor.EditorFlowAuthoring.isWorldPickableFlowRole;
 import caxecraft.editor.EditorFlowAuthoring.nextZoneConnectionRuleId;
+import caxecraft.editor.EditorFlowAuthoring.nextFlowRepeatPolicy;
+import caxecraft.editor.EditorFlowAuthoring.stepFlowPriority;
 import caxecraft.editor.EditorFlowAuthoring.worldPickFor;
 import caxecraft.editor.EditorFlowCardLibrary.EditorFlowActionChoice;
 import caxecraft.editor.EditorFlowCardLibrary.EditorFlowContentChoices;
@@ -1454,9 +1456,10 @@ final class CaxecraftEditorScreen {
 				}
 				cursor += 20;
 			}
-			if (cursor + 18 < bottom) {
-				Raylib.DrawTextString(flowRulePolicyText(locale, rule.priority, rule.repeat), left, cursor, 11, Color.rgba(160, 190, 194));
-				cursor += 18;
+			if (cursor + 28 < bottom) {
+				if (drawFlowRulePolicyControls(locale, objectId, rule, left, cursor, width))
+					return cursor + 28;
+				cursor += 28;
 			}
 			for (card in rule.cards) {
 				if (cursor + 34 >= bottom)
@@ -1474,6 +1477,28 @@ final class CaxecraftEditorScreen {
 			cursor = drawNestedFlowCards(locale, objectId, rule.ruleId, rule.nestedCards, left, cursor, width, bottom);
 		}
 		return drawFlowTraceOverlay(locale, left, cursor, width, bottom);
+	}
+
+	/** Edit scheduling through the same typed rule command used by Text mode. */
+	function drawFlowRulePolicyControls(locale:LocaleCursor, zone:ScenarioId, rule:EditorFlowRuleProjection, left:Int, top:Int, width:Int):Bool {
+		final source = currentFlowRule(rule.ruleId);
+		if (source == null)
+			return false;
+		final stepWidth = 24;
+		if (Raygui.ButtonString(Rectangle.fromFloat(left, top, stepWidth, 22), "-").has(GuiResult.Pressed))
+			return commitFlowEdit(zone, rule.ruleId, SetPriority(stepFlowPriority(rule.priority, -1)));
+		final priorityWidth = 126;
+		Raylib.DrawTextString(uiCatalog.format(locale, EditorFlowUiMessage.PriorityMessage.messageId(), [Std.string(rule.priority)]), left
+			+ stepWidth
+			+ 4,
+			top
+			+ 6, 11, Color.rgba(160, 190, 194));
+		if (Raygui.ButtonString(Rectangle.fromFloat(left + priorityWidth - stepWidth, top, stepWidth, 22), "+").has(GuiResult.Pressed))
+			return commitFlowEdit(zone, rule.ruleId, SetPriority(stepFlowPriority(rule.priority, 1)));
+		final repeatLeft = left + priorityWidth + 5;
+		final repeatWidth = width - priorityWidth - 5;
+		return Raygui.ButtonString(Rectangle.fromFloat(repeatLeft, top, repeatWidth, 22), flowRepeatPolicyText(locale, rule.repeat)).has(GuiResult.Pressed)
+			&& commitFlowEdit(zone, rule.ruleId, SetRepeat(nextFlowRepeatPolicy(source.event, rule.repeat)));
 	}
 
 	/** Draw explicit editable rows for nested predicates and weighted actions. */
@@ -1667,7 +1692,12 @@ final class CaxecraftEditorScreen {
 	/** Resolve canonical scheduling policy through data-owned UI messages. */
 	function flowRulePolicyText(locale:LocaleCursor, priority:Int, repeat:FlowRepeatPolicy):String {
 		final priorityText = uiCatalog.format(locale, EditorFlowUiMessage.PriorityMessage.messageId(), [Std.string(priority)]);
-		final repeatText = switch repeat {
+		return '$priorityText · ${flowRepeatPolicyText(locale, repeat)}';
+	}
+
+	/** Resolve only the repeat-policy label used by its direct visual control. */
+	function flowRepeatPolicyText(locale:LocaleCursor, repeat:FlowRepeatPolicy):String
+		return switch repeat {
 			case Once: uiCatalog.format(locale, EditorFlowUiMessage.RepeatOnceMessage.messageId(), []);
 			case Repeat: uiCatalog.format(locale, EditorFlowUiMessage.RepeatMessage.messageId(), []);
 			case Cooldown(ticks): uiCatalog.format(locale, EditorFlowUiMessage.RepeatCooldownMessage.messageId(), [Std.string(ticks)]);
@@ -1675,8 +1705,6 @@ final class CaxecraftEditorScreen {
 			case CooldownPerActor(ticks):
 				uiCatalog.format(locale, EditorFlowUiMessage.RepeatCooldownPerActorMessage.messageId(), [Std.string(ticks)]);
 		};
-		return '$priorityText · $repeatText';
-	}
 
 	/** Apply one typed palette decision through the canonical rule command. */
 	function applyFlowCardPanelAction(action:CaxecraftFlowCardPanelAction):Void {

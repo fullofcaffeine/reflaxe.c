@@ -11,6 +11,7 @@ import caxecraft.scenario.CaxeFlow.FlowEvent;
 import caxecraft.scenario.CaxeFlow.FlowPredicate;
 import caxecraft.scenario.CaxeFlow.FlowRepeatPolicy;
 import caxecraft.scenario.CaxeFlow.FlowRule;
+import caxecraft.scenario.CaxeFlowEventRegistry.flowEventSupportsActor;
 import caxecraft.scenario.CaxeFlowCopy.copyFlowAction;
 import caxecraft.scenario.CaxeFlowCopy.copyFlowActions;
 import caxecraft.scenario.CaxeFlowCopy.copyFlowPredicate;
@@ -98,6 +99,33 @@ function nextZoneConnectionRuleId(zone:ScenarioId, ruleIds:Array<ScenarioId>):Sc
 	while (containsRuleId(ruleIds, prefix + number))
 		number++;
 	return new ScenarioId(prefix + number);
+}
+
+/**
+	Return the next valid repeat policy for the rule's current event.
+
+	The visual control never offers actor-local history to an event that cannot
+	identify an actor. A new cooldown starts at one fixed tick, the smallest
+	valid value; Advanced text remains the exact path for larger tick counts.
+**/
+function nextFlowRepeatPolicy(event:FlowEvent, current:FlowRepeatPolicy):FlowRepeatPolicy {
+	final supportsActor = flowEventSupportsActor(event);
+	return switch current {
+		case Once: Repeat;
+		case Repeat: Cooldown(1);
+		case Cooldown(_): supportsActor ? OncePerActor : Once;
+		case OncePerActor: supportsActor ? CooldownPerActor(1) : Once;
+		case CooldownPerActor(_): Once;
+	};
+}
+
+/** Move one priority step without overflowing Haxe's signed 32-bit `Int`. */
+function stepFlowPriority(priority:Int, direction:Int):Int {
+	if (direction < 0)
+		return priority == -2147483648 ? priority : priority - 1;
+	if (direction > 0)
+		return priority == 2147483647 ? priority : priority + 1;
+	return priority;
 }
 
 /** Replace, insert, or remove one canonical card without mutating the input. */
