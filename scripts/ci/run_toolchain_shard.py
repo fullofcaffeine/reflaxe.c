@@ -115,6 +115,7 @@ SHARDS: dict[str, tuple[str, ...]] = {
         "test:caxecraft-campaign-runtime",
         "test:caxecraft-runtime-content-publication",
         "test:caxecraft-cross-target-adapter",
+        "test:caxecraft-eval-assisted-loop-profile",
         "test:caxecraft-water",
         "test:caxecraft-aquatics",
         "test:caxecraft-session",

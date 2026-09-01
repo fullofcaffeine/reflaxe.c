@@ -200,6 +200,10 @@ Run `npm run test:caxecraft-cross-target-adapter` for the executable boundary
 proof. The command compiles the shared probe with Eval, JavaScript, and haxe.c.
 It also runs strict native C and audits ordinary source modules.
 
+The [Eval-assisted loop experiment](research/caxecraft-eval-assisted-loop.md)
+keeps this boundary honest. Eval remains a fast rule probe, while reloadable
+content and the persistent native game provide creator-facing frame feedback.
+
 ## Boundary and representation
 
 The shared algorithm layer uses ordinary Haxe records, a fieldless Haxe enum,
