@@ -236,6 +236,26 @@ requirements and do not change the empty runtime plan. A nonempty runtime payloa
 feature catalog: packaging verifies each registered source SHA-256, and this
 manifest hashes the emitted copy plus its exact source/include build plan.
 
+### Where packaged bytes came from
+
+Manifest schema 2 records how each artifact entered the application package.
+This record is the artifact's `provenance` object. It has one `production`
+value:
+
+- `compiled-program` identifies C or headers rendered from the typed program.
+- `compiler-sidecar` identifies reports, manifests, and build adapters.
+- `repository-copy` identifies unchanged bytes copied from `runtime/hxrt`.
+
+A `repository-copy` record also contains `sourcePath` and `sourceSha256`.
+The runtime packager compares that hash before it admits the copied file.
+Package tools can therefore derive notices from the same selected runtime plan.
+They do not need a second list of runtime files.
+
+These values report construction facts. They do not state a license or grant
+permission to redistribute an artifact. This section is not legal advice.
+The generated-output license decision remains tracked by `haxe_c-od2.5`.
+It requires exact terms from the repository owner and a qualified rights review.
+
 ## Neutral build plan and adapters
 
 `hxc.manifest.json.build` is the schema-1 authority consumed by all three build

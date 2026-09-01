@@ -485,7 +485,7 @@ def validate_positive(project: RenderedProject) -> None:
 
     manifest = project.manifest
     if (
-        manifest.get("schemaVersion") != 1
+        manifest.get("schemaVersion") != 2
         or manifest.get("compilationStatus") != "lowered-direct-value-executable"
     ):
         raise CImportFailure("compiler manifest lost its bounded direct-value status")

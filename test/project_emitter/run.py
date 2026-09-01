@@ -506,7 +506,7 @@ def check_manifest(output: Path, *, expected_original_build: bool = True) -> Non
     if not isinstance(manifest, dict):
         raise ProjectEmitterFailure("compiler manifest is not a JSON object")
     if (
-        manifest.get("schemaVersion") != 1
+        manifest.get("schemaVersion") != 2
         or manifest.get("generator") != "reflaxe.c"
         or manifest.get("compilationStatus")
         != "structural-fixture-no-haxe-lowering"
@@ -591,8 +591,20 @@ def check_manifest(output: Path, *, expected_original_build: bool = True) -> Non
             raise ProjectEmitterFailure(f"invalid addressed artifact: {entry!r}")
         path = entry.get("path")
         digest = entry.get("sha256")
+        kind = entry.get("kind")
+        provenance = entry.get("provenance")
         if not isinstance(path, str) or not isinstance(digest, str):
             raise ProjectEmitterFailure(f"invalid addressed artifact: {entry!r}")
+        expected_production = (
+            "compiled-program"
+            if kind in {"public-header", "private-header", "source"}
+            else "compiler-sidecar"
+        )
+        if provenance != {"production": expected_production}:
+            raise ProjectEmitterFailure(
+                f"runtime-free artifact {path!r} has {provenance!r}; "
+                f"expected production {expected_production!r}"
+            )
         if path in addressed:
             raise ProjectEmitterFailure(f"duplicate addressed artifact: {path}")
         addressed[path] = digest
@@ -1314,6 +1326,7 @@ def check_negative_guards() -> None:
         "conflicting-include",
         "invalid-layout",
         "invalid-line-endings",
+        "invalid-runtime-provenance",
         "lowered",
     ):
         with tempfile.TemporaryDirectory(

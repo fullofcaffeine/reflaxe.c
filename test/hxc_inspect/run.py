@@ -235,6 +235,16 @@ def check_fail_closed(source: Path, temporary: Path) -> None:
     result = invoke(modified, "config", "--json")
     require(result.returncode == 1 and "does not match its SHA-256" in result.stderr, "modified artifact did not fail closed")
 
+    contradictory = temporary / "contradictory-provenance"
+    shutil.copytree(source, contradictory)
+    manifest_path = contradictory / "hxc.manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    program = next(artifact for artifact in manifest["artifacts"] if artifact["kind"] == "source")
+    program["provenance"] = {"production": "compiler-sidecar"}
+    manifest_path.write_text(json.dumps(manifest) + "\n", encoding="utf-8")
+    result = invoke(contradictory, "manifest", "--json")
+    require(result.returncode == 1 and "contradicts its compiled-program role" in result.stderr, "contradictory provenance did not fail closed")
+
     traversing = temporary / "traversing"
     shutil.copytree(source, traversing)
     manifest_path = traversing / "hxc.manifest.json"
