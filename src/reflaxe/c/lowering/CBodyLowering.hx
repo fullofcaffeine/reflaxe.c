@@ -645,9 +645,10 @@ class CBodyLowering {
 		requireSettledFunctionBuildContributions(settledFunctionBuildContributions,
 			functionContributionSnapshot(aggregateRegistry, dynamicRegistry, enumConstructorAdapters, functionLiterals));
 		CPhaseTiming.stopDetail(functionConstructionTimer);
+		final retainedIterators = hasRuntimeFeature(built, "iterator") ? preparedIterators : [];
 		final programAssemblyTimer = CPhaseTiming.startDetail(CDTHxcIRProgramAssembly);
 		final program = buildProgram(built, preparedGlobals, preparedAggregates, preparedEnums, preparedClasses, preparedInterfaces, preparedArrays,
-			preparedIterators, preparedIntMaps, preparedStringMaps, preparedTypedMaps, preparedBytes, preparedImports, preparedDispatch,
+			retainedIterators, preparedIntMaps, preparedStringMaps, preparedTypedMaps, preparedBytes, preparedImports, preparedDispatch,
 			dynamicRegistry.plan());
 		CPhaseTiming.stopDetail(programAssemblyTimer);
 		final managedRootTimer = CPhaseTiming.startDetail(CDTHxcIRManagedRootPlanning);
@@ -734,7 +735,7 @@ class CBodyLowering {
 		CPhaseTiming.stopDetail(nameProjectionTimer);
 		CPhaseTiming.stop(analysisTimer);
 		final castBodyTimer = CPhaseTiming.start(CPCASTBodyConstruction);
-		final emitter = new CBodyEmitter(loweredAggregates, loweredEnums, loweredClasses, loweredArrays, preparedIterators, preparedIntMaps,
+		final emitter = new CBodyEmitter(loweredAggregates, loweredEnums, loweredClasses, loweredArrays, retainedIterators, preparedIntMaps,
 			loweredStringMaps, loweredTypedMaps, preparedBytes, loweredOptionals, loweredDispatch, loweredImports, managedProgram, loweredDynamicPlan);
 		final lowered:Array<CLoweredBodyFunction> = [];
 		for (item in built) {
@@ -787,7 +788,7 @@ class CBodyLowering {
 			runtimeRequirements.push(new CBodyRuntimeRequirement(feature, "managed-type-representation",
 				"ordinary Haxe Array<T> shared container representation", array.source, array.position));
 		}
-		for (iterator in preparedIterators) {
+		for (iterator in retainedIterators) {
 			runtimeRequirements.push(new CBodyRuntimeRequirement("iterator", "managed-type-representation",
 				"standard Haxe Iterator<T> shared cursor representation", iterator.source, iterator.position));
 			collectDeclarationTypeRuntimeRequirements(runtimeRequirements, iterator.element.irType, iterator.source, iterator.position,
@@ -830,9 +831,26 @@ class CBodyLowering {
 		runtimeRequirements.sort(compareRuntimeRequirements);
 		CPhaseTiming.setCounter(CPCounterRuntimeRequirements, runtimeRequirements.length);
 		return new CBodyLoweringResult(validatedProgram, lowered, loweredGlobals, loweredAggregates, loweredEnums, loweredClasses, loweredArrays,
-			preparedIterators, preparedIntMaps, loweredStringMaps, loweredTypedMaps, preparedBytes, loweredOptionals, loweredDynamicPlan, loweredConstructors,
+			retainedIterators, preparedIntMaps, loweredStringMaps, loweredTypedMaps, preparedBytes, loweredOptionals, loweredDynamicPlan, loweredConstructors,
 			loweredDispatch, loweredImports, helpers, helperSelection.buildFacts().concat(loweredImports.buildFacts), symbolTable, boundsAbortName,
 			runtimeRequirements, managedProgram, completeHxcIRDump);
+	}
+
+	/**
+	 * Keep iterator declarations only when final HxcIR retained iterator work.
+	 *
+	 * Typed Haxe exposes an `Iterator<T>` while the compiler examines every
+	 * `for` loop. Structural span lowering replaces that cursor before final
+	 * HxcIR, so its preparation record is type inventory rather than executable
+	 * runtime use. A real iterator contributes at least one iterator operation,
+	 * ownership transfer, or cleanup requirement from its lowered function.
+	 */
+	static function hasRuntimeFeature(functions:Array<BuiltBodyFunction>, featureId:String):Bool {
+		for (fn in functions)
+			for (requirement in fn.runtimeRequirements)
+				if (requirement.featureId == featureId)
+					return true;
+		return false;
 	}
 
 	/**

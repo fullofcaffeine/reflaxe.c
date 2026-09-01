@@ -519,6 +519,34 @@ def required_text(report: dict[str, object], key: str) -> str:
     return value
 
 
+def assert_no_retained_iterator_execution(hxcir: str) -> None:
+    """Permit typed Iterator inventory but reject executable iterator machinery."""
+
+    for forbidden in ("hasNext", 'direct("next")'):
+        if forbidden in hxcir:
+            raise SpanLoweringFailure(
+                f"HxcIR retained iterator machinery {forbidden!r}"
+            )
+    for line in hxcir.splitlines():
+        if "iterator" not in line.lower():
+            continue
+        statement = line.lstrip()
+        typed_declaration = (
+            statement.startswith('type "type.haxe-iterator.')
+            and ' name="Iterator<' in statement
+            and " kind=reference " in statement
+        )
+        typed_instance = (
+            statement.startswith('instance "instance.haxe-iterator.')
+            and ' declaration="type.haxe-iterator.' in statement
+            and ' representation=managed("iterator") ' in statement
+        )
+        if not typed_declaration and not typed_instance:
+            raise SpanLoweringFailure(
+                f"HxcIR retained iterator machinery {statement!r}"
+            )
+
+
 def symbol_entries(symbols: dict[str, object]) -> list[dict[str, object]]:
     value = symbols.get("symbols")
     if not isinstance(value, list) or not all(isinstance(item, dict) for item in value):
@@ -580,9 +608,7 @@ def validate(report: dict[str, object], *, profile: str, build: str) -> None:
     hxcir = required_text(report, "hxcir")
     if str(ROOT) in hxcir or "\\" in hxcir or "hxrt" in hxcir.lower():
         raise SpanLoweringFailure("HxcIR leaked a host path or runtime dependency")
-    for forbidden in ("iterator", "hasNext", 'direct("next")'):
-        if forbidden in hxcir:
-            raise SpanLoweringFailure(f"HxcIR retained iterator machinery {forbidden!r}")
+    assert_no_retained_iterator_execution(hxcir)
     expected_counts = {
         "type=fixed-array(length=4,witness=\"Length4\",element=i32)": 3,
         "type=fixed-array(length=4,witness=\"Length4\",element=u8)": 2,
