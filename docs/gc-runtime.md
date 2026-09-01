@@ -66,16 +66,12 @@ collection reports `HXC_STATUS_INTERNAL_ERROR` without sweeping.
 
 ## Thread boundary
 
-`hxc_gc_thread` is currently an execution-context root chain, not a promise of
-operating-system thread support. The collector can mark several registered
-chains, which proves the shape required by future threads, but every API call
-currently requires managed execution to be stopped. The runtime advertises no
-thread or atomic capability, contains no hidden lock, and must not be called
-concurrently.
-
-E5.T11 owns actual thread registration, synchronization, safepoint
-coordination, and stop-the-world handshakes. A single-thread build links none of
-that future machinery.
+`hxc_gc_thread` remains an execution-context root chain. The standalone `gc`
+slice still requires managed execution to be stopped and contains no hidden
+lock. Programs that combine POSIX threads with managed values select the
+separate `thread-gc` adapter. It registers one chain per managed thread and
+parks every peer at generated safepoints before allocation or collection reads
+roots. A single-thread build links none of that coordination or pthread state.
 
 ## Collection and pressure
 

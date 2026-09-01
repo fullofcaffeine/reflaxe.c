@@ -45,6 +45,8 @@ class RuntimeFeatureCatalog {
 		final arrayJoin = RuntimeFeatureId.parse("array-join");
 		final io = RuntimeFeatureId.parse("io");
 		final dateTime = RuntimeFeatureId.parse("date-time");
+		final thread = RuntimeFeatureId.parse("thread");
+		final threadGc = RuntimeFeatureId.parse("thread-gc");
 		return [
 			new RuntimeFeatureDefinition(runtimeBase, "Shared C types, internal ABI version, and visibility/alignment macros for selected runtime slices.",
 				CompilerSelectable, true, environments, [], [header("base.h")], [], [], [],
@@ -733,11 +735,69 @@ class RuntimeFeatureCatalog {
 					"The literal representation stays direct C, but ISO C has no expression that performs the required hosted write and flush side effect.",
 					"Inlining fwrite/fputc/fflush at each call site would duplicate platform and failure policy rather than specialize semantics.",
 					"One narrow hosted service centralizes exact-length output, embedded-NUL handling, flushing, and status mapping without pulling in general strings or allocation.",
-					"docs/hxrt.md", [
+					"docs/hxrt.md",
+					[
 						"test/string_output/run.py",
 						"test/runtime/runtime-feature-graph/run.py",
 						"examples/hello/run.py"
-					]))
+					])),
+			new RuntimeFeatureDefinition(thread, "Hosted POSIX synchronization, counting semaphores, and thread-local keys.", CompilerSelectable, true,
+				[CEnvironment.Hosted], [status], [header("thread.h"), source("thread.c")], [
+					"hxc_condition_acquire",
+					"hxc_condition_broadcast",
+					"hxc_condition_dispose",
+					"hxc_condition_init",
+					"hxc_condition_release",
+					"hxc_condition_signal",
+					"hxc_condition_try_acquire",
+					"hxc_condition_wait",
+					"hxc_mutex_acquire",
+					"hxc_mutex_dispose",
+					"hxc_mutex_init",
+					"hxc_mutex_release",
+					"hxc_mutex_try_acquire",
+					"hxc_semaphore_acquire",
+					"hxc_semaphore_dispose",
+					"hxc_semaphore_init",
+					"hxc_semaphore_release",
+					"hxc_semaphore_try_acquire",
+					"hxc_tls_key_dispose",
+					"hxc_tls_key_get",
+					"hxc_tls_key_init",
+					"hxc_tls_key_set"
+				],
+				["pthread"], [],
+				documentation("Owns recursive mutexes, condition variables with an internal mutex, counting waits, bounded timeouts, and isolated native TLS keys through checked status boundaries.",
+					[
+						new RuntimeFeatureSelectionRoot("synchronization-operation", RuntimeFeatureSelectionRootKind.HxcIrOperation,
+							"A reachable sys.thread synchronization or TLS operation requires the selected POSIX adapter.")
+					],
+					"C11 atomics remain direct generated C and do not select pthreads or this runtime feature.",
+					"A closed single-thread program omits synchronization rather than simulating it with local mutable state.",
+					"POSIX object lifetime, native error mapping, wakeup loops, timeout conversion, and TLS key isolation require one hosted adapter shared with collector coordination.",
+					"docs/hxrt.md",
+					[
+						"runtime/hxrt/test/thread_contract.c",
+						"test/runtime/runtime-feature-graph/run.py"
+					])),
+			new RuntimeFeatureDefinition(threadGc, "Stop-the-world coordination between POSIX threads and the exact collector.", CompilerSelectable, true,
+				[CEnvironment.Hosted], [gc, thread], [header("thread_gc.h"), source("thread_gc.c")], [
+					"hxc_gc_thread_allocate",
+					"hxc_gc_thread_collect",
+					"hxc_gc_thread_coordinator_dispose",
+					"hxc_gc_thread_coordinator_init",
+					"hxc_gc_thread_safepoint",
+					"hxc_gc_thread_token_register",
+					"hxc_gc_thread_token_unregister"
+				], [], [],
+				documentation("Parks every other registered managed thread before exact root tracing, collection, or pressure allocation.", [
+					new RuntimeFeatureSelectionRoot("managed-thread-coordination", RuntimeFeatureSelectionRootKind.HxcIrOperation,
+						"A managed program that combines operating-system threads with collector-owned values requires coordinated roots and safepoints.")
+				],
+					"Single-thread collector programs use the gc slice directly, while unmanaged synchronization uses only thread.",
+					"A program-local lock cannot safely define collector registration, root visibility, and stop-the-world ordering independently.",
+					"The adapter composes the separately tested collector and POSIX primitives without adding pthread state to either standalone slice.",
+					"docs/hxrt.md", ["runtime/hxrt/test/thread_gc_contract.c", "test/thread_runtime/run.py"]))
 		];
 	}
 
@@ -750,7 +810,6 @@ class RuntimeFeatureCatalog {
 			reserved("reflection", "E4.T08", "Reachability-selected type and member reflection metadata."),
 			reserved("regex", "E5.T07", "Selected regular-expression backend and adapter."),
 			reserved("socket", "E5.T10", "Network address, socket, and error adapters."),
-			reserved("thread", "E5.T11", "Threads, synchronization, thread roots, TLS, and atomics."),
 			reserved("unicode", "E5.T02", "Unicode scalar algorithms not feasible as direct or local specialized C.")
 		];
 	}
@@ -777,13 +836,13 @@ class RuntimeFeatureCatalog {
 			case "allocator.h": "6e21c0bc498eb40bcec901914a04dd1bee33b6b21e5a27f1ac5f169a8a1cc448";
 			case "array.h": "b647fc5be70b1ddca8c0da723732cacf5d52ac43f061671ab4483ab8a677d96b";
 			case "array_join.h": "5829a159dab0bd3446b5bc418c2ee32ad2902c0fec6bcc04f82efeb66c294fea";
-			case "base.h": "7d4f67124bf94b76bfc24d5db973426f48f3f9f37daeae975fd4948f5b1dea25";
+			case "base.h": "4ae5831a9d2ec013f312b363a620bfddf50a2138867fdb12afd9afbf308a2a1d";
 			case "bytes.h": "dc9f59ab163486e2fc06f988cd931065eda3f480dfadae6917ee08ab60e9a4f5";
 			case "bytes_string.h": "9d944e38a748696628076b0c5fd56339668e48953a220d51c8da1630fbdf9c40";
 			case "date_time.h": "07086c9185ea03a13dc6bf39d02f00f99b7cbd8151ba0bdf90d7e457c07880d4";
 			case "dynamic.h": "6acbca9069ce4670988e682c5c214a32968fadee892ea4490d0844674c2e24b2";
 			case "exception.h": "af147c885d31d9408b27b0777a3021bb6d1631b580b237fed75aa21459bad529";
-			case "gc.h": "d99575a5bad765d45822a1d6221f7bc1b620d59dd6111e0c8ec8a2d45db36159";
+			case "gc.h": "0e352705676392a2ab438d90fbe3f7aca58cdafdce805d0d7f8568b8246e31b3";
 			case "io.h": "4b92f03451dc4d04ea74c857ca3ce54d52fbe80d31f155b93781ee2fab946589";
 			case "int_map.h": "11213ebbb4fccb5620a4e949ec4a0852a512c7be8d1f5750d987f56aca71cd7f";
 			case "iterator.h": "10ec767355e93a45e214b4774435a46496dd2c601f285412bc072af7904a3e51";
@@ -799,6 +858,8 @@ class RuntimeFeatureCatalog {
 			case "string_map.h": "a12868bdfbc4b5420b2930bc920fc45e6e69ead5b72be130c54919c54ba0c042";
 			case "string_scalar.h": "b400d7ef9af853410334b30627ea98a5af87d5c3a863f6aa4c770d7cc4b3d90b";
 			case "string_split.h": "a17c9cd6c31cfdb8da2cf4955b980090c144e68ee1ae4f1d0f0b543f4b6eb3eb";
+			case "thread.h": "7372d59f1aa8578873539a102461abba3bb2ba730c5e9155a593ba223557e29e";
+			case "thread_gc.h": "a68a0c2f780b726d10d65a1f8ff427842aafee615e0337a28ad900c94d793ec5";
 			case "typed_map.h": "8e0838bbf09921bf4167fc85e55d99a762cd208b069a41008e645b5e07949f11";
 			case _: throw 'runtime feature header `$name` has no reviewed SHA-256 provenance';
 		};
@@ -827,6 +888,8 @@ class RuntimeFeatureCatalog {
 			case "string_map.c": "c637ffdce4e990fe7436f88e7445376722ee0b28dec10cf57db860a5120706e9";
 			case "string_scalar.c": "2c44eebc655dd34ed374b58402de9dfe731425fb4e0b54997a7c16c12e1309fb";
 			case "string_split.c": "799fc917a450169e4babd86748e879fe7222b4abfef293880c47891e671f9d1b";
+			case "thread.c": "ee99ff5df639a65c247a5b59663f92d4741a46bf2114fd5d453d7495eb9987f1";
+			case "thread_gc.c": "91ee43900cd58ef1f322ae2eb7d999903d1748167b03f28c4e77a5bb7680051d";
 			case "typed_map.c": "2a890d9f7a66a2faaffff43eee084fcf704138442f5915e8e728acbcad6fbcff";
 			case _: throw 'runtime feature source `$name` has no reviewed SHA-256 provenance';
 		};

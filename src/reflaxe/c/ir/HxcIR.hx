@@ -193,6 +193,15 @@ enum HxcIRTypeRef {
 	IRTAbiInteger(kind:HxcIRAbiIntegerKind);
 	IRTFloat(width:Int);
 
+	/**
+		One non-copyable C11 atomic storage location embedded in an owner.
+
+		The element is the exact value read or written by atomic instructions. This
+		type can appear in addressable storage, but never as an ordinary copied SSA
+		value.
+	**/
+	IRTAtomic(element:HxcIRTypeRef);
+
 	/** Immutable valid UTF-8 with Unicode-scalar Haxe indexing semantics. */
 	IRTString;
 
@@ -543,6 +552,35 @@ enum HxcIRManagedCarrierAcquisition {
 	IRMCARetainBorrowed(implementation:HxcIRImplementation);
 }
 
+/** A C11 memory order retained as a closed semantic value. */
+enum HxcIRMemoryOrder {
+	IRMO_Relaxed;
+	IRMO_Consume;
+	IRMO_Acquire;
+	IRMO_Release;
+	IRMO_AcquireRelease;
+	IRMO_SequentiallyConsistent;
+}
+
+/**
+	One operation on an addressable `IRTAtomic` place.
+
+	Load, store, exchange, and fetch operations return the source-level value.
+	Compare-exchange also returns the observed prior value, not C's success flag.
+**/
+enum HxcIRAtomicInstruction {
+	IRAInitialize(place:HxcIRPlace, valueId:String);
+	IRALoad(place:HxcIRPlace, order:HxcIRMemoryOrder);
+	IRAStore(place:HxcIRPlace, valueId:String, order:HxcIRMemoryOrder);
+	IRAExchange(place:HxcIRPlace, valueId:String, order:HxcIRMemoryOrder);
+	IRACompareExchange(place:HxcIRPlace, expectedValueId:String, replacementValueId:String, success:HxcIRMemoryOrder, failure:HxcIRMemoryOrder);
+	IRAFetchAdd(place:HxcIRPlace, valueId:String, order:HxcIRMemoryOrder);
+	IRAFetchSub(place:HxcIRPlace, valueId:String, order:HxcIRMemoryOrder);
+	IRAFetchAnd(place:HxcIRPlace, valueId:String, order:HxcIRMemoryOrder);
+	IRAFetchOr(place:HxcIRPlace, valueId:String, order:HxcIRMemoryOrder);
+	IRAFetchXor(place:HxcIRPlace, valueId:String, order:HxcIRMemoryOrder);
+}
+
 /**
 	Instruction array order is semantic evaluation order. No emitter may compact
 	two side-effecting instructions into a C expression with weaker ordering.
@@ -572,6 +610,9 @@ enum HxcIRInstructionKind {
 		generic instruction walkers one conservative effect boundary.
 	**/
 	IRIODynamic(operation:HxcIRDynamicInstruction);
+
+	/** Execute one typed C11 atomic operation without a pthread dependency. */
+	IRIOAtomic(operation:HxcIRAtomicInstruction);
 
 	/** Operate on compiler-owned contained exception frames and cleanup records. */
 	IRIOException(operation:HxcIRExceptionInstruction);

@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import copy
 import json
 import os
 import re
@@ -338,6 +339,83 @@ def check_target_conflicts() -> None:
     )
     assert_target_contract(
         freestanding, expected_freestanding, "freestanding capability-clean probe"
+    )
+
+    # Atomics are selected by an explicit C backend fact. They do not imply
+    # pthreads, target.sys, or a hosted environment.
+    expected_atomics = json.loads(
+        EXPECTED_TARGET_CONTRACT.read_text(encoding="utf-8")
+    )
+    expected_atomics["atomicBackend"] = "c11"
+    expected_atomics["platform"]["supportsAtomics"] = True
+    expected_atomics["defines"]["targetAtomics"] = True
+    atomics = run(
+        source_command(
+            c_build=True,
+            direct_defines=("hxc_atomic_backend=c11",),
+            target_report=True,
+        ),
+        cwd=FIXTURE,
+        label="explicit C11 atomic backend probe",
+    )
+    assert_target_contract(atomics, expected_atomics, "explicit C11 atomic backend probe")
+
+    expected_posix = copy.deepcopy(expected_atomics)
+    expected_posix["threadBackend"] = "posix"
+    expected_posix["platform"]["supportsThreads"] = True
+    expected_posix["defines"]["targetThreaded"] = True
+    posix = run(
+        source_command(
+            c_build=True,
+            direct_defines=(
+                "hxc_atomic_backend=c11",
+                "hxc_thread_backend=posix",
+            ),
+            target_report=True,
+        ),
+        cwd=FIXTURE,
+        label="explicit POSIX thread backend probe",
+    )
+    assert_target_contract(posix, expected_posix, "explicit POSIX thread backend probe")
+
+    assert_configuration_conflict(
+        source_command(
+            c_build=True,
+            direct_defines=("hxc_thread_backend=posix",),
+        ),
+        "POSIX thread backend requires `hxc_atomic_backend=c11`",
+        "POSIX backend without C11 atomics probe",
+    )
+
+    assert_configuration_conflict(
+        source_command(
+            c_build=True,
+            direct_defines=(
+                "hxc_environment=freestanding",
+                "hxc_atomic_backend=c11",
+                "hxc_thread_backend=posix",
+            ),
+        ),
+        "POSIX thread backend requires the hosted C environment",
+        "freestanding POSIX backend probe",
+    )
+
+    assert_configuration_conflict(
+        source_command(
+            c_build=True,
+            direct_defines=("hxc_atomic_backend=invalid",),
+        ),
+        "unsupported C atomic backend `invalid`",
+        "invalid atomic backend probe",
+    )
+
+    assert_configuration_conflict(
+        source_command(
+            c_build=True,
+            direct_defines=("hxc_thread_backend=invalid",),
+        ),
+        "unsupported C thread backend `invalid`",
+        "invalid thread backend probe",
     )
 
     for define in ("target.name=c", "target.utf16", "target.atomics"):

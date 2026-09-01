@@ -98,6 +98,8 @@ class RuntimeFeatureGraphGolden {
 		final exceptionPlan = planner.plan(featureRequest(CRuntimePolicy.Auto, [reason("fixture.exception", "exception")], []));
 		final objectPlan = planner.plan(featureRequest(CRuntimePolicy.Auto, [reason("fixture.object", "object")], []));
 		final gc = planner.plan(featureRequest(CRuntimePolicy.Auto, [reason("fixture.gc", "gc")], []));
+		final thread = planner.plan(featureRequest(CRuntimePolicy.Auto, [reason("fixture.thread", "thread")], []));
+		final threadGc = planner.plan(featureRequest(CRuntimePolicy.Auto, [reason("fixture.thread-gc", "thread-gc")], []));
 		final stringScalar = planner.plan(featureRequest(CRuntimePolicy.Auto, [reason("fixture.string-scalar", "string-scalar")], []));
 		final stringReason = reason("fixture.string", "string");
 		final ownerAllocationReason = reason("fixture.owner-allocation", "alloc");
@@ -129,6 +131,8 @@ class RuntimeFeatureGraphGolden {
 		final exceptionFiles = packager.packageFiles(exceptionPlan, repositorySource);
 		final objectFiles = packager.packageFiles(objectPlan, repositorySource);
 		final gcFiles = packager.packageFiles(gc, repositorySource);
+		final threadFiles = packager.packageFiles(thread, repositorySource);
+		final threadGcFiles = packager.packageFiles(threadGc, repositorySource);
 		final stringScalarFiles = packager.packageFiles(stringScalar, repositorySource);
 		final stringFiles = packager.packageFiles(stringPlan, repositorySource);
 		final ioFiles = packager.packageFiles(compilerIo, repositorySource);
@@ -188,6 +192,8 @@ class RuntimeFeatureGraphGolden {
 			exception: exceptionPlan,
 			object: objectPlan,
 			gc: gc,
+			thread: thread,
+			threadGc: threadGc,
 			stringScalar: stringScalar,
 			string: stringPlan,
 			minimalString: minimalString,
@@ -242,6 +248,8 @@ class RuntimeFeatureGraphGolden {
 			exception: packageRecords(exceptionFiles),
 			object: packageRecords(objectFiles),
 			gc: packageRecords(gcFiles),
+			thread: packageRecords(threadFiles),
+			threadGc: packageRecords(threadGcFiles),
 			stringScalar: packageRecords(stringScalarFiles),
 			string: packageRecords(stringFiles),
 			io: packageRecords(ioFiles)

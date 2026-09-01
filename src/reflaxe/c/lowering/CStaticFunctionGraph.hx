@@ -190,6 +190,7 @@ class CStaticFunctionGraphCollector {
 					add(method, byId, pending);
 			case TCall(callee, arguments)
 				if (!isCompilerIntrinsicCall(callee)
+					&& !isAtomicIntrinsicCall(callee)
 					&& !isStructInitIntrinsicCall(callee)
 					&& !isBytesIntrinsicCall(callee)
 					&& !isDateIntrinsicCall(callee)
@@ -560,6 +561,22 @@ class CStaticFunctionGraphCollector {
 					.name == "trace";
 			case TParenthesis(inner) | TMeta(_, inner) | TCast(inner, _): isCompilerIntrinsicCall(inner);
 			case _: false;
+		};
+	}
+
+	/** Keep `c.Atomic` operations in semantic lowering instead of the call graph. */
+	static function isAtomicIntrinsicCall(callee:TypedExpr):Bool {
+		return switch callee.expr {
+			case TField(_, FStatic(classReference, _)):
+				switch classReference.get().kind {
+					case KAbstractImpl(reference): final owner = reference.get(); owner.pack.length == 1 && owner.pack[0] == "c" && owner.name == "Atomic";
+					case _:
+						false;
+				}
+			case TParenthesis(inner) | TMeta(_, inner) | TCast(inner, _):
+				isAtomicIntrinsicCall(inner);
+			case _:
+				false;
 		};
 	}
 

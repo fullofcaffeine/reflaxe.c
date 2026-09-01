@@ -1946,10 +1946,37 @@ private class HxcIRValidationState {
 			case IRIOInitializeSpan(place, sourceArray, _, _): placeValueUses(place).concat(placeValueUses(sourceArray));
 			case IRIOBoundsCheck(collection, indexValueId, _): placeValueUses(collection).concat([indexValueId]);
 			case IRIODynamic(operation): dynamicInstructionValueUses(operation);
+			case IRIOAtomic(operation): atomicInstructionValueUses(operation);
 			case IRIOException(_): [];
 			case IRIOCall(_): [];
 		};
 	}
+
+	static function atomicInstructionValueUses(operation:HxcIRAtomicInstruction):Array<String> {
+		return switch operation {
+			case IRALoad(place, _): placeValueUses(place);
+			case IRAInitialize(place, valueId) | IRAStore(place, valueId, _) | IRAExchange(place, valueId, _) | IRAFetchAdd(place, valueId, _) |
+				IRAFetchSub(place, valueId,
+					_) | IRAFetchAnd(place, valueId, _) | IRAFetchOr(place, valueId, _) | IRAFetchXor(place, valueId, _): placeValueUses(place)
+					.concat([valueId]);
+			case IRACompareExchange(place, expectedValueId, replacementValueId, _, _):
+				placeValueUses(place).concat([expectedValueId, replacementValueId]);
+		};
+	}
+
+	static function atomicInstructionOperandValueUses(operation:HxcIRAtomicInstruction):Array<String>
+		return switch operation {
+			case IRALoad(_, _): [];
+			case IRAInitialize(_, valueId) | IRAStore(_, valueId, _) | IRAExchange(_, valueId, _) | IRAFetchAdd(_, valueId, _) | IRAFetchSub(_, valueId, _) |
+				IRAFetchAnd(_, valueId, _) | IRAFetchOr(_, valueId, _) | IRAFetchXor(_, valueId, _): [valueId];
+			case IRACompareExchange(_, expectedValueId, replacementValueId, _, _): [expectedValueId, replacementValueId];
+		};
+
+	static function atomicInstructionPlace(operation:HxcIRAtomicInstruction):HxcIRPlace
+		return switch operation {
+			case IRAInitialize(place, _) | IRALoad(place, _) | IRAStore(place, _, _) | IRAExchange(place, _, _) | IRACompareExchange(place, _, _, _, _) |
+				IRAFetchAdd(place, _, _) | IRAFetchSub(place, _, _) | IRAFetchAnd(place, _, _) | IRAFetchOr(place, _, _) | IRAFetchXor(place, _, _): place;
+		};
 
 	static function dynamicInstructionValueUses(operation:HxcIRDynamicInstruction):Array<String>
 		return switch operation {
@@ -2544,6 +2571,9 @@ private class HxcIRValidationState {
 							reject(valueId, "a Dynamic failure edge");
 					case IRDEqual(_, _, _):
 				}
+			case IRIOAtomic(operation):
+				for (valueId in atomicInstructionOperandValueUses(operation))
+					reject(valueId, "an atomic operation");
 			case IRIOException(_):
 			case IRIOSequence(_) | IRIOConstant(_) | IRIOFunctionReference(_) | IRIOLoad(_) | IRIOAddress(_) | IRIOBorrowClassField(_) | IRIOBorrowSpan(_) |
 				IRIOUnary(_, _, _) | IRIOBinary(_, _, _, _) | IRIOConvert(_, _, _, _, _) | IRIOProject(_, _) | IRIOMatchTag(_, _) |
@@ -2665,6 +2695,9 @@ private class HxcIRValidationState {
 						rejectValues(failure.arguments, "a Dynamic failure-edge argument");
 					case IRDEqual(_, _, _):
 				}
+			case IRIOAtomic(operation):
+				for (valueId in atomicInstructionOperandValueUses(operation))
+					rejectValue(valueId, "an atomic operation");
 			case IRIOException(_):
 			case IRIODeallocate(place, _) | IRIORetain(place, _) | IRIORelease(place, _) | IRIOTrace(place, _):
 				if (placeUsesBorrowedReference(place, borrowed) && !placeOwnsFieldBelowBorrowedReference(place, borrowed))
@@ -2960,6 +2993,10 @@ private class HxcIRValidationState {
 				validatePlace(place, '$path.place', instruction.source, available, locals, nullProofs);
 				validateCollectionAccessProof(place, boundsProofs, path, instruction.source, available, locals, block.id, dominanceProofs);
 				final loadedType = knownPlaceType(place, available, locals);
+				switch loadedType {
+					case IRTAtomic(_): add(path, "atomic storage is non-copyable; use a typed atomic operation", instruction.source);
+					case _:
+				}
 				if (instruction.result != null && loadedType != null && typeKey(instruction.result.type) != typeKey(loadedType)) {
 					add(path, "load result type does not match its place type", instruction.source);
 				}
@@ -3003,6 +3040,10 @@ private class HxcIRValidationState {
 				validateCollectionAccessProof(place, boundsProofs, path, instruction.source, available, locals, block.id, dominanceProofs);
 				final storedType = requireValue(valueId, '$path.value', instruction.source, available);
 				final storePlaceType = knownPlaceType(place, available, locals);
+				switch storePlaceType {
+					case IRTAtomic(_): add(path, "atomic storage is non-copyable; use a typed atomic operation", instruction.source);
+					case _:
+				}
 				if (isRootPlace(place) && storePlaceType != null && isCollectionType(storePlaceType)) {
 					add(path, "whole fixed-array/span assignment is outside the admitted bounds-proof model", instruction.source);
 				}
@@ -3171,6 +3212,8 @@ private class HxcIRValidationState {
 				}
 			case IRIODynamic(operation):
 				validateDynamicInstruction(instruction, operation, path, available, blocks, regions);
+			case IRIOAtomic(operation):
+				validateAtomicInstruction(instruction, operation, path, available, locals, nullProofs);
 			case IRIOException(operation):
 				validateExceptionInstruction(instruction, operation, path, exceptionRegions, exceptionCleanups);
 			case IRIOCall(call):
@@ -3535,6 +3578,10 @@ private class HxcIRValidationState {
 				validatePlace(place, '$path.place', instruction.source, available, locals, nullProofs);
 				final initializedType = requireValue(valueId, '$path.value', instruction.source, available);
 				final initializePlaceType = knownPlaceType(place, available, locals);
+				switch initializePlaceType {
+					case IRTAtomic(_): add(path, "atomic storage must be initialized through its typed constructor operation", instruction.source);
+					case _:
+				}
 				if (initializedType != null && initializePlaceType != null && typeKey(initializedType) != typeKey(initializePlaceType)) {
 					add(path, "initializer value type does not match its place type", instruction.source);
 				}
@@ -3883,12 +3930,87 @@ private class HxcIRValidationState {
 				true;
 			case IRIOCall(call):
 				call.returnType != IRTVoid;
+			case IRIOAtomic(IRAInitialize(_, _)):
+				false;
+			case IRIOAtomic(_):
+				true;
 			case IRIOSequence(_) | IRIOStore(_, _) | IRIODeallocate(_, _) | IRIORetain(_, _) | IRIORelease(_, _) | IRIOTrace(_, _) |
 				IRIODeclareUninitialized(_) | IRIODeclareManagedCarrier(_, _) | IRIOAcquireManagedCarrier(_, _, _) | IRIODefaultInitialize(_, _, _) |
 				IRIOInitialize(_, _, _, _) | IRIOInitializeFixedArray(_, _, _, _) | IRIOZeroInitializeFixedArray(_, _, _) | IRIOInitializeSpan(_, _, _, _) |
 				IRIOBindVirtualTable(_, _) | IRIOBoundsCheck(_, _, _) | IRIONullCheck(_, _) | IRIOLifetime(_, _, _, _) |
 				IRIOException(IREFramePush(_) | IREFramePop(_) | IRECleanupPush(_) | IRECleanupRun(_) | IRECleanupDiscard(_)):
 				false;
+		}
+	}
+
+	/** Validate C11's atomic type, operand, result, and memory-order contracts. */
+	function validateAtomicInstruction(instruction:HxcIRInstruction, operation:HxcIRAtomicInstruction, path:String, available:Map<String, HxcIRTypeRef>,
+			locals:Map<String, HxcIRLocal>, nullProofs:Map<String, Bool>):Void {
+		final place = atomicInstructionPlace(operation);
+		validatePlace(place, '$path.place', instruction.source, available, locals, nullProofs);
+		final element = switch knownPlaceType(place, available, locals) {
+			case IRTAtomic(value): value;
+			case _:
+				add(path, "atomic operation requires an addressable atomic place", instruction.source);
+				null;
+		};
+
+		function requireElement(valueId:String, role:String):Void {
+			final actual = requireValue(valueId, '$path.$role', instruction.source, available);
+			if (actual != null && element != null && typeKey(actual) != typeKey(element))
+				add(path, 'atomic $role type does not match the storage element type', instruction.source);
+		}
+		function requireResult():Void
+			if (instruction.result != null && element != null && typeKey(instruction.result.type) != typeKey(element))
+				add(path, "atomic result type does not match the storage element type", instruction.source);
+		function rejectLoadOrder(order:HxcIRMemoryOrder):Void
+			switch order {
+				case IRMO_Release | IRMO_AcquireRelease:
+					add(path, "atomic load cannot use release or acquire-release ordering", instruction.source);
+				case _:
+			}
+		function rejectStoreOrder(order:HxcIRMemoryOrder):Void
+			switch order {
+				case IRMO_Consume | IRMO_Acquire | IRMO_AcquireRelease:
+					add(path, "atomic store cannot use consume, acquire, or acquire-release ordering", instruction.source);
+				case _:
+			}
+		function validFailureOrder(success:HxcIRMemoryOrder, failure:HxcIRMemoryOrder):Bool
+			return switch success {
+				case IRMO_Relaxed: failure == IRMO_Relaxed;
+				case IRMO_Consume: failure == IRMO_Relaxed || failure == IRMO_Consume;
+				case IRMO_Acquire: failure == IRMO_Relaxed || failure == IRMO_Consume || failure == IRMO_Acquire;
+				case IRMO_Release: failure == IRMO_Relaxed;
+				case IRMO_AcquireRelease: failure == IRMO_Relaxed || failure == IRMO_Consume || failure == IRMO_Acquire;
+				case IRMO_SequentiallyConsistent: failure == IRMO_Relaxed || failure == IRMO_Consume || failure == IRMO_Acquire || failure == IRMO_SequentiallyConsistent;
+			};
+		function requireIntegerFetch():Void
+			if (element != null && typeKey(element) != typeKey(IRTInt(32, true)))
+				add(path, "atomic fetch arithmetic and bitwise operations require an Int storage element", instruction.source);
+
+		switch operation {
+			case IRAInitialize(_, valueId):
+				requireElement(valueId, "initializer");
+			case IRALoad(_, order):
+				rejectLoadOrder(order);
+				requireResult();
+			case IRAStore(_, valueId, order):
+				requireElement(valueId, "storedValue");
+				rejectStoreOrder(order);
+				requireResult();
+			case IRAExchange(_, valueId, _):
+				requireElement(valueId, "replacement");
+				requireResult();
+			case IRACompareExchange(_, expectedValueId, replacementValueId, success, failure):
+				requireElement(expectedValueId, "expected");
+				requireElement(replacementValueId, "replacement");
+				if (!validFailureOrder(success, failure))
+					add(path, "atomic compare-exchange failure ordering is invalid or stronger than its success ordering", instruction.source);
+				requireResult();
+			case IRAFetchAdd(_, valueId, _) | IRAFetchSub(_, valueId, _) | IRAFetchAnd(_, valueId, _) | IRAFetchOr(_, valueId, _) | IRAFetchXor(_, valueId, _):
+				requireElement(valueId, "operand");
+				requireIntegerFetch();
+				requireResult();
 		}
 	}
 
@@ -5590,8 +5712,8 @@ private class HxcIRValidationState {
 						}
 					}
 				}
-			case IRTManagedString | IRTMutableCStringBuffer | IRTVoid | IRTPointer(_, _) | IRTNullable(_, _) | IRTFixedArray(_, _, _) | IRTSpan(_, _) |
-				IRTDynamic:
+			case IRTAtomic(_) | IRTManagedString | IRTMutableCStringBuffer | IRTVoid | IRTPointer(_, _) | IRTNullable(_, _) | IRTFixedArray(_, _, _) |
+				IRTSpan(_, _) | IRTDynamic:
 				false;
 		};
 	}
@@ -5854,6 +5976,7 @@ private class HxcIRValidationState {
 				placeContainsLocal(place, localId);
 			case IRIOInitializeSpan(place, sourceArray, _, _): placeContainsLocal(place, localId) || placeContainsLocal(sourceArray, localId);
 			case IRIOBorrowSpan(sourceArray): placeContainsLocal(sourceArray, localId);
+			case IRIOAtomic(operation): placeContainsLocal(atomicInstructionPlace(operation), localId);
 			case IRIOSequence(_) | IRIOConstant(_) | IRIOFunctionReference(_) | IRIOUnary(_, _, _) | IRIOBinary(_, _, _, _) | IRIOConvert(_, _, _, _, _) |
 				IRIODynamic(_) | IRIOException(_) | IRIOCall(_) | IRIOConstructAggregate(_, _) | IRIOZeroAggregate(_) | IRIOConstructInterface(_, _, _) |
 				IRIOUpcastInterface(_, _, _, _) | IRIOProject(_, _) | IRIOConstructTag(_, _, _) | IRIOMatchTag(_, _) | IRIOProjectTag(_, _, _, _) |
@@ -6058,7 +6181,7 @@ private class HxcIRValidationState {
 				if (result.indexOf(instanceId) == -1) {
 					result.push(instanceId);
 				}
-			case IRTNullable(inner, IRNTagged) | IRTFixedArray(inner, _, _):
+			case IRTAtomic(inner) | IRTNullable(inner, IRNTagged) | IRTFixedArray(inner, _, _):
 				collectDirectLayoutDependencies(inner, result);
 			case IRTBool | IRTInt(_, _) | IRTAbiInteger(_) | IRTFloat(_) | IRTString | IRTManagedString | IRTCString | IRTVoid | IRTPointer(_, _) |
 				IRTCallScopedCString | IRTMutableCStringBuffer | IRTNullable(_, IRNPointer) | IRTFunction(_, _) | IRTSpan(_, _) | IRTDynamic:
@@ -6512,6 +6635,13 @@ private class HxcIRValidationState {
 				if (width != 32 && width != 64) {
 					add(path, 'floating width $width is unsupported; expected 32 or 64', source);
 				}
+			case IRTAtomic(element):
+				validateTypeRef(element, '$path.element', source, false);
+				switch element {
+					case IRTBool | IRTInt(32, true) | IRTPointer(_, _):
+					case _:
+						add(path, 'atomic storage requires Bool, Int, or a typed managed reference; found `${typeKey(element)}`', source);
+				}
 			case IRTVoid:
 				if (!allowVoid) {
 					add(path, "Void is not a storable value type", source);
@@ -6730,6 +6860,7 @@ private class HxcIRValidationState {
 			case IRTInt(width, signed): '${signed ? "i" : "u"}$width';
 			case IRTAbiInteger(kind): 'abi:${abiIntegerKey(kind)}';
 			case IRTFloat(width): 'f$width';
+			case IRTAtomic(element): 'atomic<${typeKey(element)}>';
 			case IRTString: "string-utf8";
 			case IRTManagedString: "managed-string-utf8";
 			case IRTCString: "cstring-borrowed-literal";

@@ -8,10 +8,10 @@
  * unreachable.
  *
  * The records below are internal ABI, not application-export types. Operations
- * are request-local and contain no process-global state. The current runtime
- * has no thread feature, so callers must invoke every operation while managed
- * execution is stopped. Several thread root chains can already be registered
- * and traced; E5.T11 will own synchronization and stop-the-world coordination.
+ * are request-local and contain no process-global state. Standalone callers
+ * invoke them only while managed execution is stopped. The optional thread-gc
+ * feature composes these same exact root chains with POSIX stop-the-world
+ * coordination without adding a lock to this single-thread slice.
  */
 #ifndef HXRT_GC_H_INCLUDED
 #define HXRT_GC_H_INCLUDED

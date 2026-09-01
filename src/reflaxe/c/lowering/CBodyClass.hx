@@ -634,6 +634,9 @@ class CBodyClassRegistry {
 	/** Mark every class reference reachable through one finite direct value. */
 	function markCollectorClasses(type:CBodyValueType, visitedEnums:Map<String, Bool>, ?visitedOwnedClasses:Map<String, Bool>):Bool {
 		final ownedClasses = visitedOwnedClasses == null ? new Map<String, Bool>() : visitedOwnedClasses;
+		final atomicElement = type.atomicElement();
+		if (atomicElement != null)
+			return markCollectorClasses(atomicElement, visitedEnums, ownedClasses);
 		final ownedChild = type.ownedClassValue();
 		if (ownedChild != null)
 			return markCollectorClassesInOwnedLayout(ownedChild, visitedEnums, ownedClasses);
@@ -764,6 +767,9 @@ class CBodyClassRegistry {
 	}
 
 	static function containsManagedReference(value:CBodyValueType, visitedEnums:Map<String, Bool>):Bool {
+		final atomicElement = value.atomicElement();
+		if (atomicElement != null)
+			return containsManagedReference(atomicElement, visitedEnums);
 		final classValue = value.classValue();
 		if (classValue != null)
 			return classValue.managedByCollector;

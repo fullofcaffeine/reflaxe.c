@@ -179,6 +179,7 @@ private typedef CBodyEmissionState = {
 
 /** Lowers the admitted direct-value HxcIR body subset into structural strict C11. */
 class CBodyEmitter {
+	var atomicTraceTemporaryCounter:Int = 0;
 	final aggregateTags:Map<String, CIdentifier> = [];
 	final aggregateFieldNames:Map<String, CIdentifier> = [];
 	final aggregateFieldTypes:Map<String, HxcIRTypeRef> = [];
@@ -1452,6 +1453,8 @@ class CBodyEmitter {
 					}
 				case IRIODynamic(operation):
 					emitDynamicInstruction(statements, state, instruction, operation, fn);
+				case IRIOAtomic(operation):
+					emitAtomicInstruction(statements, state, instruction, operation, fn);
 				case IRIOException(operation):
 					emitExceptionInstruction(statements, state, instruction, operation, fn);
 				case IRIOAllocate(type, IRAOwned, IRIRuntime("alloc"), {target: IRFTAbort}):
@@ -1552,6 +1555,89 @@ class CBodyEmitter {
 			}
 		}
 		return terminatedByNonReturningCall;
+	}
+
+	/** Emit one validated C11 atomic operation without introducing pthread linkage. */
+	function emitAtomicInstruction(statements:Array<CStmt>, state:CBodyEmissionState, instruction:HxcIRInstruction, operation:HxcIRAtomicInstruction,
+			fn:HxcIRFunction):Void {
+		function memoryOrder(value:HxcIRMemoryOrder):CExpr
+			return EIdentifier(new CIdentifier(switch value {
+				case IRMO_Relaxed: "memory_order_relaxed";
+				case IRMO_Consume: "memory_order_consume";
+				case IRMO_Acquire: "memory_order_acquire";
+				case IRMO_Release: "memory_order_release";
+				case IRMO_AcquireRelease: "memory_order_acq_rel";
+				case IRMO_SequentiallyConsistent: "memory_order_seq_cst";
+			}));
+		function address(place:HxcIRPlace):CExpr
+			return EUnary(AddressOf, placeExpression(place, fn, state.localNames, state.globalNames, state.spanLengthNames, state.values));
+		function call(name:String, arguments:Array<CExpr>):CExpr
+			return ECall(EIdentifier(new CIdentifier(name)), arguments);
+		function emitResult(expression:CExpr):Void
+			emitLoad(statements, state.values, state.referencedValues, instruction, expression, state.temporaryNames, state.lineDirectives, fn.id, false);
+		function resultTemporary(role:String):{result:HxcIRResult, name:CIdentifier} {
+			final result = requireResult(instruction, fn.id);
+			final name = state.temporaryNames.get(result.id);
+			if (name == null)
+				return fail('atomic $role result `${result.id}` in `${fn.id}` has no finalized temporary');
+			return {result: result, name: name};
+		}
+		function declareResult(initializer:CExpr, role:String):CIdentifier {
+			final temporary = resultTemporary(role);
+			final declaration = typedDeclarator(temporary.result.type, DName(temporary.name));
+			statements.push(SDecl({
+				storage: [],
+				alignments: [],
+				type: declaration.type,
+				declarator: declaration.declarator,
+				initializer: IExpr(initializer),
+				attributes: []
+			}));
+			state.values.set(temporary.result.id, EIdentifier(temporary.name));
+			return temporary.name;
+		}
+
+		var declaredResultNeedsDiscard = false;
+		switch operation {
+			case IRAInitialize(place, valueId):
+				addLineDirective(statements, instruction.source, state.lineDirectives);
+				statements.push(SExpr(call("atomic_init", [address(place), requireValue(state.values, valueId, fn.id)])));
+			case IRALoad(place, order):
+				emitResult(call("atomic_load_explicit", [address(place), memoryOrder(order)]));
+			case IRAStore(place, valueId, order):
+				addLineDirective(statements, instruction.source, state.lineDirectives);
+				final resultName = declareResult(requireValue(state.values, valueId, fn.id), "store");
+				statements.push(SExpr(call("atomic_store_explicit", [address(place), EIdentifier(resultName), memoryOrder(order)])));
+				declaredResultNeedsDiscard = true;
+			case IRAExchange(place, valueId, order):
+				emitResult(call("atomic_exchange_explicit", [address(place), requireValue(state.values, valueId, fn.id), memoryOrder(order)]));
+			case IRACompareExchange(place, expectedValueId, replacementValueId, success, failure):
+				addLineDirective(statements, instruction.source, state.lineDirectives);
+				final resultName = declareResult(requireValue(state.values, expectedValueId, fn.id), "compare-exchange");
+				statements.push(SExpr(call("atomic_compare_exchange_strong_explicit", [
+					address(place),
+					EUnary(AddressOf, EIdentifier(resultName)),
+					requireValue(state.values, replacementValueId, fn.id),
+					memoryOrder(success),
+					memoryOrder(failure)
+				])));
+				declaredResultNeedsDiscard = true;
+			case IRAFetchAdd(place, valueId, order):
+				emitResult(call("atomic_fetch_add_explicit", [address(place), requireValue(state.values, valueId, fn.id), memoryOrder(order)]));
+			case IRAFetchSub(place, valueId, order):
+				emitResult(call("atomic_fetch_sub_explicit", [address(place), requireValue(state.values, valueId, fn.id), memoryOrder(order)]));
+			case IRAFetchAnd(place, valueId, order):
+				emitResult(call("atomic_fetch_and_explicit", [address(place), requireValue(state.values, valueId, fn.id), memoryOrder(order)]));
+			case IRAFetchOr(place, valueId, order):
+				emitResult(call("atomic_fetch_or_explicit", [address(place), requireValue(state.values, valueId, fn.id), memoryOrder(order)]));
+			case IRAFetchXor(place, valueId, order):
+				emitResult(call("atomic_fetch_xor_explicit", [address(place), requireValue(state.values, valueId, fn.id), memoryOrder(order)]));
+		}
+		if (declaredResultNeedsDiscard && instruction.result != null && !state.referencedValues.exists(instruction.result.id)) {
+			final expression = state.values.get(instruction.result.id);
+			if (expression != null)
+				statements.push(SExpr(ECast(new CType(TVoid), DName(null), expression)));
+		}
 	}
 
 	static function addTerminatorLineDirective(statements:Array<CStmt>, block:HxcIRBlock, enabled:Bool, functionId:String):Void {
@@ -3643,6 +3729,9 @@ class CBodyEmitter {
 			case IRTAbiInteger(IRAKUIntPtr): new CType(TNamed(new CIdentifier("uintptr_t")));
 			case IRTFloat(32): new CType(TFloat);
 			case IRTFloat(64): new CType(TDouble);
+			case IRTAtomic(element):
+				final atomicElement = typedDeclarator(element, DName(null));
+				new CType(TAtomic(atomicElement.type, atomicElement.declarator));
 			case IRTString | IRTManagedString: new CType(TNamed(CBodyRuntimeNames.identifier(CBRNStringType)));
 			case IRTDynamic: new CType(TNamed(CBodyRuntimeNames.identifier(CBRNDynamicValueType)));
 			case IRTNullable(_, IRNTagged): new CType(TStruct(requireOptional(type).cTag));
@@ -3697,6 +3786,9 @@ class CBodyEmitter {
 
 	public function typedDeclarator(type:HxcIRTypeRef, inner:CDeclarator):CTypedDeclarator {
 		return switch type {
+			case IRTAtomic(element):
+				final atomicElement = typedDeclarator(element, DName(null));
+				{type: new CType(TAtomic(atomicElement.type, atomicElement.declarator)), declarator: inner};
 			case IRTInstance(instanceId) if (arrayElementTypes.exists(instanceId)):
 				{type: new CType(TStruct(new CIdentifier("hxc_array_ref"))), declarator: DPointer(inner, [])};
 			case IRTInstance(instanceId) if (iteratorElementTypes.exists(instanceId)):
@@ -4692,6 +4784,24 @@ class CBodyEmitter {
 			return;
 		}
 		switch type {
+			case IRTAtomic(element):
+				final temporaryName = new CIdentifier('${visitName.value}_atomic_${atomicTraceTemporaryCounter++}');
+				final nested:Array<CStmt> = [];
+				appendManagedTraceStatements(nested, EIdentifier(temporaryName), element, visitName, contextName);
+				if (nested.length > 0) {
+					final declaration = typedDeclarator(element, DName(temporaryName));
+					statements.push(SDecl({
+						storage: [],
+						alignments: [],
+						type: declaration.type,
+						declarator: declaration.declarator,
+						initializer: IExpr(ECall(EIdentifier(new CIdentifier("atomic_load_explicit")),
+							[EUnary(AddressOf, value), EIdentifier(new CIdentifier("memory_order_seq_cst"))])),
+						attributes: []
+					}));
+					for (statement in nested)
+						statements.push(statement);
+				}
 			case IRTInstance(instanceId) if (aggregateFieldOrder.exists(instanceId)):
 				for (fieldName in requireAggregateFieldOrder(instanceId))
 					appendManagedTraceStatements(statements,
@@ -6330,6 +6440,9 @@ class CBodyEmitter {
 				addUnique(headers, "stdbool.h");
 			case IRTInt(_, _):
 				addUnique(headers, "stdint.h");
+			case IRTAtomic(element):
+				addUnique(headers, "stdatomic.h");
+				addTypeHeaders(headers, element, visited);
 			case IRTAbiInteger(IRAKSize):
 				addUnique(headers, "stddef.h");
 			case IRTAbiInteger(IRAKPtrDiff):
@@ -9035,6 +9148,7 @@ class CBodyEmitter {
 			case IRTInt(width, signed): 'int:$width:${signed ? "signed" : "unsigned"}';
 			case IRTAbiInteger(kind): 'abi-int:$kind';
 			case IRTFloat(width): 'float:$width';
+			case IRTAtomic(element): 'atomic<${typeKey(element)}>';
 			case IRTString: "string-utf8";
 			case IRTManagedString: "managed-string-utf8";
 			case IRTCString: "cstring-borrowed-literal";
@@ -9058,6 +9172,7 @@ class CBodyEmitter {
 			case IRTInt(width, signed): 'int:$width:${signed ? "signed" : "unsigned"}';
 			case IRTAbiInteger(kind): 'abi-int:$kind';
 			case IRTFloat(width): 'float:$width';
+			case IRTAtomic(element): 'atomic<${exactTypeKey(element)}>';
 			case IRTString: "string-utf8";
 			case IRTManagedString: "managed-string-utf8";
 			case IRTCString: "cstring";

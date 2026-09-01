@@ -61,6 +61,7 @@ SHARDS: dict[str, tuple[str, ...]] = {
         "test:symbol-registry",
         "test:project-emitter",
         "test:runtime-features",
+        "test:thread-runtime",
         "test:dynamic-runtime",
         "test:dynamic-lowering",
         "test:array-runtime",
@@ -81,6 +82,7 @@ SHARDS: dict[str, tuple[str, ...]] = {
     ),
     "lowering-objects": (
         "test:body-lowering",
+        "test:atomic-lowering",
         "test:exception-lowering",
         "test:function-lowering",
         "test:aggregate-lowering",

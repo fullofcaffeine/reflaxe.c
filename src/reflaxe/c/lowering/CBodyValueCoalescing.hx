@@ -422,6 +422,8 @@ class CBodyValueCoalescingPlanner {
 				collectFailureUses(failure, site);
 			case IRIODynamic(operation):
 				collectDynamicUses(operation, site);
+			case IRIOAtomic(operation):
+				collectAtomicUses(operation, site);
 			case IRIOCall(call):
 				collectCallUses(call, site);
 			case IRIOConstructAggregate(_, fields):
@@ -454,6 +456,21 @@ class CBodyValueCoalescingPlanner {
 				addUse(indexValueId, site);
 			case IRIONullCheck(valueId, _):
 				addUse(valueId, site);
+		}
+	}
+
+	function collectAtomicUses(operation:HxcIRAtomicInstruction, site:CBodyValueUseSite):Void {
+		switch operation {
+			case IRALoad(place, _):
+				collectPlaceUses(place, site);
+			case IRAInitialize(place, valueId) | IRAStore(place, valueId, _) | IRAExchange(place, valueId, _) | IRAFetchAdd(place, valueId, _) |
+				IRAFetchSub(place, valueId, _) | IRAFetchAnd(place, valueId, _) | IRAFetchOr(place, valueId, _) | IRAFetchXor(place, valueId, _):
+				collectPlaceUses(place, site);
+				addUse(valueId, site);
+			case IRACompareExchange(place, expectedValueId, replacementValueId, _, _):
+				collectPlaceUses(place, site);
+				addUse(expectedValueId, site);
+				addUse(replacementValueId, site);
 		}
 	}
 
