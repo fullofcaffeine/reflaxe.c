@@ -284,6 +284,13 @@ def validate_manifest(manifest: dict[str, object]) -> None:
         raise StringOutputFailure("generated manifest omitted its build plan")
     if manifest.get("compilationStatus") != "lowered-primitive-executable":
         raise StringOutputFailure("literal-output project did not retain its bounded compilation status")
+    if manifest.get("licensing") != {
+        "decision": "haxe_c-od2.5",
+        "spdxLicenseListVersion": "3.28.0",
+        "licenseConcluded": "MIT",
+        "noticeFiles": ["LICENSES/HAXE-C-OUTPUT-SUPPORT-MIT.txt"],
+    }:
+        raise StringOutputFailure("generated manifest lost its output-support licensing policy")
     expected_sources = [
         "runtime/src/io.c",
         "src/program.c",
@@ -305,6 +312,13 @@ def validate_manifest(manifest: dict[str, object]) -> None:
     program = by_path.get("src/program.c")
     if not isinstance(program, dict) or program.get("provenance") != {"production": "compiled-program"}:
         raise StringOutputFailure("generated program source omitted compiled-program provenance")
+    if program.get("licensing") != {
+        "licenseConcluded": "NOASSERTION",
+        "projectCopyrightClaim": False,
+        "rationale": "user-license-not-declared",
+        "noticeFiles": [],
+    }:
+        raise StringOutputFailure("generated program source claimed unsupported project license terms")
     for output_path in EXPECTED_RUNTIME_ARTIFACTS:
         tail = output_path.removeprefix("runtime/")
         source_path = "runtime/hxrt/" + tail
@@ -319,6 +333,13 @@ def validate_manifest(manifest: dict[str, object]) -> None:
             raise StringOutputFailure(
                 f"runtime artifact {output_path!r} has {provenance!r}; expected {expected!r}"
             )
+        if artifact.get("licensing") != {
+            "licenseConcluded": "MIT",
+            "projectCopyrightClaim": True,
+            "rationale": "audited-output-support-copy",
+            "noticeFiles": ["LICENSES/HAXE-C-OUTPUT-SUPPORT-MIT.txt"],
+        }:
+            raise StringOutputFailure(f"runtime artifact {output_path!r} lost its MIT output-support terms")
 
 
 def validate_public_abi_boundary(abi: dict[str, object]) -> None:

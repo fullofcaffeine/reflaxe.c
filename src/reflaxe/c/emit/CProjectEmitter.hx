@@ -17,7 +17,12 @@ import reflaxe.c.contract.TypedCContract.TypedCBuildFact;
 import reflaxe.c.emit.CBuildPlan.CBuildPlanBuilder;
 import reflaxe.c.emit.CBuildPlan.CBuildPlanSnapshot;
 import reflaxe.c.emit.CBuildPlan.CBuildStandard;
+import reflaxe.c.emit.COutputLicensePolicy.COutputLicensePolicySnapshot;
+#if macro
+import reflaxe.c.emit.COutputLicensePolicy.COutputLicensePolicyLoader;
+#end
 import reflaxe.c.emit.GeneratedFile.GeneratedFileKind;
+import reflaxe.c.emit.GeneratedFile.GeneratedFileProduction;
 import reflaxe.c.emit.GeneratedFile.GeneratedFileProvenance;
 import reflaxe.c.lowering.CDispatchReport.CDispatchReportBuilder;
 import reflaxe.c.lowering.CDispatchReport.CDispatchReportSnapshot;
@@ -136,6 +141,21 @@ private typedef AddressedArtifact = {
 	final kind:GeneratedFileKind;
 	final sha256:String;
 	final provenance:GeneratedFileProvenance;
+	final licensing:ArtifactLicensingRecord;
+}
+
+private typedef ArtifactLicensingRecord = {
+	final licenseConcluded:String;
+	final projectCopyrightClaim:Bool;
+	final rationale:String;
+	final noticeFiles:Array<String>;
+}
+
+private typedef ManifestLicensingRecord = {
+	final decision:String;
+	final spdxLicenseListVersion:String;
+	final licenseConcluded:String;
+	final noticeFiles:Array<String>;
 }
 
 private typedef ProjectConfigurationRecord = {
@@ -159,6 +179,7 @@ private typedef CompilerManifestRecord = {
 	final compilationStatus:CProjectCompilationStatus;
 	final configuration:ProjectConfigurationRecord;
 	final contentAddressing:ContentAddressingRecord;
+	final licensing:ManifestLicensingRecord;
 	final artifacts:Array<AddressedArtifact>;
 	final build:CBuildPlanSnapshot;
 	final ownershipManifest:String;
@@ -299,7 +320,15 @@ class CProjectEmitter {
 		CBuildAdapterEmitter.MESON_PATH
 	];
 
-	public function new() {}
+	final outputLicensePolicy:COutputLicensePolicySnapshot;
+
+	public function new() {
+		#if macro
+		this.outputLicensePolicy = COutputLicensePolicyLoader.load();
+		#else
+		throw new ProjectEmissionError("project emitter requires macro-host generated-output policy facts");
+		#end
+	}
 
 	public function emit(plan:CProjectEmissionPlan):Array<GeneratedFile> {
 		#if (macro || reflaxe_runtime)
@@ -313,6 +342,8 @@ class CProjectEmitter {
 		final units = canonicalUnits(plan.units);
 		final buildPlan = new CBuildPlanBuilder().build(plan.projectName, plan.cStandard, units, plan.buildFacts);
 		final files = units.copy();
+		files.push(new GeneratedFile(outputLicensePolicy.outputSupportLicenseFile, outputLicensePolicy.outputSupportLicenseText,
+			GeneratedFileKind.LicenseNotice));
 		if (plan.inspectionFiles != null) {
 			for (file in plan.inspectionFiles) {
 				files.push(file);
@@ -424,7 +455,8 @@ class CProjectEmitter {
 			path: file.relativePath,
 			kind: file.kind,
 			sha256: file.contentSha256,
-			provenance: file.provenance
+			provenance: file.provenance,
+			licensing: artifactLicensing(file.provenance)
 		});
 		final manifest:CompilerManifestRecord = {
 			schemaVersion: MANIFEST_SCHEMA_VERSION,
@@ -443,6 +475,12 @@ class CProjectEmitter {
 				algorithm: "sha256",
 				scope: "all compiler artifacts except hxc.manifest.json and _GeneratedFiles.json"
 			},
+			licensing: {
+				decision: outputLicensePolicy.decision,
+				spdxLicenseListVersion: outputLicensePolicy.spdxLicenseListVersion,
+				licenseConcluded: outputLicensePolicy.outputSupportLicenseExpression,
+				noticeFiles: [outputLicensePolicy.outputSupportLicenseFile]
+			},
 			artifacts: addressedArtifacts,
 			build: buildPlan,
 			ownershipManifest: GeneratedFile.OWNERSHIP_MANIFEST
@@ -453,6 +491,33 @@ class CProjectEmitter {
 		CPhaseTiming.stopDetail(manifestConstructionTimer);
 		#end
 		return files;
+	}
+
+	/** Derive one license conclusion from the artifact's validated origin. */
+	function artifactLicensing(provenance:GeneratedFileProvenance):ArtifactLicensingRecord {
+		return switch provenance.production {
+			case GeneratedFileProduction.CompiledProgram:
+				{
+					licenseConcluded: outputLicensePolicy.compiledProgram.licenseConcluded,
+					projectCopyrightClaim: outputLicensePolicy.compiledProgram.projectCopyrightClaim,
+					rationale: "user-license-not-declared",
+					noticeFiles: []
+				};
+			case GeneratedFileProduction.CompilerSidecar:
+				{
+					licenseConcluded: outputLicensePolicy.compilerSidecars.licenseConcluded,
+					projectCopyrightClaim: outputLicensePolicy.compilerSidecars.projectCopyrightClaim,
+					rationale: "compiler-output-support",
+					noticeFiles: [outputLicensePolicy.outputSupportLicenseFile]
+				};
+			case GeneratedFileProduction.RepositoryCopy:
+				{
+					licenseConcluded: outputLicensePolicy.repositoryCopies.licenseConcluded,
+					projectCopyrightClaim: outputLicensePolicy.repositoryCopies.projectCopyrightClaim,
+					rationale: "audited-output-support-copy",
+					noticeFiles: [outputLicensePolicy.outputSupportLicenseFile]
+				};
+		};
 	}
 
 	function validatePlan(plan:CProjectEmissionPlan):Void {

@@ -27,6 +27,7 @@ enum abstract GeneratedFileKind(String) to String {
 	var DeclarationReport = "declaration-report";
 	var CMakeAdapter = "cmake-adapter";
 	var MesonAdapter = "meson-adapter";
+	var LicenseNotice = "license-notice";
 }
 
 /** How an artifact's bytes entered the generated application package. */
@@ -111,7 +112,7 @@ class GeneratedFile {
 				case RuntimeHeader | RuntimeSource:
 					invalid('copied runtime artifact `$relativePath` requires exact repository provenance', [relativePath]);
 				case CompilerManifest | RuntimePlan | AbiManifest | SymbolTable | StdlibReport | SpecializationReport | DispatchReport | InitializationPlan |
-					TypedInventory | HxcIR | CAst | DeclarationReport | CMakeAdapter | MesonAdapter:
+					TypedInventory | HxcIR | CAst | DeclarationReport | CMakeAdapter | MesonAdapter | LicenseNotice:
 					{production: GeneratedFileProduction.CompilerSidecar};
 			};
 		}
@@ -177,7 +178,7 @@ class GeneratedFile {
 		return switch kind {
 			case PublicHeader | PrivateHeader | Source | RuntimeHeader | RuntimeSource: true;
 			case CompilerManifest | RuntimePlan | AbiManifest | SymbolTable | StdlibReport | SpecializationReport | DispatchReport | InitializationPlan |
-				TypedInventory | HxcIR | CAst | DeclarationReport | CMakeAdapter | MesonAdapter: false;
+				TypedInventory | HxcIR | CAst | DeclarationReport | CMakeAdapter | MesonAdapter | LicenseNotice: false;
 		};
 	}
 
@@ -185,7 +186,7 @@ class GeneratedFile {
 		return switch kind {
 			case PublicHeader | PrivateHeader | Source | RuntimeHeader | RuntimeSource | CompilerManifest | RuntimePlan | AbiManifest | SymbolTable |
 				StdlibReport | SpecializationReport | DispatchReport | InitializationPlan | TypedInventory | HxcIR | CAst | DeclarationReport | CMakeAdapter |
-				MesonAdapter:
+				MesonAdapter | LicenseNotice:
 				true;
 			case _: false;
 		};

@@ -473,6 +473,8 @@ Repository-owned source is licensed under [GPL-3.0-only](LICENSE). Verified
 upstream attribution, current distribution status, and fail-closed package
 requirements live in [Third-party notices and provenance](THIRD_PARTY_NOTICES.md).
 
-The licensing treatment of generated C/headers, templates, and emitted or
-linked runtime slices is still an explicit pre-release decision; this README
-does not assume that the repository license answers those separate cases.
+User-derived C and headers receive no project copyright claim. Compiler
+sidecars and audited `hxrt` output support use MIT terms. Generated manifests
+record these conclusions and preserve separate third-party terms. See
+[Third-party notices and provenance](THIRD_PARTY_NOTICES.md) for the exact
+scope, required notice, and pre-release review status.

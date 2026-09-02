@@ -31,6 +31,11 @@ private class HxcInspectedArtifact {
 	}
 }
 
+private typedef HxcInspectedLicensing = {
+	final outputSupportLicense:String;
+	final noticeFile:String;
+}
+
 /**
 	Read one compiler manifest and expose deterministic inspection projections.
 
@@ -44,6 +49,7 @@ class HxcInspectManifest {
 	final manifestPath:String;
 	final rootPath:String;
 	final manifest:HxcJsonNode;
+	final outputLicensing:HxcInspectedLicensing;
 	final artifacts:Array<HxcInspectedArtifact>;
 
 	public function new(requestedManifestPath:String) {
@@ -53,6 +59,7 @@ class HxcInspectManifest {
 		rootPath = FileSystem.fullPath(haxe.io.Path.directory(manifestPath));
 		manifest = parseJson(File.getContent(manifestPath), "hxc.manifest.json");
 		requireNumber(requireField(manifest, "schemaVersion"), "schemaVersion", "2");
+		outputLicensing = validateManifestLicensing(requireField(manifest, "licensing"));
 		artifacts = loadArtifacts(requireField(manifest, "artifacts"));
 	}
 
@@ -150,6 +157,7 @@ class HxcInspectManifest {
 			if (!~/^[0-9a-f]{64}$/.match(expected))
 				malformed('artifact `$path` has an invalid SHA-256 address');
 			validateProvenance(record, path, kind, expected);
+			validateArtifactLicensing(record, path);
 			final requested = haxe.io.Path.join([rootPath, path]);
 			if (!FileSystem.exists(requested) || FileSystem.isDirectory(requested))
 				fail('manifest artifact `$path` is missing', "Rebuild before inspecting this output.");
@@ -164,6 +172,72 @@ class HxcInspectManifest {
 			loaded.push(new HxcInspectedArtifact(path, kind, expected, bytes));
 		}
 		return loaded;
+	}
+
+	/** Reject absent or contradictory package-level output-support terms. */
+	function validateManifestLicensing(licensing:HxcJsonNode):HxcInspectedLicensing {
+		requireSafeText(requireString(requireField(licensing, "decision"), "licensing decision"), "licensing decision");
+		requireSafeText(requireString(requireField(licensing, "spdxLicenseListVersion"), "SPDX license-list version"), "SPDX license-list version");
+		final outputSupportLicense = requireString(requireField(licensing, "licenseConcluded"), "manifest license conclusion");
+		requireSafeText(outputSupportLicense, "manifest license conclusion");
+		final noticeFile = requireSingleNotice(requireField(licensing, "noticeFiles"), "manifest licensing");
+		return {outputSupportLicense: outputSupportLicense, noticeFile: noticeFile};
+	}
+
+	/** Check that an artifact's license conclusion follows its validated origin. */
+	function validateArtifactLicensing(record:HxcJsonNode, path:String):Void {
+		final provenance = requireField(record, "provenance");
+		final production = requireString(requireField(provenance, "production"), "artifact provenance production");
+		final licensing = requireField(record, "licensing");
+		final concluded = requireString(requireField(licensing, "licenseConcluded"), "artifact license conclusion");
+		final claim = requireBoolean(requireField(licensing, "projectCopyrightClaim"), "artifact project copyright claim");
+		final rationale = requireString(requireField(licensing, "rationale"), "artifact license rationale");
+		switch production {
+			case "compiled-program":
+				if (concluded != "NOASSERTION" || claim || rationale != "user-license-not-declared")
+					malformed('artifact `$path` licensing contradicts its user-derived origin');
+				requireNoNotices(requireField(licensing, "noticeFiles"), 'artifact `$path` licensing');
+			case "compiler-sidecar":
+				if (concluded != outputLicensing.outputSupportLicense || !claim || rationale != "compiler-output-support")
+					malformed('artifact `$path` licensing contradicts its compiler-sidecar origin');
+				requireNotice(requireField(licensing, "noticeFiles"), outputLicensing.noticeFile, 'artifact `$path` licensing');
+			case "repository-copy":
+				if (concluded != outputLicensing.outputSupportLicense || !claim || rationale != "audited-output-support-copy")
+					malformed('artifact `$path` licensing contradicts its repository-copy origin');
+				requireNotice(requireField(licensing, "noticeFiles"), outputLicensing.noticeFile, 'artifact `$path` licensing');
+			case _:
+				malformed('artifact `$path` has unsupported license provenance');
+		}
+	}
+
+	function requireNotice(node:HxcJsonNode, expected:String, label:String):Void {
+		final values = switch node.value {
+			case JArray(items): items;
+			case _: return malformed('$label noticeFiles must be an array');
+		};
+		if (values.length != 1 || requireString(values[0], '$label notice') != expected)
+			malformed('$label must name the manifest output-support notice');
+	}
+
+	function requireNoNotices(node:HxcJsonNode, label:String):Void {
+		switch node.value {
+			case JArray(items) if (items.length == 0):
+			case _:
+				malformed('$label must not claim a project notice');
+		}
+	}
+
+	function requireSingleNotice(node:HxcJsonNode, label:String):String {
+		final values = switch node.value {
+			case JArray(items): items;
+			case _: return malformed('$label noticeFiles must be an array');
+		};
+		if (values.length != 1)
+			malformed('$label must name one output-support notice');
+		final notice = requireString(values[0], '$label notice');
+		if (!isNormalizedRelativePath(notice))
+			malformed('$label notice path is unsafe');
+		return notice;
 	}
 
 	/** Reject a manifest when its construction facts contradict the artifact role. */
@@ -188,7 +262,7 @@ class HxcInspectManifest {
 					malformed('runtime artifact `$path` has provenance that contradicts its exact repository copy');
 				}
 			case "compiler-manifest" | "runtime-plan" | "abi-manifest" | "symbol-table" | "stdlib-report" | "specialization-report" | "dispatch-report" |
-				"initialization-plan" | "typed-inventory" | "hxcir" | "c-ast" | "declaration-report" | "cmake-adapter" | "meson-adapter":
+				"initialization-plan" | "typed-inventory" | "hxcir" | "c-ast" | "declaration-report" | "cmake-adapter" | "meson-adapter" | "license-notice":
 				if (production != "compiler-sidecar" || sourcePathNode != null || sourceSha256Node != null)
 					malformed('artifact `$path` has provenance that contradicts its compiler-sidecar role');
 			case _:
@@ -235,6 +309,17 @@ class HxcInspectManifest {
 		return switch node.value {
 			case JString(value): value;
 			case _: malformed('$label must be a string');
+		};
+
+	function requireSafeText(value:String, label:String):Void {
+		if (value == "" || value.indexOf("\x00") != -1 || value.indexOf("\r") != -1 || value.indexOf("\n") != -1)
+			malformed('$label is empty or unsafe');
+	}
+
+	function requireBoolean(node:HxcJsonNode, label:String):Bool
+		return switch node.value {
+			case JBool(value): value;
+			case _: malformed('$label must be boolean');
 		};
 
 	function requireNumber(node:HxcJsonNode, label:String, expected:String):Void {

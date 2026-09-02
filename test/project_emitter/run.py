@@ -582,6 +582,14 @@ def check_manifest(output: Path, *, expected_original_build: bool = True) -> Non
                 )
             )
         )
+    expected_manifest_licensing = {
+        "decision": "haxe_c-od2.5",
+        "spdxLicenseListVersion": "3.28.0",
+        "licenseConcluded": "MIT",
+        "noticeFiles": ["LICENSES/HAXE-C-OUTPUT-SUPPORT-MIT.txt"],
+    }
+    if manifest.get("licensing") != expected_manifest_licensing:
+        raise ProjectEmitterFailure("compiler manifest lost its output-support licensing policy")
     raw_artifacts = manifest.get("artifacts")
     if not isinstance(raw_artifacts, list):
         raise ProjectEmitterFailure("compiler manifest omitted content-addressed artifacts")
@@ -593,6 +601,7 @@ def check_manifest(output: Path, *, expected_original_build: bool = True) -> Non
         digest = entry.get("sha256")
         kind = entry.get("kind")
         provenance = entry.get("provenance")
+        licensing = entry.get("licensing")
         if not isinstance(path, str) or not isinstance(digest, str):
             raise ProjectEmitterFailure(f"invalid addressed artifact: {entry!r}")
         expected_production = (
@@ -604,6 +613,26 @@ def check_manifest(output: Path, *, expected_original_build: bool = True) -> Non
             raise ProjectEmitterFailure(
                 f"runtime-free artifact {path!r} has {provenance!r}; "
                 f"expected production {expected_production!r}"
+            )
+        expected_licensing = (
+            {
+                "licenseConcluded": "NOASSERTION",
+                "projectCopyrightClaim": False,
+                "rationale": "user-license-not-declared",
+                "noticeFiles": [],
+            }
+            if expected_production == "compiled-program"
+            else {
+                "licenseConcluded": "MIT",
+                "projectCopyrightClaim": True,
+                "rationale": "compiler-output-support",
+                "noticeFiles": ["LICENSES/HAXE-C-OUTPUT-SUPPORT-MIT.txt"],
+            }
+        )
+        if licensing != expected_licensing:
+            raise ProjectEmitterFailure(
+                f"runtime-free artifact {path!r} has licensing {licensing!r}; "
+                f"expected {expected_licensing!r}"
             )
         if path in addressed:
             raise ProjectEmitterFailure(f"duplicate addressed artifact: {path}")

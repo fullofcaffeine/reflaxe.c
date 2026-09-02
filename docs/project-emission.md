@@ -251,10 +251,17 @@ The runtime packager compares that hash before it admits the copied file.
 Package tools can therefore derive notices from the same selected runtime plan.
 They do not need a second list of runtime files.
 
-These values report construction facts. They do not state a license or grant
-permission to redistribute an artifact. This section is not legal advice.
-The generated-output license decision remains tracked by `haxe_c-od2.5`.
-It requires exact terms from the repository owner and a qualified rights review.
+The manifest derives a separate `licensing` record from each validated origin.
+User-derived C and headers use explained SPDX `NOASSERTION` when the user gives
+no license assertion. This means no determination was made and grants no
+rights. Compiler sidecars and exact audited `hxrt` copies use MIT output-support
+terms. The compiler emits the reviewed notice and names it in each applicable
+artifact record.
+
+Origin remains the authority. Mixed-origin source must be split or rejected,
+and third-party input keeps its declared component terms. The complete policy
+lives in `docs/specs/third-party-provenance.json`. This section is not legal
+advice. A qualified rights-chain review remains required before release.
 
 ## Neutral build plan and adapters
 
