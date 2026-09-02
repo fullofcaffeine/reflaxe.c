@@ -51,7 +51,8 @@ private function renameFlowIdentity(scenario:Scenario, variableBefore:Null<Scena
 				{
 					id: replaceNullable(sequence.id, sequenceBefore, sequenceAfter),
 					parameters: [
-						for (parameter in sequence.parameters) {id: parameter.id, initial: parameter.initial}
+						for (parameter in sequence.parameters)
+							{id: parameter.id, initial: parameter.initial}
 					],
 					actions: [
 						for (action in sequence.actions)
