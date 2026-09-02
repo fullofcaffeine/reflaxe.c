@@ -1,6 +1,7 @@
 package caxecraft.editor;
 
 import caxecraft.editor.EditorSession;
+import caxecraft.editor.EditorFlowSequenceSignature.EditorFlowParameterEdit;
 import caxecraft.editor.EditorPresentation.EditorPresentationSnapshot;
 import caxecraft.editor.EditorPresentation.EditorPresentationDetails;
 import caxecraft.scenario.CaxeFlow.FlowRule;
@@ -83,7 +84,12 @@ enum EditorCommand {
 	PutRule(rule:FlowRule);
 	RemoveRule(id:ScenarioId);
 	PutFlowVariable(variable:FlowVariable);
+	RemoveFlowVariable(id:ScenarioId);
+	RenameFlowVariable(before:ScenarioId, after:ScenarioId);
 	PutFlowSequence(sequence:FlowSequence);
+	RemoveFlowSequence(id:ScenarioId);
+	RenameFlowSequence(before:ScenarioId, after:ScenarioId);
+	EditFlowSequenceParameter(sequence:ScenarioId, edit:EditorFlowParameterEdit);
 	SetDefaultLocale(locale:LocaleId);
 	PutLocale(locale:ScenarioLocaleCatalog);
 	RemoveLocale(locale:LocaleId);
@@ -282,6 +288,18 @@ enum EditorError {
 	MissingDialogue(id:ScenarioId);
 	MissingObjective(id:ScenarioId);
 	MissingRule(id:ScenarioId);
+	MissingFlowVariable(id:ScenarioId);
+	MissingFlowSequence(id:ScenarioId);
+	InvalidFlowDefinitionName(id:ScenarioId);
+	DuplicateFlowDefinition(id:ScenarioId);
+
+	/** A visual delete would leave at least one typed Flow reference unresolved. */
+	FlowDefinitionInUse(id:ScenarioId);
+
+	InvalidFlowSequenceParameter(sequence:ScenarioId, index:Int);
+	DuplicateFlowParameter(id:ScenarioId);
+	FlowParameterInUse(id:ScenarioId);
+
 	MissingLocale(id:LocaleId);
 	MissingMessage(locale:LocaleId, message:MessageId);
 	MissingEditorNode(ref:EditorNodeRef);

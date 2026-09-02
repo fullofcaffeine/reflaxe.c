@@ -11,6 +11,9 @@ import caxecraft.scenario.CaxeFlow.FlowEvent;
 import caxecraft.scenario.CaxeFlow.FlowPredicate;
 import caxecraft.scenario.CaxeFlow.FlowRepeatPolicy;
 import caxecraft.scenario.CaxeFlow.FlowRule;
+import caxecraft.scenario.CaxeFlow.FlowParameter;
+import caxecraft.scenario.CaxeFlow.FlowSequence;
+import caxecraft.scenario.CaxeFlowEventRegistry.flowEventSupportsActor;
 import caxecraft.scenario.CaxeFlowCopy.copyFlowAction;
 import caxecraft.scenario.CaxeFlowCopy.copyFlowActions;
 import caxecraft.scenario.CaxeFlowCopy.copyFlowPredicate;
@@ -59,6 +62,24 @@ enum EditorFlowCardEdit {
 	SetRepeat(repeat:FlowRepeatPolicy);
 }
 
+/** One lossless edit to a reusable sequence declaration. */
+enum EditorFlowSequenceEdit {
+	InsertSequenceDo(index:Int, action:FlowAction);
+	ReplaceSequenceDo(index:Int, action:FlowAction);
+	MoveSequenceDo(fromIndex:Int, toIndex:Int);
+	RemoveSequenceDo(index:Int);
+	InsertSequenceParameter(index:Int, parameter:FlowParameter);
+	ReplaceSequenceParameter(index:Int, parameter:FlowParameter);
+	RemoveSequenceParameter(index:Int);
+}
+
+/** Result of editing a sequence without mutating its caller-owned arrays. */
+enum EditorFlowSequenceAuthoringResult {
+	FlowSequenceAuthored(sequence:FlowSequence);
+	FlowSequenceUnchanged;
+	FlowSequenceAuthoringRejected;
+}
+
 /** One world selection plus every semantic role its placement can satisfy. */
 typedef EditorFlowWorldPick = {
 	final id:ScenarioId;
@@ -98,6 +119,76 @@ function nextZoneConnectionRuleId(zone:ScenarioId, ruleIds:Array<ScenarioId>):Sc
 	while (containsRuleId(ruleIds, prefix + number))
 		number++;
 	return new ScenarioId(prefix + number);
+}
+
+/**
+	Return the next valid repeat policy for the rule's current event.
+
+	The visual control never offers actor-local history to an event that cannot
+	identify an actor. A new cooldown starts at one fixed tick, the smallest
+	valid value; Advanced text remains the exact path for larger tick counts.
+**/
+function nextFlowRepeatPolicy(event:FlowEvent, current:FlowRepeatPolicy):FlowRepeatPolicy {
+	final supportsActor = flowEventSupportsActor(event);
+	return switch current {
+		case Once: Repeat;
+		case Repeat: Cooldown(1);
+		case Cooldown(_): supportsActor ? OncePerActor : Once;
+		case OncePerActor: supportsActor ? CooldownPerActor(1) : Once;
+		case CooldownPerActor(_): Once;
+	};
+}
+
+/** Move one priority step without overflowing Haxe's signed 32-bit `Int`. */
+function stepFlowPriority(priority:Int, direction:Int):Int {
+	if (direction < 0)
+		return priority == -2147483648 ? priority : priority - 1;
+	if (direction > 0)
+		return priority == 2147483647 ? priority : priority + 1;
+	return priority;
+}
+
+/** Edit ordered sequence parameters or actions through one copy-owning path. */
+function editFlowSequence(sequence:FlowSequence, edit:EditorFlowSequenceEdit):EditorFlowSequenceAuthoringResult {
+	final parameters:Array<FlowParameter> = [
+		for (parameter in sequence.parameters)
+			{id: parameter.id, initial: parameter.initial}
+	];
+	final actions = copyFlowActions(sequence.actions);
+	switch edit {
+		case InsertSequenceDo(index, action):
+			if (index < 0 || index > actions.length)
+				return FlowSequenceAuthoringRejected;
+			actions.insert(index, copyFlowAction(action));
+		case ReplaceSequenceDo(index, action):
+			if (!validActionIndex(actions, index))
+				return FlowSequenceAuthoringRejected;
+			actions[index] = copyFlowAction(action);
+		case MoveSequenceDo(fromIndex, toIndex):
+			if (!validActionIndex(actions, fromIndex) || !validActionIndex(actions, toIndex))
+				return FlowSequenceAuthoringRejected;
+			if (fromIndex == toIndex)
+				return FlowSequenceUnchanged;
+			final moved = actions.splice(fromIndex, 1)[0];
+			actions.insert(toIndex, moved);
+		case RemoveSequenceDo(index):
+			if (!validActionIndex(actions, index))
+				return FlowSequenceAuthoringRejected;
+			actions.splice(index, 1);
+		case InsertSequenceParameter(index, parameter):
+			if (index < 0 || index > parameters.length)
+				return FlowSequenceAuthoringRejected;
+			parameters.insert(index, {id: parameter.id, initial: parameter.initial});
+		case ReplaceSequenceParameter(index, parameter):
+			if (index < 0 || index >= parameters.length)
+				return FlowSequenceAuthoringRejected;
+			parameters[index] = {id: parameter.id, initial: parameter.initial};
+		case RemoveSequenceParameter(index):
+			if (index < 0 || index >= parameters.length)
+				return FlowSequenceAuthoringRejected;
+			parameters.splice(index, 1);
+	}
+	return FlowSequenceAuthored({id: sequence.id, parameters: parameters, actions: actions});
 }
 
 /** Replace, insert, or remove one canonical card without mutating the input. */

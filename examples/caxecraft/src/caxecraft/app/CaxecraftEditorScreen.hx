@@ -40,6 +40,9 @@ import caxecraft.editor.EditorTextAuthoring.EditorTextDocument;
 import caxecraft.editor.EditorTextAuthoring.EditorTextDocumentError;
 import caxecraft.editor.EditorTextAuthoring.EditorTextDocumentOpenResult;
 import caxecraft.editor.EditorTextAuthoring.EditorTextEditResult;
+import caxecraft.editor.EditorTextAssistance.applyEditorTextCompletion;
+import caxecraft.editor.EditorTextAssistance.editorTextCompletions;
+import caxecraft.editor.EditorTextAssistance.editorTextWorldReferences;
 import caxecraft.editor.EditorEnvironment.EditorEnvironmentControl;
 import caxecraft.editor.EditorEnvironment.EditorEnvironmentDirection;
 import caxecraft.editor.EditorEnvironment.editEnvironment;
@@ -67,16 +70,22 @@ import caxecraft.editor.EditorFlowProjection.EditorFlowTraceProjection;
 import caxecraft.editor.EditorFlowProjection.EditorFlowTraceRow;
 import caxecraft.editor.EditorFlowProjection.EditorTriggerOverlap;
 import caxecraft.editor.EditorFlowProjection.EditorFlowUiMessage;
+import caxecraft.editor.EditorFlowProjection.flowRuleReferencesObject;
 import caxecraft.editor.EditorFlowProjection.retainLatestFlowTrace;
 import caxecraft.editor.EditorFlowAuthoring.EditorFlowAuthoringResult;
 import caxecraft.editor.EditorFlowAuthoring.EditorFlowCardAddress;
 import caxecraft.editor.EditorFlowAuthoring.EditorFlowCardEdit;
+import caxecraft.editor.EditorFlowAuthoring.EditorFlowSequenceAuthoringResult;
+import caxecraft.editor.EditorFlowAuthoring.EditorFlowSequenceEdit;
 import caxecraft.editor.EditorFlowAuthoring.applyFlowWorldPick;
 import caxecraft.editor.EditorFlowAuthoring.applyFlowDocumentPick;
 import caxecraft.editor.EditorFlowAuthoring.connectZone;
 import caxecraft.editor.EditorFlowAuthoring.editFlowCard;
+import caxecraft.editor.EditorFlowAuthoring.editFlowSequence;
 import caxecraft.editor.EditorFlowAuthoring.isWorldPickableFlowRole;
 import caxecraft.editor.EditorFlowAuthoring.nextZoneConnectionRuleId;
+import caxecraft.editor.EditorFlowAuthoring.nextFlowRepeatPolicy;
+import caxecraft.editor.EditorFlowAuthoring.stepFlowPriority;
 import caxecraft.editor.EditorFlowAuthoring.worldPickFor;
 import caxecraft.editor.EditorFlowCardLibrary.EditorFlowActionChoice;
 import caxecraft.editor.EditorFlowCardLibrary.EditorFlowContentChoices;
@@ -93,8 +102,18 @@ import caxecraft.app.CaxecraftFlowCardPanel.CaxecraftFlowDocumentPanelAction;
 import caxecraft.app.CaxecraftFlowCardPanel.CaxecraftFlowDocumentPanelTarget;
 import caxecraft.app.CaxecraftFlowCardPanel.drawFlowCardPanel;
 import caxecraft.app.CaxecraftFlowCardPanel.drawFlowDocumentPanel;
+import caxecraft.app.CaxecraftFlowCardPanel.flowCardPanelActionAt;
+import caxecraft.app.CaxecraftFlowCardPanel.flowCardPanelChoiceCount;
 import caxecraft.app.CaxecraftFlowCardPanel.flowCardPanelOpen;
+import caxecraft.app.CaxecraftFlowCardPanel.flowDocumentPanelActionAt;
+import caxecraft.app.CaxecraftFlowCardPanel.flowDocumentPanelChoiceCount;
 import caxecraft.app.CaxecraftFlowCardPanel.flowDocumentPanelOpen;
+import caxecraft.app.CaxecraftFlowDefinitionPanel.CaxecraftFlowDefinitionPanelAction;
+import caxecraft.app.CaxecraftFlowDefinitionPanel.CaxecraftFlowDefinitionRenameTarget;
+import caxecraft.app.CaxecraftFlowDefinitionPanel.CaxecraftFlowDefinitionRow;
+import caxecraft.app.CaxecraftFlowDefinitionPanel.drawFlowDefinitionPanel;
+import caxecraft.app.CaxecraftFlowDefinitionPanel.flowDefinitionActionAt;
+import caxecraft.app.CaxecraftFlowDefinitionPanel.flowDefinitionRows;
 import caxecraft.editor.EditorObjectDuplicate.duplicateObjectWithConnectedRules;
 import caxecraft.editor.EditorObjectDelete.deleteObjectWithConnectedRules;
 import caxecraft.editor.EditorObjectPresentation.EditorObjectVisual;
@@ -163,9 +182,11 @@ import caxecraft.scenario.CaxeFlow.FlowEvent;
 import caxecraft.scenario.CaxeFlow.FlowPredicate;
 import caxecraft.scenario.CaxeFlow.FlowRepeatPolicy;
 import caxecraft.scenario.CaxeFlow.FlowRule;
+import caxecraft.scenario.CaxeFlow.FlowSequence;
 import caxecraft.scenario.CaxeFlow.FlowScope;
 import caxecraft.scenario.CaxeFlow.FlowValue;
 import caxecraft.scenario.CaxeFlowCopy.copyFlowRule;
+import caxecraft.scenario.CaxeFlowCopy.copyFlowSequence;
 import caxecraft.scenario.CaxeFlowRuntime.FlowTraceEntry;
 import caxecraft.scenario.ScenarioEnvironment;
 import caxecraft.scenario.ScenarioEnvironment.ScenarioHorizonEdge;
@@ -290,7 +311,13 @@ final class CaxecraftEditorScreen {
 	var flowTrace:EditorFlowTraceProjection;
 	var flowWorldPickMode:EditorFlowWorldPickMode;
 	var flowCardLibraryTarget:CaxecraftFlowCardPanelTarget;
+	var flowCardSelection:Int;
 	var flowDocumentPickMode:CaxecraftFlowDocumentPanelTarget;
+	var flowDocumentSelection:Int;
+	var flowDefinitionsOpen:Bool;
+	var flowDefinitionSelection:Int;
+	final flowDefinitionName:Null<GuiTextBoxState>;
+	var flowDefinitionRenameTarget:CaxecraftFlowDefinitionRenameTarget;
 	final flowContentChoices:EditorFlowContentChoices;
 	var camera:Null<EditorCameraState>;
 	var selection:Null<VoxelBounds>;
@@ -402,7 +429,13 @@ final class CaxecraftEditorScreen {
 		flowTrace = {rows: [], truncated: false};
 		flowWorldPickMode = NoFlowWorldPick;
 		flowCardLibraryTarget = NoFlowCardPanel;
+		flowCardSelection = 0;
 		flowDocumentPickMode = NoFlowDocumentPanel;
+		flowDocumentSelection = 0;
+		flowDefinitionsOpen = false;
+		flowDefinitionSelection = 0;
+		flowDefinitionName = GuiTextBoxState.create(96);
+		flowDefinitionRenameTarget = NoFlowDefinitionRename;
 		flowContentChoices = editorFlowContentChoices(contentRegistry);
 		camera = null;
 		selection = null;
@@ -472,6 +505,7 @@ final class CaxecraftEditorScreen {
 			&& !assetBrowserOpen
 			&& !flowCardLibraryOpen()
 			&& !flowDocumentPickerOpen()
+			&& !flowDefinitionsOpen
 			&& (editedName == null || !editedName.isEditing())
 			&& (editedObjectName == null || !editedObjectName.isEditing())
 			&& (editedAssetSearch == null || !editedAssetSearch.isEditing())
@@ -488,6 +522,7 @@ final class CaxecraftEditorScreen {
 			&& !textWorkspaceOpen
 			&& !flowCardLibraryOpen()
 			&& !flowDocumentPickerOpen()
+			&& !flowDefinitionsOpen
 			&& (editedName == null || !editedName.isEditing())
 			&& (editedObjectName == null || !editedObjectName.isEditing())
 			&& (editedAssetSearch == null || !editedAssetSearch.isEditing())
@@ -498,7 +533,7 @@ final class CaxecraftEditorScreen {
 			else
 				openAssetBrowser();
 		}
-		if (!assetBrowserOpen && !textWorkspaceOpen && !flowCardLibraryOpen() && !flowDocumentPickerOpen() && saveShortcutPressed())
+		if (!assetBrowserOpen && !textWorkspaceOpen && !flowCardLibraryOpen() && !flowDocumentPickerOpen() && !flowDefinitionsOpen && saveShortcutPressed())
 			requestSave();
 		final keyboardNavigation = readKeyboardNavigation();
 		final navigation = externalNavigation != NavigationCommand.None ? externalNavigation : keyboardNavigation;
@@ -514,6 +549,7 @@ final class CaxecraftEditorScreen {
 			&& !textWorkspaceOpen
 			&& !flowCardLibraryOpen()
 			&& !flowDocumentPickerOpen()
+			&& !flowDefinitionsOpen
 			&& (editedName == null || !editedName.isEditing())
 			&& (editedObjectName == null || !editedObjectName.isEditing());
 		switch objectShortcutAction({
@@ -549,16 +585,41 @@ final class CaxecraftEditorScreen {
 			final draft = currentDraftScenario();
 			if (draft == null)
 				flowCardLibraryTarget = NoFlowCardPanel;
-			else
-				applyFlowCardPanelAction(drawFlowCardPanel(uiCatalog, locale, flowCardLibraryTarget, draft, flowContentChoices, width, height));
+			else {
+				final wheel = Raylib.GetMouseWheelMove().toFloat();
+				if (wheel != 0.0)
+					flowCardSelection = movePaletteSelection(flowCardSelection, flowCardPanelChoiceCount(flowCardLibraryTarget, draft, flowContentChoices),
+						wheel > 0.0 ? -1 : 1);
+				applyFlowCardPanelAction(drawFlowCardPanel(uiCatalog, locale, flowCardLibraryTarget, draft, flowContentChoices, flowCardSelection, width,
+					height));
+			}
 			return StayInEditor;
 		}
 		if (flowDocumentPickerOpen()) {
 			final draft = currentDraftScenario();
 			if (draft == null)
 				flowDocumentPickMode = NoFlowDocumentPanel;
-			else
-				applyFlowDocumentPanelAction(drawFlowDocumentPanel(uiCatalog, locale, flowDocumentPickMode, draft, width, height));
+			else {
+				final wheel = Raylib.GetMouseWheelMove().toFloat();
+				if (wheel != 0.0)
+					flowDocumentSelection = movePaletteSelection(flowDocumentSelection, flowDocumentPanelChoiceCount(flowDocumentPickMode, draft),
+						wheel > 0.0 ? -1 : 1);
+				applyFlowDocumentPanelAction(drawFlowDocumentPanel(uiCatalog, locale, flowDocumentPickMode, draft, flowDocumentSelection, width, height));
+			}
+			return StayInEditor;
+		}
+		if (flowDefinitionsOpen) {
+			final draft = currentDraftScenario();
+			if (draft == null)
+				flowDefinitionsOpen = false;
+			else {
+				final wheel = Raylib.GetMouseWheelMove().toFloat();
+				if (wheel != 0.0)
+					flowDefinitionSelection = movePaletteSelection(flowDefinitionSelection, flowDefinitionRows(draft, flowContentChoices.states).length,
+						wheel > 0.0 ? -1 : 1);
+				applyFlowDefinitionPanelAction(drawFlowDefinitionPanel(uiCatalog, locale, draft, flowContentChoices.states, flowDefinitionSelection,
+					flowDefinitionRenameTarget, flowDefinitionName, width, height));
+			}
 			return StayInEditor;
 		}
 		if (immersiveWorkspaceActive(workspaceView == BuildView, buildPointerState == EditorBuildPointerState.Captured)) {
@@ -646,6 +707,8 @@ final class CaxecraftEditorScreen {
 		final canvasWidth = width - 64 - inspectorWidth - (inspectorWidth > 0 ? 12 : 0);
 		final canvasHeight = shelfTop - canvasTop - 12;
 		Raygui.PanelString(Rectangle.fromFloat(canvasLeft, canvasTop, canvasWidth, canvasHeight), uiCatalog.text(locale, UiMessage.EditorCanvasHelp));
+		if (focusedButtonSized(EditorFocusTarget.Advanced, canvasLeft + 8.0, canvasTop + 4.0, 142.0, 28.0, uiCatalog.text(locale, UiMessage.EditorAdvanced)))
+			openFlowDefinitions();
 		drawLayerControls(locale, canvasLeft + canvasWidth - 190, canvasTop + 4);
 		final innerLeft = canvasLeft + 12;
 		final innerTop = canvasTop + 36;
@@ -1020,9 +1083,15 @@ final class CaxecraftEditorScreen {
 		final lineEditor = textLineEditor;
 		if (lineEditor != null) {
 			Raylib.DrawTextString('${textSelectedLine + 1}', panelLeft + 20, editorTop + 9, 14, Color.rgba(126, 205, 209));
-			final result = lineEditor.draw(Rectangle.fromFloat(panelLeft + 68, editorTop, panelWidth - 88, 34));
+			final result = lineEditor.draw(Rectangle.fromFloat(panelLeft + 68, editorTop, panelWidth - 350, 34));
 			if (result.has(GuiResult.Pressed) && !lineEditor.isEditing())
 				commitTextLine();
+			if (Raygui.ButtonString(Rectangle.fromFloat(panelLeft + panelWidth - 272, editorTop, 116, 34), uiCatalog.text(locale, UiMessage.EditorTextComplete))
+				.has(GuiResult.Pressed))
+				completeTextLine();
+			if (Raygui.ButtonString(Rectangle.fromFloat(panelLeft + panelWidth - 146, editorTop, 126, 34), uiCatalog.text(locale, UiMessage.EditorTextJump))
+				.has(GuiResult.Pressed))
+				jumpToTextWorldReference();
 		}
 		final statusTop = editorTop + 44;
 		final statusMessage = switch textNotice {
@@ -1141,6 +1210,40 @@ final class CaxecraftEditorScreen {
 				textNotice = TextInvalid;
 				false;
 		}
+	}
+
+	/** Complete the final source token from the shared registries or typed draft. */
+	function completeTextLine():Bool {
+		final lineEditor = textLineEditor;
+		final draft = currentDraftScenario();
+		if (lineEditor == null || draft == null)
+			return false;
+		final choices = editorTextCompletions(lineEditor.text(), draft, flowContentChoices);
+		if (choices.length == 0)
+			return false;
+		if (!lineEditor.replace(applyEditorTextCompletion(lineEditor.text(), choices[0]))) {
+			textNotice = TextInvalid;
+			return false;
+		}
+		lineEditor.setEditing(true);
+		return commitTextLine();
+	}
+
+	/** Select the first typed world object named on the current source line. */
+	function jumpToTextWorldReference():Bool {
+		final document = textDocument;
+		final draft = currentDraftScenario();
+		if (document == null || draft == null || !commitTextLine())
+			return false;
+		final line = document.lineAt(textSelectedLine);
+		if (line == null)
+			return false;
+		final references = editorTextWorldReferences(line, draft);
+		if (references.length == 0)
+			return false;
+		closeTextWorkspace();
+		selectObject(references[0]);
+		return selectedObjectIndex() >= 0;
 	}
 
 	/** Insert one blank source line and move editing focus to it. */
@@ -1345,8 +1448,7 @@ final class CaxecraftEditorScreen {
 			if (detailsOpen) {
 				Raylib.DrawTextString('${gizmo.width} x ${gizmo.height} x ${gizmo.depth}', left + 14, cursorTop, 15, CaxecraftPalette.hudText());
 				cursorTop += 28;
-				if (gizmo.kind == TriggerZoneGizmo)
-					cursorTop = drawSelectedTriggerFlowCards(locale, gizmo.id, left + 14, cursorTop, width - 28, top + height - 12);
+				cursorTop = drawSelectedObjectFlowCards(locale, gizmo.id, gizmo.kind == TriggerZoneGizmo, left + 14, cursorTop, width - 28, top + height - 12);
 			}
 		}
 		if (worldListOpen) {
@@ -1363,17 +1465,17 @@ final class CaxecraftEditorScreen {
 		}
 	}
 
-	/** Draw registry-backed WHEN / IF / DO cards connected to one trigger. */
-	function drawSelectedTriggerFlowCards(locale:LocaleCursor, zone:ScenarioId, left:Int, top:Int, width:Int, bottom:Int):Int {
+	/** Draw registry-backed cards for any selected object named by a rule. */
+	function drawSelectedObjectFlowCards(locale:LocaleCursor, objectId:ScenarioId, isZone:Bool, left:Int, top:Int, width:Int, bottom:Int):Int {
 		var cursor = top;
-		if (cursor + 34 < bottom) {
+		if (isZone && cursor + 34 < bottom) {
 			final connectLabel = uiCatalog.format(locale, EditorFlowUiMessage.ConnectObjectMessage.messageId(), []);
 			if (Raygui.ButtonString(Rectangle.fromFloat(left, cursor, width, 30), connectLabel).has(GuiResult.Pressed))
-				beginZoneConnection(zone);
+				beginZoneConnection(objectId);
 			cursor += 38;
 		}
 		for (overlap in flowOverlaps)
-			if (overlap.first.text() == zone.text() || overlap.second.text() == zone.text()) {
+			if (isZone && (overlap.first.text() == objectId.text() || overlap.second.text() == objectId.text())) {
 				if (cursor + 26 >= bottom)
 					return cursor;
 				Raylib.DrawRectangle(left, cursor, width, 22, Color.rgba(71, 48, 15));
@@ -1382,15 +1484,20 @@ final class CaxecraftEditorScreen {
 				cursor += 26;
 			}
 		for (rule in flowRules) {
-			if (!flowRuleUsesZone(rule, zone))
+			if (!flowRuleReferencesObject(rule, objectId))
 				continue;
 			if (cursor + 20 < bottom) {
 				Raylib.DrawTextString(rule.ruleId.text(), left, cursor, 13, Color.rgba(236, 114, 255));
 				if (Raygui.ButtonString(Rectangle.fromFloat(left + width - 26, cursor - 3, 24, 20), "+").has(GuiResult.Pressed)) {
-					flowCardLibraryTarget = InsertDoFlowCardPanel(zone, rule.ruleId, rule.cards.length - 2);
+					openFlowCardPanel(InsertDoFlowCardPanel(objectId, rule.ruleId, rule.cards.length - 2));
 					return cursor + 20;
 				}
 				cursor += 20;
+			}
+			if (cursor + 28 < bottom) {
+				if (drawFlowRulePolicyControls(locale, objectId, rule, left, cursor, width))
+					return cursor + 28;
+				cursor += 28;
 			}
 			for (card in rule.cards) {
 				if (cursor + 34 >= bottom)
@@ -1400,14 +1507,36 @@ final class CaxecraftEditorScreen {
 				Raylib.DrawRectangle(left + 6, cursor + 6, 18, 18, visual.color);
 				Raylib.DrawTextString(visual.keyword, left + 30, cursor + 7, 13, visual.color);
 				Raylib.DrawTextString(visual.summary, left + 88, cursor + 7, 13, CaxecraftPalette.hudText());
-				if (drawFlowCardEditControls(locale, zone, rule.ruleId, card, left, cursor, width))
+				if (drawFlowCardEditControls(locale, objectId, rule.ruleId, card, left, cursor, width))
 					return cursor + 34;
-				drawFlowReferencePickers(zone, rule.ruleId, card, left, cursor, width, flowCardControlWidth(card));
+				drawFlowReferencePickers(objectId, rule.ruleId, card, left, cursor, width, flowCardControlWidth(card));
 				cursor += 34;
 			}
-			cursor = drawNestedFlowCards(locale, zone, rule.ruleId, rule.nestedCards, left, cursor, width, bottom);
+			cursor = drawNestedFlowCards(locale, objectId, rule.ruleId, rule.nestedCards, left, cursor, width, bottom);
 		}
 		return drawFlowTraceOverlay(locale, left, cursor, width, bottom);
+	}
+
+	/** Edit scheduling through the same typed rule command used by Text mode. */
+	function drawFlowRulePolicyControls(locale:LocaleCursor, zone:ScenarioId, rule:EditorFlowRuleProjection, left:Int, top:Int, width:Int):Bool {
+		final source = currentFlowRule(rule.ruleId);
+		if (source == null)
+			return false;
+		final stepWidth = 24;
+		if (Raygui.ButtonString(Rectangle.fromFloat(left, top, stepWidth, 22), "-").has(GuiResult.Pressed))
+			return commitFlowEdit(zone, rule.ruleId, SetPriority(stepFlowPriority(rule.priority, -1)));
+		final priorityWidth = 126;
+		Raylib.DrawTextString(uiCatalog.format(locale, EditorFlowUiMessage.PriorityMessage.messageId(), [Std.string(rule.priority)]), left
+			+ stepWidth
+			+ 4,
+			top
+			+ 6, 11, Color.rgba(160, 190, 194));
+		if (Raygui.ButtonString(Rectangle.fromFloat(left + priorityWidth - stepWidth, top, stepWidth, 22), "+").has(GuiResult.Pressed))
+			return commitFlowEdit(zone, rule.ruleId, SetPriority(stepFlowPriority(rule.priority, 1)));
+		final repeatLeft = left + priorityWidth + 5;
+		final repeatWidth = width - priorityWidth - 5;
+		return Raygui.ButtonString(Rectangle.fromFloat(repeatLeft, top, repeatWidth, 22), flowRepeatPolicyText(locale, rule.repeat)).has(GuiResult.Pressed)
+			&& commitFlowEdit(zone, rule.ruleId, SetRepeat(nextFlowRepeatPolicy(source.event, rule.repeat)));
 	}
 
 	/** Draw explicit editable rows for nested predicates and weighted actions. */
@@ -1427,9 +1556,9 @@ final class CaxecraftEditorScreen {
 				.has(GuiResult.Pressed)) {
 				switch card {
 					case NestedIfFlowCard(path, _, _, _, _):
-						flowCardLibraryTarget = NestedIfFlowCardPanel(zone, rule, path.copy());
-					case NestedDoFlowCard(parentActionIndex, choiceIndex, actionIndex, _, _, _, _):
-						flowCardLibraryTarget = NestedDoFlowCardPanel(zone, rule, parentActionIndex, choiceIndex, actionIndex);
+						openFlowCardPanel(NestedIfFlowCardPanel(zone, rule, path.copy()));
+					case NestedDoFlowCard(parentActionIndex, choiceIndex, actionIndex, _, _, _, _, _):
+						openFlowCardPanel(NestedDoFlowCardPanel(zone, rule, parentActionIndex, choiceIndex, actionIndex));
 				}
 				return cursor + 30;
 			}
@@ -1520,21 +1649,21 @@ final class CaxecraftEditorScreen {
 				if (Raygui.ButtonString(Rectangle.fromFloat(left + width - 53, top + 3, 50, 24),
 					uiCatalog.format(locale, EditorFlowUiMessage.EditMessage.messageId(), []))
 					.has(GuiResult.Pressed)) {
-					flowCardLibraryTarget = WhenFlowCardPanel(zone, ruleId);
+					openFlowCardPanel(WhenFlowCardPanel(zone, ruleId));
 					true;
 				} else false;
 			case IfFlowCard(_, _, _):
 				if (Raygui.ButtonString(Rectangle.fromFloat(left + width - 53, top + 3, 50, 24),
 					uiCatalog.format(locale, EditorFlowUiMessage.EditMessage.messageId(), []))
 					.has(GuiResult.Pressed)) {
-					flowCardLibraryTarget = IfFlowCardPanel(zone, ruleId);
+					openFlowCardPanel(IfFlowCardPanel(zone, ruleId));
 					true;
 				} else false;
 			case DoFlowCard(index, _, _, _):
 				final first = left + width - 145;
 				if (Raygui.ButtonString(Rectangle.fromFloat(first, top + 3, 50, 24), uiCatalog.format(locale, EditorFlowUiMessage.EditMessage.messageId(), []))
 					.has(GuiResult.Pressed)) {
-					flowCardLibraryTarget = DoFlowCardPanel(zone, ruleId, index);
+					openFlowCardPanel(DoFlowCardPanel(zone, ruleId, index));
 					true;
 				} else if (Raygui.ButtonString(Rectangle.fromFloat(first + 53, top + 3, 26, 24), "^")
 					.has(GuiResult.Pressed)) commitFlowEdit(zone, ruleId,
@@ -1560,19 +1689,6 @@ final class CaxecraftEditorScreen {
 			case IfFlowCard(_, _, _): IfCardAddress;
 			case DoFlowCard(index, _, _, _): DoCardAddress(index);
 		};
-
-	/** True when a projected rule's source card points at this trigger. */
-	static function flowRuleUsesZone(rule:EditorFlowRuleProjection, zone:ScenarioId):Bool {
-		for (card in rule.cards)
-			switch card {
-				case WhenFlowCard(_, _, references):
-					for (reference in references)
-						if (reference.id.text() == zone.text())
-							return true;
-				case IfFlowCard(_, _, _) | DoFlowCard(_, _, _, _):
-			}
-		return false;
-	}
 
 	/** Resolve data-owned card prose while retaining descriptor-backed content. */
 	function flowCardVisual(locale:LocaleCursor, card:EditorFlowCard):{final keyword:String; final summary:String; final color:Color;} {
@@ -1603,13 +1719,30 @@ final class CaxecraftEditorScreen {
 					summary: uiCatalog.format(locale, text.message, text.arguments),
 					color: Color.rgba(84, 191, 205)
 				};
-			case NestedDoFlowCard(_, choiceIndex, actionIndex, depth, _, text, _): {
+			case NestedDoFlowCard(_, choiceIndex, actionIndex, weight, depth, _, text, _): {
 					depth: depth,
-					summary: '${choiceIndex + 1}.${actionIndex + 1}  ${uiCatalog.format(locale, text.message, text.arguments)}',
+					summary: '${choiceIndex + 1} ×$weight · ${actionIndex + 1}  ${uiCatalog.format(locale, text.message, text.arguments)}',
 					color: Color.rgba(111, 174, 91)
 				};
 		};
 	}
+
+	/** Resolve canonical scheduling policy through data-owned UI messages. */
+	function flowRulePolicyText(locale:LocaleCursor, priority:Int, repeat:FlowRepeatPolicy):String {
+		final priorityText = uiCatalog.format(locale, EditorFlowUiMessage.PriorityMessage.messageId(), [Std.string(priority)]);
+		return '$priorityText · ${flowRepeatPolicyText(locale, repeat)}';
+	}
+
+	/** Resolve only the repeat-policy label used by its direct visual control. */
+	function flowRepeatPolicyText(locale:LocaleCursor, repeat:FlowRepeatPolicy):String
+		return switch repeat {
+			case Once: uiCatalog.format(locale, EditorFlowUiMessage.RepeatOnceMessage.messageId(), []);
+			case Repeat: uiCatalog.format(locale, EditorFlowUiMessage.RepeatMessage.messageId(), []);
+			case Cooldown(ticks): uiCatalog.format(locale, EditorFlowUiMessage.RepeatCooldownMessage.messageId(), [Std.string(ticks)]);
+			case OncePerActor: uiCatalog.format(locale, EditorFlowUiMessage.RepeatOncePerActorMessage.messageId(), []);
+			case CooldownPerActor(ticks):
+				uiCatalog.format(locale, EditorFlowUiMessage.RepeatCooldownPerActorMessage.messageId(), [Std.string(ticks)]);
+		};
 
 	/** Apply one typed palette decision through the canonical rule command. */
 	function applyFlowCardPanelAction(action:CaxecraftFlowCardPanelAction):Void {
@@ -1629,7 +1762,125 @@ final class CaxecraftEditorScreen {
 					value) : insert ? InsertDo(actionIndex, value) : ReplaceDo(actionIndex, value);
 				if (commitFlowEdit(zone, rule, edit))
 					flowCardLibraryTarget = NoFlowCardPanel;
+			case SelectFlowSequenceAction(sequenceId, actionIndex, insert, value):
+				final sequence = currentFlowSequence(sequenceId);
+				if (sequence == null)
+					notice = Invalid;
+				else {
+					final edit = insert ? InsertSequenceDo(actionIndex, value) : ReplaceSequenceDo(actionIndex, value);
+					switch editFlowSequence(sequence, edit) {
+						case FlowSequenceAuthored(next):
+							if (commitFlowDefinition(PutFlowSequence(next))) flowCardLibraryTarget = NoFlowCardPanel;
+						case FlowSequenceUnchanged:
+							flowCardLibraryTarget = NoFlowCardPanel;
+						case FlowSequenceAuthoringRejected:
+							notice = Invalid;
+					}
+				}
 		}
+	}
+
+	/** Apply one typed decision from the Advanced Flow declaration modal. */
+	function applyFlowDefinitionPanelAction(action:CaxecraftFlowDefinitionPanelAction):Void {
+		switch action {
+			case KeepFlowDefinitionPanel:
+			case CloseFlowDefinitionPanel:
+				flowDefinitionsOpen = false;
+				cancelFlowDefinitionRename();
+				focusedControl = EditorFocusTarget.Advanced;
+			case ApplyFlowDefinition(command):
+				commitFlowDefinition(command);
+			case OpenFlowSequenceAction(sequence, actionIndex, insert):
+				openFlowCardPanel(insert ? InsertSequenceDoFlowCardPanel(sequence, actionIndex) : SequenceDoFlowCardPanel(sequence, actionIndex));
+			case BeginFlowDefinitionRename(target):
+				beginFlowDefinitionRename(target);
+			case CommitFlowDefinitionRename(target, value):
+				commitFlowDefinitionRename(target, value);
+			case CancelFlowDefinitionRename:
+				cancelFlowDefinitionRename();
+		}
+	}
+
+	/** Start one temporary identity field from the accepted declaration ID. */
+	function beginFlowDefinitionRename(target:CaxecraftFlowDefinitionRenameTarget):Void {
+		final name = flowDefinitionName;
+		if (name == null)
+			return;
+		final value = switch target {
+			case NoFlowDefinitionRename: return;
+			case VariableDefinitionRename(id) | SequenceDefinitionRename(id): id.text();
+			case ParameterDefinitionRename(_, _, id): id.text();
+		};
+		if (!name.replace(value))
+			return;
+		name.setEditing(true);
+		flowDefinitionRenameTarget = target;
+	}
+
+	/** Commit one stable-ID rename through the matching canonical command. */
+	function commitFlowDefinitionRename(target:CaxecraftFlowDefinitionRenameTarget, value:String):Void {
+		final after = new ScenarioId(value);
+		final command:Null<EditorCommand> = switch target {
+			case NoFlowDefinitionRename: null;
+			case VariableDefinitionRename(before): RenameFlowVariable(before, after);
+			case SequenceDefinitionRename(before): RenameFlowSequence(before, after);
+			case ParameterDefinitionRename(sequenceId, parameterIndex, before):
+				final sequence = currentFlowSequence(sequenceId);
+				if (sequence == null
+					|| parameterIndex < 0
+					|| parameterIndex >= sequence.parameters.length
+					|| sequence.parameters[parameterIndex].id.text() != before.text()) null; else EditFlowSequenceParameter(sequenceId,
+					ReplaceFlowParameter(parameterIndex, {
+						id: after,
+						initial: sequence.parameters[parameterIndex].initial
+					}));
+		};
+		if (command == null) {
+			notice = Invalid;
+			return;
+		}
+		if (commitFlowDefinition(command))
+			cancelFlowDefinitionRename();
+	}
+
+	/** Discard only temporary text; the canonical Flow document is unchanged. */
+	function cancelFlowDefinitionRename():Void {
+		final name = flowDefinitionName;
+		if (name != null)
+			name.setEditing(false);
+		flowDefinitionRenameTarget = NoFlowDefinitionRename;
+	}
+
+	/** Commit one variable or sequence edit through canonical history. */
+	function commitFlowDefinition(command:EditorCommand):Bool {
+		final current = session;
+		if (current == null)
+			return false;
+		return switch current.mutate({baseRevision: current.revision(), mutation: Apply(command)}) {
+			case MutationApplied(_, _, _, _, _, _):
+				notice = Ready;
+				refreshProjection(false, KeepTerrain);
+				final draft = currentDraftScenario();
+				if (draft != null)
+					flowDefinitionSelection = movePaletteSelection(flowDefinitionSelection, flowDefinitionRows(draft, flowContentChoices.states).length, 0);
+				true;
+			case MutationUnchanged(_, _):
+				notice = Ready;
+				true;
+			case MutationRejected(_, _):
+				notice = Invalid;
+				false;
+		};
+	}
+
+	/** Open Advanced Flow declarations at the first deterministic row. */
+	function openFlowDefinitions():Void {
+		flowDefinitionsOpen = true;
+		flowDefinitionSelection = 0;
+		cancelFlowDefinitionRename();
+		assetBrowserOpen = false;
+		textWorkspaceOpen = false;
+		focusedControl = EditorFocusTarget.Advanced;
 	}
 
 	/** Apply one revision-bound document selection through typed reference traversal. */
@@ -1663,9 +1914,21 @@ final class CaxecraftEditorScreen {
 	function flowCardLibraryOpen():Bool
 		return flowCardPanelOpen(flowCardLibraryTarget);
 
+	/** Open one card palette at its first registry-derived row. */
+	function openFlowCardPanel(target:CaxecraftFlowCardPanelTarget):Void {
+		flowCardLibraryTarget = target;
+		flowCardSelection = 0;
+	}
+
 	/** True while the extracted document panel owns input and drawing. */
 	function flowDocumentPickerOpen():Bool
 		return flowDocumentPanelOpen(flowDocumentPickMode);
+
+	/** Open one document picker at its first compatible identity. */
+	function openFlowDocumentPanel(target:CaxecraftFlowDocumentPanelTarget):Void {
+		flowDocumentPickMode = target;
+		flowDocumentSelection = 0;
+	}
 
 	/**
 	 * Read one isolated Flow-authoring draft at most once per document revision.
@@ -2027,10 +2290,66 @@ final class CaxecraftEditorScreen {
 			applyAssetBrowserNavigation(command);
 			return StayInEditor;
 		}
-		if (flowCardLibraryOpen() || flowDocumentPickerOpen()) {
-			if (command == NavigationCommand.Cancel) {
-				flowCardLibraryTarget = NoFlowCardPanel;
-				flowDocumentPickMode = NoFlowDocumentPanel;
+		if (flowCardLibraryOpen()) {
+			final draft = currentDraftScenario();
+			final count = draft == null ? 0 : flowCardPanelChoiceCount(flowCardLibraryTarget, draft, flowContentChoices);
+			switch command {
+				case Up | Left:
+					flowCardSelection = movePaletteSelection(flowCardSelection, count, -1);
+				case Down | Right:
+					flowCardSelection = movePaletteSelection(flowCardSelection, count, 1);
+				case Confirm:
+					if (draft != null)
+						applyFlowCardPanelAction(flowCardPanelActionAt(flowCardLibraryTarget, draft, flowContentChoices, flowCardSelection));
+				case Cancel:
+					flowCardLibraryTarget = NoFlowCardPanel;
+				case None:
+			}
+			return StayInEditor;
+		}
+		if (flowDocumentPickerOpen()) {
+			final draft = currentDraftScenario();
+			final count = draft == null ? 0 : flowDocumentPanelChoiceCount(flowDocumentPickMode, draft);
+			switch command {
+				case Up | Left:
+					flowDocumentSelection = movePaletteSelection(flowDocumentSelection, count, -1);
+				case Down | Right:
+					flowDocumentSelection = movePaletteSelection(flowDocumentSelection, count, 1);
+				case Confirm:
+					if (draft != null)
+						applyFlowDocumentPanelAction(flowDocumentPanelActionAt(flowDocumentPickMode, draft, flowDocumentSelection));
+				case Cancel:
+					flowDocumentPickMode = NoFlowDocumentPanel;
+				case None:
+			}
+			return StayInEditor;
+		}
+		if (flowDefinitionsOpen) {
+			final draft = currentDraftScenario();
+			final count = draft == null ? 0 : flowDefinitionRows(draft, flowContentChoices.states).length;
+			switch flowDefinitionRenameTarget {
+				case NoFlowDefinitionRename:
+					switch command {
+						case Up | Left:
+							flowDefinitionSelection = movePaletteSelection(flowDefinitionSelection, count, -1);
+						case Down | Right:
+							flowDefinitionSelection = movePaletteSelection(flowDefinitionSelection, count, 1);
+						case Confirm:
+							if (draft != null) applyFlowDefinitionPanelAction(flowDefinitionActionAt(draft, flowContentChoices.states,
+								flowDefinitionSelection));
+						case Cancel:
+							flowDefinitionsOpen = false;
+							focusedControl = EditorFocusTarget.Advanced;
+						case None:
+					}
+				case target:
+					switch command {
+						case Confirm:
+							final name = flowDefinitionName;
+							if (name != null) commitFlowDefinitionRename(target, name.text());
+						case Cancel: cancelFlowDefinitionRename();
+						case Up | Down | Left | Right | None:
+					}
 			}
 			return StayInEditor;
 		}
@@ -2090,16 +2409,29 @@ final class CaxecraftEditorScreen {
 		return StayInEditor;
 	}
 
+	/** Move one modal cursor cyclically without exposing an invalid row. */
+	static function movePaletteSelection(current:Int, count:Int, delta:Int):Int {
+		if (count <= 0)
+			return 0;
+		final normalized = current < 0 || current >= count ? 0 : current;
+		final moved = (normalized + delta) % count;
+		return moved < 0 ? moved + count : moved;
+	}
+
 	/** Route keyboard, controller, and pilot movement inside the Text workspace. */
 	function applyTextNavigation(command:NavigationCommand):Void {
 		final document = textDocument;
 		if (document == null)
 			return;
 		switch command {
-			case Up | Left:
+			case Up:
 				selectTextLine(textSelectedLine > 0 ? textSelectedLine - 1 : document.lineCount() - 1);
-			case Down | Right:
+			case Down:
 				selectTextLine(textSelectedLine + 1 < document.lineCount() ? textSelectedLine + 1 : 0);
+			case Right:
+				completeTextLine();
+			case Left:
+				jumpToTextWorldReference();
 			case Confirm:
 				final editor = textLineEditor;
 				if (editor != null)
@@ -2147,6 +2479,8 @@ final class CaxecraftEditorScreen {
 				setWorkspaceView(PlanView);
 			case Text:
 				openTextWorkspace();
+			case Advanced:
+				openFlowDefinitions();
 			case CameraMode:
 				cycleEditorCamera();
 			case PreviousLayer:
@@ -2786,7 +3120,7 @@ final class CaxecraftEditorScreen {
 		final current = session;
 		if (current == null)
 			return;
-		flowDocumentPickMode = FlowDocumentPanel(zone, rule, card, referenceIndex, role, current.revision());
+		openFlowDocumentPanel(FlowDocumentPanel(zone, rule, card, referenceIndex, role, current.revision()));
 		flowCardLibraryTarget = NoFlowCardPanel;
 		flowWorldPickMode = NoFlowWorldPick;
 		notice = Ready;
@@ -2896,6 +3230,17 @@ final class CaxecraftEditorScreen {
 		for (rule in draft.flow.rules)
 			if (rule.id.text() == expected.text())
 				return copyFlowRule(rule);
+		return null;
+	}
+
+	/** Copy one cached reusable sequence only when a visual gesture mutates it. */
+	function currentFlowSequence(expected:ScenarioId):Null<FlowSequence> {
+		final draft = currentDraftScenario();
+		if (draft == null)
+			return null;
+		for (sequence in draft.flow.sequences)
+			if (sequence.id.text() == expected.text())
+				return copyFlowSequence(sequence);
 		return null;
 	}
 
@@ -4132,6 +4477,30 @@ final class CaxecraftEditorScreen {
 		var document = textDocument;
 		if (document == null)
 			return false;
+		final completionLine = pilotTextLineStartingWith(document, "end-map");
+		if (completionLine < 0)
+			return false;
+		selectTextLine(completionLine);
+		if (!lineEditor.replace("  do spa"))
+			return false;
+		lineEditor.setEditing(false);
+		applyTextNavigation(NavigationCommand.Right);
+		if (document.lineAt(completionLine) != "  do spawn" || !resetTextWorkspace())
+			return false;
+		document = textDocument;
+		if (document == null)
+			return false;
+		final objectLine = pilotTextLineStartingWith(document, "object ");
+		if (objectLine < 0)
+			return false;
+		selectTextLine(objectLine);
+		applyTextNavigation(NavigationCommand.Left);
+		if (textWorkspaceOpen || selectedObjectIndex() < 0)
+			return false;
+		openTextWorkspace();
+		document = textDocument;
+		if (document == null)
+			return false;
 		final titleLine = pilotTextLineStartingWith(document, "title ");
 		if (titleLine < 0)
 			return false;
@@ -4535,7 +4904,7 @@ final class CaxecraftEditorScreen {
 		final beforeRules = flowRuleCount;
 		var copiedRuleCount = 0;
 		for (rule in flowRules)
-			if (flowRuleUsesZone(rule, zone.id))
+			if (flowRuleReferencesObject(rule, zone.id))
 				copiedRuleCount++;
 		if (copiedRuleCount < 1)
 			return false;
@@ -4546,11 +4915,150 @@ final class CaxecraftEditorScreen {
 		if (objectGizmos.length != beforeObjects || flowRuleCount != beforeRules)
 			return false;
 		selectObject(zone.id);
-		flowCardLibraryTarget = DoFlowCardPanel(zone.id, connected, 2);
 		var authoredNestedCards = -1;
 		for (rule in flowRules)
 			if (rule.ruleId.text() == connected.text())
 				authoredNestedCards = rule.nestedCards.length;
+		final navigationDraft = currentDraftScenario();
+		if (navigationDraft == null)
+			return false;
+		final actionChoices = actionCardChoices(navigationDraft, connected, flowContentChoices, false);
+		var replacementIndex = -1;
+		for (index in 0...actionChoices.length)
+			switch actionChoices[index] {
+				case ReadyActionChoice(descriptor, _) if (descriptor.id.text() == "despawn"):
+					replacementIndex = index;
+				case _:
+			}
+		if (replacementIndex < 0)
+			return false;
+		final beforeNavigation = current.canonicalDraft();
+		openFlowCardPanel(DoFlowCardPanel(zone.id, connected, 3));
+		flowCardSelection = replacementIndex;
+		applyNavigation(NavigationCommand.Confirm);
+		if (flowCardLibraryOpen() || current.canonicalDraft().compare(beforeNavigation) == 0)
+			return false;
+		undo();
+		if (current.canonicalDraft().compare(beforeNavigation) != 0)
+			return false;
+		final restoredDraft = currentDraftScenario();
+		if (restoredDraft == null)
+			return false;
+		openFlowCardPanel(DoFlowCardPanel(zone.id, connected, 3));
+		final cardChoiceCount = flowCardPanelChoiceCount(flowCardLibraryTarget, restoredDraft, flowContentChoices);
+		applyNavigation(NavigationCommand.Up);
+		if (cardChoiceCount < 2 || flowCardSelection != cardChoiceCount - 1)
+			return false;
+		applyNavigation(NavigationCommand.Down);
+		if (flowCardSelection != 0)
+			return false;
+		flowCardLibraryTarget = NoFlowCardPanel;
+		openFlowDocumentPanel(FlowDocumentPanel(zone.id, connected, DoCardAddress(0), 0, WorldObjectFlowReference, current.revision()));
+		final documentChoiceCount = flowDocumentPanelChoiceCount(flowDocumentPickMode, restoredDraft);
+		applyNavigation(NavigationCommand.Up);
+		if (documentChoiceCount < 2 || flowDocumentSelection != documentChoiceCount - 1)
+			return false;
+		applyNavigation(NavigationCommand.Down);
+		if (flowDocumentSelection != 0)
+			return false;
+		flowDocumentPickMode = NoFlowDocumentPanel;
+		openFlowDefinitions();
+		final beforeDefinition = current.canonicalDraft();
+		applyNavigation(NavigationCommand.Confirm);
+		if (!flowDefinitionsOpen || current.canonicalDraft().compare(beforeDefinition) == 0)
+			return false;
+		final definitionDraft = currentDraftScenario();
+		if (definitionDraft == null)
+			return false;
+		final definitionRows = flowDefinitionRows(definitionDraft, flowContentChoices.states);
+		var sequenceRow = -1;
+		for (index in 0...definitionRows.length)
+			switch definitionRows[index] {
+				case AddSequenceActionRow(_, sequence) if (sequence.id.text() == supportSequence.text()):
+					sequenceRow = index;
+				case _:
+			}
+		if (sequenceRow < 0)
+			return false;
+		flowDefinitionSelection = sequenceRow;
+		applyNavigation(NavigationCommand.Confirm);
+		if (!flowCardLibraryOpen())
+			return false;
+		final sequenceChoices = actionCardChoices(definitionDraft, supportSequence, flowContentChoices, false, supportSequence);
+		var sequenceAction = -1;
+		for (index in 0...sequenceChoices.length)
+			switch sequenceChoices[index] {
+				case ReadyActionChoice(descriptor, _) if (descriptor.id.text() == "set-counter"):
+					sequenceAction = index;
+				case _:
+			}
+		if (sequenceAction < 0)
+			return false;
+		flowCardSelection = sequenceAction;
+		applyNavigation(NavigationCommand.Confirm);
+		if (flowCardLibraryOpen() || !flowDefinitionsOpen)
+			return false;
+		final variableRenameDraft = currentDraftScenario();
+		if (variableRenameDraft == null)
+			return false;
+		final variableRenameRows = flowDefinitionRows(variableRenameDraft, flowContentChoices.states);
+		var variableRenameRow = -1;
+		for (index in 0...variableRenameRows.length)
+			switch variableRenameRows[index] {
+				case VariableDefinitionRow(_, variable) if (variable.id.text() == supportCounter.text()):
+					variableRenameRow = index;
+				case _:
+			}
+		if (variableRenameRow < 0)
+			return false;
+		flowDefinitionSelection = variableRenameRow;
+		applyNavigation(NavigationCommand.Confirm);
+		final definitionName = flowDefinitionName;
+		final renamedCounter = new ScenarioId(supportCounter.text() + ".renamed");
+		if (definitionName == null || !definitionName.replace(renamedCounter.text()))
+			return false;
+		applyNavigation(NavigationCommand.Confirm);
+		switch flowDefinitionRenameTarget {
+			case NoFlowDefinitionRename:
+			case _:
+				return false;
+		}
+		final sequenceRenameDraft = currentDraftScenario();
+		if (sequenceRenameDraft == null)
+			return false;
+		var foundRenamedVariable = false;
+		for (variable in sequenceRenameDraft.flow.variables)
+			if (variable.id.text() == renamedCounter.text())
+				foundRenamedVariable = true;
+		if (!foundRenamedVariable)
+			return false;
+		final sequenceRenameRows = flowDefinitionRows(sequenceRenameDraft, flowContentChoices.states);
+		var sequenceRenameRow = -1;
+		for (index in 0...sequenceRenameRows.length)
+			switch sequenceRenameRows[index] {
+				case SequenceDefinitionRow(_, sequence) if (sequence.id.text() == supportSequence.text()):
+					sequenceRenameRow = index;
+				case _:
+			}
+		if (sequenceRenameRow < 0)
+			return false;
+		flowDefinitionSelection = sequenceRenameRow;
+		applyNavigation(NavigationCommand.Confirm);
+		final renamedSequence = new ScenarioId(supportSequence.text() + ".renamed");
+		if (definitionName == null || !definitionName.replace(renamedSequence.text()))
+			return false;
+		applyNavigation(NavigationCommand.Confirm);
+		final renamedDefinitionDraft = currentDraftScenario();
+		if (renamedDefinitionDraft == null)
+			return false;
+		var foundRenamedSequence = false;
+		for (sequence in renamedDefinitionDraft.flow.sequences)
+			if (sequence.id.text() == renamedSequence.text())
+				foundRenamedSequence = true;
+		if (!foundRenamedSequence)
+			return false;
+		flowDefinitionsOpen = false;
+		openFlowCardPanel(DoFlowCardPanel(zone.id, connected, 3));
 		return switch current.query(InspectValidation) {
 			case ValidationObserved(_, DraftPlayable(_)): authoredNestedCards >= 2;
 			case _:

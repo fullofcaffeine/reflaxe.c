@@ -255,14 +255,24 @@ complete line, then use Apply + Format to publish valid source as one undoable
 document change. Add Line and Delete Line change only the isolated source
 draft. Reset from Visual discards those source-only edits.
 
+Complete replaces only the final bare token on the selected line. Event,
+condition, and action words come from the same typed registries used by the
+parser, cards, validator, and runtime. Compatible IDs come from the current
+typed scenario and validated content registry. The helper never invents a
+second syntax catalog. With keyboard or controller navigation, Right applies
+the first matching completion. Left selects the first world object named by
+the line and returns to the 3D view. Quoted text and comments are not treated
+as object references.
+
 Apply runs the public UTF-8 decoder, lexer, parser, semantic validator, and
 canonical writer. A source-located diagnostic selects the first failing line.
 Malformed, incomplete, oversized, stale, or semantically invalid source stays
 in Text and leaves the visual model, history, selection, and Test Play snapshot
 unchanged. A successful Apply refreshes every visual view from the one typed
 scenario. Syntax colors distinguish structural records, flow events,
-conditions, and actions. Registry completion and jump-to-world references
-remain planned work.
+conditions, and actions. Completion can leave a line incomplete because the
+creator must still fill its typed arguments. Such text remains an isolated
+draft until the ordinary Apply validation succeeds.
 
 Plan is an advanced tool for hidden layers, trigger volumes, logic links, large
 selections, and fast navigation. It is not the default authoring experience.
@@ -495,34 +505,47 @@ event source -> conditions -> ordered actions
 ```
 
 A spatial volume is one event source. The world view can place, name, resize,
-duplicate, and select its visible gizmo. A selected volume shows localized
-WHEN/IF/DO cards projected from the canonical typed rule. The current compact
-controls can switch enter/leave, replace a condition with a picked event actor
-or `Always`, insert a picked-object `Spawn` action, switch `Spawn` and
-`Despawn`, reorder or remove actions, and replace compatible object references
-by selecting the object in the world. The renderer-independent command also
-supports replacing any closed event, predicate, or admitted action plus changing
-priority and repeat policy. Every gesture commits the ordinary `PutRule`
+duplicate, and select its visible gizmo. Selecting any world object shows the
+localized WHEN/IF/DO cards for every rule whose visible card tree names that
+object, including references inside nested predicates and weighted actions.
+Only trigger volumes show zone connection and overlap controls. The current
+compact controls can switch enter/leave, replace a condition with a picked
+event actor or `Always`, insert a picked-object `Spawn` action, switch `Spawn`
+and `Despawn`, reorder or remove actions, and replace compatible object
+references by selecting the object in the world. The renderer-independent
+command also supports replacing any closed event, predicate, or admitted action
+plus changing priority and repeat policy. Every gesture commits the ordinary `PutRule`
 command, so Undo, Redo, validation, save, and Advanced mode observe the same
 CaxeFlow data. A world-pick gesture records the document revision and rejects a
 stale target instead of applying it to a changed card.
 
+Card libraries and document-reference pickers share one semantic cursor.
+Up/Left and Down/Right move cyclically, Confirm chooses the highlighted enabled
+row, and Cancel closes the modal. The mouse wheel moves the same cursor, and a
+mouse click returns the same typed result.
+At smaller supported windows, the modal draws only complete rows and follows
+the cursor through the full registry-derived list, so later actions do not clip
+outside the panel.
+
 The shared renderer-independent trace projection bounds and classifies source,
 predicate, action, and deferred-event rows. Native Test Play retains the latest
 non-empty bounded trace and draws it under the selected cards after the creator
-returns. A live overlay while the game screen is still open, polished
-registry-driven field forms, filters/enabled controls, and non-world document
-pickers remain planned work. The current screen is a complete minimal spatial
-rule editor, not yet the complete child-facing card library.
+returns. A live overlay while the game screen is still open and polished
+registry-driven field forms with filters and enabled controls remain planned
+work. The current screen is a complete minimal spatial rule editor, not yet the
+complete child-facing card library.
 
 The same typed draft has three authoring depths. **Guided** mode uses large
 icon-and-sentence cards, templates, and world picking. **Advanced visual** mode
-will reveal nested predicates, event context, variables, branches, sequences,
-and timing while preserving those cards. **Text** mode now edits the exact
-bounded CaxeMap/CaxeFlow source. It provides line editing, syntax colors,
-canonical formatting, and source-positioned diagnostics. It is useful for
-experienced creators and automation agents. Shared-registry completion and
-jump-to-world references remain planned.
+now reveals nested predicates, rule priority, repeat/cooldown timing, and exact
+weighted-branch weights while preserving those cards. Event-context predicates,
+variable and sequence references, and scheduled sequence timing use the same
+registry-backed card sentences and typed pickers. Complete visual declaration
+editing for variables and sequence bodies remains planned. **Text** mode edits
+the exact bounded CaxeMap/CaxeFlow source. It provides line editing, syntax colors,
+canonical formatting, source-positioned diagnostics, shared-registry
+completion, and jump-to-world references. It is useful for experienced
+creators and automation agents.
 
 Moving between views must parse and validate the same model. Text mode cannot
 call a mechanic unavailable to cards, and the visual views cannot flatten or
@@ -538,8 +561,7 @@ fades, choices, and persistent CaxeFlow changes. Normal and skip previews must
 reach the same required persistent state and restore camera and controls. The
 remaining visual depth is tracked under `haxe_c-xge.19.6` and cinematic
 authoring under `haxe_c-xge.20.3`. The current native trigger-card slice does not
-yet provide the complete card library, advanced visual tree, registry-backed
-text completion, jump-to-world references, or cinematic timeline.
+yet provide the complete advanced visual tree or cinematic timeline.
 
 ## Executable evidence
 

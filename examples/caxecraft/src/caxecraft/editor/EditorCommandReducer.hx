@@ -11,6 +11,12 @@ import caxecraft.editor.EditorWorldGrid.paint as paintWorldVoxel;
 import caxecraft.editor.EditorWorldGrid.resize as resizeWorld;
 import caxecraft.editor.EditorEnvironment.copyEnvironment;
 import caxecraft.editor.EditorObjectRename.renameScenarioObject;
+import caxecraft.editor.EditorFlowDefinitions.flowSequenceIsReferenced;
+import caxecraft.editor.EditorFlowDefinitions.flowVariableIsReferenced;
+import caxecraft.editor.EditorFlowSequenceSignature.EditorFlowSignatureResult;
+import caxecraft.editor.EditorFlowSequenceSignature.editFlowSequenceSignature;
+import caxecraft.editor.EditorFlowIdentityRename.renameFlowSequence;
+import caxecraft.editor.EditorFlowIdentityRename.renameFlowVariable;
 import caxecraft.scenario.CaxeFlow.FlowRule;
 import caxecraft.scenario.CaxeFlow.FlowSequence;
 import caxecraft.scenario.CaxeFlow.FlowVariable;
@@ -132,8 +138,24 @@ function apply(scenario:Scenario, command:EditorCommand, context:EditorReduction
 			removeFlowRule(scenario, id);
 		case PutFlowVariable(variable):
 			ready(withFlowDefinitions(scenario, putFlowVariable(scenario.flow.variables, variable), scenario.flow.sequences), Rule);
+		case RemoveFlowVariable(id):
+			removeFlowVariableFromScenario(scenario, id);
+		case RenameFlowVariable(before, after):
+			renameFlowVariableInScenario(scenario, before, after);
 		case PutFlowSequence(sequence):
 			ready(withFlowDefinitions(scenario, scenario.flow.variables, putFlowSequence(scenario.flow.sequences, sequence)), Rule);
+		case RemoveFlowSequence(id):
+			removeFlowSequenceFromScenario(scenario, id);
+		case RenameFlowSequence(before, after):
+			renameFlowSequenceInScenario(scenario, before, after);
+		case EditFlowSequenceParameter(sequence, edit):
+			switch editFlowSequenceSignature(scenario, sequence, edit) {
+				case FlowSignatureUpdated(variables, sequences, rules): ready(withFlow(scenario, variables, sequences, rules), Rule);
+				case FlowSignatureMissingSequence(id): ReductionRejected(MissingFlowSequence(id));
+				case FlowSignatureInvalidIndex(id, index): ReductionRejected(InvalidFlowSequenceParameter(id, index));
+				case FlowSignatureDuplicateParameter(id): ReductionRejected(DuplicateFlowParameter(id));
+				case FlowSignatureParameterInUse(id): ReductionRejected(FlowParameterInUse(id));
+			}
 		case SetDefaultLocale(locale):
 			setDefaultLocale(scenario, locale);
 		case PutLocale(locale):
@@ -467,6 +489,48 @@ private function removeFlowRule(scenario:Scenario, id:ScenarioId):EditorReductio
 	return ready(withRules(scenario, removeRule(scenario.flow.rules, id)), Rule);
 }
 
+/** Refuse a destructive visual delete before it can publish a broken draft. */
+private function removeFlowVariableFromScenario(scenario:Scenario, id:ScenarioId):EditorReductionResult {
+	if (!hasFlowVariable(scenario, id))
+		return ReductionRejected(MissingFlowVariable(id));
+	if (flowVariableIsReferenced(scenario, id))
+		return ReductionRejected(FlowDefinitionInUse(id));
+	return ready(withFlowDefinitions(scenario, removeFlowVariable(scenario.flow.variables, id), scenario.flow.sequences), Rule);
+}
+
+/** Refuse sequence deletion while a local scope, call, or schedule still names it. */
+private function removeFlowSequenceFromScenario(scenario:Scenario, id:ScenarioId):EditorReductionResult {
+	if (!hasFlowSequence(scenario, id))
+		return ReductionRejected(MissingFlowSequence(id));
+	if (flowSequenceIsReferenced(scenario, id))
+		return ReductionRejected(FlowDefinitionInUse(id));
+	return ready(withFlowDefinitions(scenario, scenario.flow.variables, removeFlowSequence(scenario.flow.sequences, id)), Rule);
+}
+
+/** Rename a variable only when its canonical identity remains unambiguous. */
+private function renameFlowVariableInScenario(scenario:Scenario, before:ScenarioId, after:ScenarioId):EditorReductionResult {
+	if (!hasFlowVariable(scenario, before))
+		return ReductionRejected(MissingFlowVariable(before));
+	if (!isValidScenarioIdText(after.text()))
+		return ReductionRejected(InvalidFlowDefinitionName(after));
+	if (!same(before, after) && (hasFlowVariable(scenario, after) || hasFlowParameter(scenario, after)))
+		return ReductionRejected(DuplicateFlowDefinition(after));
+	final renamed = renameFlowVariable(scenario, before, after);
+	return ready(withFlow(scenario, renamed.variables, renamed.sequences, renamed.rules), Rule);
+}
+
+/** Rename a sequence together with every local scope, call, and schedule. */
+private function renameFlowSequenceInScenario(scenario:Scenario, before:ScenarioId, after:ScenarioId):EditorReductionResult {
+	if (!hasFlowSequence(scenario, before))
+		return ReductionRejected(MissingFlowSequence(before));
+	if (!isValidScenarioIdText(after.text()))
+		return ReductionRejected(InvalidFlowDefinitionName(after));
+	if (!same(before, after) && hasFlowSequence(scenario, after))
+		return ReductionRejected(DuplicateFlowDefinition(after));
+	final renamed = renameFlowSequence(scenario, before, after);
+	return ready(withFlow(scenario, renamed.variables, renamed.sequences, renamed.rules), Rule);
+}
+
 private function paint(scenario:Scenario, points:Array<VoxelPoint>, paletteCode:Int, maximumCells:Int):EditorReductionResult {
 	if (points.length > maximumCells)
 		return ReductionRejected(VoxelEditTooLarge(points.length, maximumCells));
@@ -538,6 +602,29 @@ private function hasObjective(scenario:Scenario, id:ScenarioId):Bool {
 
 private function hasRule(scenario:Scenario, id:ScenarioId):Bool {
 	for (value in scenario.flow.rules)
+		if (same(value.id, id))
+			return true;
+	return false;
+}
+
+private function hasFlowVariable(scenario:Scenario, id:ScenarioId):Bool {
+	for (value in scenario.flow.variables)
+		if (same(value.id, id))
+			return true;
+	return false;
+}
+
+/** True when any reusable sequence already owns this parameter identity. */
+private function hasFlowParameter(scenario:Scenario, id:ScenarioId):Bool {
+	for (sequence in scenario.flow.sequences)
+		for (parameter in sequence.parameters)
+			if (same(parameter.id, id))
+				return true;
+	return false;
+}
+
+private function hasFlowSequence(scenario:Scenario, id:ScenarioId):Bool {
+	for (value in scenario.flow.sequences)
 		if (same(value.id, id))
 			return true;
 	return false;
@@ -654,6 +741,10 @@ private function putFlowVariable(values:Array<FlowVariable>, replacement:FlowVar
 	return result;
 }
 
+/** Remove one variable; session validation refuses any surviving typed reference. */
+private function removeFlowVariable(values:Array<FlowVariable>, id:ScenarioId):Array<FlowVariable>
+	return [for (value in values) if (!same(value.id, id)) copyFlowVariable(value)];
+
 /** Insert or replace one copy-owned sequence without retaining caller arrays. */
 private function putFlowSequence(values:Array<FlowSequence>, replacement:FlowSequence):Array<FlowSequence> {
 	final result = [
@@ -663,6 +754,10 @@ private function putFlowSequence(values:Array<FlowSequence>, replacement:FlowSeq
 	result.push(copyFlowSequence(replacement));
 	return result;
 }
+
+/** Remove one sequence; session validation refuses calls, schedules, or local scopes that still name it. */
+private function removeFlowSequence(values:Array<FlowSequence>, id:ScenarioId):Array<FlowSequence>
+	return [for (value in values) if (!same(value.id, id)) copyFlowSequence(value)];
 
 private function removeRule(values:Array<FlowRule>, id:ScenarioId):Array<FlowRule>
 	return [for (value in values) if (!same(value.id, id)) value];
@@ -750,6 +845,10 @@ private function withRules(scenario:Scenario, rules:Array<FlowRule>):Scenario
 
 /** Replace reusable flow definitions while retaining rules and all document data. */
 private function withFlowDefinitions(scenario:Scenario, variables:Array<FlowVariable>, sequences:Array<FlowSequence>):Scenario
+	return withFlow(scenario, variables, sequences, scenario.flow.rules);
+
+/** Replace complete typed Flow arrays after one atomic cross-reference edit. */
+private function withFlow(scenario:Scenario, variables:Array<FlowVariable>, sequences:Array<FlowSequence>, rules:Array<FlowRule>):Scenario
 	return {
 		formatVersion: scenario.formatVersion,
 		requiredFeatures: scenario.requiredFeatures.copy(),
@@ -766,7 +865,7 @@ private function withFlowDefinitions(scenario:Scenario, variables:Array<FlowVari
 		flow: {
 			variables: [for (variable in variables) copyFlowVariable(variable)],
 			sequences: [for (sequence in sequences) copyFlowSequence(sequence)],
-			rules: [for (rule in scenario.flow.rules) copyFlowRule(rule)]
+			rules: [for (rule in rules) copyFlowRule(rule)]
 		},
 		extensions: scenario.extensions.copy()
 	};

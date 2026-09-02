@@ -37,6 +37,7 @@ import caxecraft.editor.EditorFlowProjection.EditorFlowCard;
 import caxecraft.editor.EditorFlowProjection.EditorFlowNestedCard;
 import caxecraft.editor.EditorFlowReferences.EditorFlowReferenceRole;
 import caxecraft.editor.EditorFlowProjection.EditorFlowTraceRow;
+import caxecraft.editor.EditorFlowProjection.flowRuleReferencesObject;
 import caxecraft.editor.EditorFlowProjection.projectFlowRules;
 import caxecraft.editor.EditorFlowProjection.projectFlowTrace;
 import caxecraft.editor.EditorFlowProjection.projectTriggerOverlaps;
@@ -46,13 +47,24 @@ import caxecraft.editor.EditorFlowAuthoring.EditorFlowAuthoringResult;
 import caxecraft.editor.EditorFlowAuthoring.EditorFlowAuthoringError;
 import caxecraft.editor.EditorFlowAuthoring.EditorFlowCardAddress;
 import caxecraft.editor.EditorFlowAuthoring.EditorFlowCardEdit;
+import caxecraft.editor.EditorFlowAuthoring.EditorFlowSequenceAuthoringResult;
+import caxecraft.editor.EditorFlowAuthoring.EditorFlowSequenceEdit;
 import caxecraft.editor.EditorFlowAuthoring.applyFlowDocumentPick;
 import caxecraft.editor.EditorFlowAuthoring.applyFlowWorldPick;
 import caxecraft.editor.EditorFlowAuthoring.connectZone;
 import caxecraft.editor.EditorFlowAuthoring.editFlowCard;
+import caxecraft.editor.EditorFlowAuthoring.editFlowSequence;
 import caxecraft.editor.EditorFlowAuthoring.isWorldPickableFlowRole;
 import caxecraft.editor.EditorFlowAuthoring.nextZoneConnectionRuleId;
+import caxecraft.editor.EditorFlowAuthoring.nextFlowRepeatPolicy;
+import caxecraft.editor.EditorFlowAuthoring.stepFlowPriority;
 import caxecraft.editor.EditorFlowAuthoring.worldPickFor;
+import caxecraft.editor.EditorFlowDefinitions.EditorFlowVariableEdit;
+import caxecraft.editor.EditorFlowDefinitions.editFlowVariable;
+import caxecraft.editor.EditorFlowDefinitions.nextFlowParameter;
+import caxecraft.editor.EditorFlowDefinitions.nextFlowSequence;
+import caxecraft.editor.EditorFlowDefinitions.nextFlowVariable;
+import caxecraft.editor.EditorFlowSequenceSignature.EditorFlowParameterEdit;
 import caxecraft.editor.EditorFlowCardLibrary.EditorFlowActionChoice;
 import caxecraft.editor.EditorFlowCardLibrary.EditorFlowContentChoices;
 import caxecraft.editor.EditorFlowCardLibrary.EditorFlowEventChoice;
@@ -92,6 +104,9 @@ import caxecraft.editor.EditorSession;
 import caxecraft.editor.EditorTextAuthoring.EditorTextDocument;
 import caxecraft.editor.EditorTextAuthoring.EditorTextDocumentOpenResult;
 import caxecraft.editor.EditorTextAuthoring.EditorTextEditResult;
+import caxecraft.editor.EditorTextAssistance.applyEditorTextCompletion;
+import caxecraft.editor.EditorTextAssistance.editorTextCompletions;
+import caxecraft.editor.EditorTextAssistance.editorTextWorldReferences;
 import caxecraft.editor.EditorTypes.EditorCommand;
 import caxecraft.editor.EditorTypes.EditorCommandFamily;
 import caxecraft.editor.EditorTypes.EditorChangeId;
@@ -400,6 +415,30 @@ final class EditorProbe {
 			extensions: [{feature: extensionFeature, id: id("text.extension"), data: "advanced=true"}]
 		};
 		final expected = ScenarioWriter.write(advanced);
+		final assistanceContent:EditorFlowContentChoices = {
+			blocks: [STONE],
+			items: [content("caxecraft:berry")],
+			states: [content("caxecraft:active")],
+			effects: [content("caxecraft:spark")],
+			signals: [signal]
+		};
+		final actionSyntax = editorTextCompletions("  do spa", advanced, assistanceContent);
+		require(actionSyntax.length == 1 && actionSyntax[0].replacement == "spawn", "advanced completion drifted from the action registry");
+		require(applyEditorTextCompletion("  do spa", actionSyntax[0]) == "  do spawn", "advanced completion changed bytes outside the active token");
+		final eventSyntax = editorTextCompletions("  when int", advanced, assistanceContent);
+		require(eventSyntax.length == 1
+			&& eventSyntax[0].replacement == "interact", "advanced completion drifted from the event registry");
+		final predicateSyntax = editorTextCompletions("  if cou", advanced, assistanceContent);
+		require(predicateSyntax.length == 1
+			&& predicateSyntax[0].replacement == "counter", "advanced completion drifted from the predicate registry");
+		final objectIdentity = editorTextCompletions("  do spawn pla", advanced, assistanceContent);
+		require(objectIdentity.length == 1
+			&& objectIdentity[0].replacement == PLAYER.text(), "advanced completion did not use typed scenario identities");
+		final references = editorTextWorldReferences('  do spawn ${PLAYER.text()}', advanced);
+		require(references.length == 1 && references[0].text() == PLAYER.text(), "advanced world jump did not resolve the typed object identity");
+		require(editorTextWorldReferences('title "${PLAYER.text()}" # ${PLAYER.text()}', advanced).length == 0,
+			"advanced world jump treated quoted prose or a comment as an object reference");
+		require(editorTextCompletions("  do spa # draft note", advanced, assistanceContent).length == 0, "advanced completion rewrote a source comment");
 		final sourceDocument = openTextDocument(expected);
 		expectTextEdit(sourceDocument.insertLineAfter(0, "# retained until successful Apply"), "insert text comment");
 		final destination = open(defaultEditorSettings());
@@ -2000,6 +2039,7 @@ final class EditorProbe {
 			EditorFocusTarget.Build,
 			EditorFocusTarget.Plan,
 			EditorFocusTarget.Text,
+			EditorFocusTarget.Advanced,
 			EditorFocusTarget.CameraMode,
 			EditorFocusTarget.PreviousLayer,
 			EditorFocusTarget.NextLayer,
@@ -2029,6 +2069,7 @@ final class EditorProbe {
 			EditorFocusTarget.NextLayer,
 			EditorFocusTarget.PreviousLayer,
 			EditorFocusTarget.CameraMode,
+			EditorFocusTarget.Advanced,
 			EditorFocusTarget.Text,
 			EditorFocusTarget.Plan,
 			EditorFocusTarget.Build,
@@ -3752,6 +3793,26 @@ final class EditorProbe {
 		final configured = authoredRule(editFlowCard(authoredRule(editFlowCard(moved, SetPriority(9)), "set card priority"), SetRepeat(Repeat)),
 			"set card repeat");
 		require(configured.priority == 9 && configured.repeat == Repeat, "card configuration lost priority or per-actor repeat policy");
+		require(stepFlowPriority(9, -1) == 8 && stepFlowPriority(9, 1) == 10 && stepFlowPriority(9, 0) == 9,
+			"visual priority steps changed direction or admitted a zero-direction edit");
+		require(stepFlowPriority(-2147483648, -1) == -2147483648 && stepFlowPriority(2147483647, 1) == 2147483647,
+			"visual priority steps overflowed the signed Int boundary");
+		final globalEvent = LevelEntered(id("level.policy"));
+		final actorEvent = Interact(id("npc.policy"));
+		require(nextFlowRepeatPolicy(globalEvent, Once) == Repeat, "repeat control skipped the ordinary repeat policy");
+		switch nextFlowRepeatPolicy(globalEvent, Repeat) {
+			case Cooldown(1):
+			case _:
+				throw "repeat control did not create the smallest valid cooldown";
+		}
+		require(nextFlowRepeatPolicy(globalEvent, Cooldown(7)) == Once, "repeat control offered actor-local history to an event without an actor");
+		require(nextFlowRepeatPolicy(actorEvent, Cooldown(7)) == OncePerActor, "repeat control hid actor-local history from an actor event");
+		switch nextFlowRepeatPolicy(actorEvent, OncePerActor) {
+			case CooldownPerActor(1):
+			case _:
+				throw "repeat control did not create the smallest valid actor cooldown";
+		}
+		require(nextFlowRepeatPolicy(actorEvent, CooldownPerActor(7)) == Once, "repeat control did not close its actor-policy cycle");
 		final replaced = authoredRule(editFlowCard(configured, ReplaceDo(0, EmitSignal(content("caxecraft:authored")))), "replace DO card");
 		final removed = authoredRule(editFlowCard(replaced, RemoveDo(1)), "remove DO card");
 		require(removed.actions.length == 1, "card removal did not preserve the remaining action");
@@ -3784,6 +3845,290 @@ final class EditorProbe {
 		require(supportSession.canonicalDraft().compare(supportBefore) == 0, "flow-definition undo did not restore exact bytes");
 		expectHistory(supportSession.redo(), Transaction, "redo flow-definition transaction");
 		require(supportSession.canonicalDraft().compare(supportAfter) == 0, "flow-definition redo did not restore exact bytes");
+
+		final supportDraft = switch supportSession.query(InspectDraft) {
+			case DraftObserved(_, draft): draft;
+			case other: throw 'flow-definition draft query failed: $other';
+		};
+		final generatedFlag = nextFlowVariable(Flag(false), supportDraft.flow.variables);
+		require(generatedFlag.id.text() == "editor.variable.flag.n1" && generatedFlag.scope == Map,
+			"visual variable creation did not use a collision-free map-scoped identity");
+		final generatedFlagAgain = nextFlowVariable(Flag(false), supportDraft.flow.variables.concat([generatedFlag]));
+		require(generatedFlagAgain.id.text() == "editor.variable.flag.n2", "visual variable creation replaced an existing generated identity");
+		final generatedSequence = nextFlowSequence(supportDraft.flow.sequences);
+		require(generatedSequence.id.text() == "editor.sequence.n1"
+			&& generatedSequence.parameters.length == 0
+			&& generatedSequence.actions.length == 0,
+			"visual sequence creation did not start with one empty canonical declaration");
+		final stateChoices = [content("caxecraft:idle"), content("caxecraft:active")];
+		final kindCounter = editFlowVariable(generatedFlag, NextVariableKind, supportDraft.flow.sequences, stateChoices);
+		switch kindCounter.initial {
+			case Counter(0):
+			case _:
+				throw "visual variable kind did not advance from flag to counter";
+		}
+		final kindState = editFlowVariable(kindCounter, NextVariableKind, supportDraft.flow.sequences, stateChoices);
+		switch kindState.initial {
+			case State(value):
+				require(value.text() == "caxecraft:idle", "visual state variable did not use the shared registry order");
+			case _:
+				throw "visual variable kind did not advance from counter to state";
+		}
+		final nextState = editFlowVariable(kindState, NextVariableValue, supportDraft.flow.sequences, stateChoices);
+		switch nextState.initial {
+			case State(value):
+				require(value.text() == "caxecraft:active", "visual state value did not advance through shared registry IDs");
+			case _:
+				throw "visual state value changed its kind";
+		}
+		final localVariable = editFlowVariable(editFlowVariable(editFlowVariable(generatedFlag, NextVariableScope, supportDraft.flow.sequences, stateChoices),
+			NextVariableScope, supportDraft.flow.sequences, stateChoices),
+			NextVariableScope, supportDraft.flow.sequences, stateChoices);
+		switch localVariable.scope {
+			case Local(sequence):
+				require(sequence.text() == "sequence.cards", "visual local scope did not choose the canonical sequence");
+			case _:
+				throw "visual variable scope did not reach a local sequence";
+		}
+		final parameter = nextFlowParameter(generatedSequence, supportDraft.flow.variables);
+		require(parameter.id.text() == "editor.parameter.n1", "visual sequence parameter did not use a collision-free identity");
+		final sequenceWithParameter = switch editFlowSequence(generatedSequence, InsertSequenceParameter(0, parameter)) {
+			case FlowSequenceAuthored(value): value;
+			case _: throw "visual sequence did not add a typed parameter";
+		};
+		final sequenceWithAction = switch editFlowSequence(sequenceWithParameter, InsertSequenceDo(0, SetFlag(parameter.id, true))) {
+			case FlowSequenceAuthored(value): value;
+			case _: throw "visual sequence did not add an ordered action";
+		};
+		require(sequenceWithAction.parameters.length == 1
+			&& sequenceWithAction.actions.length == 1, "visual sequence authoring lost its parameter or action");
+		final selfSafeChoices = actionCardChoices(supportDraft, id("sequence.cards"), {
+			blocks: [STONE],
+			items: [],
+			states: stateChoices,
+			effects: [],
+			signals: []
+		}, false, id("sequence.cards"));
+		for (choice in selfSafeChoices)
+			switch choice {
+				case ReadyActionChoice(descriptor, _) if (descriptor.id.text() == "schedule" || descriptor.id.text() == "call"):
+					throw "visual sequence palette admitted an immediate self-reference";
+				case _:
+			}
+		final signatureSequence = id("sequence.cards");
+		final signatureBefore = id("parameter.before");
+		final signatureAfter = id("parameter.after");
+		expectApplied(supportSession.apply(EditFlowSequenceParameter(signatureSequence, InsertFlowParameter(0, {id: signatureBefore, initial: Flag(false)}))),
+			Rule, "insert visual sequence parameter");
+		expectApplied(supportSession.apply(PutFlowSequence({
+			id: signatureSequence,
+			parameters: [{id: signatureBefore, initial: Flag(false)}],
+			actions: [SetFlag(signatureBefore, true)]
+		})), Rule, "reference visual sequence parameter");
+		expectApplied(supportSession.apply(PutRule({
+			id: id("rule.signature"),
+			priority: 0,
+			repeat: Once,
+			event: StateChanged(id("counter.cards")),
+			predicate: Always,
+			actions: [CallSequence(signatureSequence, [Value(Flag(false))])]
+		})), Rule, "call visual sequence parameter");
+		expectApplied(supportSession.apply(EditFlowSequenceParameter(signatureSequence, ReplaceFlowParameter(0, {id: signatureAfter, initial: Flag(true)}))),
+			Rule, "rename visual sequence parameter");
+		var reboundDraft = switch supportSession.query(InspectDraft) {
+			case DraftObserved(_, draft): draft;
+			case other: throw 'rebound signature draft query failed: $other';
+		};
+		switch reboundDraft.flow.sequences[0].actions[0] {
+			case SetFlag(parameter, true):
+				require(parameter.text() == signatureAfter.text(), "parameter rename left its sequence body stale");
+			case _:
+				throw "parameter rename changed its sequence action shape";
+		}
+		switch reboundDraft.flow.rules[0].actions[0] {
+			case CallSequence(sequence, [Value(Flag(false))]):
+				require(sequence.text() == signatureSequence.text(), "parameter rename changed its caller target");
+			case _:
+				throw "parameter rename did not preserve a compatible caller argument";
+		}
+		switch supportSession.apply(EditFlowSequenceParameter(signatureSequence, ReplaceFlowParameter(0, {id: signatureAfter, initial: Counter(2)}))) {
+			case EditRejected(FlowParameterInUse(parameter)):
+				require(parameter.text() == signatureAfter.text(), "in-use parameter rejection named the wrong input");
+			case other:
+				throw 'parameter kind change did not protect its sequence body: $other';
+		}
+		expectApplied(supportSession.apply(PutFlowSequence({
+			id: signatureSequence,
+			parameters: [{id: signatureAfter, initial: Flag(true)}],
+			actions: []
+		})), Rule, "clear visual sequence parameter use");
+		expectApplied(supportSession.apply(EditFlowSequenceParameter(signatureSequence, ReplaceFlowParameter(0, {id: signatureAfter, initial: Counter(2)}))),
+			Rule, "change unreferenced visual parameter kind");
+		reboundDraft = switch supportSession.query(InspectDraft) {
+			case DraftObserved(_, draft): draft;
+			case other: throw 'type-rebound signature draft query failed: $other';
+		};
+		switch reboundDraft.flow.rules[0].actions[0] {
+			case CallSequence(_, [Value(Counter(2))]):
+			case _:
+				throw "parameter kind change did not install its typed default in the caller";
+		}
+		expectApplied(supportSession.apply(EditFlowSequenceParameter(signatureSequence, RemoveFlowParameter(0))), Rule,
+			"remove unreferenced visual sequence parameter");
+		reboundDraft = switch supportSession.query(InspectDraft) {
+			case DraftObserved(_, draft): draft;
+			case other: throw 'removed signature draft query failed: $other';
+		};
+		switch reboundDraft.flow.rules[0].actions[0] {
+			case CallSequence(_, []):
+			case _:
+				throw "parameter removal did not remove the matching caller argument";
+		}
+		expectApplied(supportSession.apply(RemoveRule(id("rule.signature"))), Rule, "remove visual signature caller");
+
+		final renameVariableRule = id("rule.rename.variable");
+		expectApplied(supportSession.apply(PutRule({
+			id: renameVariableRule,
+			priority: 0,
+			repeat: Once,
+			event: StateChanged(id("counter.cards")),
+			predicate: CounterCompare(id("counter.cards"), GreaterOrEqual, 0),
+			actions: [
+				ChooseSeeded(id("counter.cards"), [
+					{
+						weight: 1,
+						actions: [SetCounter(id("counter.cards"), 4)]
+					}
+				])
+			]
+		})), Rule, "add variable-rename references");
+		final variableBeforeRenameBytes = supportSession.canonicalDraft();
+		expectApplied(supportSession.apply(RenameFlowVariable(id("counter.cards"), id("counter.renamed"))), Rule, "rename visual Flow variable");
+		final variableAfterRenameBytes = supportSession.canonicalDraft();
+		var renamedVariableRule:Null<FlowRule> = null;
+		var renamedVariableDraft = switch supportSession.query(InspectDraft) {
+			case DraftObserved(_, draft): draft;
+			case other: throw 'renamed variable draft query failed: $other';
+		};
+		require(renamedVariableDraft.flow.variables[0].id.text() == "counter.renamed", "variable rename left its declaration stale");
+		for (rule in renamedVariableDraft.flow.rules)
+			if (rule.id.text() == renameVariableRule.text())
+				renamedVariableRule = rule;
+		if (renamedVariableRule == null)
+			throw "variable rename lost its owning rule";
+		switch renamedVariableRule.event {
+			case StateChanged(variable):
+				require(variable.text() == "counter.renamed", "variable rename left its event stale");
+			case _:
+				throw "variable rename changed its event shape";
+		}
+		switch renamedVariableRule.predicate {
+			case CounterCompare(variable, GreaterOrEqual, 0):
+				require(variable.text() == "counter.renamed", "variable rename left its predicate stale");
+			case _:
+				throw "variable rename changed its predicate shape";
+		}
+		switch renamedVariableRule.actions[0] {
+			case ChooseSeeded(seed, [{weight: 1, actions: [SetCounter(variable, 4)]}]):
+				require(seed.text() == "counter.renamed" && variable.text() == "counter.renamed", "variable rename left a nested action reference stale");
+			case _:
+				throw "variable rename changed its nested action shape";
+		}
+		expectHistory(supportSession.undo(), Rule, "undo visual Flow variable rename");
+		require(supportSession.canonicalDraft().compare(variableBeforeRenameBytes) == 0, "variable rename undo did not restore exact bytes");
+		expectHistory(supportSession.redo(), Rule, "redo visual Flow variable rename");
+		require(supportSession.canonicalDraft().compare(variableAfterRenameBytes) == 0, "variable rename redo did not restore exact bytes");
+		switch supportSession.apply(RenameFlowVariable(id("counter.renamed"), id("Invalid.Name"))) {
+			case EditRejected(InvalidFlowDefinitionName(value)):
+				require(value.text() == "Invalid.Name", "invalid variable rename reported the wrong identity");
+			case other:
+				throw 'visual variable rename admitted an invalid identity: $other';
+		}
+		expectApplied(supportSession.apply(PutFlowVariable({id: id("counter.other"), scope: Map, initial: Counter(0)})), Rule, "add variable rename collision");
+		switch supportSession.apply(RenameFlowVariable(id("counter.renamed"), id("counter.other"))) {
+			case EditRejected(DuplicateFlowDefinition(value)):
+				require(value.text() == "counter.other", "duplicate variable rename reported the wrong identity");
+			case other:
+				throw 'visual variable rename admitted a duplicate identity: $other';
+		}
+		expectApplied(supportSession.apply(RemoveFlowVariable(id("counter.other"))), Rule, "remove variable rename collision");
+		expectApplied(supportSession.apply(RenameFlowVariable(id("counter.renamed"), id("counter.cards"))), Rule, "restore visual Flow variable ID");
+		expectApplied(supportSession.apply(RemoveRule(renameVariableRule)), Rule, "remove variable-rename references");
+
+		expectApplied(supportSession.apply(PutFlowVariable({id: id("counter.cards"), scope: Local(id("sequence.cards")), initial: Counter(0)})), Rule,
+			"make flow variable sequence-local");
+		expectApplied(supportSession.apply(PutFlowSequence({
+			id: id("sequence.caller"),
+			parameters: [],
+			actions: [Schedule(id("timer.rename"), 2, id("sequence.cards"), [])]
+		})), Rule, "add sequence-rename caller");
+		expectApplied(supportSession.apply(PutRule({
+			id: id("rule.rename.sequence"),
+			priority: 0,
+			repeat: Once,
+			event: StateChanged(id("counter.cards")),
+			predicate: Always,
+			actions: [CallSequence(id("sequence.cards"), [])]
+		})), Rule, "add sequence-rename rule caller");
+		expectApplied(supportSession.apply(RenameFlowSequence(id("sequence.cards"), id("sequence.renamed"))), Rule, "rename visual Flow sequence");
+		final renamedSequenceDraft = switch supportSession.query(InspectDraft) {
+			case DraftObserved(_, draft): draft;
+			case other: throw 'renamed sequence draft query failed: $other';
+		};
+		switch renamedSequenceDraft.flow.variables[0].scope {
+			case Local(sequence):
+				require(sequence.text() == "sequence.renamed", "sequence rename left a local scope stale");
+			case _:
+				throw "sequence rename changed its local variable scope";
+		}
+		var sawRenamedDeclaration = false;
+		var sawRenamedSchedule = false;
+		for (sequence in renamedSequenceDraft.flow.sequences) {
+			if (sequence.id.text() == "sequence.renamed")
+				sawRenamedDeclaration = true;
+			if (sequence.id.text() == "sequence.caller")
+				switch sequence.actions[0] {
+					case Schedule(_, 2, target, []):
+						sawRenamedSchedule = target.text() == "sequence.renamed";
+					case _:
+				}
+		}
+		require(sawRenamedDeclaration && sawRenamedSchedule, "sequence rename left its declaration or schedule stale");
+		for (rule in renamedSequenceDraft.flow.rules)
+			if (rule.id.text() == "rule.rename.sequence")
+				switch rule.actions[0] {
+					case CallSequence(target, []):
+						require(target.text() == "sequence.renamed", "sequence rename left a rule caller stale");
+					case _:
+						throw "sequence rename changed its rule caller shape";
+				}
+		switch supportSession.apply(RenameFlowSequence(id("sequence.renamed"), id("sequence.caller"))) {
+			case EditRejected(DuplicateFlowDefinition(value)):
+				require(value.text() == "sequence.caller", "duplicate sequence rename reported the wrong identity");
+			case other:
+				throw 'visual sequence rename admitted a duplicate identity: $other';
+		}
+		expectApplied(supportSession.apply(RenameFlowSequence(id("sequence.renamed"), id("sequence.cards"))), Rule, "restore visual Flow sequence ID");
+		expectApplied(supportSession.apply(RemoveRule(id("rule.rename.sequence"))), Rule, "remove sequence-rename rule caller");
+		expectApplied(supportSession.apply(RemoveFlowSequence(id("sequence.caller"))), Rule, "remove sequence-rename caller");
+		switch supportSession.apply(RemoveFlowSequence(id("sequence.cards"))) {
+			case EditRejected(FlowDefinitionInUse(id)):
+				require(id.text() == "sequence.cards", "referenced sequence deletion named the wrong declaration");
+			case other:
+				throw 'visual sequence deletion did not fail closed while referenced: $other';
+		}
+		switch supportSession.mutate({
+			baseRevision: supportSession.revision(),
+			mutation: ApplyBatch([
+				RemoveFlowVariable(id("counter.cards")),
+				RemoveFlowSequence(id("sequence.cards"))
+			])
+		}) {
+			case MutationApplied([Rule, Rule], changes, TerrainUnchanged, _, _, _):
+				require(changes.length == 2, "atomic flow-definition deletion lost one semantic identity");
+			case other:
+				throw 'unreferenced flow definitions did not delete atomically: $other';
+		}
 
 		final scenario = flowCardLibraryScenario();
 		final contentChoices:EditorFlowContentChoices = {
@@ -3914,20 +4259,27 @@ final class EditorProbe {
 
 		final nestedRule:FlowRule = {
 			id: id("rule.nested-library"),
-			priority: 0,
-			repeat: Once,
+			priority: 7,
+			repeat: Cooldown(4),
 			event: EnterZone(id("zone.library")),
 			predicate: All([Not(Always)]),
 			actions: [
 				ChooseSeeded(id("counter.library"), [
 					{
-						weight: 1,
+						weight: 3,
 						actions: [Spawn(PLAYER)]
 					}
 				])
 			]
 		};
-		final nestedProjection = projectFlowRules([nestedRule])[0].nestedCards;
+		final nestedRuleProjection = projectFlowRules([nestedRule])[0];
+		require(nestedRuleProjection.priority == 7, "advanced rule row hid canonical priority");
+		switch nestedRuleProjection.repeat {
+			case Cooldown(4):
+			case _:
+				throw "advanced rule row hid canonical repeat timing";
+		}
+		final nestedProjection = nestedRuleProjection.nestedCards;
 		require(nestedProjection.length == 3, "compound cards did not expose every nested predicate and weighted action");
 		switch nestedProjection[0] {
 			case NestedIfFlowCard(path, 1, descriptor, _, _):
@@ -3936,7 +4288,7 @@ final class EditorProbe {
 				throw "first nested row was not the NOT child";
 		}
 		switch nestedProjection[2] {
-			case NestedDoFlowCard(0, 0, 0, 1, descriptor, _, _):
+			case NestedDoFlowCard(0, 0, 0, 3, 1, descriptor, _, _):
 				require(descriptor.id.text() == "spawn", "weighted branch row lost its action descriptor");
 			case _:
 				throw "weighted action did not retain its branch and order address";
@@ -3949,11 +4301,15 @@ final class EditorProbe {
 		}
 		final nestedActionEdited = authoredRule(editFlowCard(nestedPredicateEdited, ReplaceNestedChoiceDo(0, 0, 0, Despawn(PLAYER))), "replace nested DO card");
 		switch nestedActionEdited.actions[0] {
-			case ChooseSeeded(_, [{weight: 1, actions: [Despawn(id)]}]):
+			case ChooseSeeded(_, [{weight: 3, actions: [Despawn(id)]}]):
 				require(id.text() == PLAYER.text(), "nested action edit changed its selected object");
 			case _:
 				throw "nested action edit flattened its weighted branch";
 		}
+		final objectLinkedProjection = projectFlowRules([nestedRule])[0];
+		require(flowRuleReferencesObject(objectLinkedProjection, PLAYER), "selected object could not discover a nested action that references it");
+		require(flowRuleReferencesObject(objectLinkedProjection, id("zone.library")), "selected trigger could not discover its source rule");
+		require(!flowRuleReferencesObject(objectLinkedProjection, id("checkpoint.library")), "unrelated object discovered another object's Flow cards");
 	}
 
 	/** Validate one card candidate through the same gate that opens playable drafts. */
