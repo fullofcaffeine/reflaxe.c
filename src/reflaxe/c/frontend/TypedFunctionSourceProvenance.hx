@@ -2,6 +2,7 @@ package reflaxe.c.frontend;
 
 #if (macro || reflaxe_runtime)
 import haxe.crypto.Sha256;
+import haxe.io.Bytes;
 import haxe.macro.Context;
 import haxe.macro.Expr.Position;
 import haxe.macro.Type.TypedExpr;
@@ -12,6 +13,12 @@ private typedef CachedTypedFunctionPosition = {
 	final owned:Bool;
 	final min:Int;
 	final max:Int;
+}
+
+/** One immutable source snapshot shared by functions in the same request. */
+private typedef TypedFunctionSourceInput = {
+	final bytes:Bytes;
+	final digest:String;
 }
 
 /**
@@ -38,6 +45,14 @@ class TypedFunctionSourceProvenance {
 	#end
 	static var cacheInsertionOrder:Array<String> = [];
 
+	/** Source bytes are request-owned because an editor can save between builds. */
+	static var requestSources:Map<String, TypedFunctionSourceInput> = [];
+
+	/** Start a fresh request-local source view without retaining compiler objects. */
+	public static function beginRequest():Void {
+		requestSources = [];
+	}
+
 	/**
 		Return current-request positions indexed by the compiler positions they replace.
 
@@ -47,9 +62,8 @@ class TypedFunctionSourceProvenance {
 	**/
 	public static function plan(declarationPath:String, fieldName:String, declarationPosition:Position, expression:TypedExpr):Map<String, Position> {
 		final declarationInfo = Context.getPosInfos(declarationPosition);
-		final bytes = try {
-			File.getBytes(declarationInfo.file);
-		} catch (_:haxe.Exception) {
+		final source = readSource(declarationInfo.file);
+		if (source == null) {
 			return [];
 		}
 		final positions:Array<Position> = [];
@@ -62,7 +76,7 @@ class TypedFunctionSourceProvenance {
 			Std.string(CACHE_SCHEMA),
 			declarationPath,
 			fieldName,
-			Sha256.make(bytes).toHex(),
+			source.digest,
 			canonicalTypedExpressionText(expression)
 		].join("\n");
 		var cached = cacheByContent.get(key);
@@ -85,7 +99,7 @@ class TypedFunctionSourceProvenance {
 				throw new haxe.Exception('typed function `$declarationPath.$fieldName` changed source-file ownership under Haxe server reuse');
 			if (!remembered.owned)
 				continue;
-			if (remembered.min < 0 || remembered.max < remembered.min || remembered.max > bytes.length)
+			if (remembered.min < 0 || remembered.max < remembered.min || remembered.max > source.bytes.length)
 				throw new haxe.Exception('typed function `$declarationPath.$fieldName` retained an invalid source-position offset');
 			final position = Context.makePosition({file: declarationInfo.file, min: remembered.min, max: remembered.max});
 			final currentKey = exactPositionKey(current);
@@ -95,6 +109,31 @@ class TypedFunctionSourceProvenance {
 			result.set(currentKey, position);
 		}
 		return result;
+	}
+
+	/**
+		Read and hash each current-request source file at most once.
+
+		A large module can own hundreds of functions. They all use the same source
+		bytes, so repeating complete-file I/O and SHA-256 work adds cost without
+		strengthening invalidation. The cache is reset before every typed capture,
+		which also gives all fields one coherent view if an editor saves mid-build.
+	**/
+	static function readSource(path:String):Null<TypedFunctionSourceInput> {
+		final existing = requestSources.get(path);
+		if (existing != null)
+			return existing;
+		final bytes = try {
+			File.getBytes(path);
+		} catch (_:haxe.Exception) {
+			return null;
+		}
+		final source:TypedFunctionSourceInput = {
+			bytes: bytes,
+			digest: Sha256.make(bytes).toHex()
+		};
+		requestSources.set(path, source);
+		return source;
 	}
 
 	/** Build the exact key used by request-local source-span resolvers. */

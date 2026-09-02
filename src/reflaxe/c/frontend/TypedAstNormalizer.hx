@@ -17,6 +17,7 @@ import reflaxe.c.frontend.TypedFunctionSourceProvenance;
 /** Converts Haxe compiler objects into a stable whole-program input model. */
 class TypedAstNormalizer {
 	public static function normalize(moduleTypes:Array<ModuleType>, mainModule:Null<ModuleType>, mainExpr:Null<TypedExpr>):TypedProgramInput {
+		TypedFunctionSourceProvenance.beginRequest();
 		final rawModules = moduleTypes.copy();
 		rawModules.sort(compareModuleTypes);
 
