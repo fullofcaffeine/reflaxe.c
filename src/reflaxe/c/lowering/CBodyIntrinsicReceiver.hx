@@ -49,6 +49,8 @@ class CBodyIntrinsicReceiver {
 			return CBIRIntMap;
 		if (CBodyStringMapRecognition.isStringMap(access.owner))
 			return CBIRStringMap;
+		if (CBodyStringMapRecognition.isStringKeyedIMap(access.receiver.t))
+			return CBIRStringMap;
 		if (CBodyTypedMapRecognition.family(access.owner) != null)
 			return CBIRTypedMap;
 		if (CBodyTypedMapRecognition.familyForMapType(access.receiver.t) != null)

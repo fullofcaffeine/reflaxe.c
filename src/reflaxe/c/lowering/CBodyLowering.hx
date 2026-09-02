@@ -7115,18 +7115,17 @@ private class FunctionBuilder {
 				unsupported(initializer, 'TNew(stack-reference-escape:local-alias:${variable.name})');
 			}
 		}
-		final typedMapInterfaceAlias = initializer != null
-			&& CBodyTypedMapRecognition.isIMapType(variable.t) ? typedMapInitializerMapping(initializer,
-				'TVar(${variable.name}:typed-map-interface-initializer)') : null;
-		if (typedMapInterfaceAlias != null && typedMapInterfaceAlias.typedMapValue() == null)
-			return unsupportedAt(position, 'TVar(${variable.name}:typed-map-interface-initializer-not-admitted-map)');
+		final mapInterfaceAlias = initializer != null
+			&& CBodyTypedMapRecognition.isIMapType(variable.t) ? mapInitializerMapping(initializer, 'TVar(${variable.name}:map-interface-initializer)') : null;
+		if (mapInterfaceAlias != null && mapInterfaceAlias.stringMapValue() == null && mapInterfaceAlias.typedMapValue() == null)
+			return unsupportedAt(position, 'TVar(${variable.name}:map-interface-initializer-not-admitted-map)');
 		final collectionType = bodyCollectionType(variable.t, position, 'TVar(${variable.name}:type)');
 		if (collectionType != null) {
 			lowerCollectionVariable(variable, initializer, position, ordinal, localId, collectionType);
 			return;
 		}
-		final localMapping = typedMapInterfaceAlias == null ? localStorageValueType(variable, initializer, position,
-			'TVar(${variable.name}:type)') : typedMapInterfaceAlias;
+		final localMapping = mapInterfaceAlias == null ? localStorageValueType(variable, initializer, position,
+			'TVar(${variable.name}:type)') : mapInterfaceAlias;
 		if (localMapping.irType == IRTVoid) {
 			unsupportedAt(position, 'TVar(${variable.name}:Void)');
 		}
@@ -7435,13 +7434,22 @@ private class FunctionBuilder {
 	}
 
 	/** Recover the exact map plan through compiler-inlined IMap alias locals. */
-	function typedMapInitializerMapping(expression:TypedExpr, node:String):CBodyValueType {
+	function mapInitializerMapping(expression:TypedExpr, node:String):CBodyValueType {
 		final local = switch unwrapExpression(expression).expr {
 			case TLocal(variable): localTypesByCompilerId.get(variable.id);
 			case _: null;
 		};
-		if (local != null && local.typedMapValue() != null)
+		if (local != null && (local.stringMapValue() != null || local.typedMapValue() != null))
 			return local;
+		switch unwrapExpression(expression).expr {
+			case TField(_, FInstance(owner, ownerArguments, fieldReference)):
+				final definition = owner.get();
+				final fieldType = TypeTools.applyTypeParameters(fieldReference.get().type, definition.params, ownerArguments.map(applyCurrentSpecialization));
+				final field = bodyValueType(fieldType, expression.pos, '$node:field');
+				if (field.stringMapValue() != null || field.typedMapValue() != null)
+					return field;
+			case _:
+		}
 		return bodyValueType(expression.t, expression.pos, node);
 	}
 

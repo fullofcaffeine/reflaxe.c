@@ -377,6 +377,7 @@ class CBodyTypedMapRecognition {
 
 	static function familyForKeyType(type:Type):Null<CBodyTypedMapFamily>
 		return switch TypeTools.follow(type) {
+			case TInst(reference, _) if (reference.get().pack.length == 0 && reference.get().name == "String"): null;
 			case TInst(reference, _) if (!reference.get().isInterface): CBTMObject;
 			case TEnum(_, _): CBTMEnumValue;
 			case _: null;

@@ -448,6 +448,18 @@ private class ContextStringType {
 
 /** Exact owner recognition keeps StringMap calls out of class dispatch. */
 class CBodyStringMapRecognition {
+	/** Recognize the String-keyed IMap view introduced by inline Map access. */
+	public static function isStringKeyedIMap(type:Type):Bool
+		return switch type {
+			case TInst(reference, parameters) if (isIMap(reference)): parameters.length == 2 && isString(parameters[0]);
+			case TMono(reference): final resolved = reference.get(); resolved != null && isStringKeyedIMap(resolved);
+			case TLazy(resolve): isStringKeyedIMap(resolve());
+			case TType(reference, parameters):
+				final definition = reference.get();
+				isStringKeyedIMap(TypeTools.applyTypeParameters(definition.type, definition.params, parameters));
+			case _: false;
+		};
+
 	/** True only for Haxe's concrete `haxe.ds.StringMap` implementation class. */
 	public static function isStringMap(reference:Ref<ClassType>):Bool {
 		final value = reference.get();
@@ -465,6 +477,17 @@ class CBodyStringMapRecognition {
 	public static function isIMapType(type:Type):Bool
 		return switch TypeTools.follow(type) {
 			case TInst(reference, _): final value = reference.get(); value.pack.join(".") == "haxe" && value.name == "IMap";
+			case _: false;
+		};
+
+	static function isIMap(reference:Ref<ClassType>):Bool {
+		final value = reference.get();
+		return value.pack.join(".") == "haxe" && value.name == "IMap";
+	}
+
+	static function isString(type:Type):Bool
+		return switch TypeTools.follow(type) {
+			case TInst(reference, _): final value = reference.get(); value.pack.length == 0 && value.name == "String";
 			case _: false;
 		};
 }

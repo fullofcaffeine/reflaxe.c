@@ -113,6 +113,10 @@ private final class KindTable {
 	public function get(key:String):Null<StoredKind>
 		return values.get(key);
 
+	/** Preserve the same lookup when Haxe expands the Map access into its caller. */
+	public inline function getInline(key:String):Null<StoredKind>
+		return values.get(key);
+
 	/**
 		Return the stored enum or a caller-supplied value when the key is absent.
 
@@ -328,7 +332,10 @@ final class Main {
 	static function fieldlessEnumTrace():Bool {
 		final table = new KindTable();
 		table.set("build", Draft);
-		if (table.getOr("build", Complete) != Draft || table.get("missing") != null)
+		if (table.getOr("build", Complete) != Draft
+			|| table.get("missing") != null
+			|| table.getInline("build") != Draft
+			|| table.getInline("missing") != null)
 			return false;
 
 		table.set("build", Ready);
