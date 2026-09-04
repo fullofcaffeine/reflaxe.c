@@ -7,6 +7,9 @@ import caxecraft.pilot.GameInputSource;
 import caxecraft.pilot.PilotCheckpoint.PilotCheckpointKind;
 import caxecraft.pilot.PilotCatalog.PilotExecutionKind;
 import caxecraft.pilot.PilotCatalog.allPilotMetadata;
+import caxecraft.pilot.PilotCapturePlan.pilotScreenshotAt;
+import caxecraft.pilot.PilotCapturePlan.pilotScreenshotIsReview;
+import caxecraft.pilot.PilotCheckpoint.PilotScreenshot;
 import caxecraft.pilot.PilotScript;
 import caxecraft.pilot.PilotScript.PilotScriptName;
 import caxecraft.gameplay.Inventory;
@@ -37,6 +40,7 @@ final class PilotProbe {
 		checkpoints += checkSmoothMotion();
 		checkpoints += checkEditorShell();
 		checkpoints += checkCampaignTravel();
+		checkpoints += checkCapturePlan();
 		checkpoints += checkAgentDistance();
 		checkSharedInterface();
 
@@ -213,10 +217,35 @@ final class PilotProbe {
 			&& PilotScript.sample(name, 5).hotbarCycle == 1
 			&& PilotScript.sample(name, 6).pausePressed,
 			"editor-shell script must mutate and stop two disposable runs");
-		final screenshot = PilotScript.checkpoint(name, 10);
-		require(screenshot != null && screenshot.kind == CaptureScreenshot && screenshot.label == "editor-shell.return",
-			"editor-shell return screenshot checkpoint changed");
-		return 1;
+		final expectedLabels = [
+			"editor-shell.terrain-prompt",
+			"editor-shell.test-play",
+			"editor-shell.text",
+			"editor-shell.assets",
+			"editor-shell.environment",
+			"editor-shell.return"
+		];
+		final expectedFrames = [0, 5, 7, 8, 9, 10];
+		for (index in 0...expectedFrames.length) {
+			final screenshot = PilotScript.checkpoint(name, expectedFrames[index]);
+			require(screenshot != null && screenshot.kind == CaptureScreenshot && screenshot.label == expectedLabels[index],
+				'editor-shell checkpoint changed at frame ${expectedFrames[index]}');
+		}
+		return expectedFrames.length;
+	}
+
+	/** Prove the app-facing capture plan derives from the canonical checkpoints. */
+	static function checkCapturePlan():Int {
+		require(pilotScreenshotAt(PilotScriptName.LaunchSmoke, 1) == PilotScreenshot.Launch, "launch checkpoint lost its native capture plan");
+		require(pilotScreenshotAt(PilotScriptName.MoveJumpEdit, 10) == null, "state-only movement checkpoint unexpectedly requested a screenshot");
+		require(pilotScreenshotAt(PilotScriptName.PauseRecapture, 4) == PilotScreenshot.Pause, "pause checkpoint lost its native capture plan");
+		require(pilotScreenshotAt(PilotScriptName.EditorShell, 9) == PilotScreenshot.EditorEnvironment,
+			"editor environment checkpoint lost its native capture plan");
+		require(pilotScreenshotIsReview(PilotScreenshot.EditorEnvironment)
+			&& !pilotScreenshotIsReview(PilotScreenshot.EditorAssets)
+			&& !pilotScreenshotIsReview(PilotScreenshot.EditorReturn),
+			"editor capture review ownership changed");
+		return 5;
 	}
 
 	static function checkCampaignTravel():Int {
