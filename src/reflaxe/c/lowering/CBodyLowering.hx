@@ -7160,9 +7160,12 @@ private class FunctionBuilder {
 		// can safely give the join exactly one complete record owner.
 		final managedFlowCarrierAggregate = compilerFlowCarrier ? localMapping.aggregateValue() : null;
 		final managedAggregateFlowCarrier = managedFlowCarrierAggregate != null && managedFlowCarrierAggregate.managedLifetime;
-		final tracedAggregateFlowCarrier = compilerFlowCarrier
-			&& managedFlowCarrierAggregate != null
-			&& !managedFlowCarrierAggregate.managedLifetime
+		// A direct record or tagged enum can contain collector-traced class
+		// references without owning retain/release work. Start that carrier at a
+		// structural zero value so collection between declaration and branch
+		// assignment never follows an inactive payload.
+		final tracedDirectFlowCarrier = compilerFlowCarrier
+			&& conditionalDirectValue(localMapping)
 			&& localMapping.containsCollectorManagedReference();
 		final managedFlowCarrier = compilerFlowCarrier
 			&& (localMapping.irType == IRTManagedString
@@ -7172,7 +7175,7 @@ private class FunctionBuilder {
 				|| managedFlowCarrierEnum != null);
 		final directFlowCarrier = compilerFlowCarrier
 			&& (conditionalDirectValue(localMapping) || localMapping.primitiveMapping() != null)
-			&& !tracedAggregateFlowCarrier;
+			&& !tracedDirectFlowCarrier;
 		if (authoredDefinitelyAssignedPrimitive && localMapping.primitiveMapping() == null)
 			throw new CBodyEmissionError('definitely assigned local `${variable.name}` lost its primitive representation');
 		final uninitializedDirectLocal = directFlowCarrier || authoredDefinitelyAssignedPrimitive;
@@ -7185,12 +7188,12 @@ private class FunctionBuilder {
 			&& isEnumPayloadProjection(initializer)
 			&& (localMapping.arrayValue() != null || localMapping.bytesValue() != null);
 		final value:Null<LoweredValue> = switch initializer {
-			case null if (managedFlowCarrier || uninitializedDirectLocal || tracedAggregateFlowCarrier):
+			case null if (managedFlowCarrier || uninitializedDirectLocal || tracedDirectFlowCarrier):
 				// The HxcIR declaration below deliberately starts empty. Its
 				// validator proves every normal arm initializes or acquires an
-				// unmanaged carrier before the one admitted read. A traced record is
-				// instead zero-initialized below so an intervening collection cannot
-				// observe indeterminate pointer fields.
+				// unmanaged carrier before the one admitted read. A traced direct value
+				// is instead zero-initialized below so an intervening collection cannot
+				// observe inactive enum payloads or indeterminate pointer fields.
 				null;
 			case null if (compilerFlowCarrier):
 				// Reflaxe can expose a value-producing if/switch as a temporary followed
@@ -7234,7 +7237,7 @@ private class FunctionBuilder {
 		if (managedFlowCarrier) {
 			appendInstruction(null, IRIODeclareManagedCarrier(IRPLocal(localId), managedCarrierImplementation(localMapping, managedFlowCarrierEnum, false)),
 				source, "flow-carrier-managed-declare");
-		} else if (tracedAggregateFlowCarrier) {
+		} else if (tracedDirectFlowCarrier) {
 			appendInstruction(null, IRIODefaultInitialize(IRPLocal(localId), IRISUninitialized, IRISInitialized), source,
 				"flow-carrier-traced-default-initialize");
 		} else if (uninitializedDirectLocal) {
