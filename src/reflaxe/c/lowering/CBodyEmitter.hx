@@ -7117,6 +7117,7 @@ class CBodyEmitter {
 						EUnary(AddressOf, EIdentifier(program.collector)),
 						ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNDefaultAllocator)), []),
 						valueOperations,
+						stringMapRootOps(program.collector),
 						EIdentifier(temporary)
 					]), boundsAbortName, instruction.id, fn.id);
 				} else {
@@ -7180,6 +7181,7 @@ class CBodyEmitter {
 						EUnary(AddressOf, EIdentifier(program.collector)),
 						ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNDefaultAllocator)), []),
 						stringMapValueOps(mapPlan, valueDeclaration),
+						stringMapRootOps(program.collector),
 						EIdentifier(temporary)
 					]), boundsAbortName, instruction.id, fn.id);
 					emitStatusAbort(statements,
@@ -7641,6 +7643,13 @@ class CBodyEmitter {
 			{designators: [], value: IExpr(plan.assignName == null ? ENull : EIdentifier(plan.assignName))},
 			{designators: [], value: IExpr(plan.destroyName == null ? ENull : EIdentifier(plan.destroyName))},
 			{designators: [], value: IExpr(plan.traceName == null ? ENull : EIdentifier(plan.traceName))}
+		]));
+
+	function stringMapRootOps(collector:CIdentifier):CExpr
+		return ECompoundLiteral(new CType(TNamed(CBodyRuntimeNames.identifier(CBRNStringMapRootOpsType))), DName(null), IList([
+			{designators: [], value: IExpr(EUnary(AddressOf, EIdentifier(collector)))},
+			{designators: [], value: IExpr(EIdentifier(CBodyRuntimeNames.identifier(CBRNGcIteratorRootsRegister)))},
+			{designators: [], value: IExpr(EIdentifier(CBodyRuntimeNames.identifier(CBRNGcIteratorRootsUnregister)))}
 		]));
 
 	function typedMapValueOps(plan:CLoweredBodyTypedMap, declaration:CTypedDeclarator):CExpr

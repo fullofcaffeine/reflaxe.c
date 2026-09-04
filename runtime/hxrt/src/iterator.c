@@ -50,7 +50,8 @@ static bool hxc_iterator_root_ops_is_valid(
   return roots != NULL
     && ((roots->register_roots == NULL && roots->unregister_roots == NULL)
       || (roots->register_roots != NULL && roots->unregister_roots != NULL))
-    && (roots->trace_element == NULL || roots->register_roots != NULL);
+    && ((roots->producer_root == NULL && roots->trace_element == NULL)
+      || roots->register_roots != NULL);
 }
 
 /** True when two already-bounds-checked pair members occupy separate bytes. */
@@ -264,6 +265,7 @@ static hxc_status hxc_iterator_register_snapshot_roots(
   hxc_iterator_trace_fill fill;
   hxc_iterator_element_trace_fn trace;
   void *trace_context;
+  size_t root_count;
   size_t *offsets;
   size_t index;
   hxc_status status;
@@ -278,7 +280,7 @@ static hxc_status hxc_iterator_register_snapshot_roots(
   trace_context = roots.trace_element == NULL
     ? iterator->elements.context
     : roots.trace_context;
-  if (trace == NULL) {
+  if (trace == NULL && roots.producer_root == NULL) {
     return HXC_STATUS_INVALID_ARGUMENT;
   }
   status = hxc_allocation_allocate(
@@ -294,23 +296,32 @@ static hxc_status hxc_iterator_register_snapshot_roots(
   offsets = iterator->root_offsets.memory;
   for (index = 0u; index < iterator->length; index++) {
     offsets[index] = count.count;
-    trace(
-      trace_context,
-      hxc_iterator_slot(iterator, index),
-      hxc_iterator_count_root,
-      &count
-    );
+    if (trace != NULL) {
+      trace(
+        trace_context,
+        hxc_iterator_slot(iterator, index),
+        hxc_iterator_count_root,
+        &count
+      );
+    }
     if (count.overflow) {
       return HXC_STATUS_SIZE_OVERFLOW;
     }
   }
   offsets[iterator->length] = count.count;
-  if (count.count == 0u) {
+  root_count = count.count;
+  if (roots.producer_root != NULL) {
+    if (root_count == SIZE_MAX) {
+      return HXC_STATUS_SIZE_OVERFLOW;
+    }
+    root_count++;
+  }
+  if (root_count == 0u) {
     return hxc_allocation_dispose(&iterator->root_offsets);
   }
   status = hxc_allocation_allocate(
     &iterator->allocator,
-    count.count,
+    root_count,
     sizeof(void *),
     HXC_ALIGNOF(void *),
     &iterator->root_slots
@@ -321,23 +332,28 @@ static hxc_status hxc_iterator_register_snapshot_roots(
   fill = (hxc_iterator_trace_fill){
     iterator->root_slots.memory,
     0u,
-    count.count
+    root_count
   };
   for (index = 0u; index < iterator->length; index++) {
-    trace(
-      trace_context,
-      hxc_iterator_slot(iterator, index),
-      hxc_iterator_fill_root,
-      &fill
-    );
+    if (trace != NULL) {
+      trace(
+        trace_context,
+        hxc_iterator_slot(iterator, index),
+        hxc_iterator_fill_root,
+        &fill
+      );
+    }
   }
-  if (fill.count != count.count) {
+  if (roots.producer_root != NULL) {
+    fill.slots[fill.count++] = roots.producer_root;
+  }
+  if (fill.count != root_count) {
     return HXC_STATUS_INTERNAL_ERROR;
   }
   status = roots.register_roots(
     roots.context,
     iterator->root_slots.memory,
-    count.count,
+    root_count,
     &iterator->root_registration
   );
   if (status != HXC_STATUS_OK && iterator->root_registration != NULL) {
@@ -348,6 +364,7 @@ static hxc_status hxc_iterator_register_snapshot_roots(
   } else if (status == HXC_STATUS_OK) {
     iterator->roots = roots;
     iterator->roots.context = NULL;
+    iterator->roots.producer_root = NULL;
     iterator->roots.trace_context = NULL;
     iterator->roots.trace_element = NULL;
     iterator->roots.register_roots = NULL;
@@ -378,7 +395,9 @@ static hxc_status hxc_iterator_ref_create_snapshot_internal(
     || ((anchor == NULL) != (release_anchor == NULL))
     || (roots.register_roots == NULL
       ? elements.trace != NULL
-      : roots.trace_element == NULL && elements.trace == NULL)) {
+      : roots.producer_root == NULL
+        && roots.trace_element == NULL
+        && elements.trace == NULL)) {
     return HXC_STATUS_INVALID_ARGUMENT;
   }
   status = hxc_alloc(

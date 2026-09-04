@@ -211,6 +211,20 @@ HXC_API hxc_status hxc_gc_root_table_register(
 );
 HXC_API hxc_status hxc_gc_root_table_unregister(hxc_gc_root_table *table);
 
+/**
+ * Register iterator-owned root slots through the GC feature boundary.
+ *
+ * The opaque handle lets collector-aware producers pass these functions as
+ * callbacks without making their ordinary runtime feature depend on `gc.c`.
+ */
+HXC_API hxc_status hxc_gc_iterator_roots_register(
+  void *context,
+  const void **slots,
+  size_t slot_count,
+  void **out_registration
+);
+HXC_API hxc_status hxc_gc_iterator_roots_unregister(void *registration);
+
 /** Pin/unpin one exact managed base for retention by foreign native code. */
 HXC_API hxc_status hxc_gc_pin_object(
   hxc_gc *gc,

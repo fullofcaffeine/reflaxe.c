@@ -31,6 +31,31 @@ typedef struct gc_test_bad_trace {
 static uint64_t gc_test_clock = UINT64_C(0);
 static uint64_t gc_test_finalizer_count = UINT64_C(0);
 
+static hxc_status gc_test_fail_allocate(
+  void *context,
+  size_t size,
+  size_t alignment,
+  void **out_memory
+) {
+  (void)context;
+  (void)size;
+  (void)alignment;
+  (void)out_memory;
+  return HXC_STATUS_OUT_OF_MEMORY;
+}
+
+static void gc_test_fail_release(
+  void *context,
+  void *memory,
+  size_t size,
+  size_t alignment
+) {
+  (void)context;
+  (void)memory;
+  (void)size;
+  (void)alignment;
+}
+
 static uint64_t gc_test_now(void *context) {
   uint64_t *clock = (uint64_t *)context;
   *clock += UINT64_C(7);
@@ -122,6 +147,7 @@ static int gc_test_primary_contract(hxc_gc *gc) {
   hxc_gc_root_frame worker_frame = HXC_GC_ROOT_FRAME_INITIALIZER;
   hxc_gc_root_table globals = HXC_GC_ROOT_TABLE_INITIALIZER;
   hxc_gc_pin pin = HXC_GC_PIN_INITIALIZER;
+  void *iterator_roots = NULL;
   const void *volatile main_slots[2] = { NULL, NULL };
   const void *volatile worker_slots[1] = { NULL };
   const void *global_slots[1] = { NULL };
@@ -172,6 +198,26 @@ static int gc_test_primary_contract(hxc_gc *gc) {
   HXC_CHECK(hxc_gc_collect(gc) == HXC_STATUS_OK);
   HXC_CHECK(!hxc_gc_owns_exact(gc, global));
   HXC_CHECK(!hxc_gc_owns_exact(gc, worker));
+
+  /* Opaque iterator roots retain exact objects without exposing GC storage. */
+  HXC_CHECK(gc_test_allocate_node(gc, &global) == HXC_STATUS_OK);
+  global_slots[0] = global;
+  HXC_CHECK(
+    hxc_gc_iterator_roots_register(
+      gc,
+      global_slots,
+      1u,
+      &iterator_roots
+    ) == HXC_STATUS_OK
+  );
+  global_slots[0] = global;
+  HXC_CHECK(hxc_gc_collect(gc) == HXC_STATUS_OK);
+  HXC_CHECK(hxc_gc_owns_exact(gc, global));
+  HXC_CHECK(hxc_gc_iterator_roots_unregister(iterator_roots) == HXC_STATUS_OK);
+  iterator_roots = NULL;
+  global_slots[0] = NULL;
+  HXC_CHECK(hxc_gc_collect(gc) == HXC_STATUS_OK);
+  HXC_CHECK(!hxc_gc_owns_exact(gc, global));
 
   /* A pin is the only supported way for foreign code to retain a payload. */
   HXC_CHECK(gc_test_allocate_node(gc, &foreign_retained) == HXC_STATUS_OK);
@@ -274,6 +320,36 @@ static int gc_test_pressure_contract(hxc_allocator allocator) {
   return 0;
 }
 
+static int gc_test_iterator_root_allocation_failure(void) {
+  hxc_allocator allocator = {
+    NULL,
+    gc_test_fail_allocate,
+    NULL,
+    gc_test_fail_release
+  };
+  hxc_gc gc = HXC_GC_INITIALIZER;
+  hxc_gc_config config;
+  const void *slots[1] = { &gc };
+  void *registration = NULL;
+
+  config.allocator = allocator;
+  config.initial_threshold_bytes = 1u;
+  config.clock_now = NULL;
+  config.clock_context = NULL;
+  HXC_CHECK(hxc_gc_init(&config, &gc) == HXC_STATUS_OK);
+  HXC_CHECK(
+    hxc_gc_iterator_roots_register(
+      &gc,
+      slots,
+      1u,
+      &registration
+    ) == HXC_STATUS_OUT_OF_MEMORY
+  );
+  HXC_CHECK(registration == NULL);
+  HXC_CHECK(hxc_gc_dispose(&gc) == HXC_STATUS_OK);
+  return 0;
+}
+
 int main(void) {
   hxc_allocator allocator = hxc_default_allocator();
   hxc_gc gc = HXC_GC_INITIALIZER;
@@ -293,6 +369,7 @@ int main(void) {
   HXC_CHECK(gc_test_finalizer_count == final_stats.allocation_count);
   HXC_CHECK(hxc_gc_dispose(&gc) == HXC_STATUS_OK);
   HXC_CHECK(gc_test_pressure_contract(allocator) == 0);
+  HXC_CHECK(gc_test_iterator_root_allocation_failure() == 0);
   HXC_CHECK(gc_test_finalizer_count > finalizers_before_pressure);
 
   (void)printf(

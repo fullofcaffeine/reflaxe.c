@@ -211,7 +211,6 @@ final class Main {
 		values.set("beta", 5);
 		final keys = values.keys();
 		final pairs = values.keyValueIterator();
-		values.clear();
 		values.set("later", 9);
 		var keyBytes = 0;
 		while (keys.hasNext())

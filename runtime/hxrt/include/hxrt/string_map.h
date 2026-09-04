@@ -87,6 +87,13 @@ typedef struct hxc_string_map_value_ops {
   hxc_string_map_value_trace_fn trace;
 } hxc_string_map_value_ops;
 
+/** Exact-root callbacks supplied only by a collector-owned specialization. */
+typedef struct hxc_string_map_root_ops {
+  void *context;
+  hxc_iterator_roots_register_fn register_roots;
+  hxc_iterator_roots_unregister_fn unregister_roots;
+} hxc_string_map_root_ops;
+
 /** Accept a non-zero layout and either zero or three lifecycle callbacks. */
 HXC_API bool hxc_string_map_value_ops_is_valid(
   const hxc_string_map_value_ops *values
@@ -115,6 +122,7 @@ HXC_API hxc_status hxc_string_map_init_collector_owned(
   hxc_gc *collector,
   hxc_allocator allocator,
   hxc_string_map_value_ops values,
+  hxc_string_map_root_ops roots,
   hxc_string_map_ref *map
 );
 

@@ -52,6 +52,7 @@ class RuntimeAbiContract {
 		"hxc_string",
 		"hxc_string_buffer",
 		"hxc_string_map_ref",
+		"hxc_string_map_root_ops",
 		"hxc_string_map_value_ops",
 		"hxc_type_descriptor",
 		"hxc_typed_map_key_ops",

@@ -53,6 +53,8 @@ enum CBodyRuntimeName {
 	CBRNGcRootFramePush;
 	CBRNGcRootFramePop;
 	CBRNGcRootFramePopCleanup;
+	CBRNGcIteratorRootsRegister;
+	CBRNGcIteratorRootsUnregister;
 	CBRNExceptionFrameType;
 	CBRNExceptionFrameInitializer;
 	CBRNExceptionFramePush;
@@ -109,6 +111,7 @@ enum CBodyRuntimeName {
 	CBRNStringMapTypeDescriptor;
 	CBRNStringMapInitCollectorOwned;
 	CBRNStringMapValueOpsType;
+	CBRNStringMapRootOpsType;
 	CBRNStringMapRetain;
 	CBRNStringMapRelease;
 	CBRNStringMapReleaseSlot;
@@ -268,6 +271,8 @@ class CBodyRuntimeNames {
 			case CBRNGcRootFramePush: "hxc_gc_root_frame_push";
 			case CBRNGcRootFramePop: "hxc_gc_root_frame_pop";
 			case CBRNGcRootFramePopCleanup: "hxc_gc_root_frame_pop_cleanup";
+			case CBRNGcIteratorRootsRegister: "hxc_gc_iterator_roots_register";
+			case CBRNGcIteratorRootsUnregister: "hxc_gc_iterator_roots_unregister";
 			case CBRNExceptionFrameType: "hxc_exception_frame";
 			case CBRNExceptionFrameInitializer: "HXC_EXCEPTION_FRAME_INITIALIZER";
 			case CBRNExceptionFramePush: "hxc_exception_frame_push";
@@ -324,6 +329,7 @@ class CBodyRuntimeNames {
 			case CBRNStringMapTypeDescriptor: "hxc_string_map_type_descriptor";
 			case CBRNStringMapInitCollectorOwned: "hxc_string_map_init_collector_owned";
 			case CBRNStringMapValueOpsType: "hxc_string_map_value_ops";
+			case CBRNStringMapRootOpsType: "hxc_string_map_root_ops";
 			case CBRNStringMapRetain: "hxc_string_map_ref_retain";
 			case CBRNStringMapRelease: "hxc_string_map_ref_release";
 			case CBRNStringMapReleaseSlot: "hxc_string_map_ref_release_slot";

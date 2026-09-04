@@ -738,6 +738,78 @@ hxc_status hxc_gc_root_table_unregister(hxc_gc_root_table *table) {
   return HXC_STATUS_OK;
 }
 
+typedef struct hxc_gc_iterator_roots {
+  hxc_allocator allocator;
+  hxc_gc_root_table table;
+} hxc_gc_iterator_roots;
+
+hxc_status hxc_gc_iterator_roots_register(
+  void *context,
+  const void **slots,
+  size_t slot_count,
+  void **out_registration
+) {
+  hxc_gc *gc = context;
+  hxc_gc_iterator_roots *registration = NULL;
+  hxc_status status;
+  if (gc == NULL
+    || !gc->initialized
+    || out_registration == NULL
+    || *out_registration != NULL) {
+    return HXC_STATUS_INVALID_ARGUMENT;
+  }
+  status = hxc_alloc(
+    &gc->allocator,
+    sizeof(hxc_gc_iterator_roots),
+    HXC_ALIGNOF(hxc_gc_iterator_roots),
+    (void **)&registration
+  );
+  if (status != HXC_STATUS_OK) {
+    return status;
+  }
+  *registration = (hxc_gc_iterator_roots){
+    gc->allocator,
+    HXC_GC_ROOT_TABLE_INITIALIZER
+  };
+  status = hxc_gc_root_table_register(
+    gc,
+    slots,
+    slot_count,
+    &registration->table
+  );
+  if (status != HXC_STATUS_OK) {
+    (void)hxc_free(
+      &registration->allocator,
+      registration,
+      sizeof(hxc_gc_iterator_roots),
+      HXC_ALIGNOF(hxc_gc_iterator_roots)
+    );
+    return status;
+  }
+  *out_registration = registration;
+  return HXC_STATUS_OK;
+}
+
+hxc_status hxc_gc_iterator_roots_unregister(void *registration_value) {
+  hxc_gc_iterator_roots *registration = registration_value;
+  hxc_allocator allocator;
+  hxc_status status;
+  if (registration == NULL) {
+    return HXC_STATUS_INVALID_ARGUMENT;
+  }
+  allocator = registration->allocator;
+  status = hxc_gc_root_table_unregister(&registration->table);
+  if (status != HXC_STATUS_OK) {
+    return status;
+  }
+  return hxc_free(
+    &allocator,
+    registration,
+    sizeof(hxc_gc_iterator_roots),
+    HXC_ALIGNOF(hxc_gc_iterator_roots)
+  );
+}
+
 hxc_status hxc_gc_pin_object(
   hxc_gc *gc,
   const void *object,

@@ -180,6 +180,9 @@ def check_collector_record(toolchains: list[Toolchain]) -> None:
             'representation=managed("gc")',
             'runtime(feature="string-map",operation="create")',
             'runtime(feature="string-map",operation="copy")',
+            'runtime(feature="string-map",operation="iterator")',
+            'runtime(feature="string-map",operation="keys")',
+            'runtime(feature="string-map",operation="key-value-iterator")',
             "managed-root",
             "nullable-payload",
         ):
@@ -189,15 +192,31 @@ def check_collector_record(toolchains: list[Toolchain]) -> None:
         sources = sorted((normal / "runtime/src").glob("*.c")) + sorted(
             (normal / "src").rglob("*.c")
         )
+        application_sources = sorted((normal / "src").rglob("*.c"))
         source_text = "\n".join(path.read_text(encoding="utf-8") for path in sources)
+        application_text = "\n".join(path.read_text(encoding="utf-8") for path in application_sources)
         for marker in (
             "hxc_string_map_type_descriptor()",
             "hxc_string_map_init_collector_owned",
             "hxc_string_map_copy_in_place",
+            "hxc_string_map_root_ops",
+            "hxc_gc_iterator_roots_register",
+            "hxc_gc_iterator_roots_unregister",
+            "hxc_string_map_ref_value_iterator",
+            "hxc_string_map_ref_key_iterator",
+            "hxc_string_map_ref_pair_iterator",
             "value_trace",
         ):
             if marker not in source_text:
                 raise StringMapFailure(f"collector-record generated C omitted {marker}")
+        for forbidden in (
+            "hxc_string_map_ref_retain(",
+            "hxc_string_map_ref_release(",
+        ):
+            if forbidden in application_text:
+                raise StringMapFailure(
+                    f"collector-record generated C used invalid map ownership call {forbidden}"
+                )
 
         include_roots = [normal / "include", normal / "runtime/include"]
         for toolchain in toolchains:

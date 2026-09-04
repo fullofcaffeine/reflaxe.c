@@ -57,6 +57,7 @@ typedef hxc_status (*hxc_iterator_roots_unregister_fn)(
 /** Optional root-table policy supplied only by collector-backed producers. */
 typedef struct hxc_iterator_root_ops {
   void *context;
+  const void *producer_root;
   void *trace_context;
   hxc_iterator_element_trace_fn trace_element;
   hxc_iterator_roots_register_fn register_roots;
@@ -107,9 +108,11 @@ HXC_API hxc_status hxc_iterator_ref_create_snapshot(
 );
 
 /**
- * Build a snapshot and register every exact managed child as a collector root.
+ * Build a snapshot and register every exact managed object as a collector root.
  *
- * `roots.trace_element` can provide producer-owned trace context that is needed
+ * `roots.producer_root` keeps a collector-owned snapshot producer reachable
+ * until the final iterator alias is released. `roots.trace_element` can provide
+ * producer-owned trace context that is needed
  * only during construction. When it is null, `elements.trace` and
  * `elements.context` provide the trace policy. The iterator retains neither
  * producer trace context after root registration.

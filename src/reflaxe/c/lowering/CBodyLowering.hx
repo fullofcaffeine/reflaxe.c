@@ -14201,9 +14201,7 @@ private class FunctionBuilder {
 			}
 			final matches = switch family {
 				case CBMCFArray: final array = field.type.arrayValue(); array != null && !array.managedByCollector;
-				case CBMCFStringMap:
-					final map = field.type.stringMapValue();
-					map != null && !map.managedByCollector();
+				case CBMCFStringMap: final map = field.type.stringMapValue(); map != null && !map.managedByCollector();
 				case CBMCFString:
 					field.type.irType == IRTManagedString;
 				case CBMCFDirect:
@@ -14845,8 +14843,6 @@ private class FunctionBuilder {
 		final method = access.field.get().name;
 		final runtimeMethod = method == "keyValueIterator" ? "key-value-iterator" : method == "toString" ? "to-string" : method;
 		final iteratorMethod = method == "iterator" || method == "keys" || method == "keyValueIterator";
-		if (iteratorMethod && map.managedByCollector())
-			return unsupported(expression, 'TCall(StringMap.$method:collector-traced-snapshot-not-yet-admitted)');
 		final expectedArguments = method == "clear"
 			|| method == "copy"
 			|| method == "toString"

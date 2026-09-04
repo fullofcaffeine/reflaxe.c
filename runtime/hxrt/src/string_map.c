@@ -48,6 +48,7 @@ struct hxc_string_map_ref {
   hxc_allocator allocator;
   hxc_allocation slots;
   hxc_gc *collector;
+  hxc_string_map_root_ops roots;
   bool collector_owned;
 };
 
@@ -59,9 +60,11 @@ typedef struct hxc_string_map_value_iterator_fill {
 
 typedef struct hxc_string_map_pair_iterator_fill {
   hxc_string_map_ref *map;
+  hxc_allocator allocator;
   size_t slot_index;
   size_t key_offset;
   size_t value_offset;
+  bool collector_owned;
 } hxc_string_map_pair_iterator_fill;
 
 static bool hxc_string_map_power_of_two(size_t value) {
@@ -136,6 +139,14 @@ static bool hxc_string_map_is_valid(const hxc_string_map_ref *map) {
       || (!map->collector_owned
         && map->references > 0u
         && map->collector == NULL))
+    && ((map->collector_owned
+        && map->roots.context == map->collector
+        && map->roots.register_roots != NULL
+        && map->roots.unregister_roots != NULL)
+      || (!map->collector_owned
+        && map->roots.context == NULL
+        && map->roots.register_roots == NULL
+        && map->roots.unregister_roots == NULL))
     && hxc_string_map_value_ops_is_valid(&map->values)
     && hxc_allocator_is_valid(&map->allocator)
     && ((map->capacity == 0u
@@ -315,14 +326,39 @@ static hxc_status hxc_string_map_pair_iterator_fill_next(
   return HXC_STATUS_INTERNAL_ERROR;
 }
 
+/** Trace the value member of one completed key/value snapshot element. */
+static void hxc_string_map_trace_pair_iterator_element(
+  void *context,
+  const void *element,
+  hxc_iterator_root_visit_fn visit,
+  void *visit_context
+) {
+  const hxc_string_map_pair_iterator_fill *fill = context;
+  if (fill == NULL
+    || fill->map == NULL
+    || element == NULL
+    || visit == NULL
+    || fill->map->values.trace == NULL) {
+    return;
+  }
+  fill->map->values.trace(
+    fill->map->values.context,
+    (const unsigned char *)element + fill->value_offset,
+    visit,
+    visit_context
+  );
+}
+
 static hxc_status hxc_string_map_iterator_release_anchor(void *anchor) {
   return hxc_string_map_ref_release(anchor);
 }
 
 static hxc_status hxc_string_map_pair_iterator_release_anchor(void *anchor) {
   hxc_string_map_pair_iterator_fill *fill = anchor;
-  hxc_allocator allocator = fill->map->allocator;
-  hxc_status status = hxc_string_map_ref_release(fill->map);
+  hxc_allocator allocator = fill->allocator;
+  hxc_status status = fill->collector_owned
+    ? HXC_STATUS_OK
+    : hxc_string_map_ref_release(fill->map);
   hxc_status free_status = hxc_free(
     &allocator,
     fill,
@@ -473,6 +509,7 @@ static hxc_status hxc_string_map_initialize(
   bool collector_owned,
   hxc_allocator allocator,
   hxc_string_map_value_ops values,
+  hxc_string_map_root_ops roots,
   hxc_string_map_ref *map
 ) {
   hxc_status status;
@@ -483,7 +520,14 @@ static hxc_status hxc_string_map_initialize(
     || !hxc_string_map_value_ops_is_valid(&values)
     || !hxc_allocator_is_valid(&allocator)
     || collector_owned != (collector != NULL)
-    || (!collector_owned && values.trace != NULL)) {
+    || (!collector_owned && values.trace != NULL)
+    || (collector_owned
+      ? roots.context != collector
+        || roots.register_roots == NULL
+        || roots.unregister_roots == NULL
+      : roots.context != NULL
+        || roots.register_roots != NULL
+        || roots.unregister_roots != NULL)) {
     return HXC_STATUS_INVALID_ARGUMENT;
   }
   status = hxc_string_map_align_up(
@@ -513,6 +557,7 @@ static hxc_status hxc_string_map_initialize(
   map->allocator = allocator;
   map->slots = (hxc_allocation)HXC_ALLOCATION_INITIALIZER;
   map->collector = collector;
+  map->roots = roots;
   map->collector_owned = collector_owned;
   return HXC_STATUS_OK;
 }
@@ -576,7 +621,14 @@ hxc_status hxc_string_map_ref_create_with_ops(
   if (status != HXC_STATUS_OK) {
     return status;
   }
-  status = hxc_string_map_initialize(NULL, false, allocator, values, map);
+  status = hxc_string_map_initialize(
+    NULL,
+    false,
+    allocator,
+    values,
+    (hxc_string_map_root_ops){0},
+    map
+  );
   if (status != HXC_STATUS_OK) {
     (void)hxc_free(&allocator, map, sizeof(*map), HXC_ALIGNOF(hxc_string_map_ref));
     return status;
@@ -589,9 +641,17 @@ hxc_status hxc_string_map_init_collector_owned(
   hxc_gc *collector,
   hxc_allocator allocator,
   hxc_string_map_value_ops values,
+  hxc_string_map_root_ops roots,
   hxc_string_map_ref *map
 ) {
-  return hxc_string_map_initialize(collector, true, allocator, values, map);
+  return hxc_string_map_initialize(
+    collector,
+    true,
+    allocator,
+    values,
+    roots,
+    map
+  );
 }
 
 hxc_status hxc_string_map_dispose_in_place(hxc_string_map_ref *map) {
@@ -917,32 +977,56 @@ hxc_status hxc_string_map_ref_value_iterator(
     || *out_iterator != NULL) {
     return HXC_STATUS_INVALID_ARGUMENT;
   }
-  status = hxc_string_map_ref_retain(map);
-  if (status != HXC_STATUS_OK) {
-    return status;
-  }
   elements = (hxc_iterator_element_ops){
     map->values.size,
     map->values.alignment,
     map->values.context,
     map->values.copy,
     map->values.destroy,
-    NULL
+    map->values.trace
   };
   fill = (hxc_string_map_value_iterator_fill){map, 0u};
-  status = hxc_iterator_ref_create_snapshot(
-    map->allocator,
-    elements,
-    map->length,
-    hxc_string_map_value_iterator_fill_next,
-    &fill,
-    map,
-    hxc_string_map_iterator_release_anchor,
-    out_iterator
-  );
+  if (map->collector_owned) {
+    status = hxc_iterator_ref_create_traced_snapshot(
+      (hxc_iterator_root_ops){
+        map->roots.context,
+        map,
+        NULL,
+        NULL,
+        map->roots.register_roots,
+        map->roots.unregister_roots
+      },
+      map->allocator,
+      elements,
+      map->length,
+      hxc_string_map_value_iterator_fill_next,
+      &fill,
+      NULL,
+      NULL,
+      out_iterator
+    );
+  } else {
+    status = hxc_string_map_ref_retain(map);
+    if (status != HXC_STATUS_OK) {
+      return status;
+    }
+    status = hxc_iterator_ref_create_snapshot(
+      map->allocator,
+      elements,
+      map->length,
+      hxc_string_map_value_iterator_fill_next,
+      &fill,
+      map,
+      hxc_string_map_iterator_release_anchor,
+      out_iterator
+    );
+  }
   if (status != HXC_STATUS_OK) {
-    hxc_status cleanup_status = hxc_string_map_ref_release(map);
-    return cleanup_status == HXC_STATUS_OK ? status : cleanup_status;
+    if (!map->collector_owned) {
+      hxc_status cleanup_status = hxc_string_map_ref_release(map);
+      return cleanup_status == HXC_STATUS_OK ? status : cleanup_status;
+    }
+    return status;
   }
   return HXC_STATUS_OK;
 }
@@ -958,10 +1042,6 @@ hxc_status hxc_string_map_ref_key_iterator(
     || *out_iterator != NULL) {
     return HXC_STATUS_INVALID_ARGUMENT;
   }
-  status = hxc_string_map_ref_retain(map);
-  if (status != HXC_STATUS_OK) {
-    return status;
-  }
   elements = (hxc_iterator_element_ops){
     sizeof(hxc_string),
     HXC_ALIGNOF(hxc_string),
@@ -971,19 +1051,47 @@ hxc_status hxc_string_map_ref_key_iterator(
     NULL
   };
   fill = (hxc_string_map_value_iterator_fill){map, 0u};
-  status = hxc_iterator_ref_create_snapshot(
-    map->allocator,
-    elements,
-    map->length,
-    hxc_string_map_key_iterator_fill_next,
-    &fill,
-    map,
-    hxc_string_map_iterator_release_anchor,
-    out_iterator
-  );
+  if (!map->collector_owned) {
+    status = hxc_string_map_ref_retain(map);
+    if (status != HXC_STATUS_OK) {
+      return status;
+    }
+  }
+  status = map->collector_owned
+    ? hxc_iterator_ref_create_traced_snapshot(
+        (hxc_iterator_root_ops){
+          map->roots.context,
+          map,
+          NULL,
+          NULL,
+          map->roots.register_roots,
+          map->roots.unregister_roots
+        },
+        map->allocator,
+        elements,
+        map->length,
+        hxc_string_map_key_iterator_fill_next,
+        &fill,
+        NULL,
+        NULL,
+        out_iterator
+      )
+    : hxc_iterator_ref_create_snapshot(
+        map->allocator,
+        elements,
+        map->length,
+        hxc_string_map_key_iterator_fill_next,
+        &fill,
+        map,
+        hxc_string_map_iterator_release_anchor,
+        out_iterator
+      );
   if (status != HXC_STATUS_OK) {
-    hxc_status cleanup_status = hxc_string_map_ref_release(map);
-    return cleanup_status == HXC_STATUS_OK ? status : cleanup_status;
+    if (!map->collector_owned) {
+      hxc_status cleanup_status = hxc_string_map_ref_release(map);
+      return cleanup_status == HXC_STATUS_OK ? status : cleanup_status;
+    }
+    return status;
   }
   return HXC_STATUS_OK;
 }
@@ -1015,9 +1123,16 @@ hxc_status hxc_string_map_ref_pair_iterator(
     return status;
   }
   *fill = (hxc_string_map_pair_iterator_fill){
-    map, 0u, key_offset, value_offset
+    map,
+    map->allocator,
+    0u,
+    key_offset,
+    value_offset,
+    map->collector_owned
   };
-  status = hxc_string_map_ref_retain(map);
+  status = map->collector_owned
+    ? HXC_STATUS_OK
+    : hxc_string_map_ref_retain(map);
   if (status != HXC_STATUS_OK) {
     (void)hxc_free(
       &map->allocator,
@@ -1033,21 +1148,42 @@ hxc_status hxc_string_map_ref_pair_iterator(
     fill,
     hxc_string_map_pair_copy,
     hxc_string_map_pair_destroy,
-    NULL
+    map->collector_owned ? hxc_string_map_trace_pair_iterator_element : NULL
   };
-  status = hxc_iterator_ref_create_snapshot(
-    map->allocator,
-    elements,
-    map->length,
-    hxc_string_map_pair_iterator_fill_next,
-    fill,
-    fill,
-    hxc_string_map_pair_iterator_release_anchor,
-    out_iterator
-  );
+  status = map->collector_owned
+    ? hxc_iterator_ref_create_traced_snapshot(
+        (hxc_iterator_root_ops){
+          map->roots.context,
+          map,
+          fill,
+          hxc_string_map_trace_pair_iterator_element,
+          map->roots.register_roots,
+          map->roots.unregister_roots
+        },
+        map->allocator,
+        elements,
+        map->length,
+        hxc_string_map_pair_iterator_fill_next,
+        fill,
+        fill,
+        hxc_string_map_pair_iterator_release_anchor,
+        out_iterator
+      )
+    : hxc_iterator_ref_create_snapshot(
+        map->allocator,
+        elements,
+        map->length,
+        hxc_string_map_pair_iterator_fill_next,
+        fill,
+        fill,
+        hxc_string_map_pair_iterator_release_anchor,
+        out_iterator
+      );
   if (status != HXC_STATUS_OK) {
     hxc_allocator allocator = map->allocator;
-    (void)hxc_string_map_ref_release(map);
+    if (!fill->collector_owned) {
+      (void)hxc_string_map_ref_release(map);
+    }
     (void)hxc_free(
       &allocator,
       fill,

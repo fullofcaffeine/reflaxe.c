@@ -85,8 +85,10 @@ class CPreparedBodyStringMap {
 
 	public final assignRequest:Null<CSymbolRequest>;
 	public final destroyRequest:Null<CSymbolRequest>;
+
 	/** Exact slot visitor, present only when values contain collector pointers. */
 	public final traceRequest:Null<CSymbolRequest>;
+
 	public final copyParameterRequests:Array<CSymbolRequest>;
 	public final assignParameterRequests:Array<CSymbolRequest>;
 	public final destroyParameterRequests:Array<CSymbolRequest>;
@@ -96,8 +98,9 @@ class CPreparedBodyStringMap {
 	/** Create one immutable plan after its key and value contracts are validated. */
 	public function new(semanticKey:String, digest:String, value:CBodyValueType, lifecycle:CBodyStringMapValueLifecycle, ownerModule:String,
 			source:HxcSourceSpan, position:Position, copyRequest:Null<CSymbolRequest>, assignRequest:Null<CSymbolRequest>,
-			destroyRequest:Null<CSymbolRequest>, traceRequest:Null<CSymbolRequest>, copyParameterRequests:Array<CSymbolRequest>, assignParameterRequests:Array<CSymbolRequest>,
-			destroyParameterRequests:Array<CSymbolRequest>, copyStatusRequest:Null<CSymbolRequest>, assignStatusRequest:Null<CSymbolRequest>) {
+			destroyRequest:Null<CSymbolRequest>, traceRequest:Null<CSymbolRequest>, copyParameterRequests:Array<CSymbolRequest>,
+			assignParameterRequests:Array<CSymbolRequest>, destroyParameterRequests:Array<CSymbolRequest>, copyStatusRequest:Null<CSymbolRequest>,
+			assignStatusRequest:Null<CSymbolRequest>) {
 		this.semanticKey = semanticKey;
 		this.digest = digest;
 		this.declarationId = 'type.haxe-string-map.$digest';
@@ -165,6 +168,7 @@ class CLoweredBodyStringMap {
 
 	/** Destruction callback, or null for a byte-copyable value. */
 	public final destroyName:Null<CIdentifier>;
+
 	/** Final exact slot visitor, or null when values contain no collector edge. */
 	public final traceName:Null<CIdentifier>;
 
@@ -184,9 +188,9 @@ class CLoweredBodyStringMap {
 	public final assignStatusName:Null<CIdentifier>;
 
 	/** Join one prepared plan with the finalized identifiers it requested. */
-	public function new(prepared:CPreparedBodyStringMap, copyName:Null<CIdentifier>, assignName:Null<CIdentifier>, destroyName:Null<CIdentifier>, traceName:Null<CIdentifier>,
-			copyParameterNames:Array<CIdentifier>, assignParameterNames:Array<CIdentifier>, destroyParameterNames:Array<CIdentifier>,
-			copyStatusName:Null<CIdentifier>, assignStatusName:Null<CIdentifier>) {
+	public function new(prepared:CPreparedBodyStringMap, copyName:Null<CIdentifier>, assignName:Null<CIdentifier>, destroyName:Null<CIdentifier>,
+			traceName:Null<CIdentifier>, copyParameterNames:Array<CIdentifier>, assignParameterNames:Array<CIdentifier>,
+			destroyParameterNames:Array<CIdentifier>, copyStatusName:Null<CIdentifier>, assignStatusName:Null<CIdentifier>) {
 		this.prepared = prepared;
 		this.copyName = copyName;
 		this.assignName = assignName;
@@ -409,9 +413,10 @@ class CBodyStringMapRegistry {
 			if (value.copyStatusRequest == null || value.assignStatusRequest == null)
 				throw new CBodyEmissionError('managed StringMap specialization `${value.semanticKey}` lost its callback locals');
 			result.push(new CLoweredBodyStringMap(value, symbols.identifierFor(value.copyRequest), symbols.identifierFor(value.assignRequest),
-				symbols.identifierFor(value.destroyRequest), identifierOrNull(symbols, value.traceRequest), value.copyParameterRequests.map(symbols.identifierFor),
-				value.assignParameterRequests.map(symbols.identifierFor), value.destroyParameterRequests.map(symbols.identifierFor),
-				symbols.identifierFor(value.copyStatusRequest), symbols.identifierFor(value.assignStatusRequest)));
+				symbols.identifierFor(value.destroyRequest), identifierOrNull(symbols, value.traceRequest),
+				value.copyParameterRequests.map(symbols.identifierFor), value.assignParameterRequests.map(symbols.identifierFor),
+				value.destroyParameterRequests.map(symbols.identifierFor), symbols.identifierFor(value.copyStatusRequest),
+				symbols.identifierFor(value.assignStatusRequest)));
 		}
 		return result;
 	}

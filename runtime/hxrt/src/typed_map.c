@@ -1029,6 +1029,7 @@ static hxc_status hxc_typed_map_iterator(
     return hxc_iterator_ref_create_traced_snapshot(
       (hxc_iterator_root_ops){
         map,
+        NULL,
         &trace,
         hxc_typed_map_trace_iterator_element,
         hxc_typed_map_register_iterator_roots,

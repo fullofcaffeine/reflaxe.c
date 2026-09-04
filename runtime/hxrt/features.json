@@ -677,6 +677,8 @@
         "hxc_gc_dispose",
         "hxc_gc_get_stats",
         "hxc_gc_init",
+        "hxc_gc_iterator_roots_register",
+        "hxc_gc_iterator_roots_unregister",
         "hxc_gc_owns_exact",
         "hxc_gc_pin_object",
         "hxc_gc_root_frame_pop",
@@ -691,13 +693,13 @@
       ],
       "artifacts": [
         {
-          "sourceSha256": "d99575a5bad765d45822a1d6221f7bc1b620d59dd6111e0c8ec8a2d45db36159",
+          "sourceSha256": "7b5fe8d44a7a6362aec79d4c11ca0ab0d33ef568d9825cf424431d59300fe7f1",
           "kind": "runtime-header",
           "outputPath": "runtime/include/hxrt/gc.h",
           "sourcePath": "runtime/hxrt/include/hxrt/gc.h"
         },
         {
-          "sourceSha256": "a79c93c94db215b3bc303ea4c761de627637d0eb881faeeaf10c07f9bed4c502",
+          "sourceSha256": "89ab1f81bcf0c9ae6f881723c261a00d9537028b29854fb3435118b1e1df2a7b",
           "kind": "runtime-source",
           "outputPath": "runtime/src/gc.c",
           "sourcePath": "runtime/hxrt/src/gc.c"
@@ -903,13 +905,13 @@
       ],
       "artifacts": [
         {
-          "sourceSha256": "10ec767355e93a45e214b4774435a46496dd2c601f285412bc072af7904a3e51",
+          "sourceSha256": "8865889fd4023c7d8b727d4fa4d3fd9673c3c930347add80596b9298bdde37e3",
           "kind": "runtime-header",
           "outputPath": "runtime/include/hxrt/iterator.h",
           "sourcePath": "runtime/hxrt/include/hxrt/iterator.h"
         },
         {
-          "sourceSha256": "a4f3da3f7e3a3fb5ad2f24497b00d77eae1b11c600167b8f5553b656623dba6b",
+          "sourceSha256": "63f6a8b80f026cafb8d02599925509b87f3204fac7cf253b75d6f473d1dc9067",
           "kind": "runtime-source",
           "outputPath": "runtime/src/iterator.c",
           "sourcePath": "runtime/hxrt/src/iterator.c"
@@ -1535,13 +1537,13 @@
       ],
       "artifacts": [
         {
-          "sourceSha256": "0ae3c4da07b98855ee647b06cacd516362ae79f9bf3eef1bea61b794ed152874",
+          "sourceSha256": "c0a37f3c8f4533b3def7bb0d24232af2ace3a44bd048bb5c6693b45c79bb708b",
           "kind": "runtime-header",
           "outputPath": "runtime/include/hxrt/string_map.h",
           "sourcePath": "runtime/hxrt/include/hxrt/string_map.h"
         },
         {
-          "sourceSha256": "3c27b6893edee126220a94adb748181f563f1c7777fa576d1015fbe915651ef4",
+          "sourceSha256": "5aab0384572b0c8dceefd0b7dcec9078bbb97099d48c2d67c4692819de3db405",
           "kind": "runtime-source",
           "outputPath": "runtime/src/string_map.c",
           "sourcePath": "runtime/hxrt/src/string_map.c"
@@ -1768,7 +1770,7 @@
           "sourcePath": "runtime/hxrt/include/hxrt/typed_map.h"
         },
         {
-          "sourceSha256": "2a890d9f7a66a2faaffff43eee084fcf704138442f5915e8e728acbcad6fbcff",
+          "sourceSha256": "3221306bf9ebbaeaf196bf82da63dd22318bcb05d67073c6856584031d6fe9d0",
           "kind": "runtime-source",
           "outputPath": "runtime/src/typed_map.c",
           "sourcePath": "runtime/hxrt/src/typed_map.c"
@@ -1855,6 +1857,7 @@
         "hxc_string",
         "hxc_string_buffer",
         "hxc_string_map_ref",
+        "hxc_string_map_root_ops",
         "hxc_string_map_value_ops",
         "hxc_type_descriptor",
         "hxc_typed_map_key_ops",
@@ -1868,7 +1871,7 @@
     "releaseProvenance": {
       "runtimeCStandard": "c11",
       "sourceHashAlgorithm": "sha256",
-      "sourceSetSha256": "76a3b8418d27145437724e737c1b5103eb59fc58b79b4dab31c37144defff3b7",
+      "sourceSetSha256": "1f417a01604bf2810842a475d2b72c3bfddd1e9f3b17200b656e0fefab8121a7",
       "publicHeaderCppStandard": "c++17"
     },
     "generatedCodeCompatibility": "same-major",

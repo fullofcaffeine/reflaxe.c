@@ -354,7 +354,7 @@ def compile_and_run(
     result = run([str(executable)])
     require_success(result, f"{toolchain.family} {suffix} collector run")
     if result.stderr or result.stdout.strip() != (
-        "gc-contract: OK allocations=265 collections=137 reclaimed=265 pause_ticks=973"
+        "gc-contract: OK allocations=266 collections=139 reclaimed=266 pause_ticks=987"
     ):
         raise GcTestFailure(
             f"{toolchain.family} {suffix} collector report drifted\n"

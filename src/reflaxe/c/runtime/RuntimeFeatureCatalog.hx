@@ -506,6 +506,8 @@ class RuntimeFeatureCatalog {
 					"hxc_gc_root_frame_pop_cleanup",
 					"hxc_gc_root_table_register",
 					"hxc_gc_root_table_unregister",
+					"hxc_gc_iterator_roots_register",
+					"hxc_gc_iterator_roots_unregister",
 					"hxc_gc_pin_object",
 					"hxc_gc_unpin_object"
 				], [], [],
@@ -789,10 +791,10 @@ class RuntimeFeatureCatalog {
 			case "date_time.h": "07086c9185ea03a13dc6bf39d02f00f99b7cbd8151ba0bdf90d7e457c07880d4";
 			case "dynamic.h": "6acbca9069ce4670988e682c5c214a32968fadee892ea4490d0844674c2e24b2";
 			case "exception.h": "af147c885d31d9408b27b0777a3021bb6d1631b580b237fed75aa21459bad529";
-			case "gc.h": "d99575a5bad765d45822a1d6221f7bc1b620d59dd6111e0c8ec8a2d45db36159";
+			case "gc.h": "7b5fe8d44a7a6362aec79d4c11ca0ab0d33ef568d9825cf424431d59300fe7f1";
 			case "io.h": "4b92f03451dc4d04ea74c857ca3ce54d52fbe80d31f155b93781ee2fab946589";
 			case "int_map.h": "11213ebbb4fccb5620a4e949ec4a0852a512c7be8d1f5750d987f56aca71cd7f";
-			case "iterator.h": "10ec767355e93a45e214b4774435a46496dd2c601f285412bc072af7904a3e51";
+			case "iterator.h": "8865889fd4023c7d8b727d4fa4d3fd9673c3c930347add80596b9298bdde37e3";
 			case "object.h": "779b452097e4c58c7971b90743ace19a2dc6c91e381557abc84fbd5f9b30f1e5";
 			case "status.h": "6bf20f5d82594014ad0f2b79a25cb81417791bd9c07375d2fb89835e415be1c4";
 			case "status_name.h": "64bf3917787ffcf924369c8e1c0a525cf10902d004d5bb4b898f2af46a7456cc";
@@ -802,7 +804,7 @@ class RuntimeFeatureCatalog {
 			case "string_decode.h": "aa93ea7f132aff625adfdcc7498532b139f621196deab4c0e9ecb5de2934fd48";
 			case "string_float.h": "8747a86c3cabae9bf54a4125305f043d6c70d7c97bc9f6f90174ba6185e3ecc1";
 			case "string_literal.h": "ac6b5ad9fa13004c62e3b33b9b28a935bfb8a22287cd4595ce6e6eb81490e283";
-			case "string_map.h": "0ae3c4da07b98855ee647b06cacd516362ae79f9bf3eef1bea61b794ed152874";
+			case "string_map.h": "c0a37f3c8f4533b3def7bb0d24232af2ace3a44bd048bb5c6693b45c79bb708b";
 			case "string_scalar.h": "b400d7ef9af853410334b30627ea98a5af87d5c3a863f6aa4c770d7cc4b3d90b";
 			case "string_split.h": "a17c9cd6c31cfdb8da2cf4955b980090c144e68ee1ae4f1d0f0b543f4b6eb3eb";
 			case "typed_map.h": "8e0838bbf09921bf4167fc85e55d99a762cd208b069a41008e645b5e07949f11";
@@ -821,19 +823,19 @@ class RuntimeFeatureCatalog {
 			case "date_time.c": "546e3f244d3187993254aca85dd4acfd64bd3c259b1531d736c950ce9de51b24";
 			case "dynamic.c": "804371b7eb2bfa6dbcb6598ff729754b312a2ba7b24a94a615915c30dee68503";
 			case "exception.c": "e6660d0b55b56be3cd436af8f0c16a7668b70f7e82031687a5a149e029c12741";
-			case "gc.c": "a79c93c94db215b3bc303ea4c761de627637d0eb881faeeaf10c07f9bed4c502";
+			case "gc.c": "89ab1f81bcf0c9ae6f881723c261a00d9537028b29854fb3435118b1e1df2a7b";
 			case "io.c": "898b3f351b60a91f25fd1ffdfe8d832e95a5a6a738ffe226ac33581f1fcb5b0f";
 			case "int_map.c": "1b9a0cf4a376e2c2afe7cb79457f50557d50274e8187239e9e4ae80a5a8108cf";
-			case "iterator.c": "a4f3da3f7e3a3fb5ad2f24497b00d77eae1b11c600167b8f5553b656623dba6b";
+			case "iterator.c": "63f6a8b80f026cafb8d02599925509b87f3204fac7cf253b75d6f473d1dc9067";
 			case "object.c": "0e7fc6a55b562eaaf03fe63eca743dd73248f0bee1c09e21b79464917e8c89c0";
 			case "status.c": "0695ab2528db6e29d5cf29d905ad736b7c1a3a79333082347ec18faea2d4e6d8";
 			case "string.c": "07fb06813ca533677bf00f8580f874bd3c05a41a5bd1b647f45598b0d3e3c8c1";
 			case "string_lower_case.c": "55a692cfd855f71f1a1fa4f90f311f1653ec0638797ecfb024764e23a66680c8";
 			case "string_float.c": "60e5189e7f7304ccbc1f69136b7393e4eea35760cde590853ebced414bf39267";
-			case "string_map.c": "3c27b6893edee126220a94adb748181f563f1c7777fa576d1015fbe915651ef4";
+			case "string_map.c": "5aab0384572b0c8dceefd0b7dcec9078bbb97099d48c2d67c4692819de3db405";
 			case "string_scalar.c": "2c44eebc655dd34ed374b58402de9dfe731425fb4e0b54997a7c16c12e1309fb";
 			case "string_split.c": "799fc917a450169e4babd86748e879fe7222b4abfef293880c47891e671f9d1b";
-			case "typed_map.c": "2a890d9f7a66a2faaffff43eee084fcf704138442f5915e8e728acbcad6fbcff";
+			case "typed_map.c": "3221306bf9ebbaeaf196bf82da63dd22318bcb05d67073c6856584031d6fe9d0";
 			case _: throw 'runtime feature source `$name` has no reviewed SHA-256 provenance';
 		};
 	}
