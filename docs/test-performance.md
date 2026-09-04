@@ -1258,6 +1258,10 @@ python3 examples/caxecraft/profile_compiler.py \
 
 The report labels a sample as contended when other work can distort its elapsed
 time. Do not use a contended sample as a performance baseline.
+If the default 180-second request bound expires on a loaded host, one local
+correctness diagnostic may add `--timeout-seconds 600`. The report records that
+override. It can preserve structural counters and artifact evidence, but it
+does not change the default or prove a performance budget.
 
 The first full-playable structured profile found one avoidable control-flow
 cost. A *dominator* is a block that every route from the function entry must
