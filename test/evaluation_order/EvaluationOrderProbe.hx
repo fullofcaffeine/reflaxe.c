@@ -498,9 +498,9 @@ class EvaluationOrderProbe {
 		requireStructured("thirty-step early-return ladder", earlyReturnLadder, ladderResult.plan, verifier);
 		if (ladderResult.work.normalJoinSearches < 30)
 			throw new haxe.Exception('early-return ladder exercised only ${ladderResult.work.normalJoinSearches} normal-join searches');
-		if (ladderResult.work.normalJoinCandidateProofs > ladderResult.work.normalJoinSearches * 2)
+		if (ladderResult.work.normalJoinCandidateProofs > ladderResult.work.normalJoinSearches)
 			throw new haxe.Exception('early-return ladder used ${ladderResult.work.normalJoinCandidateProofs} candidate proofs for '
-				+ '${ladderResult.work.normalJoinSearches} searches; ranked search should need at most one build proof and one validation proof per branch');
+				+ '${ladderResult.work.normalJoinSearches} searches; the same-analysis validator must reuse each successful build proof');
 		final maximumCompletionWork = ladderResult.work.completionSetSearches * earlyReturnLadder.blocks.length;
 		if (ladderResult.work.completionSetInitialBlockScans * 4 >= maximumCompletionWork * 3)
 			throw new haxe.Exception('early-return ladder initialized ${ladderResult.work.completionSetInitialBlockScans} completion rules; '
