@@ -35,6 +35,30 @@ typedef PlayerCameraView = {
 	final avatarVisible:Bool;
 }
 
+/** Device-neutral camera and jump state sampled for one rendered frame. */
+typedef PlayerLookFrameInput = {
+	final mode:PlayerCameraMode;
+	final lookX:Float;
+	final lookY:Float;
+	final lookZ:Float;
+	final captured:Bool;
+	final blockedByConversation:Bool;
+	final togglePressed:Bool;
+	final yawDelta:Float;
+	final pitchDelta:Float;
+	final jumpPressed:Bool;
+	final jumpQueued:Bool;
+}
+
+/** Updated camera heading and queued jump after one input sample. */
+typedef PlayerLookFrameOutcome = {
+	final mode:PlayerCameraMode;
+	final lookX:Float;
+	final lookY:Float;
+	final lookZ:Float;
+	final jumpQueued:Bool;
+}
+
 inline final DESIRED_BOOM_DISTANCE:Float = 3.8;
 inline final CAMERA_RADIUS:Float = 0.18;
 inline final BOOM_STEP:Float = 0.1;
@@ -43,6 +67,49 @@ inline final EYE_HEIGHT:Float = 1.62;
 /** Switch between the two admitted views without changing gameplay state. */
 function togglePlayerCamera(mode:PlayerCameraMode):PlayerCameraMode
 	return mode == FirstPerson ? BehindPlayer : FirstPerson;
+
+/**
+ * Apply one camera input sample without reading devices or mutating gameplay.
+ *
+ * The bounded yaw step keeps the inexpensive heading normalization stable, and
+ * pitch remains inside the range used by world interaction and rendering.
+ */
+function advancePlayerLookFrame(input:PlayerLookFrameInput):PlayerLookFrameOutcome {
+	var mode = input.mode;
+	var lookX = input.lookX;
+	var lookY = input.lookY;
+	var lookZ = input.lookZ;
+	var jumpQueued = input.jumpQueued;
+	if (input.captured && !input.blockedByConversation) {
+		if (input.togglePressed)
+			mode = togglePlayerCamera(mode);
+		var yawDelta = input.yawDelta;
+		if (yawDelta > 0.25)
+			yawDelta = 0.25;
+		if (yawDelta < -0.25)
+			yawDelta = -0.25;
+		final candidateX = lookX + yawDelta * lookZ;
+		final candidateZ = lookZ - yawDelta * lookX;
+		final lengthSquared = candidateX * candidateX + candidateZ * candidateZ;
+		final normalize = 1.5 - 0.5 * lengthSquared;
+		lookX = candidateX * normalize;
+		lookZ = candidateZ * normalize;
+		lookY += input.pitchDelta;
+		if (lookY > 0.90)
+			lookY = 0.90;
+		if (lookY < -0.90)
+			lookY = -0.90;
+		if (input.jumpPressed)
+			jumpQueued = true;
+	}
+	return {
+		mode: mode,
+		lookX: lookX,
+		lookY: lookY,
+		lookZ: lookZ,
+		jumpQueued: jumpQueued
+	};
+}
 
 /**
  * Resolve one frame from committed state and current authored solid boxes.

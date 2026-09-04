@@ -4,6 +4,7 @@ import caxecraft.domain.CharacterBody;
 import caxecraft.domain.DynamicCollisionBox;
 import caxecraft.domain.PlayerCamera.PlayerCameraMode;
 import caxecraft.domain.PlayerCamera.PlayerCameraView;
+import caxecraft.domain.PlayerCamera.advancePlayerLookFrame;
 import caxecraft.domain.PlayerCamera.resolvePlayerCamera;
 import caxecraft.domain.PlayerCamera.togglePlayerCamera;
 import caxecraft.domain.World;
@@ -62,6 +63,43 @@ function selfCheck():Int {
 	if (togglePlayerCamera(PlayerCameraMode.FirstPerson) != PlayerCameraMode.BehindPlayer
 		|| togglePlayerCamera(PlayerCameraMode.BehindPlayer) != PlayerCameraMode.FirstPerson)
 		return 7;
+	final lookFrame = advancePlayerLookFrame({
+		mode: PlayerCameraMode.FirstPerson,
+		lookX: 0.0,
+		lookY: 0.0,
+		lookZ: -1.0,
+		captured: true,
+		blockedByConversation: false,
+		togglePressed: true,
+		yawDelta: 1.0,
+		pitchDelta: 2.0,
+		jumpPressed: true,
+		jumpQueued: false
+	});
+	if (lookFrame.mode != PlayerCameraMode.BehindPlayer
+		|| !near(lookFrame.lookX, -0.2421875)
+		|| lookFrame.lookY != 0.90
+		|| !lookFrame.jumpQueued)
+		return 14;
+	final blockedLook = advancePlayerLookFrame({
+		mode: PlayerCameraMode.FirstPerson,
+		lookX: 0.0,
+		lookY: 0.0,
+		lookZ: -1.0,
+		captured: true,
+		blockedByConversation: true,
+		togglePressed: true,
+		yawDelta: 0.25,
+		pitchDelta: 0.25,
+		jumpPressed: true,
+		jumpQueued: false
+	});
+	if (blockedLook.mode != PlayerCameraMode.FirstPerson
+		|| blockedLook.lookX != 0.0
+		|| blockedLook.lookY != 0.0
+		|| blockedLook.lookZ != -1.0
+		|| blockedLook.jumpQueued)
+		return 15;
 	final behind = resolvePlayerCamera(view, noCollisions, PlayerCameraMode.BehindPlayer, player, 0.0, 0.0, -2.0);
 	if (!near(behind.positionZ, 13.8)
 		|| !near(behind.boomDistance, 3.8)
