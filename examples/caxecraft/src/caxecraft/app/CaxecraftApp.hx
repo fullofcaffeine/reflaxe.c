@@ -42,17 +42,16 @@ import caxecraft.app.AppScreen.finishEditorTestPlay;
 import caxecraft.app.AppScreen.initialScreen;
 import caxecraft.app.AppScreen.finishLoading;
 import caxecraft.app.AppScreen.isPlaying as screenIsPlaying;
-import caxecraft.app.AppScreen.loseFocus as pauseAfterFocusLoss;
 import caxecraft.app.AppScreen.openEditor;
 import caxecraft.app.AppScreen.pausesSimulation as screenPausesSimulation;
-import caxecraft.app.AppScreen.recapture as recapturePointer;
 import caxecraft.app.AppScreen.showsEditor as screenShowsEditor;
 import caxecraft.app.AppScreen.showsLoading as screenShowsLoading;
 import caxecraft.app.AppScreen.showsCampaignSelection as screenShowsCampaignSelection;
 import caxecraft.app.AppScreen.showsTitle as screenShowsTitle;
 import caxecraft.app.AppScreen.startSelectedCampaign;
 import caxecraft.app.AppScreen.stopsEditorTestPlay;
-import caxecraft.app.AppScreen.togglePause;
+import caxecraft.app.AppScreen.AppPointerDirective;
+import caxecraft.app.AppScreen.advancePlayScreenFrame;
 import caxecraft.app.TitleMenuFlow.advanceTitleMenuFrame;
 import caxecraft.app.TitleMenuFlow.allowsCampaignTravel;
 import caxecraft.app.TitleMenuFlow.titleMenuState;
@@ -1331,43 +1330,28 @@ final class CaxecraftApp {
 				}
 			}
 
-			if (!focused && screenIsPlaying(screen) && screen != AppScreen.EditorTestPlay) {
-				screen = pauseAfterFocusLoss(screen);
+			final playScreenFrame = advancePlayScreenFrame({
+				screen: screen,
+				focused: focused,
+				playerDefeated: characterIsDefeated(character.vitals),
+				pausePressed: pausePressed,
+				capturePressed: capturePressed
+			});
+			screen = playScreenFrame.screen;
+			if (playScreenFrame.clearQueuedJump)
 				jumpQueued = false;
+			if (playScreenFrame.resetSimulationClock)
 				accumulator = 0.0;
+			if (playScreenFrame.resetMotion)
 				resetMotionThisFrame = true;
-				Raylib.EnableCursor();
-			}
-			if (!screenShowsTitle(screen)
-				&& !screenShowsCampaignSelection(screen)
-				&& !screenShowsLoading(screen)
-				&& !screenShowsEditor(screen)
-				&& screen != AppScreen.EditorTestPlay
-				&& focused
-				&& !characterIsDefeated(character.vitals)
-				&& pausePressed) {
-				screen = togglePause(screen);
-				accumulator = 0.0;
-				resetMotionThisFrame = true;
-				if (screenPausesSimulation(screen))
-					jumpQueued = false;
-				if (screenCapturesPointer(screen))
-					Raylib.DisableCursor();
-				else
-					Raylib.EnableCursor();
-			}
-			if (!screenShowsTitle(screen)
-				&& !screenShowsCampaignSelection(screen)
-				&& !screenShowsLoading(screen)
-				&& !screenShowsEditor(screen)
-				&& focused
-				&& screenPausesSimulation(screen)
-				&& capturePressed) {
-				screen = recapturePointer(screen);
+			if (playScreenFrame.recapturedThisFrame)
 				recapturedThisFrame = true;
-				accumulator = 0.0;
-				resetMotionThisFrame = true;
-				Raylib.DisableCursor();
+			switch playScreenFrame.pointer {
+				case PreservePointer:
+				case CapturePointer:
+					Raylib.DisableCursor();
+				case ReleasePointer:
+					Raylib.EnableCursor();
 			}
 
 			// These are read-only projections of one closed state, not independent

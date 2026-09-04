@@ -28,6 +28,32 @@ enum AppScreen {
 	EditorTestPlay;
 }
 
+/** Cursor effect requested by a device-neutral screen transition. */
+enum AppPointerDirective {
+	PreservePointer;
+	CapturePointer;
+	ReleasePointer;
+}
+
+/** Inputs that can pause or recapture ordinary play during one frame. */
+typedef PlayScreenFrameInput = {
+	final screen:AppScreen;
+	final focused:Bool;
+	final playerDefeated:Bool;
+	final pausePressed:Bool;
+	final capturePressed:Bool;
+}
+
+/** Screen and lifecycle effects produced by one ordinary-play input sample. */
+typedef PlayScreenFrameOutcome = {
+	final screen:AppScreen;
+	final pointer:AppPointerDirective;
+	final resetSimulationClock:Bool;
+	final resetMotion:Bool;
+	final clearQueuedJump:Bool;
+	final recapturedThisFrame:Bool;
+}
+
 /** Choose the first valid screen without depending on a windowing library. */
 function initialScreen(showTitle:Bool):AppScreen {
 	if (showTitle)
@@ -212,6 +238,56 @@ function recapture(screen:AppScreen):AppScreen {
 		case Loading: Loading;
 		case Editor: Editor;
 		case EditorTestPlay: EditorTestPlay;
+	};
+}
+
+/**
+ * Apply focus loss, pause, and recapture in their observable frame order.
+ *
+ * Editor Test Play has a separate stop barrier and is intentionally excluded.
+ * The returned directives let the native application perform cursor and timing
+ * effects without duplicating semantic screen branches in its main loop.
+ */
+function advancePlayScreenFrame(input:PlayScreenFrameInput):PlayScreenFrameOutcome {
+	var screen = input.screen;
+	var pointer = AppPointerDirective.PreservePointer;
+	var resetClock = false;
+	var resetMotion = false;
+	var clearJump = false;
+	var recapturedThisFrame = false;
+	if (!input.focused && screen == AppScreen.Playing) {
+		screen = loseFocus(screen);
+		clearJump = true;
+		resetClock = true;
+		resetMotion = true;
+		pointer = AppPointerDirective.ReleasePointer;
+	}
+	final ordinaryPlayScreen = screen == AppScreen.Playing || screen == AppScreen.Paused;
+	if (ordinaryPlayScreen && input.focused && !input.playerDefeated && input.pausePressed) {
+		screen = togglePause(screen);
+		resetClock = true;
+		resetMotion = true;
+		if (pausesSimulation(screen))
+			clearJump = true;
+		pointer = capturesPointer(screen) ? AppPointerDirective.CapturePointer : AppPointerDirective.ReleasePointer;
+	}
+	if ((screen == AppScreen.Playing || screen == AppScreen.Paused)
+		&& input.focused
+		&& pausesSimulation(screen)
+		&& input.capturePressed) {
+		screen = recapture(screen);
+		recapturedThisFrame = true;
+		resetClock = true;
+		resetMotion = true;
+		pointer = AppPointerDirective.CapturePointer;
+	}
+	return {
+		screen: screen,
+		pointer: pointer,
+		resetSimulationClock: resetClock,
+		resetMotion: resetMotion,
+		clearQueuedJump: clearJump,
+		recapturedThisFrame: recapturedThisFrame
 	};
 }
 
