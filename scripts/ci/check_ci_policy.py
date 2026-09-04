@@ -2290,7 +2290,8 @@ def validate() -> list[str]:
         "_Static_assert(",
         "checked-abort",
         "payload-enum-equality-requires-structural-semantics",
-        "recursive-enum-with-collector-payload",
+        "--recursive-managed-class-only",
+        "recursive-enum-collector-node",
     ):
         if required_enum_contract not in enum_runner:
             errors.append(

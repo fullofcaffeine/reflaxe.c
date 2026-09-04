@@ -1287,10 +1287,6 @@ def check_negative_cases() -> None:
     cases = {
         "payload_equality": ("HXC1001", "payload-enum-equality-requires-structural-semantics:PayloadValue"),
         "nonexhaustive": ("Unmatched patterns: On", "fixtures/nonexhaustive/Main.hx:"),
-        "recursive_managed_class": (
-            "HXC1001",
-            "recursive-enum-with-collector-payload:ManagedChain",
-        ),
         "recursive_conditional": (
             "HXC1001",
             "TVar(selected:managed-flow-carrier-fallible-retain-not-admitted)",
@@ -1947,6 +1943,140 @@ def check_managed_class_payload(*, requested_toolchain: str) -> None:
             )
 
 
+def check_recursive_managed_class(*, requested_toolchain: str) -> None:
+    """Prove exact tracing for collector-owned recursive enum nodes."""
+    fixture = FIXTURES / "recursive_managed_class"
+    eval_result = run_bounded_process(
+        [development_tool("haxe"), "-cp", str(fixture), "-main", "Main", "--interp"],
+        cwd=ROOT,
+        env=haxe_environment(),
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    require_compile_success(eval_result, "recursive managed enum Eval oracle")
+    with tempfile.TemporaryDirectory(prefix="hxc-enum-recursive-managed-") as temporary:
+        root = Path(temporary)
+        output = root / "unity"
+        result = custom_target(fixture, output, main="Main", report=True)
+        hxcir = extract_static_hxcir(result, "recursive managed enum compile")
+        generated_c = b"\n".join(
+            path.read_bytes() for path in sorted(output.rglob("*.c"))
+        ).decode("utf-8")
+        for marker in (
+            'implementation=runtime("gc")',
+            "managed-root",
+            "nullable-payload/tag(",
+            "ManagedChain",
+        ):
+            if marker not in hxcir:
+                raise EnumLoweringFailure(
+                    f"recursive managed enum HxcIR omitted {marker!r}"
+                )
+        for marker in (
+            "hxc_gc_allocate",
+            "hxc_gc_root_frame_push",
+            "hxc_ManagedChain_Link",
+            "hxc_ManagedChain_Branch",
+            "_trace_visit",
+        ):
+            if marker not in generated_c:
+                raise EnumLoweringFailure(
+                    f"recursive managed enum generated C omitted {marker!r}"
+                )
+
+        project = CFixtureProject(
+            "enum-recursive-managed-class",
+            tuple(
+                path.relative_to(output).as_posix()
+                for path in sorted(output.rglob("*.c"))
+            ),
+            tuple(
+                path.relative_to(output).as_posix()
+                for path in sorted(output.rglob("*.h"))
+            ),
+            ("include", "runtime/include"),
+            "",
+            (
+                "recursive-enum-collector-node",
+                "active-tag-trace",
+                "nullable-root",
+                "recursive-array-cycle",
+                "generated-executable",
+            ),
+        )
+        for optimization in ("-O0", "-O2"):
+            report = run_c_fixture_corpus(
+                suite=f"enum-recursive-managed-{optimization[1:].lower()}",
+                projects=(project,),
+                fixture_root=output,
+                build_root=root / f"native-{optimization[1:].lower()}",
+                repository_root=ROOT,
+                requested_toolchain=requested_toolchain,
+                strict_flags=(*C11_STRICT_FLAGS, optimization),
+            )
+            validate_report(report, required_coverage=frozenset(project.coverage))
+
+        toolchain = resolve_toolchains(
+            requested_toolchain, repository_root=ROOT
+        )[0]
+        cxx = shutil.which(CXX_COMMANDS[toolchain.family])
+        if cxx is not None:
+            consumer = root / "recursive-enum-layout-consumer.cpp"
+            consumer.write_text(
+                '#include "hxc/program.h"\nint enum_layout_consumer() { return 0; }\n',
+                encoding="utf-8",
+            )
+            for optimization in ("-O0", "-O2"):
+                require_silent_success(
+                    [
+                        cxx,
+                        *CXX_STRICT_FLAGS,
+                        optimization,
+                        "-I",
+                        str(output / "include"),
+                        "-I",
+                        str(output / "runtime/include"),
+                        "-c",
+                        str(consumer),
+                        "-o",
+                        str(root / f"recursive-enum-{optimization[1:].lower()}.o"),
+                    ],
+                    label=f"recursive managed enum C++17 {optimization} consumer",
+                )
+
+        sanitizer_project = CFixtureProject(
+            "enum-recursive-managed-class-sanitized",
+            project.sources,
+            project.headers,
+            project.include_directories,
+            "",
+            (*project.coverage, "asan-ubsan"),
+            link_arguments=("-fsanitize=address,undefined",),
+        )
+        sanitizer_report = run_c_fixture_corpus(
+            suite="enum-recursive-managed-sanitized",
+            projects=(sanitizer_project,),
+            fixture_root=output,
+            build_root=root / "native-sanitized",
+            repository_root=ROOT,
+            requested_toolchain=requested_toolchain,
+            strict_flags=(
+                *C11_STRICT_FLAGS,
+                "-O1",
+                "-g",
+                "-fno-omit-frame-pointer",
+                "-fno-sanitize-recover=all",
+                "-fsanitize=address,undefined",
+            ),
+        )
+        validate_report(
+            sanitizer_report,
+            required_coverage=frozenset(sanitizer_project.coverage),
+        )
+
+
 def check_bytes_payload(*, requested_toolchain: str) -> None:
     """Prove shared Bytes identity and active-case cleanup inside a value enum."""
     fixture = FIXTURES / "bytes_payload"
@@ -2398,6 +2528,7 @@ def parse_args(arguments: Iterable[str]) -> argparse.Namespace:
     parser.add_argument("--statement-early-return-only", action="store_true")
     parser.add_argument("--bytes-payload-only", action="store_true")
     parser.add_argument("--managed-class-payload-only", action="store_true")
+    parser.add_argument("--recursive-managed-class-only", action="store_true")
     parser.add_argument("--managed-string-callback-only", action="store_true")
     parser.add_argument("--negative-only", action="store_true")
     return parser.parse_args(list(arguments))
@@ -2438,6 +2569,13 @@ def main(arguments: Iterable[str] = ()) -> int:
                 "and sanitizer evidence passed"
             )
             return 0
+        if args.recursive_managed_class_only:
+            check_recursive_managed_class(requested_toolchain=args.toolchain)
+            print(
+                "enum-lowering: OK: recursive collector enum nodes retain exact "
+                "active-tag roots through nulls, aliases, cycles, and pressure"
+            )
+            return 0
         if args.managed_string_callback_only:
             check_managed_string_callback(requested_toolchain=args.toolchain)
             print(
@@ -2472,6 +2610,7 @@ def main(arguments: Iterable[str] = ()) -> int:
         check_string_payload(requested_toolchain=args.toolchain)
         check_managed_string_callback(requested_toolchain=args.toolchain)
         check_managed_class_payload(requested_toolchain=args.toolchain)
+        check_recursive_managed_class(requested_toolchain=args.toolchain)
         check_bytes_payload(requested_toolchain=args.toolchain)
         check_negative_cases()
     except (

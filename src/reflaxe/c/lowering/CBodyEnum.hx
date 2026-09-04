@@ -152,6 +152,9 @@ class CPreparedBodyEnumInstance {
 	public var retainParameterRequest:Null<CSymbolRequest> = null;
 	public var destroyParameterRequest:Null<CSymbolRequest> = null;
 	public var retainStatusRequest:Null<CSymbolRequest> = null;
+	public var descriptorRequest:Null<CSymbolRequest> = null;
+	public var traceRequest:Null<CSymbolRequest> = null;
+	public var finalizerRequest:Null<CSymbolRequest> = null;
 
 	public function new(shapeKey:String, digest:String, haxePath:String, displayName:String, ownerModule:String, source:HxcSourceSpan,
 			representation:CBodyEnumRepresentation, typeParameterNames:Array<String>, typeArguments:Array<CGenericTypeArgument>,
@@ -294,10 +297,14 @@ class CLoweredBodyEnum {
 	public final retainParameterName:Null<CIdentifier>;
 	public final destroyParameterName:Null<CIdentifier>;
 	public final retainStatusName:Null<CIdentifier>;
+	public final descriptorName:Null<CIdentifier>;
+	public final traceName:Null<CIdentifier>;
+	public final finalizerName:Null<CIdentifier>;
 
 	public function new(prepared:CPreparedBodyEnumInstance, valueTag:CIdentifier, discriminantTag:CIdentifier, payloadUnionTag:Null<CIdentifier>,
 			tagMember:Null<CIdentifier>, payloadMember:Null<CIdentifier>, cases:Array<CLoweredBodyEnumCase>, retainName:Null<CIdentifier>,
-			destroyName:Null<CIdentifier>, retainParameterName:Null<CIdentifier>, destroyParameterName:Null<CIdentifier>, retainStatusName:Null<CIdentifier>) {
+			destroyName:Null<CIdentifier>, retainParameterName:Null<CIdentifier>, destroyParameterName:Null<CIdentifier>, retainStatusName:Null<CIdentifier>,
+			descriptorName:Null<CIdentifier>, traceName:Null<CIdentifier>, finalizerName:Null<CIdentifier>) {
 		this.prepared = prepared;
 		this.valueTag = valueTag;
 		this.discriminantTag = discriminantTag;
@@ -310,6 +317,9 @@ class CLoweredBodyEnum {
 		this.retainParameterName = retainParameterName;
 		this.destroyParameterName = destroyParameterName;
 		this.retainStatusName = retainStatusName;
+		this.descriptorName = descriptorName;
+		this.traceName = traceName;
+		this.finalizerName = finalizerName;
 	}
 
 	public function tagCase(name:String):Null<CLoweredBodyEnumCase> {
@@ -397,8 +407,6 @@ class CBodyEnumRegistry {
 		final reason = HaxeSourceSpan.fromPosition(position, ownerSourcePath);
 		final existing = byShape.get(shapeKey);
 		if (existing != null) {
-			if (existing.recursive && existing.collectorPayload)
-				return rejected(fail, position, '$node:recursive-enum-with-collector-payload:${existing.haxePath}');
 			existing.addReason(reason);
 			return existing;
 		}
@@ -517,8 +525,6 @@ class CBodyEnumRegistry {
 		preparationDepth--;
 		if (preparationDepth == 0) {
 			recomputeRecursion();
-			if (prepared.recursive && prepared.collectorPayload)
-				return rejected(fail, position, '$node:recursive-enum-with-collector-payload:$path');
 		}
 		return prepared;
 	}
@@ -600,7 +606,9 @@ class CBodyEnumRegistry {
 				identifierOrNull(symbols, prepared.payloadUnionRequest), identifierOrNull(symbols, prepared.tagMemberRequest),
 				identifierOrNull(symbols, prepared.payloadMemberRequest), cases, identifierOrNull(symbols, prepared.retainRequest),
 				identifierOrNull(symbols, prepared.destroyRequest), identifierOrNull(symbols, prepared.retainParameterRequest),
-				identifierOrNull(symbols, prepared.destroyParameterRequest), identifierOrNull(symbols, prepared.retainStatusRequest));
+				identifierOrNull(symbols, prepared.destroyParameterRequest), identifierOrNull(symbols, prepared.retainStatusRequest),
+				identifierOrNull(symbols, prepared.descriptorRequest), identifierOrNull(symbols, prepared.traceRequest),
+				prepared.managedPayload ? identifierOrNull(symbols, prepared.finalizerRequest) : null);
 		});
 	}
 
@@ -629,13 +637,19 @@ class CBodyEnumRegistry {
 			final previousManagedLifetime = value.managedLifetime;
 			value.managedPayload = requiresManagedPayloadLifecycle(value, []);
 			value.collectorPayload = requiresCollectorPayload(value, []);
-			value.managedLifetime = value.managedPayload || value.recursive;
+			// Recursive nodes selected for collection copy their immutable child
+			// pointers directly. Their descriptor traces those pointers, while a
+			// finalizer owns only direct reference-counted payloads. Recursive enums
+			// without collector edges retain the established deep-copy lifecycle.
+			value.managedLifetime = value.managedPayload || value.recursive && !value.collectorPayload;
 			if (value.managedPayload != previousManagedPayload
 				|| value.collectorPayload != previousCollectorPayload
 				|| value.managedLifetime != previousManagedLifetime)
 				changed = true;
 			if (value.managedLifetime)
 				registerManagedLifecycle(value);
+			if (value.recursive && value.collectorPayload)
+				registerCollectorNames(value);
 		}
 		return changed;
 	}
@@ -718,6 +732,23 @@ class CBodyEnumRegistry {
 		// Avoid shadowing the public `hxc_status` typedef in C's ordinary
 		// identifier namespace. GCC diagnoses that ambiguity in the strict lane.
 		value.retainStatusRequest = lifecycleLocal(value.retainRequest, "operation_status", 1);
+	}
+
+	/** Register exact tracing names for collector-owned recursive enum nodes. */
+	function registerCollectorNames(value:CPreparedBodyEnumInstance):Void {
+		if (value.descriptorRequest != null)
+			return;
+		final root = ["compiler", "gc", "enum", value.digest];
+		value.descriptorRequest = new CSymbolRequest(CSKTypeDescriptor, root.concat(["descriptor"]), CNSOrdinary("translation-unit"), CSVInternal, null, [],
+			[], 0, ["enum", value.digest.substr(0, 8), "descriptor"]);
+		value.traceRequest = new CSymbolRequest(CSKMethod, root.concat(["trace"]), CNSOrdinary("translation-unit"), CSVInternal, null, [], [], 1,
+			["enum", value.digest.substr(0, 8), "trace"]);
+		value.finalizerRequest = value.managedPayload ? new CSymbolRequest(CSKMethod, root.concat(["finalize"]), CNSOrdinary("translation-unit"), CSVInternal,
+			null, [], [], 2, ["enum", value.digest.substr(0, 8), "finalize"]) : null;
+		context.symbols.register(value.descriptorRequest);
+		context.symbols.register(value.traceRequest);
+		if (value.finalizerRequest != null)
+			context.symbols.register(value.finalizerRequest);
 	}
 
 	function lifecycleLocal(owner:CSymbolRequest, role:String, ordinal:Int):CSymbolRequest {

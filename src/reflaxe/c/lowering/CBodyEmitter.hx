@@ -226,6 +226,10 @@ class CBodyEmitter {
 	final stringMapsByInstance:Map<String, CLoweredBodyStringMap> = [];
 	final typedMapsByInstance:Map<String, CLoweredBodyTypedMap> = [];
 	final collectorManagedInstanceIds:Map<String, Bool> = [];
+
+	/** Tagged value instances whose indirect recursive nodes use collector pointers. */
+	final collectorManagedPointerTargetIds:Map<String, Bool> = [];
+
 	final arrayElementCleanups:Map<String, CBodyEmitterArrayElementCleanup> = [];
 	final bytesInstanceIds:Map<String, Bool> = [];
 	final optionalsByType:Map<String, CLoweredBodyOptional> = [];
@@ -332,6 +336,12 @@ class CBodyEmitter {
 					enumPayloadNames.set(caseKey, payloadNames);
 				}
 				enumCaseOrder.set(instanceId, caseOrder);
+				if (value.prepared.recursive && value.prepared.collectorPayload) {
+					if (value.descriptorName == null || value.traceName == null)
+						throw new CBodyEmissionError('collector-managed recursive enum `$instanceId` lost its descriptor or trace name');
+					managedDescriptorNames.set(instanceId, value.descriptorName);
+					collectorManagedPointerTargetIds.set(instanceId, true);
+				}
 				if (value.prepared.managedLifetime) {
 					final retainName = requireEnumLifecycleName(value.retainName, value, "retain");
 					final destroyName = requireEnumLifecycleName(value.destroyName, value, "destroy");
@@ -4199,7 +4209,7 @@ class CBodyEmitter {
 				requireEnumLifecycleParameter(value.retainParameterName, value, "retain"), false));
 			result.push(enumLifecyclePrototype(requireEnumLifecycleName(value.destroyName, value, "destroy"),
 				requireEnumLifecycleParameter(value.destroyParameterName, value, "destroy"), true));
-			if (value.prepared.recursive) {
+			if (value.prepared.recursive && !value.prepared.collectorPayload) {
 				result.push(enumRecursivePointerPrototype(recursiveCloneName(value), recursiveCloneParameter(value), true));
 				result.push(enumRecursivePointerPrototype(recursiveDestroyName(value), recursiveDestroyParameter(value), false));
 			}
@@ -4243,7 +4253,7 @@ class CBodyEmitter {
 		for (value in canonicalManagedEnums()) {
 			result.push(enumRetainDefinition(value));
 			result.push(enumDestroyDefinition(value));
-			if (value.prepared.recursive) {
+			if (value.prepared.recursive && !value.prepared.collectorPayload) {
 				result.push(enumRecursiveCloneDefinition(value));
 				result.push(enumRecursiveDestroyDefinition(value));
 			}
@@ -4500,6 +4510,14 @@ class CBodyEmitter {
 			result.push(arrayTraceDefinition(array));
 			result.push(arrayFinalizerDefinition(array));
 		}
+		for (instanceId in enumInstanceOrder) {
+			final value = enumsByInstance.get(instanceId);
+			if (value == null || !value.prepared.recursive || !value.prepared.collectorPayload)
+				continue;
+			result.push(enumNodeTraceDefinition(value));
+			if (value.finalizerName != null)
+				result.push(enumNodeFinalizerDefinition(value));
+		}
 		for (declaration in new CObjectDescriptorEmitter().declarations(managedObjectDescriptorSpecs()))
 			result.push(declaration);
 		return result;
@@ -4537,7 +4555,68 @@ class CBodyEmitter {
 			result.push(new CObjectDescriptorSpec('array.${array.prepared.digest}', array.descriptorName,
 				{type: new CType(TStruct(new CIdentifier("hxc_array_ref"))), declarator: DName(null)}, array.traceName, array.finalizerName, true));
 		}
+		for (instanceId in enumInstanceOrder) {
+			final value = enumsByInstance.get(instanceId);
+			if (value == null || !value.prepared.recursive || !value.prepared.collectorPayload)
+				continue;
+			if (value.descriptorName == null || value.traceName == null)
+				throw new CBodyEmissionError('collector-managed recursive enum `$instanceId` lost descriptor callbacks');
+			result.push(new CObjectDescriptorSpec('enum.${value.prepared.digest}', value.descriptorName,
+				{type: new CType(TStruct(value.valueTag)), declarator: DName(null)}, value.traceName, value.finalizerName, true));
+		}
 		return result;
+	}
+
+	/** Trace only the active payload of one collector-owned recursive enum node. */
+	function enumNodeTraceDefinition(value:CLoweredBodyEnum):CDecl {
+		if (value.traceName == null)
+			throw new CBodyEmissionError('collector-managed recursive enum `${value.prepared.instanceId}` lost its trace function');
+		final objectName = new CIdentifier(value.traceName.value + "_object");
+		final visitName = new CIdentifier(value.traceName.value + "_visit");
+		final contextName = new CIdentifier(value.traceName.value + "_context");
+		final typedName = new CIdentifier(value.traceName.value + "_typed");
+		final typed = EIdentifier(typedName);
+		final statements:Array<CStmt> = [
+			SDecl({
+				storage: [],
+				alignments: [],
+				type: new CType(TStruct(value.valueTag), [QConst]),
+				declarator: DPointer(DName(typedName), []),
+				initializer: IExpr(ECast(new CType(TStruct(value.valueTag), [QConst]), DPointer(DName(null), []), EIdentifier(objectName))),
+				attributes: []
+			})
+		];
+		appendManagedTraceStatements(statements, EUnary(Dereference, typed), IRTInstance(value.prepared.instanceId), visitName, contextName);
+		return DFunction({
+			storage: [SStatic],
+			functionSpecifiers: [],
+			returnType: new CType(TVoid),
+			declarator: DFunction(DName(value.traceName), FPPrototype([
+				{type: new CType(TVoid, [QConst]), declarator: DPointer(DName(objectName), []), attributes: []},
+				{type: new CType(TNamed(new CIdentifier("hxc_trace_visit_fn"))), declarator: DName(visitName), attributes: []},
+				{type: new CType(TVoid), declarator: DPointer(DName(contextName), []), attributes: []}
+			], false)),
+			body: SBlock(statements),
+			attributes: []
+		});
+	}
+
+	/** Release direct ref-counted fields when a recursive enum node is collected. */
+	function enumNodeFinalizerDefinition(value:CLoweredBodyEnum):CDecl {
+		if (value.finalizerName == null || !value.prepared.managedPayload)
+			throw new CBodyEmissionError('collector-managed recursive enum `${value.prepared.instanceId}` lost its finalizer contract');
+		final destroyName = requireEnumLifecycleName(value.destroyName, value, "destroy");
+		final objectName = new CIdentifier(value.finalizerName.value + "_object");
+		return DFunction({
+			storage: [SStatic],
+			functionSpecifiers: [],
+			returnType: new CType(TVoid),
+			declarator: DFunction(DName(value.finalizerName), FPPrototype([
+				{type: new CType(TVoid), declarator: DPointer(DName(objectName), []), attributes: []}
+			], false)),
+			body: SBlock([SExpr(ECall(EIdentifier(destroyName), [EIdentifier(objectName)]))]),
+			attributes: []
+		});
 	}
 
 	/** Trace exact collector references nested in one generated Dynamic wrapper. */
@@ -4669,12 +4748,13 @@ class CBodyEmitter {
 
 		This is the heap-container counterpart to HxcIR managed-root projections.
 		Tags and optional presence are checked before an overlapping or inactive
-		payload is read. Recursive enum nodes remain outside this helper until they
-		have a separately validated recursive trace contract.
+		payload is read. A collector-owned recursive enum pointer is a leaf here:
+		the pointer is visited, then that node's exact descriptor continues tracing.
 	**/
 	function appendManagedTraceStatements(statements:Array<CStmt>, value:CExpr, type:HxcIRTypeRef, visitName:CIdentifier, contextName:CIdentifier):Void {
 		final directManaged = switch type {
-			case IRTPointer(IRTInstance(target), _) | IRTInstance(target): collectorManagedInstanceIds.exists(target);
+			case IRTPointer(IRTInstance(target), _): collectorManagedInstanceIds.exists(target) || collectorManagedPointerTargetIds.exists(target);
+			case IRTInstance(target): collectorManagedInstanceIds.exists(target);
 			case _: false;
 		};
 		if (directManaged) {
@@ -4812,7 +4892,8 @@ class CBodyEmitter {
 				continue;
 			}
 			final managedByCollector = switch type {
-				case IRTPointer(IRTInstance(target), _) | IRTInstance(target): collectorManagedInstanceIds.exists(target);
+				case IRTPointer(IRTInstance(target), _): collectorManagedInstanceIds.exists(target) || collectorManagedPointerTargetIds.exists(target);
+				case IRTInstance(target): collectorManagedInstanceIds.exists(target);
 				case _: false;
 			};
 			final interfaceReference = switch type {
@@ -4910,10 +4991,13 @@ class CBodyEmitter {
 		final status = requireOptionalLifecycleStatus(value.retainStatusName, value);
 		final optionalValue = optionalLifecycleStorageValue(value, EIdentifier(parameter));
 		final payload = EMember(optionalValue, value.payloadName, false);
+		final retain = managedOptionalRetainCall(value, payload);
+		if (retain == null)
+			return optionalNoOpRetainDefinition(name, parameter);
 		final statements:Array<CStmt> = [statusDeclaration(status)];
 		statements.push(SIf(EUnary(LogicalNot, EMember(optionalValue, value.presenceName, false)),
 			SReturn(EIdentifier(CBodyRuntimeNames.identifier(CBRNStatusOk))), null));
-		statements.push(SExpr(EBinary(Assign, EIdentifier(status), managedOptionalRetainCall(value, payload))));
+		statements.push(SExpr(EBinary(Assign, EIdentifier(status), retain)));
 		statements.push(SIf(EBinary(NotEqual, EIdentifier(status), EIdentifier(CBodyRuntimeNames.identifier(CBRNStatusOk))), SReturn(EIdentifier(status)),
 			null));
 		statements.push(SReturn(EIdentifier(CBodyRuntimeNames.identifier(CBRNStatusOk))));
@@ -4938,8 +5022,11 @@ class CBodyEmitter {
 		final parameter = requireOptionalLifecycleParameter(value.destroyParameterName, value, "destroy");
 		final optionalValue = optionalLifecycleStorageValue(value, EIdentifier(parameter));
 		final payload = EMember(optionalValue, value.payloadName, false);
+		final destroy = managedOptionalDestroyCall(value, payload);
+		if (destroy == null)
+			return optionalNoOpDestroyDefinition(name, parameter);
 		final statements:Array<CStmt> = [
-			SIf(EMember(optionalValue, value.presenceName, false), SBlock([SExpr(managedOptionalDestroyCall(value, payload))]), null)
+			SIf(EMember(optionalValue, value.presenceName, false), SBlock([SExpr(destroy)]), null)
 		];
 		return DFunction({
 			storage: [],
@@ -4959,7 +5046,7 @@ class CBodyEmitter {
 	}
 
 	/** Retain the one closed managed payload family selected by this optional. */
-	function managedOptionalRetainCall(value:CLoweredBodyOptional, payload:CExpr):CExpr {
+	function managedOptionalRetainCall(value:CLoweredBodyOptional, payload:CExpr):Null<CExpr> {
 		if (value.prepared.payload.bytesValue() != null)
 			return ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNBytesRetain)), [payload]);
 		final preparedAggregate = value.prepared.payload.aggregateValue();
@@ -4976,11 +5063,13 @@ class CBodyEmitter {
 				throw new CBodyEmissionError('managed optional `${value.prepared.planId}` lost finalized enum `${preparedEnum.instanceId}`');
 			return ECall(EIdentifier(requireEnumLifecycleName(enumValue.retainName, enumValue, "retain")), [EUnary(AddressOf, payload)]);
 		}
+		if (preparedEnum != null && preparedEnum.recursive && preparedEnum.collectorPayload)
+			return null;
 		throw new CBodyEmissionError('managed optional `${value.prepared.planId}` lost its managed Bytes, record, or enum payload');
 	}
 
 	/** Destroy the present payload through the same family chosen for retain. */
-	function managedOptionalDestroyCall(value:CLoweredBodyOptional, payload:CExpr):CExpr {
+	function managedOptionalDestroyCall(value:CLoweredBodyOptional, payload:CExpr):Null<CExpr> {
 		if (value.prepared.payload.bytesValue() != null)
 			return ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNBytesRelease)), [payload]);
 		final preparedAggregate = value.prepared.payload.aggregateValue();
@@ -4997,8 +5086,43 @@ class CBodyEmitter {
 				throw new CBodyEmissionError('managed optional `${value.prepared.planId}` lost finalized enum `${preparedEnum.instanceId}`');
 			return ECall(EIdentifier(requireEnumLifecycleName(enumValue.destroyName, enumValue, "destroy")), [EUnary(AddressOf, payload)]);
 		}
+		if (preparedEnum != null && preparedEnum.recursive && preparedEnum.collectorPayload)
+			return null;
 		throw new CBodyEmissionError('managed optional `${value.prepared.planId}` lost its managed Bytes, record, or enum payload');
 	}
+
+	/** Preserve an earlier optional ownership plan after its recursive payload settles on tracing-only copies. */
+	function optionalNoOpRetainDefinition(name:CIdentifier, parameter:CIdentifier):CDecl
+		return DFunction({
+			storage: [],
+			functionSpecifiers: [],
+			returnType: new CType(TNamed(CBodyRuntimeNames.identifier(CBRNStatusType))),
+			declarator: DFunction(DName(name), FPPrototype([
+				{
+					type: new CType(TVoid),
+					declarator: DPointer(DName(parameter), []),
+					attributes: []
+				}
+			], false)),
+			body: SBlock([
+				ignoreExpression(EIdentifier(parameter)),
+				SReturn(EIdentifier(CBodyRuntimeNames.identifier(CBRNStatusOk)))
+			]),
+			attributes: []
+		});
+
+	/** Emit the matching warning-clean destroy helper for a tracing-only optional payload. */
+	function optionalNoOpDestroyDefinition(name:CIdentifier, parameter:CIdentifier):CDecl
+		return DFunction({
+			storage: [],
+			functionSpecifiers: [],
+			returnType: new CType(TVoid),
+			declarator: DFunction(DName(name), FPPrototype([
+				{type: new CType(TVoid), declarator: DPointer(DName(parameter), []), attributes: []}
+			], false)),
+			body: SBlock([ignoreExpression(EIdentifier(parameter))]),
+			attributes: []
+		});
 
 	function enumLifecyclePrototype(name:CIdentifier, parameter:CIdentifier, destroy:Bool):CDecl {
 		final returnType = destroy ? new CType(TVoid) : new CType(TNamed(CBodyRuntimeNames.identifier(CBRNStatusType)));
@@ -5098,6 +5222,11 @@ class CBodyEmitter {
 				final nested = nestedPrepared == null ? null : enumsByInstance.get(nestedPrepared.instanceId);
 				if (nested == null || !nested.prepared.recursive)
 					throw new CBodyEmissionError('recursive enum `${value.prepared.instanceId}` lost nested payload `${payload.prepared.name}`');
+				// Collector-owned recursive nodes are immutable shared pointers. The
+				// enclosing root or descriptor traces them, and their finalizer owns
+				// direct reference-counted fields, so a value copy performs no manual work.
+				if (nested.prepared.collectorPayload)
+					continue;
 				result.push({
 					retain: ECall(EIdentifier(recursiveCloneName(nested)), [EUnary(AddressOf, field)]),
 					release: ECall(EIdentifier(recursiveDestroyName(nested)), [EUnary(AddressOf, field)])

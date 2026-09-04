@@ -9462,16 +9462,23 @@ private class FunctionBuilder {
 			if (payload.indirect) {
 				if (laterExpressionCreatesFlow(arguments, index))
 					return unsupported(argument, 'enum-constructor:${enumField.name}:recursive-payload-before-flow:$index');
+				final nestedEnum = payload.valueType.enumValue();
+				if (nestedEnum == null || !nestedEnum.recursive)
+					throw new CBodyEmissionError('recursive enum payload `${payload.name}` lost its recursive value plan');
+				final collectorNode = nestedEnum.collectorPayload;
 				final pointer:HxcIRResult = {id: nextValueId(), type: payload.storageType()};
-				appendInstruction(pointer, IRIOAllocate(payload.valueType.irType, IRAOwned, IRIRuntime("alloc"), {
-					kind: IRFAllocationFailure,
-					target: IRFTAbort,
-					arguments: [],
-					cleanup: []
-				}), payloadSource, "enum-recursive-payload-allocate");
+				appendInstruction(pointer,
+					IRIOAllocate(payload.valueType.irType, collectorNode ? IRAShared : IRAOwned, IRIRuntime(collectorNode ? "gc" : "alloc"), {
+						kind: IRFAllocationFailure,
+						target: IRFTAbort,
+						arguments: [],
+						cleanup: []
+					}), payloadSource, "enum-recursive-payload-allocate");
 				registerValueTemporary(pointer.id, "enum-recursive-payload-owner");
 				appendInstruction(null, IRIOStore(IRPDereference(pointer.id), ownedPayload.id), payloadSource, "enum-recursive-payload-initialize");
-				runtimeRequirements.push(new CBodyRuntimeRequirement("alloc", "allocation", "recursive Haxe enum payload", payloadSource, argument.pos));
+				final feature = collectorNode ? "gc" : "alloc";
+				runtimeRequirements.push(new CBodyRuntimeRequirement(feature, "allocation",
+					collectorNode ? "collector-traced recursive Haxe enum payload" : "recursive Haxe enum payload", payloadSource, argument.pos));
 				payloadIds.push(pointer.id);
 			} else {
 				final staged = stageFlowValue(ownedPayload, argument, laterExpressionCreatesFlow(arguments, index), 'enum-payload-$index');

@@ -3338,14 +3338,19 @@ private class HxcIRValidationState {
 						if (intent != IRAShared)
 							add(path, "collector allocation requires shared lifetime intent", instruction.source);
 						final managed = switch type {
-							case IRTInstance(instanceId): final instance = typeInstances.get(instanceId); instance != null && switch instance.representation {
+							case IRTInstance(instanceId): final instance = typeInstances.get(instanceId); final declaration = instance == null ? null : typeDeclarations.get(instance.declarationId); instance != null && switch instance.representation {
 									case IRRManaged("gc"): true;
+									// A recursive enum remains a direct tagged value at source
+									// boundaries, but its indirect nodes can use the collector.
+									// The emitter must still provide an exact descriptor before
+									// this allocation can become C.
+									case IRRTagged: declaration != null && declaration.kind.match(IRTKTaggedUnion(_));
 									case _: false;
 								};
 							case _: false;
 						};
 						if (!managed)
-							add(path, "collector allocation requires one managed(gc) instance payload", instruction.source);
+							add(path, "collector allocation requires one managed(gc) instance or tagged recursive-enum payload", instruction.source);
 						if (failure == null || failure.target != IRFTAbort) add(path,
 							"collector allocation currently requires an explicit abort failure edge", instruction.source);
 					case _:
