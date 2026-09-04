@@ -12514,9 +12514,11 @@ private class FunctionBuilder {
 				|| rightMapping.arrayValue() == null
 				|| typeKey(leftMapping.irType) != typeKey(rightMapping.irType)))
 			return unsupported(expression, "TBinop(array-reference-equality-requires-matching-specializations)");
-		final leftValue = coerce(lowerValue(left, target), target, left.pos, "TBinop(array-reference-equality:left)");
+		final leftValue = stabilizeFreshManagedArray(coerce(lowerValue(left, target), target, left.pos, "TBinop(array-reference-equality:left)"), left.pos,
+			"array-reference-equality-left");
 		final stagedLeft = stageFlowValue(leftValue, left, expressionCreatesFlow(right), "array-reference-equality-left");
-		final rightValue = coerce(lowerValue(right, target), target, right.pos, "TBinop(array-reference-equality:right)");
+		final rightValue = stabilizeFreshManagedArray(coerce(lowerValue(right, target), target, right.pos, "TBinop(array-reference-equality:right)"),
+			right.pos, "array-reference-equality-right");
 		final stableLeftId = restoreStagedValue(stagedLeft, "array-reference-equality-left");
 		final boolMapping = bodyValueType(expression.t, expression.pos, "TBinop(array-reference-equality:result-type)");
 		if (boolMapping.irType != IRTBool)

@@ -102,11 +102,13 @@ Haxe's explicit `Null<Array<T>>` spelling uses that same `hxc_array_ref *`
 carrier. A present value points at the shared container and an absent value is
 plain C `NULL`; the compiler does not wrap the pointer in another
 `{ has_value, value }` record. Direct null checks therefore become pointer
-comparisons. A returned Array transfers its fresh or local owner to the caller;
-returning a borrowed Array first retains it. The matching runtime retain and
-release operations treat `NULL` as a successful no-op, while still rejecting a
-malformed non-null reference. This makes cleanup of a dynamically nullable
-local safe without turning null into an empty Array.
+comparisons. When a function call creates the value used directly by a null
+check, the caller keeps that fresh result alive through the comparison and
+releases its one owner afterward. A returned Array transfers its fresh or local
+owner to the caller; returning a borrowed Array first retains it. The matching
+runtime retain and release operations treat `NULL` as a successful no-op, while
+still rejecting a malformed non-null reference. This makes cleanup of a
+dynamically nullable local safe without turning null into an empty Array.
 
 Some Array type graphs cannot use that local reference count. For example, an
 enum can contain a record whose `next` field is an Array of the same enum.

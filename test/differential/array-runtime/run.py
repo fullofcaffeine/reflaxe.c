@@ -47,6 +47,7 @@ GENERATED_ACYCLIC = CASE / "generated-acyclic"
 GENERATED_CLASS = CASE / "generated-class"
 GENERATED_CYCLE = CASE / "generated-cycle"
 GENERATED_FUNCTION = CASE / "generated-function"
+GENERATED_NULL_COMPARISON = CASE / "generated-null-comparison"
 GENERATED_TO_STRING = CASE / "generated-to-string"
 GENERATED_CLASS_GC_DRIVER = ROOT / "test/native/array_class_gc_driver.c"
 GENERATED_CYCLE_GC_DRIVER = ROOT / "test/native/array_cycle_gc_driver.c"
@@ -2177,6 +2178,107 @@ def run_to_string_lane(toolchains: list[Toolchain]) -> None:
             )
 
 
+def validate_null_comparison_hxcir(hxcir: str) -> None:
+    """Require one temporary owner around each fresh Array null comparison."""
+    for function_id, operation in (
+        ("function.Main.freshArrayIsPresent", "haxe.array-reference.not-equal"),
+        ("function.Main.freshArrayIsAbsent", "haxe.array-reference.equal"),
+    ):
+        section = hxcir_function(hxcir, function_id)
+        owner = re.search(
+            r'action "array-temporary\.([^"]+)\.release" '
+            r'idempotence=exactly-once release place=local\("([^"]+)"\)',
+            section,
+        )
+        if owner is None or owner.group(1) != owner.group(2):
+            raise ArrayRuntimeFailure(
+                f"{function_id} omitted its one exact temporary Array owner"
+            )
+        cleanup = (
+            f'"cleanup.construction"."array-temporary.{owner.group(1)}.release"'
+        )
+        call_offset = section.find('dispatch=direct("function.Main.maybeValues")')
+        comparison_offset = section.find(operation)
+        cleanup_offset = section.find(cleanup)
+        if (
+            section.count('action "array-temporary.') != 1
+            or section.count(cleanup) != 1
+            or call_offset < 0
+            or comparison_offset <= call_offset
+            or cleanup_offset <= comparison_offset
+        ):
+            raise ArrayRuntimeFailure(
+                f"{function_id} lost call, comparison, and exactly-once cleanup order"
+            )
+    borrowed = hxcir_function(hxcir, "function.Main.borrowedArrayIsPresent")
+    if (
+        "haxe.array-reference.not-equal" not in borrowed
+        or 'action "array-temporary.' in borrowed
+        or " retain place=" in borrowed
+        or " release place=" in borrowed
+    ):
+        raise ArrayRuntimeFailure(
+            "borrowed Array null comparison gained ownership traffic"
+        )
+
+
+def render_null_comparison_pair(root: Path) -> Path:
+    """Render the focused null-check fixture twice and compare it with Eval."""
+    normal = root / "generated-null-comparison-normal"
+    reverse = root / "generated-null-comparison-reverse"
+    first = compile_generated_haxe(GENERATED_NULL_COMPARISON, normal, report=True)
+    second = compile_generated_haxe(
+        GENERATED_NULL_COMPARISON, reverse, reverse=True
+    )
+    for label, result in (("normal", first), ("reverse", second)):
+        if result.returncode != 0:
+            raise ArrayRuntimeFailure(
+                f"{label} fresh Array null-comparison compile failed\n"
+                f"stdout={result.stdout!r}\nstderr={result.stderr!r}"
+            )
+    if generated_tree(normal) != generated_tree(reverse):
+        raise ArrayRuntimeFailure(
+            "fresh Array null-comparison project changed under reversed discovery"
+        )
+    validate_null_comparison_hxcir(extract_hxcir(first))
+    oracle = run_bounded_process(
+        [development_tool("haxe"), "oracle.hxml"],
+        cwd=GENERATED_NULL_COMPARISON,
+        env=haxe_environment(),
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    if oracle.returncode != 0 or oracle.stdout or oracle.stderr:
+        raise ArrayRuntimeFailure(
+            "fresh Array null-comparison Eval oracle failed: "
+            f"exit={oracle.returncode} stdout={oracle.stdout!r} "
+            f"stderr={oracle.stderr!r}"
+        )
+    return normal
+
+
+def run_null_comparison_lane(toolchains: list[Toolchain]) -> None:
+    """Verify fresh Array null checks without running unrelated Array suites."""
+    with tempfile.TemporaryDirectory(
+        prefix="reflaxe-c-array-null-comparison-"
+    ) as temporary:
+        root = Path(temporary)
+        generated = render_null_comparison_pair(root)
+        for toolchain in toolchains:
+            build = root / toolchain.family
+            build.mkdir(parents=True)
+            for flags, label in (
+                (("-O0",), "generated-array-null-comparison-o0"),
+                (("-O2",), "generated-array-null-comparison-o2"),
+                (SANITIZER_FLAGS, "generated-array-null-comparison-sanitized"),
+            ):
+                compile_and_run_generated(
+                    toolchain, build, generated, flags, label
+                )
+
+
 def parse_args(argv: Iterable[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--toolchain", choices=("auto", *TOOLCHAINS), default="auto")
@@ -2200,6 +2302,11 @@ def parse_args(argv: Iterable[str]) -> argparse.Namespace:
         action="store_true",
         help="run only Array/record/enum cycle collection and acyclic selectivity",
     )
+    parser.add_argument(
+        "--null-comparison-only",
+        action="store_true",
+        help="run only fresh nullable Array identity comparisons and cleanup",
+    )
     return parser.parse_args(list(argv))
 
 
@@ -2212,12 +2319,26 @@ def main(argv: Iterable[str] = ()) -> int:
                 args.function_values_only,
                 args.to_string_only,
                 args.collection_cycles_only,
+                args.null_comparison_only,
             )
         )
         if focused > 1:
             raise ArrayRuntimeFailure(
                 "choose only one focused Array lane"
             )
+        if args.null_comparison_only:
+            if args.native_only:
+                raise ArrayRuntimeFailure(
+                    "--null-comparison-only requires generated Haxe and cannot use --native-only"
+                )
+            run_null_comparison_lane(toolchains)
+            families = ", ".join(toolchain.family for toolchain in toolchains)
+            print(
+                "array-runtime: OK: "
+                f"{families}; fresh nullable Array equality and inequality, "
+                "exactly-once ownership cleanup, determinism, strict C, and sanitizers passed"
+            )
+            return 0
         if args.collection_cycles_only:
             if args.native_only:
                 raise ArrayRuntimeFailure(

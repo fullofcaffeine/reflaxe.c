@@ -350,6 +350,10 @@ final class Main {
 		after.set(0, 11);
 		final absent = maybeValues(false);
 		final present = maybeValues(true);
+		final freshPresent = freshArrayIsPresent(true);
+		final freshMissing = freshArrayIsPresent(false);
+		final absentFreshPresent = freshArrayIsAbsent(true);
+		final absentFreshMissing = freshArrayIsAbsent(false);
 		final borrowedPlanValues = [17, 19];
 		final conditionalFresh = chooseArray(true, borrowedPlanValues);
 		final conditionalBorrowed = chooseArray(false, borrowedPlanValues);
@@ -567,6 +571,10 @@ final class Main {
 			|| returnedRecord.commands.length != 1
 			|| absent != null
 			|| present == null
+			|| !freshPresent
+			|| freshMissing
+			|| absentFreshPresent
+			|| !absentFreshMissing
 			|| nullableLength(absent) != -1
 			|| nullableLength(present) != 2
 			|| conditionalFresh.length != 2
@@ -763,6 +771,14 @@ final class Main {
 		final values:Array<Int> = [3, 4];
 		return values;
 	}
+
+	/** Compare a freshly returned nullable Array directly with `null`. */
+	static function freshArrayIsPresent(present:Bool):Bool
+		return maybeValues(present) != null;
+
+	/** Compare a freshly returned nullable Array directly with `null`. */
+	static function freshArrayIsAbsent(present:Bool):Bool
+		return maybeValues(present) == null;
 
 	/** Read a nullable Array parameter only after an ordinary Haxe null check. */
 	static function nullableLength(values:Null<Array<Int>>):Int {

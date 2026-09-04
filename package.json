@@ -38,6 +38,7 @@
     "test:dynamic-runtime": "python3 test/runtime/dynamic/run.py",
     "test:dynamic-lowering": "python3 test/differential/dynamic-runtime/run.py",
     "test:array-runtime": "python3 test/differential/array-runtime/run.py",
+    "test:array-null-comparison": "python3 test/differential/array-runtime/run.py --null-comparison-only",
     "test:int-map": "python3 test/differential/int-map/run.py",
     "test:string-map": "python3 test/differential/string-map/run.py",
     "test:string-char-at": "python3 test/differential/string-char-at/run.py",
