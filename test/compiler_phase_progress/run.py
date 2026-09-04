@@ -75,6 +75,8 @@ def main() -> int:
         record("phase-completed", phase="typed input capture"),
         record("phase-started", phase="target pipeline"),
         record("request-configured", profile="portable", build_mode="debug"),
+        record("phase-started", phase="HxcIR function construction"),
+        record("phase-completed", phase="HxcIR function construction"),
         record("phase-started", phase="configuration and contracts"),
         record("phase-completed", phase="configuration and contracts"),
         record("phase-completed", phase="target pipeline"),
