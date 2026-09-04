@@ -322,9 +322,13 @@ class CProjectEmitter {
 
 	final outputLicensePolicy:COutputLicensePolicySnapshot;
 
-	public function new() {
+	public function new()
+		this.outputLicensePolicy = loadOutputLicensePolicy();
+
+	/** Load policy in the macro host and keep target-side construction fail-closed. */
+	static function loadOutputLicensePolicy():COutputLicensePolicySnapshot {
 		#if macro
-		this.outputLicensePolicy = COutputLicensePolicyLoader.load();
+		return COutputLicensePolicyLoader.load();
 		#else
 		throw new ProjectEmissionError("project emitter requires macro-host generated-output policy facts");
 		#end
