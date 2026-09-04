@@ -4755,7 +4755,7 @@ private class HxcIRValidationState {
 		validateCleanupFreeStatusAbort(call.failure, path, source, "managed Bytes operation");
 	}
 
-	/** Validate the one Bytes/String composition before C symbol selection. */
+	/** Validate each Bytes/String composition before C symbol selection. */
 	function validateBytesStringCall(call:HxcIRCall, argumentTypes:Array<Null<HxcIRTypeRef>>, path:String, source:HxcSourceSpan):Void {
 		final operationId = switch call.dispatch {
 			case IRCDRuntime("bytes-string", value): value;
@@ -4768,11 +4768,19 @@ private class HxcIRValidationState {
 			final type = argumentTypes[index];
 			return type != null && typeKey(type) == intType;
 		};
-		final valid = operationId == "get-string-utf8" && argumentTypes.length == 3 && isManagedBytes(argumentTypes[0]) && isInt(1) && isInt(2)
-			&& call.returnType == IRTManagedString;
+		final valid = switch operationId {
+			case "get-string-utf8":
+				argumentTypes.length == 3
+				&& isManagedBytes(argumentTypes[0])
+				&& isInt(1)
+				&& isInt(2)
+				&& call.returnType == IRTManagedString;
+			case "to-hex": argumentTypes.length == 1 && isManagedBytes(argumentTypes[0]) && call.returnType == IRTManagedString;
+			case _: false;
+		};
 		if (!valid)
-			add(path, "Bytes UTF-8 decoding requires managed Bytes, Haxe Int position/length, and returns one managed String", source);
-		validateCleanupFreeStatusAbort(call.failure, path, source, "Bytes UTF-8 decoding");
+			add(path, "Bytes text conversion requires the operation's exact managed Bytes arguments and returns one managed String", source);
+		validateCleanupFreeStatusAbort(call.failure, path, source, "Bytes text conversion");
 	}
 
 	/** Validate allocation-backed String calls before C symbol selection. */

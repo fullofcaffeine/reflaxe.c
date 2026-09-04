@@ -125,6 +125,7 @@ int main(void) {
   char *borrowed_text = NULL;
   hxc_string owned_source = HXC_STRING_INITIALIZER;
   hxc_string decoded = HXC_STRING_INITIALIZER;
+  hxc_string hexadecimal = HXC_STRING_INITIALIZER;
   int32_t value = -1;
   int32_t order = 7;
   const uint8_t shorter_data[] = {UINT8_C(255)};
@@ -206,6 +207,23 @@ int main(void) {
   HXC_TEST_CHECK(decoded.data[0] == UINT8_C(0xc3));
   HXC_TEST_CHECK(hxc_string_release(&decoded) == HXC_STATUS_OK);
 
+  HXC_TEST_CHECK(hxc_bytes_ref_to_hex(utf8, allocator, &hexadecimal) == HXC_STATUS_OK);
+  HXC_TEST_CHECK(
+    hxc_string_is_valid(hexadecimal)
+      && hexadecimal.byte_length == 14u
+      && hexadecimal.data[0] == UINT8_C('7')
+      && hexadecimal.data[1] == UINT8_C('8')
+      && hexadecimal.data[2] == UINT8_C('5')
+      && hexadecimal.data[3] == UINT8_C('8')
+      && hexadecimal.data[12] == UINT8_C('8')
+      && hexadecimal.data[13] == UINT8_C('2')
+  );
+  HXC_TEST_CHECK(hxc_string_release(&hexadecimal) == HXC_STATUS_OK);
+
+  HXC_TEST_CHECK(hxc_bytes_ref_to_hex(empty, allocator, &hexadecimal) == HXC_STATUS_OK);
+  HXC_TEST_CHECK(hxc_string_is_valid(hexadecimal) && hexadecimal.byte_length == 0u);
+  HXC_TEST_CHECK(hxc_string_release(&hexadecimal) == HXC_STATUS_OK);
+
   HXC_TEST_CHECK(
     hxc_bytes_ref_get_string_utf8(utf8, -1, 1, allocator, &decoded)
       == HXC_STATUS_OUT_OF_RANGE
@@ -252,6 +270,16 @@ int main(void) {
       == HXC_STATUS_OUT_OF_MEMORY
   );
   HXC_TEST_CHECK(failed == NULL);
+  arena.failure_armed = false;
+
+  arena.failure_armed = true;
+  arena.successful_allocations_before_failure = 1u;
+  HXC_TEST_CHECK(
+    hxc_bytes_ref_to_hex(utf8, allocator, &hexadecimal)
+      == HXC_STATUS_OUT_OF_MEMORY
+      && hexadecimal.data == NULL
+      && hexadecimal.owner == NULL
+  );
   arena.failure_armed = false;
 
   arena.failure_armed = true;

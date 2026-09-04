@@ -74,22 +74,13 @@ final class Main {
 	}
 
 	/**
-		Render digest-sized bytes through the ordinary lowercase hexadecimal path.
+		Render bytes through the ordinary lowercase hexadecimal path.
 
-		The fresh `StringBuf` result is compared with a borrowed literal after this
-		call returns. This keeps byte reads, indexed digit lookup, repeated
-		`addChar`, returned String ownership, and equality in one reduced contract.
+		Returning the fresh result across this helper boundary proves that the
+		caller receives one independent managed String owner.
 	**/
-	static function lowercaseHex(value:Bytes):String {
-		final digits = "0123456789abcdef";
-		final output = new StringBuf();
-		for (index in 0...value.length) {
-			final byte = value.get(index);
-			output.addChar(digits.charCodeAt(byte >>> 4));
-			output.addChar(digits.charCodeAt(byte & 15));
-		}
-		return output.toString();
-	}
+	static function lowercaseHex(value:Bytes):String
+		return value.toHex();
 
 	/** Build a deterministic 32-byte stand-in for a binary SHA-256 result. */
 	static function knownDigestBytes():Bytes {
@@ -245,6 +236,14 @@ final class Main {
 		final explicitUtf8 = decodedBytes.getString(0, decodedBytes.length, Encoding.UTF8);
 		final decodedWhole = decodedBytes.toString();
 		final decodedEmpty = Bytes.alloc(0).toString();
+		final hexBoundaryBytes = Bytes.alloc(6);
+		hexBoundaryBytes.set(1, 0x01);
+		hexBoundaryBytes.set(2, 0x7f);
+		hexBoundaryBytes.set(3, 0x80);
+		hexBoundaryBytes.set(4, 0xfe);
+		hexBoundaryBytes.set(5, 0xff);
+		final hexBoundary = hexBoundaryBytes.toHex();
+		final hexEmpty = Bytes.alloc(0).toHex();
 		decodedBytes.set(7, "X".code);
 
 		while (bytes.length != 8
@@ -301,6 +300,8 @@ final class Main {
 			|| explicitUtf8 != "prefix:hé🙂"
 			|| decodedWhole != "prefix:hé🙂"
 			|| decodedEmpty != ""
+			|| hexBoundary != "00017f80feff"
+			|| hexEmpty != ""
 			|| lowercaseHex(knownDigestBytes()) != "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff"
 			|| decodedBytes.get(7) != "X".code) {}
 	}

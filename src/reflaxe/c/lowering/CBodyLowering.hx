@@ -1717,7 +1717,7 @@ class CBodyLowering {
 	}
 
 	/**
-	 * Recognize the two pinned `haxe.io.Bytes` operations that create Strings.
+	 * Recognize the pinned `haxe.io.Bytes` operations that create Strings.
 	 *
 	 * Both methods validate and copy mutable byte storage into a fresh immutable
 	 * String owner. Discovering that ownership before function signatures are
@@ -1733,7 +1733,7 @@ class CBodyLowering {
 				&& owner.pack[0] == "haxe"
 				&& owner.pack[1] == "io"
 				&& owner.name == "Bytes"
-				&& (name == "getString" || name == "toString");
+				&& (name == "getString" || name == "toString" || name == "toHex");
 			case TParenthesis(inner) | TMeta(_, inner) | TCast(inner, _):
 				isBytesStringCall(inner);
 			case _:
@@ -15625,7 +15625,7 @@ private class FunctionBuilder {
 			materializeResult:Bool):Null<LoweredValue> {
 		final method = access.field.get().name;
 		final receiver = lowerManagedBytesReceiver(access.receiver, method);
-		if (method == "getString" || method == "toString")
+		if (method == "getString" || method == "toString" || method == "toHex")
 			return lowerManagedBytesStringCall(expression, receiver, method, arguments);
 		final loweredArguments:Array<String> = [receiver.id];
 		var operation = method;
@@ -15701,16 +15701,18 @@ private class FunctionBuilder {
 	}
 
 	/**
-		Decode a checked `Bytes` range into a fresh immutable Haxe String.
+		Convert `Bytes` into a fresh immutable Haxe String.
 
 		`Bytes` stores arbitrary mutable data, so this boundary cannot return a
 		view into the original allocation. HxcIR records the receiver and exact
-		byte range; the selected `bytes-string` runtime validates UTF-8, copies it,
-		and publishes a separately owned String only after all checks succeed.
+		byte range or hexadecimal operation. The selected `bytes-string` runtime
+		validates or encodes it and publishes a separately owned String only after
+		all checks succeed.
 	**/
 	function lowerManagedBytesStringCall(expression:TypedExpr, receiver:LoweredValue, method:String, arguments:Array<TypedExpr>):LoweredValue {
 		final source = sourceSpan(expression.pos);
 		final loweredArguments:Array<String> = [receiver.id];
+		var operation = "get-string-utf8";
 		if (method == "getString") {
 			if (arguments.length < 2 || arguments.length > 3)
 				return unsupported(expression, 'TCall(Bytes.getString:argument-count=${arguments.length})');
@@ -15718,7 +15720,7 @@ private class FunctionBuilder {
 				return unsupported(arguments[2], "TCall(Bytes.getString:encoding-not-UTF8)");
 			loweredArguments.push(lowerBytesIntArgument(arguments[0], "Bytes.getString:position").id);
 			loweredArguments.push(lowerBytesIntArgument(arguments[1], "Bytes.getString:length").id);
-		} else {
+		} else if (method == "toString") {
 			if (arguments.length != 0)
 				return unsupported(expression, 'TCall(Bytes.toString:argument-count=${arguments.length})');
 			final zero:HxcIRResult = {id: nextValueId(), type: IRTInt(32, true)};
@@ -15734,22 +15736,26 @@ private class FunctionBuilder {
 			runtimeRequirements.push(new CBodyRuntimeRequirement("bytes", "length", "ordinary haxe.io.Bytes.toString full byte range", source, expression.pos));
 			loweredArguments.push(zero.id);
 			loweredArguments.push(length.id);
+		} else {
+			if (arguments.length != 0)
+				return unsupported(expression, 'TCall(Bytes.toHex:argument-count=${arguments.length})');
+			operation = "to-hex";
 		}
 		final resultMapping = bodyValueType(expression.t, expression.pos, 'TCall(Bytes.$method:result-type)');
 		if (resultMapping.irType != IRTManagedString)
 			return unsupported(expression, 'TCall(Bytes.$method:result-requires-managed-String:${resultMapping.cSpelling})');
 		final result:HxcIRResult = {id: nextValueId(), type: IRTManagedString};
 		appendInstruction(result, IRIOCall({
-			dispatch: IRCDRuntime("bytes-string", "get-string-utf8"),
+			dispatch: IRCDRuntime("bytes-string", operation),
 			arguments: loweredArguments,
 			returnType: IRTManagedString,
 			failure: managedArrayFailure()
-		}), source, "bytes-get-string-utf8");
-		registerValueTemporary(result.id, "bytes-get-string-utf8-result");
+		}), source, 'bytes-$operation');
+		registerValueTemporary(result.id, 'bytes-$operation-result');
 		freshManagedStringValueIds.set(result.id, true);
 		freshManagedStringValueRoles.set(result.id, 'Bytes.$method result');
-		runtimeRequirements.push(new CBodyRuntimeRequirement("bytes-string", "get-string-utf8", 'ordinary Haxe Bytes.$method checked UTF-8 snapshot', source,
-			expression.pos));
+		final description = method == "toHex" ? "ordinary Haxe Bytes.toHex lowercase encoding" : 'ordinary Haxe Bytes.$method checked UTF-8 snapshot';
+		runtimeRequirements.push(new CBodyRuntimeRequirement("bytes-string", operation, description, source, expression.pos));
 		return {id: result.id, type: result.type, mapping: resultMapping};
 	}
 

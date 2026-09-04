@@ -947,7 +947,10 @@ class CProjectEmitter {
 				case "string-float" if (reason.kind == "runtime-operation" && reason.operationId == "from-float"):
 				case "string-split" if (reason.kind == "runtime-operation" && reason.operationId == "split"):
 				case "array-join" if (reason.kind == "runtime-operation" && reason.operationId == "join"):
-				case "bytes-string" if (reason.kind == "runtime-operation" && reason.operationId == "get-string-utf8"):
+				case "bytes-string" if (reason.kind == "runtime-operation" && switch reason.operationId {
+						case "get-string-utf8" | "to-hex": true;
+						case _: false;
+					}):
 				case "io" if (reason.kind == "hosted-output"):
 				case "array" if (reason.kind == "runtime-operation"):
 				case "iterator" if (reason.kind == "runtime-operation"):

@@ -457,15 +457,17 @@ class RuntimeFeatureCatalog {
 						"test/differential/bytes-runtime/run.py",
 						"test/runtime/runtime-feature-graph/run.py"
 					])),
-			new RuntimeFeatureDefinition(bytesString, "Checked UTF-8 decoding from mutable Bytes into an independently owned Haxe String.",
+			new RuntimeFeatureDefinition(bytesString, "Checked text conversion from mutable Bytes into an independently owned Haxe String.",
 				CompilerSelectable, true, environments, [bytes, string], [header("bytes_string.h"), source("bytes_string.c")],
-				["hxc_bytes_ref_get_string_utf8"], [], [],
-				documentation("Copies one checked Bytes range into a fresh immutable String only after the range is valid UTF-8.", [
+				["hxc_bytes_ref_get_string_utf8", "hxc_bytes_ref_to_hex"], [], [],
+				documentation("Copies one checked Bytes range or lowercase hexadecimal encoding into a fresh immutable String.", [
 					new RuntimeFeatureSelectionRoot("get-string-utf8", RuntimeFeatureSelectionRootKind.HxcIrOperation,
-						"A reachable ordinary Bytes.getString or Bytes.toString interprets run-time binary storage as UTF-8.")
+						"A reachable ordinary Bytes.getString or Bytes.toString interprets run-time binary storage as UTF-8."),
+					new RuntimeFeatureSelectionRoot("to-hex", RuntimeFeatureSelectionRootKind.HxcIrOperation,
+						"A reachable ordinary Bytes.toHex encodes run-time binary storage as lowercase hexadecimal text.")
 				],
-					"Compiler-known immutable valid UTF-8 bytes may become a direct literal-backed String when mutation and identity are unobservable.",
-					"A closed fixed-capacity buffer may use a program-local checked decoder when that preserves bounds, malformed-input failure, and String ownership.",
+					"Compiler-known immutable bytes may become direct literal-backed text when mutation and identity are unobservable.",
+					"A closed fixed-capacity buffer may use a program-local decoder or hexadecimal encoder when that preserves bounds, exact text, and String ownership.",
 					"General Bytes and String values have separate owners. This composition validates the selected bytes, copies them once, and publishes a String whose lifetime no longer depends on later buffer mutation.",
 					"docs/hxrt.md",
 					[
@@ -787,7 +789,7 @@ class RuntimeFeatureCatalog {
 			case "array_join.h": "5829a159dab0bd3446b5bc418c2ee32ad2902c0fec6bcc04f82efeb66c294fea";
 			case "base.h": "7d4f67124bf94b76bfc24d5db973426f48f3f9f37daeae975fd4948f5b1dea25";
 			case "bytes.h": "dc9f59ab163486e2fc06f988cd931065eda3f480dfadae6917ee08ab60e9a4f5";
-			case "bytes_string.h": "9d944e38a748696628076b0c5fd56339668e48953a220d51c8da1630fbdf9c40";
+			case "bytes_string.h": "7e51a3fd0924ebee6ab1f9c2778c2162061f4d8b946721ae08ec072243f5e0d2";
 			case "date_time.h": "07086c9185ea03a13dc6bf39d02f00f99b7cbd8151ba0bdf90d7e457c07880d4";
 			case "dynamic.h": "6acbca9069ce4670988e682c5c214a32968fadee892ea4490d0844674c2e24b2";
 			case "exception.h": "af147c885d31d9408b27b0777a3021bb6d1631b580b237fed75aa21459bad529";
@@ -819,7 +821,7 @@ class RuntimeFeatureCatalog {
 			case "array.c": "0ab7e5cb0654cc0969974a2719de7fa032e81497b4e7de66bcf3f4e7a3299c57";
 			case "array_join.c": "b158708b62c7e407f9da21c24a1b3306d4b41baa6b63f2d8019f631a98008fde";
 			case "bytes.c": "10a4c6c17d1cedc31562fef6708fd54351e094ec4be631848d6348bb82ced46c";
-			case "bytes_string.c": "0ee9604f1b4ae78baeeaf7cac8b2a35b5634f115c958a7575230c790e8aa6ca6";
+			case "bytes_string.c": "21e54e678dfbd41d215499314b330dde189374d132c3e13360adc3a9fa23019b";
 			case "date_time.c": "546e3f244d3187993254aca85dd4acfd64bd3c259b1531d736c950ce9de51b24";
 			case "dynamic.c": "804371b7eb2bfa6dbcb6598ff729754b312a2ba7b24a94a615915c30dee68503";
 			case "exception.c": "e6660d0b55b56be3cd436af8f0c16a7668b70f7e82031687a5a149e029c12741";

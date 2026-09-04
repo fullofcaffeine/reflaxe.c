@@ -351,21 +351,9 @@ def validate_bytes_flow_carrier(hxcir: str, function_id: str) -> None:
 def validate_lowercase_hex_path(hxcir: str) -> None:
     """Prove digest bytes become one owned lowercase String through typed calls."""
     function = hxcir_function(hxcir, "function.Main.lowercaseHex")
-    expected_counts = {
-        'runtime(feature="bytes",operation="get")': 1,
-        'runtime(feature="string-scalar",operation="char-code-at")': 2,
-        'runtime(feature="string",operation="from-scalar")': 2,
-        'runtime(feature="string",operation="concat")': 2,
-    }
-    for marker, expected in expected_counts.items():
-        actual = function.count(marker)
-        if actual != expected:
-            raise BytesRuntimeFailure(
-                "lowercase hexadecimal reduction has "
-                f"{actual} {marker!r} operation(s); expected {expected}"
-            )
     if (
         "returns=managed-string-utf8" not in function
+        or 'runtime(feature="bytes-string",operation="to-hex")' not in function
         or "terminator return value=" not in function
         or 'implementation=runtime("string")' not in function
     ):
@@ -485,6 +473,7 @@ def validate_generated_project(output: Path, hxcir: str) -> None:
         'runtime(feature="bytes",operation="blit")',
         'runtime(feature="bytes",operation="compare")',
         'runtime(feature="bytes-string",operation="get-string-utf8")',
+        'runtime(feature="bytes-string",operation="to-hex")',
         "bytes-temporary.local.",
         "static-call-argument-0-owner-initialize",
         "static-call-argument-0-borrow",
@@ -636,7 +625,7 @@ def validate_generated_project(output: Path, hxcir: str) -> None:
             "managed-type-representation",
         },
         "array-join": {"join"},
-        "bytes-string": {"get-string-utf8"},
+        "bytes-string": {"get-string-utf8", "to-hex"},
         "string": {"cleanup-release", "concat", "from-scalar", "retain"},
     }:
         raise BytesRuntimeFailure(
@@ -654,6 +643,7 @@ def validate_generated_project(output: Path, hxcir: str) -> None:
         "hxc_bytes_ref_retain",
         "hxc_bytes_ref_release",
         "hxc_bytes_ref_get_string_utf8",
+        "hxc_bytes_ref_to_hex",
         "hxc_array_string_join",
         "hxc_string_concat_ref",
         "hxc_string_from_scalar",
@@ -1164,7 +1154,7 @@ def main(argv: Iterable[str] = ()) -> int:
     mode = "native contract" if args.native_only else "Eval plus generated ordinary-Haxe Bytes"
     print(
         "bytes-runtime: OK: "
-        f"{families}; {mode}; C11 O0/O2 and C++17 header consumers, aliasing, overlap, bounds, checked UTF-8 snapshots, call-scoped mutable C text, allocation rollback, ownership, sanitizers, and selective symbols passed"
+        f"{families}; {mode}; C11 O0/O2 and C++17 header consumers, aliasing, overlap, bounds, checked UTF-8 snapshots, lowercase hexadecimal encoding, call-scoped mutable C text, allocation rollback, ownership, sanitizers, and selective symbols passed"
     )
     return 0
 

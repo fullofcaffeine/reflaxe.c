@@ -21,7 +21,9 @@ The first haxe.c slice supports ordinary Haxe calls to:
 - `getString(position, length)` and `toString()`, using UTF-8. The selected
   range must be in bounds and contain complete, well-formed UTF-8. The returned
   immutable String owns its own copy, so later mutation of the Bytes value
-  cannot alter text that has already been published.
+  cannot alter text that has already been published;
+- `toHex()`, which returns two lowercase hexadecimal digits per byte in a new
+  immutable String. Empty Bytes returns the empty String.
 
 Assignment shares the same mutable Bytes value. `sub` is different: it creates
 an independent copy. `set` and `fill` keep the low eight bits of the supplied
