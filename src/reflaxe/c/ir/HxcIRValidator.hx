@@ -10,6 +10,33 @@ private typedef HxcIRInstructionSite = {
 	final block:HxcIRBlock;
 }
 
+/** Deterministic work counts for validation paths whose growth must stay bounded. */
+typedef HxcIRValidationWorkReport = {
+	/** Functions whose call-scoped C-string uses required one complete scan. */
+	final callScopedFunctions:Int;
+
+	/** Call-scoped immutable or mutable C-string values checked by those scans. */
+	final callScopedValues:Int;
+
+	/** Instructions visited while indexing all call-scoped uses once per function. */
+	final callScopedInstructionVisits:Int;
+
+	/** Terminators visited while indexing all call-scoped uses once per function. */
+	final callScopedTerminatorVisits:Int;
+}
+
+/** Mutable evidence accumulated for one call-scoped value during one function scan. */
+private typedef HxcIRCallScopedCStringEvidence = {
+	final label:String;
+	final valuePath:String;
+	final origin:HxcIRInstructionSite;
+	final preparedOrigin:Null<Bool>;
+	var nativeUses:Int;
+	var disposeUses:Int;
+	var nativeInstructionIndex:Int;
+	var disposeInstructionIndex:Int;
+}
+
 /** One path state used to prove an empty direct local before each reachable read. */
 private typedef HxcIRCarrierFlowState = {
 	final blockId:String;
@@ -113,10 +140,27 @@ class ValidatedHxcIRProgram {
 class HxcIRValidator {
 	public static inline final SCHEMA_VERSION = 27;
 
-	public function new() {}
+	var latestWork:HxcIRValidationWorkReport;
 
-	public function validate(program:HxcIRProgram, profile:String):Array<HxcIRDiagnostic>
-		return new HxcIRValidationState(program, profile).validate();
+	public function new() {
+		latestWork = emptyWorkReport();
+	}
+
+	public function validate(program:HxcIRProgram, profile:String):Array<HxcIRDiagnostic> {
+		final state = new HxcIRValidationState(program, profile);
+		final diagnostics = state.validate();
+		latestWork = state.workReport();
+		return diagnostics;
+	}
+
+	/** Return scalar evidence from the most recent complete validation request. */
+	public function workReport():HxcIRValidationWorkReport
+		return {
+			callScopedFunctions: latestWork.callScopedFunctions,
+			callScopedValues: latestWork.callScopedValues,
+			callScopedInstructionVisits: latestWork.callScopedInstructionVisits,
+			callScopedTerminatorVisits: latestWork.callScopedTerminatorVisits
+		};
 
 	/** Validate and freeze one complete program for downstream analysis and emission. */
 	public function requireValid(program:HxcIRProgram, profile:String):ValidatedHxcIRProgram {
@@ -126,6 +170,14 @@ class HxcIRValidator {
 		}
 		return new ValidatedHxcIRProgram(program);
 	}
+
+	static function emptyWorkReport():HxcIRValidationWorkReport
+		return {
+			callScopedFunctions: 0,
+			callScopedValues: 0,
+			callScopedInstructionVisits: 0,
+			callScopedTerminatorVisits: 0
+		};
 }
 
 private class HxcIRValidationState {
@@ -144,6 +196,10 @@ private class HxcIRValidationState {
 	final dynamicCallShapes:Map<String, HxcIRDynamicCallShape> = [];
 	final dynamicOperations:Map<String, HxcIRDynamicOperation> = [];
 	final managedRootPaths:HxcIRManagedRootPaths;
+	var callScopedFunctions:Int = 0;
+	var callScopedValues:Int = 0;
+	var callScopedInstructionVisits:Int = 0;
+	var callScopedTerminatorVisits:Int = 0;
 
 	public function new(program:HxcIRProgram, profile:String) {
 		this.program = program;
@@ -164,6 +220,15 @@ private class HxcIRValidationState {
 		diagnostics.sort(compareDiagnostics);
 		return diagnostics;
 	}
+
+	/** Publish immutable work evidence after validation has completed. */
+	public function workReport():HxcIRValidationWorkReport
+		return {
+			callScopedFunctions: callScopedFunctions,
+			callScopedValues: callScopedValues,
+			callScopedInstructionVisits: callScopedInstructionVisits,
+			callScopedTerminatorVisits: callScopedTerminatorVisits
+		};
 
 	function programSource():HxcSourceSpan {
 		if (program.modules.length > 0) {
@@ -1826,6 +1891,7 @@ private class HxcIRValidationState {
 	**/
 	function validateCallScopedCStringBuffers(fn:HxcIRFunction, path:String, values:Map<String, HxcIRTypeRef>, valueSites:Map<String, HxcIRInstructionSite>,
 			blockParameterIds:Map<String, Bool>):Void {
+		final evidenceByValue:Map<String, HxcIRCallScopedCStringEvidence> = [];
 		for (valueId => type in values) {
 			if (type != IRTCallScopedCString && type != IRTMutableCStringBuffer)
 				continue;
@@ -1859,59 +1925,86 @@ private class HxcIRValidationState {
 			};
 			if (preparedOrigin == null)
 				add(valuePath, 'a call-scoped $label must originate at its checked borrow operation', origin.instruction.source);
-
-			var nativeUses = 0;
-			var disposeUses = 0;
-			var nativeInstructionIndex = -1;
-			var disposeInstructionIndex = -1;
-			for (block in fn.blocks) {
-				for (instructionIndex => instruction in block.instructions) {
-					switch instruction.kind {
-						case IRIOCall(call):
-							for (index => argument in call.arguments)
-								if (argument == valueId) {
-									switch call.dispatch {
-										case IRCDNative(_):
-											nativeUses++;
-											nativeInstructionIndex = instructionIndex;
-											if (block.id != origin.block.id) add(valuePath,
-												"the native consumer must remain in the borrow producer's basic block", instruction.source);
-										case IRCDRuntime("string", "dispose-cstring") if (preparedOrigin == true):
-											disposeUses++;
-											disposeInstructionIndex = instructionIndex;
-											if (block.id != origin.block.id) add(valuePath,
-												"the temporary disposer must remain in the prepare producer's basic block", instruction.source);
-										case _:
-											add(valuePath, 'call-scoped $label escapes through a non-native call argument $index', instruction.source);
-									}
-								}
-							for (dispatchUse in dispatchValueUses(call.dispatch))
-								if (dispatchUse == valueId)
-									add(valuePath, 'call-scoped $label cannot be a dispatch receiver or callable', instruction.source);
-							if (call.failure != null)
-								for (argument in call.failure.arguments)
-									if (argument == valueId)
-										add(valuePath, 'call-scoped $label cannot enter a failure edge', instruction.source);
-						case other:
-							for (use in nonCallInstructionValueUses(other))
-								if (use == valueId)
-									add(valuePath, 'call-scoped $label escapes through another HxcIR operation', instruction.source);
-					}
+			evidenceByValue.set(valueId, {
+				label: label,
+				valuePath: valuePath,
+				origin: origin,
+				preparedOrigin: preparedOrigin,
+				nativeUses: 0,
+				disposeUses: 0,
+				nativeInstructionIndex: -1,
+				disposeInstructionIndex: -1
+			});
+		}
+		if (!evidenceByValue.keys().hasNext())
+			return;
+		callScopedFunctions++;
+		for (_ in evidenceByValue)
+			callScopedValues++;
+		for (block in fn.blocks) {
+			for (instructionIndex => instruction in block.instructions) {
+				callScopedInstructionVisits++;
+				switch instruction.kind {
+					case IRIOCall(call):
+						for (index => argument in call.arguments) {
+							final evidence = evidenceByValue.get(argument);
+							if (evidence == null)
+								continue;
+							switch call.dispatch {
+								case IRCDNative(_):
+									evidence.nativeUses++;
+									evidence.nativeInstructionIndex = instructionIndex;
+									if (block.id != evidence.origin.block.id) add(evidence.valuePath,
+										"the native consumer must remain in the borrow producer's basic block", instruction.source);
+								case IRCDRuntime("string", "dispose-cstring") if (evidence.preparedOrigin == true):
+									evidence.disposeUses++;
+									evidence.disposeInstructionIndex = instructionIndex;
+									if (block.id != evidence.origin.block.id) add(evidence.valuePath,
+										"the temporary disposer must remain in the prepare producer's basic block", instruction.source);
+								case _:
+									add(evidence.valuePath, 'call-scoped ${evidence.label} escapes through a non-native call argument $index',
+										instruction.source);
+							}
+						}
+						for (dispatchUse in dispatchValueUses(call.dispatch)) {
+							final evidence = evidenceByValue.get(dispatchUse);
+							if (evidence != null)
+								add(evidence.valuePath, 'call-scoped ${evidence.label} cannot be a dispatch receiver or callable', instruction.source);
+						}
+						if (call.failure != null)
+							for (argument in call.failure.arguments) {
+								final evidence = evidenceByValue.get(argument);
+								if (evidence != null)
+									add(evidence.valuePath, 'call-scoped ${evidence.label} cannot enter a failure edge', instruction.source);
+							}
+					case other:
+						for (use in nonCallInstructionValueUses(other)) {
+							final evidence = evidenceByValue.get(use);
+							if (evidence != null)
+								add(evidence.valuePath, 'call-scoped ${evidence.label} escapes through another HxcIR operation', instruction.source);
+						}
 				}
-				if (block.terminator != null)
-					for (use in terminatorValueUses(block.terminator.kind))
-						if (use == valueId)
-							add(valuePath, 'call-scoped $label escapes through control flow or return', block.terminator.source);
 			}
-			if (nativeUses != 1)
-				add(valuePath, 'call-scoped $label requires exactly one direct native consumer; found $nativeUses', origin.instruction.source);
-			if (preparedOrigin == true) {
-				if (disposeUses != 1)
-					add(valuePath, 'a prepared call-scoped $label requires exactly one disposer; found $disposeUses', origin.instruction.source);
-				if (nativeInstructionIndex < 0 || disposeInstructionIndex <= nativeInstructionIndex)
-					add(valuePath, "a prepared call-scoped immutable C string must be disposed after its native consumer", origin.instruction.source);
-			} else if (disposeUses != 0) {
-				add(valuePath, "a zero-copy borrowed C string must not use the temporary disposer", origin.instruction.source);
+			if (block.terminator != null) {
+				callScopedTerminatorVisits++;
+				for (use in terminatorValueUses(block.terminator.kind)) {
+					final evidence = evidenceByValue.get(use);
+					if (evidence != null)
+						add(evidence.valuePath, 'call-scoped ${evidence.label} escapes through control flow or return', block.terminator.source);
+				}
+			}
+		}
+		for (evidence in evidenceByValue) {
+			final source = evidence.origin.instruction.source;
+			if (evidence.nativeUses != 1)
+				add(evidence.valuePath, 'call-scoped ${evidence.label} requires exactly one direct native consumer; found ${evidence.nativeUses}', source);
+			if (evidence.preparedOrigin == true) {
+				if (evidence.disposeUses != 1)
+					add(evidence.valuePath, 'a prepared call-scoped ${evidence.label} requires exactly one disposer; found ${evidence.disposeUses}', source);
+				if (evidence.nativeInstructionIndex < 0 || evidence.disposeInstructionIndex <= evidence.nativeInstructionIndex)
+					add(evidence.valuePath, "a prepared call-scoped immutable C string must be disposed after its native consumer", source);
+			} else if (evidence.disposeUses != 0) {
+				add(evidence.valuePath, "a zero-copy borrowed C string must not use the temporary disposer", source);
 			}
 		}
 	}

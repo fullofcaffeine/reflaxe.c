@@ -225,6 +225,14 @@ class HxcIRGolden {
 			throw "collector-managed receiver span without its exact root did not fail closed";
 		validator.requireValid(mutableCStringBufferProgram(1, false, false), PROFILE);
 		validator.requireValid(callScopedCStringProgram(), PROFILE);
+		final linearCallScopedValidator = new HxcIRValidator();
+		linearCallScopedValidator.requireValid(callScopedCStringProgram(true, false, 64), PROFILE);
+		final linearCallScopedWork = linearCallScopedValidator.workReport();
+		if (linearCallScopedWork.callScopedFunctions != 1
+			|| linearCallScopedWork.callScopedValues != 64
+			|| linearCallScopedWork.callScopedInstructionVisits != 128
+			|| linearCallScopedWork.callScopedTerminatorVisits != 1)
+			throw 'call-scoped C-string validation repeated function work: ${Json.stringify(linearCallScopedWork)}';
 		validator.requireValid(managedRootProgram(false), PROFILE);
 		validator.requireValid(managedClassInheritanceProgram(false), PROFILE);
 		validator.requireValid(managedCarrierLoopProgram(), PROFILE);
@@ -4102,7 +4110,7 @@ class HxcIRGolden {
 	}
 
 	/** Build one checked immutable String borrow with one same-block native use. */
-	static function callScopedCStringProgram(checkedBorrow:Bool = true, parameterCarrier:Bool = false):HxcIRProgram {
+	static function callScopedCStringProgram(checkedBorrow:Bool = true, parameterCarrier:Bool = false, valueCount:Int = 1):HxcIRProgram {
 		final invalid = !checkedBorrow || parameterCarrier;
 		final file = invalid ? "test/negative/CallScopedCString.hx" : "test/hxc_ir/fixtures/CallScopedCString.hx";
 		final failure:HxcIRFailureEdge = {
@@ -4112,12 +4120,16 @@ class HxcIRGolden {
 			cleanup: []
 		};
 		final instructions:Array<HxcIRInstruction> = [];
-		if (!parameterCarrier) {
-			instructions.push(checkedBorrow ? instruction("borrow.cstring", result("value.cstring", IRTCallScopedCString),
-				IRIOCall(call(IRCDRuntime("string", "borrow-cstring"), ["value.text"], IRTCallScopedCString, failure)), file,
-				2) : instruction("invent.cstring", result("value.cstring", IRTCallScopedCString), IRIOConstant(IRCString("text", 4)), file, 2));
+		for (index in 0...valueCount) {
+			final suffix = valueCount == 1 ? "" : '.$index';
+			final valueId = 'value.cstring$suffix';
+			if (!parameterCarrier)
+				instructions.push(checkedBorrow ? instruction('borrow.cstring$suffix', result(valueId, IRTCallScopedCString),
+					IRIOCall(call(IRCDRuntime("string", "borrow-cstring"), ["value.text"], IRTCallScopedCString, failure)), file,
+					2 + index * 2) : instruction('invent.cstring$suffix', result(valueId, IRTCallScopedCString), IRIOConstant(IRCString("text", 4)), file,
+						2 + index * 2));
+			instructions.push(instruction('consume.cstring$suffix', null, IRIOCall(call(IRCDNative("native.text"), [valueId], IRTVoid)), file, 3 + index * 2));
 		}
-		instructions.push(instruction("consume.cstring", null, IRIOCall(call(IRCDNative("native.text"), ["value.cstring"], IRTVoid)), file, 3));
 		final program = minimalProgram("fixture.CallScopedCString", instructions, terminator(IRTReturn(null, []), file, 4), [], [], file);
 		program.modules[0].functions[0].parameters.push(parameter(parameterCarrier ? "value.cstring" : "value.text",
 			parameterCarrier ? IRTCallScopedCString : IRTManagedString, file, 1));
