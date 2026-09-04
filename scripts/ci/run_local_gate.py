@@ -84,6 +84,7 @@ GIT_HOOK_AUTHOR_VARIABLES = (
     "GIT_AUTHOR_EMAIL",
     "GIT_AUTHOR_DATE",
 )
+PARTIAL_INDEX_EVIDENCE_VALUE = "<content-addressed-by-stagedTree>"
 
 
 class LocalGateFailure(Exception):
@@ -211,8 +212,9 @@ def normalized_owner_environment(
     stock Beads marks its own hook delegation with ``BD_GIT_HOOK=1``. None of
     the admitted local owners consumes those transport values, so both direct
     and hook runs remove them and execute under the same environment. A
-    partial commit's temporary index and every other environment difference
-    remain in the key.
+    partial commit keeps its temporary index so an owner that invokes Git sees
+    the intended staged state. Every other environment difference remains in
+    the key.
     """
 
     selected = dict(environment)
@@ -243,6 +245,25 @@ def normalized_owner_environment(
     return selected
 
 
+def environment_for_evidence_digest(
+    environment: Mapping[str, str],
+) -> dict[str, str]:
+    """Remove only a partial index's non-semantic pathname from its key.
+
+    Git creates a newly named temporary index for every path-limited commit.
+    The separate ``stagedTree`` input already hashes that index's complete
+    logical contents, including each path, mode, stage, and blob identity. The
+    pathname therefore identifies Git's transport file, not different test
+    inputs. Owners still execute with the original environment and index path;
+    only the environment digest uses this stable marker.
+    """
+
+    selected = dict(environment)
+    if "GIT_INDEX_FILE" in selected:
+        selected["GIT_INDEX_FILE"] = PARTIAL_INDEX_EVIDENCE_VALUE
+    return selected
+
+
 def collect_inputs(
     script: str,
     command: str,
@@ -258,7 +279,9 @@ def collect_inputs(
             "commandDigest": command_definition_digest(script, command),
             "locksDigest": digest_files(EVIDENCE_LOCK_PATHS),
             "toolsDigest": tool_identity_digest(environment),
-            "environmentDigest": environment_digest(environment),
+            "environmentDigest": environment_digest(
+                environment_for_evidence_digest(environment)
+            ),
             "runnerDigest": runner_implementation_digest(),
             "hookDigest": hook_digest,
             "hostDigest": host_identity_digest(),

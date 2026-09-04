@@ -325,9 +325,33 @@ class LocalGateEvidenceTests(unittest.TestCase):
         partial_commit["GIT_INDEX_FILE"] = str(
             self.temporary_root / "next-index-123.lock"
         )
-        self.assertIn(
-            "GIT_INDEX_FILE",
-            self.runner.normalized_owner_environment(partial_commit),
+        normalized_partial = self.runner.normalized_owner_environment(
+            partial_commit
+        )
+        self.assertEqual(
+            normalized_partial["GIT_INDEX_FILE"],
+            partial_commit["GIT_INDEX_FILE"],
+        )
+        next_partial_commit = dict(partial_commit)
+        next_partial_commit["GIT_INDEX_FILE"] = str(
+            self.temporary_root / "next-index-456.lock"
+        )
+        normalized_next_partial = self.runner.normalized_owner_environment(
+            next_partial_commit
+        )
+        self.assertNotEqual(
+            normalized_partial["GIT_INDEX_FILE"],
+            normalized_next_partial["GIT_INDEX_FILE"],
+        )
+        self.assertEqual(
+            self.runner.environment_digest(
+                self.runner.environment_for_evidence_digest(normalized_partial)
+            ),
+            self.runner.environment_digest(
+                self.runner.environment_for_evidence_digest(
+                    normalized_next_partial
+                )
+            ),
         )
         changed_semantics = dict(hook)
         changed_semantics["HXC_MODE"] = "metal"
@@ -525,8 +549,11 @@ class LocalGateEvidenceTests(unittest.TestCase):
             finally:
                 events.append("lock-exit")
 
-        def observed_execute(_script: str, _environment: dict[str, str]):
+        partial_index = self.temporary_root / "partial-index"
+
+        def observed_execute(_script: str, environment: dict[str, str]):
             self.assertEqual(events, ["lock-enter"])
+            self.assertEqual(environment["GIT_INDEX_FILE"], str(partial_index))
             events.append("execute")
             return 0, 1
 
@@ -542,6 +569,11 @@ class LocalGateEvidenceTests(unittest.TestCase):
             mock.patch.object(
                 self.runner, "execute_package_owner", observed_execute
             ),
+            mock.patch.object(
+                self.runner,
+                "default_git_index_path",
+                return_value=self.temporary_root / "default-index",
+            ),
             redirect_stdout(io.StringIO()),
             redirect_stderr(io.StringIO()),
         ):
@@ -550,7 +582,10 @@ class LocalGateEvidenceTests(unittest.TestCase):
                 hook_mode=False,
                 cold=True,
                 evidence_dir=self.evidence_dir,
-                environment=self.environment,
+                environment={
+                    **self.environment,
+                    "GIT_INDEX_FILE": str(partial_index),
+                },
             )
         self.assertEqual(result, 0)
         self.assertEqual(events, ["lock-enter", "execute", "lock-exit"])

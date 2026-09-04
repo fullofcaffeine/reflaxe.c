@@ -78,8 +78,11 @@ starting pre-commit. The wrapper removes those values from both the direct and
 hook test processes: the reviewed `bd` path entry (even when npm places its
 own `node_modules/.bin` entry before it), Git's normal index,
 commit-author fields, and the noninteractive `GIT_EDITOR=:` value. A partial
-commit's temporary index is not normalized, and every remaining environment
-difference still changes the receipt key. Reusable owners also run with
+commit still passes its temporary index to each test owner, but its randomly
+generated pathname is normalized in the receipt key. The separate staged-tree
+digest covers the index's paths, modes, stages, and blob identities, so changed
+staged content still invalidates reuse. Every other environment difference
+changes the receipt key. Reusable owners also run with
 `PYTHONDONTWRITEBYTECODE=1`, so importing a repository test helper cannot
 create an ignored `__pycache__` input halfway through its own evidence run.
 
