@@ -2812,30 +2812,40 @@ class CBodyEmitter {
 	function emitDefaultInitialize(statements:Array<CStmt>, declared:Map<String, Bool>, referencedLocals:Map<String, Bool>, instruction:HxcIRInstruction,
 			localId:String, from:HxcIRInitializationState, to:HxcIRInitializationState, fn:HxcIRFunction, localNames:Map<String, CIdentifier>,
 			lineDirectives:Bool):Void {
-		if (instruction.result != null || declared.exists(localId) || from != IRISUninitialized || to != IRISInitializing && to != IRISInitialized) {
+		if (instruction.result != null || from == IRISUninitialized && declared.exists(localId) || from == IRISDestroyed && !declared.exists(localId)
+			|| from != IRISUninitialized && from != IRISDestroyed || to != IRISInitializing && to != IRISInitialized) {
 			fail('default initializer `${instruction.id}` in `${fn.id}` has invalid declaration or lifetime state');
 		}
 		final local = requireLocal(fn, localId);
-		switch local.type {
+		final instanceId = switch local.type {
 			case IRTInstance(instanceId)
 				if (classTags.exists(instanceId)
 					|| aggregateTags.exists(instanceId)
 					|| enumsByInstance.exists(instanceId)
 					&& requireEnumRepresentation(instanceId) == CBECTagged):
+				instanceId;
 			case _:
 				return fail('default initializer `${instruction.id}` in `${fn.id}` does not target direct record, tagged enum, or concrete-class storage');
-		}
-		final declaration = typedDeclarator(local.type, DName(requireLocalName(localNames, localId, fn.id)));
+		};
+		if (from == IRISDestroyed && !classTags.exists(instanceId))
+			return fail('default initializer `${instruction.id}` in `${fn.id}` can only reset destroyed concrete-class storage');
+		final localName = requireLocalName(localNames, localId, fn.id);
+		final declaration = typedDeclarator(local.type, DName(localName));
 		addLineDirective(statements, instruction.source, lineDirectives);
-		statements.push(SDecl({
-			storage: [],
-			alignments: [],
-			type: declaration.type,
-			declarator: declaration.declarator,
-			initializer: IList([{designators: [], value: IExpr(EInt(CIntegerLiteral.decimal("0")))}]),
-			attributes: []
-		}));
-		declared.set(localId, true);
+		if (from == IRISUninitialized) {
+			statements.push(SDecl({
+				storage: [],
+				alignments: [],
+				type: declaration.type,
+				declarator: declaration.declarator,
+				initializer: IList([{designators: [], value: IExpr(EInt(CIntegerLiteral.decimal("0")))}]),
+				attributes: []
+			}));
+			declared.set(localId, true);
+		} else {
+			statements.push(SExpr(EBinary(Assign, EIdentifier(localName),
+				ECompoundLiteral(declaration.type, DName(null), IList([{designators: [], value: IExpr(EInt(CIntegerLiteral.decimal("0")))}])))));
+		}
 		if (!referencedLocals.exists(localId)) {
 			statements.push(SExpr(ECast(new CType(TVoid), DName(null), EIdentifier(requireLocalName(localNames, localId, fn.id)))));
 		}

@@ -48,6 +48,7 @@ OWNED_FALLIBLE = FIXTURES / "owned_fallible"
 FACTORY_RETURN = FIXTURES / "factory_return"
 EARLY_EXIT = FIXTURES / "early_exit"
 CONDITIONAL = FIXTURES / "conditional"
+LOCAL_REASSIGNMENT = FIXTURES / "local_reassignment"
 FINAL_PRIMITIVE_FIELDS = FIXTURES / "final_primitive_fields"
 NATIVE = Path(__file__).with_name("native")
 EXPECTED = Path(__file__).with_name("expected")
@@ -310,6 +311,14 @@ PATH_SCOPED_NATIVE_COVERAGE = frozenset(
         "constructor-path-scoped-return",
         "constructor-path-scoped-reverse-cleanup",
         "constructor-path-scoped-failure",
+    }
+)
+LOCAL_REASSIGNMENT_NATIVE_COVERAGE = frozenset(
+    {
+        "constructor-local-reassignment",
+        "constructor-local-reassignment-loop",
+        "constructor-local-reassignment-managed-cleanup",
+        "constructor-local-reassignment-failure-cleanup",
     }
 )
 FINAL_PRIMITIVE_NATIVE_COVERAGE = frozenset(
@@ -3364,6 +3373,187 @@ def check_path_scoped_only(
         check_path_scoped_negatives()
 
 
+def check_local_reassignment_oracle() -> None:
+    """Prove replacement order and loop behavior first with Haxe Eval."""
+
+    result = run_bounded_process(
+        [
+            development_tool("haxe"),
+            "-cp",
+            str(LOCAL_REASSIGNMENT),
+            "-main",
+            "Main",
+            "--interp",
+        ],
+        cwd=ROOT,
+        env=haxe_environment(),
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    if result.returncode != 0 or result.stdout or result.stderr:
+        raise ConstructorLoweringFailure(
+            "pinned Haxe local-reassignment oracle failed\n"
+            f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
+        )
+
+
+def validate_local_reassignment_project(
+    output: Path, report: dict[str, object]
+) -> None:
+    """Prove in-place storage reuse, evaluation order, and exact failure cleanup."""
+
+    hxcir = required_text(report.get("hxcir"), "local-reassignment HxcIR")
+    rebuild = function_section(hxcir, "function.Main.rebuildText")
+    failure = function_section(hxcir, "function.Main.replacementFailure")
+    sources = "\n".join(
+        path.read_text(encoding="utf-8")
+        for path in sorted((output / "src").rglob("*.c"))
+    )
+    failure_call = failure[failure.index("reconstructed-constructor-call") :]
+    ordered(
+        rebuild,
+        (
+            'dispatch=direct("method.ReplaceableValue.read")',
+            "string-concat",
+            "release-reconstructed-class-field",
+            "destroy-reconstructed-class-owner",
+            "class-reinitialize",
+            "reconstructed-constructor-call",
+        ),
+        "local replacement evaluation and cleanup",
+    )
+    if (
+        "transition=destroyed->initializing" not in rebuild
+        or 'dispatch=direct("constructor.StringBuf")' not in hxcir
+        or '"construction.0.string-field.text.release"' not in failure_call
+        or '"construction.0.partial"' not in failure_call
+        or '"construction.0.initialized"' in failure_call.split("\n", 1)[0]
+        or " = (struct hxc_ReplaceableValue){ 0 };" not in sources
+        or " = (struct hxc_StringBuf){ 0 };" not in sources
+        or "malloc(" in sources
+        or "calloc(" in sources
+        or "goto " in sources
+    ):
+        raise ConstructorLoweringFailure(
+            "local class reassignment lost stable storage, managed cleanup, "
+            "or replacement failure ownership"
+        )
+
+
+def render_local_reassignment_project(
+    fixture_root: Path,
+) -> tuple[CFixtureProject, CFixtureProject]:
+    """Render the replacement fixture twice and return success/failure consumers."""
+
+    normal = fixture_root / "local-reassignment-split"
+    reverse = fixture_root / "local-reassignment-split-reverse"
+    reports: list[tuple[str, dict[str, object]]] = []
+    for label, output, reverse_input in (
+        ("local reassignment", normal, False),
+        ("reversed local reassignment", reverse, True),
+    ):
+        result = custom_target(
+            LOCAL_REASSIGNMENT,
+            output,
+            reverse=reverse_input,
+            report=True,
+            layout="split",
+            runtime_diagnostics="off",
+        )
+        reports.append(emitted_constructor_report(result, label))
+    if reports[0][0] != reports[1][0] or generated_tree(normal) != generated_tree(
+        reverse
+    ):
+        raise ConstructorLoweringFailure(
+            "local class reassignment changed with typed-module order"
+        )
+    validate_local_reassignment_project(normal, reports[0][1])
+    sources = tuple(
+        path.relative_to(fixture_root).as_posix()
+        for path in sorted(normal.rglob("*.c"))
+    )
+    headers = tuple(
+        path.relative_to(fixture_root).as_posix()
+        for path in sorted((normal / "include").rglob("*.h"))
+    )
+    includes = tuple(
+        path.relative_to(fixture_root).as_posix()
+        for path in (normal / "include", normal / "runtime" / "include")
+        if path.is_dir()
+    )
+    success = CFixtureProject(
+        "constructor-local-reassignment",
+        sources,
+        headers,
+        includes,
+        "",
+        tuple(sorted((*LOCAL_REASSIGNMENT_NATIVE_COVERAGE, "strict-c11"))),
+    )
+    native_failure = normal / "native" / "local_reassignment_failure.c"
+    native_failure.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copyfile(NATIVE / "local_reassignment_failure.c", native_failure)
+    generated_main = (normal / "src" / "hxc" / "main.c").relative_to(
+        fixture_root
+    ).as_posix()
+    failure = CFixtureProject(
+        "constructor-local-reassignment-failure",
+        tuple(source for source in sources if source != generated_main)
+        + (native_failure.relative_to(fixture_root).as_posix(),),
+        headers,
+        includes,
+        "",
+        ("constructor-local-reassignment-failure-cleanup", "strict-c11"),
+        expected_exit=-signal.SIGABRT,
+    )
+    return success, failure
+
+
+def check_local_reassignment_only(*, requested_toolchain: str) -> None:
+    """Run Eval, deterministic generation, strict C, and sanitizer replacement proof."""
+
+    check_local_reassignment_oracle()
+    with tempfile.TemporaryDirectory(
+        prefix="hxc-local-reassignment-focused-"
+    ) as temporary:
+        root = Path(temporary)
+        fixture_root = root / "fixture"
+        projects = render_local_reassignment_project(fixture_root)
+        required = LOCAL_REASSIGNMENT_NATIVE_COVERAGE | {"strict-c11"}
+        for optimization in ("-O0", "-O2"):
+            report = run_c_fixture_corpus(
+                suite=f"constructor-local-reassignment-{optimization[1:].lower()}",
+                projects=projects,
+                fixture_root=fixture_root,
+                build_root=root / f"c-build-{optimization[1:].lower()}",
+                repository_root=ROOT,
+                requested_toolchain=requested_toolchain,
+                strict_flags=(*C11_STRICT_FLAGS, optimization),
+            )
+            validate_report(report, required_coverage=required)
+        if "clang" in {
+            toolchain.family
+            for toolchain in resolve_toolchains(
+                requested_toolchain, repository_root=ROOT
+            )
+        }:
+            sanitized = tuple(
+                replace(project, link_arguments=("-fsanitize=address,undefined",))
+                for project in projects
+            )
+            report = run_c_fixture_corpus(
+                suite="constructor-local-reassignment-sanitized",
+                projects=sanitized,
+                fixture_root=fixture_root,
+                build_root=root / "c-build-sanitized",
+                repository_root=ROOT,
+                requested_toolchain="clang",
+                strict_flags=(*C11_STRICT_FLAGS, *SANITIZER_FLAGS),
+            )
+            validate_report(report, required_coverage=required)
+
+
 def check_factory_return_only(*, requested_toolchain: str) -> None:
     """Run the guarded factory's complete lifetime slice without older fixtures."""
 
@@ -4322,6 +4512,7 @@ def parse_args(arguments: Iterable[str]) -> argparse.Namespace:
     parser.add_argument("--factory-return-only", action="store_true")
     parser.add_argument("--early-exit-only", action="store_true")
     parser.add_argument("--path-scoped-only", action="store_true")
+    parser.add_argument("--local-reassignment-only", action="store_true")
     parser.add_argument("--final-primitive-only", action="store_true")
     parser.add_argument("--negative-only", action="store_true")
     return parser.parse_args(list(arguments))
@@ -4419,6 +4610,14 @@ def main(arguments: Iterable[str] = ()) -> int:
                 "C11/C++17/sanitizer behavior and rejected escaping shapes"
             )
             return 0
+        if args.local_reassignment_only:
+            check_local_reassignment_only(requested_toolchain=args.toolchain)
+            print(
+                "constructor-lowering: OK: mutable direct-class locals preserved "
+                "Eval order, in-place loop storage, managed cleanup, failure cleanup, "
+                "determinism, strict C11, and sanitizer behavior"
+            )
+            return 0
         if args.final_primitive_only:
             check_final_primitive_only(requested_toolchain=args.toolchain)
             print(
@@ -4461,6 +4660,7 @@ def main(arguments: Iterable[str] = ()) -> int:
             requested_toolchain=args.toolchain,
             include_negatives=False,
         )
+        check_local_reassignment_only(requested_toolchain=args.toolchain)
         check_minimal_example()
         check_native(first, requested_toolchain=args.toolchain)
         check_negative_cases()
