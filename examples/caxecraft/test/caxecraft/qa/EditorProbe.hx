@@ -8,7 +8,11 @@ import caxecraft.editor.EditorBuildControls.EditorBuildObjectAction;
 import caxecraft.editor.EditorBuildControls.EditorBuildObjectInput;
 import caxecraft.editor.EditorBuildControls.EditorBuildObjectGrab;
 import caxecraft.editor.EditorBuildControls.EditorBuildTerrainAction;
+import caxecraft.editor.EditorBuildControls.EditorBuildHotbarAction;
 import caxecraft.editor.EditorBuildControls.EditorObjectShortcutAction;
+import caxecraft.editor.EditorBuildControls.buildHotbarAction;
+import caxecraft.editor.EditorBuildControls.buildHotbarLayout;
+import caxecraft.editor.EditorBuildControls.buildHotbarSlotAt;
 import caxecraft.editor.EditorBuildControls.cycleBuildHotbarTool;
 import caxecraft.editor.EditorBuildControls.cycleBuildPaletteCode;
 import caxecraft.editor.EditorBuildControls.buildPrompt;
@@ -2575,6 +2579,25 @@ final class EditorProbe {
 			&& toolForBuildHotbarSlot(0) == null
 			&& toolForBuildHotbarSlot(6) == null,
 			"Build hotbar slots drifted from the five visible creation cards");
+		checks++;
+		switch buildHotbarAction(4) {
+			case OpenBuildAssetBrowser:
+			case NoBuildHotbarAction | SelectBuildHotbarTool(_):
+				require(false, "the direct Things to Add slot did not open asset discovery");
+		}
+		switch buildHotbarAction(2) {
+			case SelectBuildHotbarTool(PaintTool):
+			case NoBuildHotbarAction | OpenBuildAssetBrowser | SelectBuildHotbarTool(_):
+				require(false, "an ordinary direct Build slot did not select its tool");
+		}
+		require(buildHotbarAction(0) == NoBuildHotbarAction, "an invisible Build slot accepted direct input");
+		checks += 3;
+		final hotbar = buildHotbarLayout(1280, 720, 16);
+		require(buildHotbarSlotAt(hotbar, hotbar.left + 1, hotbar.top + 1) == 1
+			&& buildHotbarSlotAt(hotbar, hotbar.left + (hotbar.slotWidth + hotbar.gap) * 3 + 1, hotbar.top + 1) == 4
+			&& buildHotbarSlotAt(hotbar, hotbar.left + hotbar.slotWidth, hotbar.top + 1) == 0
+			&& buildHotbarSlotAt(hotbar, hotbar.left + 1, hotbar.top - 1) == 0,
+			"released-pointer Build hotbar hit testing drifted from the visible cards");
 		checks++;
 		require(cycleBuildHotbarTool(SelectTool, -1) == TriggerZoneTool
 			&& cycleBuildHotbarTool(TriggerZoneTool, 1) == SelectTool
