@@ -795,7 +795,8 @@ class CBodyLowering {
 				"standard Haxe Iterator element carrier");
 		}
 		for (map in preparedStringMaps) {
-			runtimeRequirements.push(new CBodyRuntimeRequirement("string-map", "managed-type-representation",
+			final feature = map.managedByCollector() ? "gc" : "string-map";
+			runtimeRequirements.push(new CBodyRuntimeRequirement(feature, "managed-type-representation",
 				"ordinary Haxe Map<String, V> shared hash-table representation", map.source, map.position));
 			collectDeclarationTypeRuntimeRequirements(runtimeRequirements, map.value.irType, map.source, map.position, "ordinary Haxe StringMap value carrier");
 		}
@@ -6614,7 +6615,10 @@ private class FunctionBuilder {
 		if (construction == null || !CBodyStringMapRecognition.isStringMap(construction.classReference))
 			return false;
 		final value = lowerStringMapConstruction(right, construction.arguments, field.type);
-		if (!freshManagedStringMapValueIds.remove(value.id))
+		final map = field.type.stringMapValue();
+		if (map == null)
+			throw new CBodyEmissionError('StringMap field `$fieldName` lost its specialization');
+		if (!map.managedByCollector() && !freshManagedStringMapValueIds.remove(value.id))
 			throw new CBodyEmissionError('StringMap field `$fieldName` did not receive a fresh table owner');
 		appendInstruction(null, IRIOStore(IRPField(IRPDereference(self.id), fieldName), value.id), sourceSpan(left.pos), "initialize-string-map-field");
 		initializedManagedStringMapFields.set(fieldName, true);
@@ -7258,7 +7262,8 @@ private class FunctionBuilder {
 			arrayCleanupActionIdsByCompilerId.set(variable.id, cleanupId);
 			runtimeRequirements.push(new CBodyRuntimeRequirement("array", "cleanup-release", "ordinary Haxe Array local lifetime", source, position));
 		}
-		if (localMapping.stringMapValue() != null) {
+		final localStringMap = localMapping.stringMapValue();
+		if (localStringMap != null && !localStringMap.managedByCollector()) {
 			final transferredFreshOwner = value != null && freshManagedStringMapValueIds.remove(value.id);
 			if (!transferredFreshOwner) {
 				appendInstruction(null, IRIORetain(IRPLocal(localId), IRIRuntime("string-map")), source, "retain-string-map-alias");
@@ -8919,7 +8924,8 @@ private class FunctionBuilder {
 			terminateReturn(returnedValueId, source, transferredCleanupId);
 			return;
 		}
-		if (prepared.returnMapping.stringMapValue() != null) {
+		final returnedStringMap = prepared.returnMapping.stringMapValue();
+		if (returnedStringMap != null && !returnedStringMap.managedByCollector()) {
 			var transferredCleanupId:Null<String> = null;
 			var returnedValueId = lowered.id;
 			if (!freshManagedStringMapValueIds.remove(lowered.id)) {
@@ -13351,7 +13357,8 @@ private class FunctionBuilder {
 		final returnedArray = target.returnMapping.arrayValue();
 		if (returnedArray != null && !returnedArray.managedByCollector)
 			freshManagedArrayValueIds.set(result.id, true);
-		if (target.returnMapping.stringMapValue() != null)
+		final returnedStringMap = target.returnMapping.stringMapValue();
+		if (returnedStringMap != null && !returnedStringMap.managedByCollector())
 			freshManagedStringMapValueIds.set(result.id, true);
 		if (target.returnMapping.iteratorValue() != null)
 			freshManagedIteratorValueIds.set(result.id, true);
@@ -13588,7 +13595,8 @@ private class FunctionBuilder {
 			freshManagedStringValueIds.set(result.id, true);
 		if (signature.result.irType == IRTManagedString)
 			freshManagedStringValueRoles.set(result.id, "indirect-call-result");
-		if (signature.result.stringMapValue() != null)
+		final returnedStringMap = signature.result.stringMapValue();
+		if (returnedStringMap != null && !returnedStringMap.managedByCollector())
 			freshManagedStringMapValueIds.set(result.id, true);
 		final returnedEnum = signature.result.enumValue();
 		if (returnedEnum != null && returnedEnum.managedLifetime)
@@ -14194,7 +14202,8 @@ private class FunctionBuilder {
 			final matches = switch family {
 				case CBMCFArray: final array = field.type.arrayValue(); array != null && !array.managedByCollector;
 				case CBMCFStringMap:
-					field.type.stringMapValue() != null;
+					final map = field.type.stringMapValue();
+					map != null && !map.managedByCollector();
 				case CBMCFString:
 					field.type.irType == IRTManagedString;
 				case CBMCFDirect:
@@ -14635,7 +14644,8 @@ private class FunctionBuilder {
 			freshManagedArrayValueIds.set(resultId, true);
 		if (mapping.intMapValue() != null)
 			freshManagedIntMapValueIds.set(resultId, true);
-		if (mapping.stringMapValue() != null)
+		final returnedStringMap = mapping.stringMapValue();
+		if (returnedStringMap != null && !returnedStringMap.managedByCollector())
 			freshManagedStringMapValueIds.set(resultId, true);
 		if (mapping.bytesValue() != null)
 			freshManagedBytesValueIds.set(resultId, true);
@@ -14813,7 +14823,9 @@ private class FunctionBuilder {
 			failure: managedArrayFailure()
 		}), source, "string-map-create");
 		registerValueTemporary(result.id, "string-map-create-result");
-		freshManagedStringMapValueIds.set(result.id, true);
+		final map = mapping.stringMapValue();
+		if (map != null && !map.managedByCollector())
+			freshManagedStringMapValueIds.set(result.id, true);
 		runtimeRequirements.push(new CBodyRuntimeRequirement("string-map", "create", "ordinary Haxe Map<String, V> construction", source, expression.pos));
 		return {id: result.id, type: result.type, mapping: mapping};
 	}
@@ -14833,6 +14845,8 @@ private class FunctionBuilder {
 		final method = access.field.get().name;
 		final runtimeMethod = method == "keyValueIterator" ? "key-value-iterator" : method == "toString" ? "to-string" : method;
 		final iteratorMethod = method == "iterator" || method == "keys" || method == "keyValueIterator";
+		if (iteratorMethod && map.managedByCollector())
+			return unsupported(expression, 'TCall(StringMap.$method:collector-traced-snapshot-not-yet-admitted)');
 		final expectedArguments = method == "clear"
 			|| method == "copy"
 			|| method == "toString"
@@ -14908,7 +14922,8 @@ private class FunctionBuilder {
 				failure: managedArrayFailure()
 			}), source, "string-map-copy");
 			registerValueTemporary(result.id, "string-map-copy-result");
-			freshManagedStringMapValueIds.set(result.id, true);
+			if (!map.managedByCollector())
+				freshManagedStringMapValueIds.set(result.id, true);
 			runtimeRequirements.push(new CBodyRuntimeRequirement("string-map", "copy", "ordinary Haxe StringMap.copy", source, expression.pos));
 			return {id: result.id, type: result.type, mapping: receiver.mapping};
 		}
@@ -16013,7 +16028,8 @@ private class FunctionBuilder {
 		final returnedArray = returnMapping.arrayValue();
 		if (returnedArray != null && !returnedArray.managedByCollector)
 			freshManagedArrayValueIds.set(result.id, true);
-		if (returnMapping.stringMapValue() != null)
+		final returnedStringMap = returnMapping.stringMapValue();
+		if (returnedStringMap != null && !returnedStringMap.managedByCollector())
 			freshManagedStringMapValueIds.set(result.id, true);
 		if (returnMapping.iteratorValue() != null)
 			freshManagedIteratorValueIds.set(result.id, true);
@@ -16664,7 +16680,8 @@ private class FunctionBuilder {
 
 	/** Keep a fresh StringMap owned by the caller while one call borrows it. */
 	function stabilizeFreshManagedStringMap(value:LoweredValue, position:Position, role:String):LoweredValue {
-		if (value.mapping.stringMapValue() == null || !freshManagedStringMapValueIds.remove(value.id))
+		final map = value.mapping.stringMapValue();
+		if (map == null || map.managedByCollector() || !freshManagedStringMapValueIds.remove(value.id))
 			return value;
 		final source = sourceSpan(position);
 		final ownerLocalId = createFlowLocal(value.mapping, value.id, source, role + "-owner");

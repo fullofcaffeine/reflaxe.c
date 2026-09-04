@@ -1499,18 +1499,22 @@
           "test/runtime/runtime-feature-graph/run.py"
         ],
         "directAlternative": "A compiler-known immutable lookup table can remain direct const C data when Haxe mutation and alias identity are unobservable.",
-        "contract": "Preserves ordinary Map<String, V> alias identity while copying canonical UTF-8 keys and keeping each admitted V specialization exact and unboxed; trivial values copy as bytes, while managed direct records use a complete compiler-generated copy/assign/destroy policy.",
+        "contract": "Preserves ordinary Map<String, V> alias identity while copying canonical UTF-8 keys and keeping each admitted V specialization exact and unboxed. Reference-counted fields use compiler-generated copy and cleanup callbacks. Collector-managed fields use one exact slot trace callback.",
         "programLocalAlternative": "A closed, bounded map can use a program-local specialization when it preserves String equality, mutation, missing values, and alias identity."
       },
       "dependencies": [
         "alloc",
         "iterator",
+        "object",
         "string",
         "string-literal"
       ],
       "id": "string-map",
       "availability": "compiler-selectable",
       "symbols": [
+        "hxc_string_map_copy_in_place",
+        "hxc_string_map_dispose_in_place",
+        "hxc_string_map_init_collector_owned",
         "hxc_string_map_ref_clear",
         "hxc_string_map_ref_copy",
         "hxc_string_map_ref_create",
@@ -1526,17 +1530,18 @@
         "hxc_string_map_ref_set_copy",
         "hxc_string_map_ref_to_string",
         "hxc_string_map_ref_value_iterator",
+        "hxc_string_map_type_descriptor",
         "hxc_string_map_value_ops_is_valid"
       ],
       "artifacts": [
         {
-          "sourceSha256": "a12868bdfbc4b5420b2930bc920fc45e6e69ead5b72be130c54919c54ba0c042",
+          "sourceSha256": "0ae3c4da07b98855ee647b06cacd516362ae79f9bf3eef1bea61b794ed152874",
           "kind": "runtime-header",
           "outputPath": "runtime/include/hxrt/string_map.h",
           "sourcePath": "runtime/hxrt/include/hxrt/string_map.h"
         },
         {
-          "sourceSha256": "c637ffdce4e990fe7436f88e7445376722ee0b28dec10cf57db860a5120706e9",
+          "sourceSha256": "3c27b6893edee126220a94adb748181f563f1c7777fa576d1015fbe915651ef4",
           "kind": "runtime-source",
           "outputPath": "runtime/src/string_map.c",
           "sourcePath": "runtime/hxrt/src/string_map.c"
@@ -1863,7 +1868,7 @@
     "releaseProvenance": {
       "runtimeCStandard": "c11",
       "sourceHashAlgorithm": "sha256",
-      "sourceSetSha256": "9565a71276595b7a39dc1110f5f2ee1af06be4c9a3944da7a37a8571587be2db",
+      "sourceSetSha256": "76a3b8418d27145437724e737c1b5103eb59fc58b79b4dab31c37144defff3b7",
       "publicHeaderCppStandard": "c++17"
     },
     "generatedCodeCompatibility": "same-major",

@@ -1049,7 +1049,9 @@ private class HxcIRValidationState {
 		switch instance.representation {
 			case IRRManaged(runtimeFeature):
 				validateStableId(runtimeFeature, '$path.runtimeFeature', instance.source);
-				if (runtimeFeature == "string-map")
+				if (runtimeFeature == "string-map"
+					|| runtimeFeature == "gc"
+					&& StringTools.startsWith(instance.declarationId, "type.haxe-string-map."))
 					validateStringMapTypeInstance(instance, declaration, path);
 				if (runtimeFeature == "iterator")
 					validateIteratorTypeInstance(instance, declaration, path);
@@ -4545,6 +4547,7 @@ private class HxcIRValidationState {
 			return null;
 		return switch instance.representation {
 			case IRRManaged("string-map"): instance.arguments[1];
+			case IRRManaged("gc") if (StringTools.startsWith(instance.declarationId, "type.haxe-string-map.")): instance.arguments[1];
 			case _: null;
 		};
 	}

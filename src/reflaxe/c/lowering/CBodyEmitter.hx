@@ -4232,6 +4232,8 @@ class CBodyEmitter {
 			result.push(arrayLifecyclePrototype(requireStringMapCallbackName(map.assignName, map, "assign"), map.assignParameterNames, false));
 			result.push(arrayLifecyclePrototype(requireStringMapCallbackName(map.destroyName, map, "destroy"), map.destroyParameterNames, true));
 		}
+		for (map in canonicalTracedStringMaps())
+			result.push(typedMapTracePrototype(requireStringMapCallbackName(map.traceName, map, "trace")));
 		for (map in canonicalTypedMaps()) {
 			result.push(typedMapHashPrototype(map));
 			result.push(typedMapEqualPrototype(map));
@@ -4274,6 +4276,8 @@ class CBodyEmitter {
 			result.push(stringMapAssignDefinition(map));
 			result.push(stringMapDestroyDefinition(map));
 		}
+		for (map in canonicalTracedStringMaps())
+			result.push(stringMapTraceDefinition(map));
 		for (map in canonicalTypedMaps()) {
 			result.push(typedMapHashDefinition(map));
 			result.push(typedMapEqualDefinition(map));
@@ -4454,6 +4458,31 @@ class CBodyEmitter {
 		final value = typedMapStorageValue(valueType, EIdentifier(valueName), true);
 		final statements:Array<CStmt> = [ignoreExpression(EIdentifier(context))];
 		appendManagedTraceStatements(statements, value, valueType.irType, visit, visitContext);
+		return DFunction({
+			storage: [],
+			functionSpecifiers: [],
+			returnType: new CType(TVoid),
+			declarator: DFunction(DName(name), FPPrototype([
+				{type: new CType(TVoid), declarator: DPointer(DName(context), []), attributes: []},
+				{type: new CType(TVoid, [QConst]), declarator: DPointer(DName(valueName), []), attributes: []},
+				{type: new CType(TNamed(new CIdentifier("hxc_trace_visit_fn"))), declarator: DName(visit), attributes: []},
+				{type: new CType(TVoid), declarator: DPointer(DName(visitContext), []), attributes: []}
+			], false)),
+			body: SBlock(statements),
+			attributes: []
+		});
+	}
+
+	/** Trace collector references stored in one exact StringMap slot value. */
+	function stringMapTraceDefinition(map:CLoweredBodyStringMap):CDecl {
+		final name = requireStringMapCallbackName(map.traceName, map, "trace");
+		final context = derivedLifecycleName(name, "context");
+		final valueName = derivedLifecycleName(name, "value");
+		final visit = derivedLifecycleName(name, "visit");
+		final visitContext = derivedLifecycleName(name, "visit_context");
+		final value = stringMapValueStorage(map, EIdentifier(valueName), true);
+		final statements:Array<CStmt> = [ignoreExpression(EIdentifier(context))];
+		appendManagedTraceStatements(statements, value, map.prepared.value.irType, visit, visitContext);
 		return DFunction({
 			storage: [],
 			functionSpecifiers: [],
@@ -5637,6 +5666,7 @@ class CBodyEmitter {
 						release: ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNStringRelease)), [EUnary(AddressOf, value)])
 					}
 				];
+			case IRTInstance(instanceId) if (collectorManagedInstanceIds.exists(instanceId)): [];
 			case IRTInstance(instanceId) if (bytesInstanceIds.exists(instanceId)): [
 					{
 						retain: ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNBytesRetain)), [value]),
@@ -5850,6 +5880,12 @@ class CBodyEmitter {
 
 	function canonicalManagedStringMaps():Array<CLoweredBodyStringMap> {
 		final result = [for (value in stringMapsByInstance) if (value.hasLifecycle()) value];
+		result.sort((left, right) -> compareUtf8(left.prepared.digest, right.prepared.digest));
+		return result;
+	}
+
+	function canonicalTracedStringMaps():Array<CLoweredBodyStringMap> {
+		final result = [for (value in stringMapsByInstance) if (value.traceName != null) value];
 		result.sort((left, right) -> compareUtf8(left.prepared.digest, right.prepared.digest));
 		return result;
 	}
@@ -7067,25 +7103,35 @@ class CBodyEmitter {
 					initializer: IExpr(ENull),
 					attributes: []
 				}));
-				final valueOperations = ECompoundLiteral(new CType(TNamed(CBodyRuntimeNames.identifier(CBRNStringMapValueOpsType))), DName(null), IList([
-					{designators: [], value: IExpr(ESizeOfType(valueDeclaration.type, valueDeclaration.declarator))},
-					{designators: [], value: IExpr(EAlignOfType(valueDeclaration.type, valueDeclaration.declarator))},
-					{designators: [], value: IExpr(ENull)},
-					{designators: [], value: IExpr(mapPlan.copyName == null ? ENull : EIdentifier(mapPlan.copyName))},
-					{designators: [], value: IExpr(mapPlan.assignName == null ? ENull : EIdentifier(mapPlan.assignName))},
-					{designators: [], value: IExpr(mapPlan.destroyName == null ? ENull : EIdentifier(mapPlan.destroyName))}
-				]));
-				final createCall = if (mapPlan.hasLifecycle()) ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNStringMapCreateWithOps)), [
-					ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNDefaultAllocator)), []),
-					valueOperations,
-					EUnary(AddressOf, EIdentifier(temporary))
-				]) else ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNStringMapCreate)), [
-					ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNDefaultAllocator)), []),
-					ESizeOfType(valueDeclaration.type, valueDeclaration.declarator),
-					EAlignOfType(valueDeclaration.type, valueDeclaration.declarator),
-					EUnary(AddressOf, EIdentifier(temporary))
-				]);
-				emitStatusAbort(statements, createCall, boundsAbortName, instruction.id, fn.id);
+				final valueOperations = stringMapValueOps(mapPlan, valueDeclaration);
+				if (mapPlan.prepared.managedByCollector()) {
+					final program = managedProgram;
+					if (program == null)
+						return fail('collector-owned StringMap `${instruction.id}` has no executable collector context');
+					emitStatusAbort(statements, ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNGcAllocate)), [
+						EUnary(AddressOf, EIdentifier(program.collector)),
+						ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNStringMapTypeDescriptor)), []),
+						ECast(new CType(TVoid), DPointer(DPointer(DName(null), []), []), EUnary(AddressOf, EIdentifier(temporary)))
+					]), boundsAbortName, instruction.id, fn.id);
+					emitStatusAbort(statements, ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNStringMapInitCollectorOwned)), [
+						EUnary(AddressOf, EIdentifier(program.collector)),
+						ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNDefaultAllocator)), []),
+						valueOperations,
+						EIdentifier(temporary)
+					]), boundsAbortName, instruction.id, fn.id);
+				} else {
+					final createCall = if (mapPlan.hasLifecycle()) ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNStringMapCreateWithOps)), [
+						ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNDefaultAllocator)), []),
+						valueOperations,
+						EUnary(AddressOf, EIdentifier(temporary))
+					]) else ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNStringMapCreate)), [
+						ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNDefaultAllocator)), []),
+						ESizeOfType(valueDeclaration.type, valueDeclaration.declarator),
+						EAlignOfType(valueDeclaration.type, valueDeclaration.declarator),
+						EUnary(AddressOf, EIdentifier(temporary))
+					]);
+					emitStatusAbort(statements, createCall, boundsAbortName, instruction.id, fn.id);
+				}
 				values.set(result.id, EIdentifier(temporary));
 				if (!referencedValues.exists(result.id))
 					statements.push(SExpr(ECast(new CType(TVoid), DName(null), EIdentifier(temporary))));
@@ -7110,6 +7156,7 @@ class CBodyEmitter {
 			case "copy":
 				final result = requireResult(instruction, fn.id);
 				final temporary = requireStringMapTemporary(temporaryNames, result.id, instruction.id, fn.id);
+				final mapPlan = requireStringMapPlan(result.type, instruction.id, fn.id);
 				final declaration = typedDeclarator(result.type, DName(temporary));
 				statements.push(SDecl({
 					storage: [],
@@ -7119,10 +7166,31 @@ class CBodyEmitter {
 					initializer: IExpr(ENull),
 					attributes: []
 				}));
-				emitStatusAbort(statements, ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNStringMapCopy)), [
-					requireValue(values, call.arguments[0], fn.id),
-					EUnary(AddressOf, EIdentifier(temporary))
-				]), boundsAbortName, instruction.id, fn.id);
+				if (mapPlan.prepared.managedByCollector()) {
+					final program = managedProgram;
+					if (program == null)
+						return fail('collector-owned StringMap copy `${instruction.id}` has no executable collector context');
+					final valueDeclaration = typedDeclarator(mapPlan.prepared.value.irType, DName(null));
+					emitStatusAbort(statements, ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNGcAllocate)), [
+						EUnary(AddressOf, EIdentifier(program.collector)),
+						ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNStringMapTypeDescriptor)), []),
+						ECast(new CType(TVoid), DPointer(DPointer(DName(null), []), []), EUnary(AddressOf, EIdentifier(temporary)))
+					]), boundsAbortName, instruction.id, fn.id);
+					emitStatusAbort(statements, ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNStringMapInitCollectorOwned)), [
+						EUnary(AddressOf, EIdentifier(program.collector)),
+						ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNDefaultAllocator)), []),
+						stringMapValueOps(mapPlan, valueDeclaration),
+						EIdentifier(temporary)
+					]), boundsAbortName, instruction.id, fn.id);
+					emitStatusAbort(statements,
+						ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNStringMapCopyInPlace)),
+							[requireValue(values, call.arguments[0], fn.id), EIdentifier(temporary)]),
+						boundsAbortName, instruction.id, fn.id);
+				} else
+					emitStatusAbort(statements, ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNStringMapCopy)), [
+						requireValue(values, call.arguments[0], fn.id),
+						EUnary(AddressOf, EIdentifier(temporary))
+					]), boundsAbortName, instruction.id, fn.id);
 				values.set(result.id, EIdentifier(temporary));
 			case "iterator" | "keys" | "key-value-iterator":
 				final result = requireResult(instruction, fn.id);
@@ -7562,6 +7630,17 @@ class CBodyEmitter {
 			{designators: [], value: IExpr(plan.keyTraceName == null ? ENull : EIdentifier(plan.keyTraceName))},
 			{designators: [], value: IExpr(EIdentifier(plan.hashName))},
 			{designators: [], value: IExpr(EIdentifier(plan.equalName))}
+		]));
+
+	function stringMapValueOps(plan:CLoweredBodyStringMap, declaration:CTypedDeclarator):CExpr
+		return ECompoundLiteral(new CType(TNamed(CBodyRuntimeNames.identifier(CBRNStringMapValueOpsType))), DName(null), IList([
+			{designators: [], value: IExpr(ESizeOfType(declaration.type, declaration.declarator))},
+			{designators: [], value: IExpr(EAlignOfType(declaration.type, declaration.declarator))},
+			{designators: [], value: IExpr(ENull)},
+			{designators: [], value: IExpr(plan.copyName == null ? ENull : EIdentifier(plan.copyName))},
+			{designators: [], value: IExpr(plan.assignName == null ? ENull : EIdentifier(plan.assignName))},
+			{designators: [], value: IExpr(plan.destroyName == null ? ENull : EIdentifier(plan.destroyName))},
+			{designators: [], value: IExpr(plan.traceName == null ? ENull : EIdentifier(plan.traceName))}
 		]));
 
 	function typedMapValueOps(plan:CLoweredBodyTypedMap, declaration:CTypedDeclarator):CExpr

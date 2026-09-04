@@ -5,14 +5,16 @@
  * compiler keeps V exact and unboxed. Keys are copied as canonical UTF-8 bytes,
  * so a table never borrows temporary String storage. Mutations are fail-atomic:
  * allocation failure may reserve spare capacity but never changes visible
- * entries. Plain values copy as bytes; managed direct values provide one
- * complete copy/assign/destroy strategy so every table slot owns its contents.
+ * entries. Plain values copy as bytes. Reference-counted values provide one
+ * copy/assign/destroy strategy. Collector-owned maps also trace exact slot
+ * references and release non-GC owners when the collector finalizes the map.
  */
 #ifndef HXRT_STRING_MAP_H_INCLUDED
 #define HXRT_STRING_MAP_H_INCLUDED
 
 #include "hxrt/allocator.h"
 #include "hxrt/iterator.h"
+#include "hxrt/object.h"
 #include "hxrt/string_literal.h"
 #include "hxrt/string.h"
 
@@ -21,6 +23,7 @@ extern "C" {
 #endif
 
 typedef struct hxc_string_map_ref hxc_string_map_ref;
+typedef struct hxc_gc hxc_gc;
 
 /** Primitive value spellings admitted by the first natural toString slice. */
 typedef enum hxc_string_map_format_kind {
@@ -58,12 +61,21 @@ typedef void (*hxc_string_map_value_destroy_fn)(
   void *value
 );
 
+/** Visit every collector object reachable from one exact stored value. */
+typedef void (*hxc_string_map_value_trace_fn)(
+  void *context,
+  const void *value,
+  hxc_trace_visit_fn visit,
+  void *visit_context
+);
+
 /**
  * Exact unboxed storage and lifetime policy for one Map<String, V>.
  *
- * Trivial byte-relocatable values use three null callbacks. Managed direct
- * values use all three callbacks. Context and callback code must outlive the
- * map, and callbacks must not re-enter or mutate that map.
+ * Trivial byte-relocatable values use null lifecycle callbacks. Values with
+ * reference-counted fields use all three lifecycle callbacks. The trace
+ * callback is independent and visits only collector-managed fields. Context
+ * and callback code must outlive the map and must not mutate that map.
  */
 typedef struct hxc_string_map_value_ops {
   size_t size;
@@ -72,6 +84,7 @@ typedef struct hxc_string_map_value_ops {
   hxc_string_map_value_copy_fn copy;
   hxc_string_map_value_assign_fn assign;
   hxc_string_map_value_destroy_fn destroy;
+  hxc_string_map_value_trace_fn trace;
 } hxc_string_map_value_ops;
 
 /** Accept a non-zero layout and either zero or three lifecycle callbacks. */
@@ -94,6 +107,20 @@ HXC_API hxc_status hxc_string_map_ref_create_with_ops(
   hxc_string_map_ref **out_map
 );
 
+/** Descriptor for a collector-owned StringMap whose slots need tracing. */
+HXC_API const hxc_type_descriptor *hxc_string_map_type_descriptor(void);
+
+/** Initialize map storage already allocated by the precise collector. */
+HXC_API hxc_status hxc_string_map_init_collector_owned(
+  hxc_gc *collector,
+  hxc_allocator allocator,
+  hxc_string_map_value_ops values,
+  hxc_string_map_ref *map
+);
+
+/** Dispose slots and non-GC owners without freeing collector storage. */
+HXC_API hxc_status hxc_string_map_dispose_in_place(hxc_string_map_ref *map);
+
 /**
  * Retain/release one alias to the same mutable Haxe Map object.
  *
@@ -109,6 +136,12 @@ HXC_API hxc_status hxc_string_map_ref_release_slot(void *context);
 HXC_API hxc_status hxc_string_map_ref_copy(
   const hxc_string_map_ref *source,
   hxc_string_map_ref **out_map
+);
+
+/** Copy entries into an initialized empty map with the same value policy. */
+HXC_API hxc_status hxc_string_map_copy_in_place(
+  const hxc_string_map_ref *source,
+  hxc_string_map_ref *destination
 );
 
 /**

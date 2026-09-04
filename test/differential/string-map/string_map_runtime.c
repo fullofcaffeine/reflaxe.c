@@ -96,6 +96,7 @@ static hxc_string_map_value_ops bool_ops(void) {
     NULL,
     NULL,
     NULL,
+    NULL,
     NULL
   };
   return result;
@@ -152,7 +153,8 @@ static hxc_string_map_value_ops tracked_ops(tracked_value_state *state) {
     state,
     tracked_copy,
     tracked_assign,
-    tracked_destroy
+    tracked_destroy,
+    NULL
   };
   return result;
 }
@@ -297,9 +299,11 @@ static int prove_failure_atomic_insertion(void) {
 
 static int prove_managed_value_callbacks(void) {
   tracked_value_state state = {0u, 0u, 0u, 0u, SIZE_MAX, false, false};
+  tracked_value_state other_state = {0u, 0u, 0u, 0u, SIZE_MAX, false, false};
   hxc_string_map_value_ops operations = tracked_ops(&state);
   hxc_string_map_ref *map = NULL;
   hxc_string_map_ref *copy = NULL;
+  hxc_string_map_ref *incompatible = NULL;
   tracked_value source = {7};
   tracked_value output = {-1};
   bool found = false;
@@ -313,6 +317,14 @@ static int prove_managed_value_callbacks(void) {
   ) == HXC_STATUS_OK);
   CHECK(hxc_string_map_ref_set_copy(map, literal("managed"), &source) == HXC_STATUS_OK);
   CHECK(state.copies == 1u && state.live_owners == 1u);
+  CHECK(hxc_string_map_ref_create_with_ops(
+    hxc_default_allocator(),
+    tracked_ops(&other_state),
+    &incompatible
+  ) == HXC_STATUS_OK);
+  CHECK(hxc_string_map_copy_in_place(map, incompatible) == HXC_STATUS_INVALID_ARGUMENT);
+  CHECK(hxc_string_map_ref_release(incompatible) == HXC_STATUS_OK);
+  CHECK(other_state.copies == 0u && other_state.live_owners == 0u);
 
   CHECK(hxc_string_map_ref_get_copy(
     map,

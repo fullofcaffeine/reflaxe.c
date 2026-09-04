@@ -85,6 +85,8 @@ class CPreparedBodyStringMap {
 
 	public final assignRequest:Null<CSymbolRequest>;
 	public final destroyRequest:Null<CSymbolRequest>;
+	/** Exact slot visitor, present only when values contain collector pointers. */
+	public final traceRequest:Null<CSymbolRequest>;
 	public final copyParameterRequests:Array<CSymbolRequest>;
 	public final assignParameterRequests:Array<CSymbolRequest>;
 	public final destroyParameterRequests:Array<CSymbolRequest>;
@@ -94,7 +96,7 @@ class CPreparedBodyStringMap {
 	/** Create one immutable plan after its key and value contracts are validated. */
 	public function new(semanticKey:String, digest:String, value:CBodyValueType, lifecycle:CBodyStringMapValueLifecycle, ownerModule:String,
 			source:HxcSourceSpan, position:Position, copyRequest:Null<CSymbolRequest>, assignRequest:Null<CSymbolRequest>,
-			destroyRequest:Null<CSymbolRequest>, copyParameterRequests:Array<CSymbolRequest>, assignParameterRequests:Array<CSymbolRequest>,
+			destroyRequest:Null<CSymbolRequest>, traceRequest:Null<CSymbolRequest>, copyParameterRequests:Array<CSymbolRequest>, assignParameterRequests:Array<CSymbolRequest>,
 			destroyParameterRequests:Array<CSymbolRequest>, copyStatusRequest:Null<CSymbolRequest>, assignStatusRequest:Null<CSymbolRequest>) {
 		this.semanticKey = semanticKey;
 		this.digest = digest;
@@ -108,6 +110,7 @@ class CPreparedBodyStringMap {
 		this.copyRequest = copyRequest;
 		this.assignRequest = assignRequest;
 		this.destroyRequest = destroyRequest;
+		this.traceRequest = traceRequest;
 		this.copyParameterRequests = copyParameterRequests.copy();
 		this.assignParameterRequests = assignParameterRequests.copy();
 		this.destroyParameterRequests = destroyParameterRequests.copy();
@@ -124,19 +127,23 @@ class CPreparedBodyStringMap {
 			source: source
 		};
 
-	/** Preserve exact String/value arguments and the managed StringMap runtime intent. */
+	/** Preserve exact arguments and select collector ownership only for traced slots. */
 	public function instance():HxcIRTypeInstance
 		return {
 			id: instanceId,
 			declarationId: declarationId,
 			arguments: [IRTString, value.irType],
-			representation: IRRManaged("string-map"),
+			representation: IRRManaged(managedByCollector() ? "gc" : "string-map"),
 			source: source
 		};
 
 	/** True when slot copies must run program-local ownership callbacks. */
 	public function hasLifecycle():Bool
 		return lifecycle != CBSMVLTrivial;
+
+	/** True when mutable slots must participate in exact collector traversal. */
+	public function managedByCollector():Bool
+		return traceRequest != null;
 }
 
 /**
@@ -158,6 +165,8 @@ class CLoweredBodyStringMap {
 
 	/** Destruction callback, or null for a byte-copyable value. */
 	public final destroyName:Null<CIdentifier>;
+	/** Final exact slot visitor, or null when values contain no collector edge. */
+	public final traceName:Null<CIdentifier>;
 
 	/** Final names for the copy callback's context, destination, and source. */
 	public final copyParameterNames:Array<CIdentifier>;
@@ -175,13 +184,14 @@ class CLoweredBodyStringMap {
 	public final assignStatusName:Null<CIdentifier>;
 
 	/** Join one prepared plan with the finalized identifiers it requested. */
-	public function new(prepared:CPreparedBodyStringMap, copyName:Null<CIdentifier>, assignName:Null<CIdentifier>, destroyName:Null<CIdentifier>,
+	public function new(prepared:CPreparedBodyStringMap, copyName:Null<CIdentifier>, assignName:Null<CIdentifier>, destroyName:Null<CIdentifier>, traceName:Null<CIdentifier>,
 			copyParameterNames:Array<CIdentifier>, assignParameterNames:Array<CIdentifier>, destroyParameterNames:Array<CIdentifier>,
 			copyStatusName:Null<CIdentifier>, assignStatusName:Null<CIdentifier>) {
 		this.prepared = prepared;
 		this.copyName = copyName;
 		this.assignName = assignName;
 		this.destroyName = destroyName;
+		this.traceName = traceName;
 		this.copyParameterNames = copyParameterNames.copy();
 		this.assignParameterNames = assignParameterNames.copy();
 		this.destroyParameterNames = destroyParameterNames.copy();
@@ -238,6 +248,7 @@ class CBodyStringMapRegistry {
 		var copyRequest:Null<CSymbolRequest> = null;
 		var assignRequest:Null<CSymbolRequest> = null;
 		var destroyRequest:Null<CSymbolRequest> = null;
+		var traceRequest:Null<CSymbolRequest> = null;
 		var copyParameters:Array<CSymbolRequest> = [];
 		var assignParameters:Array<CSymbolRequest> = [];
 		var destroyParameters:Array<CSymbolRequest> = [];
@@ -256,8 +267,12 @@ class CBodyStringMapRegistry {
 			copyStatus = registerLocal(copyRequest, "operation_status", 0);
 			assignStatus = registerLocal(assignRequest, "operation_status", 0);
 		}
+		if (containsCollectorReference(value)) {
+			traceRequest = lifecycleRequest(digest, "trace", 3);
+			context.symbols.register(traceRequest);
+		}
 		final prepared = new CPreparedBodyStringMap(semanticKey, digest, value, lifecycle, ownerModule, HaxeSourceSpan.fromPosition(position, sourcePath),
-			position, copyRequest, assignRequest, destroyRequest, copyParameters, assignParameters, destroyParameters, copyStatus, assignStatus);
+			position, copyRequest, assignRequest, destroyRequest, traceRequest, copyParameters, assignParameters, destroyParameters, copyStatus, assignStatus);
 		bySemanticKey.set(semanticKey, prepared);
 		return prepared;
 	}
@@ -276,16 +291,16 @@ class CBodyStringMapRegistry {
 		representations. A nominal abstract over String keeps its nominal identity
 		while reusing the selected immutable String carrier: static bytes copy
 		trivially, while a runtime-backed view uses the shared String retain/release
-		contract. A closed record is admitted only when every nested value already
-		has a finite, byte-relocatable direct representation and no collector tracing
-		is required. Managed records use the record's proven retain/destroy plan.
+		contract. A closed record is admitted only when every nested value has a
+		finite direct representation. Managed records use the proven retain/destroy
+		plan. Records with collector references also receive one exact trace callback.
 
 		A payload-free Haxe enum is also a direct value: its prepared enum plan
 		selects one native C `enum`, so copying or moving a slot copies only that
 		closed discriminant. A tagged enum is deliberately different because its
-		active payload may need ownership or tracing work. Unsupported references
-		and tagged enums still fail before the runtime's `void *` ABI can erase
-		their exact type and lifetime rules.
+		active payload can need ownership or tracing work. Unsupported references
+		still fail before the runtime's `void *` ABI can erase their exact type and
+		lifetime rules.
 	**/
 	static function valueLifecycle(value:CBodyValueType):Null<CBodyStringMapValueLifecycle>
 		return switch value.kind {
@@ -319,22 +334,33 @@ class CBodyStringMapRegistry {
 	}
 
 	/**
-		Reject nested values whose lifetime needs a tracing collector or borrow.
+		Admit nested values only when copy, cleanup, and tracing are all exact.
 
-		The accepted cases already own complete direct copy/destroy semantics.
-		This recursive proof is intentionally narrower than “the compiler knows
-		this type”: knowing a class or StringMap carrier is not enough to make it
-		safe as an unboxed record field inside another StringMap slot.
+		The accepted cases have a finite direct layout. Collector-managed classes,
+		Arrays, and enums use slot tracing instead of reference counts. Unknown
+		references still fail before erased runtime storage can hide their lifetime.
 	**/
 	static function nestedValueIsStorable(value:CBodyValueType):Bool
 		return switch value.kind {
 			case CBVKPrimitive(mapping): mapping.irType != IRTVoid && mapping.irType != IRTString && mapping.irType != IRTManagedString;
 			case CBVKStaticString(_) | CBVKManagedString(_) | CBVKImport(_): true;
 			case CBVKAggregate(aggregate): aggregateIsStorable(aggregate);
-			case CBVKArray(array): !array.managedByCollector;
+			case CBVKClass(value, _): value.managedByCollector;
+			case CBVKArray(_): true;
 			case CBVKBytes(_): true;
-			case CBVKEnum(enumeration): !enumeration.collectorPayload;
+			case CBVKEnum(_): true;
 			case CBVKOptional(optional): nestedValueIsStorable(optional.payload);
+			case _: false;
+		};
+
+	/** Detect the exact collector edges that require dynamic slot traversal. */
+	static function containsCollectorReference(value:CBodyValueType):Bool
+		return switch value.kind {
+			case CBVKClass(value, _): value.managedByCollector;
+			case CBVKArray(value): value.managedByCollector;
+			case CBVKEnum(value): value.collectorPayload;
+			case CBVKAggregate(value): Lambda.exists(value.fields, field -> containsCollectorReference(field.type));
+			case CBVKOptional(value): containsCollectorReference(value.payload);
 			case _: false;
 		};
 
@@ -375,7 +401,7 @@ class CBodyStringMapRegistry {
 		final result:Array<CLoweredBodyStringMap> = [];
 		for (value in canonicalMaps()) {
 			if (!value.hasLifecycle()) {
-				result.push(new CLoweredBodyStringMap(value, null, null, null, [], [], [], null, null));
+				result.push(new CLoweredBodyStringMap(value, null, null, null, identifierOrNull(symbols, value.traceRequest), [], [], [], null, null));
 				continue;
 			}
 			if (value.copyRequest == null || value.assignRequest == null || value.destroyRequest == null)
@@ -383,12 +409,15 @@ class CBodyStringMapRegistry {
 			if (value.copyStatusRequest == null || value.assignStatusRequest == null)
 				throw new CBodyEmissionError('managed StringMap specialization `${value.semanticKey}` lost its callback locals');
 			result.push(new CLoweredBodyStringMap(value, symbols.identifierFor(value.copyRequest), symbols.identifierFor(value.assignRequest),
-				symbols.identifierFor(value.destroyRequest), value.copyParameterRequests.map(symbols.identifierFor),
+				symbols.identifierFor(value.destroyRequest), identifierOrNull(symbols, value.traceRequest), value.copyParameterRequests.map(symbols.identifierFor),
 				value.assignParameterRequests.map(symbols.identifierFor), value.destroyParameterRequests.map(symbols.identifierFor),
 				symbols.identifierFor(value.copyStatusRequest), symbols.identifierFor(value.assignStatusRequest)));
 		}
 		return result;
 	}
+
+	static function identifierOrNull(symbols:CSymbolRegistry, request:Null<CSymbolRequest>):Null<CIdentifier>
+		return request == null ? null : symbols.identifierFor(request);
 
 	/** Recover the exact key/value arguments from Map or concrete StringMap typing. */
 	static function mapParameters(type:Type):Null<Array<Type>>

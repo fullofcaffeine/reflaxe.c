@@ -26,6 +26,7 @@ from scripts.test.bounded_process import run as run_bounded_process  # noqa: E40
 
 CASE = Path(__file__).resolve().parent
 GENERATED = CASE / "generated"
+COLLECTOR_RECORD = CASE / "collector_record"
 DIRECT_DECISION = CASE / "direct_decision"
 DISPATCH_OWNED = CASE / "dispatch_owned"
 NEGATIVE = CASE / "negative"
@@ -138,6 +139,87 @@ def run_eval_oracle() -> None:
         results.append((execution.returncode, execution.stdout, execution.stderr))
     if results != [(0, "", ""), (0, "", "")]:
         raise StringMapFailure(f"pinned Eval StringMap oracle drifted: {results!r}")
+
+
+def check_collector_record(toolchains: list[Toolchain]) -> None:
+    """Keep collector references in exact StringMap record slots reachable."""
+
+    for label in ("first", "second"):
+        oracle = run_bounded_process(
+            [development_tool("haxe"), "-cp", str(COLLECTOR_RECORD), "-main", "Main", "--interp"],
+            cwd=ROOT,
+            env=haxe_environment(),
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        if oracle.returncode != 0 or oracle.stdout or oracle.stderr:
+            raise StringMapFailure(
+                f"collector-record {label} Eval oracle failed: "
+                f"{oracle.returncode} {oracle.stdout!r} {oracle.stderr!r}"
+            )
+
+    with tempfile.TemporaryDirectory(prefix="reflaxe-c-string-map-collector-") as temporary:
+        root = Path(temporary)
+        normal = root / "normal"
+        reverse = root / "reverse"
+        first = compile_haxe(COLLECTOR_RECORD, normal, report=True)
+        second = compile_haxe(COLLECTOR_RECORD, reverse, reverse=True)
+        for label, result in (("normal", first), ("reverse", second)):
+            if result.returncode != 0:
+                raise StringMapFailure(
+                    f"collector-record {label} compile failed: "
+                    f"{result.stdout!r} {result.stderr!r}"
+                )
+        if generated_tree(normal) != generated_tree(reverse):
+            raise StringMapFailure("collector-record output changed under reversed discovery")
+
+        hxcir = extract_hxcir(first)
+        for marker in (
+            'representation=managed("gc")',
+            'runtime(feature="string-map",operation="create")',
+            'runtime(feature="string-map",operation="copy")',
+            "managed-root",
+            "nullable-payload",
+        ):
+            if marker not in hxcir:
+                raise StringMapFailure(f"collector-record HxcIR omitted {marker}")
+
+        sources = sorted((normal / "runtime/src").glob("*.c")) + sorted(
+            (normal / "src").rglob("*.c")
+        )
+        source_text = "\n".join(path.read_text(encoding="utf-8") for path in sources)
+        for marker in (
+            "hxc_string_map_type_descriptor()",
+            "hxc_string_map_init_collector_owned",
+            "hxc_string_map_copy_in_place",
+            "value_trace",
+        ):
+            if marker not in source_text:
+                raise StringMapFailure(f"collector-record generated C omitted {marker}")
+
+        include_roots = [normal / "include", normal / "runtime/include"]
+        for toolchain in toolchains:
+            build = root / toolchain.family
+            build.mkdir()
+            for optimization in ("-O0", "-O2"):
+                compile_and_run(
+                    toolchain.compiler,
+                    sources,
+                    include_roots,
+                    build / f"collector-record-{optimization[1:].lower()}",
+                    (optimization,),
+                )
+            validate_cpp_headers(normal, toolchain.family, build)
+            if toolchain.family == "clang":
+                compile_and_run(
+                    toolchain.compiler,
+                    sources,
+                    include_roots,
+                    build / "collector-record-sanitized",
+                    SANITIZER_FLAGS,
+                )
 
 
 def check_dispatch_owned_map(toolchains: list[Toolchain]) -> None:
@@ -828,6 +910,7 @@ def run_native(toolchains: list[Toolchain], *, generated_haxe: bool) -> None:
         root = Path(temporary)
         if generated_haxe:
             check_direct_runtime_decisions(toolchains)
+            check_collector_record(toolchains)
         projects = render_projects(root) if generated_haxe else {}
         if generated_haxe:
             run_negative_cases(root)
@@ -893,6 +976,7 @@ def parse_args(argv: Iterable[str]) -> argparse.Namespace:
     parser.add_argument("--native-only", action="store_true")
     parser.add_argument("--direct-decision-only", action="store_true")
     parser.add_argument("--dispatch-owned-only", action="store_true")
+    parser.add_argument("--collector-record-only", action="store_true")
     return parser.parse_args(list(argv))
 
 
@@ -900,6 +984,13 @@ def main(argv: Iterable[str] = ()) -> int:
     args = parse_args(argv)
     try:
         toolchains = resolve_toolchains(args.toolchain)
+        if args.collector_record_only:
+            check_collector_record(toolchains)
+            print(
+                "string-map: OK: collector-bearing record slots retain exact "
+                "roots through mutation, copy, and collection pressure"
+            )
+            return 0
         if args.dispatch_owned_only:
             check_dispatch_owned_map(toolchains)
             print(

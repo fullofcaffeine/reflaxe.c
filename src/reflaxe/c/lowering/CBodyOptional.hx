@@ -119,8 +119,10 @@ class CBodyOptionalRegistry {
 
 		The payload check is recursive. Unmanaged values need no lifecycle work. A
 		managed closed record or enum is admitted only after it has one complete
-		typed retain/destroy plan. Managed Bytes uses its exact runtime retain/release
-		pair. In either case, the presence flag guards every ownership operation.
+		typed retain/destroy plan. A record that contains only collector-managed
+		references needs no retain/destroy pair: its tagged wrapper is an exact root,
+		and the presence flag guards traversal of its payload. Managed Bytes uses its
+		exact runtime retain/release pair.
 	**/
 	public function require(payload:CBodyValueType, ownerModule:String, sourcePath:String, position:Position, fail:(Position, String) -> Void,
 			node:String):CPreparedBodyOptional {
@@ -130,7 +132,7 @@ class CBodyOptionalRegistry {
 		final managedLifetime = (payloadAggregate != null && payloadAggregate.managedLifetime)
 			|| (payloadEnum != null && payloadEnum.managedLifetime)
 			|| payloadBytes != null;
-		if (!isDirectUnmanaged(payload) && !managedLifetime) {
+		if (!isDirectUnmanaged(payload) && !managedLifetime && !payload.containsCollectorManagedReference()) {
 			fail(position, '$node:payload-requires-direct-unmanaged-value:${payload.cSpelling}');
 			throw new CBodyEmissionError("direct optional rejection callback returned unexpectedly");
 		}

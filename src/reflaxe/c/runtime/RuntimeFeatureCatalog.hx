@@ -291,13 +291,17 @@ class RuntimeFeatureCatalog {
 						"test/runtime/runtime-feature-graph/run.py"
 					])),
 			new RuntimeFeatureDefinition(stringMap, "String-keyed shared Haxe Map identity with copied UTF-8 keys and exact unboxed value storage.",
-				CompilerSelectable, true, environments, [alloc, iterator, string, stringLiteral], [header("string_map.h"), source("string_map.c")], [
+				CompilerSelectable, true, environments, [alloc, iterator, object, string, stringLiteral], [header("string_map.h"), source("string_map.c")], [
 					"hxc_string_map_ref_create",
 					"hxc_string_map_ref_create_with_ops",
+					"hxc_string_map_type_descriptor",
+					"hxc_string_map_init_collector_owned",
+					"hxc_string_map_dispose_in_place",
 					"hxc_string_map_ref_retain",
 					"hxc_string_map_ref_release",
 					"hxc_string_map_ref_release_slot",
 					"hxc_string_map_ref_copy",
+					"hxc_string_map_copy_in_place",
 					"hxc_string_map_ref_set_copy",
 					"hxc_string_map_ref_exists",
 					"hxc_string_map_ref_get_copy",
@@ -310,7 +314,7 @@ class RuntimeFeatureCatalog {
 					"hxc_string_map_value_ops_is_valid"
 				],
 				[], [],
-				documentation("Preserves ordinary Map<String, V> alias identity while copying canonical UTF-8 keys and keeping each admitted V specialization exact and unboxed; trivial values copy as bytes, while managed direct records use a complete compiler-generated copy/assign/destroy policy.",
+				documentation("Preserves ordinary Map<String, V> alias identity while copying canonical UTF-8 keys and keeping each admitted V specialization exact and unboxed. Reference-counted fields use compiler-generated copy and cleanup callbacks. Collector-managed fields use one exact slot trace callback.",
 					[
 						new RuntimeFeatureSelectionRoot("managed-type-representation", RuntimeFeatureSelectionRootKind.HxcIrOperation,
 							"A reachable ordinary Haxe Map<String, V> whose keys, contents, and shared identity change at run time."),
@@ -798,7 +802,7 @@ class RuntimeFeatureCatalog {
 			case "string_decode.h": "aa93ea7f132aff625adfdcc7498532b139f621196deab4c0e9ecb5de2934fd48";
 			case "string_float.h": "8747a86c3cabae9bf54a4125305f043d6c70d7c97bc9f6f90174ba6185e3ecc1";
 			case "string_literal.h": "ac6b5ad9fa13004c62e3b33b9b28a935bfb8a22287cd4595ce6e6eb81490e283";
-			case "string_map.h": "a12868bdfbc4b5420b2930bc920fc45e6e69ead5b72be130c54919c54ba0c042";
+			case "string_map.h": "0ae3c4da07b98855ee647b06cacd516362ae79f9bf3eef1bea61b794ed152874";
 			case "string_scalar.h": "b400d7ef9af853410334b30627ea98a5af87d5c3a863f6aa4c770d7cc4b3d90b";
 			case "string_split.h": "a17c9cd6c31cfdb8da2cf4955b980090c144e68ee1ae4f1d0f0b543f4b6eb3eb";
 			case "typed_map.h": "8e0838bbf09921bf4167fc85e55d99a762cd208b069a41008e645b5e07949f11";
@@ -826,7 +830,7 @@ class RuntimeFeatureCatalog {
 			case "string.c": "07fb06813ca533677bf00f8580f874bd3c05a41a5bd1b647f45598b0d3e3c8c1";
 			case "string_lower_case.c": "55a692cfd855f71f1a1fa4f90f311f1653ec0638797ecfb024764e23a66680c8";
 			case "string_float.c": "60e5189e7f7304ccbc1f69136b7393e4eea35760cde590853ebced414bf39267";
-			case "string_map.c": "c637ffdce4e990fe7436f88e7445376722ee0b28dec10cf57db860a5120706e9";
+			case "string_map.c": "3c27b6893edee126220a94adb748181f563f1c7777fa576d1015fbe915651ef4";
 			case "string_scalar.c": "2c44eebc655dd34ed374b58402de9dfe731425fb4e0b54997a7c16c12e1309fb";
 			case "string_split.c": "799fc917a450169e4babd86748e879fe7222b4abfef293880c47891e671f9d1b";
 			case "typed_map.c": "2a890d9f7a66a2faaffff43eee084fcf704138442f5915e8e728acbcad6fbcff";
