@@ -1665,7 +1665,7 @@ def validate_editor_asset_browser_screenshot(path: Path, *, platform_name: str) 
     scale = width // logical_width
     panel_changed = 0
     panel_colors: set[int] = set()
-    mechanism_icon_pixels = 0
+    thumbnail_colors: dict[int, int] = {}
     focus_pixels = 0
     for row in range(50 * scale, 670 * scale):
         row_at = row * width * 4
@@ -1675,23 +1675,28 @@ def validate_editor_asset_browser_screenshot(path: Path, *, platform_name: str) 
             panel_colors.add((red >> 4) << 8 | (green >> 4) << 4 | (blue >> 4))
             if abs(red - 12) + abs(green - 28) + abs(blue - 36) > 24:
                 panel_changed += 1
-            if (red, green, blue) == (210, 105, 230):
-                mechanism_icon_pixels += 1
+            # Inspect the first result's thumbnail, away from text and focus borders.
+            # Atlas art owns its palette; a flat category mark is not texture evidence.
+            if 204 * scale <= row < 238 * scale and 236 * scale <= column < 270 * scale:
+                color = red << 16 | green << 8 | blue
+                thumbnail_colors[color] = thumbnail_colors.get(color, 0) + 1
             if (red, green, blue) == (255, 132, 47):
                 focus_pixels += 1
     minimum_changed = 150_000 * scale * scale
+    thumbnail_detail_pixels = sum(thumbnail_colors.values()) - max(thumbnail_colors.values(), default=0)
     minimum_icon = 400 * scale * scale
     minimum_focus = 100 * scale * scale
     if (
         panel_changed < minimum_changed
         or len(panel_colors) < 8
-        or mechanism_icon_pixels < minimum_icon
+        or len(thumbnail_colors) < 8
+        or thumbnail_detail_pixels < minimum_icon
         or focus_pixels < minimum_focus
     ):
         raise PlayFailure(
-            "Caxecraft editor asset browser is blank, unfocused, or missing its stable mechanism icon "
+            "Caxecraft editor asset browser is blank, unfocused, or missing its textured thumbnail "
             f"(changed:{panel_changed}, colors:{len(panel_colors)}, "
-            f"icon:{mechanism_icon_pixels}, focus:{focus_pixels})"
+            f"icon-detail:{thumbnail_detail_pixels}, icon-colors:{len(thumbnail_colors)}, focus:{focus_pixels})"
         )
     return width, height
 
