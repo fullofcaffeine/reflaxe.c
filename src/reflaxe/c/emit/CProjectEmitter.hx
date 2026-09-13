@@ -828,7 +828,7 @@ class CProjectEmitter {
 			expectedDirectDecisions.push("managed-haxe-arrays");
 		if (directRuntimeFeatures.exists("iterator"))
 			expectedDirectDecisions.push("managed-haxe-iterators");
-		if (directRuntimeFeatures.exists("string-map"))
+		if (directRuntimeFeatures.exists("string-map") || directRuntimeFeatures.exists("gc-string-map"))
 			expectedDirectDecisions.push("managed-haxe-string-maps");
 		if (directRuntimeFeatures.exists("int-map"))
 			expectedDirectDecisions.push("managed-haxe-int-maps");
@@ -880,6 +880,7 @@ class CProjectEmitter {
 				case "iterator" if (reason.kind == "runtime-operation"):
 				case "int-map" if (reason.kind == "runtime-operation"):
 				case "string-map" if (reason.kind == "runtime-operation"):
+				case "gc-string-map" if (reason.kind == "runtime-operation"):
 				case "object-map" if (reason.kind == "runtime-operation"):
 				case "enum-value-map" if (reason.kind == "runtime-operation"):
 				case "bytes" if (reason.kind == "runtime-operation"):

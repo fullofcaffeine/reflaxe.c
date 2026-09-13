@@ -539,6 +539,7 @@ class CStaticFunctionGraphCollector {
 			expression: base.expression,
 			declarationPosition: base.declarationPosition,
 			sourcePositionOverrides: base.sourcePositionOverrides,
+			functionSourcePlan: base.functionSourcePlan,
 			typeParameters: methodTypeParameters(base),
 			ownerTypeParameters: ownerTypeParameters(base),
 			specialization: specialization,
@@ -601,6 +602,7 @@ class CStaticFunctionGraphCollector {
 							expression: field.expression,
 							declarationPosition: field.rawClassField.pos,
 							sourcePositionOverrides: field.sourcePositionOverrides,
+							functionSourcePlan: field.functionSourcePlan,
 							typeParameters: field.rawClassField.params,
 							ownerTypeParameters: declarationTypeParameters.filter(parameter -> !hasNamedParameter(field.rawClassField.params, parameter.name)),
 							specialization: null

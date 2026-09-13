@@ -1287,10 +1287,6 @@ def check_negative_cases() -> None:
     cases = {
         "payload_equality": ("HXC1001", "payload-enum-equality-requires-structural-semantics:PayloadValue"),
         "nonexhaustive": ("Unmatched patterns: On", "fixtures/nonexhaustive/Main.hx:"),
-        "recursive_managed_class": (
-            "HXC1001",
-            "recursive-enum-with-collector-payload:ManagedChain",
-        ),
         "recursive_conditional": (
             "HXC1001",
             "TVar(selected:managed-flow-carrier-fallible-retain-not-admitted)",
@@ -1735,6 +1731,205 @@ def check_managed_string_callback(*, requested_toolchain: str) -> None:
                 "managed-String enum callback lost its balanced retain, active-tag "
                 "release, or caller cleanup proof"
             )
+
+
+def check_recursive_collector_observer(
+    root: Path, output: Path, *, expected: str, requested_toolchain: str
+) -> None:
+    """Require actual collection, cycle reclamation, and fail-stop node allocation."""
+    symbols = json.loads((output / "hxc.symbols.json").read_text(encoding="utf-8"))
+
+    def name(parts: list[str]) -> str:
+        matches = [
+            item.get("cName") for item in symbols["symbols"]
+            if item.get("readableName") == parts
+        ]
+        if len(matches) != 1 or not isinstance(matches[0], str) or re.fullmatch(
+            r"[A-Za-z_][A-Za-z0-9_]*", matches[0]
+        ) is None:
+            raise EnumLoweringFailure(f"collector observer lost exact symbol {parts!r}")
+        return matches[0]
+
+    template = (NATIVE / "recursive_collector_observer.c.in").read_text(encoding="utf-8")
+    node_names = [
+        item.get("readableName") for item in symbols["symbols"]
+        if item.get("kind") == "type-descriptor"
+        and isinstance(item.get("readableName"), list)
+        and item["readableName"][-1:] == ["node_descriptor"]
+    ]
+    if len(node_names) != 1:
+        raise EnumLoweringFailure("collector observer requires exactly one enum node descriptor")
+    template = template.replace("@NODE_DESCRIPTOR@", name(node_names[0]))
+    for marker, parts in (
+        ("@COLLECTOR@", ["program", "gc"]),
+        ("@THREAD@", ["program", "gc", "thread"]),
+        ("@ENTRY@", ["Main", "main"]),
+    ):
+        template = template.replace(marker, name(parts))
+    observer = root / "observer" / "main.c"
+    observer.parent.mkdir(exist_ok=True)
+    observer.write_text(template, encoding="utf-8")
+    runtime_sources = tuple(
+        path.relative_to(root).as_posix()
+        for path in sorted((output / "runtime").rglob("*.c"))
+    )
+    # The observer includes this C file rather than compiling it separately.
+    # Record it with the include inputs so the evidence hashes the actual code.
+    headers = (
+        *(path.relative_to(root).as_posix() for path in sorted(output.rglob("*.h"))),
+        "generated/src/program.c",
+    )
+    for variant, flags, failure in (
+        ("lifecycle", ("-O2",), False),
+        ("sanitized", ("-O1", "-g", "-fno-omit-frame-pointer", "-fno-sanitize-recover=all", "-fsanitize=address,undefined"), False),
+        ("allocation-failure", ("-O0", "-DFIXTURE_FAIL_NODE_ALLOCATION=1"), True),
+    ):
+        project = CFixtureProject(
+            f"enum-recursive-collector-{variant}",
+            (*runtime_sources, "observer/main.c"), headers,
+            ("generated/include", "generated/runtime/include"),
+            "" if failure else expected,
+            ("node-allocation-abort",) if failure else ("observed-pressure-collection", "unreachable-graph-reclamation"),
+            expected_exit=77 if failure else 0,
+            link_arguments=("-fsanitize=address,undefined",) if variant == "sanitized" else (),
+        )
+        report = run_c_fixture_corpus(
+            suite=f"enum-recursive-collector-{variant}", projects=(project,),
+            fixture_root=root, build_root=root / f"observer-{variant}",
+            repository_root=ROOT, requested_toolchain=requested_toolchain,
+            strict_flags=(*C11_STRICT_FLAGS, *flags),
+        )
+        validate_report(report, required_coverage=frozenset(project.coverage))
+
+
+def check_recursive_collector_payload(*, requested_toolchain: str) -> None:
+    """Prove both trivial shared nodes and nodes with independently owned payloads."""
+    for directory, expected in (
+        ("recursive_collector_payload", "18\n18\n1\n"),
+        ("recursive_managed_class", "19\n"),
+    ):
+        check_recursive_collector_fixture(
+            FIXTURES / directory, expected=expected, requested_toolchain=requested_toolchain
+        )
+
+
+def check_recursive_collector_fixture(
+    fixture: Path, *, expected: str, requested_toolchain: str
+) -> None:
+    """Require the independent source expectation, native semantics, and lifecycle observer."""
+    interpreted = run_bounded_process(
+        [development_tool("haxe"), "-cp", str(fixture), "-main", "Main", "--interp"],
+        cwd=ROOT,
+        env=haxe_environment(),
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    if interpreted.returncode != 0 or interpreted.stdout != expected or interpreted.stderr:
+        raise EnumLoweringFailure(
+            f"recursive collector enum Eval differed from {expected!r}\n"
+            f"{interpreted.stdout}{interpreted.stderr}"
+        )
+    print("enum-lowering: recursive collector enum Eval passed", flush=True)
+    with tempfile.TemporaryDirectory(prefix="hxc-enum-recursive-collector-") as temporary:
+        root = Path(temporary)
+        output = root / "generated"
+        compiled = custom_target(fixture, output, main="Main")
+        require_compile_success(compiled, "recursive collector enum positive compile")
+        project = CFixtureProject(
+            "enum-recursive-collector",
+            tuple(path.relative_to(output).as_posix() for path in sorted(output.rglob("*.c"))),
+            tuple(path.relative_to(output).as_posix() for path in sorted(output.rglob("*.h"))),
+            ("include", "runtime/include"),
+            expected,
+            ("recursive-enum-array-alias", "recursive-enum-cycle-read"),
+        )
+        for optimization in ("-O0", "-O2"):
+            report = run_c_fixture_corpus(
+                suite=f"enum-recursive-collector-{optimization[1:].lower()}",
+                projects=(project,),
+                fixture_root=output,
+                build_root=root / optimization[1:].lower(),
+                repository_root=ROOT,
+                requested_toolchain=requested_toolchain,
+                strict_flags=(*C11_STRICT_FLAGS, optimization),
+            )
+            validate_report(report, required_coverage=frozenset(project.coverage))
+        sanitized = CFixtureProject(
+            "enum-recursive-collector-sanitized",
+            project.sources,
+            project.headers,
+            project.include_directories,
+            expected,
+            (*project.coverage, "asan-ubsan"),
+            link_arguments=("-fsanitize=address,undefined",),
+        )
+        report = run_c_fixture_corpus(
+            suite="enum-recursive-collector-sanitized",
+            projects=(sanitized,),
+            fixture_root=output,
+            build_root=root / "sanitized",
+            repository_root=ROOT,
+            requested_toolchain=requested_toolchain,
+            strict_flags=(
+                *C11_STRICT_FLAGS, "-O1", "-g", "-fno-omit-frame-pointer",
+                "-fno-sanitize-recover=all", "-fsanitize=address,undefined",
+            ),
+        )
+        validate_report(report, required_coverage=frozenset(sanitized.coverage))
+        check_recursive_collector_observer(
+            root, output, expected=expected, requested_toolchain=requested_toolchain
+        )
+
+
+def check_traced_flow(*, requested_toolchain: str) -> None:
+    """Keep switch carriers safe during collection before and after arm stores."""
+    fixture = FIXTURES / "traced_flow"
+    interpreted = run_bounded_process(
+        [development_tool("haxe"), "-cp", str(fixture), "-main", "Main", "--interp"],
+        cwd=ROOT, env=haxe_environment(), check=False,
+        capture_output=True, text=True, timeout=30,
+    )
+    if interpreted.returncode or interpreted.stdout or interpreted.stderr:
+        raise EnumLoweringFailure(f"traced flow Eval failed: {interpreted.stdout}{interpreted.stderr}")
+    with tempfile.TemporaryDirectory(prefix="hxc-enum-traced-flow-") as temporary:
+        root = Path(temporary)
+        output = root / "generated"
+        compiled = custom_target(fixture, output, main="Main")
+        require_compile_success(compiled, "traced enum switch compile")
+        symbols = json.loads((output / "hxc.symbols.json").read_text(encoding="utf-8"))
+        template = (NATIVE / "traced_flow_observer.c.in").read_text(encoding="utf-8")
+        for marker, parts in (
+            ("@COLLECTOR@", ["program", "gc"]),
+            ("@THREAD@", ["program", "gc", "thread"]),
+            ("@ENTRY@", ["Main", "main"]),
+        ):
+            names = [item.get("cName") for item in symbols["symbols"] if item.get("readableName") == parts]
+            if len(names) != 1 or not isinstance(names[0], str) or re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", names[0]) is None:
+                raise EnumLoweringFailure(f"traced flow observer lost exact symbol {parts!r}")
+            template = template.replace(marker, names[0])
+        observer = root / "observer/main.c"
+        observer.parent.mkdir()
+        observer.write_text(template, encoding="utf-8")
+        sources = tuple(path.relative_to(root).as_posix() for path in sorted((output / "runtime").rglob("*.c")))
+        headers = (*(path.relative_to(root).as_posix() for path in sorted(output.rglob("*.h"))), "generated/src/program.c")
+        for label, flags in (
+            ("o0", ("-O0",)), ("o2", ("-O2",)),
+            ("sanitized", ("-O1", "-g", "-fno-omit-frame-pointer", "-fno-sanitize-recover=all", "-fsanitize=address,undefined")),
+        ):
+            project = CFixtureProject(
+                f"enum-traced-flow-{label}", (*sources, "observer/main.c"), headers,
+                ("generated/include", "generated/runtime/include"), "",
+                ("traced-switch-arm-collection", "traced-switch-join-collection", "reclamation"),
+                link_arguments=("-fsanitize=address,undefined",) if label == "sanitized" else (),
+            )
+            report = run_c_fixture_corpus(
+                suite=f"enum-traced-flow-{label}", projects=(project,), fixture_root=root,
+                build_root=root / label, repository_root=ROOT, requested_toolchain=requested_toolchain,
+                strict_flags=(*C11_STRICT_FLAGS, *flags),
+            )
+            validate_report(report, required_coverage=frozenset(project.coverage))
 
 
 def check_managed_class_payload(*, requested_toolchain: str) -> None:
@@ -2391,6 +2586,21 @@ def snapshot_report() -> dict[str, object]:
     }
 
 
+def check_provenance_deltas() -> None:
+    """Keep replay source ranges exact when enum history grows across functions."""
+    result = run_bounded_process(
+        [development_tool("haxe"), "-cp", str(FIXTURES / "provenance"),
+         "-cp", str(Path(__file__).parent), "-lib", "reflaxe.c",
+         "--macro", "EnumProvenanceProbe.run()", "-main", "ProvenanceFixture", "--interp"],
+        cwd=ROOT, env=haxe_environment(), check=False, capture_output=True,
+        text=True, timeout=30,
+    )
+    if result.returncode != 0 or result.stdout.strip() != "ENUM_PROVENANCE_DELTA_OK" or result.stderr:
+        raise EnumLoweringFailure(
+            f"enum provenance delta contract failed\n{result.stdout}\n{result.stderr}"
+        )
+
+
 def parse_args(arguments: Iterable[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--toolchain", choices=("auto", "gcc", "clang"), default="auto")
@@ -2398,6 +2608,9 @@ def parse_args(arguments: Iterable[str]) -> argparse.Namespace:
     parser.add_argument("--statement-early-return-only", action="store_true")
     parser.add_argument("--bytes-payload-only", action="store_true")
     parser.add_argument("--managed-class-payload-only", action="store_true")
+    parser.add_argument("--recursive-collector-payload-only", action="store_true")
+    parser.add_argument("--traced-flow-only", action="store_true")
+    parser.add_argument("--provenance-only", action="store_true")
     parser.add_argument("--managed-string-callback-only", action="store_true")
     parser.add_argument("--negative-only", action="store_true")
     return parser.parse_args(list(arguments))
@@ -2409,6 +2622,10 @@ def main(arguments: Iterable[str] = ()) -> int:
         print("enum-lowering: ERROR: pinned Haxe executable is unavailable", file=sys.stderr)
         return 1
     try:
+        if args.provenance_only:
+            check_provenance_deltas()
+            print("enum-lowering: OK: enum provenance deltas preserve exact source ranges")
+            return 0
         if args.native_only:
             report = snapshot_report()
             validate(report)
@@ -2429,6 +2646,14 @@ def main(arguments: Iterable[str] = ()) -> int:
                 "enum-lowering: OK: Bytes payload ownership, active-tag cleanup, "
                 "determinism, native safety, and unsupported-reference rejection passed"
             )
+            return 0
+        if args.recursive_collector_payload_only:
+            check_recursive_collector_payload(requested_toolchain=args.toolchain)
+            print("enum-lowering: OK: recursive collector enum positive semantics passed")
+            return 0
+        if args.traced_flow_only:
+            check_traced_flow(requested_toolchain=args.toolchain)
+            print("enum-lowering: OK: traced switch carrier Eval, native, collection and cleanup checks passed")
             return 0
         if args.managed_class_payload_only:
             check_managed_class_payload(requested_toolchain=args.toolchain)
@@ -2453,6 +2678,7 @@ def main(arguments: Iterable[str] = ()) -> int:
             )
             return 0
 
+        check_provenance_deltas()
         first_payload, first = render("first enum render")
         second_payload, second = render("second enum render")
         reverse_payload, reverse = render("reverse-input enum render", reverse=True)
@@ -2472,6 +2698,8 @@ def main(arguments: Iterable[str] = ()) -> int:
         check_string_payload(requested_toolchain=args.toolchain)
         check_managed_string_callback(requested_toolchain=args.toolchain)
         check_managed_class_payload(requested_toolchain=args.toolchain)
+        check_recursive_collector_payload(requested_toolchain=args.toolchain)
+        check_traced_flow(requested_toolchain=args.toolchain)
         check_bytes_payload(requested_toolchain=args.toolchain)
         check_negative_cases()
     except (

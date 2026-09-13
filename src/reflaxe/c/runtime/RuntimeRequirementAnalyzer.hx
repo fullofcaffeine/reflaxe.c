@@ -119,8 +119,11 @@ class RuntimeRequirementAnalyzer {
 		// types do not by themselves select a runtime representation. The shared
 		// traversal below owns all executable, failure, cleanup, and root recursion.
 		for (module in program.modules) {
+			final referenceDeclarations:Map<String, Bool> = [];
 			for (declaration in module.types) {
 				switch declaration.kind {
+					case IRTKReference:
+						referenceDeclarations.set(declaration.id, true);
 					case IRTKAggregate(fields):
 						for (field in fields)
 							collectDeclarationType(field.type, field.source, observations);
@@ -144,6 +147,13 @@ class RuntimeRequirementAnalyzer {
 				switch instance.representation {
 					case IRRManaged(featureId):
 						observations.push(new RuntimeIntentObservation(featureId, "managed-type-representation", instance.source));
+						if (featureId == "gc") {
+							// Exact container arguments remain stored carriers even though the
+							// collector, rather than a collection-specific counter, owns them.
+							if (referenceDeclarations.exists(instance.declarationId))
+								for (argument in instance.arguments)
+									collectDeclarationType(argument, instance.source, observations);
+						}
 						if (featureId == "string-map") {
 							if (instance.arguments.length != 2 || instance.arguments[0] != IRTString)
 								internal('validated managed StringMap `${instance.id}` lost its exact [String, value] arguments');

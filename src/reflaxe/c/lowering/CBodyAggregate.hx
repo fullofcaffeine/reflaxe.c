@@ -848,6 +848,9 @@ class CBodyAggregateRegistry {
 
 	public function valueType(type:Type, position:Position, ownerModule:String, sourcePath:String, fail:(Position, String) -> Void,
 			node:String):CBodyValueType {
+		final knownNominal = cachedExactNominalValueType(type);
+		if (knownNominal != null)
+			return knownNominal;
 		final imported = importRegistry == null ? null : importRegistry.valueType(type, position, ownerModule, sourcePath, fail, node);
 		if (imported != null)
 			return imported;
@@ -866,6 +869,9 @@ class CBodyAggregateRegistry {
 		final stringIdentity = staticStringIdentity(type);
 		if (stringIdentity != null)
 			return runtimeCreatedStrings ? CBodyValueType.managedString(stringIdentity) : CBodyValueType.staticString(stringIdentity);
+		final collectedStringMap = typedMapRegistry.collectorStringMapType(type, position, ownerModule, sourcePath, fail, node);
+		if (collectedStringMap != null)
+			return CBodyValueType.typedMapReference(collectedStringMap);
 		final directStringMap = stringMapRegistry.valueType(type, position, ownerModule, sourcePath, fail, node);
 		if (directStringMap != null)
 			return CBodyValueType.stringMapReference(directStringMap);
@@ -990,6 +996,27 @@ class CBodyAggregateRegistry {
 	/** Number of distinct exact class/interface value plans built in this request. */
 	public inline function exactNominalMisses():Int
 		return exactNominalCacheMisses;
+
+	/**
+		Reuse a previously classified nominal type before testing unrelated families.
+
+		Only the complete first-use classifier populates this request-local cache.
+		A hit therefore already passed import, string, map, and native-boundary
+		checks. The wrapper retains the shared class/interface plan, including later
+		collector decisions; this lookup neither freezes that plan nor admits a new
+		type. Generic and wrapped types must still use their contextual classifier.
+	**/
+	function cachedExactNominalValueType(type:Type):Null<CBodyValueType> {
+		return switch type {
+			case TInst(reference, parameters) if (parameters.length == 0):
+				final definition = reference.get();
+				final cached = exactNominalValues.get(definition.pack.concat([definition.name]).join("."));
+				if (cached != null)
+					exactNominalCacheHits++;
+				cached;
+			case _: null;
+		};
+	}
 
 	/**
 		Reuses the value plan for an exact non-generic class or interface.
@@ -1187,9 +1214,13 @@ class CBodyAggregateRegistry {
 	public function canonicalEnums():Array<CPreparedBodyEnumInstance>
 		return enumRegistry.canonicalEnums();
 
-	/** Copy source provenance so one function can retain only its new ranges. */
-	public function enumReasonSnapshot():Map<String, Array<HxcSourceSpan>>
-		return enumRegistry.reasonSnapshot();
+	/** Remember enum provenance positions before building one function. */
+	public function enumReasonCheckpoint():Map<String, Int>
+		return enumRegistry.reasonCheckpoint();
+
+	/** Return only ranges added by that function, without scanning prior ranges. */
+	public function enumReasonsSince(checkpoint:Map<String, Int>):Map<String, Array<HxcSourceSpan>>
+		return enumRegistry.reasonsSince(checkpoint);
 
 	/** Restore one function-owned generic-enum provenance range. */
 	public function addEnumReason(instanceId:String, reason:HxcSourceSpan):Void
@@ -1265,6 +1296,7 @@ class CBodyAggregateRegistry {
 
 	/** Settle the selective GC graph before any function chooses stack or heap construction. */
 	public function completeManagedRepresentations(interfaceImplementations:Array<CBodyInterfaceImplementation>):Void {
+		typedMapRegistry.completeStringLifetimes(iteratorRegistry.canonicalIterators());
 		// Array identity cycles are visible only after every enum and record payload
 		// has been prepared. Settle them before class closure so either owner can
 		// trace the other without making ordinary acyclic Arrays collector objects.

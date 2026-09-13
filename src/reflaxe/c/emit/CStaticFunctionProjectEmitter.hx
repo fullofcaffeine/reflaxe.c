@@ -1074,8 +1074,11 @@ class CStaticFunctionProjectEmitter {
 		final result:Map<String, String> = [];
 		for (aggregate in lowered.aggregates)
 			addTypeOwner(result, aggregate.prepared.instanceId, aggregate.prepared.ownerModule);
-		for (value in lowered.enums)
+		for (value in lowered.enums) {
 			addTypeOwner(result, value.prepared.instanceId, value.prepared.ownerModule);
+			if (value.prepared.collectorNode())
+				addTypeOwner(result, value.prepared.nodeInstanceId(), value.prepared.ownerModule);
+		}
 		for (value in lowered.classes)
 			addTypeOwner(result, value.prepared.instanceId, value.prepared.ownerModule);
 		for (value in lowered.optionals)
@@ -1186,9 +1189,12 @@ class CStaticFunctionProjectEmitter {
 			case IRTPointer(pointee, _) | IRTNullable(pointee, IRNPointer) | IRTSpan(pointee, _):
 				addDeclarationHeaderDependencies(pointee, dependencies, emitter);
 			case IRTFunction(parameters, result):
+				// A function-pointer field still declares each parameter and result by
+				// value. Complete those carriers first. Pointer-shaped values remain
+				// soft edges through the pointer branch above.
 				for (parameter in parameters)
-					addDeclarationHeaderDependencies(parameter, dependencies, emitter);
-				addDeclarationHeaderDependencies(result, dependencies, emitter);
+					addDefinitionTypeDependencies(parameter, dependencies, emitter);
+				addDefinitionTypeDependencies(result, dependencies, emitter);
 			case IRTBool | IRTInt(_, _) | IRTAbiInteger(_) | IRTFloat(_) | IRTString | IRTManagedString | IRTCString | IRTCallScopedCString |
 				IRTMutableCStringBuffer | IRTVoid | IRTDynamic:
 		}

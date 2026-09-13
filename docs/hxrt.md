@@ -682,9 +682,48 @@ remain outside this intentionally bounded specialization.
 The Haxe fixture proves language semantics through generated C. The separate
 handwritten-C native fixture injects allocator and callback failures directly,
 so code generation and hxrt cannot accidentally validate the same bug
-together. Other key/value specializations, key and pair iteration, text conversion,
-collector-traced values, and owner-replacing map assignment remain explicitly
-unsupported until they receive complete typed lifetime contracts.
+together. Records with collector-managed children use the separate
+`gc-string-map` representation below. Other unsupported value families and
+owner-replacing assignments still require their own typed lifetime contracts.
+
+<!-- hxrt-feature:gc-string-map -->
+### `gc-string-map`
+
+A StringMap can store a record whose children need garbage collection. For
+example, a record can combine a recursive enum containing an Array with a
+Bytes buffer. The map keeps the enum graph alive, while its value callbacks
+retain and release the Bytes buffer.
+
+The compiler selects one representation from the complete Haxe source types.
+This decision precedes recursive layout preparation, so function signatures
+and local variables use the same carrier. Scalar maps and records without
+collector-managed children keep the smaller `string-map` representation.
+
+Collected maps reuse `hxc_typed_map_ref`, its descriptor, and its existing
+failure-atomic table operations. Generated Haxe-to-C callbacks supply UTF-8 key
+hashing and equality, exact value tracing, and copy and destroy operations.
+Keys and record values remain unboxed. An alias shares table identity;
+`copy()` creates independent membership while preserving shared child values.
+The feature selects the owned String runtime for key copies, even when all
+source keys are literals.
+
+Value and pair snapshots register their exact collector children as roots.
+Their generated lifetime callbacks also own copied Strings, Bytes, and other
+reference-counted fields. Snapshot cleanup releases remaining values and
+unregisters those roots. The existing bounded map snapshot contract still
+applies; this does not claim unrestricted mutation-during-iteration parity
+with every Haxe target.
+
+Run the focused contract with:
+
+```sh
+python3 test/differential/string-map/run.py --collector-record-only --toolchain clang
+```
+
+It checks Eval expectations,
+generated C at O0/O2, sanitizers, collection under pressure, reclamation, and
+the compiler's abort policy when map allocation fails. Full Caxecraft
+integration remains tracked by `haxe_c-3zuz` until its application gate passes.
 
 <!-- hxrt-feature:bytes -->
 ### `bytes`

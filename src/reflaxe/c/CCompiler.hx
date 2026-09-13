@@ -493,7 +493,7 @@ class CCompiler {
 			directDecisions.push("managed-haxe-arrays");
 		if (hasRuntimeFeature(runtimeRequirements, "iterator"))
 			directDecisions.push("managed-haxe-iterators");
-		if (hasRuntimeFeature(runtimeRequirements, "string-map"))
+		if (hasRuntimeFeature(runtimeRequirements, "string-map") || hasRuntimeFeature(runtimeRequirements, "gc-string-map"))
 			directDecisions.push("managed-haxe-string-maps");
 		if (hasRuntimeFeature(runtimeRequirements, "int-map"))
 			directDecisions.push("managed-haxe-int-maps");
@@ -816,6 +816,7 @@ class CCompiler {
 			expression: target.expression,
 			declarationPosition: target.declarationPosition,
 			sourcePositionOverrides: target.sourcePositionOverrides,
+			functionSourcePlan: target.functionSourcePlan,
 			typeParameters: [],
 			specialization: null
 		};
@@ -840,6 +841,7 @@ class CCompiler {
 				expression: field.expression,
 				declarationPosition: field.rawClassField.pos,
 				sourcePositionOverrides: field.sourcePositionOverrides,
+				functionSourcePlan: field.functionSourcePlan,
 				typeParameters: switch field.rawClassField {
 					case null: throw "normalized static main field lost its typed ClassField";
 					case raw: raw.params;

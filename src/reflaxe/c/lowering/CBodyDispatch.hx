@@ -425,6 +425,7 @@ class CBodyDispatchCatalog {
 							expression: field.expression,
 							declarationPosition: field.rawClassField.pos,
 							sourcePositionOverrides: field.sourcePositionOverrides,
+							functionSourcePlan: field.functionSourcePlan,
 							typeParameters: field.rawClassField.params,
 							ownerTypeParameters: classReference.get().params,
 							specialization: null,

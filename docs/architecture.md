@@ -398,13 +398,20 @@ modify persistent evidence. The
 construction without replacing the prior generation.
 `reflaxe_c_body_function_replay_cache_report` and the structured profile expose
 hit, miss, shared-revision match, missing-function miss, changed-input miss,
-retained-function, retained-function-input, and retained-program-revision
-counts. The JSON report also names the closed program decision: disabled, no
-prior generation, schema changed, program changed, or matched. Sizes are Haxe
-string code units, not claimed UTF-8 bytes. Compiler-created adapter functions
-remain on their deterministic ordinary construction path; the cache currently
-owns the prepared source and function-literal builders whose complete inputs
-and outputs are explicit.
+`frontendSourcePlanHits`, `frontendSourcePlanFallbacks`, retained-function,
+retained-function-input, and retained-program-revision counts. The JSON report
+also names the closed program decision: disabled, no prior generation, schema
+changed, program changed, or matched. Sizes are Haxe string code units, not
+claimed UTF-8 bytes.
+
+The frontend captures canonical typed text and deterministic expression order
+while it repairs positions for the current request. Ordinary method replay
+identity reuses this source plan instead of printing and traversing the same
+typed expression again. The plan stays request-local and never enters the
+prior replay generation. Constructors, initializers, function literals, and
+compiler-created adapters use the deterministic fallback path. The cache owns
+only prepared source and function-literal builders with explicit inputs and
+outputs.
 
 The same diagnostic boundary divides semantic analysis into helper selection,
 name-request registration, deterministic symbol finalization, representation

@@ -8,9 +8,10 @@ import reflaxe.c.ir.HxcIR;
 	A direct managed class or Array contributes one empty path. Direct records,
 	tagged enums, and tagged optionals contribute one path per embedded managed
 	reference. The result is finite because ordinary by-value layouts must already
-	be finite; recursive enum payloads use a pointer and are deliberately not
-	followed here. A recursive owned graph that also contains collector references
-	needs its own recursive trace owner and remains rejected by enum preparation.
+	be finite. A collector-owned recursive enum node contributes its exact base
+	pointer; its descriptor traces further children at collection time. Ordinary
+	uniquely owned recursive nodes contain no collector references and are not
+	followed here. Thus stack-root planning never expands an unbounded graph.
 
 	Both root planning and validation use this class. That prevents the validator
 	from accepting a path that the planner would never produce, or vice versa.

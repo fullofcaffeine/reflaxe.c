@@ -102,9 +102,9 @@ class ValidatedHxcIRProgram {
 	public function requireOwnedFunction(fn:HxcIRFunction):Void {
 		final candidate = functionsById.get(fn.id);
 		if (candidate == null)
-			throw 'validated HxcIR program does not contain function `${fn.id}`';
+			throw("validated HxcIR program does not contain function `" + fn.id + "`");
 		if (candidate != fn)
-			throw 'validated HxcIR function `${fn.id}` does not belong to this program';
+			throw("validated HxcIR function `" + fn.id + "` does not belong to this program");
 	}
 }
 
@@ -152,7 +152,7 @@ private class HxcIRValidationState {
 
 	public function validate():Array<HxcIRDiagnostic> {
 		if (program.schemaVersion != HxcIRValidator.SCHEMA_VERSION) {
-			add("program", 'schema version ${program.schemaVersion} is unsupported; expected ${HxcIRValidator.SCHEMA_VERSION}', programSource());
+			add("program", ("schema version " + program.schemaVersion + " is unsupported; expected " + HxcIRValidator.SCHEMA_VERSION), programSource());
 		}
 		indexProgram();
 		validateDynamicPlan();
@@ -174,45 +174,45 @@ private class HxcIRValidationState {
 	function indexProgram():Void {
 		final moduleIds:Map<String, Bool> = [];
 		for (module in sorted(program.modules, item -> item.id)) {
-			final path = 'module:${module.id}';
-			validateStableId(module.id, '${path}.id', module.source);
-			validateSpan(module.source, '${path}.source');
+			final path = ("module:" + module.id);
+			validateStableId(module.id, ("" + path + ".id"), module.source);
+			validateSpan(module.source, ("" + path + ".source"));
 			if (moduleIds.exists(module.id)) {
-				add(path, 'duplicate module ID `${module.id}`', module.source);
+				add(path, ("duplicate module ID `" + module.id + "`"), module.source);
 			} else {
 				moduleIds.set(module.id, true);
 			}
 
 			for (declaration in sorted(module.types, item -> item.id)) {
-				indexUnique(typeDeclarations, declaration.id, declaration, '$path.type:${declaration.id}', declaration.source, "type declaration");
+				indexUnique(typeDeclarations, declaration.id, declaration, ("" + path + ".type:" + declaration.id), declaration.source, "type declaration");
 			}
 			for (instance in sorted(module.typeInstances, item -> item.id)) {
-				indexUnique(typeInstances, instance.id, instance, '$path.instance:${instance.id}', instance.source, "type instance");
+				indexUnique(typeInstances, instance.id, instance, ("" + path + ".instance:" + instance.id), instance.source, "type instance");
 			}
 			for (global in sorted(module.globals, item -> item.id)) {
-				indexUnique(globals, global.id, global, '$path.global:${global.id}', global.source, "global");
+				indexUnique(globals, global.id, global, ("" + path + ".global:" + global.id), global.source, "global");
 			}
 			for (fn in sorted(module.functions, item -> item.id)) {
-				indexUnique(functions, fn.id, fn, '$path.function:${fn.id}', fn.source, "function");
+				indexUnique(functions, fn.id, fn, ("" + path + ".function:" + fn.id), fn.source, "function");
 			}
 		}
 		for (layout in sorted(program.dispatch.layouts, item -> item.id)) {
-			indexUnique(virtualLayouts, layout.id, layout, 'dispatch.layout:${layout.id}', layout.source, "virtual-table layout");
+			indexUnique(virtualLayouts, layout.id, layout, ("dispatch.layout:" + layout.id), layout.source, "virtual-table layout");
 		}
 		for (slot in sorted(program.dispatch.slots, item -> item.id)) {
-			indexUnique(virtualSlots, slot.id, slot, 'dispatch.slot:${slot.id}', slot.source, "virtual slot");
+			indexUnique(virtualSlots, slot.id, slot, ("dispatch.slot:" + slot.id), slot.source, "virtual slot");
 		}
 		for (table in sorted(program.dispatch.tables, item -> item.id)) {
-			indexUnique(virtualTables, table.id, table, 'dispatch.table:${table.id}', table.source, "virtual table");
+			indexUnique(virtualTables, table.id, table, ("dispatch.table:" + table.id), table.source, "virtual table");
 		}
 		for (type in sorted(program.dynamicPlan.types, item -> item.id))
-			indexUnique(dynamicTypes, type.id, type, 'dynamic.type:${type.id}', type.source, "Dynamic type");
+			indexUnique(dynamicTypes, type.id, type, ("dynamic.type:" + type.id), type.source, "Dynamic type");
 		for (member in sorted(program.dynamicPlan.members, item -> item.id))
-			indexUnique(dynamicMembers, member.id, member, 'dynamic.member:${member.id}', member.source, "Dynamic member");
+			indexUnique(dynamicMembers, member.id, member, ("dynamic.member:" + member.id), member.source, "Dynamic member");
 		for (shape in sorted(program.dynamicPlan.callShapes, item -> item.id))
-			indexUnique(dynamicCallShapes, shape.id, shape, 'dynamic.callShape:${shape.id}', shape.source, "Dynamic call shape");
+			indexUnique(dynamicCallShapes, shape.id, shape, ("dynamic.callShape:" + shape.id), shape.source, "Dynamic call shape");
 		for (operation in sorted(program.dynamicPlan.operations, item -> item.id))
-			indexUnique(dynamicOperations, operation.id, operation, 'dynamic.operation:${operation.id}', operation.source, "Dynamic operation");
+			indexUnique(dynamicOperations, operation.id, operation, ("dynamic.operation:" + operation.id), operation.source, "Dynamic operation");
 	}
 
 	function indexUnique<T>(index:Map<String, T>, id:String, value:T, path:String, source:HxcSourceSpan, label:String):Void {
@@ -234,13 +234,13 @@ private class HxcIRValidationState {
 
 		final numericTypeIds:Map<Int, String> = [];
 		for (type in program.dynamicPlan.types) {
-			final path = 'dynamic.type:${type.id}';
+			final path = ("dynamic.type:" + type.id);
 			validateSpan(type.source, '$path.source');
 			if (type.typeId < 0)
 				add(path, "Dynamic numeric type ID must be non-negative", type.source);
 			final prior = numericTypeIds.get(type.typeId);
 			if (prior != null)
-				add(path, 'Dynamic numeric type ID ${type.typeId} is shared with `$prior`', type.source);
+				add(path, ("Dynamic numeric type ID " + type.typeId + " is shared with `" + prior + "`"), type.source);
 			else
 				numericTypeIds.set(type.typeId, type.id);
 			if (type.sourceType != null) {
@@ -256,7 +256,7 @@ private class HxcIRValidationState {
 
 		final memberTokens:Map<String, String> = [];
 		for (member in program.dynamicPlan.members) {
-			final path = 'dynamic.member:${member.id}';
+			final path = ("dynamic.member:" + member.id);
 			validateSpan(member.source, '$path.source');
 			validateText(member.sourceName, '$path.sourceName', member.source);
 			final owner = requireDynamicType(member.ownerTypeId, '$path.ownerTypeId', member.source);
@@ -267,7 +267,7 @@ private class HxcIRValidationState {
 			final tokenKey = member.ownerTypeId + ":" + member.token;
 			final prior = memberTokens.get(tokenKey);
 			if (prior != null)
-				add(path, 'Dynamic member token ${member.token} is shared with `$prior` on owner `${member.ownerTypeId}`', member.source);
+				add(path, ("Dynamic member token " + member.token + " is shared with `" + prior + "` on owner `" + member.ownerTypeId + "`"), member.source);
 			else
 				memberTokens.set(tokenKey, member.id);
 			switch member.kind {
@@ -281,7 +281,7 @@ private class HxcIRValidationState {
 		}
 
 		for (shape in program.dynamicPlan.callShapes) {
-			final path = 'dynamic.callShape:${shape.id}';
+			final path = ("dynamic.callShape:" + shape.id);
 			validateSpan(shape.source, '$path.source');
 			for (index => typeId in shape.parameterTypeIds)
 				requireDynamicType(typeId, '$path.parameterTypeId:$index', shape.source);
@@ -327,7 +327,7 @@ private class HxcIRValidationState {
 	}
 
 	function validateDynamicOperation(operation:HxcIRDynamicOperation):Void {
-		final path = 'dynamic.operation:${operation.id}';
+		final path = ("dynamic.operation:" + operation.id);
 		validateSpan(operation.source, '$path.source');
 		switch operation.kind {
 			case IRDOKBox(typeId):
@@ -365,7 +365,7 @@ private class HxcIRValidationState {
 					switch member.kind {
 						case IRDMMethod(callShapeIds):
 							if (shape != null && callShapeIds.indexOf(shape.id) == -1) add(path,
-								'Dynamic method `${member.id}` does not admit call shape `${shape.id}`', operation.source);
+								("Dynamic method `" + member.id + "` does not admit call shape `" + shape.id + "`"), operation.source);
 						case IRDMField(_, _): add(path, "Dynamic member invocation requires a method", operation.source);
 					}
 			case IRDOKEqual(leftTypeId, rightTypeId):
@@ -426,18 +426,18 @@ private class HxcIRValidationState {
 
 	function validateProgramContents():Void {
 		for (module in sorted(program.modules, item -> item.id)) {
-			final path = 'module:${module.id}';
+			final path = ("module:" + module.id);
 			for (declaration in sorted(module.types, item -> item.id)) {
-				validateTypeDeclaration(declaration, '$path.type:${declaration.id}');
+				validateTypeDeclaration(declaration, ("" + path + ".type:" + declaration.id));
 			}
 			for (instance in sorted(module.typeInstances, item -> item.id)) {
-				validateTypeInstance(instance, '$path.instance:${instance.id}');
+				validateTypeInstance(instance, ("" + path + ".instance:" + instance.id));
 			}
 			for (global in sorted(module.globals, item -> item.id)) {
-				validateGlobal(global, '$path.global:${global.id}');
+				validateGlobal(global, ("" + path + ".global:" + global.id));
 			}
 			for (fn in sorted(module.functions, item -> item.id)) {
-				validateFunction(fn, '$path.function:${fn.id}');
+				validateFunction(fn, ("" + path + ".function:" + fn.id));
 			}
 		}
 	}
@@ -464,7 +464,7 @@ private class HxcIRValidationState {
 			}
 		}
 		for (layout in program.dispatch.layouts) {
-			final path = 'dispatch.layout:${layout.id}';
+			final path = ("dispatch.layout:" + layout.id);
 			validateSpan(layout.source, '$path.source');
 			final layoutKind = requireDispatchLayoutRoot(layout.rootInstanceId, '$path.rootInstanceId', layout.source);
 			if (layoutKind != null)
@@ -472,7 +472,7 @@ private class HxcIRValidationState {
 			switch layoutKind {
 				case IRDLVirtual(_):
 					if (headersByLayout.get(layout.id) != layout.rootInstanceId)
-						add(path, 'virtual layout `${layout.id}` is not selected by root `${layout.rootInstanceId}`', layout.source);
+						add(path, ("virtual layout `" + layout.id + "` is not selected by root `" + layout.rootInstanceId + "`"), layout.source);
 				case IRDLInterface(_):
 				case null:
 			}
@@ -480,19 +480,20 @@ private class HxcIRValidationState {
 			for (slotId in layout.slotIds) {
 				final priorLayout = layoutsBySlot.get(slotId);
 				if (priorLayout != null) {
-					add(path, 'dispatch slot `$slotId` belongs to both `$priorLayout` and `${layout.id}`', layout.source);
+					add(path, ("dispatch slot `" + slotId + "` belongs to both `" + priorLayout + "` and `" + layout.id + "`"), layout.source);
 				} else {
 					layoutsBySlot.set(slotId, layout.id);
 				}
 				final slot = virtualSlots.get(slotId);
 				if (slot == null) {
-					add(path, 'dispatch layout `${layout.id}` refers to unknown slot `$slotId`', layout.source);
+					add(path, ("dispatch layout `" + layout.id + "` refers to unknown slot `" + slotId + "`"), layout.source);
 				} else {
 					switch layoutKind {
 						case IRDLVirtual(root) if (!isClassDescendant(slot.ownerInstanceId, root.id)):
-							add(path, 'virtual slot `$slotId` owner `${slot.ownerInstanceId}` is outside root `${root.id}`', slot.source);
+							add(path, ("virtual slot `" + slotId + "` owner `" + slot.ownerInstanceId + "` is outside root `" + root.id + "`"), slot.source);
 						case IRDLInterface(interfaceType) if (slot.ownerInstanceId != interfaceType.id):
-							add(path, 'interface slot `$slotId` owner `${slot.ownerInstanceId}` does not match `${interfaceType.id}`', slot.source);
+							add(path, ("interface slot `" + slotId + "` owner `" + slot.ownerInstanceId + "` does not match `" + interfaceType.id + "`"),
+								slot.source);
 						case _:
 					}
 				}
@@ -506,10 +507,10 @@ private class HxcIRValidationState {
 			}
 		}
 		for (slot in program.dispatch.slots) {
-			final path = 'dispatch.slot:${slot.id}';
+			final path = ("dispatch.slot:" + slot.id);
 			validateSpan(slot.source, '$path.source');
 			if (!layoutsBySlot.exists(slot.id)) {
-				add(path, 'dispatch slot `${slot.id}` does not belong to a table layout', slot.source);
+				add(path, ("dispatch slot `" + slot.id + "` does not belong to a table layout"), slot.source);
 			}
 			final layoutId = layoutsBySlot.get(slot.id);
 			final layoutKind = layoutId == null ? null : layoutKinds.get(layoutId);
@@ -523,12 +524,12 @@ private class HxcIRValidationState {
 			for (index => parameter in slot.parameterTypes) {
 				validateTypeRef(parameter, '$path.parameter:$index', slot.source, false);
 				if (parameter == IRTVoid)
-					add(path, 'dispatch slot `${slot.id}` parameter $index is Void', slot.source);
+					add(path, ("dispatch slot `" + slot.id + "` parameter " + index + " is Void"), slot.source);
 			}
 			validateTypeRef(slot.returnType, '$path.returnType', slot.source, true);
 		}
 		for (table in program.dispatch.tables) {
-			final path = 'dispatch.table:${table.id}';
+			final path = ("dispatch.table:" + table.id);
 			validateSpan(table.source, '$path.source');
 			final layout = virtualLayouts.get(table.layoutId);
 			final layoutKind = layoutKinds.get(table.layoutId);
@@ -537,23 +538,32 @@ private class HxcIRValidationState {
 				case IRDLVirtual(_) | null: requireDirectClassInstance(table.classInstanceId, '$path.classInstanceId', table.source);
 			};
 			if (layout == null) {
-				add(path, 'dispatch table `${table.id}` refers to unknown layout `${table.layoutId}`', table.source);
+				add(path, ("dispatch table `" + table.id + "` refers to unknown layout `" + table.layoutId + "`"), table.source);
 				continue;
 			}
 			final family = dispatchFamily(layoutKind);
 			switch layoutKind {
 				case IRDLVirtual(_) if (tableClass != null && !isClassDescendant(tableClass.id, layout.rootInstanceId)):
-					add(path, 'virtual table class `${table.classInstanceId}` is outside layout root `${layout.rootInstanceId}`', table.source);
+					add(path, ("virtual table class `" + table.classInstanceId + "` is outside layout root `" + layout.rootInstanceId + "`"), table.source);
 				case IRDLInterface(_):
 				case _:
 			}
 			if (table.entries.length != layout.slotIds.length) {
-				add(path, '$family table `${table.id}` has ${table.entries.length} entries for ${layout.slotIds.length} layout slots', table.source);
+				add(path, (""
+					+ family
+					+ " table `"
+					+ table.id
+					+ "` has "
+					+ table.entries.length
+					+ " entries for "
+					+ layout.slotIds.length
+					+ " layout slots"),
+					table.source);
 			}
 			for (index => entry in table.entries) {
-				final entryPath = '$path.entry:$index:${entry.slotId}';
+				final entryPath = ("" + path + ".entry:" + index + ":" + entry.slotId);
 				if (index >= layout.slotIds.length || entry.slotId != layout.slotIds[index]) {
-					add(entryPath, '$family table entry order does not match layout `${layout.id}`', table.source);
+					add(entryPath, ("" + family + " table entry order does not match layout `" + layout.id + "`"), table.source);
 				}
 				final slot = virtualSlots.get(entry.slotId);
 				if (slot == null)
@@ -565,16 +575,16 @@ private class HxcIRValidationState {
 				};
 				if (entry.implementationFunctionId == null) {
 					if (applicable)
-						add(entryPath, 'applicable $family slot `${slot.id}` has no implementation', table.source);
+						add(entryPath, ("applicable " + family + " slot `" + slot.id + "` has no implementation"), table.source);
 					continue;
 				}
 				if (!applicable) {
-					add(entryPath, 'inapplicable $family slot `${slot.id}` unexpectedly has an implementation', table.source);
+					add(entryPath, ("inapplicable " + family + " slot `" + slot.id + "` unexpectedly has an implementation"), table.source);
 					continue;
 				}
 				final implementation = functions.get(entry.implementationFunctionId);
 				if (implementation == null) {
-					add(entryPath, '$family table refers to unknown implementation `${entry.implementationFunctionId}`', table.source);
+					add(entryPath, ("" + family + " table refers to unknown implementation `" + entry.implementationFunctionId + "`"), table.source);
 					continue;
 				}
 				switch layoutKind {
@@ -640,13 +650,15 @@ private class HxcIRValidationState {
 				if (matchingTables.length == 0)
 					continue;
 				if (!isGcManaged(owner.representation))
-					add('retained-interface:${owner.id}.${field.name}',
-						'class `${owner.id}` retains interface `$interfaceInstanceId` without managed(gc) ownership', field.source);
+					add(("retained-interface:" + owner.id + "." + field.name),
+						("class `" + owner.id + "` retains interface `" + interfaceInstanceId + "` without managed(gc) ownership"), field.source);
 				for (table in matchingTables) {
 					final implementation = typeInstances.get(table.classInstanceId);
 					if (implementation == null || !isGcManaged(implementation.representation))
-						add('retained-interface:${owner.id}.${field.name}',
-							'interface `$interfaceInstanceId` table `${table.id}` has non-managed concrete object `${table.classInstanceId}`', table.source);
+						add(("retained-interface:" + owner.id + "." + field.name),
+							("interface `" + interfaceInstanceId + "` table `" + table.id + "` has non-managed concrete object `" + table.classInstanceId +
+								"`"),
+							table.source);
 				}
 			}
 		}
@@ -671,66 +683,100 @@ private class HxcIRValidationState {
 	function validateInterfaceImplementation(slot:HxcIRVirtualSlot, table:HxcIRVirtualTable, implementation:HxcIRFunction, path:String):Void {
 		if (implementation.parameters.length != slot.parameterTypes.length + 1) {
 			add(path,
-				'interface implementation `${implementation.id}` has ${implementation.parameters.length} parameters for slot `${slot.id}` expected ${slot.parameterTypes.length + 1}',
+				("interface implementation `" + implementation.id + "` has " + implementation.parameters.length + " parameters for slot `" + slot.id
+					+ "` expected " + (slot.parameterTypes.length + 1)),
 				implementation.source);
 			return;
 		}
 		final implementationOwner = switch implementation.parameters[0].type {
 			case IRTPointer(IRTInstance(instanceId), true): instanceId;
 			case other:
-				add(path, 'interface implementation `${implementation.id}` has invalid receiver `${typeKey(other)}`', implementation.source);
+				add(path, ("interface implementation `" + implementation.id + "` has invalid receiver `" + (typeKey(other)) + "`"), implementation.source);
 				return;
 		};
 		if (!isClassDescendant(table.classInstanceId, implementationOwner))
-			add(path, 'interface table class `${table.classInstanceId}` does not descend from implementation receiver `$implementationOwner`',
+			add(path, ("interface table class `"
+				+ table.classInstanceId
+				+ "` does not descend from implementation receiver `"
+				+ implementationOwner
+				+ "`"),
 				implementation.source);
 		for (index in 0...slot.parameterTypes.length)
 			if (typeKey(implementation.parameters[index + 1].type) != typeKey(slot.parameterTypes[index]))
-				add(path, 'interface implementation `${implementation.id}` parameter $index does not preserve slot `${slot.id}` representation',
+				add(path,
+					("interface implementation `"
+						+ implementation.id
+						+ "` parameter "
+						+ index
+						+ " does not preserve slot `"
+						+ slot.id
+						+ "` representation"),
 					implementation.source);
 		if (typeKey(implementation.returnType) != typeKey(slot.returnType))
-			add(path, 'interface implementation `${implementation.id}` return type does not preserve slot `${slot.id}` representation', implementation.source);
+			add(path, ("interface implementation `"
+				+ implementation.id
+				+ "` return type does not preserve slot `"
+				+ slot.id
+				+ "` representation"),
+				implementation.source);
 		switch implementation.failureConvention {
 			case IRFCInfallible:
 			case IRFCStatus(_):
-				add(path, 'interface implementation `${implementation.id}` must be infallible in the admitted dispatch slice', implementation.source);
+				add(path, ("interface implementation `" + implementation.id + "` must be infallible in the admitted dispatch slice"), implementation.source);
 		}
 	}
 
 	function validateVirtualImplementation(slot:HxcIRVirtualSlot, table:HxcIRVirtualTable, implementation:HxcIRFunction, path:String):Void {
 		if (implementation.parameters.length != slot.parameterTypes.length + 1) {
 			add(path,
-				'virtual implementation `${implementation.id}` has ${implementation.parameters.length} parameters for slot `${slot.id}` expected ${slot.parameterTypes.length + 1}',
+				("virtual implementation `" + implementation.id + "` has " + implementation.parameters.length + " parameters for slot `" + slot.id
+					+ "` expected " + (slot.parameterTypes.length + 1)),
 				implementation.source);
 			return;
 		}
 		final implementationOwner = switch implementation.parameters[0].type {
 			case IRTPointer(IRTInstance(instanceId), true): instanceId;
 			case other:
-				add(path, 'virtual implementation `${implementation.id}` has invalid receiver `${typeKey(other)}`', implementation.source);
+				add(path, ("virtual implementation `" + implementation.id + "` has invalid receiver `" + (typeKey(other)) + "`"), implementation.source);
 				return;
 		};
 		if (!isClassDescendant(implementationOwner, slot.ownerInstanceId)) {
-			add(path, 'virtual implementation receiver `$implementationOwner` does not descend from slot owner `${slot.ownerInstanceId}`',
+			add(path, ("virtual implementation receiver `"
+				+ implementationOwner
+				+ "` does not descend from slot owner `"
+				+ slot.ownerInstanceId
+				+ "`"),
 				implementation.source);
 		}
 		if (!isClassDescendant(table.classInstanceId, implementationOwner)) {
-			add(path, 'virtual table class `${table.classInstanceId}` does not descend from implementation receiver `$implementationOwner`',
+			add(path, ("virtual table class `"
+				+ table.classInstanceId
+				+ "` does not descend from implementation receiver `"
+				+ implementationOwner
+				+ "`"),
 				implementation.source);
 		}
 		for (index in 0...slot.parameterTypes.length) {
 			if (typeKey(implementation.parameters[index + 1].type) != typeKey(slot.parameterTypes[index])) {
-				add(path, 'virtual implementation `${implementation.id}` parameter $index does not preserve slot `${slot.id}` representation',
+				add(path,
+					("virtual implementation `"
+						+ implementation.id
+						+ "` parameter "
+						+ index
+						+ " does not preserve slot `"
+						+ slot.id
+						+ "` representation"),
 					implementation.source);
 			}
 		}
 		if (typeKey(implementation.returnType) != typeKey(slot.returnType)) {
-			add(path, 'virtual implementation `${implementation.id}` return type does not preserve slot `${slot.id}` representation', implementation.source);
+			add(path, ("virtual implementation `" + implementation.id + "` return type does not preserve slot `" + slot.id + "` representation"),
+				implementation.source);
 		}
 		switch implementation.failureConvention {
 			case IRFCInfallible:
 			case IRFCStatus(_):
-				add(path, 'virtual implementation `${implementation.id}` must be infallible in the admitted dispatch slice', implementation.source);
+				add(path, ("virtual implementation `" + implementation.id + "` must be infallible in the admitted dispatch slice"), implementation.source);
 		}
 	}
 
@@ -898,14 +944,14 @@ private class HxcIRValidationState {
 			case IRTKAggregate(fields):
 				final names:Map<String, Bool> = [];
 				for (index => field in fields) {
-					final fieldPath = '$path.field:$index:${field.name}';
+					final fieldPath = ("" + path + ".field:" + index + ":" + field.name);
 					validateStableId(field.name, '$fieldPath.name', field.source);
 					validateSpan(field.source, '$fieldPath.source');
 					validateTypeRef(field.type, '$fieldPath.type', field.source, false);
 					rejectStoredSpanType(field.type, '$fieldPath.type', field.source, "aggregate field");
 					rejectStoredCallScopedCStringType(field.type, '$fieldPath.type', field.source, "aggregate field");
 					if (names.exists(field.name)) {
-						add(fieldPath, 'duplicate aggregate field `${field.name}`', field.source);
+						add(fieldPath, ("duplicate aggregate field `" + field.name + "`"), field.source);
 					} else {
 						names.set(field.name, true);
 					}
@@ -914,32 +960,32 @@ private class HxcIRValidationState {
 				final names:Map<String, Bool> = [];
 				final values:Map<Int, Bool> = [];
 				for (index => tag in cases) {
-					final tagPath = '$path.case:$index:${tag.name}';
+					final tagPath = ("" + path + ".case:" + index + ":" + tag.name);
 					validateStableId(tag.name, '$tagPath.name', tag.source);
 					validateSpan(tag.source, '$tagPath.source');
 					if (names.exists(tag.name)) {
-						add(tagPath, 'duplicate tagged-union case `${tag.name}`', tag.source);
+						add(tagPath, ("duplicate tagged-union case `" + tag.name + "`"), tag.source);
 					} else {
 						names.set(tag.name, true);
 					}
 					if (tag.tagValue < 0 || values.exists(tag.tagValue)) {
-						add(tagPath, 'tagged-union case `${tag.name}` has invalid or duplicate discriminant `${tag.tagValue}`', tag.source);
+						add(tagPath, ("tagged-union case `" + tag.name + "` has invalid or duplicate discriminant `" + tag.tagValue + "`"), tag.source);
 					} else {
 						values.set(tag.tagValue, true);
 					}
 					if (tag.tagValue != index) {
-						add(tagPath, 'tagged-union case `${tag.name}` must retain source discriminant $index, found ${tag.tagValue}', tag.source);
+						add(tagPath, ("tagged-union case `" + tag.name + "` must retain source discriminant " + index + ", found " + tag.tagValue), tag.source);
 					}
 					final payloadNames:Map<String, Bool> = [];
 					for (payloadIndex => payload in tag.payload) {
-						final payloadPath = '$tagPath.payload:$payloadIndex:${payload.name}';
+						final payloadPath = ("" + tagPath + ".payload:" + payloadIndex + ":" + payload.name);
 						validateStableId(payload.name, '$payloadPath.name', payload.source);
 						validateSpan(payload.source, '$payloadPath.source');
 						validateTypeRef(payload.type, '$payloadPath.type', payload.source, false);
 						rejectStoredSpanType(payload.type, '$payloadPath.type', payload.source, "tagged-union payload");
 						rejectStoredCallScopedCStringType(payload.type, '$payloadPath.type', payload.source, "tagged-union payload");
 						if (payloadNames.exists(payload.name)) {
-							add(payloadPath, 'duplicate payload name `${payload.name}` in tagged-union case `${tag.name}`', payload.source);
+							add(payloadPath, ("duplicate payload name `" + payload.name + "` in tagged-union case `" + tag.name + "`"), payload.source);
 						} else {
 							payloadNames.set(payload.name, true);
 						}
@@ -951,11 +997,11 @@ private class HxcIRValidationState {
 					final base = typeInstances.get(layout.baseInstanceId);
 					final baseDeclaration = base == null ? null : typeDeclarations.get(base.declarationId);
 					if (base == null || baseDeclaration == null) {
-						add(path, 'class base `${layout.baseInstanceId}` is not a known type instance', declaration.source);
+						add(path, ("class base `" + layout.baseInstanceId + "` is not a known type instance"), declaration.source);
 					} else {
 						switch baseDeclaration.kind {
 							case IRTKClass(_):
-							case _: add(path, 'class base `${layout.baseInstanceId}` is not a class instance', declaration.source);
+							case _: add(path, ("class base `" + layout.baseInstanceId + "` is not a class instance"), declaration.source);
 						}
 					}
 				}
@@ -966,14 +1012,14 @@ private class HxcIRValidationState {
 				}
 				final names:Map<String, Bool> = [];
 				for (index => field in layout.fields) {
-					final fieldPath = '$path.field:$index:${field.name}';
+					final fieldPath = ("" + path + ".field:" + index + ":" + field.name);
 					validateStableId(field.name, '$fieldPath.name', field.source);
 					validateSpan(field.source, '$fieldPath.source');
 					validateTypeRef(field.type, '$fieldPath.type', field.source, false);
 					rejectStoredSpanType(field.type, '$fieldPath.type', field.source, "class field");
 					rejectStoredCallScopedCStringType(field.type, '$fieldPath.type', field.source, "class field");
 					if (names.exists(field.name)) {
-						add(fieldPath, 'duplicate class storage field `${field.name}`', field.source);
+						add(fieldPath, ("duplicate class storage field `" + field.name + "`"), field.source);
 					} else {
 						names.set(field.name, true);
 					}
@@ -985,13 +1031,14 @@ private class HxcIRValidationState {
 		validateSpan(instance.source, '$path.source');
 		final declaration = typeDeclarations.get(instance.declarationId);
 		if (declaration == null) {
-			add(path, 'type instance `${instance.id}` refers to unknown declaration `${instance.declarationId}`', instance.source);
+			add(path, ("type instance `" + instance.id + "` refers to unknown declaration `" + instance.declarationId + "`"), instance.source);
 		} else {
 			switch declaration.kind {
 				case IRTKTaggedUnion(cases) if (instance.representation == IRRDirect):
 					for (tagCase in cases) {
 						if (tagCase.payload.length > 0) {
-							add(path, 'direct native-enum instance `${instance.id}` cannot contain payload case `${tagCase.name}`', instance.source);
+							add(path, ("direct native-enum instance `" + instance.id + "` cannot contain payload case `" + tagCase.name + "`"),
+								instance.source);
 							break;
 						}
 					}
@@ -1003,7 +1050,9 @@ private class HxcIRValidationState {
 					};
 					if (!validRepresentation)
 						add(path,
-							'class instance `${instance.id}` must pair direct storage with a direct/virtual header or managed(gc) storage with a runtime(gc) header',
+							("class instance `"
+								+ instance.id
+								+ "` must pair direct storage with a direct/virtual header or managed(gc) storage with a runtime(gc) header"),
 							instance.source);
 					if (layout.baseInstanceId != null) {
 						final base = typeInstances.get(layout.baseInstanceId);
@@ -1022,7 +1071,8 @@ private class HxcIRValidationState {
 							};
 							if (!compatibleInheritanceStorage)
 								add(path,
-									'class instance `${instance.id}` and base `${layout.baseInstanceId}` must use the same direct or managed(gc) storage model',
+									("class instance `" + instance.id + "` and base `" + layout.baseInstanceId
+										+ "` must use the same direct or managed(gc) storage model"),
 									instance.source);
 						}
 					}
@@ -1038,7 +1088,7 @@ private class HxcIRValidationState {
 		if (declaration != null) {
 			switch declaration.kind {
 				case IRTKClass(_) if (instance.arguments.length != 0):
-					add(path, 'class instance `${instance.id}` must be specialized before layout emission', instance.source);
+					add(path, ("class instance `" + instance.id + "` must be specialized before layout emission"), instance.source);
 				case _:
 			}
 		}
@@ -1067,7 +1117,7 @@ private class HxcIRValidationState {
 			case _: false;
 		};
 		if (!isReference || instance.arguments.length != 1)
-			add(path, 'managed Iterator instance `${instance.id}` requires a reference declaration and one exact element argument', instance.source);
+			add(path, ("managed Iterator instance `" + instance.id + "` requires a reference declaration and one exact element argument"), instance.source);
 	}
 
 	/** Reject a malformed managed StringMap declaration before any operation uses it. */
@@ -1077,28 +1127,29 @@ private class HxcIRValidationState {
 			case _: false;
 		};
 		if (!isReference || instance.arguments.length != 2 || instance.arguments[0] != IRTString)
-			add(path, 'managed StringMap instance `${instance.id}` requires a reference declaration and exact [String, value] arguments', instance.source);
+			add(path, ("managed StringMap instance `" + instance.id + "` requires a reference declaration and exact [String, value] arguments"),
+				instance.source);
 	}
 
 	/** Prove the structural `{ invoke, context }` carrier matches its semantic call signature. */
 	function validateStackClosureCarrier(instance:HxcIRTypeInstance, fields:Array<HxcIRTypeField>, parameters:Array<HxcIRTypeRef>, result:HxcIRTypeRef,
 			path:String):Void {
 		if (instance.arguments.length != 0)
-			add(path, 'stack closure `${instance.id}` must have a fully specialized carrier', instance.source);
+			add(path, ("stack closure `" + instance.id + "` must have a fully specialized carrier"), instance.source);
 		final invoke = findAggregateField(fields, "invoke");
 		final context = findAggregateField(fields, "context");
 		if (fields.length != 2 || invoke == null || context == null) {
-			add(path, 'stack closure `${instance.id}` requires exactly `invoke` and `context` fields', instance.source);
+			add(path, ("stack closure `" + instance.id + "` requires exactly `invoke` and `context` fields"), instance.source);
 			return;
 		}
 		final contextType = IRTPointer(IRTVoid, true);
 		final expectedInvoke = IRTFunction([contextType].concat(parameters), result);
 		if (typeKey(invoke.type) != typeKey(expectedInvoke))
-			add(path, 'stack closure `${instance.id}` invoke field does not preserve its typed context-first signature', invoke.source);
+			add(path, ("stack closure `" + instance.id + "` invoke field does not preserve its typed context-first signature"), invoke.source);
 		if (typeKey(context.type) != typeKey(contextType))
-			add(path, 'stack closure `${instance.id}` context field must be a nullable opaque pointer', context.source);
+			add(path, ("stack closure `" + instance.id + "` context field must be a nullable opaque pointer"), context.source);
 		if (invoke.mutable || context.mutable)
-			add(path, 'stack closure `${instance.id}` carrier fields must be immutable', instance.source);
+			add(path, ("stack closure `" + instance.id + "` carrier fields must be immutable"), instance.source);
 	}
 
 	function validateGlobal(global:HxcIRGlobal, path:String):Void {
@@ -1116,10 +1167,10 @@ private class HxcIRValidationState {
 			case IRGIDeferred(initializerFunctionId):
 				final initializer = functions.get(initializerFunctionId);
 				if (initializer == null) {
-					add(path, 'global `${global.id}` refers to unknown initializer function `$initializerFunctionId`', global.source);
+					add(path, ("global `" + global.id + "` refers to unknown initializer function `" + initializerFunctionId + "`"), global.source);
 				} else {
 					if (initializer.parameters.length != 0 || initializer.returnType != IRTVoid) {
-						add(path, 'global `${global.id}` initializer `$initializerFunctionId` must have signature `():Void`', global.source);
+						add(path, ("global `" + global.id + "` initializer `" + initializerFunctionId + "` must have signature `():Void`"), global.source);
 					}
 					var initializeCount = 0;
 					for (block in initializer.blocks) {
@@ -1132,7 +1183,9 @@ private class HxcIRValidationState {
 						}
 					}
 					if (initializeCount != 1) {
-						add(path, 'global `${global.id}` initializer `$initializerFunctionId` must initialize it exactly once; found $initializeCount',
+						add(path,
+							("global `" + global.id + "` initializer `" + initializerFunctionId + "` must initialize it exactly once; found " +
+								initializeCount),
 							global.source);
 					}
 				}
@@ -1184,7 +1237,7 @@ private class HxcIRValidationState {
 		final values:Map<String, HxcIRTypeRef> = [];
 		final parametersById:Map<String, HxcIRParameter> = [];
 		for (index => parameter in fn.parameters) {
-			final parameterPath = '$path.parameter:$index:${parameter.id}';
+			final parameterPath = ("" + path + ".parameter:" + index + ":" + parameter.id);
 			validateParameter(parameter, parameterPath);
 			if (parameter.type == IRTCallScopedCString)
 				add('$parameterPath.type', "a function parameter cannot receive a call-scoped immutable C string", parameter.source);
@@ -1276,20 +1329,20 @@ private class HxcIRValidationState {
 				}
 		}
 		for (local in sorted(fn.locals, item -> item.id)) {
-			final localPath = '$path.local:${local.id}';
+			final localPath = ("" + path + ".local:" + local.id);
 			validateStableId(local.id, '$localPath.id', local.source);
 			validateSpan(local.source, '$localPath.source');
 			validateTypeRef(local.type, '$localPath.type', local.source, false);
 			rejectStoredCallScopedCStringType(local.type, '$localPath.type', local.source, "local");
 			if (locals.exists(local.id)) {
-				add(localPath, 'duplicate local place ID `${local.id}`', local.source);
+				add(localPath, ("duplicate local place ID `" + local.id + "`"), local.source);
 			} else {
 				locals.set(local.id, local);
 			}
 			switch local.initialState {
 				case IRISUninitialized | IRISInitialized:
 				case IRISInitializing | IRISMoved | IRISDestroyed:
-					add(localPath, 'local `${local.id}` begins in invalid state ${stateName(local.initialState)}', local.source);
+					add(localPath, ("local `" + local.id + "` begins in invalid state " + (stateName(local.initialState))), local.source);
 			}
 			switch local.storage {
 				case IRLSRegion(regionId):
@@ -1413,26 +1466,26 @@ private class HxcIRValidationState {
 		final valueSites:Map<String, HxcIRInstructionSite> = [];
 		final blockParameterIds:Map<String, Bool> = [];
 		for (block in sorted(fn.blocks, item -> item.id)) {
-			final blockPath = '$path.block:${block.id}';
+			final blockPath = ("" + path + ".block:" + block.id);
 			validateStableId(block.id, '$blockPath.id', block.source);
 			validateSpan(block.source, '$blockPath.source');
 			if (blocks.exists(block.id)) {
-				add(blockPath, 'duplicate basic block ID `${block.id}`', block.source);
+				add(blockPath, ("duplicate basic block ID `" + block.id + "`"), block.source);
 			} else {
 				blocks.set(block.id, block);
 			}
 			for (index => parameter in block.parameters) {
-				final parameterPath = '$blockPath.parameter:$index:${parameter.id}';
+				final parameterPath = ("" + blockPath + ".parameter:" + index + ":" + parameter.id);
 				validateParameter(parameter, parameterPath);
 				indexValue(values, parameter.id, parameter.type, parameterPath, parameter.source);
 				blockParameterIds.set(parameter.id, true);
 			}
 			for (index => instruction in block.instructions) {
-				final instructionPath = '$blockPath.instruction:$index:${instruction.id}';
+				final instructionPath = ("" + blockPath + ".instruction:" + index + ":" + instruction.id);
 				validateStableId(instruction.id, '$instructionPath.id', instruction.source);
 				validateSpan(instruction.source, '$instructionPath.source');
 				if (instructionIds.exists(instruction.id)) {
-					add(instructionPath, 'duplicate instruction ID `${instruction.id}`', instruction.source);
+					add(instructionPath, ("duplicate instruction ID `" + instruction.id + "`"), instruction.source);
 				} else {
 					instructionIds.set(instruction.id, true);
 					instructionSites.set(instruction.id, {instruction: instruction, block: block});
@@ -1453,16 +1506,16 @@ private class HxcIRValidationState {
 		validateCallScopedCStringBuffers(fn, path, values, valueSites, blockParameterIds);
 
 		if (!blocks.exists(fn.entryBlockId)) {
-			add(path, 'function `${fn.id}` entry block `${fn.entryBlockId}` does not exist', fn.source);
+			add(path, ("function `" + fn.id + "` entry block `" + fn.entryBlockId + "` does not exist"), fn.source);
 		}
 
 		final regions:Map<String, HxcIRCleanupRegion> = [];
 		for (region in sorted(fn.cleanupRegions, item -> item.id)) {
-			final regionPath = '$path.cleanup:${region.id}';
+			final regionPath = ("" + path + ".cleanup:" + region.id);
 			validateStableId(region.id, '$regionPath.id', region.source);
 			validateSpan(region.source, '$regionPath.source');
 			if (regions.exists(region.id)) {
-				add(regionPath, 'duplicate cleanup region ID `${region.id}`', region.source);
+				add(regionPath, ("duplicate cleanup region ID `" + region.id + "`"), region.source);
 			} else {
 				regions.set(region.id, region);
 			}
@@ -1473,14 +1526,14 @@ private class HxcIRValidationState {
 		for (local in fn.locals) {
 			switch local.storage {
 				case IRLSRegion(regionId) if (!regions.exists(regionId)):
-					add('$path.local:${local.id}', 'local `${local.id}` refers to unknown storage region `$regionId`', local.source);
+					add(("" + path + ".local:" + local.id), ("local `" + local.id + "` refers to unknown storage region `" + regionId + "`"), local.source);
 				case _:
 			}
 		}
 
 		final dominanceProofs = buildDominanceProofs(fn);
 		for (block in sorted(fn.blocks, item -> item.id)) {
-			validateBlock(fn, block, '$path.block:${block.id}', locals, borrowedLocalIds, blocks, regions, exceptionRegions, exceptionCleanups,
+			validateBlock(fn, block, ("" + path + ".block:" + block.id), locals, borrowedLocalIds, blocks, regions, exceptionRegions, exceptionCleanups,
 				instructionSites, valueSites, dominanceProofs);
 		}
 		validateExceptionProtocol(fn, path, exceptionRegions, exceptionCleanups);
@@ -1510,17 +1563,17 @@ private class HxcIRValidationState {
 					add('$path.exceptionStrategy', "contained runtime lowering requires an explicit region or unwind terminator", fn.source);
 		}
 		for (index => region in regions) {
-			final regionPath = '$path.exceptionRegion:$index:${region.id}';
+			final regionPath = ("" + path + ".exceptionRegion:" + index + ":" + region.id);
 			validateStableId(region.id, '$regionPath.id', region.source);
 			validateStableId(region.frameStorageId, '$regionPath.frameStorageId', region.source);
 			validateStableId(region.payloadValueId, '$regionPath.payloadValueId', region.source);
 			validateSpan(region.source, '$regionPath.source');
 			if (result.exists(region.id))
-				add(regionPath, 'duplicate exception region ID `${region.id}`', region.source);
+				add(regionPath, ("duplicate exception region ID `" + region.id + "`"), region.source);
 			else
 				result.set(region.id, region);
 			if (storageIds.exists(region.frameStorageId))
-				add(regionPath, 'duplicate exception frame storage ID `${region.frameStorageId}`', region.source);
+				add(regionPath, ("duplicate exception frame storage ID `" + region.frameStorageId + "`"), region.source);
 			else
 				storageIds.set(region.frameStorageId, true);
 		}
@@ -1548,7 +1601,7 @@ private class HxcIRValidationState {
 			storageIds.set(region.frameStorageId, true);
 		final cleanups = fn.exceptionCleanups == null ? [] : fn.exceptionCleanups;
 		for (index => cleanup in cleanups) {
-			final cleanupPath = '$path.exceptionCleanup:$index:${cleanup.id}';
+			final cleanupPath = ("" + path + ".exceptionCleanup:" + index + ":" + cleanup.id);
 			validateStableId(cleanup.id, '$cleanupPath.id', cleanup.source);
 			validateStableId(cleanup.storageId, '$cleanupPath.storageId', cleanup.source);
 			validateStableId(cleanup.actionId, '$cleanupPath.actionId', cleanup.source);
@@ -1556,11 +1609,11 @@ private class HxcIRValidationState {
 			validateStableCleanupPlace(cleanup.place, cleanupPath, cleanup.source, locals);
 			validateImplementation(cleanup.implementation, '$cleanupPath.implementation', cleanup.source);
 			if (result.exists(cleanup.id))
-				add(cleanupPath, 'duplicate exception cleanup ID `${cleanup.id}`', cleanup.source);
+				add(cleanupPath, ("duplicate exception cleanup ID `" + cleanup.id + "`"), cleanup.source);
 			else
 				result.set(cleanup.id, cleanup);
 			if (storageIds.exists(cleanup.storageId))
-				add(cleanupPath, 'duplicate exception frame or cleanup storage ID `${cleanup.storageId}`', cleanup.source);
+				add(cleanupPath, ("duplicate exception frame or cleanup storage ID `" + cleanup.storageId + "`"), cleanup.source);
 			else
 				storageIds.set(cleanup.storageId, true);
 
@@ -1576,7 +1629,7 @@ private class HxcIRValidationState {
 							case _:
 						}
 			if (!matched)
-				add(cleanupPath, 'exception cleanup `${cleanup.id}` has no matching semantic release action `${cleanup.actionId}`', cleanup.source);
+				add(cleanupPath, ("exception cleanup `" + cleanup.id + "` has no matching semantic release action `" + cleanup.actionId + "`"), cleanup.source);
 		}
 		return result;
 	}
@@ -1694,22 +1747,22 @@ private class HxcIRValidationState {
 				case IRTReturn(valueId, _):
 					returnCount++;
 					if (valueId == null) {
-						add('$path.block:${block.id}.terminator', "receiver-field span return omits its value", block.terminator.source);
+						add(("" + path + ".block:" + block.id + ".terminator"), "receiver-field span return omits its value", block.terminator.source);
 						continue;
 					}
 					final site = valueSites.get(valueId);
 					if (site == null) {
-						add('$path.block:${block.id}.terminator', "receiver-field span return is not produced by a checked borrow instruction",
+						add(("" + path + ".block:" + block.id + ".terminator"), "receiver-field span return is not produced by a checked borrow instruction",
 							block.terminator.source);
 						continue;
 					}
 					switch site.instruction.kind {
 						case IRIOBorrowSpan(sourceArray):
 							if (!isImmediateReceiverField(sourceArray,
-								receiverId)) add('$path.block:${block.id}.terminator',
+								receiverId)) add(("" + path + ".block:" + block.id + ".terminator"),
 									'receiver-field span return must borrow an immediate fixed-array field of `$receiverId`', site.instruction.source);
 						case _:
-							add('$path.block:${block.id}.terminator',
+							add(("" + path + ".block:" + block.id + ".terminator"),
 								"receiver-field span return is not produced by the checked fixed-array borrow operation", site.instruction.source);
 					}
 				case _:
@@ -1763,30 +1816,30 @@ private class HxcIRValidationState {
 		final rootIds:Map<String, Bool> = [];
 		final rootedPaths:Map<String, Bool> = [];
 		for (index => root in fn.managedRoots) {
-			final rootPath = '$path.managedRoot:$index:${root.id}';
+			final rootPath = ("" + path + ".managedRoot:" + index + ":" + root.id);
 			validateStableId(root.id, '$rootPath.id', root.source);
 			validateStableId(root.valueId, '$rootPath.valueId', root.source);
 			validateSpan(root.source, '$rootPath.source');
 			if (rootIds.exists(root.id))
-				add(rootPath, 'duplicate managed root ID `${root.id}`', root.source);
+				add(rootPath, ("duplicate managed root ID `" + root.id + "`"), root.source);
 			else
 				rootIds.set(root.id, true);
 			final type = values.get(root.valueId);
 			if (type == null) {
-				add(rootPath, 'managed root `${root.id}` names unknown value `${root.valueId}`', root.source);
+				add(rootPath, ("managed root `" + root.id + "` names unknown value `" + root.valueId + "`"), root.source);
 				continue;
 			}
 			if (blockParameterIds.exists(root.valueId)) {
-				add(rootPath, 'managed block parameter `${root.valueId}` requires edge-owned root updates', root.source);
+				add(rootPath, ("managed block parameter `" + root.valueId + "` requires edge-owned root updates"), root.source);
 				continue;
 			}
 			if (!parameters.exists(root.valueId) && !valueSites.exists(root.valueId)) {
-				add(rootPath, 'managed root `${root.id}` must name a function parameter or instruction result', root.source);
+				add(rootPath, ("managed root `" + root.id + "` must name a function parameter or instruction result"), root.source);
 			}
 			final projectionKey = HxcIRManagedRootPaths.key(root.projections);
 			final completeKey = root.valueId + "|" + projectionKey;
 			if (rootedPaths.exists(completeKey))
-				add(rootPath, 'managed value `${root.valueId}` repeats root path `$projectionKey`', root.source);
+				add(rootPath, ("managed value `" + root.valueId + "` repeats root path `" + projectionKey + "`"), root.source);
 			else
 				rootedPaths.set(completeKey, true);
 			var admitted = false;
@@ -1796,7 +1849,7 @@ private class HxcIRValidationState {
 					break;
 				}
 			if (!admitted)
-				add(rootPath, 'managed root `${root.id}` has invalid path `$projectionKey` for `${typeKey(type)}`', root.source);
+				add(rootPath, ("managed root `" + root.id + "` has invalid path `" + projectionKey + "` for `" + (typeKey(type)) + "`"), root.source);
 		}
 		for (valueId => type in values) {
 			if (blockParameterIds.exists(valueId)) {
@@ -2055,17 +2108,17 @@ private class HxcIRValidationState {
 			regions:Map<String, HxcIRCleanupRegion>):Void {
 		final noValues:Map<String, HxcIRTypeRef> = [];
 		for (region in sorted(fn.cleanupRegions, item -> item.id)) {
-			final path = '$functionPath.cleanup:${region.id}';
+			final path = ("" + functionPath + ".cleanup:" + region.id);
 			if (region.parentId != null && !regions.exists(region.parentId)) {
-				add(path, 'cleanup region `${region.id}` has unknown parent `${region.parentId}`', region.source);
+				add(path, ("cleanup region `" + region.id + "` has unknown parent `" + region.parentId + "`"), region.source);
 			}
 			final actionIds:Map<String, Bool> = [];
 			for (index => action in region.actions) {
-				final actionPath = '$path.action:$index:${action.id}';
+				final actionPath = ("" + path + ".action:" + index + ":" + action.id);
 				validateStableId(action.id, '$actionPath.id', action.source);
 				validateSpan(action.source, '$actionPath.source');
 				if (actionIds.exists(action.id)) {
-					add(actionPath, 'duplicate cleanup action ID `${action.id}` in region `${region.id}`', action.source);
+					add(actionPath, ("duplicate cleanup action ID `" + action.id + "` in region `" + region.id + "`"), action.source);
 				} else {
 					actionIds.set(action.id, true);
 				}
@@ -2156,7 +2209,7 @@ private class HxcIRValidationState {
 			var current:Null<HxcIRCleanupRegion> = region;
 			while (current != null) {
 				if (seen.exists(current.id)) {
-					add('$functionPath.cleanup:${region.id}', 'cleanup parent cycle reaches `${current.id}`', region.source);
+					add(("" + functionPath + ".cleanup:" + region.id), ("cleanup parent cycle reaches `" + current.id + "`"), region.source);
 					break;
 				}
 				seen.set(current.id, true);
@@ -2442,7 +2495,7 @@ private class HxcIRValidationState {
 					nullProofs.set(valueId, true);
 		}
 		for (index => instruction in block.instructions) {
-			final instructionPath = '$path.instruction:$index:${instruction.id}';
+			final instructionPath = ("" + path + ".instruction:" + index + ":" + instruction.id);
 			validateInstruction(instruction, instructionPath, block, available, locals, blocks, regions, exceptionRegions, exceptionCleanups,
 				instructionSites, valueSites, boundsProofs, nullProofs, dominanceProofs);
 			validateBorrowedReferenceInstruction(instruction, instructionPath, available, locals, borrowedReferenceValues, borrowedReferenceLocals);
@@ -2462,7 +2515,7 @@ private class HxcIRValidationState {
 		}
 
 		if (block.terminator == null) {
-			add(path, 'basic block `${block.id}` has no terminator', block.source);
+			add(path, ("basic block `" + block.id + "` has no terminator"), block.source);
 			return;
 		}
 		validateSpan(block.terminator.source, '$path.terminator.source');
@@ -2511,7 +2564,7 @@ private class HxcIRValidationState {
 					reject(valueId, "a fixed-array initializer");
 			case IRIOConstructAggregate(_, fields):
 				for (field in fields)
-					reject(field.valueId, 'aggregate field `${field.name}`');
+					reject(field.valueId, ("aggregate field `" + field.name + "`"));
 			case IRIOZeroAggregate(_):
 			case IRIOConstructInterface(_, objectValueId, _):
 				reject(objectValueId, "an interface value");
@@ -2623,7 +2676,7 @@ private class HxcIRValidationState {
 				if (placeUsesMutableAggregateBorrow(place, borrowed, available)) {
 					final terminalField = terminalPlaceField(place, available, locals);
 					if (terminalField != null && !terminalField.mutable)
-						add(path, 'store cannot change immutable field `${terminalField.name}` through a mutable-record borrow', instruction.source);
+						add(path, ("store cannot change immutable field `" + terminalField.name + "` through a mutable-record borrow"), instruction.source);
 				}
 				rejectValue(valueId, "a store");
 			case IRIOInitialize(IRPLocal(localId), valueId, _, _) if (borrowedLocals.exists(localId)):
@@ -2645,7 +2698,7 @@ private class HxcIRValidationState {
 							case _: null;
 						};
 						if (fieldType == null || !typeContainsInterfaceReference(fieldType))
-							rejectValue(field.valueId, 'aggregate field `${field.name}`');
+							rejectValue(field.valueId, ("aggregate field `" + field.name + "`"));
 					}
 			case IRIOZeroAggregate(_):
 			case IRIOConstructInterface(_, _, _) | IRIOUpcastInterface(_, _, _, _):
@@ -2921,7 +2974,7 @@ private class HxcIRValidationState {
 		if (resultExpected && instruction.result == null) {
 			add(path, "value-producing instruction has no result", instruction.source);
 		} else if (!resultExpected && instruction.result != null) {
-			add(path, 'side-effect-only instruction unexpectedly defines `${instruction.result.id}`', instruction.source);
+			add(path, ("side-effect-only instruction unexpectedly defines `" + instruction.result.id + "`"), instruction.source);
 		}
 
 		switch instruction.kind {
@@ -3193,23 +3246,23 @@ private class HxcIRValidationState {
 					validateStableId(field.name, '$path.field:$index.name', instruction.source);
 					final valueType = requireValue(field.valueId, '$path.field:$index.value', instruction.source, available);
 					if (names.exists(field.name)) {
-						add(path, 'aggregate construction repeats field `${field.name}`', instruction.source);
+						add(path, ("aggregate construction repeats field `" + field.name + "`"), instruction.source);
 					} else {
 						names.set(field.name, true);
 					}
 					if (expectedFields != null) {
 						final expected = findAggregateField(expectedFields, field.name);
 						if (expected == null) {
-							add(path, 'aggregate construction names unknown field `${field.name}`', instruction.source);
+							add(path, ("aggregate construction names unknown field `" + field.name + "`"), instruction.source);
 						} else if (valueType != null && typeKey(valueType) != typeKey(expected.type)) {
-							add(path, 'aggregate field `${field.name}` value type does not match its declaration', instruction.source);
+							add(path, ("aggregate field `" + field.name + "` value type does not match its declaration"), instruction.source);
 						}
 					}
 				}
 				if (expectedFields != null) {
 					for (field in expectedFields) {
 						if (!names.exists(field.name)) {
-							add(path, 'aggregate construction omits required field `${field.name}`', instruction.source);
+							add(path, ("aggregate construction omits required field `" + field.name + "`"), instruction.source);
 						}
 					}
 					if (fields.length == expectedFields.length) {
@@ -3291,7 +3344,8 @@ private class HxcIRValidationState {
 					}
 				}
 				if (tagCase != null && payload.length != tagCase.payload.length) {
-					add(path, 'tag construction provides ${payload.length} payload value(s) for ${tagCase.payload.length} field(s)', instruction.source);
+					add(path, ("tag construction provides " + payload.length + " payload value(s) for " + tagCase.payload.length + " field(s)"),
+						instruction.source);
 				}
 				for (index => valueId in payload) {
 					final payloadType = requireValue(valueId, '$path.payload:$index', instruction.source, available);
@@ -3299,7 +3353,7 @@ private class HxcIRValidationState {
 						&& tagCase != null
 						&& index < tagCase.payload.length
 						&& typeKey(payloadType) != typeKey(tagCase.payload[index].type)) {
-						add(path, 'tag payload value $index does not match `${tagCase.payload[index].name}`', instruction.source);
+						add(path, ("tag payload value " + index + " does not match `" + (tagCase.payload[index].name) + "`"), instruction.source);
 					}
 				}
 			case IRIOMatchTag(valueId, tagName):
@@ -3318,7 +3372,7 @@ private class HxcIRValidationState {
 				} else if (tagCase != null
 					&& instruction.result != null
 					&& typeKey(instruction.result.type) != typeKey(tagCase.payload[payloadIndex].type)) {
-					add(path, 'tag payload projection result does not match `${tagCase.payload[payloadIndex].name}`', instruction.source);
+					add(path, ("tag payload projection result does not match `" + (tagCase.payload[payloadIndex].name) + "`"), instruction.source);
 				}
 				validateTagCheck(check, '$path.check', instruction.source);
 			case IRIOAllocate(type, intent, implementation, failure):
@@ -3554,7 +3608,7 @@ private class HxcIRValidationState {
 				switch arrayType {
 					case IRTFixedArray(element, length, _):
 						if (values.length != length) {
-							add(path, 'fixed-array initializer provides ${values.length} values for length $length', instruction.source);
+							add(path, ("fixed-array initializer provides " + values.length + " values for length " + length), instruction.source);
 						}
 						for (index => valueId in values) {
 							final valueType = requireValue(valueId, '$path.value:$index', instruction.source, available);
@@ -3747,7 +3801,7 @@ private class HxcIRValidationState {
 									|| typeKey(adapter.sourceType) != typeKey(valueType))) add(path,
 									"Dynamic box operand does not match its exact adapter type", instruction.source);
 						case _:
-							add(path, 'Dynamic instruction requires a box operation, not `${planned.id}`', instruction.source);
+							add(path, ("Dynamic instruction requires a box operation, not `" + planned.id + "`"), instruction.source);
 					}
 				requireDynamicResult();
 			case IRDBoxNull(operationId):
@@ -3760,7 +3814,7 @@ private class HxcIRValidationState {
 								&& (adapter.sourceType != null || adapter.category != IRDCNull || adapter.storage != IRDSInlineNull)) add(path,
 									"Dynamic null box requires the canonical operand-free null adapter", instruction.source);
 						case _:
-							add(path, 'Dynamic instruction requires a box operation, not `${planned.id}`', instruction.source);
+							add(path, ("Dynamic instruction requires a box operation, not `" + planned.id + "`"), instruction.source);
 					}
 				requireDynamicResult();
 			case IRDBoxTypeToken(operationId):
@@ -3773,7 +3827,7 @@ private class HxcIRValidationState {
 								&& (adapter.sourceType != null || adapter.category != IRDCTypeValue || adapter.storage != IRDSStaticToken)) add(path,
 									"Dynamic type-token box requires an operand-free static-token adapter", instruction.source);
 						case _:
-							add(path, 'Dynamic instruction requires a box operation, not `${planned.id}`', instruction.source);
+							add(path, ("Dynamic instruction requires a box operation, not `" + planned.id + "`"), instruction.source);
 					}
 				requireDynamicResult();
 			case IRDUnbox(valueId, operationId, failure):
@@ -3789,7 +3843,7 @@ private class HxcIRValidationState {
 								&& typeKey(adapter.sourceType) != typeKey(instruction.result.type)) add(path,
 									"Dynamic unbox result does not match its exact adapter type", instruction.source);
 						case _:
-							add(path, 'Dynamic instruction requires an unbox operation, not `${planned.id}`', instruction.source);
+							add(path, ("Dynamic instruction requires an unbox operation, not `" + planned.id + "`"), instruction.source);
 					}
 				validateDynamicFailure(failure);
 			case IRDGet(receiverValueId, operationId, failure):
@@ -3814,7 +3868,7 @@ private class HxcIRValidationState {
 							final shape = dynamicCallShapes.get(callShapeId);
 							if (shape != null
 								&& arguments.length != shape.parameterTypeIds.length) add(path,
-									'Dynamic call provides ${arguments.length} argument(s) for ${shape.parameterTypeIds.length} parameter(s)',
+									("Dynamic call provides " + arguments.length + " argument(s) for " + shape.parameterTypeIds.length + " parameter(s)"),
 									instruction.source);
 						case _:
 					}
@@ -3831,7 +3885,8 @@ private class HxcIRValidationState {
 							final shape = dynamicCallShapes.get(callShapeId);
 							if (shape != null
 								&& arguments.length != shape.parameterTypeIds.length) add(path,
-									'Dynamic member call provides ${arguments.length} argument(s) for ${shape.parameterTypeIds.length} parameter(s)',
+									("Dynamic member call provides " + arguments.length + " argument(s) for " + shape.parameterTypeIds.length +
+										" parameter(s)"),
 									instruction.source);
 						case _:
 					}
@@ -3868,7 +3923,7 @@ private class HxcIRValidationState {
 			case IRDOKEqual(_, _): "equal";
 		};
 		if (actual != expected)
-			add(path, 'Dynamic instruction requires a $expected operation, not `${operation.id}`', source);
+			add(path, ("Dynamic instruction requires a " + expected + " operation, not `" + operation.id + "`"), source);
 		return operation;
 	}
 
@@ -3909,7 +3964,7 @@ private class HxcIRValidationState {
 				if (region == null)
 					add(path, 'exception payload names unknown region `$regionId`', instruction.source);
 				else if (instruction.result != null && instruction.result.id != region.payloadValueId)
-					add(path, 'exception payload result must be `${region.payloadValueId}`', instruction.source);
+					add(path, ("exception payload result must be `" + region.payloadValueId + "`"), instruction.source);
 				if (instruction.result != null && instruction.result.type != IRTDynamic)
 					add(path, "exception payload result must have Dynamic type", instruction.source);
 			case IRECleanupPush(cleanupId) | IRECleanupRun(cleanupId) | IRECleanupDiscard(cleanupId):
@@ -3950,7 +4005,8 @@ private class HxcIRValidationState {
 			add(path, "interface upcast requires at least one reachable source-table mapping", instruction.source);
 		if (tables.length != expectedSources.length)
 			add(path,
-				'interface upcast has ${tables.length} table mapping(s), but source interface `$sourceInterfaceInstanceId` has ${expectedSources.length} reachable table(s)',
+				("interface upcast has " + tables.length + " table mapping(s), but source interface `" + sourceInterfaceInstanceId + "` has "
+					+ expectedSources.length + " reachable table(s)"),
 				instruction.source);
 
 		final mappedSources:Map<String, Bool> = [];
@@ -3960,7 +4016,7 @@ private class HxcIRValidationState {
 			validateStableId(pair.sourceTableId, '$pairPath.sourceTableId', instruction.source);
 			validateStableId(pair.targetTableId, '$pairPath.targetTableId', instruction.source);
 			if (mappedSources.exists(pair.sourceTableId)) {
-				add(pairPath, 'interface upcast repeats source table `${pair.sourceTableId}`', instruction.source);
+				add(pairPath, ("interface upcast repeats source table `" + pair.sourceTableId + "`"), instruction.source);
 			} else {
 				mappedSources.set(pair.sourceTableId, true);
 			}
@@ -3973,21 +4029,21 @@ private class HxcIRValidationState {
 			final sourceLayout = sourceTable == null ? null : virtualLayouts.get(sourceTable.layoutId);
 			final targetLayout = targetTable == null ? null : virtualLayouts.get(targetTable.layoutId);
 			if (sourceTable == null) {
-				add(pairPath, 'interface upcast refers to unknown source table `${pair.sourceTableId}`', instruction.source);
+				add(pairPath, ("interface upcast refers to unknown source table `" + pair.sourceTableId + "`"), instruction.source);
 			} else if (sourceLayout == null || sourceInterface == null || sourceLayout.rootInstanceId != sourceInterfaceInstanceId) {
-				add(pairPath, 'source table `${pair.sourceTableId}` does not implement `$sourceInterfaceInstanceId`', instruction.source);
+				add(pairPath, ("source table `" + pair.sourceTableId + "` does not implement `" + sourceInterfaceInstanceId + "`"), instruction.source);
 			}
 			if (targetTable == null) {
-				add(pairPath, 'interface upcast refers to unknown target table `${pair.targetTableId}`', instruction.source);
+				add(pairPath, ("interface upcast refers to unknown target table `" + pair.targetTableId + "`"), instruction.source);
 			} else if (targetLayout == null || targetInterface == null || targetLayout.rootInstanceId != targetInterfaceInstanceId) {
-				add(pairPath, 'target table `${pair.targetTableId}` does not implement `$targetInterfaceInstanceId`', instruction.source);
+				add(pairPath, ("target table `" + pair.targetTableId + "` does not implement `" + targetInterfaceInstanceId + "`"), instruction.source);
 			}
 			if (sourceTable != null && targetTable != null && sourceTable.classInstanceId != targetTable.classInstanceId)
 				add(pairPath, "interface upcast source and target tables must belong to the same concrete class", instruction.source);
 		}
 		for (expected in expectedSources)
 			if (!mappedSources.exists(expected.id))
-				add(path, 'interface upcast omits reachable source table `${expected.id}`', instruction.source);
+				add(path, ("interface upcast omits reachable source table `" + expected.id + "`"), instruction.source);
 	}
 
 	function validateCall(call:HxcIRCall, path:String, source:HxcSourceSpan, available:Map<String, HxcIRTypeRef>, blocks:Map<String, HxcIRBlock>,
@@ -4029,7 +4085,7 @@ private class HxcIRValidationState {
 				} else {
 					final expectedReceiver = IRTPointer(IRTInstance(slot.ownerInstanceId), true);
 					if (receiverType != null && typeKey(receiverType) != typeKey(expectedReceiver)) {
-						add(path, 'virtual call receiver does not match slot `$slotId` owner `${slot.ownerInstanceId}`', source);
+						add(path, ("virtual call receiver does not match slot `" + slotId + "` owner `" + slot.ownerInstanceId + "`"), source);
 					}
 					final parameters:Array<HxcIRParameter> = [];
 					for (index => parameterType in slot.parameterTypes)
@@ -4051,7 +4107,7 @@ private class HxcIRValidationState {
 					add(path, 'interface call refers to unknown slot `$slotId`', source);
 				} else {
 					if (slot.ownerInstanceId != interfaceTypeId)
-						add(path, 'interface call slot `$slotId` belongs to `${slot.ownerInstanceId}`, not `$interfaceTypeId`', source);
+						add(path, ("interface call slot `" + slotId + "` belongs to `" + slot.ownerInstanceId + "`, not `" + interfaceTypeId + "`"), source);
 					final parameters:Array<HxcIRParameter> = [];
 					for (index => parameterType in slot.parameterTypes)
 						parameters.push({id: 'interface.argument.$index', type: parameterType, source: slot.source});
@@ -4081,7 +4137,7 @@ private class HxcIRValidationState {
 					validateHostedOutputCall(call, argumentTypes, path, source);
 				} else if (featureId == "array") {
 					validateManagedArrayCall(call, argumentTypes, path, source, nullProofs);
-				} else if (featureId == "string-map") {
+				} else if (featureId == "string-map" || featureId == "gc-string-map") {
 					validateStringMapCall(call, argumentTypes, path, source);
 				} else if (featureId == "iterator") {
 					validateIteratorCall(call, argumentTypes, path, source);
@@ -4434,12 +4490,16 @@ private class HxcIRValidationState {
 
 	/** Validate the closed first Map<String, V> runtime operation family. */
 	function validateStringMapCall(call:HxcIRCall, argumentTypes:Array<Null<HxcIRTypeRef>>, path:String, source:HxcSourceSpan):Void {
+		final collector = switch call.dispatch {
+			case IRCDRuntime("gc-string-map", _): true;
+			case _: false;
+		};
 		final operationId = switch call.dispatch {
-			case IRCDRuntime("string-map", value): value;
+			case IRCDRuntime("string-map", value) | IRCDRuntime("gc-string-map", value): value;
 			case _: return;
 		};
 		final receiverType = argumentTypes.length == 0 ? null : argumentTypes[0];
-		final receiverValue = managedStringMapValue(receiverType);
+		final receiverValue = managedStringMapValue(receiverType, collector);
 		// A map key may be a compile-time-backed String view (`IRTString`) or
 		// a runtime-owned String (`IRTManagedString`). Both carry the same
 		// immutable Haxe String value; ownership changes how long its bytes
@@ -4448,7 +4508,7 @@ private class HxcIRValidationState {
 		final returnsBool = call.returnType == IRTBool;
 		switch operationId {
 			case "create":
-				if (argumentTypes.length != 0 || managedStringMapValue(call.returnType) == null)
+				if (argumentTypes.length != 0 || managedStringMapValue(call.returnType, collector) == null)
 					add(path, "StringMap creation takes no arguments and returns one exact Map<String, V> specialization", source);
 			case "set":
 				final storedType = argumentTypes.length > 2 ? argumentTypes[2] : null;
@@ -4512,16 +4572,20 @@ private class HxcIRValidationState {
 		String keys; this prevents a later pass from accepting another map family
 		merely because its runtime feature name happens to match.
 	**/
-	function managedStringMapValue(type:Null<HxcIRTypeRef>):Null<HxcIRTypeRef> {
+	function managedStringMapValue(type:Null<HxcIRTypeRef>, collector:Bool = false):Null<HxcIRTypeRef> {
 		final instanceId = switch type {
 			case IRTInstance(value): value;
 			case _: return null;
 		};
 		final instance = typeInstances.get(instanceId);
-		if (instance == null || instance.arguments.length != 2 || instance.arguments[0] != IRTString)
+		if (instance == null || instance.arguments.length != 2)
+			return null;
+		if (instance.arguments[0] != IRTString && (!collector || instance.arguments[0] != IRTManagedString))
 			return null;
 		return switch instance.representation {
-			case IRRManaged("string-map"): instance.arguments[1];
+			case IRRManaged("string-map") if (!collector): instance.arguments[1];
+			case IRRManaged("gc") if (collector
+				&& StringTools.startsWith(instance.id, "instance.haxe-gc-string-map.")): instance.arguments[1];
 			case _: null;
 		};
 	}
@@ -4771,7 +4835,10 @@ private class HxcIRValidationState {
 					|| call.returnType != IRTManagedString) {
 					final actualArguments = argumentTypes.map(value -> value == null ? "missing" : typeKey(value)).join(", ");
 					add(path,
-						'String concatenation requires two managed String carriers and returns a managed String; actual arguments=[$actualArguments], return=${typeKey(call.returnType)}',
+						("String concatenation requires two managed String carriers and returns a managed String; actual arguments=["
+							+ actualArguments
+							+ "], return="
+							+ (typeKey(call.returnType))),
 						source);
 				}
 			case "borrow-cstring":
@@ -5006,11 +5073,11 @@ private class HxcIRValidationState {
 	function validateKnownCallSignature(call:HxcIRCall, argumentTypes:Array<Null<HxcIRTypeRef>>, parameters:Array<HxcIRParameter>, returnType:HxcIRTypeRef,
 			path:String, source:HxcSourceSpan):Void {
 		if (argumentTypes.length != parameters.length) {
-			add(path, 'call provides ${argumentTypes.length} arguments for ${parameters.length} parameters', source);
+			add(path, ("call provides " + argumentTypes.length + " arguments for " + parameters.length + " parameters"), source);
 		}
 		for (index => argumentType in argumentTypes) {
 			if (argumentType != null && index < parameters.length && typeKey(argumentType) != typeKey(parameters[index].type)) {
-				add(path, 'call argument $index type does not match parameter `${parameters[index].id}`', source);
+				add(path, ("call argument " + index + " type does not match parameter `" + (parameters[index].id) + "`"), source);
 			}
 		}
 		if (typeKey(call.returnType) != typeKey(returnType)) {
@@ -5056,12 +5123,12 @@ private class HxcIRValidationState {
 				for (index => item in cases) {
 					validateStableId(item.tagName, '$path.case:$index.tag', source);
 					if (names.exists(item.tagName)) {
-						add(path, 'tag switch repeats case `${item.tagName}`', source);
+						add(path, ("tag switch repeats case `" + item.tagName + "`"), source);
 					} else {
 						names.set(item.tagName, true);
 					}
 					if (expectedCases != null && findTagCase(expectedCases, item.tagName) == null) {
-						add(path, 'tag switch names unknown case `${item.tagName}`', source);
+						add(path, ("tag switch names unknown case `" + item.tagName + "`"), source);
 					}
 					validateBlockEdge(item.edge, '$path.case:$index.edge', source, available, blocks, regions);
 				}
@@ -5071,7 +5138,7 @@ private class HxcIRValidationState {
 						if (!names.exists(tagCase.name)) {
 							exhaustive = false;
 							if (defaultEdge == null) {
-								add(path, 'tag switch without a default omits `${tagCase.name}`', source);
+								add(path, ("tag switch without a default omits `" + tagCase.name + "`"), source);
 							}
 						}
 					}
@@ -5119,7 +5186,7 @@ private class HxcIRValidationState {
 						final exceptionCleanups = fn.exceptionCleanups == null ? [] : fn.exceptionCleanups;
 						for (step in edge.cleanup)
 							if (!Lambda.exists(exceptionCleanups, cleanup -> cleanup.actionId == step.actionId))
-								add(path, 'unwind cleanup action `${step.actionId}` has no runtime cleanup registration', source);
+								add(path, ("unwind cleanup action `" + step.actionId + "` has no runtime cleanup registration"), source);
 					case IRFTBlock(_) | IRFTAbort:
 				}
 			case IRTUnreachable:
@@ -5130,7 +5197,7 @@ private class HxcIRValidationState {
 			regions:Map<String, HxcIRCleanupRegion>):Void {
 		final target = blocks.get(edge.targetBlockId);
 		if (target == null) {
-			add(path, 'control edge targets unknown block `${edge.targetBlockId}`', source);
+			add(path, ("control edge targets unknown block `" + edge.targetBlockId + "`"), source);
 		} else {
 			validateEdgeArguments(edge.arguments, target.parameters, path, source, available);
 		}
@@ -5158,12 +5225,12 @@ private class HxcIRValidationState {
 	function validateEdgeArguments(arguments:Array<String>, parameters:Array<HxcIRParameter>, path:String, source:HxcSourceSpan,
 			available:Map<String, HxcIRTypeRef>):Void {
 		if (arguments.length != parameters.length) {
-			add(path, 'edge provides ${arguments.length} arguments for ${parameters.length} block parameters', source);
+			add(path, ("edge provides " + arguments.length + " arguments for " + parameters.length + " block parameters"), source);
 		}
 		for (index => argument in arguments) {
 			final argumentType = requireValue(argument, '$path.argument:$index', source, available);
 			if (argumentType != null && index < parameters.length && typeKey(argumentType) != typeKey(parameters[index].type)) {
-				add(path, 'edge argument $index type does not match block parameter `${parameters[index].id}`', source);
+				add(path, ("edge argument " + index + " type does not match block parameter `" + (parameters[index].id) + "`"), source);
 			}
 		}
 	}
@@ -5176,7 +5243,7 @@ private class HxcIRValidationState {
 			final stepPath = '$path:$index';
 			final region = regions.get(step.regionId);
 			if (region == null) {
-				add(stepPath, 'cleanup step refers to unknown region `${step.regionId}`', source);
+				add(stepPath, ("cleanup step refers to unknown region `" + step.regionId + "`"), source);
 				continue;
 			}
 			var actionIndex = -1;
@@ -5187,10 +5254,10 @@ private class HxcIRValidationState {
 				}
 			}
 			if (actionIndex == -1) {
-				add(stepPath, 'cleanup step refers to unknown action `${step.actionId}` in region `${step.regionId}`', source);
+				add(stepPath, ("cleanup step refers to unknown action `" + step.actionId + "` in region `" + step.regionId + "`"), source);
 				continue;
 			}
-			final key = '${step.regionId}:${step.actionId}';
+			final key = ("" + step.regionId + ":" + step.actionId);
 			if (seen.exists(key)) {
 				add(stepPath, 'cleanup action `$key` appears more than once on one edge', source);
 			} else {
@@ -5200,10 +5267,10 @@ private class HxcIRValidationState {
 			if (previousRegion != null) {
 				if (previousRegion.id == region.id) {
 					if (actionIndex >= previousActionIndex) {
-						add(stepPath, 'cleanup actions in region `${region.id}` must execute in reverse registration order', source);
+						add(stepPath, ("cleanup actions in region `" + region.id + "` must execute in reverse registration order"), source);
 					}
 				} else if (previousRegion.parentId != region.id) {
-					add(stepPath, 'cleanup path must move from inner region `${previousRegion.id}` to its parent, not `${region.id}`', source);
+					add(stepPath, ("cleanup path must move from inner region `" + previousRegion.id + "` to its parent, not `" + region.id + "`"), source);
 				}
 			}
 			previousRegion = region;
@@ -5231,7 +5298,7 @@ private class HxcIRValidationState {
 					case IRTPointer(_, false):
 					case null:
 					case _:
-						add(path, 'dereference requires a pointer value, found `${typeKey(pointerType)}`', source);
+						add(path, ("dereference requires a pointer value, found `" + (typeKey(pointerType)) + "`"), source);
 				}
 			case IRPField(base, fieldName):
 				validatePlace(base, '$path.base', source, available, locals, nullProofs);
@@ -5874,8 +5941,8 @@ private class HxcIRValidationState {
 			case IRPLocal(id): 'local:$id';
 			case IRPGlobal(id): 'global:$id';
 			case IRPDereference(id): 'deref:$id';
-			case IRPField(base, field): 'field:${placeKey(base)}:$field';
-			case IRPIndex(base, index): 'index:${placeKey(base)}:$index';
+			case IRPField(base, field): ("field:" + (placeKey(base)) + ":" + field);
+			case IRPIndex(base, index): ("index:" + (placeKey(base)) + ":" + index);
 		};
 
 	static function implementationKey(implementation:HxcIRImplementation):String
@@ -6006,8 +6073,8 @@ private class HxcIRValidationState {
 		}
 		if (existing == 1) {
 			final cycle = stack.concat([instance.id]);
-			add('type-layout:${instance.id}',
-				'direct by-value type layout is recursive: ${cycle.join(" -> ")}; insert an explicit pointer or managed boundary', instance.source);
+			add(("type-layout:" + instance.id),
+				("direct by-value type layout is recursive: " + (cycle.join(" -> ")) + "; insert an explicit pointer or managed boundary"), instance.source);
 			return;
 		}
 		state.set(instance.id, 1);
@@ -6075,6 +6142,41 @@ private class HxcIRValidationState {
 		}
 	}
 
+	/**
+		Admit a borrowed view of a collector node's exact tagged-value layout.
+
+		The storage and value instances must name the same specialized declaration
+		and arguments. This does not admit a reverse conversion: an ordinary value
+		pointer is not proof of a collector allocation.
+	**/
+	function isCollectorEnumNodeView(sourceType:HxcIRTypeRef, targetType:HxcIRTypeRef):Bool {
+		final sourceId = switch sourceType {
+			case IRTInstance(id): id;
+			case _: return false;
+		};
+		final targetId = switch targetType {
+			case IRTInstance(id): id;
+			case _: return false;
+		};
+		final source = typeInstances.get(sourceId);
+		final target = typeInstances.get(targetId);
+		if (source == null || target == null)
+			return false;
+		if (source.declarationId != target.declarationId
+			|| !source.representation.match(IRRManaged("gc"))
+			|| target.representation != IRRTagged
+			|| source.arguments.length != target.arguments.length)
+			return false;
+		for (index in 0...source.arguments.length)
+			if (typeKey(source.arguments[index]) != typeKey(target.arguments[index]))
+				return false;
+		final declaration = typeDeclarations.get(source.declarationId);
+		return declaration != null && switch declaration.kind {
+			case IRTKTaggedUnion(_): true;
+			case _: false;
+		};
+	}
+
 	function validateConversion(kind:HxcIRConversionKind, sourceType:HxcIRTypeRef, targetType:HxcIRTypeRef, implementation:HxcIRImplementation,
 			failure:Null<HxcIRFailureEdge>, hasNullProof:Bool, path:String, source:HxcSourceSpan):Void {
 		final requiresFailure = kind == IRCNumericChecked || kind == IRCNullableUnwrap && !hasNullProof;
@@ -6139,7 +6241,10 @@ private class HxcIRValidationState {
 					]:
 						if (sourceNullable && !targetNullable && !hasNullProof)
 							add(path, "nullable-to-non-null pointer conversion requires a dominating null check", source);
-						if (typeKey(sourcePointee) != typeKey(targetPointee) && sourcePointee != IRTVoid && targetPointee != IRTVoid)
+						if (typeKey(sourcePointee) != typeKey(targetPointee)
+							&& sourcePointee != IRTVoid
+							&& targetPointee != IRTVoid
+							&& !isCollectorEnumNodeView(sourcePointee, targetPointee))
 							add(path, "pointer conversion may only preserve its pointee type or erase/restore it through void", source);
 						if (implementation != IRIStatic || failure != null) add(path, "pointer conversion must use direct C with no independent failure edge",
 							source);
@@ -6272,7 +6377,7 @@ private class HxcIRValidationState {
 				false;
 		}
 		if (!valid) {
-			add(path, 'invalid lifetime transition ${stateName(from)} -> ${stateName(to)}', source);
+			add(path, ("invalid lifetime transition " + (stateName(from)) + " -> " + (stateName(to))), source);
 		}
 	}
 
@@ -6340,12 +6445,12 @@ private class HxcIRValidationState {
 	**/
 	static function collectionPlaceProofKey(place:HxcIRPlace):Null<String> {
 		return switch place {
-			case IRPLocal(localId): 'local:${localId.length}:$localId';
-			case IRPGlobal(globalId): 'global:${globalId.length}:$globalId';
-			case IRPDereference(valueId): 'deref:${valueId.length}:$valueId';
+			case IRPLocal(localId): ("local:" + localId.length + ":" + localId);
+			case IRPGlobal(globalId): ("global:" + globalId.length + ":" + globalId);
+			case IRPDereference(valueId): ("deref:" + valueId.length + ":" + valueId);
 			case IRPField(base, fieldName):
 				final baseKey = collectionPlaceProofKey(base);
-				baseKey == null ? null : 'field:${baseKey.length}:$baseKey:${fieldName.length}:$fieldName';
+				baseKey == null ? null : ("field:" + baseKey.length + ":" + baseKey + ":" + fieldName.length + ":" + fieldName);
 			case IRPIndex(_, _): null;
 		};
 	}
@@ -6612,7 +6717,7 @@ private class HxcIRValidationState {
 			case IRCInt(text):
 				switch type {
 					case IRTInt(width, signed) if (!fixedWidthIntegerConstantFits(text, width, signed)):
-						add(path, 'integer constant `$text` is outside the ${signed ? "signed" : "unsigned"} $width-bit range', source);
+						add(path, ("integer constant `" + text + "` is outside the " + (signed ? "signed" : "unsigned") + " " + width + "-bit range"), source);
 					case _:
 				}
 			case _:
@@ -6691,7 +6796,7 @@ private class HxcIRValidationState {
 
 	function validateStableId(value:String, path:String, source:HxcSourceSpan):Void {
 		if (value == "" || StringTools.trim(value) != value || hasControl(value)) {
-			add(path, 'stable identifier `${escaped(value)}` is empty, padded, or contains control characters', source);
+			add(path, ("stable identifier `" + (escaped(value)) + "` is empty, padded, or contains control characters"), source);
 		}
 	}
 
@@ -6727,8 +6832,8 @@ private class HxcIRValidationState {
 	static function typeKey(type:HxcIRTypeRef):String {
 		return switch type {
 			case IRTBool: "bool";
-			case IRTInt(width, signed): '${signed ? "i" : "u"}$width';
-			case IRTAbiInteger(kind): 'abi:${abiIntegerKey(kind)}';
+			case IRTInt(width, signed): ("" + (signed ? "i" : "u") + width);
+			case IRTAbiInteger(kind): ("abi:" + (abiIntegerKey(kind)));
 			case IRTFloat(width): 'f$width';
 			case IRTString: "string-utf8";
 			case IRTManagedString: "managed-string-utf8";
@@ -6737,11 +6842,11 @@ private class HxcIRValidationState {
 			case IRTMutableCStringBuffer: "mutable-cstring-buffer-call-borrow";
 			case IRTVoid: "void";
 			case IRTInstance(instanceId): 'instance:$instanceId';
-			case IRTPointer(pointee, nullable): 'pointer:${nullable ? "nullable" : "nonnull"}<${typeKey(pointee)}>';
-			case IRTNullable(inner, representation): 'nullable:${nullableRepresentationKey(representation)}<${typeKey(inner)}>';
-			case IRTFunction(parameters, result): 'function(${parameters.map(typeKey).join(",")})->${typeKey(result)}';
-			case IRTFixedArray(element, length, witnessId): 'fixed-array:$length:$witnessId<${typeKey(element)}>';
-			case IRTSpan(element, mutable): 'span:${mutable ? "mutable" : "const"}<${typeKey(element)}>';
+			case IRTPointer(pointee, nullable): ("pointer:" + (nullable ? "nullable" : "nonnull") + "<" + (typeKey(pointee)) + ">");
+			case IRTNullable(inner, representation): ("nullable:" + (nullableRepresentationKey(representation)) + "<" + (typeKey(inner)) + ">");
+			case IRTFunction(parameters, result): ("function(" + (parameters.map(typeKey).join(",")) + ")->" + (typeKey(result)));
+			case IRTFixedArray(element, length, witnessId): ("fixed-array:" + length + ":" + witnessId + "<" + (typeKey(element)) + ">");
+			case IRTSpan(element, mutable): ("span:" + (mutable ? "mutable" : "const") + "<" + (typeKey(element)) + ">");
 			case IRTDynamic: "dynamic";
 		}
 	}
@@ -6767,9 +6872,9 @@ private class HxcIRValidationState {
 			case IRCInt(text): 'int:$text';
 			case IRCFloat(text): 'float:$text';
 			case IRCBool(flag): 'bool:$flag';
-			case IRCString(text, byteLength): 'string-utf8:$byteLength:${escaped(text)}';
-			case IRCCStringLiteral(text, byteLength): 'cstring-literal:$byteLength:${escaped(text)}';
-			case IRCNativeConstant(constantId): 'native-constant:${escaped(constantId)}';
+			case IRCString(text, byteLength): ("string-utf8:" + byteLength + ":" + (escaped(text)));
+			case IRCCStringLiteral(text, byteLength): ("cstring-literal:" + byteLength + ":" + (escaped(text)));
+			case IRCNativeConstant(constantId): ("native-constant:" + (escaped(constantId)));
 			case IRCNull: "null";
 		}
 	}

@@ -1,11 +1,12 @@
-package reflaxe.c.emit;
+package reflaxe.c;
 
 import haxe.io.Bytes;
 
 /**
-	Computes stable content digests for compiler-owned output.
+	Computes stable content digests for compiler source identities and output.
 
-	Generated manifests and build caches use SHA-256, so this module preserves
+	Source-position caches, generated manifests, and build caches use SHA-256,
+	so this module preserves
 	that exact public algorithm. The Eval macro host gets a streaming
 	implementation because the standard library first expands the whole input
 	into boxed integer arrays; multi-megabyte generated C then creates far more

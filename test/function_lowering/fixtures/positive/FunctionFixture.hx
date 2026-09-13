@@ -5,6 +5,12 @@
 	Eval and generated C can execute the same program.
 **/
 
+/** A direct record that proves callback carriers receive complete value types. */
+private typedef CallbackPoint = {
+	final x:Int;
+	final y:Int;
+}
+
 /**
 	Exercises ordinary Haxe function calls through the semantic C pipeline.
 
@@ -46,6 +52,15 @@ class FunctionFixture {
 
 	static function apply(value:Int, operation:Int->Int):Int {
 		return operation(value);
+	}
+
+	/** Pass a complete record through the callback function pointer by value. */
+	static function applyPoint(point:CallbackPoint, operation:CallbackPoint->Int):Int {
+		return operation(point);
+	}
+
+	static function pointValue(point:CallbackPoint):Int {
+		return point.x + point.y;
 	}
 
 	/**
@@ -204,6 +219,8 @@ class FunctionFixture {
 		while (chooseSwitch(1)(5) != 10) {}
 		while (chooseSwitch(2)(5) != 5) {}
 		while (recursiveThroughValue(true) != 4) {}
+		final pointResult = applyPoint({x: 2, y: 3}, pointValue);
+		while (pointResult != 5) {}
 		final captured = captureRoundTrip(5);
 		// The first result (5) becomes the second call's argument; its result is 15.
 		while (captured != 15) {}

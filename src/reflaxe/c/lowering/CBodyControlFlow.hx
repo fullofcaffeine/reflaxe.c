@@ -2349,7 +2349,39 @@ private class CBodyControlFlowAnalysis {
 			dominators.set(blockId, bitWordsToSet(requireBitWords(bitsByBlock, blockId, "dominator"), orderedReachable));
 	}
 
+	/**
+		Visit successors before their predecessors for backward-flow analysis.
+
+		A post-dominator lies on every remaining path to an exit. Its facts flow
+		backward, so source-order scans can require one full pass per block in a
+		straight chain. Graph postorder propagates that chain in one pass without
+		depending on declaration order. An explicit stack also admits deep graphs;
+		cycles still converge through the existing fixed-point calculation.
+	**/
+	function backwardAnalysisOrder():Array<String> {
+		final visited:Map<String, Bool> = [];
+		final result:Array<String> = [];
+		final pending = [{id: fn.entryBlockId, next: 0}];
+		visited.set(fn.entryBlockId, true);
+		while (pending.length > 0) {
+			final frame = pending[pending.length - 1];
+			final outgoing = successors(frame.id);
+			if (frame.next == outgoing.length) {
+				result.push(frame.id);
+				pending.pop();
+			} else {
+				final target = outgoing[frame.next++];
+				if (!visited.exists(target)) {
+					visited.set(target, true);
+					pending.push({id: target, next: 0});
+				}
+			}
+		}
+		return result;
+	}
+
 	function computePostDominators():Void {
+		final analysisOrder = backwardAnalysisOrder();
 		final blockCount = orderedReachable.length;
 		final bitCount = blockCount + 1;
 		final wordCount = bitWordCount(bitCount);
@@ -2364,7 +2396,7 @@ private class CBodyControlFlowAnalysis {
 		var changed = true;
 		while (changed) {
 			changed = false;
-			for (blockId in orderedReachable) {
+			for (blockId in analysisOrder) {
 				var foundOutgoing = false;
 				for (target in successors(blockId)) {
 					if (!reachable.exists(target))

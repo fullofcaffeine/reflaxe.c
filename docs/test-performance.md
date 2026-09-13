@@ -187,6 +187,41 @@ compile → strict-C-build → runtime smoke. Until those artifacts exist, the
 planner reports `readiness-only-not-a-pass`; expected failures remain
 nonpassing and visible rather than being converted into exclusions.
 
+### Stock Haxe macro string processing
+
+The largest backend modules use ordinary string concatenation for diagnostic
+text and semantic keys. The pinned Haxe compiler reparses each braced
+interpolation expression at its source offset. Repeating that work in a large
+module adds substantial startup cost before application lowering begins.
+
+The startup repair in `CBodyLowering`, `CBodyEmitter`, and `HxcIRValidator`
+uses the expression trees produced by stock `MacroStringTools.formatString`.
+Complex operands retain explicit grouping. A structural round-trip check
+compares each node and its ordered children; printed text alone cannot prove
+that conditional or arithmetic grouping survived. The conversion also checks
+that a deliberately misgrouped conditional produces a different tree.
+
+The normal [symbol-registry](../test/symbol_registry/run.py),
+[HxcIR](../test/hxc_ir/run.py), and
+[bootstrap/package](../test/bootstrap/run.py) checks pass with this source form.
+They preserve exact snapshots, negative diagnostics, compiler registration,
+and server isolation.
+
+The combined repair also skips unused Reflaxe callback preparation, shares the
+existing streaming SHA-256 implementation with source provenance, and avoids
+repeated conversions of exact compiler positions. On September 12, 2026, the
+unchanged all-sources lane passed each 30-second phase at normal priority; the
+complete lane took 13.6 seconds. Runtime-content generation passed its
+60-second Haxe limit, Eval/native assertions, and sanitizers; the complete lane,
+including native checks, took 69.4 seconds. The ordinary game then compiled
+within its 120-second Haxe limit and initialized the desktop display. Its
+generated project retained the preceding build's content identity.
+
+These are bounded acceptance runs, not stable timing medians. Earlier
+background-priority diagnostics remain correctness evidence and must not be
+used to claim that normal-priority budgets failed. Task `haxe_c-w26f` owns the
+repair and its integration evidence. No compiler pin or timeout was changed.
+
 ## Baseline and trigger
 
 Governance run
@@ -1612,6 +1647,18 @@ payloads with Haxe's implementation around every one-block/two-block padding
 boundary and across many blocks. This is an execution optimization, not a
 weaker or different content identity.
 
+The shared module lives at `src/reflaxe/c/CContentDigest.hx`. Function and
+named-record source provenance use it to hash source bytes as well. Their
+SHA-256 values and cache-key formats stay the same. The focused typed-AST
+source-identity and source-anchor checks cover changed files and repeated,
+reordered, and profile-changing compiler-server requests.
+
+The C adapter captures the complete typed program before Reflaxe prepares
+individual class and enum callbacks. Those callbacks emit nothing, so the
+adapter declines their preparation and disables their unused type-usage
+tracker. Whole-program validation and emission still run in `onCompileEnd`;
+the bootstrap lane protects activation and server isolation.
+
 The formatter itself now reuses one indentation prefix per nesting depth,
 returns immediately for empty qualifier/specifier lists, and joins already
 validated non-empty tokens without intermediate filter and join arrays. The
@@ -1917,6 +1964,14 @@ so tooling need not infer invalidation from elapsed time. Use
 ordinary construction path; use
 `reflaxe_c_body_function_replay_cache_report` when a server test needs the
 machine-readable lifecycle result.
+
+Each lifecycle report also includes `frontendSourcePlanHits` and
+`frontendSourcePlanFallbacks`. These counters distinguish functions that reuse
+the frontend source plan from functions that use the ordinary fallback. The
+source plan contains canonical typed text and expression positions for the
+current request. It is not retained as cache authority. These counters measure
+avoided duplicate printing and traversal. They do not prove an elapsed-time
+improvement.
 
 ### Exact invalidation catalog and bounded server state
 

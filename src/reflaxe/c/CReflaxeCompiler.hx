@@ -147,6 +147,20 @@ class CReflaxeCompiler extends GenericCompiler<Bool, Bool, Bool, Bool, Bool> {
 		return empty.iterator();
 	}
 
+	/**
+		Skip callback field preparation after the complete typed program is captured.
+
+		This adapter emits through onCompileEnd. Its class callback consumes none
+		of Reflaxe's prepared fields; reachability, inheritance, and validation belong
+		to the whole-program compiler and still use the captured declarations.
+	**/
+	override public function shouldGenerateClass(classType:ClassType):Bool
+		return false;
+
+	/** Enum declarations are likewise emitted from the captured whole program. */
+	override public function shouldGenerateEnum(enumType:EnumType):Bool
+		return false;
+
 	public function compileClassImpl(classType:ClassType, varFields:Array<ClassVarData>, funcFields:Array<ClassFuncData>):Null<Bool> {
 		// Selection is intentionally deferred to the whole-program compiler so it
 		// can reason about layout, initialization order, runtime slices, and ABI.

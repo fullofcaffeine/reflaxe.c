@@ -10,6 +10,7 @@ import re
 import shutil
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 
@@ -335,11 +336,55 @@ def check_diagnostics(report: dict[str, object]) -> None:
         raise HxcIRFailure("diagnostics leaked machine-local path spelling")
 
 
+def check_json_strings() -> None:
+    """Keep compiler-host quoting and the portable fallback byte-compatible."""
+    command = [development_tool("haxe"), "-cp", str(ROOT / "src"),
+               "-cp", str(Path(__file__).parent), "-main", "HxcJsonStringProbe"]
+    environment = os.environ.copy()
+    environment["HAXE_NO_SERVER"] = "1"
+    with tempfile.TemporaryDirectory(prefix="hxc-json-string-") as temporary:
+        script = Path(temporary) / "probe.js"
+        for arguments in (["--interp"], ["-js", str(script)]):
+            result = run_bounded_process(command + arguments, cwd=ROOT, env=environment,
+                                         check=False, capture_output=True, text=True, timeout=30)
+            expected = "HXC_JSON_STRING_OK" if arguments == ["--interp"] else ""
+            if result.returncode or result.stdout.strip() != expected or result.stderr:
+                raise HxcIRFailure(f"JSON string compilation/check failed\n{result.stdout}\n{result.stderr}")
+        result = run_bounded_process(["node", str(script)], cwd=ROOT, check=False,
+                                     capture_output=True, text=True, timeout=30)
+        if result.returncode or result.stdout.strip() != "HXC_JSON_STRING_OK" or result.stderr:
+            raise HxcIRFailure(f"portable JSON string check failed\n{result.stdout}\n{result.stderr}")
+
+
+def check_nominal_cache() -> None:
+    """Check request-local type reuse without starting the target compiler."""
+    command = [development_tool("haxe"), "-cp", str(ROOT / "src"),
+               "-cp", str(ROOT / "vendor/reflaxe/src"), "-cp", str(Path(__file__).parent),
+               "--macro", "NominalCacheProbe.install()", "-main", "NominalCacheFixture", "--interp"]
+    environment = os.environ.copy()
+    environment["HAXE_NO_SERVER"] = "1"
+    result = run_bounded_process(command, cwd=ROOT, env=environment, check=False,
+                                 capture_output=True, text=True, timeout=30)
+    if result.returncode or result.stdout.strip() != "NOMINAL_CACHE_OK" or result.stderr:
+        raise HxcIRFailure(f"nominal cache check failed\n{result.stdout}\n{result.stderr}")
+
+
 def main() -> int:
     if shutil.which(development_tool("haxe")) is None:
         print("hxc-ir: ERROR: pinned Haxe executable is unavailable", file=sys.stderr)
         return 1
     try:
+        if sys.argv[1:] not in ([], ["--json-strings-only"], ["--nominal-cache-only"]):
+            raise HxcIRFailure("usage: test/hxc_ir/run.py [--json-strings-only | --nominal-cache-only]")
+        if sys.argv[1:] != ["--json-strings-only"]:
+            check_nominal_cache()
+        if sys.argv[1:] == ["--nominal-cache-only"]:
+            print("hxc-ir: OK: request-local nominal type cache")
+            return 0
+        check_json_strings()
+        if sys.argv[1:] == ["--json-strings-only"]:
+            print("hxc-ir: OK: canonical JSON string bytes on Eval and JavaScript")
+            return 0
         check_oracle()
         check_dynamic_oracle()
         check_raw_program_boundary()

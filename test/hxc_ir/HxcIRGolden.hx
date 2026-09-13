@@ -8,6 +8,8 @@ import reflaxe.c.ir.HxcIRTraversal.HXC_IR_TRAVERSAL_SCHEMA_VERSION;
 import reflaxe.c.ir.HxcIRTraversal.walkHxcIR;
 import reflaxe.c.ir.HxcIRValidator;
 import reflaxe.c.ir.HxcIRValidator.ValidatedHxcIRProgram;
+import reflaxe.c.ir.HxcIRManagedRootPlanner;
+import reflaxe.c.ir.HxcIRManagedRootPaths;
 import reflaxe.c.ir.HxcSourceSpan;
 import reflaxe.c.lowering.CBodyNullCheckCoalescing;
 
@@ -17,6 +19,14 @@ private enum ManagedCarrierLinearMutation {
 	LinearDuplicateAcquire;
 	LinearDuplicateMove;
 	LinearOwnedExit;
+}
+
+/** Check the exact-layout boundary without granting arbitrary pointer casts. */
+private enum CollectorNodeViewMutation {
+	NodeViewValid;
+	NodeViewReverse;
+	NodeViewOtherDeclaration;
+	NodeViewOtherArguments;
 }
 
 /** Select one focused mutation of the mutable-record borrow contract. */
@@ -121,7 +131,9 @@ class HxcIRGolden {
 
 	static function main():Void {
 		HxcIRControlFlowGolden.run();
+		BodyControlFlowOrderProbe.run();
 		final validator = new HxcIRValidator();
+		checkCollectorNodeViews(validator);
 		final dumper = new HxcIRDumper();
 		if (HXC_IR_TRAVERSAL_SCHEMA_VERSION != HxcIRValidator.SCHEMA_VERSION)
 			throw "HxcIR traversal schema sentinel was not reviewed with the validator schema";
@@ -1819,6 +1831,81 @@ class HxcIRGolden {
 		return minimalProgram("invalid.ConstantTypeMismatch", [
 			instruction("bad.constant", result("value.bad", IRTInt(32, true)), IRIOConstant(IRCBool(true)), file, 2)
 		], terminator(IRTReturn(null, []), file, 3), [], [], file);
+	}
+
+	/** An exact node view preserves its source root and cannot forge a GC owner. */
+	static function checkCollectorNodeViews(validator:HxcIRValidator):Void {
+		final program = collectorNodeViewProgram(NodeViewValid);
+		validator.requireValid(program, PROFILE);
+		final paths = new HxcIRManagedRootPaths(program).collect(IRTInstance("instance.node-value"));
+		if (paths.length != 1 || HxcIRManagedRootPaths.key(paths[0]) != "tag(instance.node-value,Link,0)")
+			throw "recursive node root planning lost its finite exact child pointer";
+		for (mutation in [NodeViewReverse, NodeViewOtherDeclaration, NodeViewOtherArguments])
+			requireInvalidMarker(collectorNodeViewProgram(mutation), "pointer conversion may only preserve its pointee type",
+				"collector node view must preserve exact layout and ownership direction");
+	}
+
+	/** Build a pointer view with one recursive tag and independently chosen identities. */
+	static function collectorNodeViewProgram(mutation:CollectorNodeViewMutation):HxcIRProgram {
+		final file = "test/hxc_ir/fixtures/CollectorNodeView.hx";
+		final source = span(file, 1, 8);
+		final nodeType = IRTPointer(IRTInstance("instance.node-storage"), true);
+		final valueType = IRTPointer(IRTInstance("instance.node-value"), true);
+		final fromType = mutation == NodeViewReverse ? valueType : nodeType;
+		final toType = mutation == NodeViewReverse ? nodeType : valueType;
+		final program = minimalProgram("coverage.CollectorNodeView", [
+			instruction("view", result("value.view", toType), IRIOConvert("parameter.node", IRCPointer, toType, IRIStatic, null), file, 2)
+		], terminator(IRTReturn(null, []), file, 3), [], [], file);
+		final module = program.modules[0];
+		module.types.push({
+			id: "type.node-value",
+			displayName: "NodeValue",
+			kind: IRTKTaggedUnion([
+				{
+					name: "End",
+					tagValue: 0,
+					payload: [],
+					source: source
+				},
+				{
+					name: "Link",
+					tagValue: 1,
+					payload: [{name: "child", type: nodeType, source: source}],
+					source: source
+				}
+			]),
+			source: source
+		});
+		module.types.push({
+			id: "type.other-value",
+			displayName: "OtherValue",
+			kind: IRTKTaggedUnion([
+				{
+					name: "End",
+					tagValue: 0,
+					payload: [],
+					source: source
+				}
+			]),
+			source: source
+		});
+		module.typeInstances.push({
+			id: "instance.node-storage",
+			declarationId: "type.node-value",
+			arguments: [IRTInt(32, true)],
+			representation: IRRManaged("gc"),
+			source: source
+		});
+		module.typeInstances.push({
+			id: "instance.node-value",
+			declarationId: mutation == NodeViewOtherDeclaration ? "type.other-value" : "type.node-value",
+			arguments: [mutation == NodeViewOtherArguments ? IRTBool : IRTInt(32, true)],
+			representation: IRRTagged,
+			source: source
+		});
+		module.functions[0].parameters.push(parameter("parameter.node", fromType, file, 1));
+		new HxcIRManagedRootPlanner().run(program);
+		return program;
 	}
 
 	/**

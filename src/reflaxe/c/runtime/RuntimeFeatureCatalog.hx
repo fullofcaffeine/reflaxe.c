@@ -30,6 +30,7 @@ class RuntimeFeatureCatalog {
 		final intMap = RuntimeFeatureId.parse("int-map");
 		final stringMap = RuntimeFeatureId.parse("string-map");
 		final typedMap = RuntimeFeatureId.parse("typed-map");
+		final gcStringMap = RuntimeFeatureId.parse("gc-string-map");
 		final objectMap = RuntimeFeatureId.parse("object-map");
 		final enumValueMap = RuntimeFeatureId.parse("enum-value-map");
 		final bytes = RuntimeFeatureId.parse("bytes");
@@ -386,6 +387,20 @@ class RuntimeFeatureCatalog {
 					"docs/hxrt.md",
 					[
 						"test/differential/object-enum-map/run.py",
+						"test/runtime/runtime-feature-graph/run.py"
+					])),
+			new RuntimeFeatureDefinition(gcStringMap, "String-keyed maps with precisely traced record values.", CompilerSelectable, true, environments,
+				[typedMap, string], [], [], [], [],
+				documentation("Keeps collector-managed children alive through map slots and iterator snapshots while preserving UTF-8 key equality.", [
+					new RuntimeFeatureSelectionRoot("gc-string-map-operation", RuntimeFeatureSelectionRootKind.HxcIrOperation,
+						"A reachable StringMap operation whose record value contains collector-managed children.")
+				],
+					"Maps whose values need no collector retain the ordinary reference-counted StringMap representation.",
+					"A bounded table specialization must preserve key equality, shared map identity, exact roots, and failure-atomic mutation.",
+					"The existing typed-map runtime owns storage and collection. Generated callbacks own String equality and each exact value's tracing and cleanup.",
+					"docs/hxrt.md",
+					[
+						"test/differential/string-map/run.py",
 						"test/runtime/runtime-feature-graph/run.py"
 					])),
 			new RuntimeFeatureDefinition(objectMap, "Object-identity Map keys over the shared exact typed-map runtime.", CompilerSelectable, true,

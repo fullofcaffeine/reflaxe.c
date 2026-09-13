@@ -1,7 +1,7 @@
 package reflaxe.c.frontend;
 
 #if (macro || reflaxe_runtime)
-import haxe.crypto.Sha256;
+import reflaxe.c.CContentDigest.sha256Hex;
 import haxe.macro.Context;
 import haxe.macro.Expr.Position;
 import haxe.macro.Type.TypedExpr;
@@ -12,6 +12,31 @@ private typedef CachedTypedFunctionPosition = {
 	final owned:Bool;
 	final min:Int;
 	final max:Int;
+}
+
+/** Source identity shared by functions captured in one normalization request. */
+private typedef FunctionSourceIdentity = {
+	final digest:String;
+	final length:Int;
+}
+
+/**
+	Carries one request's already-computed function identity inputs into lowering.
+
+	Frontend provenance must inspect the complete typed tree to repair positions
+	that Haxe's server can reuse. Body replay needs the same canonical tree text
+	and expression order. Keeping those request-local values together avoids a
+	second print and traversal without making them persistent cache authority.
+**/
+typedef TypedFunctionSourcePlan = {
+	/** The stable typed-tree text that both provenance and replay identity use. */
+	final canonicalTypedExpressionText:String;
+
+	/** The typed tree's positions in deterministic traversal order for this request. */
+	final expressionPositions:Array<Position>;
+
+	/** Maps reused compiler positions to the matching positions in current source bytes. */
+	final positionOverrides:Map<String, Position>;
 }
 
 /**
@@ -25,6 +50,16 @@ private typedef CachedTypedFunctionPosition = {
 	different file remain compiler-owned and are never rewritten here.
 **/
 class TypedFunctionSourceProvenance {
+	final sourcesByFile:Map<String, FunctionSourceIdentity> = [];
+
+	/**
+		Own one request's file identities, separate from the persistent position cache.
+
+		An instance bounds reuse to one normalization pass. A new pass reads current
+		bytes again, including edits received by the same compilation server.
+	**/
+	public function new() {}
+
 	static inline final CACHE_SCHEMA = 1;
 	static inline final MAX_CACHE_ENTRIES = 4096;
 
@@ -45,56 +80,92 @@ class TypedFunctionSourceProvenance {
 		collapses distinct authored ranges onto the same current position, recovery
 		fails instead of choosing a plausible but incorrect source span.
 	**/
-	public static function plan(declarationPath:String, fieldName:String, declarationPosition:Position, expression:TypedExpr):Map<String, Position> {
-		final declarationInfo = Context.getPosInfos(declarationPosition);
-		final bytes = try {
-			File.getBytes(declarationInfo.file);
-		} catch (_:haxe.Exception) {
-			return [];
-		}
+	public function plan(declarationPath:String, fieldName:String, declarationPosition:Position, expression:TypedExpr):TypedFunctionSourcePlan {
 		final positions:Array<Position> = [];
 		function visit(value:TypedExpr):Void {
 			positions.push(value.pos);
 			TypedExprTools.iter(value, visit);
 		}
 		visit(expression);
+		final canonicalText = canonicalTypedExpressionText(expression);
+		final declarationInfo = Context.getPosInfos(declarationPosition);
+		final source = sourceIdentity(declarationInfo.file);
+		if (source == null) {
+			return {
+				canonicalTypedExpressionText: canonicalText,
+				expressionPositions: positions,
+				positionOverrides: []
+			};
+		}
 		final key = [
 			Std.string(CACHE_SCHEMA),
 			declarationPath,
 			fieldName,
-			Sha256.make(bytes).toHex(),
-			canonicalTypedExpressionText(expression)
+			source.digest,
+			canonicalText
 		].join("\n");
-		var cached = cacheByContent.get(key);
-		if (cached == null) {
-			cached = positions.map(position -> {
-				final info = Context.getPosInfos(position);
-				{owned: info.file == declarationInfo.file, min: info.min, max: info.max};
-			});
-			remember(key, cached);
-		}
-		if (cached.length != positions.length)
+		final previous = cacheByContent.get(key);
+		final hasPrevious = previous != null;
+		final cached:Array<CachedTypedFunctionPosition> = previous == null ? [] : previous;
+		if (hasPrevious && cached.length != positions.length)
 			throw new haxe.Exception('typed function `$declarationPath.$fieldName` changed source-position arity under one semantic cache key');
 
 		final result:Map<String, Position> = [];
 		for (index in 0...positions.length) {
 			final current = positions[index];
 			final currentInfo = Context.getPosInfos(current);
-			final remembered = cached[index];
+			final remembered:CachedTypedFunctionPosition = if (hasPrevious) cached[index] else {
+				owned: currentInfo.file == declarationInfo.file,
+				min: currentInfo.min,
+				max: currentInfo.max
+			};
+			if (!hasPrevious)
+				cached.push(remembered);
 			if (remembered.owned != (currentInfo.file == declarationInfo.file))
 				throw new haxe.Exception('typed function `$declarationPath.$fieldName` changed source-file ownership under Haxe server reuse');
 			if (!remembered.owned)
 				continue;
-			if (remembered.min < 0 || remembered.max < remembered.min || remembered.max > bytes.length)
+			if (remembered.min < 0 || remembered.max < remembered.min || remembered.max > source.length)
 				throw new haxe.Exception('typed function `$declarationPath.$fieldName` retained an invalid source-position offset');
-			final position = Context.makePosition({file: declarationInfo.file, min: remembered.min, max: remembered.max});
-			final currentKey = exactPositionKey(current);
+			// Preserve the current compiler value when its exact range already matches.
+			// Only a restored warm-server range needs a new Position allocation.
+			final position = currentInfo.min == remembered.min && currentInfo.max == remembered.max ? current : Context.makePosition({
+				file: declarationInfo.file,
+				min: remembered.min,
+				max: remembered.max
+			});
+			final currentKey = currentInfo.file + "\n" + currentInfo.min + ":" + currentInfo.max;
 			final existing = result.get(currentKey);
-			if (existing != null && exactPositionKey(existing) != exactPositionKey(position))
-				throw new haxe.Exception('typed function `$declarationPath.$fieldName` collapsed distinct source positions under Haxe server reuse');
+			if (existing != null) {
+				final existingInfo = Context.getPosInfos(existing);
+				if (existingInfo.file != declarationInfo.file || existingInfo.min != remembered.min || existingInfo.max != remembered.max)
+					throw new haxe.Exception('typed function `$declarationPath.$fieldName` collapsed distinct source positions under Haxe server reuse');
+			}
 			result.set(currentKey, position);
 		}
-		return result;
+		// Publish only after every range and collision check succeeds.
+		if (!hasPrevious)
+			remember(key, cached);
+		return {
+			canonicalTypedExpressionText: canonicalText,
+			expressionPositions: positions,
+			positionOverrides: result
+		};
+	}
+
+	/** Hash each readable file once; failed reads remain retryable within the request. */
+	function sourceIdentity(file:String):Null<FunctionSourceIdentity> {
+		final existing = sourcesByFile.get(file);
+		if (existing != null)
+			return existing;
+		final bytes = try {
+			File.getBytes(file);
+		} catch (_:haxe.Exception) {
+			return null;
+		}
+		final source:FunctionSourceIdentity = {digest: sha256Hex(bytes), length: bytes.length};
+		sourcesByFile.set(file, source);
+		return source;
 	}
 
 	/** Build the exact key used by request-local source-span resolvers. */

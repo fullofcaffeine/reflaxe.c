@@ -28,6 +28,7 @@ CASE = Path(__file__).resolve().parent
 GENERATED = CASE / "generated"
 DIRECT_DECISION = CASE / "direct_decision"
 DISPATCH_OWNED = CASE / "dispatch_owned"
+COLLECTOR_RECORD = CASE / "collector_record"
 NEGATIVE = CASE / "negative"
 FIXTURE = CASE / "string_map_runtime.c"
 INCLUDE = ROOT / "runtime/hxrt/include"
@@ -228,6 +229,94 @@ def check_dispatch_owned_map(toolchains: list[Toolchain]) -> None:
                     build / "dispatch-owned-sanitized",
                     SANITIZER_FLAGS,
                 )
+
+
+def check_collector_minimal(toolchains: list[Toolchain]) -> None:
+    """Select key ownership without an incidental String operation or iterator."""
+    fixture = CASE / "collector_minimal"
+    interpreted = run_bounded_process(
+        [development_tool("haxe"), "-cp", str(fixture), "-main", "Main", "--interp"],
+        cwd=ROOT, env=haxe_environment(), check=False,
+        capture_output=True, text=True, timeout=30,
+    )
+    if interpreted.returncode or interpreted.stdout or interpreted.stderr:
+        raise StringMapFailure(f"minimal collector map Eval failed: {interpreted.stdout}{interpreted.stderr}")
+    with tempfile.TemporaryDirectory(prefix="hxc-string-map-minimal-") as directory:
+        root = Path(directory)
+        output = root / "generated"
+        compiled = compile_haxe(fixture, output, layout="unity")
+        if compiled.returncode:
+            raise StringMapFailure(f"minimal collector map compile failed: {compiled.stdout}{compiled.stderr}")
+        sources = [*sorted((output / "runtime/src").glob("*.c")), *sorted((output / "src").rglob("*.c"))]
+        includes = [output / "include", output / "runtime/include"]
+        for toolchain in toolchains:
+            compile_and_run(toolchain.compiler, sources, includes, root / toolchain.family, ("-O2",))
+
+
+def check_collector_record(toolchains: list[Toolchain]) -> None:
+    """Keep map-owned graphs and independent snapshots alive, then reclaim them."""
+    interpreted = run_bounded_process(
+        [development_tool("haxe"), "-cp", str(COLLECTOR_RECORD), "-main", "Main", "--interp"],
+        cwd=ROOT, env=haxe_environment(), check=False,
+        capture_output=True, text=True, timeout=30,
+    )
+    if interpreted.returncode or interpreted.stdout or interpreted.stderr:
+        raise StringMapFailure(f"collector record Eval failed: {interpreted.stdout}{interpreted.stderr}")
+    with tempfile.TemporaryDirectory(prefix="hxc-string-map-collector-") as temporary:
+        root = Path(temporary)
+        output = root / "generated"
+        compiled = compile_haxe(COLLECTOR_RECORD, output, layout="unity")
+        if compiled.returncode:
+            raise StringMapFailure(f"collector record compile failed: {compiled.stdout}{compiled.stderr}")
+        reverse = root / "reverse"
+        reversed_compile = compile_haxe(COLLECTOR_RECORD, reverse, layout="unity", reverse=True)
+        if reversed_compile.returncode:
+            raise StringMapFailure(f"reversed collector record compile failed: {reversed_compile.stdout}{reversed_compile.stderr}")
+        if generated_tree(output) != generated_tree(reverse):
+            raise StringMapFailure("collector record output changed under reversed discovery")
+        runtime = sorted((output / "runtime/src").glob("*.c"))
+        sources = [*runtime, *sorted((output / "src").rglob("*.c"))]
+        includes = [output / "include", output / "runtime/include"]
+        for toolchain in toolchains:
+            for label, flags in (("o0", ("-O0",)), ("o2", ("-O2",))):
+                compile_and_run(toolchain.compiler, sources, includes, root / f"{toolchain.family}-{label}", flags)
+            if toolchain.family == "clang":
+                compile_and_run(toolchain.compiler, sources, includes, root / "sanitized", SANITIZER_FLAGS)
+        check_collector_observer(root, output, toolchains)
+
+
+def check_collector_observer(root: Path, output: Path, toolchains: list[Toolchain]) -> None:
+    """Observe real GC pressure, zero surviving allocations, and map allocation abort."""
+    symbols = json.loads((output / "hxc.symbols.json").read_text(encoding="utf-8"))
+    template = (CASE / "collector_observer.c.in").read_text(encoding="utf-8")
+    for marker, parts in (
+        ("@COLLECTOR@", ["program", "gc"]),
+        ("@THREAD@", ["program", "gc", "thread"]),
+        ("@ENTRY@", ["Main", "main"]),
+    ):
+        names = [entry.get("cName") for entry in symbols["symbols"] if entry.get("readableName") == parts]
+        if len(names) != 1 or not isinstance(names[0], str) or re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", names[0]) is None:
+            raise StringMapFailure(f"collector observer lost exact symbol {parts!r}")
+        template = template.replace(marker, names[0])
+    observer = root / "observer/main.c"
+    observer.parent.mkdir(exist_ok=True)
+    observer.write_text(template, encoding="utf-8")
+    sources = [*sorted((output / "runtime/src").glob("*.c")), observer]
+    includes = [output / "include", output / "runtime/include"]
+    for toolchain in toolchains:
+        variants = [("lifecycle", ("-O2",), 0), ("allocation-failure", ("-O0", "-DFIXTURE_FAIL_MAP_ALLOCATION=1"), 77)]
+        if toolchain.family == "clang":
+            variants.append(("sanitized", SANITIZER_FLAGS, 0))
+        for label, flags, expected_exit in variants:
+            executable = root / f"observer-{toolchain.family}-{label}"
+            command = [toolchain.compiler, *STRICT_FLAGS, *flags, *(f"-I{path}" for path in includes),
+                       *(str(path) for path in sources), "-o", str(executable)]
+            built = run_bounded_process(command, cwd=ROOT, check=False, capture_output=True, text=True, timeout=60)
+            if built.returncode or built.stdout or built.stderr:
+                raise StringMapFailure(f"collector observer compile failed: {built.stdout}{built.stderr}")
+            observed = run_bounded_process([str(executable)], cwd=ROOT, check=False, capture_output=True, text=True, timeout=30)
+            if observed.returncode != expected_exit or observed.stdout or observed.stderr:
+                raise StringMapFailure(f"collector observer {label} failed: exit={observed.returncode} {observed.stdout}{observed.stderr}")
 
 
 def compile_haxe(
@@ -893,6 +982,8 @@ def parse_args(argv: Iterable[str]) -> argparse.Namespace:
     parser.add_argument("--native-only", action="store_true")
     parser.add_argument("--direct-decision-only", action="store_true")
     parser.add_argument("--dispatch-owned-only", action="store_true")
+    parser.add_argument("--collector-record-only", action="store_true")
+    parser.add_argument("--collector-minimal-only", action="store_true")
     return parser.parse_args(list(argv))
 
 
@@ -900,6 +991,15 @@ def main(argv: Iterable[str] = ()) -> int:
     args = parse_args(argv)
     try:
         toolchains = resolve_toolchains(args.toolchain)
+        if args.collector_minimal_only:
+            check_collector_minimal(toolchains)
+            print("string-map: OK: minimal collector map key ownership passed")
+            return 0
+        if args.collector_record_only:
+            check_collector_minimal(toolchains)
+            check_collector_record(toolchains)
+            print("string-map: OK: collector record semantics, reclamation, and allocation failure")
+            return 0
         if args.dispatch_owned_only:
             check_dispatch_owned_map(toolchains)
             print(
@@ -916,6 +1016,8 @@ def main(argv: Iterable[str] = ()) -> int:
             return 0
         if not args.native_only:
             run_eval_oracle()
+            check_collector_minimal(toolchains)
+            check_collector_record(toolchains)
         run_native(toolchains, generated_haxe=not args.native_only)
     except (
         StringMapFailure,

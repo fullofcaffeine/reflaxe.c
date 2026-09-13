@@ -56,6 +56,11 @@ enum CSymbolVisibility {
 	enter the key.
  */
 class CSymbolRequest {
+	#if (macro || eval)
+	/** Match only ASCII control codes 0–31 and 127 through the native host's string scanner. */
+	static final controlCharacters = ~/[\x00-\x1F\x7F]/;
+	#end
+
 	public final kind:CSymbolKind;
 	public final qualifiedName:Array<String>;
 	public final namespace:CSymbolNamespace;
@@ -304,6 +309,9 @@ class CSymbolRequest {
 		return value.indexOf("/") != -1 || value.indexOf("\\") != -1;
 
 	static function containsControl(value:String):Bool {
+		#if (macro || eval)
+		return controlCharacters.match(value);
+		#else
 		for (index in 0...value.length) {
 			final code = value.charCodeAt(index);
 			if (code == null || code < 0x20 || code == 0x7F) {
@@ -311,6 +319,7 @@ class CSymbolRequest {
 			}
 		}
 		return false;
+		#end
 	}
 
 	static function internalFailure(detail:String):Void {

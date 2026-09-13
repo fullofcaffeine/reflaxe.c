@@ -360,6 +360,18 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
         )
 
     header = required_text(report, "header")
+    callback_record = header.find("struct hxc_CallbackPoint {\n")
+    callback_carrier = header.find(
+        "(*hxc_invoke)(void *, struct hxc_CallbackPoint)"
+    )
+    if (
+        callback_record == -1
+        or callback_carrier == -1
+        or callback_record > callback_carrier
+    ):
+        raise FunctionLoweringFailure(
+            "by-value callback carrier preceded its complete record declaration"
+        )
     program_source = sources["src/program.c"]
     mutual_left_source = sources["src/nonreturn_0000.c"]
     mutual_right_source = sources["src/nonreturn_0001.c"]
@@ -541,7 +553,7 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
         )
 
     functions = report.get("functions")
-    if not isinstance(functions, list) or len(functions) != 26:
+    if not isinstance(functions, list) or len(functions) != 29:
         raise FunctionLoweringFailure("function report omitted admitted functions")
     by_field = {
         entry.get("field"): entry
@@ -549,10 +561,12 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
         if isinstance(entry, dict) and isinstance(entry.get("field"), str)
     }
     if (
-        len(by_field) != 26
+        len(by_field) != 29
         or by_field.get("main", {}).get("parameters") != []
         or len(by_field.get("first", {}).get("parameters", [])) != 2
         or len(by_field.get("apply", {}).get("parameters", [])) != 2
+        or len(by_field.get("applyPoint", {}).get("parameters", [])) != 2
+        or len(by_field.get("pointValue", {}).get("parameters", [])) != 1
         or len(by_field.get("applyTwice", {}).get("parameters", [])) != 2
         or len(by_field.get("captureRoundTrip", {}).get("parameters", [])) != 1
         or len(by_field.get("mutateParameters", {}).get("parameters", [])) != 3

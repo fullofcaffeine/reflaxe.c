@@ -824,6 +824,22 @@ def assert_body_function_replay(
                 f"{label} body-function replay field {field} was "
                 f"{report.get(field)!r}, expected {value!r}: {report!r}"
             )
+    source_plan_hits = report.get("frontendSourcePlanHits")
+    source_plan_fallbacks = report.get("frontendSourcePlanFallbacks")
+    if (
+        not isinstance(source_plan_hits, int)
+        or source_plan_hits <= 0
+        or not isinstance(source_plan_fallbacks, int)
+        or source_plan_fallbacks < 0
+    ):
+        raise TypedAstProbeFailure(
+            f"{label} did not report bounded frontend source-plan reuse: {report!r}"
+        )
+    if enabled and source_plan_hits + source_plan_fallbacks != hits + misses:
+        raise TypedAstProbeFailure(
+            f"{label} source-plan accounting did not cover every resolved body: "
+            f"{report!r}"
+        )
     retained_input_units = report.get("retainedInputCodeUnits")
     retained_revision_units = report.get("retainedProgramRevisionCodeUnits")
     expect_retained_text = retained_functions > 0
@@ -1883,6 +1899,24 @@ def check_function_source_anchor_server() -> None:
         )
 
 
+def check_source_identity_snapshot() -> None:
+    """Check file identity lifetime with a small macro-only compilation."""
+    with tempfile.TemporaryDirectory(prefix="hxc-source-identity-") as temporary:
+        environment = os.environ.copy()
+        environment["HAXE_NO_SERVER"] = "1"
+        environment["HXC_PROVENANCE_PROBE_ROOT"] = temporary
+        process = run_bounded_process(
+            [development_tool("haxe"), "-cp", str(ROOT / "src"),
+             "-cp", str(FIXTURES / "provenance"),
+             "--macro", "SourceIdentityProbe.run()", "--no-output"],
+            cwd=ROOT, env=environment, capture_output=True, text=True, timeout=30,
+        )
+        if process.returncode != 0 or process.stdout.strip() != "HXC_SOURCE_IDENTITY_OK":
+            raise TypedAstProbeFailure(
+                f"source identity snapshot failed\n{process.stdout}\n{process.stderr}"
+            )
+
+
 def main() -> int:
     try:
         arguments = sys.argv[1:]
@@ -1890,17 +1924,23 @@ def main() -> int:
             check_backend_invalidation_catalog()
         elif arguments == ["--source-anchor-only"]:
             check_function_source_anchor_server()
+        elif arguments == ["--source-identity-only"]:
+            check_source_identity_snapshot()
         elif not arguments:
+            check_source_identity_snapshot()
             check_expected_snapshot()
             check_compiler_server_isolation()
             check_compiler_server_rebuild_inventory()
         else:
             raise TypedAstProbeFailure(
-                "usage: test/typed_ast/run.py [--invalidation-matrix|--source-anchor-only]"
+                "usage: test/typed_ast/run.py [--invalidation-matrix|--source-anchor-only|--source-identity-only]"
             )
     except (OSError, json.JSONDecodeError, subprocess.TimeoutExpired, TypedAstProbeFailure) as error:
         print(f"typed-ast: ERROR: {error}", file=os.sys.stderr)
         return 1
+    if sys.argv[1:] == ["--source-identity-only"]:
+        print("typed-ast: OK: request-local file identity and changed-source positions")
+        return 0
     if sys.argv[1:] == ["--invalidation-matrix"]:
         print(
             "typed-ast: OK: warm static initialization, hierarchy/dispatch, "

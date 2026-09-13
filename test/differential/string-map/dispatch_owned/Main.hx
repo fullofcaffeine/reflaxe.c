@@ -27,8 +27,8 @@ private final class ItemTable {
 	public function set(key:String, value:ItemId):Void
 		values.set(key, value);
 
-	/** Return an owned optional view without exposing the map representation. */
-	public function get(key:String):Null<ItemId>
+	/** Inlining must preserve StringMap ownership through Haxe's generic map view. */
+	public inline function get(key:String):Null<ItemId>
 		return values.get(key);
 }
 

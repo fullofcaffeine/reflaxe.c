@@ -12,7 +12,10 @@ import reflaxe.c.ir.HxcIR;
 import reflaxe.c.ir.HxcSourceSpan;
 import reflaxe.c.lowering.CBodyAggregate.CBodyValueKind;
 import reflaxe.c.lowering.CBodyAggregate.CBodyValueType;
+import reflaxe.c.lowering.CBodyAggregate.CBodyAggregateRegistry;
 import reflaxe.c.lowering.CBodyEmissionError;
+import reflaxe.c.lowering.CBodyStringMap.CBodyStringMapRegistry;
+import reflaxe.c.lowering.CBodyIterator.CPreparedBodyIterator;
 import reflaxe.c.naming.CSymbolRegistry;
 import reflaxe.c.naming.CSymbolRequest;
 
@@ -32,6 +35,23 @@ class CBodyTypedMap {
 enum CBodyTypedMapFamily {
 	CBTMObject;
 	CBTMEnumValue;
+
+	/** UTF-8 String equality with collector-bearing record values. */
+	CBTMString;
+}
+
+/** Exact copy/destroy callbacks shared by map slots and their iterator snapshots. */
+typedef CPreparedMapLifetime = {
+	final value:CBodyValueType;
+	final copy:CSymbolRequest;
+	final destroy:CSymbolRequest;
+}
+
+/** Final identifiers retain the same exact value type as the prepared policy. */
+typedef CLoweredMapLifetime = {
+	final value:CBodyValueType;
+	final copy:CIdentifier;
+	final destroy:CIdentifier;
 }
 
 /** Maps a key or value through the ordinary exact body-value boundary. */
@@ -53,6 +73,9 @@ class CPreparedBodyTypedMap {
 	public final equalRequest:CSymbolRequest;
 	public final keyTraceRequest:Null<CSymbolRequest>;
 	public final valueTraceRequest:Null<CSymbolRequest>;
+
+	/** Registered before symbol finalization; absent for existing scalar map families. */
+	public final lifetimes:Array<CPreparedMapLifetime> = [];
 
 	/** Preserve the complete typed policy selected by the registry. */
 	public function new(family:CBodyTypedMapFamily, semanticKey:String, digest:String, key:CBodyValueType, value:CBodyValueType, ownerModule:String,
@@ -79,6 +102,7 @@ class CPreparedBodyTypedMap {
 		return switch family {
 			case CBTMObject: "object-map";
 			case CBTMEnumValue: "enum-value-map";
+			case CBTMString: "gc-string-map";
 		};
 
 	/** Describe one shared mutable Haxe map object. */
@@ -108,15 +132,17 @@ class CLoweredBodyTypedMap {
 	public final equalName:CIdentifier;
 	public final keyTraceName:Null<CIdentifier>;
 	public final valueTraceName:Null<CIdentifier>;
+	public final lifetimes:Array<CLoweredMapLifetime>;
 
 	/** Join one semantic plan with collision-safe C identifiers. */
 	public function new(prepared:CPreparedBodyTypedMap, hashName:CIdentifier, equalName:CIdentifier, keyTraceName:Null<CIdentifier>,
-			valueTraceName:Null<CIdentifier>) {
+			valueTraceName:Null<CIdentifier>, ?lifetimes:Array<CLoweredMapLifetime>) {
 		this.prepared = prepared;
 		this.hashName = hashName;
 		this.equalName = equalName;
 		this.keyTraceName = keyTraceName;
 		this.valueTraceName = valueTraceName;
+		this.lifetimes = lifetimes == null ? [] : lifetimes;
 	}
 }
 
@@ -188,6 +214,87 @@ class CBodyTypedMapRegistry {
 		return prepared;
 	}
 
+	/**
+		Reuse the collector table for StringMap records with traced children.
+		Ordinary StringMaps keep their existing smaller reference-counted carrier.
+		Key comparison remains UTF-8 value equality, never object identity.
+	**/
+	public function collectorStringMapType(type:Type, position:Position, ownerModule:String, sourcePath:String, fail:(Position, String) -> Void,
+			node:String):Null<CPreparedBodyTypedMap> {
+		final parameters = CBodyStringMapRegistry.mapParameters(type);
+		if (parameters == null || parameters.length != 2 || CBodyAggregateRegistry.staticStringIdentity(parameters[0]) == null)
+			return null;
+		final value = resolveValue(parameters[1], position, ownerModule, sourcePath, fail, '$node.StringMap-value');
+		if (value.aggregateValue() == null)
+			return null;
+		final key = resolveValue(parameters[0], position, ownerModule, sourcePath, fail, '$node.StringMap-key');
+		final semanticKey = 'haxe-gc-string-map-v1(${canonicalPart(key.cSpelling)},${canonicalPart(value.cSpelling)})';
+		final existing = bySemanticKey.get(semanticKey);
+		if (existing != null)
+			return existing;
+		if (!CBodyStringMapRegistry.collectorRecord(value, parameters[1]))
+			return null;
+		final digest = Sha256.encode(semanticKey);
+		final root = ["compiler", "gc-string-map", digest];
+		final hash = callbackRequest(root, "hash", 0);
+		final equal = callbackRequest(root, "equal", 1);
+		final trace = callbackRequest(root, "value-trace", 2);
+		for (request in [hash, equal, trace])
+			context.symbols.register(request);
+		final prepared = new CPreparedBodyTypedMap(CBTMString, semanticKey, digest, key, value, ownerModule,
+			HaxeSourceSpan.fromPosition(position, sourcePath), position, hash, equal, null, trace);
+		bySemanticKey.set(semanticKey, prepared);
+		registerLifetime(prepared, key);
+		registerLifetime(prepared, value);
+		return prepared;
+	}
+
+	/** Snapshot callbacks own their values after the source map is cleared or collected. */
+	public function completeStringLifetimes(iterators:Array<CPreparedBodyIterator>):Void {
+		for (map in canonicalMaps())
+			if (map.family == CBTMString) {
+				for (iterator in iterators) {
+					final element = iterator.element;
+					if (element.cSpelling == map.key.cSpelling || element.cSpelling == map.value.cSpelling) {
+						registerLifetime(map, element);
+						continue;
+					}
+					final pair = element.aggregateValue();
+					if (pair == null || pair.fields.length != 2)
+						continue;
+					var key = false;
+					var value = false;
+					for (field in pair.fields) {
+						if (field.name == "key" && field.type.cSpelling == map.key.cSpelling)
+							key = true;
+						if (field.name == "value" && field.type.cSpelling == map.value.cSpelling)
+							value = true;
+					}
+					if (key && value)
+						registerLifetime(map, element);
+				}
+			}
+	}
+
+	/** Register each exact carrier once; no callback retains a collector pointer. */
+	function registerLifetime(map:CPreparedBodyTypedMap, value:CBodyValueType):Void {
+		for (entry in map.lifetimes)
+			if (entry.value.cSpelling == value.cSpelling)
+				return;
+		final root = [
+			"compiler",
+			"gc-string-map",
+			map.digest,
+			"lifetime",
+			Sha256.encode(value.cSpelling)
+		];
+		final copy = callbackRequest(root, "copy", 0);
+		final destroy = callbackRequest(root, "destroy", 1);
+		context.symbols.register(copy);
+		context.symbols.register(destroy);
+		map.lifetimes.push({value: value, copy: copy, destroy: destroy});
+	}
+
 	/** Return stable specialization order for HxcIR and C planning. */
 	public function canonicalMaps():Array<CPreparedBodyTypedMap> {
 		final values = [for (value in bySemanticKey) value];
@@ -198,11 +305,17 @@ class CBodyTypedMapRegistry {
 	/** Finalize every program-local callback name after global collision checks. */
 	public function finalize(symbols:CSymbolRegistry):Array<CLoweredBodyTypedMap>
 		return canonicalMaps().map(value -> new CLoweredBodyTypedMap(value, symbols.identifierFor(value.hashRequest),
-			symbols.identifierFor(value.equalRequest), identifierOrNull(symbols, value.keyTraceRequest), identifierOrNull(symbols, value.valueTraceRequest)));
+			symbols.identifierFor(value.equalRequest), identifierOrNull(symbols, value.keyTraceRequest), identifierOrNull(symbols, value.valueTraceRequest),
+			value.lifetimes.map(entry -> {
+				value: entry.value,
+				copy: symbols.identifierFor(entry.copy),
+				destroy: symbols.identifierFor(entry.destroy)
+			})));
 
 	static function keyRejection(family:CBodyTypedMapFamily, key:CBodyValueType):Null<String>
 		return switch family {
 			case CBTMObject: key.classValue() != null && key.ownedClassValue() == null ? null : key.cSpelling;
+			case CBTMString: key.staticStringIdentity() != null ? null : key.cSpelling;
 			case CBTMEnumValue:
 				final value = key.enumValue();
 				value == null ? key.cSpelling : enumKeyRejection(value, []);
@@ -305,6 +418,7 @@ class CBodyTypedMapRegistry {
 		return switch family {
 			case CBTMObject: "object-map";
 			case CBTMEnumValue: "enum-value-map";
+			case CBTMString: "gc-string-map";
 		};
 
 	static function canonicalPart(value:String):String {
@@ -377,6 +491,9 @@ class CBodyTypedMapRecognition {
 
 	static function familyForKeyType(type:Type):Null<CBodyTypedMapFamily>
 		return switch TypeTools.follow(type) {
+			// Core String has a class type in Haxe, but map keys compare its value.
+			// Its inlined IMap view belongs to StringMap, not object identity maps.
+			case TInst(reference, _) if (reference.get().pack.length == 0 && reference.get().name == "String"): null;
 			case TInst(reference, _) if (!reference.get().isInterface): CBTMObject;
 			case TEnum(_, _): CBTMEnumValue;
 			case _: null;

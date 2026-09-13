@@ -193,6 +193,8 @@ EXPECTED_PLAY_RUNTIME_FEATURES = (
     "object",
     "gc",
     "iterator",
+    "typed-map",
+    "gc-string-map",
     "int-map",
     "io",
     "string-float",
@@ -2275,6 +2277,7 @@ def compile_haxe(
     benchmark_renderer: bool = False,
     server_lease: HaxeServerLease | None = None,
     server_owner: OwnedHaxeServer | None = None,
+    haxe_timeout_seconds: int = 120,
 ) -> dict[str, object]:
     if raylib_configuration not in RAYLIB_CONFIGURATIONS:
         raise PlayFailure(f"unknown Raylib configuration {raylib_configuration!r}")
@@ -2325,7 +2328,7 @@ def compile_haxe(
                 *arguments,
             ],
             cwd=ROOT,
-            timeout=120,
+            timeout=haxe_timeout_seconds,
             label="Caxecraft Haxe-to-C compile",
         )
     else:
@@ -2347,7 +2350,7 @@ def compile_haxe(
                     check=False,
                     capture_output=True,
                     text=True,
-                    timeout=120,
+                    timeout=haxe_timeout_seconds,
                 )
             except subprocess.TimeoutExpired as error:
                 suffix = compiler_timeout_suffix(
@@ -2949,9 +2952,10 @@ def validate_generated_playable(
     # conversation panel adds one checked legacy-entity portrait path and one
     # manifest-owned runtime-atlas portrait path. Runtime loops still reuse
     # those fixed sites; campaign rows and dialogue lines add no texture owner.
-    if draw_texture_count != 11:
+    # The editor's atlas preview adds one shared site for its object icons.
+    if draw_texture_count != 12:
         raise PlayFailure(
-            f"generated Caxecraft sources contain {draw_texture_count} direct DrawTexturePro call sites; expected 11"
+            f"generated Caxecraft sources contain {draw_texture_count} direct DrawTexturePro call sites; expected 12"
         )
     billboard_count = combined.count("DrawBillboardRec(")
     # Actors and entity-backed stateful objects share one explicit 4x5 entity
@@ -3978,6 +3982,12 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
         help="existing host:port accepted only with --haxe-server attach",
     )
     parser.add_argument(
+        "--haxe-timeout-seconds",
+        type=int,
+        default=120,
+        help="bounded Haxe-to-C timeout for unusually slow hosts (default: 120)",
+    )
+    parser.add_argument(
         "--stop-haxe-server",
         action="store_true",
         help="stop only the exact auto-owned server recorded for this worktree",
@@ -4044,6 +4054,8 @@ def main(argv: list[str]) -> int:
             os.environ["HAXE_NO_SERVER"] = "1"
         if args.native_jobs < 1 or args.native_jobs > 32:
             raise PlayFailure("--native-jobs must be between 1 and 32")
+        if args.haxe_timeout_seconds < 1 or args.haxe_timeout_seconds > 600:
+            raise PlayFailure("--haxe-timeout-seconds must be between 1 and 600")
         if args.validate_only and not args.content_feedback:
             raise PlayFailure("--validate-only is available only with --content-feedback")
         if args.agent_session and (args.content_feedback or args.smoke or args.pilot is not None):
@@ -4275,6 +4287,7 @@ def main(argv: list[str]) -> int:
                     benchmark_renderer=args.benchmark_renderer,
                     server_lease=server_lease,
                     server_owner=server_owner,
+                    haxe_timeout_seconds=args.haxe_timeout_seconds,
                 )
                 generation = finalize_transaction(output_root, transaction)
                 generation = publish_pointer(output_root, generation)

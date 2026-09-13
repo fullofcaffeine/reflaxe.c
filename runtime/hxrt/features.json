@@ -715,6 +715,42 @@
         "referencePath": "docs/hxrt.md",
         "selectionRoots": [
           {
+            "description": "A reachable StringMap operation whose record value contains collector-managed children.",
+            "id": "gc-string-map-operation",
+            "kind": "hxc-ir-operation"
+          }
+        ],
+        "runtimeRationale": "The existing typed-map runtime owns storage and collection. Generated callbacks own String equality and each exact value's tracing and cleanup.",
+        "evidence": [
+          "test/differential/string-map/run.py",
+          "test/runtime/runtime-feature-graph/run.py"
+        ],
+        "directAlternative": "Maps whose values need no collector retain the ordinary reference-counted StringMap representation.",
+        "contract": "Keeps collector-managed children alive through map slots and iterator snapshots while preserving UTF-8 key equality.",
+        "programLocalAlternative": "A bounded table specialization must preserve key equality, shared map identity, exact roots, and failure-atomic mutation."
+      },
+      "dependencies": [
+        "string",
+        "typed-map"
+      ],
+      "id": "gc-string-map",
+      "availability": "compiler-selectable",
+      "symbols": [],
+      "artifacts": [],
+      "libraries": [],
+      "minimalAllowed": true,
+      "summary": "String-keyed maps with precisely traced record values.",
+      "defines": [],
+      "environments": [
+        "freestanding",
+        "hosted"
+      ]
+    },
+    {
+      "documentation": {
+        "referencePath": "docs/hxrt.md",
+        "selectionRoots": [
+          {
             "description": "A reachable admitted construction, copy, insertion, lookup, membership, removal, or clear operation.",
             "id": "int-map-operation",
             "kind": "hxc-ir-operation"
@@ -1790,6 +1826,7 @@
     "enum-value-map",
     "exception",
     "gc",
+    "gc-string-map",
     "int-map",
     "io",
     "iterator",

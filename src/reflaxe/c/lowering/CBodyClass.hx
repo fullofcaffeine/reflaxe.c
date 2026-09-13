@@ -664,7 +664,7 @@ class CBodyClassRegistry {
 		visitedEnums.set(enumValue.instanceId, true);
 		for (tagCase in enumValue.cases)
 			for (payload in tagCase.payload)
-				if (!payload.indirect && markCollectorClasses(payload.valueType, visitedEnums, ownedClasses))
+				if (markCollectorClasses(payload.valueType, visitedEnums, ownedClasses))
 					changed = true;
 		return changed;
 	}
@@ -764,6 +764,10 @@ class CBodyClassRegistry {
 	}
 
 	static function containsManagedReference(value:CBodyValueType, visitedEnums:Map<String, Bool>):Bool {
+		// A collected map is an exact graph edge even when its keys are Strings.
+		// The containing class must trace it after constructor-local roots end.
+		if (value.typedMapValue() != null)
+			return true;
 		final classValue = value.classValue();
 		if (classValue != null)
 			return classValue.managedByCollector;

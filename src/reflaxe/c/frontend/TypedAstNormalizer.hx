@@ -17,13 +17,14 @@ import reflaxe.c.frontend.TypedFunctionSourceProvenance;
 /** Converts Haxe compiler objects into a stable whole-program input model. */
 class TypedAstNormalizer {
 	public static function normalize(moduleTypes:Array<ModuleType>, mainModule:Null<ModuleType>, mainExpr:Null<TypedExpr>):TypedProgramInput {
+		final functionSources = new TypedFunctionSourceProvenance();
 		final rawModules = moduleTypes.copy();
 		rawModules.sort(compareModuleTypes);
 
 		final declarations:Array<TypedAstDeclaration> = [];
 		final expressionRoots:Array<TypedAstExpressionRoot> = [];
 		for (moduleType in rawModules) {
-			final declaration = normalizeDeclaration(moduleType, expressionRoots);
+			final declaration = normalizeDeclaration(moduleType, expressionRoots, functionSources);
 			declarations.push(declaration);
 		}
 		declarations.sort((left, right) -> compareStrings(declarationKey(left), declarationKey(right)));
@@ -58,7 +59,7 @@ class TypedAstNormalizer {
 				modulePath: mainModulePath,
 				declarationPath: mainDeclarationPath,
 				expression: mainExpr,
-				target: captureEntryFunction(mainExpr)
+				target: captureEntryFunction(mainExpr, functionSources)
 			};
 			expressionRoots.push({
 				sourceOrder: 0,
@@ -74,7 +75,7 @@ class TypedAstNormalizer {
 		return new TypedProgramInput(modules, declarations, expressionRoots, entryPoint, rawModules, NamedRecordSourceProvenance.plan(declarations));
 	}
 
-	static function captureEntryFunction(expression:TypedExpr):Null<TypedAstEntryFunction> {
+	static function captureEntryFunction(expression:TypedExpr, functionSources:TypedFunctionSourceProvenance):Null<TypedAstEntryFunction> {
 		return switch expression.expr {
 			case TCall({expr: TField(_, FStatic(classReference, fieldReference))}, arguments) if (arguments.length == 0):
 				final owner = classReference.get();
@@ -83,6 +84,7 @@ class TypedAstNormalizer {
 				if (field.name != "main" || fieldExpression == null) {
 					null;
 				} else {
+					final sourcePlan = functionSources.plan(declarationPath(owner), field.name, field.pos, fieldExpression);
 					final staticFields = owner.statics.get();
 					var sourceOrder = 0;
 					for (index in 0...staticFields.length) {
@@ -104,15 +106,17 @@ class TypedAstNormalizer {
 						fieldType: field.type,
 						expression: fieldExpression,
 						declarationPosition: field.pos,
-						sourcePositionOverrides: TypedFunctionSourceProvenance.plan(declarationPath(owner), field.name, field.pos, fieldExpression)
+						sourcePositionOverrides: sourcePlan.positionOverrides,
+						functionSourcePlan: sourcePlan
 					};
 				}
-			case TParenthesis(inner) | TMeta(_, inner) | TCast(inner, _): captureEntryFunction(inner);
+			case TParenthesis(inner) | TMeta(_, inner) | TCast(inner, _): captureEntryFunction(inner, functionSources);
 			case _: null;
 		};
 	}
 
-	static function normalizeDeclaration(moduleType:ModuleType, expressionRoots:Array<TypedAstExpressionRoot>):TypedAstDeclaration {
+	static function normalizeDeclaration(moduleType:ModuleType, expressionRoots:Array<TypedAstExpressionRoot>,
+			functionSources:TypedFunctionSourceProvenance):TypedAstDeclaration {
 		final base = baseType(moduleType);
 		final path = declarationPath(base);
 		final fields:Array<TypedAstField> = [];
@@ -132,14 +136,14 @@ class TypedAstNormalizer {
 				isAbstract = classType.isAbstract;
 				final memberFields = classType.fields.get();
 				for (index in 0...memberFields.length) {
-					fields.push(normalizeClassField(memberFields[index], "member", index, base.module, path, expressionRoots));
+					fields.push(normalizeClassField(memberFields[index], "member", index, base.module, path, expressionRoots, functionSources));
 				}
 				final staticFields = classType.statics.get();
 				for (index in 0...staticFields.length) {
-					fields.push(normalizeClassField(staticFields[index], "static", index, base.module, path, expressionRoots));
+					fields.push(normalizeClassField(staticFields[index], "static", index, base.module, path, expressionRoots, functionSources));
 				}
 				if (classType.constructor != null) {
-					fields.push(normalizeClassField(classType.constructor.get(), "constructor", 0, base.module, path, expressionRoots));
+					fields.push(normalizeClassField(classType.constructor.get(), "constructor", 0, base.module, path, expressionRoots, functionSources));
 				}
 				if (classType.init != null) {
 					expressionRoots.push({
@@ -192,7 +196,7 @@ class TypedAstNormalizer {
 	}
 
 	static function normalizeClassField(field:ClassField, role:String, sourceOrder:Int, ownerModulePath:String, ownerDeclarationPath:String,
-			expressionRoots:Array<TypedAstExpressionRoot>):TypedAstField {
+			expressionRoots:Array<TypedAstExpressionRoot>, functionSources:TypedFunctionSourceProvenance):TypedAstField {
 		final expression = field.expr();
 		if (expression != null) {
 			expressionRoots.push({
@@ -204,9 +208,9 @@ class TypedAstNormalizer {
 				expression: expression
 			});
 		}
-		final sourcePositionOverrides:Map<String, haxe.macro.Expr.Position> = expression == null ? [] : switch expression.expr {
-			case TFunction(_): TypedFunctionSourceProvenance.plan(ownerDeclarationPath, field.name, field.pos, expression);
-			case _: [];
+		final functionSourcePlan = expression == null ? null : switch expression.expr {
+			case TFunction(_): functionSources.plan(ownerDeclarationPath, field.name, field.pos, expression);
+			case _: null;
 		};
 		return {
 			sourceOrder: sourceOrder,
@@ -219,7 +223,8 @@ class TypedAstNormalizer {
 			isExtern: field.isExtern == true,
 			metadata: normalizeMetadata(field.meta.get()),
 			expression: expression,
-			sourcePositionOverrides: sourcePositionOverrides,
+			sourcePositionOverrides: functionSourcePlan == null ? [] : functionSourcePlan.positionOverrides,
+			functionSourcePlan: functionSourcePlan,
 			rawClassField: field,
 			rawEnumField: null
 		};
@@ -238,6 +243,7 @@ class TypedAstNormalizer {
 			metadata: normalizeMetadata(field.meta.get()),
 			expression: null,
 			sourcePositionOverrides: [],
+			functionSourcePlan: null,
 			rawClassField: null,
 			rawEnumField: field
 		};

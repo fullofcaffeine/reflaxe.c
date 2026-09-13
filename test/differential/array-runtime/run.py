@@ -2155,9 +2155,48 @@ def run_to_string_lane(toolchains: list[Toolchain]) -> None:
             )
 
 
+def run_reference_comparison_lane(toolchains: list[Toolchain]) -> None:
+    """Check fresh comparison operands against Eval and count native cleanup."""
+    fixture = CASE / "generated-reference-comparison"
+    oracle = run_bounded_process(
+        [development_tool("haxe"), "-cp", str(fixture), "-main", "Main", "--interp"],
+        cwd=ROOT, env=haxe_environment(), check=False,
+        capture_output=True, text=True, timeout=30,
+    )
+    if oracle.returncode or oracle.stdout or oracle.stderr:
+        raise ArrayRuntimeFailure(f"reference comparison Eval failed: {oracle.stdout}{oracle.stderr}")
+    with tempfile.TemporaryDirectory(prefix="hxc-array-reference-comparison-") as directory:
+        root = Path(directory)
+        generated = root / "generated"
+        result = compile_generated_haxe(fixture, generated, layout="unity")
+        if result.returncode:
+            raise ArrayRuntimeFailure(f"reference comparison compile failed: {result.stdout}{result.stderr}")
+        observer = root / "observer/main.c"
+        observer.parent.mkdir()
+        observer.write_text((CASE / "reference_comparison_observer.c.in").read_text(encoding="utf-8"), encoding="utf-8")
+        sources = [*sorted((generated / "runtime/src").glob("*.c")), observer]
+        for toolchain in toolchains:
+            variants = [("o0", ("-O0",)), ("o2", ("-O2",))]
+            if toolchain.family == "clang":
+                variants.append(("sanitized", SANITIZER_FLAGS))
+            for label, flags in variants:
+                executable = root / f"{toolchain.family}-{label}"
+                command = [toolchain.compiler, *GENERATED_STRICT_FLAGS, *flags,
+                           f"-I{generated / 'include'}", f"-I{generated / 'runtime/include'}",
+                           *(str(source) for source in sources), "-o", str(executable)]
+                built = run_bounded_process(command, cwd=ROOT, check=False, capture_output=True, text=True, timeout=60)
+                if built.returncode or built.stdout or built.stderr:
+                    raise ArrayRuntimeFailure(f"reference comparison native compile failed: {built.stdout}{built.stderr}")
+                observed = run_bounded_process([str(executable)], cwd=ROOT, check=False, capture_output=True, text=True, timeout=30)
+                if observed.returncode or observed.stdout or observed.stderr:
+                    raise ArrayRuntimeFailure(f"reference comparison {label} failed: exit={observed.returncode} {observed.stdout}{observed.stderr}")
+
+
 def parse_args(argv: Iterable[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--toolchain", choices=("auto", *TOOLCHAINS), default="auto")
+    parser.add_argument("--reference-comparison-only", action="store_true",
+                        help="check fresh Array comparison values and native cleanup")
     parser.add_argument(
         "--native-only",
         action="store_true",
@@ -2190,12 +2229,19 @@ def main(argv: Iterable[str] = ()) -> int:
                 args.function_values_only,
                 args.to_string_only,
                 args.collection_cycles_only,
+                args.reference_comparison_only,
             )
         )
         if focused > 1:
             raise ArrayRuntimeFailure(
                 "choose only one focused Array lane"
             )
+        if args.reference_comparison_only:
+            if args.native_only:
+                raise ArrayRuntimeFailure("--reference-comparison-only requires generated Haxe")
+            run_reference_comparison_lane(toolchains)
+            print("array-runtime: OK: fresh reference comparison Eval, native and cleanup checks passed")
+            return 0
         if args.collection_cycles_only:
             if args.native_only:
                 raise ArrayRuntimeFailure(
@@ -2244,6 +2290,7 @@ def main(argv: Iterable[str] = ()) -> int:
         if not args.native_only:
             run_function_array_lane(toolchains)
             run_collection_cycle_lane(toolchains)
+            run_reference_comparison_lane(toolchains)
     except (
         OSError,
         UnicodeError,

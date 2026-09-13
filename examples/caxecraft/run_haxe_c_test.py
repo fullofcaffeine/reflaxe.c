@@ -839,6 +839,8 @@ CASES = {
             "object",
             "gc",
             "iterator",
+            "typed-map",
+            "gc-string-map",
             "int-map",
             "string-map",
             "string-split",
