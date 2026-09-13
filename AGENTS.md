@@ -41,6 +41,25 @@ bd close <id>         # Complete work
 npm run beads:push     # Scan current records and push Beads data
 ```
 
+## Haxe compiler fork ownership
+
+- Keep the pinned, released Haxe compiler sufficient for the normal game and
+  editor build. Fix reusable problems in haxe.c, Reflaxe, or their build tools
+  when those layers can own a correct solution.
+- Keep custom Haxe builds as separate experiments. Do not install, pin, or make
+  one a product prerequisite without an explicit change to this requirement.
+- Use the requester-owned `fullofcaffeine/haxe` fork for Haxe compiler changes,
+  branches, pull requests, issues, and review requests.
+- Never push or submit pull requests, issues, comments, or review requests to
+  the original `HaxeFoundation/haxe` repository. Read-only upstream inspection
+  is allowed.
+- Before publishing Haxe work, verify that the target repository is
+  `fullofcaffeine/haxe`. A branch in the fork does not make a pull request to
+  the original repository acceptable.
+- This rule overrides older upstream handoffs, task notes, and publication
+  plans. A generic instruction such as "continue" does not authorize a
+  submission to the original repository.
+
 ## Commit Messages
 
 - Treat a verified task boundary as a Git boundary. After the owning Beads

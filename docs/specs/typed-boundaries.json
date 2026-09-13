@@ -86,6 +86,21 @@
       ]
     },
     {
+      "path": "test/arithmetic_semantics/fixtures/ArithmeticFixture.hx",
+      "line": 119,
+      "column": 19,
+      "construct": "unchecked-cast",
+      "boundaryKind": "language-semantics-fixture",
+      "symbol": "ArithmeticFixture.intQuotientThroughFloatCast",
+      "typedModel": "Float expression and validated HxcIR arithmetic operations",
+      "sourceLine": "return Std.int((cast(value / 8) : Float));",
+      "justification": "The fixture needs a real cast node to check that cast-wrapped division stays outside the direct integer-division proof. The operand already has type Float; the cast introduces no foreign value.",
+      "validation": "The arithmetic suite requires the general floating division operation in HxcIR. Its strict native harness independently checks that input 47 returns 5.",
+      "testEvidence": [
+        "test/arithmetic_semantics/run.py"
+      ]
+    },
+    {
       "path": "test/diagnostics/DiagnosticGolden.hx",
       "line": 45,
       "column": 27,
@@ -111,6 +126,21 @@
       "sourceLine": "private typedef ReferenceDynamic = Dynamic;",
       "justification": "The differential fixture must use the real Haxe Dynamic type so Eval and generated C exercise the same boxes, casts, member operations, calls, equality, null, and type-value behavior.",
       "validation": "One private alias contains the untyped spelling; the Dynamic differential compares Eval with strict native C, checks forced-collection ownership, verifies closed numeric adapters, and rejects unsupported shapes without output.",
+      "testEvidence": [
+        "test/differential/dynamic-runtime/run.py"
+      ]
+    },
+    {
+      "path": "test/differential/dynamic-runtime/negative/arithmetic/Main.hx",
+      "line": 11,
+      "column": 19,
+      "construct": "dynamic-type",
+      "boundaryKind": "negative-test",
+      "symbol": "Main.main.numerator",
+      "typedModel": "CBodyValueType and validated HxcIR primitive operations",
+      "sourceLine": "final numerator:Dynamic = 47;",
+      "justification": "The fixture needs a real Dynamic operand to prove that runtime-typed division cannot enter the signed-Int optimization. Replacing it with Int would remove the rejecting case.",
+      "validation": "The Dynamic differential requires source-positioned HXC1001 with the exact unsupported division marker. It also requires that no generated output remains.",
       "testEvidence": [
         "test/differential/dynamic-runtime/run.py"
       ]
