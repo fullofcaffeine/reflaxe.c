@@ -721,8 +721,8 @@
       "area": "compiler",
       "status": "implemented",
       "disposition": "available",
-      "summary": "Hosted Sys.println accepts statically typed String values, while default trace accepts compiler-known literals; both preserve exact UTF-8/NUL bytes and explicit output failure handling.",
-      "scope": "Portable auto and metal builds lower hosted output through HxcIR. Literal-only output keeps the minimal runtime-base/status/string-literal/io closure; a runtime-created String retains its exact String dependencies and is released on success or output failure.",
+      "summary": "Hosted Sys.println accepts String, Int, Bool, Float, and String-valued conditionals; default trace accepts compiler-known literals. Output preserves exact UTF-8/NUL bytes and explicit failure handling.",
+      "scope": "Portable auto and metal builds lower hosted output through HxcIR. Literal and Bool output keep the minimal runtime-base/status/string-literal/io closure. Scalar formatting reuses typed Std.string conversions; fresh text is released on success or output failure.",
       "evidence": [
         "docs/specs/stdlib-ledger.json",
         "runtime/hxrt/include/hxrt/io.h",
@@ -732,13 +732,14 @@
         "test/string_output/expected/program.c",
         "test/string_output/expected/runtime-plan.json",
         "test/string_output/fixtures/nonliteral/Main.hx",
-        "test/string_output/run.py"
+        "test/string_output/run.py",
+        "test/differential/sys-println/case.json"
       ],
       "owners": [
         "E2.T07"
       ],
       "limitations": [
-        "Sys.println still rejects values that are not statically typed String; Dynamic formatting, Sys.print, runtime default trace, custom trace parameters, and trace rebinding remain fail-closed boundaries.",
+        "Actual Dynamic values, mixed-type conditionals, other formatting categories, Sys.print, runtime default trace, custom trace parameters, and trace rebinding remain fail-closed boundaries.",
         "The feature is hosted-only and does not establish general standard-library, platform, release, or public runtime ABI support."
       ]
     },
@@ -1248,7 +1249,7 @@
       "status": "unsupported",
       "disposition": "fails-closed",
       "summary": "General Haxe standard-library parity is not implemented.",
-      "scope": "Only exact compiler-recognized slices are covered: Std.int; Std.string for statically typed Bool, Int, and hosted Float values, including interpolation through the same typed conversions, plus identity conversion for values already typed as String; statically typed String Sys.println and compiler-known literal default trace in hosted builds; bounded haxe.io.Bytes alloc, ofString, length, get, set, sub, blit, fill, and compare; String charAt, charCodeAt, fromCharCode, indexOf, lastIndexOf, length, split, and substring; and the StringBuf type, constructor, addChar, and toString path.",
+      "scope": "Only exact compiler-recognized slices are covered: Std.int; Std.string for statically typed Bool, Int, and hosted Float values, including interpolation through the same typed conversions, plus identity conversion for values already typed as String; String/Int/Bool/Float and String-conditional Sys.println and compiler-known literal default trace in hosted builds; bounded haxe.io.Bytes alloc, ofString, length, get, set, sub, blit, fill, and compare; String charAt, charCodeAt, fromCharCode, indexOf, lastIndexOf, length, split, and substring; and the StringBuf type, constructor, addChar, and toString path.",
       "evidence": [
         "docs/specs/stdlib-ledger.json",
         "test/arithmetic_semantics/run.py",

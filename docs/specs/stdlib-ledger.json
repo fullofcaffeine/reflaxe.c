@@ -5458,7 +5458,8 @@
       "owner": "direct-compiler-lowering",
       "runtimeFeatures": [
         "io",
-        "string"
+        "string",
+        "string-float"
       ],
       "profiles": [
         "portable",
@@ -5478,9 +5479,10 @@
         "test/string_output/fixtures/positive/Main.hx",
         "test/string_output/fixtures/nonliteral/Main.hx",
         "test/string_output/fixtures/nonstring/Main.hx",
-        "test/string_output/run.py"
+        "test/string_output/run.py",
+        "test/differential/sys-println/case.json"
       ],
-      "notes": "A statically typed String is admitted, including a fresh runtime-created owner. The compiler evaluates it once, emits one exact-length hosted write, and releases a fresh owner on success or output failure. Literal calls retain the allocation-free minimal closure; non-String Dynamic values remain source-positioned HXC1001 boundaries."
+      "notes": "Hosted Sys.println admits String, Int, Bool, and Float values through typed formatting. String-only conditional branches remain concrete despite a contextually Dynamic join. Each argument evaluates once; fresh text is released on success or output failure. Literal and Bool output remain allocation-free. Other formatting categories and actual Dynamic values retain source-positioned HXC1001 rejection."
     },
     {
       "id": "literal-trace-partial",
@@ -13603,7 +13605,8 @@
       "owner": "direct-compiler-lowering",
       "runtimeFeatures": [
         "io",
-        "string"
+        "string",
+        "string-float"
       ],
       "profiles": [
         "portable",
@@ -13623,9 +13626,10 @@
         "test/string_output/fixtures/positive/Main.hx",
         "test/string_output/fixtures/nonliteral/Main.hx",
         "test/string_output/fixtures/nonstring/Main.hx",
-        "test/string_output/run.py"
+        "test/string_output/run.py",
+        "test/differential/sys-println/case.json"
       ],
-      "notes": "A statically typed String is admitted, including a fresh runtime-created owner. The compiler evaluates it once, emits one exact-length hosted write, and releases a fresh owner on success or output failure. Literal calls retain the allocation-free minimal closure; non-String Dynamic values remain source-positioned HXC1001 boundaries.",
+      "notes": "Hosted Sys.println admits String, Int, Bool, and Float values through typed formatting. String-only conditional branches remain concrete despite a contextually Dynamic join. Each argument evaluates once; fresh text is released on success or output failure. Literal and Bool output remain allocation-free. Other formatting categories and actual Dynamic values retain source-positioned HXC1001 rejection.",
       "ruleId": "string-sys-println-partial"
     },
     {

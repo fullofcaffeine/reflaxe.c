@@ -1183,6 +1183,8 @@ def validate() -> list[str]:
         errors.append("package.json must retain the test:runtime-stress entry point")
     if scripts.get("test:string-runtime") != "python3 test/differential/string-runtime/run.py":
         errors.append("package.json must retain the test:string-runtime entry point")
+    if scripts.get("test:typed-output") != "python3 test/string_output/run.py --typed-only":
+        errors.append("package.json must retain the test:typed-output entry point")
     if scripts.get("test:string-output") != "python3 test/string_output/run.py":
         errors.append("package.json must retain the test:string-output entry point")
     if scripts.get("test:hello") != "python3 examples/hello/run.py":
@@ -1412,6 +1414,8 @@ def validate() -> list[str]:
         errors.append("package.json test:toolchain must execute test:runtime-stress")
     if "npm run test:string-runtime" not in str(scripts.get("test:toolchain", "")):
         errors.append("package.json test:toolchain must execute test:string-runtime")
+    if "npm run test:typed-output" not in str(scripts.get("test:toolchain", "")):
+        errors.append("package.json test:toolchain must execute test:typed-output")
     if "npm run test:string-output" not in str(scripts.get("test:toolchain", "")):
         errors.append("package.json test:toolchain must execute test:string-output")
     if "npm run test:hello" not in str(scripts.get("test:toolchain", "")):

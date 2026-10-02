@@ -8,6 +8,7 @@ import difflib
 import json
 import os
 import shutil
+import signal
 import subprocess
 import sys
 import tempfile
@@ -26,6 +27,7 @@ CASE = Path(__file__).resolve().parent
 FIXTURES = CASE / "fixtures"
 POSITIVE = FIXTURES / "positive"
 RUNTIME_STRING = FIXTURES / "nonliteral"
+TYPED_VALUES = ROOT / "test/differential/sys-println"
 EXPECTED = CASE / "expected"
 RUNTIME_CATALOG = ROOT / "runtime/hxrt/features.json"
 REPORT_PREFIX = "HXC_STATIC_INITIALIZATION="
@@ -498,7 +500,7 @@ def plausible_output_exists(output: Path) -> bool:
 
 def validate_fail_closed(root: Path) -> None:
     cases = (
-        ("nonstring", "requires-statically-typed-String"),
+        ("nonstring", "Sys.println:format-not-yet-admitted:"),
         ("sys_print", "unavailable-static-target:function.Sys.print"),
         ("trace_custom", "custom-position-info-not-admitted"),
     )
@@ -654,7 +656,10 @@ def safe_project_directory(output: Path, value: str) -> Path:
     return resolved
 
 
-def compile_native(toolchain: NativeToolchain, rendered: RenderedProject, optimization: str, build: Path) -> Path:
+def compile_native(
+    toolchain: NativeToolchain, rendered: RenderedProject, optimization: str, build: Path,
+    *, sanitize: bool = False,
+) -> Path:
     build_plan = rendered.manifest.get("build")
     if not isinstance(build_plan, dict):
         raise StringOutputFailure("native compile lost the generated build plan")
@@ -663,11 +668,13 @@ def compile_native(toolchain: NativeToolchain, rendered: RenderedProject, optimi
         safe_project_directory(rendered.output, value)
         for value in text_list(build_plan.get("includeDirectories"), "include directories")
     ]
-    executable = build / f"{toolchain.family}-{optimization}-{rendered.runtime_plan.get('profile')}"
+    suffix = "-sanitized" if sanitize else ""
+    executable = build / f"{toolchain.family}-{optimization}-{rendered.runtime_plan.get('profile')}{suffix}"
     command = [
         toolchain.compiler,
         *STRICT_FLAGS,
         f"-{optimization}",
+        *(["-g", "-fno-omit-frame-pointer", "-fsanitize=address,undefined"] if sanitize else []),
         *(f"-I{include}" for include in includes),
         *(str(source) for source in sources),
         "-o",
@@ -823,15 +830,121 @@ def run_runtime_string_native(
             )
 
 
+def run_typed_values(toolchains: list[NativeToolchain], root: Path) -> None:
+    """Compare independently specified bytes with Eval and real generated executables."""
+    expected_cases = {
+        "integer": b"-2147483648\n1\n0\n2147483647\n",
+        "selection": b"yes\nno\ntrue\nfalse\n",
+        "conditional": "yes:é\x00🙂\nno:é\x00🙂\nnested\nonce\n".encode(),
+        "scalars": b"1.5\n-0\n1e-07\n1e+20\n1.23456789012345669\n",
+    }
+    for name, expected in expected_cases.items():
+        fixture = TYPED_VALUES / name
+        oracle = run_bounded_process(
+            [development_tool("haxe"), "-cp", str(fixture), "-main", "Main", "--interp"],
+            cwd=ROOT, env=base_environment(), check=False, capture_output=True, timeout=30,
+        )
+        if oracle.returncode != 0 or oracle.stdout != expected or oracle.stderr:
+            raise StringOutputFailure(f"{name} Eval contract drifted: {oracle.stdout!r} {oracle.stderr!r}")
+        output = root / name / "out"
+        result = compile_target(fixture, output, report=True)
+        if result.returncode != 0 or result.stderr:
+            raise StringOutputFailure(f"{name} typed output compile failed: {result.stderr}")
+        hxcir = extract_hxcir(result, name)
+        plan = load_json(output / "hxc.runtime-plan.json", "typed output runtime plan")
+        features = text_list(plan.get("features"), "typed output features")
+        expected_features = set(EXPECTED_FEATURES)
+        if name != "selection":
+            expected_features.update(("alloc", "string-scalar", "string"))
+        if name == "scalars":
+            expected_features.add("string-float")
+        if set(features) != expected_features:
+            raise StringOutputFailure(f"{name} runtime selection drifted: {features}")
+        if 'runtime(feature="io",operation="sys-println-string")' not in hxcir or "haxe-dynamic" in hxcir:
+            raise StringOutputFailure(f"{name} lost typed output or introduced Dynamic boxing")
+        if name in ("integer", "conditional", "scalars"):
+            if "string-temporary" not in hxcir or "release place=" not in hxcir:
+                raise StringOutputFailure(f"{name} lost temporary String cleanup")
+        source = (output / "src/program.c").read_text(encoding="utf-8")
+        if name == "integer":
+            failure_release = (
+                "if (hxc_io_println(hxc_l_tmp_sys_println_string_argument_owner_n0) != HXC_STATUS_OK)\n"
+                "  {\n"
+                "    if (hxc_string_release(&hxc_l_tmp_sys_println_string_argument_owner_n0) != HXC_STATUS_OK)"
+            )
+            if failure_release not in source or source.count("hxc_string_release(&hxc_l_tmp_sys_println_string_argument_owner_n0)") != 2:
+                raise StringOutputFailure("Int formatting lost its normal or output-failure cleanup")
+            metal_output = root / "integer-metal" / "out"
+            metal = compile_target(fixture, metal_output, profile="metal", cwd=fixture)
+            if metal.returncode != 0 or metal.stderr:
+                raise StringOutputFailure(f"metal Int output compile failed: {metal.stderr}")
+            for path, contents in normal_artifacts(output).items():
+                if path.endswith((".c", ".h")) and (metal_output / path).read_bytes() != contents:
+                    raise StringOutputFailure(f"typed output C changed across profile, root, or working directory: {path}")
+        rendered = RenderedProject(
+            output, hxcir, plan,
+            load_json(output / "hxc.stdlib-report.json", "typed output stdlib report"),
+            load_json(output / "hxc.manifest.json", "typed output manifest"),
+        )
+        build = root / name / "native"
+        build.mkdir()
+        for toolchain in toolchains:
+            for optimization, sanitize in (("O0", False), ("O2", False), ("O1", True)):
+                executable = compile_native(toolchain, rendered, optimization, build, sanitize=sanitize)
+                environment = os.environ.copy()
+                environment["ASAN_OPTIONS"] = ("detect_leaks=0" if sys.platform == "darwin" else "detect_leaks=1") + ":halt_on_error=1"
+                environment["UBSAN_OPTIONS"] = "halt_on_error=1:print_stacktrace=1"
+                native = run_bounded_process(
+                    [str(executable)], cwd=build, env=environment,
+                    check=False, capture_output=True, timeout=30,
+                )
+                if native.returncode != 0 or native.stdout != expected or native.stderr:
+                    raise StringOutputFailure(
+                        f"{name} {toolchain.family} {optimization} sanitize={sanitize} drifted: "
+                        f"exit={native.returncode} stdout={native.stdout!r} stderr={native.stderr!r}"
+                    )
+                if optimization == "O0":
+                    def close_stdout() -> None:
+                        os.close(1)
+
+                    failed = run_bounded_process(
+                        [str(executable)], cwd=build, check=False, stderr=subprocess.PIPE,
+                        preexec_fn=close_stdout, timeout=30,
+                    )
+                    if failed.returncode != -signal.SIGABRT:
+                        raise StringOutputFailure(f"{name} output failure did not follow the abort edge: {failed.returncode}")
+    for name, fixture, marker in (
+        ("record", FIXTURES / "nonstring", "Sys.println:format-not-yet-admitted:"),
+        ("mixed", TYPED_VALUES / "mixed", "Sys.println:format-not-yet-admitted:haxe-dynamic"),
+    ):
+        output = root / name / "out"
+        result = compile_target(fixture, output)
+        if result.returncode == 0 or "HXC1001:" not in result.stderr or marker not in result.stderr:
+            raise StringOutputFailure(f"{name} formatting rejection drifted: {result.stderr}")
+        if plausible_output_exists(output):
+            raise StringOutputFailure(f"{name} formatting rejection left plausible output")
+    output = root / "runtime-none"
+    rejected = compile_target(TYPED_VALUES / "integer", output, runtime="none")
+    if rejected.returncode == 0 or "HXC2000:" not in rejected.stderr or plausible_output_exists(output):
+        raise StringOutputFailure(f"typed output bypassed runtime=none: {rejected.stderr}")
+
+
 def parse_args(argv: Iterable[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--toolchain", choices=("auto", *TOOLCHAINS), default="auto")
+    parser.add_argument("--typed-only", action="store_true", help="Check typed Sys.println values and rejection boundaries only.")
     return parser.parse_args(list(argv))
 
 
 def main(argv: Iterable[str] = ()) -> int:
     args = parse_args(argv)
     try:
+        if args.typed_only:
+            toolchains = selected_toolchains(args.toolchain)
+            with tempfile.TemporaryDirectory(prefix="reflaxe-c-typed-output-") as temporary:
+                run_typed_values(toolchains, Path(temporary))
+            print("typed-output: OK: Eval bytes, single evaluation, cleanup, selective runtime, strict C11, sanitizers, and fail-closed boundaries passed")
+            return 0
         run_eval_oracle()
         with tempfile.TemporaryDirectory(prefix="reflaxe-c-string-output-") as temporary:
             root = Path(temporary)

@@ -108,12 +108,13 @@ escapes its immediate expression, generated code retains the same optional
 owner; it does not copy the slice. `String.fromCharCode` and concatenation
 produce fresh owners, while aliases and aggregate/container copies retain them.
 The last cleanup releases the allocation. Hosted `Sys.println(value)` now
-accepts any expression whose static Haxe type is `String`, including a
-runtime-created managed String. It evaluates the expression once, keeps a fresh
+accepts `String`, `Int`, `Bool`, and `Float` expressions, including a
+runtime-created managed String. Scalar values use the existing typed
+`Std.string` conversions. It evaluates the expression once, keeps a fresh
 result alive through the write, and releases it on both success and output
-failure. The declared `Dynamic` surface remains deliberately narrower than
-Haxe's full standard library: non-String values still fail closed instead of
-silently choosing a formatting policy.
+failure. A conditional whose branches produce Strings also works, even when Haxe
+types the join as `Dynamic` for this call. Actual Dynamic values, mixed-type
+conditionals, and other formatting categories still fail before emission.
 
 `hxc_owned_string` pairs one immutable value with `hxc_allocation`. The complete
 allocator callback/context identity therefore follows owned bytes and disposal
@@ -293,7 +294,9 @@ admits hosted output. A direct literal passed to `Sys.println` or default
 `runtime-base + status + string-literal + io` closure; it packages no allocator
 or `string.c` operation symbols. `Sys.println` also accepts a statically typed
 runtime String and reuses whatever String features created that value, plus
-`io`. Default `trace` remains literal-only. Generated C
+`io`. Integer formatting additionally selects `string`; Float formatting
+also selects `string-float`. Bool formatting selects immutable text without
+an allocation. Default `trace` remains literal-only. Generated C
 stores exact validated UTF-8 bytes and byte length, including embedded NUL, and
 the output helper writes by length, adds a newline, flushes, and returns
 `HXC_STATUS_IO_ERROR` on write or flush failure. The generated caller follows

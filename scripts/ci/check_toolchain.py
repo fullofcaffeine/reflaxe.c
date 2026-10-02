@@ -336,10 +336,10 @@ def validate(root: Path, *, require_tools: bool) -> list[str]:
     )
     expected_toolchain_script = (
         "npm run deps:verify && npm run test:beads-plan && npm run test:diagnostics && "
-        "npm run test:hxc-config && npm run test:all-sources && npm run test:content-digest && "
+        "npm run test:hxc-config && npm run test:hxc-cli && npm run test:hxc-new && npm run test:hxc-inspect && npm run test:hxc-bindgen && npm run test:all-sources && npm run test:content-digest && "
         "npm run test:bootstrap && npm run test:typed-c && npm run test:c-import && npm run test:raylib-provisioning && npm run test:raygui-binding && npm run test:typed-ast && npm run test:incremental-backend && npm run test:c-ast && npm run test:c-ast-fuzz && "
         "npm run test:declaration-plan && npm run test:symbol-registry && npm run test:project-emitter && "
-        "npm run test:runtime-features && npm run test:dynamic-runtime && npm run test:dynamic-lowering && npm run test:array-runtime && npm run test:int-map && npm run test:string-map && npm run test:string-char-at && npm run test:string-null && npm run test:bytes-runtime && npm run test:gc-runtime && npm run test:runtime-stress && npm run test:string-runtime && npm run test:string-output && npm run test:hello && npm run test:hxc-ir && npm run test:primitive-semantics && "
+        "npm run test:runtime-features && npm run test:dynamic-runtime && npm run test:dynamic-lowering && npm run test:array-runtime && npm run test:int-map && npm run test:string-map && npm run test:string-char-at && npm run test:string-null && npm run test:bytes-runtime && npm run test:gc-runtime && npm run test:runtime-stress && npm run test:string-runtime && npm run test:date-time && npm run test:string-output && npm run test:typed-output && npm run test:hello && npm run test:hxc-ir && npm run test:primitive-semantics && "
         "npm run test:stdlib-ledger && "
         "npm run test:body-lowering && "
         "npm run test:exception-lowering && npm run test:function-lowering && npm run test:aggregate-lowering && npm run test:class-layout && npm run test:constructor-lowering && npm run test:virtual-dispatch && npm run test:enum-lowering && npm run test:generic-specialization && npm run test:evaluation-order && npm run test:static-initialization && "
@@ -471,6 +471,8 @@ def validate(root: Path, *, require_tools: bool) -> list[str]:
         or scripts.get("test:string-output") != expected_string_output_script
     ):
         errors.append("package.json must retain the generated literal-output gate")
+    if not isinstance(scripts, dict) or scripts.get("test:typed-output") != "python3 test/string_output/run.py --typed-only":
+        errors.append("package.json must retain the typed Sys.println differential gate")
     if (
         not isinstance(scripts, dict)
         or scripts.get("test:hello") != expected_hello_script
@@ -799,15 +801,22 @@ def validate(root: Path, *, require_tools: bool) -> list[str]:
         "-lib reflaxe.c",
         '--macro include("reflaxe.c", true)',
         '--macro include("c", true, ["c._std*"])',
-        '--macro include("hxc", true)',
         '--macro include("raylib", true)',
         '--macro include("raygui", true)',
         "-main AllSourcesProbe",
     ]
     if meaningful_hxml_lines(all_sources_hxml, errors) != expected_all_sources_hxml:
         errors.append(
-            "all_sources.hxml must include every reflaxe.c, c, hxc, raylib, and raygui module through the scoped target library"
+            "all_sources.hxml must include every reflaxe.c, c, raylib, and raygui module through the scoped target library"
         )
+    expected_hxc_sources_hxml = [
+        "-cp test/all_sources/",
+        "-cp src/",
+        '--macro include("hxc", true)',
+        "-main HxcSourcesProbe",
+    ]
+    if meaningful_hxml_lines(root / "test/all_sources/hxc_sources.hxml", errors) != expected_hxc_sources_hxml:
+        errors.append("hxc_sources.hxml must retain the separate complete host-product graph")
     if not (root / "test/all_sources/run.py").is_file():
         errors.append("dedicated all-source Haxe gate runner is missing")
 

@@ -74,6 +74,7 @@ SHARDS: dict[str, tuple[str, ...]] = {
         "test:string-runtime",
         "test:date-time",
         "test:string-output",
+        "test:typed-output",
         "test:hello",
         "test:hxc-ir",
         "test:primitive-semantics",

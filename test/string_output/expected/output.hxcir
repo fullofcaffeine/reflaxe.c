@@ -1,10 +1,10 @@
 hxcir schema=27
-module "Main" @"Main.hx":2:30-24:3
-  function "function.Main.main" name="Main.main" returns=void failure=infallible exception-strategy=none entry="entry" @"Main.hx":2:30-10:3
+module "Main" @"Main.hx":2:2-24:3
+  function "function.Main.main" name="Main.main" returns=void failure=infallible exception-strategy=none entry="entry" @"Main.hx":2:2-10:3
     local "local.0" type=bool ownership=owned-or-value storage=automatic state=uninitialized @"Main.hx":3:7-3:35
     local "local.1" type=bool ownership=owned-or-value storage=automatic state=uninitialized @"Main.hx":3:7-3:71
     local "local.2" type=bool ownership=owned-or-value storage=automatic state=uninitialized @"Main.hx":3:39-3:71
-    block "entry" @"Main.hx":2:30-10:3
+    block "entry" @"Main.hx":2:2-10:3
       instruction "instruction.0.constant" result="value.0":bool constant value=bool(true) @"Main.hx":3:19-3:23
       instruction "instruction.1.call" result="value.1":string-utf8 call dispatch=direct("function.Main.selectLabel") arguments=["value.0"] returns=string-utf8 failure=none @"Main.hx":3:7-3:24
       instruction "instruction.2.static-string-literal" result="value.2":string-utf8 constant value=string-utf8(bytes=5,value="ASCII") @"Main.hx":3:28-3:35
@@ -48,11 +48,11 @@ module "Main" @"Main.hx":2:30-24:3
       terminator return value=none cleanup=[] @"Main.hx":2:30-10:3
     end block "block.4.if-join"
   end function "function.Main.main"
-  function "function.Main.selectLabel" name="Main.selectLabel" returns=string-utf8 failure=infallible exception-strategy=none entry="entry" @"Main.hx":21:51-24:3
-    parameter "parameter.0" type=bool ownership=owned-or-value @"Main.hx":21:51-24:3
+  function "function.Main.selectLabel" name="Main.selectLabel" returns=string-utf8 failure=infallible exception-strategy=none entry="entry" @"Main.hx":21:2-24:3
+    parameter "parameter.0" type=bool ownership=owned-or-value @"Main.hx":21:2-24:3
     local "local.1" type=string-utf8 ownership=owned-or-value storage=automatic state=uninitialized @"Main.hx":22:3-22:51
     local "local.2" type=string-utf8 ownership=owned-or-value storage=automatic state=uninitialized @"Main.hx":22:20-22:50
-    block "entry" @"Main.hx":21:51-24:3
+    block "entry" @"Main.hx":21:2-24:3
       instruction "instruction.0.conditional-result-declare" result=- declare-uninitialized place=local("local.2") @"Main.hx":22:20-22:50
       terminator branch condition="parameter.0" true=edge(target="block.0.conditional-true",arguments=[],cleanup=[]) false=edge(target="block.1.conditional-false",arguments=[],cleanup=[]) @"Main.hx":22:20-22:50
     end block "entry"

@@ -92,8 +92,12 @@ The enum suite also carries a nominal abstract-over-String literal through
 construction, copy, projection, and content equality. The string-output suite
 adds the narrow generated-Haxe output proof. It checks literal
 `Sys.println`/default `trace`, statically typed borrowed and freshly managed
-String values, one-time evaluation, exact cleanup on success, and cleanup
-before output fail-stop. It does not claim Dynamic formatting or general
+String values, one-time evaluation, and cleanup on success or output failure.
+The separate `npm run test:typed-output` command covers Int/Bool/Float formatting
+and direct or nested String conditionals. It compares independently specified
+bytes with Eval and strict native C at O0/O2, then runs sanitizers.
+Both commands run in the core CI shard; the existing output deadline stays unchanged.
+It does not claim Dynamic formatting or general
 `Sys.print`. The declared `examples/hello` product proof composes that
 same reusable compiler slice into the first ordinary Haxe-to-C executable. The
 declared `examples/caxecraft` domain proof adds a realistic 16 KiB finite voxel

@@ -1631,7 +1631,9 @@ class CBodyLowering {
 					|| isBytesStringCall(callee)
 					|| isStringBufferToStringCall(callee)
 					|| isMapOwnedStringCall(callee)
-					|| (arguments.length == 1 && isStdStringCall(callee) && stdStringArgumentCreatesOwnedString(arguments[0].t, profile));
+					|| (arguments.length == 1
+						&& isStringFormattingCall(callee)
+						&& stdStringArgumentCreatesOwnedString(arguments[0].t, profile));
 				case TBinop(OpAdd, _, _) | TBinop(OpAssignOp(OpAdd), _, _):
 					CBodyAggregateRegistry.staticStringIdentity(expression.t) != null;
 				case _: false;
@@ -1646,10 +1648,10 @@ class CBodyLowering {
 		return found;
 	}
 
-	/** Identify typed `Std.string` inputs whose admitted result needs ownership. */
+	/** Identify typed formatting inputs whose resulting text needs ownership. */
 	static function stdStringArgumentCreatesOwnedString(type:Type, profile:CProfile):Bool {
 		final primitiveCreates = switch CPrimitiveTypeMapper.map(type, profile) {
-			case CTPrimitive(mapping): mapping.sourceType == CPHaxeInt && mapping.nullability == CPNonNullable;
+			case CTPrimitive(mapping): (mapping.sourceType == CPHaxeInt || mapping.sourceType == CPHaxeFloat) && mapping.nullability == CPNonNullable;
 			case _: false;
 		};
 		return primitiveCreates || isEnumStringPlanningType(type);
@@ -1762,13 +1764,14 @@ class CBodyLowering {
 		};
 	}
 
-	/** Recognize the pinned standard library's exact general string conversion. */
-	static function isStdStringCall(expression:TypedExpr):Bool {
+	/** Recognize standard calls that format a concrete value as text. */
+	static function isStringFormattingCall(expression:TypedExpr):Bool {
 		return switch expression.expr {
-			case TField(_, FStatic(reference, field)): final owner = reference.get(); owner.pack.length == 0 && owner.name == "Std" && field.get()
-					.name == "string";
+			case TField(_, FStatic(reference, field)): final owner = reference.get(); final method = field.get()
+					.name; owner.pack.length == 0 && ((owner.name == "Std" && method == "string")
+					|| (owner.name == "Sys" && method == "println"));
 			case TParenthesis(inner) | TMeta(_, inner) | TCast(inner, _):
-				isStdStringCall(inner);
+				isStringFormattingCall(inner);
 			case _:
 				false;
 		};
@@ -9104,7 +9107,7 @@ private class FunctionBuilder {
 			};
 			if (targetDynamic && (!sourceDynamic || operandFreeDynamicBox))
 				return lowerDynamicBox(expression);
-			if (!targetDynamic && sourceDynamic)
+			if (!targetDynamic && sourceDynamic && !(isStringCarrier(expectedMapping.irType) && isConcreteStringSelection(expression)))
 				return lowerDynamicUnbox(expression, expectedMapping);
 		}
 		return switch expression.expr {
@@ -16257,7 +16260,7 @@ private class FunctionBuilder {
 	}
 
 	/**
-	 * Print one ordinary Haxe String through the hosted output service.
+	 * Print one String, Int, Bool, or Float through the hosted output service.
 	 *
 	 * Literal calls keep their allocation-free HxcIR operation and byte-identical
 	 * generated C. A runtime String is evaluated exactly once, then borrowed by
@@ -16265,10 +16268,10 @@ private class FunctionBuilder {
 	 * fresh String, a compiler-owned local keeps its bytes alive and releases the
 	 * owner on both the successful continuation and the output-failure abort edge.
 	 *
-	 * `Sys.println` accepts `Dynamic` in the Haxe standard library, but this
-	 * bounded slice deliberately admits only expressions whose typed value is
-	 * already `String`. General Dynamic-to-text conversion remains a separate
-	 * runtime and language-semantics capability.
+	 * Concrete scalars reuse the typed `Std.string` formatter before output.
+	 * A conditional with String branches retains that concrete contract even
+	 * when Haxe gives its join the callee's Dynamic parameter type. Other Dynamic
+	 * expressions and unsupported formatting categories still fail before emission.
 	 */
 	function lowerSysPrintln(expression:TypedExpr, arguments:Array<TypedExpr>):Null<LoweredValue> {
 		if (arguments.length == 1 && stringLiteral(arguments[0]) != null)
@@ -16277,11 +16280,17 @@ private class FunctionBuilder {
 			return unsupported(expression, "TCall(Sys.println(String):initializer-output-not-admitted)");
 		if (arguments.length != 1)
 			return unsupported(expression, ("TCall(Sys.println(String):argument-count=" + arguments.length + ",expected=1)"));
-		final mapping = bodyValueType(arguments[0].t, arguments[0].pos, "TCall(Sys.println(String):argument-type)");
-		if (mapping.irType != IRTString && mapping.irType != IRTManagedString)
-			return unsupported(arguments[0], ("TCall(Sys.println(String):requires-statically-typed-String,actual=" + mapping.cSpelling + ")"));
+		final stringType = Context.getType("String");
+		final argumentType = isConcreteStringSelection(arguments[0]) ? stringType : arguments[0].t;
+		final mapping = bodyValueType(argumentType, arguments[0].pos, "TCall(Sys.println:argument-type)");
+		switch mapping.irType {
+			case IRTString | IRTManagedString | IRTBool | IRTInt(32, true) | IRTFloat(64):
+			case _:
+				return unsupported(arguments[0], "TCall(Sys.println:format-not-yet-admitted:" + mapping.cSpelling + ")");
+		}
 		final cleanupDepth = normalCleanupActionIds.length;
-		var value = coerce(lowerValue(arguments[0], mapping), mapping, arguments[0].pos, "TCall(Sys.println(String):argument)");
+		final resultMapping = bodyValueType(stringType, expression.pos, "TCall(Sys.println:formatted-type)");
+		var value = lowerStdStringValue(arguments[0], mapping, resultMapping, "TCall(Sys.println)");
 		value = stabilizeFreshManagedString(value, arguments[0].pos, "sys-println-string-argument");
 		final source = sourceSpan(expression.pos);
 		appendInstruction(null, IRIOCall({
@@ -16298,6 +16307,24 @@ private class FunctionBuilder {
 		runtimeRequirements.push(new CBodyRuntimeRequirement("io", "sys-println-string", "Sys.println(String)", source, expression.pos, "hosted-output"));
 		finishCallBoundedOwners(cleanupDepth);
 		return null;
+	}
+
+	/**
+	 * Recover only String-valued branches from a contextually Dynamic selection.
+	 * The standard Dynamic parameter can erase the join type while both branches
+	 * remain typed Strings. Inspect those types without evaluating either branch;
+	 * the normal conditional lowering still owns selection, order, and cleanup.
+	 * Casts and actual Dynamic values provide no such proof and remain rejected.
+	 */
+	static function isConcreteStringSelection(expression:TypedExpr):Bool {
+		if (CBodyAggregateRegistry.staticStringIdentity(expression.t) != null)
+			return true;
+		return switch expression.expr {
+			case TParenthesis(inner) | TMeta(_, inner): isConcreteStringSelection(inner);
+			case TBlock(expressions): expressions.length > 0 && isConcreteStringSelection(expressions[expressions.length - 1]);
+			case TIf(_, whenTrue, whenFalse): whenFalse != null && isConcreteStringSelection(whenTrue) && isConcreteStringSelection(whenFalse);
+			case _: false;
+		};
 	}
 
 	function traceOutput(literal:String, infoExpression:TypedExpr, source:HxcSourceSpan):String {
