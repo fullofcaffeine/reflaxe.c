@@ -1,2 +1,5 @@
 scripts/raylib/patches/*.json text eol=lf
 examples/caxecraft/src/caxecraft/pilot/PilotCatalog.hx text eol=lf
+
+# Runtime provenance hashes describe the exact checked-in bytes on every host.
+runtime/hxrt/** text eol=lf

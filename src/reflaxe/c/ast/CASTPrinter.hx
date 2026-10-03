@@ -455,6 +455,11 @@ class CASTPrinter {
 		final p = binaryPrecedence(op);
 		if (isAssignment(op))
 			return '${printAssignmentLeft(left)} ${binaryToken(op)} ${printExpr(right, p)}';
+		// Explicit comparison operands preserve the tree and avoid GCC's chained-comparison warning.
+		if (p == binaryPrecedence(Equal) || p == binaryPrecedence(Less)) {
+			final operandPrecedence = binaryPrecedence(Less) + 1;
+			return '${printExpr(left, operandPrecedence)} ${binaryToken(op)} ${printExpr(right, operandPrecedence)}';
+		}
 		if (op == Comma)
 			return '${printExpr(left, p)}, ${printExpr(right, p + 1)}';
 		return '${printExpr(left, p)} ${binaryToken(op)} ${printExpr(right, p + 1)}';
