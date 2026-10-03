@@ -59,13 +59,12 @@ struct hxc_exception_frame {
 #define HXC_EXCEPTION_CLEANUP_INITIALIZER \
   { NULL, NULL, NULL, false }
 
-/* C++ value-initialization handles opaque, platform-specific jmp_buf nesting.
+/* Whole-object initialization handles opaque, platform-specific jmp_buf nesting.
  * The zero state is inactive and gives the Dynamic payload its invalid sentinel. */
 #ifdef __cplusplus
 #define HXC_EXCEPTION_FRAME_INITIALIZER {}
 #else
-#define HXC_EXCEPTION_FRAME_INITIALIZER \
-  { { 0 }, NULL, NULL, HXC_VALUE_INVALID_INITIALIZER, NULL, NULL, false, false }
+#define HXC_EXCEPTION_FRAME_INITIALIZER { 0 }
 #endif
 
 /* setjmp must remain in the generated function that owns the automatic frame. */
