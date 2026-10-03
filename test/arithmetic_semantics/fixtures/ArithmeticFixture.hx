@@ -217,7 +217,7 @@ class ArithmeticFixture {
 			intQuotientByOne(2147483647),
 			intQuotientSideEffect(47),
 			intQuotientByVariable(47, 8),
-			intQuotientByZero(1),
+			intQuotientByZero(1) == Std.int(Math.POSITIVE_INFINITY) ? 1 : 0,
 			intQuotientByNegativeOne(minimum),
 			floatQuotientByEight(47.0),
 			intQuotientThroughFloatCast(47),

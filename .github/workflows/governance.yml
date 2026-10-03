@@ -573,6 +573,9 @@ jobs:
           raylib_report="$RUNNER_TEMP/raylib-desktop-report.json"
           raygui_cache="$RUNNER_TEMP/raygui-desktop-cache"
           python3 examples/caxecraft/play.py \
+            --compile-only \
+            --output-root "$RUNNER_TEMP/caxecraft-playable-o0"
+          python3 examples/caxecraft/play.py \
             --build-only \
             --optimization 0 \
             --allow-network \
@@ -599,6 +602,9 @@ jobs:
                 --raygui-cache-root "$raygui_cache" \
                 --output-root "$RUNNER_TEMP/caxecraft-playable-o2"
           else
+            python3 examples/caxecraft/play.py \
+              --compile-only \
+              --output-root "$RUNNER_TEMP/caxecraft-playable-o2"
             python3 examples/caxecraft/play.py \
               --build-only \
               --optimization 2 \
@@ -645,6 +651,15 @@ jobs:
     steps:
       - name: Check out source
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Resolve exact Haxe and Lix tools
+        run: npm ci
 
       - name: Validate license and provenance policy
         run: python3 scripts/ci/check_license_policy.py

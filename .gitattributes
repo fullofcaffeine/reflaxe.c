@@ -1,1 +1,2 @@
 scripts/raylib/patches/*.json text eol=lf
+examples/caxecraft/src/caxecraft/pilot/PilotCatalog.hx text eol=lf

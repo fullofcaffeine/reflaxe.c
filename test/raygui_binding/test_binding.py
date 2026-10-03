@@ -31,6 +31,7 @@ from scripts.raygui.provision import (  # noqa: E402
     RayguiProvisionFailure,
     compiler_warning_flags,
     implementation_bytes,
+    implementation_header_bytes,
     normalize_archive_headers,
     pinned_source,
 )
@@ -135,8 +136,15 @@ class RayguiBindingTests(unittest.TestCase):
             self.assertIn(b"0           0     0     ", first)
 
     def test_warning_exception_uses_only_the_selected_compiler_vocabulary(self) -> None:
-        self.assertEqual(compiler_warning_flags("clang version 18.1.0"), ("-Wno-error=shorten-64-to-32",))
-        self.assertEqual(compiler_warning_flags("gcc (GCC) 14.2.0"), ())
+        self.assertEqual(
+            compiler_warning_flags("clang version 18.1.0"),
+            ("-Wno-error=shorten-64-to-32", "-Wno-error=implicit-int-float-conversion"),
+        )
+        self.assertEqual(compiler_warning_flags("gcc (GCC) 14.2.0"), ("-Wno-error=conversion",))
+
+    def test_style_reader_patch_rejects_unreviewed_source(self) -> None:
+        with self.assertRaisesRegex(RayguiProvisionFailure, "requires the locked header"):
+            implementation_header_bytes(b"unreviewed raygui source")
 
     def test_lock_rejects_upstream_and_extraction_drift(self) -> None:
         lock = copy.deepcopy(load_lock())

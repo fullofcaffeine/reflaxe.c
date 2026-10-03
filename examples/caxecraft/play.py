@@ -3207,6 +3207,7 @@ def provision_raygui(
         "schemaVersion": 1,
         "authority": source_authority,
         "rayguiSourceTreeSha256": raygui_provision.PINNED_TREE[0],
+        "rayguiProvisionerSha256": raygui_provision.sha256_file(ROOT / "scripts/raygui/provision.py"),
         "raylibHeaderSha256": raygui_provision.sha256_file(raylib_header),
         "compiler": cc,
         "compilerVersion": tool_version(cc),

@@ -643,10 +643,10 @@ function negativeChecks():Int {
 		return 61;
 	if (!rejectsParsedPack(parsed, replaceValue([field("editorObjects"), index(0), field("initialState")], JsonString("caxecraft:other")), InvalidInvariant))
 		return 62;
-	if (!rejectsParsedPack(parsed, replaceValue([field("editorObjects"), index(3), field("targetObjectType")], JsonString("caxecraft:missing")),
+	if (!rejectsParsedPack(parsed, replaceValue([field("editorObjects"), index(1), field("targetObjectType")], JsonString("caxecraft:missing")),
 		UnresolvedReference))
 		return 77;
-	if (!rejectsParsedPack(parsed, replaceValue([field("editorObjects"), index(3), field("activeState")], JsonString("caxecraft:lowered")), InvalidInvariant))
+	if (!rejectsParsedPack(parsed, replaceValue([field("editorObjects"), index(1), field("activeState")], JsonString("caxecraft:other")), InvalidInvariant))
 		return 78;
 	return uiNegativeChecks(minimalUiCatalog());
 }
@@ -689,7 +689,10 @@ function minimalPack():String
 		+ '"effects":[{"id":"caxecraft:feedback","profile":"pickup-feedback"}],'
 		+ '"editorObjects":[{"id":"glyph-control","kind":"stateful-object","label":{"en":"GLYPH CONTROL","es-MX":"CONTROL DE GLIFO"},'
 		+ '"objectType":"caxecraft:glyph-control","initialState":"caxecraft:idle","activeState":null,"targetObjectType":null,'
-		+ '"targetInitialState":null,"targetActiveState":null}],"prefabs":[],'
+		+ '"targetInitialState":null,"targetActiveState":null},'
+		+ '{"id":"linked-control","kind":"linked-stateful-pair","label":{"en":"LINKED CONTROL","es-MX":"CONTROL VINCULADO"},'
+		+ '"objectType":"caxecraft:glyph-control","initialState":"caxecraft:idle","activeState":"caxecraft:active",'
+		+ '"targetObjectType":"caxecraft:glyph-control","targetInitialState":"caxecraft:idle","targetActiveState":"caxecraft:active"}],"prefabs":[],'
 		+ '"statefulObjects":[{"id":"caxecraft:glyph-control","interaction":"activate","interactionRadiusMilli":2500,'
 		+ '"bounds":{"widthMilli":1000,"heightMilli":1000,"depthMilli":1000},'
 		+ '"states":[{"id":"caxecraft:active","collision":"solid","render":"visible","presentation":{"asset":"adventure-items","cell":"glyph-leaf",'

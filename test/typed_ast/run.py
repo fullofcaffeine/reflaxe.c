@@ -31,17 +31,6 @@ INCREMENTAL_REPORT_PREFIX = "HXC_INCREMENTAL_INPUT="
 CONSTRUCTOR_REPORT_PREFIX = "HXC_CONSTRUCTOR_LOWERING="
 CONTROL_FLOW_CACHE_REPORT_PREFIX = "HXC_CONTROL_FLOW_PLAN_CACHE="
 BODY_FUNCTION_REPLAY_REPORT_PREFIX = "HXC_BODY_FUNCTION_REPLAY_CACHE="
-LOWERING_DIAGNOSTIC_ID = "HXC1001"
-LOWERING_EXPECTATIONS = {
-    "rich": (
-        "Unsupported typed Haxe node `TVar(box:type):generic-class-reference-requires-bounded-class-specialization:FixtureBox`",
-        "Main.hx:8: characters 3-38",
-    ),
-    "isolation": (
-        "Unsupported typed Haxe node `TTry`",
-        "Main.hx:5: lines 5-9",
-    ),
-}
 
 
 class TypedAstProbeFailure(RuntimeError):
@@ -132,25 +121,12 @@ def compile_fixture(
             text=True,
             timeout=30,
         )
-        emitted = [path for path in Path(temporary).rglob("*") if path.is_file()]
-        if emitted:
+        if process.returncode != 0 or not any(output.rglob("*.c")):
             raise TypedAstProbeFailure(
-                f"{fixture} HXC1001 boundary emitted files: "
-                + ", ".join(path.relative_to(temporary).as_posix() for path in emitted)
+                f"{fixture} failed to emit its supported C project\n"
+                f"stdout:\n{process.stdout}\nstderr:\n{process.stderr}"
             )
 
-    combined = process.stdout + process.stderr
-    lowering_detail, lowering_source = LOWERING_EXPECTATIONS[fixture]
-    if (
-        process.returncode == 0
-        or LOWERING_DIAGNOSTIC_ID not in combined
-        or lowering_detail not in combined
-        or lowering_source not in combined
-    ):
-        raise TypedAstProbeFailure(
-            f"{fixture} missed its exact source-anchored HXC1001 boundary\n"
-            f"stdout:\n{process.stdout}\nstderr:\n{process.stderr}"
-        )
     typed_payload, typed_report = parse_report(
         process.stdout, REPORT_PREFIX, f"{fixture} typed-AST"
     )
@@ -1957,7 +1933,7 @@ def main() -> int:
         return 0
     print(
         "typed-ast: OK: declarations/metadata/entry ownership, order determinism, "
-        "inventory coverage, exact HXC1001 no-output, compiler-server isolation, "
+        "inventory coverage, supported C emission, compiler-server isolation, "
         "one-module rebuild evidence, exact named-record provenance, and exact "
         "validated control-flow and semantic-function replay"
     )

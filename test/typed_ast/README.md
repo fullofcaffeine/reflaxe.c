@@ -2,9 +2,10 @@
 
 This suite compiles real Haxe through the custom C target and inspects the
 implementation-only `reflaxe_c_typed_ast_report` inventory immediately before
-body lowering. Its unsupported fixtures stop at exact source-positioned
-`HXC1001`. It proves classification and deterministic input normalization; the
-separate `test/body_lowering` suite owns TypedExpr-to-HxcIR/C evidence.
+body lowering. The rich and isolation fixtures must compile successfully and
+emit C. Their reports prove classification and deterministic input
+normalization. The separate `test/body_lowering` suite checks how typed Haxe
+expressions become the compiler's intermediate representation and C.
 
 The rich fixture covers primary and secondary module ownership, classes,
 interfaces, externs, enums, typedefs, abstracts, metadata, entry-point facts,

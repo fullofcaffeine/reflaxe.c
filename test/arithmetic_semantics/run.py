@@ -28,10 +28,12 @@ ORACLE_HXML = Path(__file__).with_name("oracle.hxml")
 FIXTURE = Path(__file__).with_name("fixtures")
 EXPECTED = Path(__file__).with_name("expected")
 REPORT_PREFIX = "HXC_ARITHMETIC_SEMANTICS="
+# Eval's infinity-to-Int result varies by host. Its zero-divisor entry compares
+# equivalent Eval inputs; the independent native harness still requires INT32_MAX.
 EXPECTED_ORACLE = (
     "-2147483648,2147483647,-2,-2147483648,2147483648,0,-2147483648,-1,1,"
     "85,95,90,-1,-1,3,0,1,1,1,1,5,3,268435455,-268435456,357913941,"
-    "-357913941,0,-1,2147483647,71,5,-1,-2147483648,5,5,0,2147483647,-2147483648,1,18,6\n"
+    "-357913941,0,-1,2147483647,71,5,1,-2147483648,5,5,0,2147483647,-2147483648,1,18,6\n"
 )
 STRICT_FLAGS = (
     "-std=c11",
