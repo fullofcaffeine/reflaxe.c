@@ -99,6 +99,102 @@
     },
     {
       "overloadSignature": [
+        "instance:instance.closed-record.3371600c91155b05e8a3858fd35a2653869322e81cfbfa377c5bd67393c1dade",
+        "instance:instance.closed-record.c5fa14bf3f96673b7e9cf7cde25822d018c7849290dcd4ea44f5a2608f7fbc62"
+      ],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": null,
+      "readableName": [
+        "FunctionFixture",
+        "applyPoint"
+      ],
+      "requestedName": null,
+      "cName": "hxc_FunctionFixture_applyPoint",
+      "semanticKey": "6:method|28:ordinary:16:translation-unit|2:15:FunctionFixture10:applyPoint|2:96:instance:instance.closed-record.3371600c91155b05e8a3858fd35a2653869322e81cfbfa377c5bd67393c1dade96:instance:instance.closed-record.c5fa14bf3f96673b7e9cf7cde25822d018c7849290dcd4ea44f5a2608f7fbc62|0:|0:",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "method",
+      "specializationArguments": [],
+      "baseName": "hxc_FunctionFixture_applyPoint",
+      "sourceSymbol": "FunctionFixture.applyPoint(instance:instance.closed-record.3371600c91155b05e8a3858fd35a2653869322e81cfbfa377c5bd67393c1dade, instance:instance.closed-record.c5fa14bf3f96673b7e9cf7cde25822d018c7849290dcd4ea44f5a2608f7fbc62)"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "readableName": [
+        "tmp",
+        "indirect-call-result"
+      ],
+      "requestedName": null,
+      "cName": "hxc_l_tmp_indirect_call_result_n0",
+      "semanticKey": "9:temporary|294:ordinary:281:6:method|28:ordinary:16:translation-unit|2:15:FunctionFixture10:applyPoint|2:96:instance:instance.closed-record.3371600c91155b05e8a3858fd35a2653869322e81cfbfa377c5bd67393c1dade96:instance:instance.closed-record.c5fa14bf3f96673b7e9cf7cde25822d018c7849290dcd4ea44f5a2608f7fbc62|0:|0:|3:15:FunctionFixture10:applyPoint20:indirect-call-result|0:|0:|1:0",
+      "escapeReasons": [
+        "non-c-identifier-byte",
+        "separator-normalized"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:15:FunctionFixture10:applyPoint|2:96:instance:instance.closed-record.3371600c91155b05e8a3858fd35a2653869322e81cfbfa377c5bd67393c1dade96:instance:instance.closed-record.c5fa14bf3f96673b7e9cf7cde25822d018c7849290dcd4ea44f5a2608f7fbc62|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_l_tmp_indirect_call_result_n0",
+      "sourceSymbol": "FunctionFixture.applyPoint.indirect-call-result#0"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 1,
+      "readableName": [
+        "operation"
+      ],
+      "requestedName": null,
+      "cName": "hxc_l_operation",
+      "semanticKey": "5:local|294:ordinary:281:6:method|28:ordinary:16:translation-unit|2:15:FunctionFixture10:applyPoint|2:96:instance:instance.closed-record.3371600c91155b05e8a3858fd35a2653869322e81cfbfa377c5bd67393c1dade96:instance:instance.closed-record.c5fa14bf3f96673b7e9cf7cde25822d018c7849290dcd4ea44f5a2608f7fbc62|0:|0:|3:15:FunctionFixture10:applyPoint9:operation|0:|0:|1:1",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:15:FunctionFixture10:applyPoint|2:96:instance:instance.closed-record.3371600c91155b05e8a3858fd35a2653869322e81cfbfa377c5bd67393c1dade96:instance:instance.closed-record.c5fa14bf3f96673b7e9cf7cde25822d018c7849290dcd4ea44f5a2608f7fbc62|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_l_operation",
+      "sourceSymbol": "FunctionFixture.applyPoint.operation#1"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "readableName": [
+        "point"
+      ],
+      "requestedName": null,
+      "cName": "hxc_l_point",
+      "semanticKey": "5:local|294:ordinary:281:6:method|28:ordinary:16:translation-unit|2:15:FunctionFixture10:applyPoint|2:96:instance:instance.closed-record.3371600c91155b05e8a3858fd35a2653869322e81cfbfa377c5bd67393c1dade96:instance:instance.closed-record.c5fa14bf3f96673b7e9cf7cde25822d018c7849290dcd4ea44f5a2608f7fbc62|0:|0:|3:15:FunctionFixture10:applyPoint5:point|0:|0:|1:0",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:15:FunctionFixture10:applyPoint|2:96:instance:instance.closed-record.3371600c91155b05e8a3858fd35a2653869322e81cfbfa377c5bd67393c1dade96:instance:instance.closed-record.c5fa14bf3f96673b7e9cf7cde25822d018c7849290dcd4ea44f5a2608f7fbc62|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_l_point",
+      "sourceSymbol": "FunctionFixture.applyPoint.point#0"
+    },
+    {
+      "overloadSignature": [
         "i32",
         "instance:instance.closed-record.155aa813c1c5ab50f5236b6c4eb50ea07d553c576ccb72fac37da5af0fc87bd9"
       ],
@@ -469,16 +565,16 @@
       "overloadSignature": [],
       "collisionResolved": false,
       "naming": "generated",
-      "sourceOrdinal": 2105,
+      "sourceOrdinal": 2535,
       "readableName": [
         "captureRoundTrip",
         "lambda",
         "stack",
-        "2105"
+        "2535"
       ],
       "requestedName": null,
-      "cName": "hxc_captureRoundTrip_lambda_stack_2105_n2105",
-      "semanticKey": "7:closure|28:ordinary:16:translation-unit|6:15:FunctionFixture16:captureRoundTrip6:lambda5:stack4:21054:2323|0:|0:|4:2105",
+      "cName": "hxc_captureRoundTrip_lambda_stack_2535_n2535",
+      "semanticKey": "7:closure|28:ordinary:16:translation-unit|6:15:FunctionFixture16:captureRoundTrip6:lambda5:stack4:25354:2753|0:|0:|4:2535",
       "escapeReasons": [],
       "namespace": {
         "scope": "translation-unit",
@@ -487,8 +583,8 @@
       "visibility": "internal",
       "kind": "closure",
       "specializationArguments": [],
-      "baseName": "hxc_captureRoundTrip_lambda_stack_2105_n2105",
-      "sourceSymbol": "FunctionFixture.captureRoundTrip.lambda.stack.2105.2323#2105"
+      "baseName": "hxc_captureRoundTrip_lambda_stack_2535_n2535",
+      "sourceSymbol": "FunctionFixture.captureRoundTrip.lambda.stack.2535.2753#2535"
     },
     {
       "overloadSignature": [],
@@ -501,20 +597,20 @@
       ],
       "requestedName": null,
       "cName": "hxc_tmp_if_false_n1",
-      "semanticKey": "9:temporary|131:label:121:7:closure|28:ordinary:16:translation-unit|6:15:FunctionFixture16:captureRoundTrip6:lambda5:stack4:21054:2323|0:|0:|4:2105|4:15:FunctionFixture34:captureRoundTrip.lambda.stack.210511:block-label8:if-false|0:|0:|1:1",
+      "semanticKey": "9:temporary|131:label:121:7:closure|28:ordinary:16:translation-unit|6:15:FunctionFixture16:captureRoundTrip6:lambda5:stack4:25354:2753|0:|0:|4:2535|4:15:FunctionFixture34:captureRoundTrip.lambda.stack.253511:block-label8:if-false|0:|0:|1:1",
       "escapeReasons": [
         "non-c-identifier-byte",
         "separator-normalized"
       ],
       "namespace": {
-        "scope": "7:closure|28:ordinary:16:translation-unit|6:15:FunctionFixture16:captureRoundTrip6:lambda5:stack4:21054:2323|0:|0:|4:2105",
+        "scope": "7:closure|28:ordinary:16:translation-unit|6:15:FunctionFixture16:captureRoundTrip6:lambda5:stack4:25354:2753|0:|0:|4:2535",
         "kind": "label"
       },
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
       "baseName": "hxc_tmp_if_false_n1",
-      "sourceSymbol": "FunctionFixture.captureRoundTrip.lambda.stack.2105.block-label.if-false#1"
+      "sourceSymbol": "FunctionFixture.captureRoundTrip.lambda.stack.2535.block-label.if-false#1"
     },
     {
       "overloadSignature": [],
@@ -527,20 +623,20 @@
       ],
       "requestedName": null,
       "cName": "hxc_tmp_if_join_n5",
-      "semanticKey": "9:temporary|131:label:121:7:closure|28:ordinary:16:translation-unit|6:15:FunctionFixture16:captureRoundTrip6:lambda5:stack4:21054:2323|0:|0:|4:2105|4:15:FunctionFixture34:captureRoundTrip.lambda.stack.210511:block-label7:if-join|0:|0:|1:5",
+      "semanticKey": "9:temporary|131:label:121:7:closure|28:ordinary:16:translation-unit|6:15:FunctionFixture16:captureRoundTrip6:lambda5:stack4:25354:2753|0:|0:|4:2535|4:15:FunctionFixture34:captureRoundTrip.lambda.stack.253511:block-label7:if-join|0:|0:|1:5",
       "escapeReasons": [
         "non-c-identifier-byte",
         "separator-normalized"
       ],
       "namespace": {
-        "scope": "7:closure|28:ordinary:16:translation-unit|6:15:FunctionFixture16:captureRoundTrip6:lambda5:stack4:21054:2323|0:|0:|4:2105",
+        "scope": "7:closure|28:ordinary:16:translation-unit|6:15:FunctionFixture16:captureRoundTrip6:lambda5:stack4:25354:2753|0:|0:|4:2535",
         "kind": "label"
       },
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
       "baseName": "hxc_tmp_if_join_n5",
-      "sourceSymbol": "FunctionFixture.captureRoundTrip.lambda.stack.2105.block-label.if-join#5"
+      "sourceSymbol": "FunctionFixture.captureRoundTrip.lambda.stack.2535.block-label.if-join#5"
     },
     {
       "overloadSignature": [],
@@ -553,20 +649,20 @@
       ],
       "requestedName": null,
       "cName": "hxc_tmp_if_join_n6",
-      "semanticKey": "9:temporary|131:label:121:7:closure|28:ordinary:16:translation-unit|6:15:FunctionFixture16:captureRoundTrip6:lambda5:stack4:21054:2323|0:|0:|4:2105|4:15:FunctionFixture34:captureRoundTrip.lambda.stack.210511:block-label7:if-join|0:|0:|1:6",
+      "semanticKey": "9:temporary|131:label:121:7:closure|28:ordinary:16:translation-unit|6:15:FunctionFixture16:captureRoundTrip6:lambda5:stack4:25354:2753|0:|0:|4:2535|4:15:FunctionFixture34:captureRoundTrip.lambda.stack.253511:block-label7:if-join|0:|0:|1:6",
       "escapeReasons": [
         "non-c-identifier-byte",
         "separator-normalized"
       ],
       "namespace": {
-        "scope": "7:closure|28:ordinary:16:translation-unit|6:15:FunctionFixture16:captureRoundTrip6:lambda5:stack4:21054:2323|0:|0:|4:2105",
+        "scope": "7:closure|28:ordinary:16:translation-unit|6:15:FunctionFixture16:captureRoundTrip6:lambda5:stack4:25354:2753|0:|0:|4:2535",
         "kind": "label"
       },
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
       "baseName": "hxc_tmp_if_join_n6",
-      "sourceSymbol": "FunctionFixture.captureRoundTrip.lambda.stack.2105.block-label.if-join#6"
+      "sourceSymbol": "FunctionFixture.captureRoundTrip.lambda.stack.2535.block-label.if-join#6"
     },
     {
       "overloadSignature": [],
@@ -579,20 +675,20 @@
       ],
       "requestedName": null,
       "cName": "hxc_tmp_if_true_n0",
-      "semanticKey": "9:temporary|131:label:121:7:closure|28:ordinary:16:translation-unit|6:15:FunctionFixture16:captureRoundTrip6:lambda5:stack4:21054:2323|0:|0:|4:2105|4:15:FunctionFixture34:captureRoundTrip.lambda.stack.210511:block-label7:if-true|0:|0:|1:0",
+      "semanticKey": "9:temporary|131:label:121:7:closure|28:ordinary:16:translation-unit|6:15:FunctionFixture16:captureRoundTrip6:lambda5:stack4:25354:2753|0:|0:|4:2535|4:15:FunctionFixture34:captureRoundTrip.lambda.stack.253511:block-label7:if-true|0:|0:|1:0",
       "escapeReasons": [
         "non-c-identifier-byte",
         "separator-normalized"
       ],
       "namespace": {
-        "scope": "7:closure|28:ordinary:16:translation-unit|6:15:FunctionFixture16:captureRoundTrip6:lambda5:stack4:21054:2323|0:|0:|4:2105",
+        "scope": "7:closure|28:ordinary:16:translation-unit|6:15:FunctionFixture16:captureRoundTrip6:lambda5:stack4:25354:2753|0:|0:|4:2535",
         "kind": "label"
       },
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
       "baseName": "hxc_tmp_if_true_n0",
-      "sourceSymbol": "FunctionFixture.captureRoundTrip.lambda.stack.2105.block-label.if-true#0"
+      "sourceSymbol": "FunctionFixture.captureRoundTrip.lambda.stack.2535.block-label.if-true#0"
     },
     {
       "overloadSignature": [],
@@ -605,20 +701,20 @@
       ],
       "requestedName": null,
       "cName": "hxc_tmp_if_true_n4",
-      "semanticKey": "9:temporary|131:label:121:7:closure|28:ordinary:16:translation-unit|6:15:FunctionFixture16:captureRoundTrip6:lambda5:stack4:21054:2323|0:|0:|4:2105|4:15:FunctionFixture34:captureRoundTrip.lambda.stack.210511:block-label7:if-true|0:|0:|1:4",
+      "semanticKey": "9:temporary|131:label:121:7:closure|28:ordinary:16:translation-unit|6:15:FunctionFixture16:captureRoundTrip6:lambda5:stack4:25354:2753|0:|0:|4:2535|4:15:FunctionFixture34:captureRoundTrip.lambda.stack.253511:block-label7:if-true|0:|0:|1:4",
       "escapeReasons": [
         "non-c-identifier-byte",
         "separator-normalized"
       ],
       "namespace": {
-        "scope": "7:closure|28:ordinary:16:translation-unit|6:15:FunctionFixture16:captureRoundTrip6:lambda5:stack4:21054:2323|0:|0:|4:2105",
+        "scope": "7:closure|28:ordinary:16:translation-unit|6:15:FunctionFixture16:captureRoundTrip6:lambda5:stack4:25354:2753|0:|0:|4:2535",
         "kind": "label"
       },
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
       "baseName": "hxc_tmp_if_true_n4",
-      "sourceSymbol": "FunctionFixture.captureRoundTrip.lambda.stack.2105.block-label.if-true#4"
+      "sourceSymbol": "FunctionFixture.captureRoundTrip.lambda.stack.2535.block-label.if-true#4"
     },
     {
       "overloadSignature": [],
@@ -631,20 +727,20 @@
       ],
       "requestedName": null,
       "cName": "hxc_tmp_short_circuit_join_n3",
-      "semanticKey": "9:temporary|131:label:121:7:closure|28:ordinary:16:translation-unit|6:15:FunctionFixture16:captureRoundTrip6:lambda5:stack4:21054:2323|0:|0:|4:2105|4:15:FunctionFixture34:captureRoundTrip.lambda.stack.210511:block-label18:short-circuit-join|0:|0:|1:3",
+      "semanticKey": "9:temporary|131:label:121:7:closure|28:ordinary:16:translation-unit|6:15:FunctionFixture16:captureRoundTrip6:lambda5:stack4:25354:2753|0:|0:|4:2535|4:15:FunctionFixture34:captureRoundTrip.lambda.stack.253511:block-label18:short-circuit-join|0:|0:|1:3",
       "escapeReasons": [
         "non-c-identifier-byte",
         "separator-normalized"
       ],
       "namespace": {
-        "scope": "7:closure|28:ordinary:16:translation-unit|6:15:FunctionFixture16:captureRoundTrip6:lambda5:stack4:21054:2323|0:|0:|4:2105",
+        "scope": "7:closure|28:ordinary:16:translation-unit|6:15:FunctionFixture16:captureRoundTrip6:lambda5:stack4:25354:2753|0:|0:|4:2535",
         "kind": "label"
       },
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
       "baseName": "hxc_tmp_short_circuit_join_n3",
-      "sourceSymbol": "FunctionFixture.captureRoundTrip.lambda.stack.2105.block-label.short-circuit-join#3"
+      "sourceSymbol": "FunctionFixture.captureRoundTrip.lambda.stack.2535.block-label.short-circuit-join#3"
     },
     {
       "overloadSignature": [],
@@ -657,20 +753,20 @@
       ],
       "requestedName": null,
       "cName": "hxc_tmp_short_circuit_rhs_n2",
-      "semanticKey": "9:temporary|131:label:121:7:closure|28:ordinary:16:translation-unit|6:15:FunctionFixture16:captureRoundTrip6:lambda5:stack4:21054:2323|0:|0:|4:2105|4:15:FunctionFixture34:captureRoundTrip.lambda.stack.210511:block-label17:short-circuit-rhs|0:|0:|1:2",
+      "semanticKey": "9:temporary|131:label:121:7:closure|28:ordinary:16:translation-unit|6:15:FunctionFixture16:captureRoundTrip6:lambda5:stack4:25354:2753|0:|0:|4:2535|4:15:FunctionFixture34:captureRoundTrip.lambda.stack.253511:block-label17:short-circuit-rhs|0:|0:|1:2",
       "escapeReasons": [
         "non-c-identifier-byte",
         "separator-normalized"
       ],
       "namespace": {
-        "scope": "7:closure|28:ordinary:16:translation-unit|6:15:FunctionFixture16:captureRoundTrip6:lambda5:stack4:21054:2323|0:|0:|4:2105",
+        "scope": "7:closure|28:ordinary:16:translation-unit|6:15:FunctionFixture16:captureRoundTrip6:lambda5:stack4:25354:2753|0:|0:|4:2535",
         "kind": "label"
       },
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
       "baseName": "hxc_tmp_short_circuit_rhs_n2",
-      "sourceSymbol": "FunctionFixture.captureRoundTrip.lambda.stack.2105.block-label.short-circuit-rhs#2"
+      "sourceSymbol": "FunctionFixture.captureRoundTrip.lambda.stack.2535.block-label.short-circuit-rhs#2"
     },
     {
       "overloadSignature": [],
@@ -683,20 +779,20 @@
       ],
       "requestedName": null,
       "cName": "hxc_l_tmp_closure_capture_address_calls_n1",
-      "semanticKey": "9:temporary|134:ordinary:121:7:closure|28:ordinary:16:translation-unit|6:15:FunctionFixture16:captureRoundTrip6:lambda5:stack4:21054:2323|0:|0:|4:2105|3:15:FunctionFixture34:captureRoundTrip.lambda.stack.210529:closure-capture-address:calls|0:|0:|1:1",
+      "semanticKey": "9:temporary|134:ordinary:121:7:closure|28:ordinary:16:translation-unit|6:15:FunctionFixture16:captureRoundTrip6:lambda5:stack4:25354:2753|0:|0:|4:2535|3:15:FunctionFixture34:captureRoundTrip.lambda.stack.253529:closure-capture-address:calls|0:|0:|1:1",
       "escapeReasons": [
         "non-c-identifier-byte",
         "separator-normalized"
       ],
       "namespace": {
-        "scope": "7:closure|28:ordinary:16:translation-unit|6:15:FunctionFixture16:captureRoundTrip6:lambda5:stack4:21054:2323|0:|0:|4:2105",
+        "scope": "7:closure|28:ordinary:16:translation-unit|6:15:FunctionFixture16:captureRoundTrip6:lambda5:stack4:25354:2753|0:|0:|4:2535",
         "kind": "ordinary"
       },
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
       "baseName": "hxc_l_tmp_closure_capture_address_calls_n1",
-      "sourceSymbol": "FunctionFixture.captureRoundTrip.lambda.stack.2105.closure-capture-address:calls#1"
+      "sourceSymbol": "FunctionFixture.captureRoundTrip.lambda.stack.2535.closure-capture-address:calls#1"
     },
     {
       "overloadSignature": [],
@@ -709,20 +805,20 @@
       ],
       "requestedName": null,
       "cName": "hxc_l_tmp_closure_capture_address_calls_n2",
-      "semanticKey": "9:temporary|134:ordinary:121:7:closure|28:ordinary:16:translation-unit|6:15:FunctionFixture16:captureRoundTrip6:lambda5:stack4:21054:2323|0:|0:|4:2105|3:15:FunctionFixture34:captureRoundTrip.lambda.stack.210529:closure-capture-address:calls|0:|0:|1:2",
+      "semanticKey": "9:temporary|134:ordinary:121:7:closure|28:ordinary:16:translation-unit|6:15:FunctionFixture16:captureRoundTrip6:lambda5:stack4:25354:2753|0:|0:|4:2535|3:15:FunctionFixture34:captureRoundTrip.lambda.stack.253529:closure-capture-address:calls|0:|0:|1:2",
       "escapeReasons": [
         "non-c-identifier-byte",
         "separator-normalized"
       ],
       "namespace": {
-        "scope": "7:closure|28:ordinary:16:translation-unit|6:15:FunctionFixture16:captureRoundTrip6:lambda5:stack4:21054:2323|0:|0:|4:2105",
+        "scope": "7:closure|28:ordinary:16:translation-unit|6:15:FunctionFixture16:captureRoundTrip6:lambda5:stack4:25354:2753|0:|0:|4:2535",
         "kind": "ordinary"
       },
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
       "baseName": "hxc_l_tmp_closure_capture_address_calls_n2",
-      "sourceSymbol": "FunctionFixture.captureRoundTrip.lambda.stack.2105.closure-capture-address:calls#2"
+      "sourceSymbol": "FunctionFixture.captureRoundTrip.lambda.stack.2535.closure-capture-address:calls#2"
     },
     {
       "overloadSignature": [],
@@ -735,20 +831,20 @@
       ],
       "requestedName": null,
       "cName": "hxc_l_tmp_closure_capture_address_seed_n2",
-      "semanticKey": "9:temporary|134:ordinary:121:7:closure|28:ordinary:16:translation-unit|6:15:FunctionFixture16:captureRoundTrip6:lambda5:stack4:21054:2323|0:|0:|4:2105|3:15:FunctionFixture34:captureRoundTrip.lambda.stack.210528:closure-capture-address:seed|0:|0:|1:2",
+      "semanticKey": "9:temporary|134:ordinary:121:7:closure|28:ordinary:16:translation-unit|6:15:FunctionFixture16:captureRoundTrip6:lambda5:stack4:25354:2753|0:|0:|4:2535|3:15:FunctionFixture34:captureRoundTrip.lambda.stack.253528:closure-capture-address:seed|0:|0:|1:2",
       "escapeReasons": [
         "non-c-identifier-byte",
         "separator-normalized"
       ],
       "namespace": {
-        "scope": "7:closure|28:ordinary:16:translation-unit|6:15:FunctionFixture16:captureRoundTrip6:lambda5:stack4:21054:2323|0:|0:|4:2105",
+        "scope": "7:closure|28:ordinary:16:translation-unit|6:15:FunctionFixture16:captureRoundTrip6:lambda5:stack4:25354:2753|0:|0:|4:2535",
         "kind": "ordinary"
       },
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
       "baseName": "hxc_l_tmp_closure_capture_address_seed_n2",
-      "sourceSymbol": "FunctionFixture.captureRoundTrip.lambda.stack.2105.closure-capture-address:seed#2"
+      "sourceSymbol": "FunctionFixture.captureRoundTrip.lambda.stack.2535.closure-capture-address:seed#2"
     },
     {
       "overloadSignature": [],
@@ -761,20 +857,20 @@
       ],
       "requestedName": null,
       "cName": "hxc_l_tmp_closure_capture_address_seed_n3",
-      "semanticKey": "9:temporary|134:ordinary:121:7:closure|28:ordinary:16:translation-unit|6:15:FunctionFixture16:captureRoundTrip6:lambda5:stack4:21054:2323|0:|0:|4:2105|3:15:FunctionFixture34:captureRoundTrip.lambda.stack.210528:closure-capture-address:seed|0:|0:|1:3",
+      "semanticKey": "9:temporary|134:ordinary:121:7:closure|28:ordinary:16:translation-unit|6:15:FunctionFixture16:captureRoundTrip6:lambda5:stack4:25354:2753|0:|0:|4:2535|3:15:FunctionFixture34:captureRoundTrip.lambda.stack.253528:closure-capture-address:seed|0:|0:|1:3",
       "escapeReasons": [
         "non-c-identifier-byte",
         "separator-normalized"
       ],
       "namespace": {
-        "scope": "7:closure|28:ordinary:16:translation-unit|6:15:FunctionFixture16:captureRoundTrip6:lambda5:stack4:21054:2323|0:|0:|4:2105",
+        "scope": "7:closure|28:ordinary:16:translation-unit|6:15:FunctionFixture16:captureRoundTrip6:lambda5:stack4:25354:2753|0:|0:|4:2535",
         "kind": "ordinary"
       },
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
       "baseName": "hxc_l_tmp_closure_capture_address_seed_n3",
-      "sourceSymbol": "FunctionFixture.captureRoundTrip.lambda.stack.2105.closure-capture-address:seed#3"
+      "sourceSymbol": "FunctionFixture.captureRoundTrip.lambda.stack.2535.closure-capture-address:seed#3"
     },
     {
       "overloadSignature": [],
@@ -787,20 +883,20 @@
       ],
       "requestedName": null,
       "cName": "hxc_l_tmp_closure_capture_load_calls_result_n4",
-      "semanticKey": "9:temporary|134:ordinary:121:7:closure|28:ordinary:16:translation-unit|6:15:FunctionFixture16:captureRoundTrip6:lambda5:stack4:21054:2323|0:|0:|4:2105|3:15:FunctionFixture34:captureRoundTrip.lambda.stack.210533:closure-capture-load:calls-result|0:|0:|1:4",
+      "semanticKey": "9:temporary|134:ordinary:121:7:closure|28:ordinary:16:translation-unit|6:15:FunctionFixture16:captureRoundTrip6:lambda5:stack4:25354:2753|0:|0:|4:2535|3:15:FunctionFixture34:captureRoundTrip.lambda.stack.253533:closure-capture-load:calls-result|0:|0:|1:4",
       "escapeReasons": [
         "non-c-identifier-byte",
         "separator-normalized"
       ],
       "namespace": {
-        "scope": "7:closure|28:ordinary:16:translation-unit|6:15:FunctionFixture16:captureRoundTrip6:lambda5:stack4:21054:2323|0:|0:|4:2105",
+        "scope": "7:closure|28:ordinary:16:translation-unit|6:15:FunctionFixture16:captureRoundTrip6:lambda5:stack4:25354:2753|0:|0:|4:2535",
         "kind": "ordinary"
       },
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
       "baseName": "hxc_l_tmp_closure_capture_load_calls_result_n4",
-      "sourceSymbol": "FunctionFixture.captureRoundTrip.lambda.stack.2105.closure-capture-load:calls-result#4"
+      "sourceSymbol": "FunctionFixture.captureRoundTrip.lambda.stack.2535.closure-capture-load:calls-result#4"
     },
     {
       "overloadSignature": [],
@@ -813,20 +909,20 @@
       ],
       "requestedName": null,
       "cName": "hxc_l_tmp_closure_capture_load_seed_result_n11",
-      "semanticKey": "9:temporary|134:ordinary:121:7:closure|28:ordinary:16:translation-unit|6:15:FunctionFixture16:captureRoundTrip6:lambda5:stack4:21054:2323|0:|0:|4:2105|3:15:FunctionFixture34:captureRoundTrip.lambda.stack.210532:closure-capture-load:seed-result|0:|0:|2:11",
+      "semanticKey": "9:temporary|134:ordinary:121:7:closure|28:ordinary:16:translation-unit|6:15:FunctionFixture16:captureRoundTrip6:lambda5:stack4:25354:2753|0:|0:|4:2535|3:15:FunctionFixture34:captureRoundTrip.lambda.stack.253532:closure-capture-load:seed-result|0:|0:|2:11",
       "escapeReasons": [
         "non-c-identifier-byte",
         "separator-normalized"
       ],
       "namespace": {
-        "scope": "7:closure|28:ordinary:16:translation-unit|6:15:FunctionFixture16:captureRoundTrip6:lambda5:stack4:21054:2323|0:|0:|4:2105",
+        "scope": "7:closure|28:ordinary:16:translation-unit|6:15:FunctionFixture16:captureRoundTrip6:lambda5:stack4:25354:2753|0:|0:|4:2535",
         "kind": "ordinary"
       },
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
       "baseName": "hxc_l_tmp_closure_capture_load_seed_result_n11",
-      "sourceSymbol": "FunctionFixture.captureRoundTrip.lambda.stack.2105.closure-capture-load:seed-result#11"
+      "sourceSymbol": "FunctionFixture.captureRoundTrip.lambda.stack.2535.closure-capture-load:seed-result#11"
     },
     {
       "overloadSignature": [],
@@ -839,20 +935,20 @@
       ],
       "requestedName": null,
       "cName": "hxc_l_tmp_closure_capture_load_seed_result_n7",
-      "semanticKey": "9:temporary|134:ordinary:121:7:closure|28:ordinary:16:translation-unit|6:15:FunctionFixture16:captureRoundTrip6:lambda5:stack4:21054:2323|0:|0:|4:2105|3:15:FunctionFixture34:captureRoundTrip.lambda.stack.210532:closure-capture-load:seed-result|0:|0:|1:7",
+      "semanticKey": "9:temporary|134:ordinary:121:7:closure|28:ordinary:16:translation-unit|6:15:FunctionFixture16:captureRoundTrip6:lambda5:stack4:25354:2753|0:|0:|4:2535|3:15:FunctionFixture34:captureRoundTrip.lambda.stack.253532:closure-capture-load:seed-result|0:|0:|1:7",
       "escapeReasons": [
         "non-c-identifier-byte",
         "separator-normalized"
       ],
       "namespace": {
-        "scope": "7:closure|28:ordinary:16:translation-unit|6:15:FunctionFixture16:captureRoundTrip6:lambda5:stack4:21054:2323|0:|0:|4:2105",
+        "scope": "7:closure|28:ordinary:16:translation-unit|6:15:FunctionFixture16:captureRoundTrip6:lambda5:stack4:25354:2753|0:|0:|4:2535",
         "kind": "ordinary"
       },
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
       "baseName": "hxc_l_tmp_closure_capture_load_seed_result_n7",
-      "sourceSymbol": "FunctionFixture.captureRoundTrip.lambda.stack.2105.closure-capture-load:seed-result#7"
+      "sourceSymbol": "FunctionFixture.captureRoundTrip.lambda.stack.2535.closure-capture-load:seed-result#7"
     },
     {
       "overloadSignature": [],
@@ -865,20 +961,20 @@
       ],
       "requestedName": null,
       "cName": "hxc_l_tmp_closure_environment_n0",
-      "semanticKey": "9:temporary|134:ordinary:121:7:closure|28:ordinary:16:translation-unit|6:15:FunctionFixture16:captureRoundTrip6:lambda5:stack4:21054:2323|0:|0:|4:2105|3:15:FunctionFixture34:captureRoundTrip.lambda.stack.210519:closure-environment|0:|0:|1:0",
+      "semanticKey": "9:temporary|134:ordinary:121:7:closure|28:ordinary:16:translation-unit|6:15:FunctionFixture16:captureRoundTrip6:lambda5:stack4:25354:2753|0:|0:|4:2535|3:15:FunctionFixture34:captureRoundTrip.lambda.stack.253519:closure-environment|0:|0:|1:0",
       "escapeReasons": [
         "non-c-identifier-byte",
         "separator-normalized"
       ],
       "namespace": {
-        "scope": "7:closure|28:ordinary:16:translation-unit|6:15:FunctionFixture16:captureRoundTrip6:lambda5:stack4:21054:2323|0:|0:|4:2105",
+        "scope": "7:closure|28:ordinary:16:translation-unit|6:15:FunctionFixture16:captureRoundTrip6:lambda5:stack4:25354:2753|0:|0:|4:2535",
         "kind": "ordinary"
       },
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
       "baseName": "hxc_l_tmp_closure_environment_n0",
-      "sourceSymbol": "FunctionFixture.captureRoundTrip.lambda.stack.2105.closure-environment#0"
+      "sourceSymbol": "FunctionFixture.captureRoundTrip.lambda.stack.2535.closure-environment#0"
     },
     {
       "overloadSignature": [],
@@ -890,17 +986,17 @@
       ],
       "requestedName": null,
       "cName": "hxc_l_context",
-      "semanticKey": "5:local|134:ordinary:121:7:closure|28:ordinary:16:translation-unit|6:15:FunctionFixture16:captureRoundTrip6:lambda5:stack4:21054:2323|0:|0:|4:2105|6:15:FunctionFixture16:captureRoundTrip6:lambda5:stack4:21057:context|0:|0:|1:0",
+      "semanticKey": "5:local|134:ordinary:121:7:closure|28:ordinary:16:translation-unit|6:15:FunctionFixture16:captureRoundTrip6:lambda5:stack4:25354:2753|0:|0:|4:2535|6:15:FunctionFixture16:captureRoundTrip6:lambda5:stack4:25357:context|0:|0:|1:0",
       "escapeReasons": [],
       "namespace": {
-        "scope": "7:closure|28:ordinary:16:translation-unit|6:15:FunctionFixture16:captureRoundTrip6:lambda5:stack4:21054:2323|0:|0:|4:2105",
+        "scope": "7:closure|28:ordinary:16:translation-unit|6:15:FunctionFixture16:captureRoundTrip6:lambda5:stack4:25354:2753|0:|0:|4:2535",
         "kind": "ordinary"
       },
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
       "baseName": "hxc_l_context",
-      "sourceSymbol": "FunctionFixture.captureRoundTrip.lambda.stack.2105.context#0"
+      "sourceSymbol": "FunctionFixture.captureRoundTrip.lambda.stack.2535.context#0"
     },
     {
       "overloadSignature": [],
@@ -912,17 +1008,17 @@
       ],
       "requestedName": null,
       "cName": "hxc_l_output",
-      "semanticKey": "5:local|134:ordinary:121:7:closure|28:ordinary:16:translation-unit|6:15:FunctionFixture16:captureRoundTrip6:lambda5:stack4:21054:2323|0:|0:|4:2105|3:15:FunctionFixture34:captureRoundTrip.lambda.stack.21056:output|0:|0:|1:4",
+      "semanticKey": "5:local|134:ordinary:121:7:closure|28:ordinary:16:translation-unit|6:15:FunctionFixture16:captureRoundTrip6:lambda5:stack4:25354:2753|0:|0:|4:2535|3:15:FunctionFixture34:captureRoundTrip.lambda.stack.25356:output|0:|0:|1:4",
       "escapeReasons": [],
       "namespace": {
-        "scope": "7:closure|28:ordinary:16:translation-unit|6:15:FunctionFixture16:captureRoundTrip6:lambda5:stack4:21054:2323|0:|0:|4:2105",
+        "scope": "7:closure|28:ordinary:16:translation-unit|6:15:FunctionFixture16:captureRoundTrip6:lambda5:stack4:25354:2753|0:|0:|4:2535",
         "kind": "ordinary"
       },
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
       "baseName": "hxc_l_output",
-      "sourceSymbol": "FunctionFixture.captureRoundTrip.lambda.stack.2105.output#4"
+      "sourceSymbol": "FunctionFixture.captureRoundTrip.lambda.stack.2535.output#4"
     },
     {
       "overloadSignature": [],
@@ -935,20 +1031,20 @@
       ],
       "requestedName": null,
       "cName": "hxc_l_tmp_short_circuit_result_n5",
-      "semanticKey": "9:temporary|134:ordinary:121:7:closure|28:ordinary:16:translation-unit|6:15:FunctionFixture16:captureRoundTrip6:lambda5:stack4:21054:2323|0:|0:|4:2105|3:15:FunctionFixture34:captureRoundTrip.lambda.stack.210520:short-circuit-result|0:|0:|1:5",
+      "semanticKey": "9:temporary|134:ordinary:121:7:closure|28:ordinary:16:translation-unit|6:15:FunctionFixture16:captureRoundTrip6:lambda5:stack4:25354:2753|0:|0:|4:2535|3:15:FunctionFixture34:captureRoundTrip.lambda.stack.253520:short-circuit-result|0:|0:|1:5",
       "escapeReasons": [
         "non-c-identifier-byte",
         "separator-normalized"
       ],
       "namespace": {
-        "scope": "7:closure|28:ordinary:16:translation-unit|6:15:FunctionFixture16:captureRoundTrip6:lambda5:stack4:21054:2323|0:|0:|4:2105",
+        "scope": "7:closure|28:ordinary:16:translation-unit|6:15:FunctionFixture16:captureRoundTrip6:lambda5:stack4:25354:2753|0:|0:|4:2535",
         "kind": "ordinary"
       },
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
       "baseName": "hxc_l_tmp_short_circuit_result_n5",
-      "sourceSymbol": "FunctionFixture.captureRoundTrip.lambda.stack.2105.short-circuit-result#5"
+      "sourceSymbol": "FunctionFixture.captureRoundTrip.lambda.stack.2535.short-circuit-result#5"
     },
     {
       "overloadSignature": [],
@@ -960,17 +1056,17 @@
       ],
       "requestedName": null,
       "cName": "hxc_l_value",
-      "semanticKey": "5:local|134:ordinary:121:7:closure|28:ordinary:16:translation-unit|6:15:FunctionFixture16:captureRoundTrip6:lambda5:stack4:21054:2323|0:|0:|4:2105|6:15:FunctionFixture16:captureRoundTrip6:lambda5:stack4:21055:value|0:|0:|1:1",
+      "semanticKey": "5:local|134:ordinary:121:7:closure|28:ordinary:16:translation-unit|6:15:FunctionFixture16:captureRoundTrip6:lambda5:stack4:25354:2753|0:|0:|4:2535|6:15:FunctionFixture16:captureRoundTrip6:lambda5:stack4:25355:value|0:|0:|1:1",
       "escapeReasons": [],
       "namespace": {
-        "scope": "7:closure|28:ordinary:16:translation-unit|6:15:FunctionFixture16:captureRoundTrip6:lambda5:stack4:21054:2323|0:|0:|4:2105",
+        "scope": "7:closure|28:ordinary:16:translation-unit|6:15:FunctionFixture16:captureRoundTrip6:lambda5:stack4:25354:2753|0:|0:|4:2535",
         "kind": "ordinary"
       },
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
       "baseName": "hxc_l_value",
-      "sourceSymbol": "FunctionFixture.captureRoundTrip.lambda.stack.2105.value#1"
+      "sourceSymbol": "FunctionFixture.captureRoundTrip.lambda.stack.2535.value#1"
     },
     {
       "overloadSignature": [],
@@ -2246,6 +2342,32 @@
       "overloadSignature": [],
       "collisionResolved": false,
       "naming": "generated",
+      "sourceOrdinal": 34,
+      "readableName": [
+        "tmp",
+        "while-body"
+      ],
+      "requestedName": null,
+      "cName": "hxc_tmp_while_body_n34",
+      "semanticKey": "9:temporary|85:label:76:6:method|28:ordinary:16:translation-unit|2:15:FunctionFixture4:main|0:|0:|0:|4:15:FunctionFixture4:main11:block-label10:while-body|0:|0:|2:34",
+      "escapeReasons": [
+        "non-c-identifier-byte",
+        "separator-normalized"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:15:FunctionFixture4:main|0:|0:|0:",
+        "kind": "label"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_tmp_while_body_n34",
+      "sourceSymbol": "FunctionFixture.main.block-label.while-body#34"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
       "sourceOrdinal": 4,
       "readableName": [
         "tmp",
@@ -2527,6 +2649,32 @@
       "specializationArguments": [],
       "baseName": "hxc_tmp_while_condition_n30",
       "sourceSymbol": "FunctionFixture.main.block-label.while-condition#30"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 33,
+      "readableName": [
+        "tmp",
+        "while-condition"
+      ],
+      "requestedName": null,
+      "cName": "hxc_tmp_while_condition_n33",
+      "semanticKey": "9:temporary|85:label:76:6:method|28:ordinary:16:translation-unit|2:15:FunctionFixture4:main|0:|0:|0:|4:15:FunctionFixture4:main11:block-label15:while-condition|0:|0:|2:33",
+      "escapeReasons": [
+        "non-c-identifier-byte",
+        "separator-normalized"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:15:FunctionFixture4:main|0:|0:|0:",
+        "kind": "label"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_tmp_while_condition_n33",
+      "sourceSymbol": "FunctionFixture.main.block-label.while-condition#33"
     },
     {
       "overloadSignature": [],
@@ -2818,6 +2966,32 @@
       "overloadSignature": [],
       "collisionResolved": false,
       "naming": "generated",
+      "sourceOrdinal": 35,
+      "readableName": [
+        "tmp",
+        "while-exit"
+      ],
+      "requestedName": null,
+      "cName": "hxc_tmp_while_exit_n35",
+      "semanticKey": "9:temporary|85:label:76:6:method|28:ordinary:16:translation-unit|2:15:FunctionFixture4:main|0:|0:|0:|4:15:FunctionFixture4:main11:block-label10:while-exit|0:|0:|2:35",
+      "escapeReasons": [
+        "non-c-identifier-byte",
+        "separator-normalized"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:15:FunctionFixture4:main|0:|0:|0:",
+        "kind": "label"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_tmp_while_exit_n35",
+      "sourceSymbol": "FunctionFixture.main.block-label.while-exit#35"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
       "sourceOrdinal": 5,
       "readableName": [
         "tmp",
@@ -3026,32 +3200,6 @@
       "overloadSignature": [],
       "collisionResolved": false,
       "naming": "generated",
-      "sourceOrdinal": 19,
-      "readableName": [
-        "tmp",
-        "call-result"
-      ],
-      "requestedName": null,
-      "cName": "hxc_l_tmp_call_result_n19",
-      "semanticKey": "9:temporary|88:ordinary:76:6:method|28:ordinary:16:translation-unit|2:15:FunctionFixture4:main|0:|0:|0:|3:15:FunctionFixture4:main11:call-result|0:|0:|2:19",
-      "escapeReasons": [
-        "non-c-identifier-byte",
-        "separator-normalized"
-      ],
-      "namespace": {
-        "scope": "6:method|28:ordinary:16:translation-unit|2:15:FunctionFixture4:main|0:|0:|0:",
-        "kind": "ordinary"
-      },
-      "visibility": "internal",
-      "kind": "temporary",
-      "specializationArguments": [],
-      "baseName": "hxc_l_tmp_call_result_n19",
-      "sourceSymbol": "FunctionFixture.main.call-result#19"
-    },
-    {
-      "overloadSignature": [],
-      "collisionResolved": false,
-      "naming": "generated",
       "sourceOrdinal": 2,
       "readableName": [
         "tmp",
@@ -3156,6 +3304,58 @@
       "overloadSignature": [],
       "collisionResolved": false,
       "naming": "generated",
+      "sourceOrdinal": 27,
+      "readableName": [
+        "tmp",
+        "call-result"
+      ],
+      "requestedName": null,
+      "cName": "hxc_l_tmp_call_result_n27",
+      "semanticKey": "9:temporary|88:ordinary:76:6:method|28:ordinary:16:translation-unit|2:15:FunctionFixture4:main|0:|0:|0:|3:15:FunctionFixture4:main11:call-result|0:|0:|2:27",
+      "escapeReasons": [
+        "non-c-identifier-byte",
+        "separator-normalized"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:15:FunctionFixture4:main|0:|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_l_tmp_call_result_n27",
+      "sourceSymbol": "FunctionFixture.main.call-result#27"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 29,
+      "readableName": [
+        "tmp",
+        "call-result"
+      ],
+      "requestedName": null,
+      "cName": "hxc_l_tmp_call_result_n29",
+      "semanticKey": "9:temporary|88:ordinary:76:6:method|28:ordinary:16:translation-unit|2:15:FunctionFixture4:main|0:|0:|0:|3:15:FunctionFixture4:main11:call-result|0:|0:|2:29",
+      "escapeReasons": [
+        "non-c-identifier-byte",
+        "separator-normalized"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:15:FunctionFixture4:main|0:|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_l_tmp_call_result_n29",
+      "sourceSymbol": "FunctionFixture.main.call-result#29"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
       "sourceOrdinal": 4,
       "readableName": [
         "tmp",
@@ -3234,13 +3434,13 @@
       "overloadSignature": [],
       "collisionResolved": false,
       "naming": "generated",
-      "sourceOrdinal": 4,
+      "sourceOrdinal": 5,
       "readableName": [
         "captured"
       ],
       "requestedName": null,
       "cName": "hxc_l_captured",
-      "semanticKey": "5:local|88:ordinary:76:6:method|28:ordinary:16:translation-unit|2:15:FunctionFixture4:main|0:|0:|0:|3:15:FunctionFixture4:main8:captured|0:|0:|1:4",
+      "semanticKey": "5:local|88:ordinary:76:6:method|28:ordinary:16:translation-unit|2:15:FunctionFixture4:main|0:|0:|0:|3:15:FunctionFixture4:main8:captured|0:|0:|1:5",
       "escapeReasons": [],
       "namespace": {
         "scope": "6:method|28:ordinary:16:translation-unit|2:15:FunctionFixture4:main|0:|0:|0:",
@@ -3250,7 +3450,7 @@
       "kind": "local",
       "specializationArguments": [],
       "baseName": "hxc_l_captured",
-      "sourceSymbol": "FunctionFixture.main.captured#4"
+      "sourceSymbol": "FunctionFixture.main.captured#5"
     },
     {
       "overloadSignature": [],
@@ -3530,13 +3730,13 @@
       "overloadSignature": [],
       "collisionResolved": false,
       "naming": "generated",
-      "sourceOrdinal": 5,
+      "sourceOrdinal": 6,
       "readableName": [
         "mutated"
       ],
       "requestedName": null,
       "cName": "hxc_l_mutated",
-      "semanticKey": "5:local|88:ordinary:76:6:method|28:ordinary:16:translation-unit|2:15:FunctionFixture4:main|0:|0:|0:|3:15:FunctionFixture4:main7:mutated|0:|0:|1:5",
+      "semanticKey": "5:local|88:ordinary:76:6:method|28:ordinary:16:translation-unit|2:15:FunctionFixture4:main|0:|0:|0:|3:15:FunctionFixture4:main7:mutated|0:|0:|1:6",
       "escapeReasons": [],
       "namespace": {
         "scope": "6:method|28:ordinary:16:translation-unit|2:15:FunctionFixture4:main|0:|0:|0:",
@@ -3546,19 +3746,19 @@
       "kind": "local",
       "specializationArguments": [],
       "baseName": "hxc_l_mutated",
-      "sourceSymbol": "FunctionFixture.main.mutated#5"
+      "sourceSymbol": "FunctionFixture.main.mutated#6"
     },
     {
       "overloadSignature": [],
       "collisionResolved": false,
       "naming": "generated",
-      "sourceOrdinal": 6,
+      "sourceOrdinal": 7,
       "readableName": [
         "mutatedFloat"
       ],
       "requestedName": null,
       "cName": "hxc_l_mutatedFloat",
-      "semanticKey": "5:local|88:ordinary:76:6:method|28:ordinary:16:translation-unit|2:15:FunctionFixture4:main|0:|0:|0:|3:15:FunctionFixture4:main12:mutatedFloat|0:|0:|1:6",
+      "semanticKey": "5:local|88:ordinary:76:6:method|28:ordinary:16:translation-unit|2:15:FunctionFixture4:main|0:|0:|0:|3:15:FunctionFixture4:main12:mutatedFloat|0:|0:|1:7",
       "escapeReasons": [],
       "namespace": {
         "scope": "6:method|28:ordinary:16:translation-unit|2:15:FunctionFixture4:main|0:|0:|0:",
@@ -3568,7 +3768,7 @@
       "kind": "local",
       "specializationArguments": [],
       "baseName": "hxc_l_mutatedFloat",
-      "sourceSymbol": "FunctionFixture.main.mutatedFloat#6"
+      "sourceSymbol": "FunctionFixture.main.mutatedFloat#7"
     },
     {
       "overloadSignature": [],
@@ -3596,13 +3796,35 @@
       "overloadSignature": [],
       "collisionResolved": false,
       "naming": "generated",
-      "sourceOrdinal": 7,
+      "sourceOrdinal": 4,
+      "readableName": [
+        "pointResult"
+      ],
+      "requestedName": null,
+      "cName": "hxc_l_pointResult",
+      "semanticKey": "5:local|88:ordinary:76:6:method|28:ordinary:16:translation-unit|2:15:FunctionFixture4:main|0:|0:|0:|3:15:FunctionFixture4:main11:pointResult|0:|0:|1:4",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:15:FunctionFixture4:main|0:|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_l_pointResult",
+      "sourceSymbol": "FunctionFixture.main.pointResult#4"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 8,
       "readableName": [
         "readOnly"
       ],
       "requestedName": null,
       "cName": "hxc_l_readOnly",
-      "semanticKey": "5:local|88:ordinary:76:6:method|28:ordinary:16:translation-unit|2:15:FunctionFixture4:main|0:|0:|0:|3:15:FunctionFixture4:main8:readOnly|0:|0:|1:7",
+      "semanticKey": "5:local|88:ordinary:76:6:method|28:ordinary:16:translation-unit|2:15:FunctionFixture4:main|0:|0:|0:|3:15:FunctionFixture4:main8:readOnly|0:|0:|1:8",
       "escapeReasons": [],
       "namespace": {
         "scope": "6:method|28:ordinary:16:translation-unit|2:15:FunctionFixture4:main|0:|0:|0:",
@@ -3612,7 +3834,7 @@
       "kind": "local",
       "specializationArguments": [],
       "baseName": "hxc_l_readOnly",
-      "sourceSymbol": "FunctionFixture.main.readOnly#7"
+      "sourceSymbol": "FunctionFixture.main.readOnly#8"
     },
     {
       "overloadSignature": [
@@ -4380,14 +4602,14 @@
       "overloadSignature": [],
       "collisionResolved": false,
       "naming": "generated",
-      "sourceOrdinal": 631,
+      "sourceOrdinal": 779,
       "readableName": [
         "passthrough",
         "synchronous callback adapter"
       ],
       "requestedName": null,
-      "cName": "hxc_passthrough_synchronous_callback_adapter_n631",
-      "semanticKey": "7:closure|28:ordinary:16:translation-unit|4:15:FunctionFixture11:passthrough28:synchronous-callback-adapter64:155aa813c1c5ab50f5236b6c4eb50ea07d553c576ccb72fac37da5af0fc87bd9|0:|0:|3:631",
+      "cName": "hxc_passthrough_synchronous_callback_adapter_n779",
+      "semanticKey": "7:closure|28:ordinary:16:translation-unit|4:15:FunctionFixture11:passthrough28:synchronous-callback-adapter64:155aa813c1c5ab50f5236b6c4eb50ea07d553c576ccb72fac37da5af0fc87bd9|0:|0:|3:779",
       "escapeReasons": [
         "non-c-identifier-byte",
         "separator-normalized"
@@ -4399,8 +4621,8 @@
       "visibility": "internal",
       "kind": "closure",
       "specializationArguments": [],
-      "baseName": "hxc_passthrough_synchronous_callback_adapter_n631",
-      "sourceSymbol": "FunctionFixture.passthrough.synchronous-callback-adapter.155aa813c1c5ab50f5236b6c4eb50ea07d553c576ccb72fac37da5af0fc87bd9#631"
+      "baseName": "hxc_passthrough_synchronous_callback_adapter_n779",
+      "sourceSymbol": "FunctionFixture.passthrough.synchronous-callback-adapter.155aa813c1c5ab50f5236b6c4eb50ea07d553c576ccb72fac37da5af0fc87bd9#779"
     },
     {
       "overloadSignature": [],
@@ -4412,13 +4634,13 @@
       ],
       "requestedName": null,
       "cName": "hxc_l_argument_0",
-      "semanticKey": "5:local|199:ordinary:186:7:closure|28:ordinary:16:translation-unit|4:15:FunctionFixture11:passthrough28:synchronous-callback-adapter64:155aa813c1c5ab50f5236b6c4eb50ea07d553c576ccb72fac37da5af0fc87bd9|0:|0:|3:631|5:15:FunctionFixture11:passthrough28:synchronous-callback-adapter8:argument1:0|0:|0:|1:1",
+      "semanticKey": "5:local|199:ordinary:186:7:closure|28:ordinary:16:translation-unit|4:15:FunctionFixture11:passthrough28:synchronous-callback-adapter64:155aa813c1c5ab50f5236b6c4eb50ea07d553c576ccb72fac37da5af0fc87bd9|0:|0:|3:779|5:15:FunctionFixture11:passthrough28:synchronous-callback-adapter8:argument1:0|0:|0:|1:1",
       "escapeReasons": [
         "non-c-identifier-byte",
         "separator-normalized"
       ],
       "namespace": {
-        "scope": "7:closure|28:ordinary:16:translation-unit|4:15:FunctionFixture11:passthrough28:synchronous-callback-adapter64:155aa813c1c5ab50f5236b6c4eb50ea07d553c576ccb72fac37da5af0fc87bd9|0:|0:|3:631",
+        "scope": "7:closure|28:ordinary:16:translation-unit|4:15:FunctionFixture11:passthrough28:synchronous-callback-adapter64:155aa813c1c5ab50f5236b6c4eb50ea07d553c576ccb72fac37da5af0fc87bd9|0:|0:|3:779",
         "kind": "ordinary"
       },
       "visibility": "internal",
@@ -4437,10 +4659,10 @@
       ],
       "requestedName": null,
       "cName": "hxc_l_context",
-      "semanticKey": "5:local|199:ordinary:186:7:closure|28:ordinary:16:translation-unit|4:15:FunctionFixture11:passthrough28:synchronous-callback-adapter64:155aa813c1c5ab50f5236b6c4eb50ea07d553c576ccb72fac37da5af0fc87bd9|0:|0:|3:631|4:15:FunctionFixture11:passthrough28:synchronous-callback-adapter7:context|0:|0:|1:0",
+      "semanticKey": "5:local|199:ordinary:186:7:closure|28:ordinary:16:translation-unit|4:15:FunctionFixture11:passthrough28:synchronous-callback-adapter64:155aa813c1c5ab50f5236b6c4eb50ea07d553c576ccb72fac37da5af0fc87bd9|0:|0:|3:779|4:15:FunctionFixture11:passthrough28:synchronous-callback-adapter7:context|0:|0:|1:0",
       "escapeReasons": [],
       "namespace": {
-        "scope": "7:closure|28:ordinary:16:translation-unit|4:15:FunctionFixture11:passthrough28:synchronous-callback-adapter64:155aa813c1c5ab50f5236b6c4eb50ea07d553c576ccb72fac37da5af0fc87bd9|0:|0:|3:631",
+        "scope": "7:closure|28:ordinary:16:translation-unit|4:15:FunctionFixture11:passthrough28:synchronous-callback-adapter64:155aa813c1c5ab50f5236b6c4eb50ea07d553c576ccb72fac37da5af0fc87bd9|0:|0:|3:779",
         "kind": "ordinary"
       },
       "visibility": "internal",
@@ -4459,10 +4681,10 @@
       ],
       "requestedName": null,
       "cName": "hxc_l_result_n0",
-      "semanticKey": "9:temporary|199:ordinary:186:7:closure|28:ordinary:16:translation-unit|4:15:FunctionFixture11:passthrough28:synchronous-callback-adapter64:155aa813c1c5ab50f5236b6c4eb50ea07d553c576ccb72fac37da5af0fc87bd9|0:|0:|3:631|4:15:FunctionFixture11:passthrough28:synchronous-callback-adapter6:result|0:|0:|1:0",
+      "semanticKey": "9:temporary|199:ordinary:186:7:closure|28:ordinary:16:translation-unit|4:15:FunctionFixture11:passthrough28:synchronous-callback-adapter64:155aa813c1c5ab50f5236b6c4eb50ea07d553c576ccb72fac37da5af0fc87bd9|0:|0:|3:779|4:15:FunctionFixture11:passthrough28:synchronous-callback-adapter6:result|0:|0:|1:0",
       "escapeReasons": [],
       "namespace": {
-        "scope": "7:closure|28:ordinary:16:translation-unit|4:15:FunctionFixture11:passthrough28:synchronous-callback-adapter64:155aa813c1c5ab50f5236b6c4eb50ea07d553c576ccb72fac37da5af0fc87bd9|0:|0:|3:631",
+        "scope": "7:closure|28:ordinary:16:translation-unit|4:15:FunctionFixture11:passthrough28:synchronous-callback-adapter64:155aa813c1c5ab50f5236b6c4eb50ea07d553c576ccb72fac37da5af0fc87bd9|0:|0:|3:779",
         "kind": "ordinary"
       },
       "visibility": "internal",
@@ -4492,6 +4714,148 @@
       "specializationArguments": [],
       "baseName": "hxc_l_value",
       "sourceSymbol": "FunctionFixture.passthrough.value#0"
+    },
+    {
+      "overloadSignature": [
+        "instance:instance.closed-record.3371600c91155b05e8a3858fd35a2653869322e81cfbfa377c5bd67393c1dade"
+      ],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": null,
+      "readableName": [
+        "FunctionFixture",
+        "pointValue"
+      ],
+      "requestedName": null,
+      "cName": "hxc_FunctionFixture_pointValue",
+      "semanticKey": "6:method|28:ordinary:16:translation-unit|2:15:FunctionFixture10:pointValue|1:96:instance:instance.closed-record.3371600c91155b05e8a3858fd35a2653869322e81cfbfa377c5bd67393c1dade|0:|0:",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "method",
+      "specializationArguments": [],
+      "baseName": "hxc_FunctionFixture_pointValue",
+      "sourceSymbol": "FunctionFixture.pointValue(instance:instance.closed-record.3371600c91155b05e8a3858fd35a2653869322e81cfbfa377c5bd67393c1dade)"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "readableName": [
+        "point"
+      ],
+      "requestedName": null,
+      "cName": "hxc_l_point",
+      "semanticKey": "5:local|195:ordinary:182:6:method|28:ordinary:16:translation-unit|2:15:FunctionFixture10:pointValue|1:96:instance:instance.closed-record.3371600c91155b05e8a3858fd35a2653869322e81cfbfa377c5bd67393c1dade|0:|0:|3:15:FunctionFixture10:pointValue5:point|0:|0:|1:0",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:15:FunctionFixture10:pointValue|1:96:instance:instance.closed-record.3371600c91155b05e8a3858fd35a2653869322e81cfbfa377c5bd67393c1dade|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_l_point",
+      "sourceSymbol": "FunctionFixture.pointValue.point#0"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 1,
+      "readableName": [
+        "argument 0"
+      ],
+      "requestedName": null,
+      "cName": "hxc_l_argument_0",
+      "semanticKey": "5:local|199:ordinary:186:7:closure|28:ordinary:16:translation-unit|4:15:FunctionFixture10:pointValue28:synchronous-callback-adapter64:c5fa14bf3f96673b7e9cf7cde25822d018c7849290dcd4ea44f5a2608f7fbc62|0:|0:|4:1607|5:15:FunctionFixture10:pointValue28:synchronous-callback-adapter8:argument1:0|0:|0:|1:1",
+      "escapeReasons": [
+        "non-c-identifier-byte",
+        "separator-normalized"
+      ],
+      "namespace": {
+        "scope": "7:closure|28:ordinary:16:translation-unit|4:15:FunctionFixture10:pointValue28:synchronous-callback-adapter64:c5fa14bf3f96673b7e9cf7cde25822d018c7849290dcd4ea44f5a2608f7fbc62|0:|0:|4:1607",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_l_argument_0",
+      "sourceSymbol": "FunctionFixture.pointValue.synchronous-callback-adapter.argument.0#1"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 1607,
+      "readableName": [
+        "pointValue",
+        "synchronous callback adapter"
+      ],
+      "requestedName": null,
+      "cName": "hxc_pointValue_synchronous_callback_adapter_n1607",
+      "semanticKey": "7:closure|28:ordinary:16:translation-unit|4:15:FunctionFixture10:pointValue28:synchronous-callback-adapter64:c5fa14bf3f96673b7e9cf7cde25822d018c7849290dcd4ea44f5a2608f7fbc62|0:|0:|4:1607",
+      "escapeReasons": [
+        "non-c-identifier-byte",
+        "separator-normalized"
+      ],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "closure",
+      "specializationArguments": [],
+      "baseName": "hxc_pointValue_synchronous_callback_adapter_n1607",
+      "sourceSymbol": "FunctionFixture.pointValue.synchronous-callback-adapter.c5fa14bf3f96673b7e9cf7cde25822d018c7849290dcd4ea44f5a2608f7fbc62#1607"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "readableName": [
+        "context"
+      ],
+      "requestedName": null,
+      "cName": "hxc_l_context",
+      "semanticKey": "5:local|199:ordinary:186:7:closure|28:ordinary:16:translation-unit|4:15:FunctionFixture10:pointValue28:synchronous-callback-adapter64:c5fa14bf3f96673b7e9cf7cde25822d018c7849290dcd4ea44f5a2608f7fbc62|0:|0:|4:1607|4:15:FunctionFixture10:pointValue28:synchronous-callback-adapter7:context|0:|0:|1:0",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "7:closure|28:ordinary:16:translation-unit|4:15:FunctionFixture10:pointValue28:synchronous-callback-adapter64:c5fa14bf3f96673b7e9cf7cde25822d018c7849290dcd4ea44f5a2608f7fbc62|0:|0:|4:1607",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_l_context",
+      "sourceSymbol": "FunctionFixture.pointValue.synchronous-callback-adapter.context#0"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "readableName": [
+        "result"
+      ],
+      "requestedName": null,
+      "cName": "hxc_l_result_n0",
+      "semanticKey": "9:temporary|199:ordinary:186:7:closure|28:ordinary:16:translation-unit|4:15:FunctionFixture10:pointValue28:synchronous-callback-adapter64:c5fa14bf3f96673b7e9cf7cde25822d018c7849290dcd4ea44f5a2608f7fbc62|0:|0:|4:1607|4:15:FunctionFixture10:pointValue28:synchronous-callback-adapter6:result|0:|0:|1:0",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "7:closure|28:ordinary:16:translation-unit|4:15:FunctionFixture10:pointValue28:synchronous-callback-adapter64:c5fa14bf3f96673b7e9cf7cde25822d018c7849290dcd4ea44f5a2608f7fbc62|0:|0:|4:1607",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_l_result_n0",
+      "sourceSymbol": "FunctionFixture.pointValue.synchronous-callback-adapter.result#0"
     },
     {
       "overloadSignature": [
@@ -5060,6 +5424,52 @@
       "sourceOrdinal": null,
       "readableName": [
         "c-standard-library",
+        "INT32_MIN"
+      ],
+      "requestedName": "INT32_MIN",
+      "cName": "INT32_MIN",
+      "semanticKey": "5:field|12:preprocessor|2:18:c-standard-library9:INT32_MIN|0:|0:|0:",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "preprocessor"
+      },
+      "visibility": "external",
+      "kind": "field",
+      "specializationArguments": [],
+      "baseName": "INT32_MIN",
+      "sourceSymbol": "c-standard-library.INT32_MIN"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "explicit",
+      "sourceOrdinal": null,
+      "readableName": [
+        "c-standard-library",
+        "UINT32_C"
+      ],
+      "requestedName": "UINT32_C",
+      "cName": "UINT32_C",
+      "semanticKey": "5:field|12:preprocessor|2:18:c-standard-library8:UINT32_C|0:|0:|0:",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "preprocessor"
+      },
+      "visibility": "external",
+      "kind": "field",
+      "specializationArguments": [],
+      "baseName": "UINT32_C",
+      "sourceSymbol": "c-standard-library.UINT32_C"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "explicit",
+      "sourceOrdinal": null,
+      "readableName": [
+        "c-standard-library",
         "abort"
       ],
       "requestedName": "abort",
@@ -5075,6 +5485,76 @@
       "specializationArguments": [],
       "baseName": "abort",
       "sourceSymbol": "c-standard-library.abort"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": null,
+      "readableName": [
+        "_FunctionFixture",
+        "CallbackPoint"
+      ],
+      "requestedName": null,
+      "cName": "hxc_FunctionFixture_CallbackPoint",
+      "semanticKey": "4:type|23:tag:16:translation-unit|3:8:compiler13:closed-record64:3371600c91155b05e8a3858fd35a2653869322e81cfbfa377c5bd67393c1dade|0:|0:|0:",
+      "escapeReasons": [
+        "implementation-reserved",
+        "separator-normalized"
+      ],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "tag"
+      },
+      "visibility": "internal",
+      "kind": "type",
+      "specializationArguments": [],
+      "baseName": "hxc_FunctionFixture_CallbackPoint",
+      "sourceSymbol": "compiler.closed-record.3371600c91155b05e8a3858fd35a2653869322e81cfbfa377c5bd67393c1dade"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "readableName": [
+        "x"
+      ],
+      "requestedName": null,
+      "cName": "hxc_x",
+      "semanticKey": "5:field|93:member:83:type.closed-record.3371600c91155b05e8a3858fd35a2653869322e81cfbfa377c5bd67393c1dade|4:8:compiler13:closed-record64:3371600c91155b05e8a3858fd35a2653869322e81cfbfa377c5bd67393c1dade1:x|0:|0:|1:0",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "type.closed-record.3371600c91155b05e8a3858fd35a2653869322e81cfbfa377c5bd67393c1dade",
+        "kind": "member"
+      },
+      "visibility": "internal",
+      "kind": "field",
+      "specializationArguments": [],
+      "baseName": "hxc_x",
+      "sourceSymbol": "compiler.closed-record.3371600c91155b05e8a3858fd35a2653869322e81cfbfa377c5bd67393c1dade.x#0"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 1,
+      "readableName": [
+        "y"
+      ],
+      "requestedName": null,
+      "cName": "hxc_y",
+      "semanticKey": "5:field|93:member:83:type.closed-record.3371600c91155b05e8a3858fd35a2653869322e81cfbfa377c5bd67393c1dade|4:8:compiler13:closed-record64:3371600c91155b05e8a3858fd35a2653869322e81cfbfa377c5bd67393c1dade1:y|0:|0:|1:1",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "type.closed-record.3371600c91155b05e8a3858fd35a2653869322e81cfbfa377c5bd67393c1dade",
+        "kind": "member"
+      },
+      "visibility": "internal",
+      "kind": "field",
+      "specializationArguments": [],
+      "baseName": "hxc_y",
+      "sourceSymbol": "compiler.closed-record.3371600c91155b05e8a3858fd35a2653869322e81cfbfa377c5bd67393c1dade.y#1"
     },
     {
       "overloadSignature": [],
@@ -5100,6 +5580,125 @@
       "specializationArguments": [],
       "baseName": "main",
       "sourceSymbol": "compiler.executable-entry-point.function.FunctionFixture.main"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "readableName": [
+        "left"
+      ],
+      "requestedName": null,
+      "cName": "hxc_l_left",
+      "semanticKey": "5:local|126:ordinary:113:14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:20:hxc.i32.add.wrapping|0:|4:8:compiler16:primitive-helper20:hxc.i32.add.wrapping4:left|0:|0:|1:0",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:20:hxc.i32.add.wrapping|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_l_left",
+      "sourceSymbol": "compiler.primitive-helper.hxc.i32.add.wrapping.left#0"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 1,
+      "readableName": [
+        "right"
+      ],
+      "requestedName": null,
+      "cName": "hxc_l_right",
+      "semanticKey": "5:local|126:ordinary:113:14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:20:hxc.i32.add.wrapping|0:|4:8:compiler16:primitive-helper20:hxc.i32.add.wrapping5:right|0:|0:|1:1",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:20:hxc.i32.add.wrapping|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_l_right",
+      "sourceSymbol": "compiler.primitive-helper.hxc.i32.add.wrapping.right#1"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "readableName": [
+        "value"
+      ],
+      "requestedName": null,
+      "cName": "hxc_l_value",
+      "semanticKey": "5:local|125:ordinary:112:14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:19:hxc.u32.to.i32.bits|0:|4:8:compiler16:primitive-helper19:hxc.u32.to.i32.bits5:value|0:|0:|1:0",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:19:hxc.u32.to.i32.bits|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_l_value",
+      "sourceSymbol": "compiler.primitive-helper.hxc.u32.to.i32.bits.value#0"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": null,
+      "readableName": [
+        "i32",
+        "add",
+        "wrapping"
+      ],
+      "requestedName": null,
+      "cName": "hxc_i32_add_wrapping",
+      "semanticKey": "14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:20:hxc.i32.add.wrapping|0:",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "specialization",
+      "specializationArguments": [
+        "hxc.i32.add.wrapping"
+      ],
+      "baseName": "hxc_i32_add_wrapping",
+      "sourceSymbol": "compiler.primitive-helper<hxc.i32.add.wrapping>"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": null,
+      "readableName": [
+        "u32",
+        "to",
+        "i32",
+        "bits"
+      ],
+      "requestedName": null,
+      "cName": "hxc_u32_to_i32_bits",
+      "semanticKey": "14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:19:hxc.u32.to.i32.bits|0:",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "specialization",
+      "specializationArguments": [
+        "hxc.u32.to.i32.bits"
+      ],
+      "baseName": "hxc_u32_to_i32_bits",
+      "sourceSymbol": "compiler.primitive-helper<hxc.u32.to.i32.bits>"
     },
     {
       "overloadSignature": [],
@@ -5138,7 +5737,7 @@
       ],
       "requestedName": null,
       "cName": "hxc_FunctionFixture_captureRoundTrip_LambdaEnvironment",
-      "semanticKey": "4:type|23:tag:16:translation-unit|3:8:compiler25:stack-closure-environment64:ac12f5bc4d8acaac42e6a080b0a4245508c4881afeb343cfc6b01f6ec5354508|0:|0:|0:",
+      "semanticKey": "4:type|23:tag:16:translation-unit|3:8:compiler25:stack-closure-environment64:730bacd0b5b4738b719b3f73b8ff2a6e957b8938437f5eb5c9e7ef9b950ff1b6|0:|0:|0:",
       "escapeReasons": [],
       "namespace": {
         "scope": "translation-unit",
@@ -5148,7 +5747,7 @@
       "kind": "type",
       "specializationArguments": [],
       "baseName": "hxc_FunctionFixture_captureRoundTrip_LambdaEnvironment",
-      "sourceSymbol": "compiler.stack-closure-environment.ac12f5bc4d8acaac42e6a080b0a4245508c4881afeb343cfc6b01f6ec5354508"
+      "sourceSymbol": "compiler.stack-closure-environment.730bacd0b5b4738b719b3f73b8ff2a6e957b8938437f5eb5c9e7ef9b950ff1b6"
     },
     {
       "overloadSignature": [],
@@ -5160,17 +5759,17 @@
       ],
       "requestedName": null,
       "cName": "hxc_calls",
-      "semanticKey": "5:field|93:member:83:type.closed-record.ac12f5bc4d8acaac42e6a080b0a4245508c4881afeb343cfc6b01f6ec5354508|4:8:compiler25:stack-closure-environment64:ac12f5bc4d8acaac42e6a080b0a4245508c4881afeb343cfc6b01f6ec53545089:capture.0|0:|0:|1:0",
+      "semanticKey": "5:field|93:member:83:type.closed-record.730bacd0b5b4738b719b3f73b8ff2a6e957b8938437f5eb5c9e7ef9b950ff1b6|4:8:compiler25:stack-closure-environment64:730bacd0b5b4738b719b3f73b8ff2a6e957b8938437f5eb5c9e7ef9b950ff1b69:capture.0|0:|0:|1:0",
       "escapeReasons": [],
       "namespace": {
-        "scope": "type.closed-record.ac12f5bc4d8acaac42e6a080b0a4245508c4881afeb343cfc6b01f6ec5354508",
+        "scope": "type.closed-record.730bacd0b5b4738b719b3f73b8ff2a6e957b8938437f5eb5c9e7ef9b950ff1b6",
         "kind": "member"
       },
       "visibility": "internal",
       "kind": "field",
       "specializationArguments": [],
       "baseName": "hxc_calls",
-      "sourceSymbol": "compiler.stack-closure-environment.ac12f5bc4d8acaac42e6a080b0a4245508c4881afeb343cfc6b01f6ec5354508.capture.0#0"
+      "sourceSymbol": "compiler.stack-closure-environment.730bacd0b5b4738b719b3f73b8ff2a6e957b8938437f5eb5c9e7ef9b950ff1b6.capture.0#0"
     },
     {
       "overloadSignature": [],
@@ -5182,21 +5781,21 @@
       ],
       "requestedName": null,
       "cName": "hxc_seed",
-      "semanticKey": "5:field|93:member:83:type.closed-record.ac12f5bc4d8acaac42e6a080b0a4245508c4881afeb343cfc6b01f6ec5354508|4:8:compiler25:stack-closure-environment64:ac12f5bc4d8acaac42e6a080b0a4245508c4881afeb343cfc6b01f6ec53545089:capture.1|0:|0:|1:1",
+      "semanticKey": "5:field|93:member:83:type.closed-record.730bacd0b5b4738b719b3f73b8ff2a6e957b8938437f5eb5c9e7ef9b950ff1b6|4:8:compiler25:stack-closure-environment64:730bacd0b5b4738b719b3f73b8ff2a6e957b8938437f5eb5c9e7ef9b950ff1b69:capture.1|0:|0:|1:1",
       "escapeReasons": [],
       "namespace": {
-        "scope": "type.closed-record.ac12f5bc4d8acaac42e6a080b0a4245508c4881afeb343cfc6b01f6ec5354508",
+        "scope": "type.closed-record.730bacd0b5b4738b719b3f73b8ff2a6e957b8938437f5eb5c9e7ef9b950ff1b6",
         "kind": "member"
       },
       "visibility": "internal",
       "kind": "field",
       "specializationArguments": [],
       "baseName": "hxc_seed",
-      "sourceSymbol": "compiler.stack-closure-environment.ac12f5bc4d8acaac42e6a080b0a4245508c4881afeb343cfc6b01f6ec5354508.capture.1#1"
+      "sourceSymbol": "compiler.stack-closure-environment.730bacd0b5b4738b719b3f73b8ff2a6e957b8938437f5eb5c9e7ef9b950ff1b6.capture.1#1"
     },
     {
       "overloadSignature": [],
-      "collisionResolved": false,
+      "collisionResolved": true,
       "naming": "generated",
       "sourceOrdinal": null,
       "readableName": [
@@ -5204,7 +5803,7 @@
         "StackClosure"
       ],
       "requestedName": null,
-      "cName": "hxc_FunctionFixture_StackClosure",
+      "cName": "hxc_FunctionFixture_StackClosure_h5d2e2fd891a8",
       "semanticKey": "4:type|23:tag:16:translation-unit|3:8:compiler13:stack-closure64:155aa813c1c5ab50f5236b6c4eb50ea07d553c576ccb72fac37da5af0fc87bd9|0:|0:|0:",
       "escapeReasons": [],
       "namespace": {
@@ -5260,8 +5859,93 @@
       "specializationArguments": [],
       "baseName": "hxc_invoke",
       "sourceSymbol": "compiler.stack-closure.155aa813c1c5ab50f5236b6c4eb50ea07d553c576ccb72fac37da5af0fc87bd9.invoke#0"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": true,
+      "naming": "generated",
+      "sourceOrdinal": null,
+      "readableName": [
+        "FunctionFixture",
+        "StackClosure"
+      ],
+      "requestedName": null,
+      "cName": "hxc_FunctionFixture_StackClosure_h89578ffbedab",
+      "semanticKey": "4:type|23:tag:16:translation-unit|3:8:compiler13:stack-closure64:c5fa14bf3f96673b7e9cf7cde25822d018c7849290dcd4ea44f5a2608f7fbc62|0:|0:|0:",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "tag"
+      },
+      "visibility": "internal",
+      "kind": "type",
+      "specializationArguments": [],
+      "baseName": "hxc_FunctionFixture_StackClosure",
+      "sourceSymbol": "compiler.stack-closure.c5fa14bf3f96673b7e9cf7cde25822d018c7849290dcd4ea44f5a2608f7fbc62"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 1,
+      "readableName": [
+        "context"
+      ],
+      "requestedName": null,
+      "cName": "hxc_context",
+      "semanticKey": "5:field|93:member:83:type.closed-record.c5fa14bf3f96673b7e9cf7cde25822d018c7849290dcd4ea44f5a2608f7fbc62|4:8:compiler13:stack-closure64:c5fa14bf3f96673b7e9cf7cde25822d018c7849290dcd4ea44f5a2608f7fbc627:context|0:|0:|1:1",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "type.closed-record.c5fa14bf3f96673b7e9cf7cde25822d018c7849290dcd4ea44f5a2608f7fbc62",
+        "kind": "member"
+      },
+      "visibility": "internal",
+      "kind": "field",
+      "specializationArguments": [],
+      "baseName": "hxc_context",
+      "sourceSymbol": "compiler.stack-closure.c5fa14bf3f96673b7e9cf7cde25822d018c7849290dcd4ea44f5a2608f7fbc62.context#1"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "readableName": [
+        "invoke"
+      ],
+      "requestedName": null,
+      "cName": "hxc_invoke",
+      "semanticKey": "5:field|93:member:83:type.closed-record.c5fa14bf3f96673b7e9cf7cde25822d018c7849290dcd4ea44f5a2608f7fbc62|4:8:compiler13:stack-closure64:c5fa14bf3f96673b7e9cf7cde25822d018c7849290dcd4ea44f5a2608f7fbc626:invoke|0:|0:|1:0",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "type.closed-record.c5fa14bf3f96673b7e9cf7cde25822d018c7849290dcd4ea44f5a2608f7fbc62",
+        "kind": "member"
+      },
+      "visibility": "internal",
+      "kind": "field",
+      "specializationArguments": [],
+      "baseName": "hxc_invoke",
+      "sourceSymbol": "compiler.stack-closure.c5fa14bf3f96673b7e9cf7cde25822d018c7849290dcd4ea44f5a2608f7fbc62.invoke#0"
     }
   ],
-  "collisions": [],
+  "collisions": [
+    {
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "tag"
+      },
+      "symbols": [
+        {
+          "cName": "hxc_FunctionFixture_StackClosure_h5d2e2fd891a8",
+          "sourceSymbol": "compiler.stack-closure.155aa813c1c5ab50f5236b6c4eb50ea07d553c576ccb72fac37da5af0fc87bd9"
+        },
+        {
+          "cName": "hxc_FunctionFixture_StackClosure_h89578ffbedab",
+          "sourceSymbol": "compiler.stack-closure.c5fa14bf3f96673b7e9cf7cde25822d018c7849290dcd4ea44f5a2608f7fbc62"
+        }
+      ],
+      "baseName": "hxc_FunctionFixture_StackClosure"
+    }
+  ],
   "algorithm": "hxc-c-symbol-v3"
 }

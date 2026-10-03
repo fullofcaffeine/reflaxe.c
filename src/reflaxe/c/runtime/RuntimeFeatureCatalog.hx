@@ -797,7 +797,7 @@ class RuntimeFeatureCatalog {
 			case "bytes_string.h": "9d944e38a748696628076b0c5fd56339668e48953a220d51c8da1630fbdf9c40";
 			case "date_time.h": "07086c9185ea03a13dc6bf39d02f00f99b7cbd8151ba0bdf90d7e457c07880d4";
 			case "dynamic.h": "6acbca9069ce4670988e682c5c214a32968fadee892ea4490d0844674c2e24b2";
-			case "exception.h": "af147c885d31d9408b27b0777a3021bb6d1631b580b237fed75aa21459bad529";
+			case "exception.h": "7672ed148ac81df19bd4461ecbf94901f176e474a92100dbda7a6e33af6b5713";
 			case "gc.h": "d99575a5bad765d45822a1d6221f7bc1b620d59dd6111e0c8ec8a2d45db36159";
 			case "io.h": "4b92f03451dc4d04ea74c857ca3ce54d52fbe80d31f155b93781ee2fab946589";
 			case "int_map.h": "11213ebbb4fccb5620a4e949ec4a0852a512c7be8d1f5750d987f56aca71cd7f";

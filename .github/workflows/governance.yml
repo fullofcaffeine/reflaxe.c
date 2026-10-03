@@ -380,7 +380,7 @@ jobs:
           raygui_cache="$RUNNER_TEMP/raygui-headless-cache"
           raygui_native="$RUNNER_TEMP/raygui-headless-native"
           python3 test/raygui_binding/native.py \
-            --raygui-cache-root "$raygui_cache" \
+            --raygui-cache-root "$raygui_cache/source" \
             --allow-network \
             --raylib-source "$raylib_cache/sources/raylib-dbc56a87da87d973a9c5baa4e7438a9d20121d28" \
             --raylib-library "$raylib_build/raylib/libraylib.a" \

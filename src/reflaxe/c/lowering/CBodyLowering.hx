@@ -1855,6 +1855,21 @@ private typedef BodyFixedArrayBorrowSource = {
 	final witnessId:String;
 }
 
+/**
+	Names the compiler-generated iterator protocol that direct span lowering erases.
+
+	This immutable record lets shared-type discovery and body construction use the
+	same syntax match without requiring discovery to create local storage bindings.
+**/
+private typedef SpanLoopSyntax = {
+	final iteratorCompilerId:Int;
+	final spanVariable:TVar;
+	final loopVariable:TVar;
+	final loopVariablePosition:Position;
+	final body:Array<TypedExpr>;
+	final sourceExpression:TypedExpr;
+}
+
 private typedef SpanLoopPattern = {
 	final iteratorCompilerId:Int;
 	final loopVariable:TVar;
@@ -5332,6 +5347,23 @@ private class FunctionBuilder {
 					}
 				case TCall(callee, []) if (isAbstractMethod(callee, "c.StructInit", "zero")):
 					visit(callee);
+				case TBlock(expressions):
+					var index = 0;
+					while (index < expressions.length) {
+						final spanLoop = index + 1 < expressions.length ? spanLoopSyntax(expressions[index], expressions[index + 1]) : null;
+						if (spanLoop != null) {
+							// Direct span lowering consumes the generated cursor, condition,
+							// and primitive element binding. Only the user body can add
+							// shared representations; registering Iterator<T> here would
+							// invent a runtime dependency before replay freezes its plan.
+							for (nested in spanLoop.body)
+								visit(nested);
+							index += 2;
+						} else {
+							visit(expressions[index]);
+							index++;
+						}
+					}
 				case _:
 					TypedExprTools.iter(expression, visit);
 			}
@@ -6972,7 +7004,37 @@ private class FunctionBuilder {
 		return true;
 	}
 
+	/** Resolve a recognized span loop to its borrowed storage and checked element type. */
 	function spanLoopPattern(iteratorDeclaration:TypedExpr, loopExpression:TypedExpr):Null<SpanLoopPattern> {
+		final syntax = spanLoopSyntax(iteratorDeclaration, loopExpression);
+		if (syntax == null)
+			return null;
+		final span = collectionBindingsByCompilerId.get(syntax.spanVariable.id);
+		if (span == null)
+			return null;
+		switch span.kind {
+			case BCKSpan(_):
+			case BCKFixedArray(_):
+				return null;
+		}
+		final spanLength = span.length;
+		if (spanLength == null)
+			return unsupported(loopExpression, "TFor(span-parameter-dynamic-length-loop-not-admitted)");
+		if (typeKey(span.element.irType) != typeKey(collectionElement(syntax.loopVariable.t, syntax.loopVariablePosition,
+			("TFor(" + syntax.loopVariable.name + ":type)")).irType))
+			return null;
+		return {
+			iteratorCompilerId: syntax.iteratorCompilerId,
+			loopVariable: syntax.loopVariable,
+			span: span,
+			length: spanLength,
+			body: syntax.body,
+			sourceExpression: syntax.sourceExpression
+		};
+	}
+
+	/** Match only the exact span protocol shared by discovery and direct loop lowering. */
+	function spanLoopSyntax(iteratorDeclaration:TypedExpr, loopExpression:TypedExpr):Null<SpanLoopSyntax> {
 		final iterator = switch iteratorDeclaration.expr {
 			case TVar(variable, initializer) if (initializer != null): {variable: variable, initializer: initializer};
 			case _: return null;
@@ -6986,19 +7048,6 @@ private class FunctionBuilder {
 				}
 			case _: return null;
 		};
-		final span = collectionBindingsByCompilerId.get(spanVariable.id);
-		if (span == null) {
-			return null;
-		}
-		switch span.kind {
-			case BCKSpan(_):
-			case BCKFixedArray(_):
-				return null;
-		}
-		final spanLength = span.length;
-		if (spanLength == null) {
-			return unsupported(loopExpression, "TFor(span-parameter-dynamic-length-loop-not-admitted)");
-		}
 		final loop = switch loopExpression.expr {
 			case TWhile(condition, body, true): {condition: condition, body: body};
 			case _: return null;
@@ -7018,14 +7067,11 @@ private class FunctionBuilder {
 				&& isIteratorCall(initializer, iterator.variable.id, "next")): variable;
 			case _: return null;
 		};
-		if (typeKey(span.element.irType) != typeKey(collectionElement(loopVariable.t, expressions[0].pos, ("TFor(" + loopVariable.name + ":type)")).irType)) {
-			return null;
-		}
 		return {
 			iteratorCompilerId: iterator.variable.id,
+			spanVariable: spanVariable,
 			loopVariable: loopVariable,
-			span: span,
-			length: spanLength,
+			loopVariablePosition: expressions[0].pos,
 			body: expressions.slice(1),
 			sourceExpression: loopExpression
 		};

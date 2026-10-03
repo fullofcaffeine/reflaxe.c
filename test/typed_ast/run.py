@@ -48,6 +48,7 @@ class CompileResult:
     generated_tree: dict[str, bytes] | None = None
     control_flow_cache_report: dict[str, object] | None = None
     body_function_replay_report: dict[str, object] | None = None
+    replay_source: str | None = None
 
 
 @dataclass(frozen=True)
@@ -573,6 +574,7 @@ def compile_successful_incremental_fixture(
         },
         control_flow_cache_report,
         body_function_replay_report,
+        (fixture_root / "ReplayFeatures.hx").read_text(encoding="utf-8"),
     )
 
 
@@ -667,10 +669,22 @@ def assert_replay_function_sources(result: CompileResult, label: str) -> None:
     """Keep declaration anchors broad while expression instructions stay exact."""
 
     hxcir = require_hxcir(result, label)
-    declaration_ranges = (
-        ("one-expression generic function", 27, 28),
-        ("parenthesized binary method", 61, 62),
-    )
+    if result.replay_source is None:
+        raise TypedAstProbeFailure(f"{label} omitted its authored replay source")
+    # Mutations can insert lines before these declarations. Derive the expected
+    # positions from the frozen Haxe input, independently of the generated IR.
+    lines = [line.strip() for line in result.replay_source.splitlines()]
+    declaration_ranges = []
+    for description, signature, expression in (
+        ("one-expression generic function", "static function identity<T>(value:T):T", "return value;"),
+        ("parenthesized binary method", "public function value(delta:Int):Int", "return (offset + delta);"),
+    ):
+        if lines.count(signature) != 1:
+            raise TypedAstProbeFailure(f"{label} lost its unique {description} fixture")
+        start_line = lines.index(signature) + 1
+        if lines[start_line] != expression:
+            raise TypedAstProbeFailure(f"{label} changed its {description} expression fixture")
+        declaration_ranges.append((description, start_line, start_line + 1))
     for description, start_line, end_line in declaration_ranges:
         pattern = re.compile(
             rf'^\s+function .* @"ReplayFeatures\.hx":{start_line}:\d+-{end_line}:\d+$',
@@ -680,8 +694,9 @@ def assert_replay_function_sources(result: CompileResult, label: str) -> None:
             raise TypedAstProbeFailure(
                 f"{label} {description} lost its complete declaration source"
             )
+    binary_line = declaration_ranges[1][2]
     if re.search(
-        r'binary operation="haxe\.i32\.add".* @"ReplayFeatures\.hx":62:\d+-62:\d+$',
+        rf'binary operation="haxe\.i32\.add".* @"ReplayFeatures\.hx":{binary_line}:\d+-{binary_line}:\d+$',
         hxcir,
         re.MULTILINE,
     ) is None:

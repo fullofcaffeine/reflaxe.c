@@ -360,9 +360,9 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
         )
 
     header = required_text(report, "header")
-    callback_record = header.find("struct hxc_CallbackPoint {\n")
+    callback_record = header.find("struct hxc_FunctionFixture_CallbackPoint {\n")
     callback_carrier = header.find(
-        "(*hxc_invoke)(void *, struct hxc_CallbackPoint)"
+        "(*hxc_invoke)(void *, struct hxc_FunctionFixture_CallbackPoint)"
     )
     if (
         callback_record == -1
@@ -730,7 +730,10 @@ def check_native(
     with tempfile.TemporaryDirectory(prefix="hxc-function-native-") as temporary:
         root = Path(temporary)
         sources = write_native_project(report, root)
-        header = root / "include/hxc/program.h"
+        # Check the public header as a consumer includes it. Compiling the header
+        # itself as the main C file misclassifies its unused inline helpers.
+        header_consumer = root / "header_consumer.c"
+        header_consumer.write_text('#include "hxc/program.h"\n', encoding="utf-8")
         for toolchain in available_compilers(selected):
             header_result = run_bounded_process(
                 [
@@ -741,7 +744,7 @@ def check_native(
                     "-x",
                     "c",
                     "-fsyntax-only",
-                    str(header),
+                    str(header_consumer),
                 ],
                 cwd=ROOT,
                 check=False,
