@@ -28,7 +28,7 @@ static_assert(
 static_assert(
   std::is_same<
     decltype(&hxc_value_managed_payload),
-    hxc_status (*)(const hxc_value *, const void **)
+    hxc_status (*)(const hxc_value *, const void *volatile *)
   >::value,
   "Dynamic managed-root projection signature must agree in C++"
 );
@@ -55,6 +55,7 @@ int main() {
   std::int32_t observed = 0;
   void *raw_wrapper = nullptr;
   FixtureFunctionWrapper wrapper{add_one};
+  const void *volatile managed_root = &wrapper;
   if (hxc_value_init_int32(&int_type, INT32_C(41), &integer) != HXC_STATUS_OK
       || hxc_value_read_int32(&integer, &observed) != HXC_STATUS_OK
       || observed != INT32_C(41)
@@ -62,6 +63,13 @@ int main() {
       || hxc_value_read_managed_wrapper(&function, &raw_wrapper) != HXC_STATUS_OK
       || static_cast<FixtureFunctionWrapper *>(raw_wrapper)->function(observed) != INT32_C(42)) {
     return 1;
+  }
+  // The same qualified slot accepts a managed root and clears for a scalar.
+  if (hxc_value_managed_payload(&function, &managed_root) != HXC_STATUS_OK
+      || managed_root != &wrapper
+      || hxc_value_managed_payload(&integer, &managed_root) != HXC_STATUS_OK
+      || managed_root != nullptr) {
+    return 2;
   }
   (void)std::puts("dynamic-header-cpp: OK");
   return 0;
