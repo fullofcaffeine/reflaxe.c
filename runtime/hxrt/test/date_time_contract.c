@@ -57,7 +57,9 @@ static int hxc_test_central_time(void) {
     return 31;
   }
   if (hxc_date_time_local_to_milliseconds(2024, 10, 3, 1, 30, 0, &milliseconds) != HXC_STATUS_OK ||
-      milliseconds != 1730619000000.0) {
+      hxc_date_time_timezone_offset(milliseconds, &offset) != HXC_STATUS_OK ||
+      !((milliseconds == 1730615400000.0 && offset == 300) ||
+        (milliseconds == 1730619000000.0 && offset == 360))) {
     return 32;
   }
   return 0;

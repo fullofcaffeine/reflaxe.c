@@ -22,7 +22,9 @@ class Main {
 		final springGap = new Date(2024, 2, 10, 2, 30, 0);
 		require(springGap.getHours() == 3 && springGap.getMinutes() == 30);
 		final fallOverlap = new Date(2024, 10, 3, 1, 30, 0);
-		require(fallOverlap.getTimezoneOffset() == 360);
+		require((fallOverlap.getTime() == 1730615400000.0 && fallOverlap.getTimezoneOffset() == 300)
+			|| (fallOverlap.getTime() == 1730619000000.0 && fallOverlap.getTimezoneOffset() == 360));
+		require(fallOverlap.toString() == "2024-11-03 01:30:00");
 		require(atSpring.toString() == "2024-03-10 03:00:00");
 		require(Date.now().getTime() > 1700000000000.0);
 		final monotonicBefore = haxe.Timer.stamp();

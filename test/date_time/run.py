@@ -551,7 +551,7 @@ def run_eval(timezone: str) -> str:
 
 
 def compare_eval_and_native(native: str, timezone: str) -> None:
-    """Compare Eval exactly, except its contradictory pre-DST offset report."""
+    """Compare fixed instants exactly and validate host-selected repeated times."""
     evaluated = run_eval(timezone)
     if timezone != CENTRAL_TZ:
         if native != evaluated:
@@ -569,7 +569,36 @@ def compare_eval_and_native(native: str, timezone: str) -> None:
         raise DateTimeFailure(
             "native Date lost the civil-time-consistent pre-DST offset"
         )
-    if native != evaluated.replace(eval_bug, corrected):
+    evaluated = evaluated.replace(eval_bug, corrected)
+
+    # Linux Eval reports standard time for the first (daylight) occurrence.
+    fall_first = (
+        "fall-first|time=1.7306154e+12|utc=2024-11-3T6:30:0|"
+        "local=2024-11-03 01:30:00|offset="
+    )
+    if fall_first + "360" in evaluated:
+        evaluated = evaluated.replace(fall_first + "360", fall_first + "300")
+    if fall_first + "300" not in evaluated or fall_first + "300" not in native:
+        raise DateTimeFailure("first fall-back instant lost its daylight offset")
+
+    # mktime may select either occurrence of a repeated local time. Check the
+    # timestamp and offset together; never erase the offset from comparisons.
+    daylight = "fall-overlap|time=1.7306154e+12|local=2024-11-03 01:30:00|offset=300"
+    standard = "fall-overlap|time=1.730619e+12|local=2024-11-03 01:30:00|offset=360"
+    eval_overlap_bug = daylight.removesuffix("300") + "360"
+    native_lines = native.splitlines(keepends=True)
+    eval_lines = evaluated.splitlines(keepends=True)
+    native_overlap = [line for line in native_lines if line.startswith("fall-overlap|")]
+    eval_overlap = [line for line in eval_lines if line.startswith("fall-overlap|")]
+    if len(native_overlap) != 1 or native_overlap[0] not in (daylight + "\n", standard + "\n"):
+        raise DateTimeFailure("native repeated local time has an invalid timestamp/offset pair")
+    if len(eval_overlap) != 1 or eval_overlap[0] not in (
+        daylight + "\n", standard + "\n", eval_overlap_bug + "\n"
+    ):
+        raise DateTimeFailure("pinned Eval repeated local time changed")
+    native_lines.remove(native_overlap[0])
+    eval_lines.remove(eval_overlap[0])
+    if native_lines != eval_lines:
         raise DateTimeFailure("native Date has an unreviewed Central-time divergence")
 
 

@@ -38,11 +38,13 @@ For example, the test rule `CST6CDT,M3.2.0/2,M11.1.0/2` gives these results:
 | Local input or instant | Result |
 | --- | --- |
 | `2024-03-10 02:30:00` | Normalizes to `03:30:00` after the spring gap. |
-| `2024-11-03 01:30:00` | Selects the standard-time occurrence. |
+| `2024-11-03 01:30:00` | The host selects either occurrence; the offset must match the selected timestamp. |
 | `2024-03-10 07:59:59Z` | Reports `360` minutes for UTC minus local time. |
 | `2024-03-10 08:00:00Z` | Reports `300` minutes for UTC minus local time. |
 
-The pinned Eval target reports `300` for the first instant while it renders standard time. The C target reports `360` to keep the offset consistent with the rendered local time.
+The pinned Eval target reports `300` for the pre-spring-transition instant while it renders standard time. The C target reports `360` to keep the offset consistent with the rendered local time.
+
+On Linux, Eval also reports a standard-time offset for the first fall-back instant. The C target reports its correct daylight-time offset of `300`. A local constructor in the repeated hour may select either valid instant, because the host owns that choice. The focused test checks each native timestamp together with its offset and compares all other output exactly.
 
 ## Wall time and monotonic time
 
