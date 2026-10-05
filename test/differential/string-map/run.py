@@ -424,9 +424,6 @@ def validate_generated_project(output: Path, hxcir: str) -> None:
         "alloc",
         "array",
         "iterator",
-		"keys",
-		"key-value-iterator",
-		"to-string",
         "string-literal",
         "string-scalar",
         "string",
@@ -450,6 +447,9 @@ def validate_generated_project(output: Path, hxcir: str) -> None:
         "retain",
         "set",
         "iterator",
+        "keys",
+        "key-value-iterator",
+        "to-string",
     }
     if operations != expected:
         raise StringMapFailure(
@@ -624,12 +624,12 @@ def render_projects(root: Path) -> dict[str, Path]:
 
 
 def run_negative_cases(root: Path) -> None:
+    # Object keys are supported and covered by the object-enum-map positive suite.
     expected = {
         "value_type": "StringMap-value-not-yet-admitted:double",
         "class_value": "StringMap-value-not-yet-admitted:haxe-class-reference:",
         "abstract_class_value": "StringMap-value-not-yet-admitted:haxe-class-reference:",
         "payload_enum_value": "StringMap-value-not-yet-admitted:haxe-enum:",
-        "key_type": "virtual-slot-generic-requires-specialization:slot.haxe.ds.ObjectMap.set",
         "reassignment": "TBinop(OpAssign:managed-StringMap-reassignment-not-admitted)",
     }
     for name, marker in expected.items():
@@ -778,6 +778,7 @@ def check_direct_runtime_decisions(toolchains: list[Toolchain]) -> None:
             "runtime-base",
             "status",
             "alloc",
+            "array",
             "iterator",
             "string-literal",
             "string-scalar",

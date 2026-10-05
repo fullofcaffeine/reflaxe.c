@@ -200,15 +200,24 @@ private final class MapBorrower {
 	separately through `exists` and nullable `get`.
 **/
 final class Main {
-	/** Prove independently owned key and pair snapshots survive source mutation. */
+	/**
+		Check key and pair contents on both targets, plus haxe.c snapshot ownership.
+
+		Eval's MapKeyValueIterator reads values from the source map on each next().
+		Only the native lane mutates the source before iteration: haxe.c promises
+		creation-time snapshots, as documented in docs/hxrt.md. The expected keys
+		and values stay identical, and the native mutation regression stays active.
+	 */
 	static function keyIteratorTrace():Bool {
 		final values:Map<String, Int> = [];
 		values.set("alpha", 3);
 		values.set("beta", 5);
 		final keys = values.keys();
 		final pairs = values.keyValueIterator();
+		#if !eval
 		values.clear();
 		values.set("later", 9);
+		#end
 		var keyBytes = 0;
 		while (keys.hasNext())
 			keyBytes += keys.next().length;

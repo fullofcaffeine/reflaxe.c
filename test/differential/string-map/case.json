@@ -21,7 +21,6 @@
     "test/differential/string-map/generated/oracle.hxml",
     "test/differential/string-map/negative/abstract_class_value/Main.hx",
     "test/differential/string-map/negative/class_value/Main.hx",
-    "test/differential/string-map/negative/key_type/Main.hx",
     "test/differential/string-map/negative/payload_enum_value/Main.hx",
     "test/differential/string-map/negative/reassignment/Main.hx",
     "test/differential/string-map/negative/value_type/Main.hx",
