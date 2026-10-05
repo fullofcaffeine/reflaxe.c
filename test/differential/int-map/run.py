@@ -227,8 +227,9 @@ def validate_generated_project(output: Path, hxcir: str) -> None:
         raise IntMapFailure("IntMap HxcIR used raw syntax or leaked the checkout path")
 
     plan = json.loads((output / "hxc.runtime-plan.json").read_text(encoding="utf-8"))
+    # Iterator runtime code depends on Array storage even for map snapshots.
     if plan.get("features") != [
-        "runtime-base", "status", "alloc", "iterator", "string-literal",
+        "runtime-base", "status", "alloc", "array", "iterator", "string-literal",
         "string-scalar", "string", "int-map",
     ]:
         raise IntMapFailure("generated IntMap program selected the wrong runtime closure")
@@ -278,6 +279,7 @@ def validate_generated_project(output: Path, hxcir: str) -> None:
 			"key-value-iterator",
 			"keys",
             "managed-type-representation",
+            "next",
 			"remove",
 			"retain",
 			"set",
