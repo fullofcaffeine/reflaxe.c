@@ -425,6 +425,7 @@ jobs:
             --report "$RUNNER_TEMP/caxecraft-renderer-comparison-${{ matrix.name }}.json"
 
       - name: Preserve normalized Raylib headless evidence
+        if: ${{ !cancelled() }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: raylib-headless-${{ matrix.name }}
@@ -440,6 +441,20 @@ jobs:
             ${{ runner.temp }}/caxecraft-renderer-benchmark/variants/linux-memory-software-split-pilot-move-jump-edit-immediate-baseline-benchmark/bin/caxecraft-pilot-move.png
           if-no-files-found: error
           retention-days: 14
+
+      # A failed comparison must retain the exact published C and its integrity
+      # inventory. Unpublished transactions, native caches, and binaries are
+      # excluded; haxe_c-rl9u needs both complete generations to audit rendering.
+      - name: Preserve generated renderer projects for budget diagnosis
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: caxecraft-renderer-projects-${{ matrix.name }}
+          path: |
+            ${{ runner.temp }}/caxecraft-renderer-benchmark/variants/*/hxc-play-current-generation.json
+            ${{ runner.temp }}/caxecraft-renderer-benchmark/variants/*/generations/
+          if-no-files-found: warn
+          retention-days: 7
 
   raylib-desktop:
     name: Raylib 6.0 desktop (${{ matrix.name }})
