@@ -441,12 +441,20 @@ iteration cheap while failing closed on missing or malformed generated output.
 It cannot infer whether a Haxe source changed after the project was generated,
 so use `--compile-only` (or normal play) first whenever Haxe input, defines,
 compiler code, or content-generation inputs changed.
+It publishes a new unchanged-build receipt only when the prior receipt matches
+the current build request. On a mismatch, it keeps the prior receipt and names
+the changed input. The next ordinary launch then rebuilds instead of treating
+the stale generated project as current.
 
 Use `WASD` to move, the mouse to look, Space to jump, and left click to use the
 selected item's primary action: remove a block normally or strike while the
 Copper Sword is selected. Right click uses the selected item's secondary
 action: it places a selected block or eats selected berries when health is not
-full. Number keys `1` through `8` or the
+full. Press `F5` during ordinary play to switch between first-person and a
+behind-player view. A wall, ceiling, or solid authored object moves the camera
+closer instead of letting it pass through the obstruction. The center-screen
+aim remains at the player's eyes in both views, so mining, placing, talking,
+and combat keep the same reach and target. Number keys `1` through `9` or the
 mouse wheel to select the hotbar, Escape to pause and read the latest unlocked
 journal clue, and `Q` to quit. Creative mode does not consume placed blocks; the current
 Adventure feasibility path has finite stacks and returns eligible mined blocks
@@ -454,6 +462,13 @@ to them. It checks room before removal, so a full matching stack leaves the
 block in the world and shows a capacity message. Losing focus pauses and releases the cursor; clicking the paused
 window captures it again without also mining. The window may be resized down
 to 800 by 450.
+
+The play interface keeps the world target clear. The objective stays at the
+upper left. Health and equipment stay at the upper right. One short action or
+result appears above the hotbar. A conversation, pause panel, or defeat panel
+replaces the normal play interface while it is active. Developer builds can
+show performance counters with `F3`. Normal builds and pilot captures hide
+these counters.
 
 Movement uses a deterministic 50 ms simulation tick, but the camera does not
 jump only twenty times per second. `MotionInterpolation` keeps the previous
@@ -471,6 +486,16 @@ npm run test:caxecraft-presentation
 
 It proves endpoints, midpoint, clamping, adjacent fixed ticks, and teleport
 reset on Eval and generated native C with sanitizers and no `hxrt` or heap.
+The separate focused camera contract is:
+
+```sh
+npm run test:caxecraft-player-camera
+```
+
+It proves both camera modes, obstruction shortening, the safe zero-look
+fallback, and the unchanged gameplay aim ray. It selects only the small array
+runtime needed by its authored-collision input; it does not select reflection
+or the general object runtime.
 The `smooth-motion` native pilot additionally walks and jumps through the real
 outer loop at deterministic 8, 17, and 25 ms display intervals. It requires a
 camera sample strictly between committed positions and an airborne final
@@ -568,7 +593,7 @@ smoke rejects that shape; ordinary resizing and the logical 1280 by 720 game
 remain available while high-DPI support is fixed separately.
 
 This is a finite playable feasibility slice with a textured title, typed
-eight-slot hotbar, original item/HUD art, Creative/Adventure menu choice, and
+nine-slot hotbar, original item/HUD art, Creative/Adventure menu choice, and
 bounded collect/consume/place rules. Nia provides the first authored friendly
 interaction, and nearby berries demonstrate content-owned pickups; one original Mossling provides bounded
 rest/wander/chase/return movement, a warned attack and recovery cycle, aimed
@@ -712,6 +737,18 @@ the same HXML and structured compiler phases, run:
 python3 examples/caxecraft/profile_compiler.py \
   --runs 1 --transport cold --workload runtime-content-generation
 ```
+
+To measure the runtime level loader without native compilation, run:
+
+```sh
+python3 examples/caxecraft/profile_compiler.py \
+  --runs 1 --transport both --workload runtime-level-loader
+```
+
+This command records one cold request and one warm request from an owned Haxe
+server. It also requires both requests to produce identical generated C files.
+Do not use a report that labels the host as `contended` for a performance
+budget.
 
 It reads the checked-in receipt first, verifies exact byte counts and SHA-256
 digests, decodes the real pack and UI files, resolves the real CaxeMap through
@@ -875,6 +912,18 @@ Raylib, or launching the game. The Caxecraft native differential lanes exercise
 those later steps separately; keeping the boundaries separate tells us whether
 a delay belongs to Haxe-to-C generation or the native toolchain.
 
+To profile the exact Haxe request used by the graphical editor pilot, run:
+
+```sh
+python3 examples/caxecraft/profile_compiler.py \
+  --runs 1 --transport cold --workload editor-shell
+```
+
+This workload selects the memory renderer, hosted package reader, concise
+runtime report, and compiled editor pilot. Use its phase report to locate the
+delay before changing a compiler timeout or optimizing compiler code. Do not
+use a sample marked `contended` as a performance baseline.
+
 To inspect one realistic source edit instead of repeated unchanged builds, run:
 
 ```sh
@@ -981,7 +1030,7 @@ The bounded inventory has its own sub-second renderer-independent proof:
 npm run test:caxecraft-inventory
 ```
 
-It covers the fixed eight-slot catalog, exact selection/wrap behavior, finite
+It covers the fixed nine-slot catalog, exact selection/wrap behavior, finite
 stack clamping, collect/consume, empty/full edges, and target-neutral source
 boundary under two locales. The native movement pilot then proves that the
 same inventory selection reaches the real textured hotbar. The gameplay probe
@@ -1052,19 +1101,45 @@ npm run test:caxecraft-editor
 It creates a complete small map through public typed commands and proves exact
 undo/redo, bounded history and gestures, canonical in-memory reload,
 last-playable recovery, disposable test play, complete-volume projection,
-bounded fly-camera steps, solid and empty-space ray picking, the optional
-top-down projection, and Select/Paint/Erase/Fill translation under C and a
-second installed locale (Spanish when available). The reusable editor package
-imports no Raylib or C target API.
+bounded Walk/Fly/Orbit camera steps, solid and empty-space ray picking, the
+optional top-down projection, direct Build capture/release rules, numbered tool
+slots, and Select/Paint/Erase/Fill translation. It also proves complete Text
+round trips, invalid and stale recovery, advanced CaxeFlow data, undo/redo, and
+Test Play. The probe runs under C and a second installed locale (Spanish when
+available). The reusable editor package imports no Raylib or C target API.
 
-The title screen's Editor button now opens the first native Raylib/Raygui
-perspective viewport. A creator can fly with WASD/QE, look while holding the
-right mouse button, move with the wheel, focus the whole world with F, and
-left-click a visible voxel or empty floor cell. Every pointer gesture becomes
-the same typed `EditorCommand` used by history and tests. The screen caches a
-read-only complete-volume projection between accepted edits; it does not
-serialize the draft every frame or let rendering code write terrain. Its
-deterministic generated-C graphical proof is:
+The title screen's Editor button opens a native Raylib/Raygui perspective
+viewport. A creator clicks the world once to enter direct Build control. Mouse
+movement then looks through a centered crosshair without a held button. Build
+starts in Walk, which follows the authored surface at player eye height. The
+Camera button or C cycles through Walk, Fly, and Orbit. Fly adds Q/E movement,
+and Orbit uses the wheel to frame the selected object or the complete world. F
+refocuses the active mode. Keys 1 through 5 select the visible tool cards. Left
+click applies the selected tool. B opens Things to Add for terrain, items,
+NPCs, enemies, and mechanisms. T opens the complete CAXEMAP Text workspace.
+Escape releases the pointer before another cancel can leave the editor. Plan
+keeps a free pointer for precise layer and object work.
+
+Text edits one selected source line at a time while showing the complete
+bounded document. Apply + Format publishes valid source as one undoable change.
+Invalid or stale source remains editable and cannot replace the visual draft,
+history, selection, or last playable snapshot. Reset from Visual discards only
+the isolated Text edits.
+
+Object and environment controls use the same typed `EditorCommand` boundary as
+terrain, history, and tests. The screen caches a read-only complete-volume
+projection between accepted edits. It also tracks the saved history state
+without serializing the complete draft every frame. Crossing into another
+target cell translates the tool from that cached state. Only a click runs the
+complete revision, reducer, canonical-format, and history checks.
+
+Save and Ctrl/Cmd+S validate the draft and publish the map with its campaign,
+runtime-content, and outer-package receipts. The native app shares one
+package-backed editor session between visual edits, Test Play, and Save. It
+reads reviewed assets from the executable's asset root but grants publication
+authority only below the writable content root. A failed save preserves the
+draft and its dirty state for a retry. Its deterministic generated-C graphical
+proof is:
 
 ```sh
 python3 examples/caxecraft/play.py \
@@ -1073,16 +1148,19 @@ python3 examples/caxecraft/play.py \
   --allow-network
 ```
 
-The pilot moves the real editor camera, paints and selects one voxel, and
-requires a clipped perspective frame with sky, ground depth, solid volume, and
-a selection outline. This is the first truthful 3D editing slice, not a claim
-that native file save, multi-layer controls, controller navigation, object
-gizmos, or the complete child-friendly event/cutscene tools are available. Its
-design is explained in
+The pilot selects the second edit layer without changing history or dirty
+state, moves the real editor camera, paints and selects one voxel, saves the
+staged package, and exercises valid and invalid Text edits. It requires visible
+Text diagnostics plus a clipped perspective frame with sky, ground depth, solid
+volume, and a selection outline. It restores the source package before the
+repeat and requires the same saved bytes, receipts, semantic report, and
+screenshots. It also starts two fresh ordinary-engine Test Play runs. This proof
+does not claim that the complete child-friendly event/cutscene tools are
+available. Its design is explained in
 [the editor semantics guide](../../docs/caxecraft-editor.md).
 
-Native persistence and the remaining visual editor work continue as ordered
-`haxe_c-xge.19.*` slices. The readable
+The remaining visual editor work continues as ordered `haxe_c-xge.19.*`
+slices. The readable
 [CAXEMAP 1 reference](../../docs/caxemap-1.md) is their shared contract.
 
 Agents and text tools can now open a real package level through the same

@@ -240,6 +240,7 @@ class CPrimitiveContract {
 				"a zero divisor returns IEEE NaN or signed infinity without executing C division by zero",
 				"INT32_MIN / -1 produces exactly 2147483648.0"
 			]),
+			positiveConstantStdIntDivisionRecord(),
 			binaryOperationRecord("int-modulo", CPBOModulo, CPHaxeInt, CPHaxeInt, CPHaxeInt, [
 				"a zero divisor returns 0 as this target's deterministic refinement",
 				"INT32_MIN % -1 returns 0 without executing overflowing C division",
@@ -286,6 +287,28 @@ class CPrimitiveContract {
 				"the compiler selects the exact math-library link fact and no runtime feature"
 			])
 		];
+	}
+
+	/** Describe the validated compound operation selected before ordinary Float division. */
+	static function positiveConstantStdIntDivisionRecord():CPrimitiveOperationRecord {
+		final intKey = CPrimitiveSemantics.sourceTypeKey(CPHaxeInt);
+		return {
+			id: "std-int-positive-constant-divide",
+			operationId: "haxe.i32.divide.positive-constant",
+			sourceOperandTypes: [intKey, intKey],
+			loweredOperandTypes: [intKey, intKey],
+			resultType: intKey,
+			implementation: "direct-c",
+			edgeCases: [
+				"the numerator range is -2147483648 through 2147483647",
+				"the directly materialized divisor range is 1 through 2147483647",
+				"a nonintegral quotient is at least 1 / divisor from a truncation boundary",
+				"binary64 round-to-nearest error is at most 2^-22 / divisor",
+				"positive divisors exclude C division by zero and INT32_MIN / -1 overflow",
+				"negative numerators retain C11 and Std.int truncation toward zero"
+			],
+			runtimeFeatures: []
+		};
 	}
 
 	static function unaryOperationRecord(id:String, operation:CPrimitiveUnaryOperator, operandType:CPrimitiveSourceType, resultType:CPrimitiveSourceType,

@@ -61,12 +61,41 @@ class HaxeServerConnection:
 
 
 @dataclass(frozen=True)
+class OwnedHaxeServerProcess:
+    """Exact process identity retained after its mutable cookie changes."""
+
+    endpoint: str
+    pid: int
+    start_identity: str
+    command_identity: str
+    compatibility_sha256: str
+    compiler: str
+    cookie_sha256: str
+
+    def cookie(self) -> dict[str, object]:
+        """Rebuild the validated ownership claim used by guarded termination."""
+
+        return {
+            "schemaVersion": COOKIE_SCHEMA_VERSION,
+            "kind": COOKIE_KIND,
+            "endpoint": self.endpoint,
+            "pid": self.pid,
+            "processStartIdentity": self.start_identity,
+            "processCommandIdentity": self.command_identity,
+            "compatibilitySha256": self.compatibility_sha256,
+            "compiler": self.compiler,
+            "sha256": self.cookie_sha256,
+        }
+
+
+@dataclass(frozen=True)
 class HaxeServerLease:
     """One server connection and whether Caxecraft owns its process lifecycle."""
 
     connection: HaxeServerConnection
     owned: bool
     compatibility_sha256: str | None
+    process: OwnedHaxeServerProcess | None
 
 
 def _development_tool(name: str) -> str:
@@ -416,6 +445,40 @@ def _owned_cookie(cookie: Mapping[str, object]) -> bool:
     )
 
 
+def _owned_process(cookie: Mapping[str, object]) -> OwnedHaxeServerProcess:
+    """Copy one validated cookie into an immutable lease identity."""
+
+    if not _owned_cookie(cookie):
+        raise HaxeServerFailure("cannot lease an invalid Haxe server ownership cookie")
+    endpoint = cookie.get("endpoint")
+    pid = cookie.get("pid")
+    start_identity = cookie.get("processStartIdentity")
+    command_identity = cookie.get("processCommandIdentity")
+    compatibility_sha256 = cookie.get("compatibilitySha256")
+    compiler = cookie.get("compiler")
+    cookie_sha256 = cookie.get("sha256")
+    if (
+        not isinstance(endpoint, str)
+        or not isinstance(pid, int)
+        or isinstance(pid, bool)
+        or not isinstance(start_identity, str)
+        or not isinstance(command_identity, str)
+        or not isinstance(compatibility_sha256, str)
+        or not isinstance(compiler, str)
+        or not isinstance(cookie_sha256, str)
+    ):
+        raise HaxeServerFailure("owned Haxe server cookie lost its process identity")
+    return OwnedHaxeServerProcess(
+        endpoint=endpoint,
+        pid=pid,
+        start_identity=start_identity,
+        command_identity=command_identity,
+        compatibility_sha256=compatibility_sha256,
+        compiler=compiler,
+        cookie_sha256=cookie_sha256,
+    )
+
+
 def _terminate_owned(cookie: Mapping[str, object]) -> bool:
     """Stop only the exact process named by a still-valid ownership cookie."""
 
@@ -511,6 +574,7 @@ class OwnedHaxeServer:
             connection=HaxeServerConnection(endpoint, self.installation),
             owned=True,
             compatibility_sha256=self.compatibility_sha256,
+            process=_owned_process(cookie),
         )
 
     def _start(self) -> HaxeServerLease:
@@ -610,9 +674,8 @@ class OwnedHaxeServer:
                 "compatibilitySha256": self.compatibility_sha256,
                 "compiler": str(self.installation.compiler),
             }
-            atomic_write_state(
-                self.cookie_path, {**body, "sha256": canonical_digest(body)}
-            )
+            cookie = {**body, "sha256": canonical_digest(body)}
+            atomic_write_state(self.cookie_path, cookie)
         except BaseException:
             # Startup has not published an ownership cookie yet. Kill only the
             # exact process we just observed; a reused PID or changed command
@@ -632,6 +695,7 @@ class OwnedHaxeServer:
             connection=HaxeServerConnection(endpoint, self.installation),
             owned=True,
             compatibility_sha256=self.compatibility_sha256,
+            process=_owned_process(cookie),
         )
 
     def connect(self) -> HaxeServerLease:
@@ -671,6 +735,36 @@ class OwnedHaxeServer:
                 self.cookie_path.unlink(missing_ok=True)
             return stopped
 
+    def stop_lease(self, lease: HaxeServerLease) -> bool:
+        """Stop the exact process retained by one automatic lease.
+
+        A timed-out client can lose or replace the mutable state-root cookie
+        while its server keeps compiling. The lease retains the same validated
+        PID, start identity, and command identity, so failure cleanup can still
+        stop that process without touching a newer server.
+        """
+
+        process = lease.process
+        if (
+            not lease.owned
+            or process is None
+            or lease.compatibility_sha256 != self.compatibility_sha256
+            or process.compatibility_sha256 != self.compatibility_sha256
+        ):
+            return False
+        self.state_root.mkdir(parents=True, exist_ok=True)
+        with VariantLock(self.lock_path):
+            stopped = _terminate_owned(process.cookie())
+            if not stopped:
+                return False
+            try:
+                current = _read_cookie(self.cookie_path)
+            except HaxeServerFailure:
+                current = None
+            if current is not None and current.get("sha256") == process.cookie_sha256:
+                self.cookie_path.unlink(missing_ok=True)
+            return True
+
     def restart_after_transport_failure(
         self, lease: HaxeServerLease
     ) -> HaxeServerLease:
@@ -678,7 +772,7 @@ class OwnedHaxeServer:
 
         if not lease.owned:
             raise HaxeServerFailure("an explicitly attached Haxe server is not owned")
-        self.stop()
+        self.stop_lease(lease)
         return self.connect()
 
 
@@ -694,6 +788,7 @@ def attached_server(
         connection=HaxeServerConnection(endpoint, installation),
         owned=False,
         compatibility_sha256=None,
+        process=None,
     )
 
 

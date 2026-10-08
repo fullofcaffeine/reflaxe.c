@@ -22,10 +22,17 @@ class RuntimeFeatureCatalog {
 		final runtimeAbi = RuntimeFeatureId.parse("runtime-abi");
 		final status = RuntimeFeatureId.parse("status");
 		final statusName = RuntimeFeatureId.parse("status-name");
+		final dynamicFeature = RuntimeFeatureId.parse("dynamic");
+		final exceptionFeature = RuntimeFeatureId.parse("exception");
 		final alloc = RuntimeFeatureId.parse("alloc");
 		final array = RuntimeFeatureId.parse("array");
+		final iterator = RuntimeFeatureId.parse("iterator");
 		final intMap = RuntimeFeatureId.parse("int-map");
 		final stringMap = RuntimeFeatureId.parse("string-map");
+		final typedMap = RuntimeFeatureId.parse("typed-map");
+		final gcStringMap = RuntimeFeatureId.parse("gc-string-map");
+		final objectMap = RuntimeFeatureId.parse("object-map");
+		final enumValueMap = RuntimeFeatureId.parse("enum-value-map");
 		final bytes = RuntimeFeatureId.parse("bytes");
 		final bytesString = RuntimeFeatureId.parse("bytes-string");
 		final object = RuntimeFeatureId.parse("object");
@@ -33,10 +40,12 @@ class RuntimeFeatureCatalog {
 		final stringLiteral = RuntimeFeatureId.parse("string-literal");
 		final stringScalar = RuntimeFeatureId.parse("string-scalar");
 		final string = RuntimeFeatureId.parse("string");
+		final stringLowerCase = RuntimeFeatureId.parse("string-lower-case");
 		final stringFloat = RuntimeFeatureId.parse("string-float");
 		final stringSplit = RuntimeFeatureId.parse("string-split");
 		final arrayJoin = RuntimeFeatureId.parse("array-join");
 		final io = RuntimeFeatureId.parse("io");
+		final dateTime = RuntimeFeatureId.parse("date-time");
 		return [
 			new RuntimeFeatureDefinition(runtimeBase, "Shared C types, internal ABI version, and visibility/alignment macros for selected runtime slices.",
 				CompilerSelectable, true, environments, [], [header("base.h")], [], [], [],
@@ -82,6 +91,70 @@ class RuntimeFeatureCatalog {
 					"A fixture could duplicate the switch, but that would stop testing the runtime's own status vocabulary.",
 					"The helper is shared native evidence, not a fallback selected for generated Haxe.", "docs/hxrt.md",
 					["scripts/ci/runtime_smoke.py", "runtime/hxrt/test/runtime_smoke.c"])),
+			new RuntimeFeatureDefinition(dynamicFeature, "Private tagged carrier for source-required closed-world Dynamic values.", CompilerSelectable, true,
+				environments, [status], [header("dynamic.h"), source("dynamic.c")], [
+					"hxc_dynamic_type_is_valid",
+					"hxc_value_init_bool",
+					"hxc_value_init_float64",
+					"hxc_value_init_int32",
+					"hxc_value_init_managed_reference",
+					"hxc_value_init_managed_wrapper",
+					"hxc_value_init_null",
+					"hxc_value_init_static_token",
+					"hxc_value_is_null",
+					"hxc_value_is_valid",
+					"hxc_value_managed_payload",
+					"hxc_value_read_bool",
+					"hxc_value_read_float64",
+					"hxc_value_read_int32",
+					"hxc_value_read_managed_reference",
+					"hxc_value_read_managed_wrapper",
+					"hxc_value_read_static_token"
+				], [],
+				[],
+				documentation("Carries one validated Dynamic type identity and active payload without routing ordinary typed values through a universal box.",
+					[
+						new RuntimeFeatureSelectionRoot("dynamic-operation", RuntimeFeatureSelectionRootKind.HxcIrOperation,
+							"A reachable validated HxcIR Dynamic box, cast, field, call, equality, or managed-payload operation.")
+					],
+					"A statically typed value or operation keeps its direct specialized C representation and omits this feature.",
+					"A closed expression may use direct or program-local specialization only when no Dynamic carrier is observable across that boundary.",
+					"Observable Dynamic values need one shared tag, type identity, checked scalar access, and managed-root projection across generated C files. The carrier itself remains allocation-free; managed adapters select object and collector support separately.",
+					"docs/hxrt.md",
+					[
+						"runtime/hxrt/test/dynamic_contract.c",
+						"runtime/hxrt/test/dynamic_header_cpp.cpp",
+						"test/runtime/dynamic/run.py",
+						"test/runtime/runtime-feature-graph/run.py"
+					])),
+			new RuntimeFeatureDefinition(exceptionFeature, "Contained same-thread exception frames with rooted payload transport and reverse cleanup.",
+				CompilerSelectable, false, environments, [dynamicFeature], [header("exception.h"), source("exception.c")], [
+					"hxc_exception_cleanup_push",
+					"hxc_exception_cleanup_run",
+					"hxc_exception_cleanup_discard",
+					"hxc_exception_frame_payload",
+					"hxc_exception_frame_take_payload",
+					"hxc_exception_frame_pop",
+					"hxc_exception_frame_push",
+					"hxc_exception_root_slot_update",
+					"hxc_exception_raise"
+				],
+				[], [],
+				documentation("Maintains a thread-local stack of active lexical handlers, rooted Dynamic payloads, and exactly-once cleanup callbacks around compiler-owned setjmp sites.",
+					[
+						new RuntimeFeatureSelectionRoot("general-exception-region", RuntimeFeatureSelectionRootKind.HxcIrOperation,
+							"A reachable throw/catch region cannot be proven equivalent to ordinary result/status control flow.")
+					],
+					"Closed exact-type regions use explicit HxcIR failure edges and ordinary C labels with no exception runtime.",
+					"A complete closed call graph may use generated status propagation when payload matching, cleanup, and observable behavior remain equivalent.",
+					"Arbitrary cross-call throw and catch need one same-thread target chain. The frame keeps setjmp in generated code, roots managed payloads through a supplied slot, runs registered cleanups in reverse, and rejects missing or stale targets.",
+					"docs/hxrt.md",
+					[
+						"runtime/hxrt/test/exception_contract.c",
+						"runtime/hxrt/test/exception_header_cpp.cpp",
+						"test/exception_lowering/run.py",
+						"test/runtime/runtime-feature-graph/run.py"
+					])),
 			new RuntimeFeatureDefinition(alloc, "Hardened allocator ownership and failure contracts with hosted and custom native evidence.",
 				CompilerSelectable, true, environments, [status], [header("allocator.h"), source("allocator.c")], [
 					"hxc_default_allocator",
@@ -137,8 +210,14 @@ class RuntimeFeatureCatalog {
 					"hxc_array_ref_pop_move",
 					"hxc_array_ref_shift_move",
 					"hxc_array_ref_splice_one_discard",
+					"hxc_array_ref_splice_one_copy",
+					"hxc_array_ref_splice_discard",
+					"hxc_array_ref_splice_copy",
+					"hxc_array_ref_insert_copy",
 					"hxc_array_ref_push_copy",
+					"hxc_array_ref_resize_default",
 					"hxc_array_ref_release",
+					"hxc_array_ref_release_slot",
 					"hxc_array_ref_retain",
 					"hxc_array_ref_set_copy",
 					"hxc_array_ref_sort",
@@ -158,9 +237,11 @@ class RuntimeFeatureCatalog {
 						new RuntimeFeatureSelectionRoot("create-literal", RuntimeFeatureSelectionRootKind.HxcIrOperation,
 							"A reachable ordinary Haxe Array literal for an admitted unboxed element representation."),
 						new RuntimeFeatureSelectionRoot("collection-operation", RuntimeFeatureSelectionRootKind.HxcIrOperation,
-							"A reachable ordinary Haxe Array length, checked indexing, push, pop, shift, or discarded one-element splice operation."),
+							"A reachable ordinary Haxe Array length, checked indexing, mutation, copy, arbitrary-range splice, resize, or sort operation."),
 						new RuntimeFeatureSelectionRoot("splice-one-discard", RuntimeFeatureSelectionRootKind.HxcIrOperation,
 							"A reachable ordinary Haxe Array.splice(pos, 1) whose removed Array result is discarded."),
+						new RuntimeFeatureSelectionRoot("splice-one-copy", RuntimeFeatureSelectionRootKind.HxcIrOperation,
+							"A reachable ordinary Haxe Array.splice(pos, 1) that returns the removed typed Array."),
 						new RuntimeFeatureSelectionRoot("sort", RuntimeFeatureSelectionRootKind.HxcIrOperation,
 							"A reachable ordinary Haxe Array.sort call with an admitted exact typed comparator.")
 					],
@@ -172,17 +253,59 @@ class RuntimeFeatureCatalog {
 						"test/differential/array-runtime/run.py",
 						"test/runtime/runtime-feature-graph/run.py"
 					])),
+			new RuntimeFeatureDefinition(iterator, "Shared-cursor typed snapshots and live Array cursors for standard Haxe Iterator values.",
+				CompilerSelectable, true, environments, [alloc, array], [header("iterator.h"), source("iterator.c")], [
+					"hxc_iterator_element_ops_is_valid",
+					"hxc_iterator_ref_create_snapshot",
+					"hxc_iterator_ref_create_traced_snapshot",
+					"hxc_iterator_ref_create_array_values",
+					"hxc_iterator_ref_create_array_pairs",
+					"hxc_iterator_ref_retain",
+					"hxc_iterator_ref_release",
+					"hxc_iterator_ref_release_slot",
+					"hxc_iterator_ref_has_next",
+					"hxc_iterator_ref_next_move"
+				],
+				[], [],
+				documentation("Preserves one shared cursor across Iterator aliases while keeping each element exact and unboxed; maps snapshot their producer, while Array cursors retain live identity and observe later length changes.",
+					[
+						new RuntimeFeatureSelectionRoot("managed-type-representation", RuntimeFeatureSelectionRootKind.HxcIrOperation,
+							"A reachable standard Haxe Iterator<T> whose shared cursor crosses ordinary expressions or calls."),
+						new RuntimeFeatureSelectionRoot("iterator-operation", RuntimeFeatureSelectionRootKind.HxcIrOperation,
+							"A reachable standard Iterator.hasNext or Iterator.next operation."),
+						new RuntimeFeatureSelectionRoot("array-cursor", RuntimeFeatureSelectionRootKind.HxcIrOperation,
+							"A reachable ArrayIterator or ArrayKeyValueIterator whose shared live cursor crosses a call or return."),
+						new RuntimeFeatureSelectionRoot("retain", RuntimeFeatureSelectionRootKind.HxcIrOperation,
+							"A reachable Iterator alias must retain the same shared cursor."),
+						new RuntimeFeatureSelectionRoot("cleanup-release", RuntimeFeatureSelectionRootKind.HxcIrOperation,
+							"A reachable Iterator owner must release unconsumed snapshot elements when its Haxe lifetime ends.")
+					],
+					"Compile-time-known iteration can remain direct control flow when no Iterator value or shared cursor is observable.",
+					"A closed producer may use a program-local cursor only when aliases, element lifetime, and exhaustion behavior remain identical.",
+					"General Iterator values need run-time shared cursor identity. Map snapshots and live Array cursors share the carrier, while their exact element layout and lifecycle remain compiler-selected.",
+					"docs/hxrt.md",
+					[
+						"test/differential/array-runtime/run.py",
+						"test/differential/string-map/run.py",
+						"test/runtime/runtime-feature-graph/run.py"
+					])),
 			new RuntimeFeatureDefinition(stringMap, "String-keyed shared Haxe Map identity with copied UTF-8 keys and exact unboxed value storage.",
-				CompilerSelectable, true, environments, [alloc, stringLiteral], [header("string_map.h"), source("string_map.c")], [
+				CompilerSelectable, true, environments, [alloc, iterator, string, stringLiteral], [header("string_map.h"), source("string_map.c")], [
 					"hxc_string_map_ref_create",
 					"hxc_string_map_ref_create_with_ops",
 					"hxc_string_map_ref_retain",
 					"hxc_string_map_ref_release",
+					"hxc_string_map_ref_release_slot",
+					"hxc_string_map_ref_copy",
 					"hxc_string_map_ref_set_copy",
 					"hxc_string_map_ref_exists",
 					"hxc_string_map_ref_get_copy",
 					"hxc_string_map_ref_remove",
 					"hxc_string_map_ref_clear",
+					"hxc_string_map_ref_value_iterator",
+					"hxc_string_map_ref_key_iterator",
+					"hxc_string_map_ref_pair_iterator",
+					"hxc_string_map_ref_to_string",
 					"hxc_string_map_value_ops_is_valid"
 				],
 				[], [],
@@ -191,7 +314,7 @@ class RuntimeFeatureCatalog {
 						new RuntimeFeatureSelectionRoot("managed-type-representation", RuntimeFeatureSelectionRootKind.HxcIrOperation,
 							"A reachable ordinary Haxe Map<String, V> whose keys, contents, and shared identity change at run time."),
 						new RuntimeFeatureSelectionRoot("string-map-operation", RuntimeFeatureSelectionRootKind.HxcIrOperation,
-							"A reachable admitted construction, lookup, membership, insertion, removal, or clear operation.")
+							"A reachable admitted construction, copy, lookup, membership, insertion, removal, or clear operation.")
 					],
 					"A compiler-known immutable lookup table can remain direct const C data when Haxe mutation and alias identity are unobservable.",
 					"A closed, bounded map can use a program-local specialization when it preserves String equality, mutation, missing values, and alias identity.",
@@ -202,12 +325,21 @@ class RuntimeFeatureCatalog {
 						"test/runtime/runtime-feature-graph/run.py"
 					])),
 			new RuntimeFeatureDefinition(intMap, "Integer-keyed shared Map<Int, Bool> identity with exact unboxed storage.", CompilerSelectable, true,
-				environments, [alloc], [header("int_map.h"), source("int_map.c")], [
+				environments, [alloc, iterator, string], [header("int_map.h"), source("int_map.c")], [
 					"hxc_int_bool_map_ref_create",
 					"hxc_int_bool_map_ref_retain",
 					"hxc_int_bool_map_ref_release",
+					"hxc_int_bool_map_ref_release_slot",
+					"hxc_int_bool_map_ref_copy",
 					"hxc_int_bool_map_ref_set",
-					"hxc_int_bool_map_ref_exists"
+					"hxc_int_bool_map_ref_exists",
+					"hxc_int_bool_map_ref_get",
+					"hxc_int_bool_map_ref_remove",
+					"hxc_int_bool_map_ref_clear",
+					"hxc_int_bool_map_ref_value_iterator",
+					"hxc_int_bool_map_ref_key_iterator",
+					"hxc_int_bool_map_ref_pair_iterator",
+					"hxc_int_bool_map_ref_to_string"
 				],
 				[], [],
 				documentation("Preserves ordinary Map<Int, Bool> alias identity and key presence while storing both key and value in their exact C scalar forms.",
@@ -215,12 +347,91 @@ class RuntimeFeatureCatalog {
 					new RuntimeFeatureSelectionRoot("managed-type-representation", RuntimeFeatureSelectionRootKind.HxcIrOperation,
 						"A reachable ordinary Haxe Map<Int, Bool> whose contents and shared identity change at run time."),
 					new RuntimeFeatureSelectionRoot("int-map-operation", RuntimeFeatureSelectionRootKind.HxcIrOperation,
-						"A reachable admitted construction, insertion, or membership operation.")
+						"A reachable admitted construction, copy, insertion, lookup, membership, removal, or clear operation.")
 				],
 					"A compiler-known immutable integer lookup table can remain direct const C data when mutation and alias identity are unobservable.",
 					"A closed bounded key range can use a program-local bitset or table when the compiler can prove that range and preserve Map identity.",
-					"General run-time keys need mutable shared storage. This first Bool specialization avoids Dynamic values and boxing while leaving unproved IntMap methods unsupported.",
+					"General run-time keys need mutable shared storage. This Bool specialization keeps values unboxed and represents missing lookup results with the compiler's typed optional carrier.",
 					"docs/hxrt.md", ["test/differential/int-map/run.py", "test/runtime/runtime-feature-graph/run.py"])),
+			new RuntimeFeatureDefinition(typedMap, "Checked exact-layout hash-table mechanics shared by compiler-specialized identity and enum-value maps.",
+				CompilerSelectable, true, environments, [gc, iterator], [header("typed_map.h"), source("typed_map.c")], [
+					"hxc_typed_map_key_ops_is_valid",
+					"hxc_typed_map_value_ops_is_valid",
+					"hxc_typed_map_identity_hash",
+					"hxc_typed_map_hash_mix",
+					"hxc_typed_map_type_descriptor",
+					"hxc_typed_map_ref_create",
+					"hxc_typed_map_init_collector_owned",
+					"hxc_typed_map_dispose_in_place",
+					"hxc_typed_map_ref_retain",
+					"hxc_typed_map_ref_release",
+					"hxc_typed_map_ref_copy",
+					"hxc_typed_map_copy_in_place",
+					"hxc_typed_map_ref_set_copy",
+					"hxc_typed_map_ref_exists",
+					"hxc_typed_map_ref_get_copy",
+					"hxc_typed_map_ref_remove",
+					"hxc_typed_map_ref_clear",
+					"hxc_typed_map_ref_value_iterator",
+					"hxc_typed_map_ref_key_iterator",
+					"hxc_typed_map_ref_pair_iterator"
+				],
+				[], [],
+				documentation("Owns collision handling, checked allocation, failure-atomic mutation, and rooted iterator snapshots for exact compiler-provided key and value layouts.",
+					[
+						dependencyRoot("Selected by ObjectMap or EnumValueMap after the compiler has chosen an exact key policy and unboxed value layout.")
+					],
+					"A closed immutable lookup can remain direct generated data when mutable map identity is unobservable.",
+					"A program-local bounded table is valid only when it preserves the same equality, aliasing, mutation, and failure contracts.",
+					"The shared runtime owns table mechanics only. Generated typed callbacks retain Haxe key meaning and exact tracing, so the runtime does not box keys or values.",
+					"docs/hxrt.md",
+					[
+						"test/differential/object-enum-map/run.py",
+						"test/runtime/runtime-feature-graph/run.py"
+					])),
+			new RuntimeFeatureDefinition(gcStringMap, "String-keyed maps with precisely traced record values.", CompilerSelectable, true, environments,
+				[typedMap, string], [], [], [], [],
+				documentation("Keeps collector-managed children alive through map slots and iterator snapshots while preserving UTF-8 key equality.", [
+					new RuntimeFeatureSelectionRoot("gc-string-map-operation", RuntimeFeatureSelectionRootKind.HxcIrOperation,
+						"A reachable StringMap operation whose record value contains collector-managed children.")
+				],
+					"Maps whose values need no collector retain the ordinary reference-counted StringMap representation.",
+					"A bounded table specialization must preserve key equality, shared map identity, exact roots, and failure-atomic mutation.",
+					"The existing typed-map runtime owns storage and collection. Generated callbacks own String equality and each exact value's tracing and cleanup.",
+					"docs/hxrt.md",
+					[
+						"test/differential/string-map/run.py",
+						"test/runtime/runtime-feature-graph/run.py"
+					])),
+			new RuntimeFeatureDefinition(objectMap, "Object-identity Map keys over the shared exact typed-map runtime.", CompilerSelectable, true,
+				environments, [typedMap], [], [], [], [],
+				documentation("Preserves stable Haxe object identity as map-key equality while tracing occupied object keys and exact values strongly.", [
+					new RuntimeFeatureSelectionRoot("object-map-operation", RuntimeFeatureSelectionRootKind.HxcIrOperation,
+						"A reachable ordinary Haxe ObjectMap construction, copy, lookup, insertion, removal, clear, or iterator operation.")
+				],
+					"A compiler-known immutable identity lookup can remain direct when no shared mutable map value is observable.",
+					"A bounded program-local specialization is allowed only when distinct objects with equal fields remain distinct keys.",
+					"Mutable ObjectMap values need shared identity and stable pointer-key equality. Exact generated callbacks keep every key and value unboxed and precisely traced.",
+					"docs/hxrt.md",
+					[
+						"test/differential/object-enum-map/run.py",
+						"test/runtime/runtime-feature-graph/run.py"
+					])),
+			new RuntimeFeatureDefinition(enumValueMap, "Recursive enum-value Map keys over the shared exact typed-map runtime.", CompilerSelectable, true,
+				environments, [typedMap], [], [], [], [],
+				documentation("Compares enum constructors and payloads recursively, using identity for class payloads, while tracing occupied keys and exact values strongly.",
+					[
+						new RuntimeFeatureSelectionRoot("enum-value-map-operation", RuntimeFeatureSelectionRootKind.HxcIrOperation,
+							"A reachable ordinary Haxe EnumValueMap construction, copy, lookup, insertion, removal, clear, or iterator operation.")
+					],
+					"A compiler-known immutable enum lookup can remain direct when no shared mutable map value is observable.",
+					"A bounded program-local specialization is allowed only when recursive payload equality and class-payload identity remain exact.",
+					"Mutable EnumValueMap values need shared identity and equality that follows the active constructor. Generated callbacks keep that policy typed and unboxed.",
+					"docs/hxrt.md",
+					[
+						"test/differential/object-enum-map/run.py",
+						"test/runtime/runtime-feature-graph/run.py"
+					])),
 			new RuntimeFeatureDefinition(bytes, "Fixed-length mutable binary storage with checked ranges and shared Haxe identity.", CompilerSelectable, true,
 				environments, [alloc, stringLiteral], [header("bytes.h"), source("bytes.c")], [
 					"hxc_bytes_ref_create_zeroed",
@@ -229,6 +440,7 @@ class RuntimeFeatureCatalog {
 					"hxc_bytes_ref_is_valid",
 					"hxc_bytes_ref_retain",
 					"hxc_bytes_ref_release",
+					"hxc_bytes_ref_release_slot",
 					"hxc_bytes_ref_length",
 					"hxc_bytes_ref_get",
 					"hxc_bytes_ref_set",
@@ -300,6 +512,7 @@ class RuntimeFeatureCatalog {
 					"hxc_gc_thread_unregister",
 					"hxc_gc_root_frame_push",
 					"hxc_gc_root_frame_pop",
+					"hxc_gc_root_frame_pop_cleanup",
 					"hxc_gc_root_table_register",
 					"hxc_gc_root_table_unregister",
 					"hxc_gc_pin_object",
@@ -343,6 +556,7 @@ class RuntimeFeatureCatalog {
 					"hxc_string_char_code_at",
 					"hxc_string_index_of",
 					"hxc_string_last_index_of",
+					"hxc_string_substr",
 					"hxc_string_substring",
 					"hxc_string_compare",
 					"hxc_string_hash"
@@ -358,6 +572,8 @@ class RuntimeFeatureCatalog {
 						"A reachable ordinary Haxe String.indexOf whose receiver, needle, or start position is known only at run time."),
 					new RuntimeFeatureSelectionRoot("last-index-of", RuntimeFeatureSelectionRootKind.HxcIrOperation,
 						"A reachable ordinary Haxe String.lastIndexOf whose receiver, needle, or start position is known only at run time."),
+					new RuntimeFeatureSelectionRoot("substr", RuntimeFeatureSelectionRootKind.HxcIrOperation,
+						"A reachable ordinary Haxe String.substr whose bounds are known only at run time."),
 					new RuntimeFeatureSelectionRoot("substring", RuntimeFeatureSelectionRootKind.HxcIrOperation,
 						"A reachable ordinary Haxe String.substring whose bounds are known only at run time."),
 					dependencyRoot("Selected transitively by a broader String feature that reuses the same validated scalar rules.")
@@ -376,6 +592,7 @@ class RuntimeFeatureCatalog {
 				environments, [alloc, stringScalar], [header("string.h"), source("string.c")], [
 					"hxc_string_retain",
 					"hxc_string_release",
+					"hxc_string_release_slot",
 					"hxc_string_from_scalar",
 					"hxc_string_from_int32",
 					"hxc_string_concat_ref",
@@ -383,6 +600,7 @@ class RuntimeFeatureCatalog {
 					"hxc_string_from_utf8_checked",
 					"hxc_string_from_utf8_lossy",
 					"hxc_string_copy",
+					"hxc_string_copy_ref",
 					"hxc_string_concat",
 					"hxc_owned_string_dispose",
 					"hxc_string_buffer_init",
@@ -393,6 +611,8 @@ class RuntimeFeatureCatalog {
 					"hxc_string_buffer_finish_ref",
 					"hxc_string_buffer_dispose",
 					"hxc_string_borrow_cstring",
+					"hxc_string_prepare_call_cstring",
+					"hxc_call_cstring_dispose",
 					"hxc_string_to_cstring_owned",
 					"hxc_owned_cstring_dispose"
 				],
@@ -407,6 +627,10 @@ class RuntimeFeatureCatalog {
 							"A reachable ordinary Haxe String concatenation whose result bytes are not compile-time constants."),
 						new RuntimeFeatureSelectionRoot("borrow-cstring", RuntimeFeatureSelectionRootKind.HxcIrOperation,
 							"A reachable direct C import borrows one validated Haxe String as immutable NUL-terminated text only until that call returns."),
+						new RuntimeFeatureSelectionRoot("prepare-cstring", RuntimeFeatureSelectionRootKind.HxcIrOperation,
+							"A reachable direct C import borrows already terminated text or creates one bounded temporary copy for an interior String view."),
+						new RuntimeFeatureSelectionRoot("dispose-cstring", RuntimeFeatureSelectionRootKind.HxcIrOperation,
+							"A prepared C-string argument releases its optional temporary storage immediately after the direct native call returns."),
 						new RuntimeFeatureSelectionRoot("retain", RuntimeFeatureSelectionRootKind.HxcIrOperation,
 							"A reachable managed String copy must keep its optional backing owner alive."),
 						new RuntimeFeatureSelectionRoot("cleanup-release", RuntimeFeatureSelectionRootKind.HxcIrOperation,
@@ -419,6 +643,27 @@ class RuntimeFeatureCatalog {
 					"Runtime-created UTF-8 bytes can cross ordinary calls and container boundaries, so their allocator identity and final release need one shared owner contract.",
 					"docs/hxrt.md",
 					[
+						"test/differential/string-runtime/run.py",
+						"test/runtime/runtime-feature-graph/run.py"
+					])),
+			new RuntimeFeatureDefinition(stringLowerCase, "Locale-independent Haxe Eval simple lowercase conversion into a fresh managed String.",
+				CompilerSelectable, true, environments, [string], [
+					header("string_lower_case.h"),
+					header("string_lower_case_data.h"),
+					source("string_lower_case.c")
+				],
+				["hxc_string_to_lower_case"], [], [],
+				documentation("Maps each valid UTF-8 scalar through the pinned Haxe Eval lowercase table and publishes one fresh managed String owner.", [
+					new RuntimeFeatureSelectionRoot("to-lower-case", RuntimeFeatureSelectionRootKind.HxcIrOperation,
+						"A reachable ordinary Haxe String.toLowerCase depends on run-time source bytes."),
+					dependencyRoot("Selected only by a broader feature that requires Eval-compatible lowercase conversion.")
+				],
+					"A compiler-known literal may fold only when compile-time mapping uses the same generated table and preserves the same fresh-value semantics where observable.",
+					"A closed ASCII-only protocol may use a smaller program-local normalizer when its admitted alphabet is statically proven and is not exposed as ordinary Haxe String.toLowerCase.",
+					"General String values need one locale-independent mapping table, checked UTF-8 decoding, size-changing encoding, failure-atomic allocation, and exact result ownership. A separate feature keeps that table out of unrelated String programs.",
+					"docs/string-runtime.md",
+					[
+						"test/differential/string-runtime/GenerateLowercaseData.hx",
 						"test/differential/string-runtime/run.py",
 						"test/runtime/runtime-feature-graph/run.py"
 					])),
@@ -466,6 +711,29 @@ class RuntimeFeatureCatalog {
 						"test/differential/array-runtime/run.py",
 						"test/runtime/runtime-feature-graph/run.py"
 					])),
+			new RuntimeFeatureDefinition(dateTime, "Hosted wall-clock, monotonic-clock, local-calendar, and timezone adapters.", CompilerSelectable, true,
+				[CEnvironment.Hosted], [status], [header("date_time.h"), source("date_time.c")], [
+					"hxc_date_time_wall_milliseconds",
+					"hxc_date_time_monotonic_seconds",
+					"hxc_date_time_local_to_milliseconds",
+					"hxc_date_time_timezone_offset"
+				],
+				[], [],
+				documentation("Reads wall and monotonic clocks separately, converts local civil fields through host timezone rules, and reports Haxe-sign timezone offsets with checked time_t range conversion.",
+					[
+						new RuntimeFeatureSelectionRoot("wall-clock", RuntimeFeatureSelectionRootKind.HxcIrOperation,
+							"A reachable Date.now call needs the host's adjustable Unix-epoch clock."),
+						new RuntimeFeatureSelectionRoot("monotonic-clock", RuntimeFeatureSelectionRootKind.HxcIrOperation,
+							"A reachable Timer.stamp call needs elapsed time that cannot move backwards with wall-clock adjustments."),
+						new RuntimeFeatureSelectionRoot("local-calendar", RuntimeFeatureSelectionRootKind.HxcIrOperation,
+							"A reachable Date constructor needs host timezone and daylight-saving normalization."),
+						new RuntimeFeatureSelectionRoot("timezone-offset", RuntimeFeatureSelectionRootKind.HxcIrOperation,
+							"A reachable local Date projection needs the host offset at that exact timestamp.")
+					],
+					"UTC Date projection remains deterministic program-local Gregorian arithmetic and Date.fromTime needs only ordinary object allocation.",
+					"A platform with a closed embedded calendar can replace these calls with a program-local adapter that preserves the same status and clock-kind contracts.",
+					"Timezone databases, daylight-saving normalization, and clocks are host services. One narrow status/out boundary keeps those effects separate from portable Date arithmetic.",
+					"docs/date-time.md", ["test/date_time/run.py", "runtime/hxrt/test/date_time_contract.c"])),
 			new RuntimeFeatureDefinition(io, "Minimal hosted length-delimited String output with explicit write and flush failure status.",
 				CompilerSelectable, true, [CEnvironment.Hosted], [status, stringLiteral], [header("io.h"), source("io.c")], ["hxc_io_println"], [], [],
 				documentation("Writes one valid length-delimited Haxe String value plus a newline to hosted stdout and reports write or flush failure explicitly.",
@@ -491,9 +759,6 @@ class RuntimeFeatureCatalog {
 	public static function reservations():Array<RuntimeFeatureReservation> {
 		return [
 			reserved("closure", "E3.T08", "Escaping closure environment support after escape analysis."),
-			reserved("date-time", "E5.T08", "Date, timezone, wall-clock, and monotonic-time adapters."),
-			reserved("dynamic", "E4.T07", "Source-required tagged Haxe dynamic values and operations."),
-			reserved("exception", "E4.T09", "Contained general exception frames after result lowering is ineligible."),
 			reserved("export-error", "E7.T04", "Thread-safe exported status and error-detail boundary."),
 			reserved("filesystem", "E5.T09", "Hosted filesystem and file-resource adapters."),
 			reserved("process", "E5.T09", "Hosted environment and process adapters."),
@@ -525,24 +790,31 @@ class RuntimeFeatureCatalog {
 		return switch name {
 			case "abi.h": "787d82dc867999ba8e8e6987cc6933ad6f6ab5d087b415e97042934c454ccf62";
 			case "allocator.h": "6e21c0bc498eb40bcec901914a04dd1bee33b6b21e5a27f1ac5f169a8a1cc448";
-			case "array.h": "bf8775c44da8ab2c851cdb2e675d14320423f1a90b8fc4b13055e73e92445eed";
+			case "array.h": "b647fc5be70b1ddca8c0da723732cacf5d52ac43f061671ab4483ab8a677d96b";
 			case "array_join.h": "5829a159dab0bd3446b5bc418c2ee32ad2902c0fec6bcc04f82efeb66c294fea";
-			case "base.h": "9df654b0fae47eefcd799187258e64df12c969a41d5d7f3654f0ea67de65f276";
-			case "bytes.h": "3f2dc89578ee5381e98051c5b3d06dcb6859e0cce10535edaba9c9bf5b38f31d";
+			case "base.h": "7d4f67124bf94b76bfc24d5db973426f48f3f9f37daeae975fd4948f5b1dea25";
+			case "bytes.h": "dc9f59ab163486e2fc06f988cd931065eda3f480dfadae6917ee08ab60e9a4f5";
 			case "bytes_string.h": "9d944e38a748696628076b0c5fd56339668e48953a220d51c8da1630fbdf9c40";
-			case "gc.h": "2ca9523f1c74c62877c3f006bab9bd8a3a2a1eced93d67ad59d015a7c6ecb9de";
+			case "date_time.h": "07086c9185ea03a13dc6bf39d02f00f99b7cbd8151ba0bdf90d7e457c07880d4";
+			case "dynamic.h": "6acbca9069ce4670988e682c5c214a32968fadee892ea4490d0844674c2e24b2";
+			case "exception.h": "630008640e511d979dec4291dffec66c202706bec4bb020616ace2ce0dcf2235";
+			case "gc.h": "d99575a5bad765d45822a1d6221f7bc1b620d59dd6111e0c8ec8a2d45db36159";
 			case "io.h": "4b92f03451dc4d04ea74c857ca3ce54d52fbe80d31f155b93781ee2fab946589";
-			case "int_map.h": "dd54b016db1d391dc7778b13e6cff856c886543ca87119b37141c5ad150f8080";
+			case "int_map.h": "11213ebbb4fccb5620a4e949ec4a0852a512c7be8d1f5750d987f56aca71cd7f";
+			case "iterator.h": "10ec767355e93a45e214b4774435a46496dd2c601f285412bc072af7904a3e51";
 			case "object.h": "779b452097e4c58c7971b90743ace19a2dc6c91e381557abc84fbd5f9b30f1e5";
 			case "status.h": "6bf20f5d82594014ad0f2b79a25cb81417791bd9c07375d2fb89835e415be1c4";
 			case "status_name.h": "64bf3917787ffcf924369c8e1c0a525cf10902d004d5bb4b898f2af46a7456cc";
-			case "string.h": "0ed1be29fb80b5bbbc2248874d214cc7126da20e6139d02711516c1b131480ca";
+			case "string.h": "fe4b3130433bf6b64d27da5b1acf0bb477763acce0644a7882c15bb67226d77f";
+			case "string_lower_case.h": "c2fb77f0f59ba1b8804e308ca769c75fac2fde81a6faf52056424c8f6c7e490a";
+			case "string_lower_case_data.h": "b069c988dec0cd7f7cfc5b116ec0c534136f022d80c71684efd9294290ea9961";
 			case "string_decode.h": "aa93ea7f132aff625adfdcc7498532b139f621196deab4c0e9ecb5de2934fd48";
 			case "string_float.h": "8747a86c3cabae9bf54a4125305f043d6c70d7c97bc9f6f90174ba6185e3ecc1";
 			case "string_literal.h": "ac6b5ad9fa13004c62e3b33b9b28a935bfb8a22287cd4595ce6e6eb81490e283";
-			case "string_map.h": "26d94aa3cdfca1ae6edb678c575ed466bf32b7d6ccc635e55a706ec393c5db54";
-			case "string_scalar.h": "7dfac11f06f3a544dbe3177ac0e60cdb7bac4bcd0c3fbc6d20f2f6bea7a41352";
+			case "string_map.h": "a12868bdfbc4b5420b2930bc920fc45e6e69ead5b72be130c54919c54ba0c042";
+			case "string_scalar.h": "b400d7ef9af853410334b30627ea98a5af87d5c3a863f6aa4c770d7cc4b3d90b";
 			case "string_split.h": "a17c9cd6c31cfdb8da2cf4955b980090c144e68ee1ae4f1d0f0b543f4b6eb3eb";
+			case "typed_map.h": "8e0838bbf09921bf4167fc85e55d99a762cd208b069a41008e645b5e07949f11";
 			case _: throw 'runtime feature header `$name` has no reviewed SHA-256 provenance';
 		};
 	}
@@ -551,20 +823,26 @@ class RuntimeFeatureCatalog {
 		return switch name {
 			case "abi.c": "3300a4498a7ca20f771b1334d7be8f2c908d2bb067ea8f2fe3c059300e680b32";
 			case "allocator.c": "13385273c7c3d4a15785caa3095dd82d97bda8a026ebd9b6d54e2f531eb3b10e";
-			case "array.c": "8e0e6042aca21a231da5addd8a83562ec66c10dcedeb383477ae8ce27070baee";
+			case "array.c": "c5fec3dcf78ed27dcd38219efec8289dd38a23eeef352785396bde64fa99c98a";
 			case "array_join.c": "b158708b62c7e407f9da21c24a1b3306d4b41baa6b63f2d8019f631a98008fde";
-			case "bytes.c": "902f1a40eb6ff1d94cc58d48a8096c9c0cb60eef4e6e9b0d0469448f929bfcb8";
+			case "bytes.c": "10a4c6c17d1cedc31562fef6708fd54351e094ec4be631848d6348bb82ced46c";
 			case "bytes_string.c": "0ee9604f1b4ae78baeeaf7cac8b2a35b5634f115c958a7575230c790e8aa6ca6";
-			case "gc.c": "96cf942d6752070aaa5005eae3bc45c7d00aca37c360dfecaeb76d8db767b4cc";
+			case "date_time.c": "546e3f244d3187993254aca85dd4acfd64bd3c259b1531d736c950ce9de51b24";
+			case "dynamic.c": "804371b7eb2bfa6dbcb6598ff729754b312a2ba7b24a94a615915c30dee68503";
+			case "exception.c": "e6660d0b55b56be3cd436af8f0c16a7668b70f7e82031687a5a149e029c12741";
+			case "gc.c": "a79c93c94db215b3bc303ea4c761de627637d0eb881faeeaf10c07f9bed4c502";
 			case "io.c": "898b3f351b60a91f25fd1ffdfe8d832e95a5a6a738ffe226ac33581f1fcb5b0f";
-			case "int_map.c": "68a649d20d244f6fa73709da7d6a1d412a4ecb6e350048f0ed09fec6b044933e";
+			case "int_map.c": "1b9a0cf4a376e2c2afe7cb79457f50557d50274e8187239e9e4ae80a5a8108cf";
+			case "iterator.c": "a4f3da3f7e3a3fb5ad2f24497b00d77eae1b11c600167b8f5553b656623dba6b";
 			case "object.c": "0e7fc6a55b562eaaf03fe63eca743dd73248f0bee1c09e21b79464917e8c89c0";
 			case "status.c": "0695ab2528db6e29d5cf29d905ad736b7c1a3a79333082347ec18faea2d4e6d8";
-			case "string.c": "8313e359e18df7d5995faab32dd2e29cccd75ccd2338e475218549870d882736";
+			case "string.c": "07fb06813ca533677bf00f8580f874bd3c05a41a5bd1b647f45598b0d3e3c8c1";
+			case "string_lower_case.c": "55a692cfd855f71f1a1fa4f90f311f1653ec0638797ecfb024764e23a66680c8";
 			case "string_float.c": "60e5189e7f7304ccbc1f69136b7393e4eea35760cde590853ebced414bf39267";
-			case "string_map.c": "6db2d30dd800c52131e18d74449995f15c170cc2c99be2596fd22b40506a0b04";
-			case "string_scalar.c": "1df11e7045ccdd0c64503478477425ca3a55b71e9ac7f18e1cd623d9f17581b3";
+			case "string_map.c": "c637ffdce4e990fe7436f88e7445376722ee0b28dec10cf57db860a5120706e9";
+			case "string_scalar.c": "2c44eebc655dd34ed374b58402de9dfe731425fb4e0b54997a7c16c12e1309fb";
 			case "string_split.c": "799fc917a450169e4babd86748e879fe7222b4abfef293880c47891e671f9d1b";
+			case "typed_map.c": "2a890d9f7a66a2faaffff43eee084fcf704138442f5915e8e728acbcad6fbcff";
 			case _: throw 'runtime feature source `$name` has no reviewed SHA-256 provenance';
 		};
 	}

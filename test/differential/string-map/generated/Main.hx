@@ -44,6 +44,55 @@ private enum LookupKey {
 }
 
 /**
+	A domain identity that keeps its String carrier nominal in Haxe.
+
+	The map must not erase this type merely because its runtime representation is
+	the same immutable UTF-8 view used by `String`.
+**/
+private abstract StoredName(String) {
+	public inline function new(value:String)
+		this = value;
+
+	/** Return the visible text without giving up nominal storage at the map edge. */
+	public inline function text():String
+		return this;
+}
+
+/** A distinct String identity proves specializations do not collapse by carrier. */
+private abstract StoredTag(String) {
+	public inline function new(value:String)
+		this = value;
+
+	/** Return the text while preserving `StoredTag` at storage boundaries. */
+	public inline function text():String
+		return this;
+}
+
+/** Own one nominal managed-String map through an ordinary final class field. */
+private final class NameTable {
+	final values:Map<String, StoredName> = [];
+
+	/** Construct one empty shared table. */
+	public function new() {}
+
+	/** Insert or failure-atomically replace one typed identity. */
+	public function set(key:String, value:StoredName):Void
+		values.set(key, value);
+
+	/** Return an independently owned view when the key exists. */
+	public function get(key:String):Null<StoredName>
+		return values.get(key);
+
+	/** Remove one owned slot without changing the caller's source value. */
+	public function remove(key:String):Bool
+		return values.remove(key);
+
+	/** Release every owned slot while preserving the shared table object. */
+	public function clear():Void
+		values.clear();
+}
+
+/**
 	Owns a fieldless-enum map through an ordinary Haxe class field.
 
 	This mirrors the Caxecraft validation table that exposed the compiler gap.
@@ -104,6 +153,41 @@ private final class RecordTable {
 	/** Remove one live slot and report whether it existed. */
 	public function remove(key:String):Bool
 		return values.remove(key);
+
+	/** Return a typed snapshot iterator over the current record values. */
+	public function iterator():Iterator<StoredRecord>
+		return values.iterator();
+
+	/**
+		Copy the table, then prove outer independence and shallow child sharing.
+
+		The copied slot owns a separate record value, but its nested Array keeps
+		ordinary Haxe reference identity. Removing the copied slot must not remove
+		the original slot or release the shared Array too early.
+	**/
+	public function copyKeepsOriginal(key:String):Bool {
+		final copied = values.copy();
+		final copiedValue = copied.get(key);
+		if (copiedValue == null)
+			return false;
+		copiedValue.flags[0] = true;
+		if (!copied.remove(key) || copied.get(key) != null)
+			return false;
+		final originalValue = values.get(key);
+		return originalValue != null && originalValue.flags[0];
+	}
+}
+
+/** Supplies one real instance-call boundary for fresh StringMap arguments. */
+private final class MapBorrower {
+	/** Construct a stateless borrower; class identity exists only for call coverage. */
+	public function new() {}
+
+	/** Read one expected entry without retaining the caller-owned map. */
+	public function contains(values:Map<String, Bool>, key:String, expected:Bool):Bool {
+		final value = values.get(key);
+		return value != null && value == expected;
+	}
 }
 
 /**
@@ -116,6 +200,91 @@ private final class RecordTable {
 	separately through `exists` and nullable `get`.
 **/
 final class Main {
+	/**
+		Check key and pair contents on both targets, plus haxe.c snapshot ownership.
+
+		Eval's MapKeyValueIterator reads values from the source map on each next().
+		Only the native lane mutates the source before iteration: haxe.c promises
+		creation-time snapshots, as documented in docs/hxrt.md. The expected keys
+		and values stay identical, and the native mutation regression stays active.
+	 */
+	static function keyIteratorTrace():Bool {
+		final values:Map<String, Int> = [];
+		values.set("alpha", 3);
+		values.set("beta", 5);
+		final keys = values.keys();
+		final pairs = values.keyValueIterator();
+		#if !eval
+		values.clear();
+		values.set("later", 9);
+		#end
+		var keyBytes = 0;
+		while (keys.hasNext())
+			keyBytes += keys.next().length;
+		var pairBytes = 0;
+		var pairValues = 0;
+		while (pairs.hasNext()) {
+			final pair = pairs.next();
+			pairBytes += pair.key.length;
+			pairValues += pair.value;
+		}
+		return keyBytes == 9 && pairBytes == 9 && pairValues == 8;
+	}
+
+	/** Exercise the primitive Eval-compatible map spelling. */
+	static function stringTrace():Bool {
+		final values:Map<String, Int> = [];
+		values.set("score", 8);
+		final rendered = values.toString();
+		return rendered == "[score => 8]";
+	}
+
+	/** Return a managed-record iterator after its source map local has ended. */
+	static function makeRecordIterator():Iterator<StoredRecord> {
+		final values:Map<String, StoredRecord> = [];
+		values.set("first", {score: 7, flags: [true]});
+		values.set("second", {score: 11, flags: [false, true]});
+		return values.iterator();
+	}
+
+	/** Exercise one ordinary parameter boundary without copying the cursor. */
+	static function iteratorHasNext(values:Iterator<StoredRecord>):Bool
+		return values.hasNext();
+
+	/** Advance the same shared cursor through an ordinary parameter boundary. */
+	static function iteratorNext(values:Iterator<StoredRecord>):StoredRecord
+		return values.next();
+
+	/**
+		Prove snapshot ownership, aliasing, calls, returns, and early cleanup.
+
+		The source map dies before this function receives its iterator. Iterator
+		aliases must then share one cursor while each yielded record independently
+		owns its nested Array. A second producer starts at its own first element.
+	**/
+	static function managedRecordIteratorTrace():Bool {
+		final values = makeRecordIterator();
+		final alias = values;
+		if (!iteratorHasNext(alias))
+			return false;
+		final first = iteratorNext(values);
+		if (!alias.hasNext())
+			return false;
+		final second = alias.next();
+		final firstValid = first.score == 7 ? first.flags.length == 1 && first.flags[0] : first.score == 11 && first.flags.length == 2 && !first.flags[0]
+			&& first.flags[1];
+		final secondValid = second.score == 7 ? second.flags.length == 1 && second.flags[0] : second.score == 11 && second.flags.length == 2
+			&& !second.flags[0] && second.flags[1];
+		if (values.hasNext() || first.score + second.score != 18 || !firstValid || !secondValid)
+			return false;
+
+		final independent = makeRecordIterator();
+		if (!independent.hasNext())
+			return false;
+		final retained = independent.next();
+		return retained.flags.length > 0 && makeRecordIterator().hasNext();
+	}
+
 	/**
 		Return one integer lookup without confusing a stored zero with absence.
 
@@ -200,14 +369,112 @@ final class Main {
 
 		final replacement:StoredRecord = {score: 11, flags: [false, true]};
 		table.set("hero", replacement);
+		if (!table.copyKeepsOriginal("hero") || !replacement.flags[0])
+			return false;
 		final replaced = table.get("hero");
-		if (replaced == null || replaced.score != 11 || replaced.flags[0] || !replaced.flags[1])
+		if (replaced == null || replaced.score != 11 || !replaced.flags[0] || !replaced.flags[1])
 			return false;
 		if (!table.remove("hero") || table.remove("hero") || table.get("hero") != null)
 			return false;
 
 		// The local owners remain valid after their former map slots are gone.
 		return first.flags[0] && replacement.flags[1];
+	}
+
+	/** Build a runtime-owned nominal value so the fixture is not literal-only. */
+	static function runtimeName():StoredName
+		return new StoredName("run" + String.fromCharCode(116) + "ime");
+
+	/** Build a runtime-owned key to exercise the borrowed key call boundary. */
+	static function runtimeKey():String
+		return "run-" + String.fromCharCode(107) + "ey";
+
+	/** Leave the map as the sole owner after this helper's source local ends. */
+	static function insertRuntimeName(table:NameTable, key:String):Void {
+		final source = runtimeName();
+		table.set(key, source);
+	}
+
+	/** Leave one live runtime-owned slot for final map destruction. */
+	static function finalRuntimeSlot():Bool {
+		final table = new NameTable();
+		table.set("final", runtimeName());
+		return table.get("final") != null;
+	}
+
+	/** Pin raw String and a second nominal String as intentional carrier families. */
+	static function neighboringStringFamilies():Bool {
+		final raw:Map<String, String> = [];
+		raw.set("raw", "raw-" + String.fromCharCode(118) + "alue");
+		raw.set(runtimeKey(), "key-" + String.fromCharCode(118) + "alue");
+		final rawValue = raw.get("raw");
+		final runtimeKeyValue = raw.get(runtimeKey());
+		final tags:Map<String, StoredTag> = [];
+		tags.set("tag", new StoredTag("tag-" + String.fromCharCode(118) + "alue"));
+		final tag = tags.get("tag");
+		return rawValue == "raw-value" && runtimeKeyValue == "key-value" && tag != null && tag.text() == "tag-value";
+	}
+
+	/** Exercise nominal String storage, copy, replacement, and cleanup. */
+	static function nominalStringTrace():Bool {
+		final table = new NameTable();
+		table.set("literal", new StoredName("static"));
+		final literal = table.get("literal");
+		if (literal == null || literal.text() != "static" || table.get("missing") != null)
+			return false;
+
+		table.set("direct", runtimeName());
+		final direct = table.get("direct");
+		if (direct == null || direct.text() != "runtime")
+			return false;
+
+		final source = runtimeName();
+		table.set("active", source);
+		final loaded = table.get("active");
+		if (loaded == null || loaded.text() != "runtime")
+			return false;
+		table.get("active");
+		table.get("missing-ignored");
+
+		table.set("same-owner", source);
+		table.set("same-owner", source);
+		final sameOwner = table.get("same-owner");
+		if (sameOwner == null || sameOwner.text() != "runtime")
+			return false;
+
+		insertRuntimeName(table, "survivor");
+		final survivor = table.get("survivor");
+		if (survivor == null || !table.remove("survivor") || survivor.text() != "runtime")
+			return false;
+
+		table.set(runtimeKey(), runtimeName());
+		final runtimeKeyValue = table.get(runtimeKey());
+		if (runtimeKeyValue == null || runtimeKeyValue.text() != "runtime")
+			return false;
+
+		table.set("copy-source", runtimeName());
+		table.set("copy-target", table.get("copy-source"));
+		final copied = table.get("copy-target");
+		if (copied == null || copied.text() != "runtime")
+			return false;
+
+		table.set("active", new StoredName("replacement"));
+		final replacement = table.get("active");
+		if (loaded.text() != "runtime" || replacement == null || replacement.text() != "replacement")
+			return false;
+		if (!table.remove("active") || table.remove("active") || table.get("active") != null || replacement.text() != "replacement")
+			return false;
+		for (index in 0...64)
+			table.set("growth-" + index, runtimeName());
+		table.set("clear", runtimeName());
+		table.clear();
+		if (table.get("literal") != null
+			|| table.get("clear") != null
+			|| table.get("growth-63") != null
+			|| source.text() != "runtime")
+			return false;
+		table.set("scope-cleanup", runtimeName());
+		return finalRuntimeSlot() && neighboringStringFamilies();
 	}
 
 	/**
@@ -234,6 +501,26 @@ final class Main {
 	/** Keep nullable lookup explicit so missing remains distinct from `false`. */
 	static function lookup(values:Map<String, Bool>, key:String):Null<Bool>
 		return values.get(key);
+
+	/** Pass fresh empty and populated maps through static and instance borrows. */
+	static function freshArgumentTrace():Bool {
+		final borrower = new MapBorrower();
+		return lookup([], runtimeKey()) == null && borrower.contains(makeMap(), "beta", true);
+	}
+
+	/** Copy entries into an independent table without sharing later mutations. */
+	static function independentCopy():Bool {
+		final original:Map<String, Bool> = [];
+		original.set("alpha", false);
+		original.set("beta", true);
+		final copied = original.copy();
+		copied.set("alpha", true);
+		copied.remove("beta");
+		return original.get("alpha") == false
+			&& original.get("beta") == true
+			&& copied.get("alpha") == true
+			&& copied.get("beta") == null;
+	}
 
 	/**
 		Return the absent value of the same nullable pointer carrier.
@@ -268,7 +555,8 @@ final class Main {
 		final emptyBeforeClear = alias.exists("");
 		alias.clear();
 
-		while (!integerTrace() || !fieldlessEnumTrace() || !managedRecordTrace() || alias != values || absent != null || null != absent || values == null
+		while (!integerTrace() || !fieldlessEnumTrace() || !managedRecordTrace() || !managedRecordIteratorTrace() || !keyIteratorTrace() || !stringTrace()
+			|| !nominalStringTrace() || !freshArgumentTrace() || !independentCopy() || alias != values || absent != null || null != absent || values == null
 			|| alphaBefore == null || alphaBefore || missingBefore != null || !removedBeta || removedBetaAgain || !gammaBeforeClear || !emptyBeforeClear
 			|| values.exists("alpha") || values.exists("gamma") || values.exists("") || values.get("alpha") != null) {}
 	}

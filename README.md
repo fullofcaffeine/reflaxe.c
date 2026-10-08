@@ -259,15 +259,15 @@ This inventory combines product capability boundaries with repository infrastruc
 
 | Status | Count | Meaning |
 | --- | ---: | --- |
-| `implemented` | 39 | The exact bounded scope has executable repository evidence. This does not confer support on adjacent Haxe semantics or make a release promise. |
+| `implemented` | 42 | The exact bounded scope has executable repository evidence. This does not confer support on adjacent Haxe semantics or make a release promise. |
 | `scaffold-only` | 3 | A typed contract, seed, fixture, or plan exists, but it is not evidence of an available user-program capability. |
-| `experimental` | 1 | The surface is explicit and opt-in, remains unstable, and has not passed a supported-release capability gate. |
-| `unsupported` | 11 | The surface is absent, deliberately fails closed, or lacks the evidence needed for a product claim. |
+| `experimental` | 2 | The surface is explicit and opt-in, remains unstable, and has not passed a supported-release capability gate. |
+| `unsupported` | 8 | The surface is absent, deliberately fails closed, or lacks the evidence needed for a product claim. |
 
 | Inventory item | Status | Current boundary |
 | --- | --- | --- |
 | `beads-bootstrap` | `implemented` | Repository governance tooling validates and previews the checked-in Beads plan deterministically; this is not compiler or runtime functionality. |
-| `bindgen` | `unsupported` | No Clang-backed binding generator or user bindgen command exists. |
+| `bindgen` | `experimental` | The hxc bindgen command captures deterministic declarations and target ABI facts from Clang. |
 | `bootstrap-capability-manifest` | `implemented` | A schema-checked M0 product, infrastructure, and limitation inventory drives the README status table. |
 | `build-adapter-seeds` | `implemented` | One typed neutral executable plan deterministically drives optional CMake and Meson files plus a direct argument-array consumer. |
 | `c-ast-printer` | `implemented` | Target-owned AST corpora deterministically emit and native-run single-file and header/source C projects. |
@@ -286,15 +286,16 @@ This inventory combines product capability boundaries with repository infrastruc
 | `generated-file-ownership` | `implemented` | Admitted projects use deterministic content-addressed artifacts and Reflaxe-owned stale-file handling. |
 | `generic-specialization` | `implemented` | Reachable closed generic static functions over admitted primitives, enums, and selected direct records share deterministic program-local instances and emit a bounded code-size report. |
 | `governance-and-provenance` | `implemented` | Contribution, disclosure, license, vendoring, provenance, and future release responsibilities are drift-checked. |
-| `hxc-cli` | `unsupported` | No Run.hx, hxc command router, project schema, template, or packaged executable exists. |
+| `hxc-cli` | `implemented` | The Eval bootstrap exposes deterministic project templates, stable command routing, help/version behavior, exit categories, schema-1 JSON framing, inspection, and schema-4 Clang semantic and ABI lock capture. |
 | `hxc-doctor` | `unsupported` | The hxc doctor human and JSON command is not implemented. |
+| `hxc-inspect` | `implemented` | The Eval bootstrap validates compiler manifests and exposes versioned human and JSON views of configuration, semantic lowering, runtime, build, declaration, ABI, and size evidence. |
 | `hxc-ir` | `implemented` | Schema-21 HxcIR structurally records values, tagged cases, concrete and header-owned nominal types, reachable class/interface layouts, slots and tables, distinct caller-owned class and interface borrows, receiver-tied read-only span returns, call-scoped mutable C-string buffers, exact native dispatch/constants, binary32 rounding/binary64 widening, strings, ordering, control flow, failures, cleanup, managed roots, unmanaged branch carriers, managed-enum ownership joins, and runtime intent. |
 | `literal-backed-string-values` | `implemented` | Immutable Haxe String values backed by source literals can flow through direct typed values without allocation. |
-| `literal-string-output` | `implemented` | Hosted Sys.println accepts statically typed String values, while default trace accepts compiler-known literals; both preserve exact UTF-8/NUL bytes and explicit output failure handling. |
+| `literal-string-output` | `implemented` | Hosted Sys.println accepts String, Int, Bool, Float, and String-valued conditionals; default trace accepts compiler-known literals. Output preserves exact UTF-8/NUL bytes and explicit failure handling. |
 | `native-interop-fixtures` | `scaffold-only` | Independent C-library and C++ extern-C shim inputs validate interop boundary shapes. |
 | `native-smoke` | `implemented` | Strict GCC/G++ and Clang/Clang++ CI lanes compile and run the declared structural, generated, runtime, import, aggregate/class/constructor/dispatch/enum-layout, generic-specialization, hello, and Caxecraft-domain corpus. |
 | `performance-evidence` | `unsupported` | No compiler-time, C-compile-time, runtime, size, allocation, FFI, or agent benchmark claim is validated. |
-| `platform-support-matrix` | `unsupported` | No operating-system, architecture, environment, runtime, and compiler tuple is currently a supported release lane. |
+| `platform-support-matrix` | `implemented` | One data-owned Tier 1 plan drives non-skippable native and emulated qualification jobs and a fail-closed release evidence aggregate. |
 | `primitive-executable-lowering` | `implemented` | A bounded primitive static-function graph with deterministic initialization, typed direct exact/modulo integer conversions, selective mutable-parameter locals, and literal or bounded zero-initialized local or nonescaping class-owned fixed-array/span storage plus nonescaping internal span parameters and receiver-tied read-only span returns emits and runs runtime-free strict C11. |
 | `primitive-semantics` | `implemented` | A typed schema-3 primitive representation, nullability, conversion, and operation contract has independent and generated C evidence. |
 | `public-c-abi` | `unsupported` | No generated public C header, stable export symbol set, ownership boundary, or ABI compatibility promise exists. |
@@ -306,7 +307,7 @@ This inventory combines product capability boundaries with repository infrastruc
 | `runtime-bytes-contract` | `implemented` | A bounded ordinary-Haxe haxe.io.Bytes slice provides shared fixed-length binary storage, checked UTF-8 text snapshots, and compiler-owned lifetimes. |
 | `runtime-collector-contract` | `implemented` | A selective precise, non-moving collector backend reclaims cyclic managed graphs through exact roots and descriptors. |
 | `runtime-feature-planning` | `implemented` | A typed deterministic feature graph resolves exact runtime closure under a versioned, provenance-locked internal ABI contract. |
-| `runtime-hxrt-seed` | `scaffold-only` | Hardened allocator, UTF-8 scalar string, typed array, Bytes, status, hosted output, object descriptor, and collector slices coexist with other provisional runtime seeds. |
+| `runtime-hxrt-seed` | `scaffold-only` | Hardened allocator, UTF-8 scalar string, typed array, Bytes, status, hosted output, object descriptor, collector, and Dynamic carrier slices coexist with other provisional runtime seeds. |
 | `runtime-string-contract` | `implemented` | The bounded native string slice enforces valid UTF-8, scalar indexing, allocation-aware ownership, and explicit CString lifetimes. |
 | `standard-library` | `unsupported` | General Haxe standard-library parity is not implemented. |
 | `standard-library-ledger` | `implemented` | The exact pinned Haxe public standard-library surface has a deterministic ownership and parity ledger. |

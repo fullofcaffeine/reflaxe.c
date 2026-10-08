@@ -215,10 +215,13 @@ def validate(root: Path, *, require_tools: bool) -> list[str]:
     expected_diagnostics_script = "python3 test/diagnostics/run.py"
     expected_hxc_config_script = "python3 test/hxc_config/run.py"
     expected_c_ast_script = "python3 test/c_ast/run.py"
+    expected_c_ast_fuzz_script = "python3 test/c_ast/run_fuzz.py"
     expected_declaration_plan_script = "python3 test/declaration_plan/run.py"
     expected_symbol_registry_script = "python3 test/symbol_registry/run.py"
     expected_project_emitter_script = "python3 test/project_emitter/run.py"
     expected_runtime_features_script = "python3 test/runtime/runtime-feature-graph/run.py"
+    expected_dynamic_runtime_script = "python3 test/runtime/dynamic/run.py"
+    expected_dynamic_lowering_script = "python3 test/differential/dynamic-runtime/run.py"
     expected_array_runtime_script = "python3 test/differential/array-runtime/run.py"
     expected_int_map_script = "python3 test/differential/int-map/run.py"
     expected_string_map_script = "python3 test/differential/string-map/run.py"
@@ -297,6 +300,9 @@ def validate(root: Path, *, require_tools: bool) -> list[str]:
     expected_caxecraft_presentation_script = (
         "python3 examples/caxecraft/run_haxe_c_test.py presentation"
     )
+    expected_caxecraft_player_camera_script = (
+        "python3 examples/caxecraft/run_haxe_c_test.py player-camera"
+    )
     expected_caxecraft_terrain_chunks_script = (
         "python3 examples/caxecraft/run_haxe_c_test.py terrain-chunks"
     )
@@ -330,14 +336,14 @@ def validate(root: Path, *, require_tools: bool) -> list[str]:
     )
     expected_toolchain_script = (
         "npm run deps:verify && npm run test:beads-plan && npm run test:diagnostics && "
-        "npm run test:hxc-config && npm run test:all-sources && npm run test:content-digest && "
-        "npm run test:bootstrap && npm run test:typed-c && npm run test:c-import && npm run test:raylib-provisioning && npm run test:raygui-binding && npm run test:typed-ast && npm run test:incremental-backend && npm run test:c-ast && "
+        "npm run test:hxc-config && npm run test:hxc-cli && npm run test:hxc-new && npm run test:hxc-inspect && npm run test:hxc-bindgen && npm run test:all-sources && npm run test:content-digest && "
+        "npm run test:bootstrap && npm run test:typed-c && npm run test:c-import && npm run test:raylib-provisioning && npm run test:raygui-binding && npm run test:typed-ast && npm run test:incremental-backend && npm run test:c-ast && npm run test:c-ast-fuzz && "
         "npm run test:declaration-plan && npm run test:symbol-registry && npm run test:project-emitter && "
-        "npm run test:runtime-features && npm run test:array-runtime && npm run test:int-map && npm run test:string-map && npm run test:string-char-at && npm run test:string-null && npm run test:bytes-runtime && npm run test:gc-runtime && npm run test:string-runtime && npm run test:string-output && npm run test:hello && npm run test:hxc-ir && npm run test:primitive-semantics && "
+        "npm run test:runtime-features && npm run test:dynamic-runtime && npm run test:dynamic-lowering && npm run test:array-runtime && npm run test:int-map && npm run test:string-map && npm run test:string-char-at && npm run test:string-null && npm run test:bytes-runtime && npm run test:gc-runtime && npm run test:runtime-stress && npm run test:string-runtime && npm run test:date-time && npm run test:string-output && npm run test:typed-output && npm run test:hello && npm run test:hxc-ir && npm run test:primitive-semantics && "
         "npm run test:stdlib-ledger && "
         "npm run test:body-lowering && "
-        "npm run test:function-lowering && npm run test:aggregate-lowering && npm run test:class-layout && npm run test:constructor-lowering && npm run test:virtual-dispatch && npm run test:enum-lowering && npm run test:generic-specialization && npm run test:evaluation-order && npm run test:static-initialization && "
-        "npm run test:arithmetic-semantics && npm run test:primitive-differential && npm run test:span-lowering && npm run test:project-layout && npm run test:caxecraft-content-json && npm run test:caxecraft-runtime-schemas && npm run test:caxecraft-actor-composition && npm run test:caxecraft-package-store && npm run test:caxecraft-package-manifest && npm run test:caxecraft-content-refresh && npm run test:caxecraft-package-zip-source && npm run test:caxecraft-package-zip-export && npm run test:caxecraft-resolved-level-plan && npm run test:caxecraft-content-generation && npm run test:caxecraft-runtime-level-loader && npm run test:caxecraft-runtime-content-generation && npm run test:caxecraft-runtime-piloscript && npm run test:caxecraft-campaign-runtime && npm run test:caxecraft-runtime-content-publication && npm run test:caxecraft-water && npm run test:caxecraft-aquatics && npm run test:caxecraft-session && npm run test:caxecraft-app-screen && npm run test:caxecraft-presentation && npm run test:caxecraft-terrain-chunks && npm run test:caxecraft-inventory && npm run test:caxecraft-gameplay && npm run test:caxecraft-pilot && npm run test:caxecraft-scenario-model && npm run test:caxecraft-caxeflow && npm run test:caxecraft-editor && npm run test:caxecraft-scenario-determinism && npm run test:caxecraft-domain:full && npm run snapshots:catalog"
+        "npm run test:exception-lowering && npm run test:function-lowering && npm run test:aggregate-lowering && npm run test:class-layout && npm run test:constructor-lowering && npm run test:virtual-dispatch && npm run test:enum-lowering && npm run test:generic-specialization && npm run test:evaluation-order && npm run test:static-initialization && "
+        "npm run test:arithmetic-semantics && npm run test:primitive-differential && npm run test:span-lowering && npm run test:project-layout && npm run test:caxecraft-content-json && npm run test:caxecraft-runtime-schemas && npm run test:caxecraft-actor-composition && npm run test:caxecraft-package-store && npm run test:caxecraft-package-manifest && npm run test:caxecraft-content-refresh && npm run test:caxecraft-package-zip-source && npm run test:caxecraft-package-zip-export && npm run test:caxecraft-resolved-level-plan && npm run test:caxecraft-content-generation && npm run test:caxecraft-runtime-level-loader && npm run test:caxecraft-runtime-content-generation && npm run test:caxecraft-runtime-piloscript && npm run test:caxecraft-campaign-runtime && npm run test:caxecraft-runtime-content-publication && npm run test:caxecraft-water && npm run test:caxecraft-aquatics && npm run test:caxecraft-session && npm run test:caxecraft-app-screen && npm run test:caxecraft-presentation && npm run test:caxecraft-player-camera && npm run test:caxecraft-terrain-chunks && npm run test:caxecraft-inventory && npm run test:caxecraft-gameplay && npm run test:caxecraft-pilot && npm run test:caxecraft-scenario-model && npm run test:caxecraft-caxeflow && npm run test:caxecraft-editor && npm run test:caxecraft-scenario-determinism && npm run test:caxecraft-domain:full && npm run snapshots:catalog"
     )
     if (
         not isinstance(scripts, dict)
@@ -369,6 +375,11 @@ def validate(root: Path, *, require_tools: bool) -> list[str]:
         or scripts.get("test:c-ast") != expected_c_ast_script
     ):
         errors.append("package.json must retain the structural C AST golden gate")
+    if (
+        not isinstance(scripts, dict)
+        or scripts.get("test:c-ast-fuzz") != expected_c_ast_fuzz_script
+    ):
+        errors.append("package.json must retain the bounded C AST fuzz gate")
     if (
         not isinstance(scripts, dict)
         or scripts.get("test:c-import") != expected_c_import_script
@@ -405,6 +416,16 @@ def validate(root: Path, *, require_tools: bool) -> list[str]:
         or scripts.get("test:runtime-features") != expected_runtime_features_script
     ):
         errors.append("package.json must retain the selective runtime feature gate")
+    if (
+        not isinstance(scripts, dict)
+        or scripts.get("test:dynamic-runtime") != expected_dynamic_runtime_script
+    ):
+        errors.append("package.json must retain the private Dynamic runtime gate")
+    if (
+        not isinstance(scripts, dict)
+        or scripts.get("test:dynamic-lowering") != expected_dynamic_lowering_script
+    ):
+        errors.append("package.json must retain the exact Dynamic lowering gate")
     if (
         not isinstance(scripts, dict)
         or scripts.get("test:array-runtime") != expected_array_runtime_script
@@ -450,6 +471,8 @@ def validate(root: Path, *, require_tools: bool) -> list[str]:
         or scripts.get("test:string-output") != expected_string_output_script
     ):
         errors.append("package.json must retain the generated literal-output gate")
+    if not isinstance(scripts, dict) or scripts.get("test:typed-output") != "python3 test/string_output/run.py --typed-only":
+        errors.append("package.json must retain the typed Sys.println differential gate")
     if (
         not isinstance(scripts, dict)
         or scripts.get("test:hello") != expected_hello_script
@@ -643,6 +666,12 @@ def validate(root: Path, *, require_tools: bool) -> list[str]:
         errors.append("package.json must retain the Caxecraft presentation gate")
     if (
         not isinstance(scripts, dict)
+        or scripts.get("test:caxecraft-player-camera")
+        != expected_caxecraft_player_camera_script
+    ):
+        errors.append("package.json must retain the Caxecraft player-camera gate")
+    if (
+        not isinstance(scripts, dict)
         or scripts.get("test:caxecraft-terrain-chunks")
         != expected_caxecraft_terrain_chunks_script
     ):
@@ -772,15 +801,22 @@ def validate(root: Path, *, require_tools: bool) -> list[str]:
         "-lib reflaxe.c",
         '--macro include("reflaxe.c", true)',
         '--macro include("c", true, ["c._std*"])',
-        '--macro include("hxc", true)',
         '--macro include("raylib", true)',
         '--macro include("raygui", true)',
         "-main AllSourcesProbe",
     ]
     if meaningful_hxml_lines(all_sources_hxml, errors) != expected_all_sources_hxml:
         errors.append(
-            "all_sources.hxml must include every reflaxe.c, c, hxc, raylib, and raygui module through the scoped target library"
+            "all_sources.hxml must include every reflaxe.c, c, raylib, and raygui module through the scoped target library"
         )
+    expected_hxc_sources_hxml = [
+        "-cp test/all_sources/",
+        "-cp src/",
+        '--macro include("hxc", true)',
+        "-main HxcSourcesProbe",
+    ]
+    if meaningful_hxml_lines(root / "test/all_sources/hxc_sources.hxml", errors) != expected_hxc_sources_hxml:
+        errors.append("hxc_sources.hxml must retain the separate complete host-product graph")
     if not (root / "test/all_sources/run.py").is_file():
         errors.append("dedicated all-source Haxe gate runner is missing")
 

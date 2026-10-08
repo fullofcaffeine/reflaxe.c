@@ -13,6 +13,10 @@ import reflaxe.c.emit.CProjectLayout.CProjectPackageLayout;
 import reflaxe.c.emit.CProjectLayout.CProjectLayoutPlanner;
 import reflaxe.c.emit.GeneratedFile.GeneratedFileKind;
 import reflaxe.c.ir.HxcIR;
+import reflaxe.c.ir.HxcIRTraversal.HxcIRTraversalSite;
+import reflaxe.c.ir.HxcIRTraversal.HxcIRTraversalVisitor;
+import reflaxe.c.ir.HxcIRTraversal.walkHxcIR;
+import reflaxe.c.ir.HxcIRValidator.ValidatedHxcIRProgram;
 import reflaxe.c.lowering.CBodyAggregate.CLoweredBodyAggregate;
 import reflaxe.c.lowering.CBodyClass.CLoweredBodyClass;
 import reflaxe.c.lowering.CBodyEmitter;
@@ -133,6 +137,7 @@ private class CStaticFunctionSemanticPlan {
 	public final classTypes:Array<CTypeSemanticPlan>;
 	public final virtualDefinitions:Array<CDecl>;
 	public final virtualObjectDeclarations:Array<CDecl>;
+	public final dynamicDeclarations:Array<CDecl>;
 	public final moduleDependencies:Map<String, Array<String>>;
 	public final support:Array<CDecl>;
 	public final supportGlobalSplit:Int;
@@ -145,8 +150,8 @@ private class CStaticFunctionSemanticPlan {
 			optionalTypes:Array<CTypeSemanticPlan>, enumForwards:Array<CDecl>, commonEnumTypes:Array<CTypeSemanticPlan>, enumTypes:Array<CTypeSemanticPlan>,
 			virtualForwards:Array<CDecl>, interfaceValueDefinitions:Array<CDecl>, classForwards:Array<CDecl>, classTypes:Array<CTypeSemanticPlan>,
 			virtualDefinitions:Array<CDecl>, virtualObjectDeclarations:Array<CDecl>, moduleDependencies:Map<String, Array<String>>, support:Array<CDecl>,
-			supportGlobalSplit:Int, globalDeclarations:Array<CModuleDeclaration>, globalDefinitions:Array<CModuleDeclaration>,
-			functions:Array<CFunctionSemanticPlan>, entry:Array<CDecl>) {
+			dynamicDeclarations:Array<CDecl>, supportGlobalSplit:Int, globalDeclarations:Array<CModuleDeclaration>,
+			globalDefinitions:Array<CModuleDeclaration>, functions:Array<CFunctionSemanticPlan>, entry:Array<CDecl>) {
 		this.common = common;
 		this.aggregateForwards = aggregateForwards.copy();
 		this.aggregateTypes = aggregateTypes.copy();
@@ -161,6 +166,7 @@ private class CStaticFunctionSemanticPlan {
 		this.classTypes = classTypes.copy();
 		this.virtualDefinitions = virtualDefinitions.copy();
 		this.virtualObjectDeclarations = virtualObjectDeclarations.copy();
+		this.dynamicDeclarations = dynamicDeclarations.copy();
 		this.moduleDependencies = moduleDependencies;
 		this.support = support.copy();
 		this.supportGlobalSplit = supportGlobalSplit;
@@ -168,6 +174,25 @@ private class CStaticFunctionSemanticPlan {
 		this.globalDefinitions = globalDefinitions.copy();
 		this.functions = functions.copy();
 		this.entry = entry.copy();
+	}
+}
+
+/** Detect the exact binary32 carrier through the shared structural traversal. */
+private class CFloat32UseVisitor extends HxcIRTraversalVisitor {
+	public var found(default, null) = false;
+
+	public function new() {
+		super();
+	}
+
+	override public function onTypeRef(type:HxcIRTypeRef, site:HxcIRTraversalSite):Void {
+		switch type {
+			case IRTFloat(32):
+				found = true;
+			case IRTBool | IRTInt(_, _) | IRTAbiInteger(_) | IRTFloat(_) | IRTString | IRTManagedString | IRTCString | IRTCallScopedCString |
+				IRTMutableCStringBuffer | IRTVoid | IRTInstance(_) | IRTPointer(_, _) | IRTNullable(_, _) | IRTFunction(_, _) | IRTFixedArray(_, _, _) |
+				IRTSpan(_, _) | IRTDynamic:
+		}
 	}
 }
 
@@ -191,6 +216,8 @@ class CStaticFunctionProjectEmitter {
 	public function planWithLayout(lowered:CBodyLoweringResult, entryFunctionId:String, entryName:CIdentifier, layout:CProjectLayoutPlan,
 			headerGuards:Map<String, CIdentifier>, ?initializerFunctionIds:Array<String>, ?initializationName:CIdentifier,
 			?runtimeAbiMajor:Int):CStaticFunctionDeclarationPlan {
+		for (fn in lowered.functions)
+			lowered.program.requireOwnedFunction(fn.ir);
 		final entry = findFunction(lowered.functions, entryFunctionId);
 		if (entry.ir.parameters.length != 0 || entry.ir.returnType != IRTVoid) {
 			throw new ProjectEmissionError('Haxe executable entry `${entry.ir.id}` must have signature `static function main():Void`');
@@ -216,8 +243,9 @@ class CStaticFunctionProjectEmitter {
 			throw new ProjectEmissionError("a compiler-owned initialization name requires an explicit initialization order");
 		}
 
-		final bodyEmitter = new CBodyEmitter(lowered.aggregates, lowered.enums, lowered.classes, lowered.arrays, lowered.intMaps, lowered.stringMaps,
-			lowered.bytes, lowered.optionals, lowered.dispatch, lowered.imports, lowered.managedProgram);
+		final bodyEmitter = new CBodyEmitter(lowered.aggregates, lowered.enums, lowered.classes, lowered.arrays, lowered.iterators, lowered.intMaps,
+			lowered.stringMaps, lowered.typedMaps, lowered.bytes, lowered.optionals, lowered.dispatch, lowered.imports, lowered.managedProgram,
+			lowered.dynamicPlan);
 		final helperEmitter = new CPrimitiveHelperEmitter(lowered.helpers);
 		final nonReturningFunctionIds = nonReturningCallCycles(lowered.functions);
 		var hasNonReturningFunctions = false;
@@ -335,6 +363,7 @@ class CStaticFunctionProjectEmitter {
 		final classTypes = classTypePlans(lowered, bodyEmitter);
 		final virtualDefinitions = bodyEmitter.virtualTableDefinitions();
 		final virtualObjectDeclarations = bodyEmitter.virtualTableObjectDeclarations();
+		final dynamicDeclarations = bodyEmitter.dynamicWrapperDefinitions().concat(bodyEmitter.dynamicAdapterDeclarations());
 		final commonTypeIds:Map<String, Bool> = [];
 		for (plan in commonEnumTypes)
 			commonTypeIds.set(plan.instanceId, true);
@@ -371,6 +400,8 @@ class CStaticFunctionProjectEmitter {
 
 		final support:Array<CDecl> = [];
 		for (definition in managedProgramDefinitions(lowered))
+			support.push(definition);
+		for (definition in bodyEmitter.dynamicAdapterDefinitions())
 			support.push(definition);
 		for (assertion in bodyEmitter.aggregateLayoutAssertions()) {
 			support.push(assertion);
@@ -455,7 +486,7 @@ class CStaticFunctionProjectEmitter {
 		}));
 		final semantic = new CStaticFunctionSemanticPlan(headerUnit, aggregateForwards, aggregateTypes, optionalForwards, optionalTypes, enumForwards,
 			commonEnumTypes, enumTypes, virtualForwards, interfaceValueDefinitions, classForwards, classTypes, virtualDefinitions, virtualObjectDeclarations,
-			moduleDependencies, support, supportGlobalSplit, globalDeclarations, globalDefinitions, functions, entryDeclarations);
+			moduleDependencies, support, dynamicDeclarations, supportGlobalSplit, globalDeclarations, globalDefinitions, functions, entryDeclarations);
 		return switch layout.layout {
 			case Unity: assignUnity(semantic, layout, headerGuards);
 			case Split: assignSplit(semantic, layout, headerGuards);
@@ -624,6 +655,7 @@ class CStaticFunctionProjectEmitter {
 		// because its signatures can depend on generated records.
 		appendDeclarations(headerUnit, semantic.virtualDefinitions);
 		appendTypeDeclarations(headerUnit, semantic.classTypes);
+		appendDeclarations(headerUnit, semantic.dynamicDeclarations);
 		appendDeclarations(headerUnit, semantic.virtualObjectDeclarations);
 		for (global in semantic.globalDeclarations)
 			headerUnit.declarations.push(global.declaration);
@@ -715,6 +747,7 @@ class CStaticFunctionProjectEmitter {
 		for (module in dependencyOrderedModules(layout, semantic.moduleDependencies)) {
 			umbrella.includes.push({path: module.headerInclude, kind: Local});
 		}
+		appendDeclarations(umbrella, semantic.dynamicDeclarations);
 		headers.push({
 			path: HEADER_PATH,
 			unit: new CHeaderUnit(requireGuard(layout, headerGuards, HEADER_PATH), umbrella)
@@ -828,6 +861,7 @@ class CStaticFunctionProjectEmitter {
 		}
 		for (pack in dependencyOrderedPackages(layout, packageDependencies))
 			umbrella.includes.push({path: pack.headerInclude, kind: Local});
+		appendDeclarations(umbrella, semantic.dynamicDeclarations);
 		headers.push({
 			path: HEADER_PATH,
 			unit: new CHeaderUnit(requireGuard(layout, headerGuards, HEADER_PATH), umbrella)
@@ -1040,8 +1074,11 @@ class CStaticFunctionProjectEmitter {
 		final result:Map<String, String> = [];
 		for (aggregate in lowered.aggregates)
 			addTypeOwner(result, aggregate.prepared.instanceId, aggregate.prepared.ownerModule);
-		for (value in lowered.enums)
+		for (value in lowered.enums) {
 			addTypeOwner(result, value.prepared.instanceId, value.prepared.ownerModule);
+			if (value.prepared.collectorNode())
+				addTypeOwner(result, value.prepared.nodeInstanceId(), value.prepared.ownerModule);
+		}
 		for (value in lowered.classes)
 			addTypeOwner(result, value.prepared.instanceId, value.prepared.ownerModule);
 		for (value in lowered.optionals)
@@ -1152,9 +1189,12 @@ class CStaticFunctionProjectEmitter {
 			case IRTPointer(pointee, _) | IRTNullable(pointee, IRNPointer) | IRTSpan(pointee, _):
 				addDeclarationHeaderDependencies(pointee, dependencies, emitter);
 			case IRTFunction(parameters, result):
+				// A function-pointer field still declares each parameter and result by
+				// value. Complete those carriers first. Pointer-shaped values remain
+				// soft edges through the pointer branch above.
 				for (parameter in parameters)
-					addDeclarationHeaderDependencies(parameter, dependencies, emitter);
-				addDeclarationHeaderDependencies(result, dependencies, emitter);
+					addDefinitionTypeDependencies(parameter, dependencies, emitter);
+				addDefinitionTypeDependencies(result, dependencies, emitter);
 			case IRTBool | IRTInt(_, _) | IRTAbiInteger(_) | IRTFloat(_) | IRTString | IRTManagedString | IRTCString | IRTCallScopedCString |
 				IRTMutableCStringBuffer | IRTVoid | IRTDynamic:
 		}
@@ -1359,120 +1399,10 @@ class CStaticFunctionProjectEmitter {
 		];
 	}
 
-	static function programUsesFloat32(program:HxcIRProgram):Bool {
-		for (slot in program.dispatch.slots) {
-			if (typesUseFloat32(slot.parameterTypes) || typeUsesFloat32(slot.returnType)) {
-				return true;
-			}
-		}
-		for (module in program.modules) {
-			for (declaration in module.types) {
-				if (typeKindUsesFloat32(declaration.kind)) {
-					return true;
-				}
-			}
-			for (instance in module.typeInstances) {
-				if (typesUseFloat32(instance.arguments)) {
-					return true;
-				}
-			}
-			for (global in module.globals) {
-				if (typeUsesFloat32(global.type)) {
-					return true;
-				}
-			}
-			for (fn in module.functions) {
-				if (functionUsesFloat32(fn)) {
-					return true;
-				}
-			}
-		}
-		return false;
-	}
-
-	static function functionUsesFloat32(fn:HxcIRFunction):Bool {
-		if (typeUsesFloat32(fn.returnType)) {
-			return true;
-		}
-		for (parameter in fn.parameters) {
-			if (typeUsesFloat32(parameter.type)) {
-				return true;
-			}
-		}
-		for (local in fn.locals) {
-			if (typeUsesFloat32(local.type)) {
-				return true;
-			}
-		}
-		for (block in fn.blocks) {
-			for (parameter in block.parameters) {
-				if (typeUsesFloat32(parameter.type)) {
-					return true;
-				}
-			}
-			for (instruction in block.instructions) {
-				if (instruction.result != null && typeUsesFloat32(instruction.result.type)) {
-					return true;
-				}
-				switch instruction.kind {
-					case IRIOConvert(_, _, targetType, _, _) | IRIOAllocate(targetType, _, _, _):
-						if (typeUsesFloat32(targetType))
-							return true;
-					case IRIOCall(call):
-						if (typeUsesFloat32(call.returnType))
-							return true;
-					case _:
-				}
-			}
-		}
-		return false;
-	}
-
-	static function typeKindUsesFloat32(kind:HxcIRTypeKind):Bool {
-		return switch kind {
-			case IRTKAggregate(fields): fieldsUseFloat32(fields);
-			case IRTKTaggedUnion(cases):
-				var found = false;
-				for (tagCase in cases) {
-					for (payload in tagCase.payload) {
-						if (typeUsesFloat32(payload.type)) {
-							found = true;
-							break;
-						}
-					}
-					if (found)
-						break;
-				}
-				found;
-			case IRTKClass(layout): fieldsUseFloat32(layout.fields);
-			case IRTKPrimitive | IRTKReference | IRTKFunction | IRTKExtern: false;
-		}
-	}
-
-	static function fieldsUseFloat32(fields:Array<HxcIRTypeField>):Bool {
-		for (field in fields) {
-			if (typeUsesFloat32(field.type))
-				return true;
-		}
-		return false;
-	}
-
-	static function typesUseFloat32(types:Array<HxcIRTypeRef>):Bool {
-		for (type in types) {
-			if (typeUsesFloat32(type))
-				return true;
-		}
-		return false;
-	}
-
-	static function typeUsesFloat32(type:HxcIRTypeRef):Bool {
-		return switch type {
-			case IRTFloat(32): true;
-			case IRTPointer(pointee, _) | IRTNullable(pointee, _) | IRTFixedArray(pointee, _, _) | IRTSpan(pointee, _):
-				typeUsesFloat32(pointee);
-			case IRTFunction(parameters, result): typesUseFloat32(parameters) || typeUsesFloat32(result);
-			case _: false;
-		}
+	static function programUsesFloat32(program:ValidatedHxcIRProgram):Bool {
+		final visitor = new CFloat32UseVisitor();
+		walkHxcIR(program, visitor);
+		return visitor.found;
 	}
 
 	/**

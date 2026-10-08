@@ -7,6 +7,7 @@ import argparse
 import json
 import os
 import re
+import shlex
 import shutil
 import socket
 import subprocess
@@ -19,6 +20,11 @@ from typing import Iterable
 
 
 ROOT = Path(__file__).resolve().parents[3]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from scripts.test.bounded_process import run as run_bounded_process  # noqa: E402
+
 CASE = Path(__file__).resolve().parent
 ORACLE_HXML = CASE / "oracle.hxml"
 FIXTURE = CASE / "string_runtime.c"
@@ -28,6 +34,8 @@ NATIVE_TEXT = CASE / "native_text"
 NATIVE_TEXT_PRIVATE_INLINE = CASE / "native_text_private_inline"
 NATIVE_TEXT_NUL = CASE / "native_text_nul"
 NATIVE_TEXT_UNTERMINATED = CASE / "native_text_unterminated"
+NATIVE_TEXT_AUTO = CASE / "native_text_auto"
+NATIVE_TEXT_AUTO_NUL = CASE / "native_text_auto_nul"
 TEXT_OBSERVER_SOURCE = CASE / "native/text_observer.c"
 TEXT_OBSERVER_INCLUDE = CASE / "native/include"
 INCLUDE = ROOT / "runtime/hxrt/include"
@@ -37,6 +45,7 @@ SOURCES = (
     ROOT / "runtime/hxrt/src/allocator.c",
     ROOT / "runtime/hxrt/src/array.c",
     ROOT / "runtime/hxrt/src/string.c",
+    ROOT / "runtime/hxrt/src/string_lower_case.c",
     ROOT / "runtime/hxrt/src/string_scalar.c",
     ROOT / "runtime/hxrt/src/string_split.c",
 )
@@ -63,15 +72,18 @@ EXPECTED_GENERATED_FEATURES = [
     "alloc",
     "array",
     "string-literal",
-    "io",
     "string-scalar",
     "string",
+    "array-join",
+    "io",
     "string-float",
+    "string-lower-case",
     "string-split",
 ]
 EXPECTED_GENERATED_ARTIFACTS = [
     "runtime/include/hxrt/allocator.h",
     "runtime/include/hxrt/array.h",
+    "runtime/include/hxrt/array_join.h",
     "runtime/include/hxrt/base.h",
     "runtime/include/hxrt/io.h",
     "runtime/include/hxrt/status.h",
@@ -79,13 +91,17 @@ EXPECTED_GENERATED_ARTIFACTS = [
     "runtime/include/hxrt/string_decode.h",
     "runtime/include/hxrt/string_float.h",
     "runtime/include/hxrt/string_literal.h",
+    "runtime/include/hxrt/string_lower_case.h",
+    "runtime/include/hxrt/string_lower_case_data.h",
     "runtime/include/hxrt/string_scalar.h",
     "runtime/include/hxrt/string_split.h",
     "runtime/src/allocator.c",
     "runtime/src/array.c",
+    "runtime/src/array_join.c",
     "runtime/src/io.c",
     "runtime/src/string.c",
     "runtime/src/string_float.c",
+    "runtime/src/string_lower_case.c",
     "runtime/src/string_scalar.c",
     "runtime/src/string_split.c",
 ]
@@ -129,8 +145,46 @@ class Toolchain:
 
 
 def development_tool(name: str) -> str:
+    if name == "haxe" and os.environ.get("HXC_TEST_HAXE"):
+        return os.environ["HXC_TEST_HAXE"]
     local = ROOT / "node_modules/.bin" / name
     return str(local) if local.is_file() else name
+
+
+def reflaxe_library_arguments() -> list[str]:
+    """Resolve the checkout library through its authoritative Lix mapping."""
+    if os.environ.get("HXC_TEST_HAXE") is None:
+        return ["-lib", "reflaxe.c"]
+    result = run_bounded_process(
+        [str(ROOT / "node_modules/.bin/haxelib"), "path", "reflaxe.c"],
+        cwd=ROOT,
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=20,
+    )
+    if result.returncode != 0 or result.stderr:
+        raise StringRuntimeFailure(
+            f"could not resolve checkout reflaxe.c arguments: {result.stderr!r}"
+        )
+    arguments: list[str] = []
+    for line in result.stdout.splitlines():
+        if line.startswith("--macro "):
+            arguments.extend(("--macro", line[len("--macro ") :]))
+            continue
+        if line.startswith("-D "):
+            arguments.extend(("-D", line[len("-D ") :]))
+            continue
+        values = shlex.split(line)
+        if not values:
+            continue
+        if values[0].startswith("-"):
+            arguments.extend(values)
+        else:
+            arguments.extend(("-cp", values[0]))
+    if not arguments:
+        raise StringRuntimeFailure("checkout reflaxe.c argument mapping is empty")
+    return arguments
 
 
 def haxe_environment(*, server: bool = False) -> dict[str, str]:
@@ -144,7 +198,7 @@ def haxe_environment(*, server: bool = False) -> dict[str, str]:
 
 
 def compiler_identity(executable: str) -> tuple[str, str]:
-    result = subprocess.run(
+    result = run_bounded_process(
         [executable, "--version"],
         cwd=ROOT,
         check=False,
@@ -210,7 +264,7 @@ def selected_toolchains(selected: str) -> list[Toolchain]:
 def run_oracle() -> str:
     outputs: list[str] = []
     for label in ("first", "second"):
-        result = subprocess.run(
+        result = run_bounded_process(
             [development_tool("haxe"), str(ORACLE_HXML)],
             cwd=ROOT,
             env=haxe_environment(),
@@ -238,7 +292,7 @@ def run_float_oracle() -> None:
     """Pin Float spelling to an independently executed Haxe Eval program."""
     observations: list[tuple[int, str, str]] = []
     for _ in range(2):
-        result = subprocess.run(
+        result = run_bounded_process(
             [development_tool("haxe"), "-cp", str(CASE), "--run", "FloatStringOracle"],
             cwd=ROOT,
             env=haxe_environment(),
@@ -273,7 +327,7 @@ def compile_native_fixture(
         "-o",
         str(executable),
     ]
-    compiled = subprocess.run(
+    compiled = run_bounded_process(
         command,
         cwd=ROOT,
         check=False,
@@ -287,7 +341,7 @@ def compile_native_fixture(
             f"command={command!r}\nstdout={compiled.stdout!r}\n"
             f"stderr={compiled.stderr!r}"
         )
-    executed = subprocess.run(
+    executed = run_bounded_process(
         [str(executable)],
         cwd=ROOT,
         check=False,
@@ -312,7 +366,7 @@ def inspect_symbols(executable: Path, family: str) -> None:
     nm = shutil.which("nm")
     if nm is None:
         raise StringRuntimeFailure(f"{family} string runtime requires nm evidence")
-    result = subprocess.run(
+    result = run_bounded_process(
         [nm, str(executable)],
         cwd=ROOT,
         check=False,
@@ -365,7 +419,7 @@ def run_generated_eval() -> None:
     """Run the ordinary-Haxe fixture twice before involving haxe.c."""
     observations: list[tuple[int, str, str]] = []
     for _ in range(2):
-        result = subprocess.run(
+        result = run_bounded_process(
             [development_tool("haxe"), "oracle.hxml"],
             cwd=GENERATED,
             env=haxe_environment(),
@@ -382,6 +436,36 @@ def run_generated_eval() -> None:
         )
 
 
+def validate_lowercase_data() -> None:
+    """Prove the packaged scalar table is byte-exact pinned Eval output."""
+    result = run_bounded_process(
+        [
+            development_tool("haxe"),
+            "-cp",
+            str(CASE),
+            "--run",
+            "GenerateLowercaseData",
+            "--check",
+        ],
+        cwd=ROOT,
+        env=haxe_environment(),
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    expected = (
+        "lowercase-data: OK: "
+        "runtime/hxrt/include/hxrt/string_lower_case_data.h matches pinned Eval\n"
+    )
+    if result.returncode != 0 or result.stdout != expected or result.stderr:
+        raise StringRuntimeFailure(
+            "generated lowercase data drifted from pinned Eval: "
+            f"exit={result.returncode} stdout={result.stdout!r} "
+            f"stderr={result.stderr!r}"
+        )
+
+
 def compile_haxe(
     fixture: Path,
     output: Path,
@@ -392,7 +476,14 @@ def compile_haxe(
     defines: tuple[str, ...] = (),
     connect: str | None = None,
 ) -> subprocess.CompletedProcess[str]:
-    """Compile one isolated ordinary-Haxe fixture through the real target."""
+    """Compile one ordinary-Haxe fixture through the real target.
+
+    An explicitly supplied endpoint owns warm-server determinism checks. The
+    optional environment endpoint lets a developer reuse one isolated server
+    when host contention would otherwise hide semantic results behind startup.
+    """
+    if connect is None:
+        connect = os.environ.get("HXC_TEST_HAXE_CONNECT")
     command = [development_tool("haxe")]
     if connect is not None:
         command.extend(["--connect", connect])
@@ -400,8 +491,7 @@ def compile_haxe(
         [
             "-cp",
             str(fixture),
-            "-lib",
-            "reflaxe.c",
+            *reflaxe_library_arguments(),
             "-main",
             "Main",
             "-D",
@@ -417,7 +507,7 @@ def compile_haxe(
     for define in defines:
         command.extend(["-D", define])
     command.extend(["--custom-target", f"c={output}"])
-    return subprocess.run(
+    return run_bounded_process(
         command,
         cwd=ROOT,
         env=haxe_environment(server=connect is not None),
@@ -568,6 +658,26 @@ def validate_std_string_identity_ownership(hxcir: str) -> None:
         )
 
 
+def validate_discarded_string_ownership(hxcir: str) -> None:
+    """Prove an ignored fresh String result is destroyed at its statement."""
+    function = hxcir_function(hxcir, "Main.discardFromCode")
+    events = (
+        'dispatch=direct("function.Main.fromCode")',
+        "discarded-string-owner-initialize",
+        "destroy-discarded-string",
+        "terminator return value=none cleanup=[]",
+    )
+    positions = [function.find(event) for event in events]
+    if (
+        any(position < 0 for position in positions)
+        or positions != sorted(positions)
+        or function.count("destroy-discarded-string") != 1
+    ):
+        raise StringRuntimeFailure(
+            "an ignored fresh String lost its immediate exact-once cleanup"
+        )
+
+
 def validate_conditional_view_ownership(hxcir: str) -> None:
     """Prove a retained String view transfers through an outer conditional."""
     for display_name in (
@@ -658,17 +768,151 @@ def validate_projected_enum_payload_ownership(hxcir: str) -> None:
         )
 
 
+def validate_lower_case_ownership(hxcir: str) -> None:
+    """Prove lowercase conversion evaluates once and returns fresh owners."""
+    function = hxcir_function(hxcir, "Main.lowerCaseContractHolds")
+    direct_calls = [
+        line
+        for line in function.splitlines()
+        if 'dispatch=direct("function.Main.observedLowerCaseSource")' in line
+    ]
+    lower_calls = [
+        line
+        for line in function.splitlines()
+        if 'runtime(feature="string-lower-case",operation="to-lower-case")'
+        in line
+    ]
+    if len(direct_calls) != 1 or len(lower_calls) != 9:
+        raise StringRuntimeFailure(
+            "String.toLowerCase must evaluate its observed receiver once and "
+            "emit nine exact runtime calls"
+        )
+
+    direct_result = re.search(r'result="([^"]+)":', direct_calls[0])
+    receiver_owners = [
+        line
+        for line in function.splitlines()
+        if "string-toLowerCase-receiver-owner-initialize" in line
+    ]
+    if direct_result is None or len(receiver_owners) != 1:
+        raise StringRuntimeFailure(
+            "the runtime-created lowercase receiver lost its one temporary owner"
+        )
+    owner = re.search(
+        r'place=local\("([^"]+)"\) value="([^"]+)"', receiver_owners[0]
+    )
+    if owner is None or owner.group(2) != direct_result.group(1):
+        raise StringRuntimeFailure(
+            "the lowercase receiver owner did not consume the observed call result"
+        )
+    receiver_owner = owner.group(1)
+    receiver_borrows = [
+        line
+        for line in function.splitlines()
+        if "string-toLowerCase-receiver-borrow" in line
+    ]
+    if len(receiver_borrows) != 1:
+        raise StringRuntimeFailure(
+            "the lowercase runtime call lost its one receiver borrow"
+        )
+    borrowed = re.search(
+        rf'result="([^"]+)":.*load place=local\("{re.escape(receiver_owner)}"\)',
+        receiver_borrows[0],
+    )
+    if borrowed is None:
+        raise StringRuntimeFailure(
+            "the lowercase receiver borrow did not come from its temporary owner"
+        )
+    borrowed_value = borrowed.group(1)
+    receiver_null_checks = [
+        line
+        for line in function.splitlines()
+        if "string-toLowerCase-receiver-null-check" in line
+        and f'null-check value="{borrowed_value}"' in line
+    ]
+    ordered_events = [
+        function.index(direct_calls[0]),
+        function.index(receiver_owners[0]),
+        function.index(receiver_borrows[0]),
+        function.index(receiver_null_checks[0])
+        if len(receiver_null_checks) == 1
+        else -1,
+        function.index(lower_calls[0]),
+    ]
+    if (
+        len(receiver_null_checks) != 1
+        or f'arguments=["{borrowed_value}"]' not in lower_calls[0]
+        or any(position < 0 for position in ordered_events)
+        or ordered_events != sorted(ordered_events)
+    ):
+        raise StringRuntimeFailure(
+            "lowercase receiver evaluation, ownership, null checking, and call "
+            "are not in source order"
+        )
+    receiver_cleanup = (
+        f'action "string-temporary.{receiver_owner}.release" '
+        f'idempotence=exactly-once release place=local("{receiver_owner}") '
+        'implementation=runtime("string")'
+    )
+    if function.count(receiver_cleanup) != 1:
+        raise StringRuntimeFailure(
+            "the runtime-created lowercase receiver lost exact-once cleanup"
+        )
+
+    for call in lower_calls:
+        result = re.search(r'result="([^"]+)":managed-string', call)
+        if result is None or "target=abort" not in call:
+            raise StringRuntimeFailure(
+                "String.toLowerCase lost its fresh managed result or terminal "
+                "allocation-failure policy"
+            )
+        result_id = result.group(1)
+        owners = [
+            line
+            for line in function.splitlines()
+            if " initialize " in line and f'value="{result_id}"' in line
+        ]
+        if len(owners) != 1:
+            raise StringRuntimeFailure(
+                f"lowercase result {result_id} did not transfer to one owner"
+            )
+        result_owner = re.search(r'place=local\("([^"]+)"\)', owners[0])
+        if result_owner is None:
+            raise StringRuntimeFailure(
+                f"lowercase result {result_id} owner has no typed local"
+            )
+        owner_local = result_owner.group(1)
+        cleanup_actions = [
+            line
+            for line in function.splitlines()
+            if " action " in line
+            and "idempotence=exactly-once" in line
+            and f'release place=local("{owner_local}") ' in line
+            and 'implementation=runtime("string")' in line
+        ]
+        if (
+            len(cleanup_actions) != 1
+            or f'retain place=local("{owner_local}") ' in function
+            or f'acquire-managed-carrier place=local("{owner_local}") ' in function
+        ):
+            raise StringRuntimeFailure(
+                f"lowercase result {result_id} is not one fresh exact-once owner"
+            )
+
+
 def validate_generated_project(output: Path, hxcir: str) -> None:
     """Check semantic intent, exact runtime closure, and recognizable C calls."""
     for operation in (
         'runtime(feature="string",operation="from-scalar")',
         'runtime(feature="string-float",operation="from-float")',
         'runtime(feature="string",operation="concat")',
+        'runtime(feature="string-lower-case",operation="to-lower-case")',
         'runtime(feature="string-scalar",operation="char-at")',
         'runtime(feature="string-scalar",operation="char-code-at")',
         'runtime(feature="string-scalar",operation="index-of")',
         'runtime(feature="string-scalar",operation="last-index-of")',
         'runtime(feature="string-scalar",operation="length")',
+        'runtime(feature="string-scalar",operation="substr")',
         'runtime(feature="string-scalar",operation="substring")',
         'runtime(feature="string-split",operation="split")',
         'unary operation="haxe.std.string.bool"',
@@ -682,9 +926,11 @@ def validate_generated_project(output: Path, hxcir: str) -> None:
         raise StringRuntimeFailure("managed String HxcIR leaked the checkout path")
     validate_switch_join_ownership(hxcir)
     validate_std_string_identity_ownership(hxcir)
+    validate_discarded_string_ownership(hxcir)
     validate_conditional_view_ownership(hxcir)
     validate_conditional_compound_ownership(hxcir)
     validate_projected_enum_payload_ownership(hxcir)
+    validate_lower_case_ownership(hxcir)
 
     plan = json.loads((output / "hxc.runtime-plan.json").read_text(encoding="utf-8"))
     if (
@@ -729,6 +975,17 @@ def validate_generated_project(output: Path, hxcir: str) -> None:
         raise StringRuntimeFailure(
             f"Float String roots drifted: {sorted(float_operations)!r}"
         )
+    case_operations = {
+        reason.get("operationId")
+        for reason in plan.get("rootReasons", [])
+        if isinstance(reason, dict)
+        and reason.get("featureId") == "string-lower-case"
+        and reason.get("kind") == "runtime-operation"
+    }
+    if case_operations != {"to-lower-case"}:
+        raise StringRuntimeFailure(
+            f"String lower case roots drifted: {sorted(case_operations)!r}"
+        )
     scalar_operations = {
         reason.get("operationId")
         for reason in plan.get("rootReasons", [])
@@ -742,6 +999,7 @@ def validate_generated_project(output: Path, hxcir: str) -> None:
         "index-of",
         "last-index-of",
         "length",
+        "substr",
         "substring",
     }:
         raise StringRuntimeFailure(
@@ -758,11 +1016,29 @@ def validate_generated_project(output: Path, hxcir: str) -> None:
         raise StringRuntimeFailure(
             f"String split roots drifted: {sorted(split_operations)!r}"
         )
+    join_operations = {
+        reason.get("operationId")
+        for reason in plan.get("rootReasons", [])
+        if isinstance(reason, dict)
+        and reason.get("featureId") == "array-join"
+        and reason.get("kind") == "runtime-operation"
+    }
+    if join_operations != {"join"}:
+        raise StringRuntimeFailure(
+            f"Array<String>.join roots drifted: {sorted(join_operations)!r}"
+        )
 
     stdlib = json.loads(
         (output / "hxc.stdlib-report.json").read_text(encoding="utf-8")
     )
-    expected_modules = ["Array", "String", "Sys", "string", "string-float"]
+    expected_modules = [
+        "Array",
+        "String",
+        "Sys",
+        "array-join",
+        "string",
+        "string-float",
+    ]
     expected_capabilities = [
         "char-at",
         "char-code-at",
@@ -775,6 +1051,7 @@ def validate_generated_project(output: Path, hxcir: str) -> None:
         "from-scalar",
         "get-checked",
         "index-of",
+        "join",
         "last-index-of",
         "length",
         "managed-type-representation",
@@ -782,8 +1059,10 @@ def validate_generated_project(output: Path, hxcir: str) -> None:
         "retain",
         "split",
         "static-value",
+        "substr",
         "substring",
         "sys-println-literal",
+        "to-lower-case",
         "type-carrier",
     ]
     if stdlib.get("modules") != expected_modules or stdlib.get(
@@ -801,14 +1080,17 @@ def validate_generated_project(output: Path, hxcir: str) -> None:
     )
     for required in (
         "hxc_string_from_scalar(",
+        "hxc_array_string_join(",
         "hxc_string_from_int32(",
         "hxc_string_from_float64(",
         "hxc_string_concat_ref(",
+        "hxc_string_to_lower_case(",
         "hxc_string_retain(",
         "hxc_string_release(",
         "hxc_string_index_of(",
         "hxc_string_last_index_of(",
         "hxc_string_split(",
+        "hxc_string_substr(",
         "hxc_string_substring(",
     ):
         if required not in source_text:
@@ -819,6 +1101,16 @@ def validate_generated_project(output: Path, hxcir: str) -> None:
         if forbidden in source_text:
             raise StringRuntimeFailure(
                 f"managed String fixture acquired unrelated/generated escape {forbidden!r}"
+            )
+    if source_text.count("hxc_string_to_lower_case(") != 9:
+        raise StringRuntimeFailure(
+            "generated C must contain nine exact lowercase runtime calls"
+        )
+    for forbidden in ("tolower(", "<ctype.h>", "setlocale(", "string_case"):
+        if forbidden in source_text:
+            raise StringRuntimeFailure(
+                "generated C bypassed the locale-independent lowercase runtime "
+                f"with {forbidden!r}"
             )
 
 
@@ -916,13 +1208,17 @@ def render_projects(root: Path) -> dict[str, Path]:
     return projects
 
 
-def render_native_text_projects(root: Path) -> tuple[Path, Path, Path, Path, Path]:
-    """Compile public/private successes and two fail-before-C text borrows."""
+def render_native_text_projects(
+    root: Path,
+) -> tuple[Path, Path, Path, Path, Path, Path, Path]:
+    """Compile zero-copy, borrow-or-copy, and fail-before-C text boundaries."""
     success = root / "native-text"
     private_split = root / "native-text-private-split"
     private_unity = root / "native-text-private-unity"
     nul = root / "native-text-nul"
     unterminated = root / "native-text-unterminated"
+    automatic = root / "native-text-auto"
+    automatic_nul = root / "native-text-auto-nul"
     rendered = compile_haxe(NATIVE_TEXT, success, report=True)
     private_rendered = compile_haxe(
         NATIVE_TEXT_PRIVATE_INLINE, private_split, report=True
@@ -932,12 +1228,16 @@ def render_native_text_projects(root: Path) -> tuple[Path, Path, Path, Path, Pat
     )
     rejected = compile_haxe(NATIVE_TEXT_NUL, nul)
     unavailable = compile_haxe(NATIVE_TEXT_UNTERMINATED, unterminated)
+    prepared = compile_haxe(NATIVE_TEXT_AUTO, automatic, report=True)
+    prepared_nul = compile_haxe(NATIVE_TEXT_AUTO_NUL, automatic_nul)
     for label, result in (
         ("native text", rendered),
         ("private inline native text", private_rendered),
         ("private inline unity native text", private_unity_rendered),
         ("embedded-NUL text", rejected),
         ("unterminated text view", unavailable),
+        ("borrow-or-copy text", prepared),
+        ("borrow-or-copy embedded-NUL text", prepared_nul),
     ):
         if result.returncode != 0 or result.stderr:
             raise StringRuntimeFailure(
@@ -991,7 +1291,83 @@ def render_native_text_projects(root: Path) -> tuple[Path, Path, Path, Path, Pat
         raise StringRuntimeFailure(
             "compatible aliases did not coalesce to one external symbol request"
         )
-    return success, private_split, private_unity, nul, unterminated
+    prepared_hxcir = extract_hxcir(prepared)
+    validate_call_cstring_project(prepared_hxcir, automatic)
+    return (
+        success,
+        private_split,
+        private_unity,
+        nul,
+        unterminated,
+        automatic,
+        automatic_nul,
+    )
+
+
+def validate_call_cstring_project(prepared_hxcir: str, automatic: Path) -> None:
+    """Check the prepared text lifetime in HxcIR and emitted C."""
+    for marker in (
+        'runtime(feature="string",operation="prepare-cstring")',
+        'runtime(feature="string",operation="dispose-cstring")',
+        ':cstring-call-borrow',
+        'native("native.function.TextObserver.matches")',
+    ):
+        if marker not in prepared_hxcir:
+            raise StringRuntimeFailure(
+                f"borrow-or-copy text HxcIR omitted {marker}"
+            )
+    prepared_sources = "\n".join(
+        path.read_text(encoding="utf-8")
+        for path in sorted((automatic / "src").rglob("*.c"))
+    )
+    if prepared_sources.count("hxc_string_prepare_call_cstring(") != 4:
+        raise StringRuntimeFailure(
+            "borrow-or-copy generated C did not prepare each native argument once"
+        )
+    if prepared_sources.count("hxc_call_cstring_dispose(") != 4:
+        raise StringRuntimeFailure(
+            "borrow-or-copy generated C did not dispose each prepared argument once"
+        )
+    if prepared_sources.find("fixture_text_matches(") > prepared_sources.find(
+        "hxc_call_cstring_dispose("
+    ):
+        raise StringRuntimeFailure(
+            "borrow-or-copy generated C disposed temporary text before the native call"
+        )
+
+
+def render_call_cstring_projects(root: Path) -> tuple[Path, Path]:
+    """Render only the focused borrow-or-copy positive and NUL cases."""
+    automatic = root / "native-text-auto"
+    automatic_nul = root / "native-text-auto-nul"
+    prepared = compile_haxe(NATIVE_TEXT_AUTO, automatic, report=True)
+    prepared_nul = compile_haxe(NATIVE_TEXT_AUTO_NUL, automatic_nul)
+    for label, result in (
+        ("borrow-or-copy text", prepared),
+        ("borrow-or-copy embedded-NUL text", prepared_nul),
+    ):
+        if result.returncode != 0 or result.stderr:
+            raise StringRuntimeFailure(
+                f"{label} compile failed\nstdout={result.stdout!r}\nstderr={result.stderr!r}"
+            )
+    validate_call_cstring_project(extract_hxcir(prepared), automatic)
+
+    escape_output = root / "negative-cstring-arg-escape"
+    escape = compile_haxe(NEGATIVE / "cstring_arg_escape", escape_output)
+    if (
+        escape.returncode == 0
+        or "HXC1001" not in escape.stderr
+        or "TCall(c.CStringArg.to:requires-direct-import-argument)"
+        not in escape.stderr
+    ):
+        raise StringRuntimeFailure(
+            f"borrow-or-copy escape negative drifted: {escape.stderr!r}"
+        )
+    if plausible_output_exists(escape_output):
+        raise StringRuntimeFailure(
+            "borrow-or-copy escape negative left plausible output"
+        )
+    return automatic, automatic_nul
 
 
 def plausible_output_exists(output: Path) -> bool:
@@ -999,18 +1375,20 @@ def plausible_output_exists(output: Path) -> bool:
 
 
 def validate_generated_failures(root: Path) -> None:
-    expected_cstring_failures = {
+    expected_failures = {
         "cstring_ref_escape": ("HXC1001", "TCall(c.CStringRef.to:requires-direct-import-argument)"),
+        "cstring_arg_escape": ("HXC1001", "TCall(c.CStringArg.to:requires-direct-import-argument)"),
         "cstring_ref_wrong_owner": ("Int should be String", "For function argument 'text'"),
         "c_import_alias_mismatch": ("HXC3000", "incompatible C ABI signature"),
+        "to_upper_case": ("HXC1001", "TCall(String.toUpperCase:not-yet-admitted)"),
     }
-    for name, (diagnostic, marker) in expected_cstring_failures.items():
+    for name, (diagnostic, marker) in expected_failures.items():
         output = root / f"negative-{name}"
         result = compile_haxe(NEGATIVE / name, output)
         if result.returncode == 0 or diagnostic not in result.stderr or marker not in result.stderr:
-            raise StringRuntimeFailure(f"negative CStringRef case {name} drifted: {result.stderr!r}")
+            raise StringRuntimeFailure(f"negative String case {name} drifted: {result.stderr!r}")
         if plausible_output_exists(output):
-            raise StringRuntimeFailure(f"negative CStringRef case {name} left plausible output")
+            raise StringRuntimeFailure(f"negative String case {name} left plausible output")
 
     none_output = root / "runtime-none"
     none = compile_haxe(
@@ -1081,7 +1459,7 @@ def compile_generated_and_run(
         "-o",
         str(executable),
     ]
-    compiled = subprocess.run(
+    compiled = run_bounded_process(
         command,
         cwd=ROOT,
         check=False,
@@ -1099,7 +1477,7 @@ def compile_generated_and_run(
     if toolchain.family == "clang" and "-fsanitize=address,undefined" in flags:
         environment["ASAN_OPTIONS"] = "detect_leaks=0"
         environment["UBSAN_OPTIONS"] = "halt_on_error=1"
-    executed = subprocess.run(
+    executed = run_bounded_process(
         [str(executable)],
         cwd=ROOT,
         env=environment,
@@ -1124,7 +1502,7 @@ def inspect_generated_symbols(executable: Path, family: str) -> None:
     nm = shutil.which("nm")
     if nm is None:
         raise StringRuntimeFailure(f"{family} managed String evidence requires nm")
-    result = subprocess.run(
+    result = run_bounded_process(
         [nm, str(executable)],
         cwd=ROOT,
         check=False,
@@ -1138,13 +1516,16 @@ def inspect_generated_symbols(executable: Path, family: str) -> None:
         )
     for required in (
         "hxc_string_from_scalar",
+        "hxc_array_string_join",
         "hxc_string_from_int32",
         "hxc_string_concat_ref",
+        "hxc_string_to_lower_case",
         "hxc_string_retain",
         "hxc_string_release",
         "hxc_string_index_of",
         "hxc_string_last_index_of",
         "hxc_string_split",
+        "hxc_string_substr",
         "hxc_string_substring",
     ):
         if required not in result.stdout:
@@ -1191,7 +1572,7 @@ def compile_cpp_headers(toolchain: Toolchain, project: Path, build: Path) -> Non
         "-o",
         str(executable),
     ]
-    compiled = subprocess.run(
+    compiled = run_bounded_process(
         command,
         cwd=ROOT,
         check=False,
@@ -1205,7 +1586,7 @@ def compile_cpp_headers(toolchain: Toolchain, project: Path, build: Path) -> Non
             f"command={command!r}\nstdout={compiled.stdout!r}\n"
             f"stderr={compiled.stderr!r}"
         )
-    executed = subprocess.run(
+    executed = run_bounded_process(
         [str(executable)],
         cwd=ROOT,
         check=False,
@@ -1222,7 +1603,7 @@ def compile_cpp_headers(toolchain: Toolchain, project: Path, build: Path) -> Non
 def run_generated_native(
     toolchains: list[Toolchain],
     projects: dict[str, Path],
-    native_text: tuple[Path, Path, Path, Path, Path],
+    native_text: tuple[Path, Path, Path, Path, Path, Path, Path],
     root: Path,
 ) -> None:
     for toolchain in toolchains:
@@ -1242,6 +1623,8 @@ def run_generated_native(
             native_text_private_unity,
             native_text_nul,
             native_text_unterminated,
+            native_text_auto,
+            native_text_auto_nul,
         ) = native_text
         for project, label, expect_runtime_rejection in (
             (native_text_success, "native-text", False),
@@ -1249,6 +1632,8 @@ def run_generated_native(
             (native_text_private_unity, "native-text-private-unity", False),
             (native_text_nul, "native-text-nul", True),
             (native_text_unterminated, "native-text-unterminated", True),
+            (native_text_auto, "native-text-auto", False),
+            (native_text_auto_nul, "native-text-auto-nul", True),
         ):
             compile_generated_and_run(
                 toolchain,
@@ -1268,6 +1653,46 @@ def run_generated_native(
             inspect_generated_symbols(executable, toolchain.family)
 
 
+def run_call_cstring_native(
+    toolchains: list[Toolchain], automatic: Path, automatic_nul: Path, root: Path
+) -> None:
+    """Run the focused prepared-text projects through strict native C."""
+    for toolchain in toolchains:
+        build = root / f"call-cstring-{toolchain.family}"
+        build.mkdir()
+        for optimization in ("-O0", "-O2"):
+            compile_generated_and_run(
+                toolchain,
+                automatic,
+                build / f"success-{optimization[1:].lower()}",
+                (optimization,),
+                extra_sources=(TEXT_OBSERVER_SOURCE,),
+                extra_include_roots=(TEXT_OBSERVER_INCLUDE,),
+                expected_stdout="",
+            )
+        compile_generated_and_run(
+            toolchain,
+            automatic_nul,
+            build / "embedded-nul",
+            ("-O0",),
+            extra_sources=(TEXT_OBSERVER_SOURCE,),
+            extra_include_roots=(TEXT_OBSERVER_INCLUDE,),
+            expect_runtime_rejection=True,
+            expected_stdout="",
+        )
+        if toolchain.family == "clang":
+            executable = build / "success-sanitized"
+            compile_generated_and_run(
+                toolchain,
+                automatic,
+                executable,
+                SANITIZER_FLAGS,
+                extra_sources=(TEXT_OBSERVER_SOURCE,),
+                extra_include_roots=(TEXT_OBSERVER_INCLUDE,),
+                expected_stdout="",
+            )
+
+
 def parse_args(argv: Iterable[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--toolchain", choices=("auto", *TOOLCHAINS), default="auto")
@@ -1276,16 +1701,35 @@ def parse_args(argv: Iterable[str]) -> argparse.Namespace:
         action="store_true",
         help="use the checked semantic trace without requiring Haxe",
     )
+    parser.add_argument(
+        "--call-cstring-only",
+        action="store_true",
+        help="check only the borrow-or-copy CString boundary and its native runtime",
+    )
     return parser.parse_args(list(argv))
 
 
 def main(argv: Iterable[str] = ()) -> int:
     args = parse_args(argv)
     try:
+        if args.native_only and args.call_cstring_only:
+            raise StringRuntimeFailure(
+                "--native-only and --call-cstring-only cannot be combined"
+            )
         expected_trace = EXPECTED_TRACE if args.native_only else run_oracle()
         toolchains = selected_toolchains(args.toolchain)
         run_native(toolchains, expected_trace)
-        if not args.native_only:
+        if args.call_cstring_only:
+            with tempfile.TemporaryDirectory(
+                prefix="reflaxe-c-call-cstring-runtime-"
+            ) as temporary:
+                root = Path(temporary)
+                automatic, automatic_nul = render_call_cstring_projects(root)
+                run_call_cstring_native(
+                    toolchains, automatic, automatic_nul, root
+                )
+        elif not args.native_only:
+            validate_lowercase_data()
             run_float_oracle()
             run_generated_eval()
             with tempfile.TemporaryDirectory(
@@ -1305,6 +1749,14 @@ def main(argv: Iterable[str] = ()) -> int:
         print(f"string-runtime: ERROR: {error}", file=sys.stderr)
         return 1
     families = ", ".join(toolchain.family for toolchain in toolchains)
+    if args.call_cstring_only:
+        print(
+            "string-runtime: OK: "
+            f"{families}; borrow and temporary-copy allocation counts, "
+            "prepare/call/dispose order, O0/O2, sanitizers, embedded-NUL "
+            "rejection, and escape rejection passed"
+        )
+        return 0
     oracle = (
         "checked native trace"
         if args.native_only
@@ -1312,8 +1764,8 @@ def main(argv: Iterable[str] = ()) -> int:
     )
     print(
         "string-runtime: OK: "
-        f"{families}; {oracle}; checked/lossy UTF-8, scalar indexing/search, "
-        "owned aliases/fields/containers/returns, call-scoped immutable C text, "
+        f"{families}; {oracle}; checked/lossy UTF-8, scalar indexing/search/lowercase, "
+        "owned aliases/fields/containers/returns, zero-copy and borrow-or-copy call-scoped C text, "
         "split/package/unity "
         "determinism, C11/C++17, sanitizers, and selective symbols passed"
     )

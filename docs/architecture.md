@@ -398,13 +398,20 @@ modify persistent evidence. The
 construction without replacing the prior generation.
 `reflaxe_c_body_function_replay_cache_report` and the structured profile expose
 hit, miss, shared-revision match, missing-function miss, changed-input miss,
-retained-function, retained-function-input, and retained-program-revision
-counts. The JSON report also names the closed program decision: disabled, no
-prior generation, schema changed, program changed, or matched. Sizes are Haxe
-string code units, not claimed UTF-8 bytes. Compiler-created adapter functions
-remain on their deterministic ordinary construction path; the cache currently
-owns the prepared source and function-literal builders whose complete inputs
-and outputs are explicit.
+`frontendSourcePlanHits`, `frontendSourcePlanFallbacks`, retained-function,
+retained-function-input, and retained-program-revision counts. The JSON report
+also names the closed program decision: disabled, no prior generation, schema
+changed, program changed, or matched. Sizes are Haxe string code units, not
+claimed UTF-8 bytes.
+
+The frontend captures canonical typed text and deterministic expression order
+while it repairs positions for the current request. Ordinary method replay
+identity reuses this source plan instead of printing and traversing the same
+typed expression again. The plan stays request-local and never enters the
+prior replay generation. Constructors, initializers, function literals, and
+compiler-created adapters use the deterministic fallback path. The cache owns
+only prepared source and function-literal builders with explicit inputs and
+outputs.
 
 The same diagnostic boundary divides semantic analysis into helper selection,
 name-request registration, deterministic symbol finalization, representation
@@ -511,7 +518,7 @@ complete rationale, direct-lowering alternative, sibling comparison, extraction
 criteria, and implementation-language analysis are in [the HxcIR semantic
 contract](hxc-ir.md#why-a-second-ir-when-haxe-already-has-one).
 
-The schema-23 semantic core is implemented under `src/reflaxe/c/ir/` and its
+The schema-27 semantic core is implemented under `src/reflaxe/c/ir/` and its
 normative internal invariants are documented in [HxcIR semantic
 contract](hxc-ir.md). Immutable values are block-local and definition-ordered;
 mutable storage uses structural places; cross-block data uses typed block
@@ -799,15 +806,19 @@ graphs still fail closed pending tracing-collector ownership. Concrete primitive
 deterministically and now participate in the shared E3.T03 report.
 See [Haxe enum lowering](enum-lowering.md).
 
-E3.T03 extends the reachable static-function worklist with closed generic
-instances. It infers typed arguments at direct calls, expands aliases, accepts
-only already-proven primitive and enum representations, and shares equivalent
-instances by a length-prefixed full semantic key. SHA-256 is only a compact
-instance suffix; request-local registries retain the full key and reject digest
-collisions. Registering an instance before scanning its body closes recursive
-generic calls, while hard function/type-count and estimated-C-byte budgets stop
-expanding graphs with source-positioned `HXC1001` instead of silently boxing.
-The typed `hxc.specializations.json` sidecar records canonical instances,
+E3.T03 extends the reachable function worklist with closed generic instances.
+It infers typed arguments at direct calls and constructions, expands aliases,
+accepts already-proven primitive, enum, record, Array, String, abstract-carrier,
+nullable, and ordinary managed-class representations, and shares equivalent
+instances by a length-prefixed full semantic key. Owner arguments precede
+method arguments. SHA-256 is only a compact instance suffix; request-local
+registries retain the full key and reject digest collisions. Registering an
+instance before scanning its body closes recursive generic calls, while hard
+function/type-count and estimated-C-byte budgets stop expanding graphs with
+source-positioned `HXC1001` instead of silently boxing. Closed generic class
+calls are admitted only after the reachable graph proves one effective target;
+generic virtual/interface slots remain fail-closed. The typed
+`hxc.specializations.json` sidecar records canonical functions and constructors,
 source-rooted reasons, recursion, and code-size attribution. See
 [deterministic generic specialization](generic-specialization.md).
 
@@ -1009,7 +1020,7 @@ artifact read for an empty plan.
 
 The schema-3 feature catalog also owns each feature's semantic contract,
 selection roots, rejected direct/local alternatives, executable evidence,
-internal runtime ABI 0.16.0, and exact source/build provenance. Every artifact has a reviewed SHA-256, packaging
+internal runtime ABI 0.19.0, and exact source/build provenance. Every artifact has a reviewed SHA-256, packaging
 rechecks those bytes, and the sorted source set has one aggregate digest. Every
 nonempty closure contains `runtime-base`; generated private headers therefore
 emit a structural same-major assertion against `HXC_RUNTIME_ABI_MAJOR`. Empty

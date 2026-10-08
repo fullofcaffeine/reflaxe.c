@@ -29,6 +29,11 @@ from dev_haxe_server import (  # noqa: E402
 
 CASE_ROOT = Path(__file__).resolve().parent
 ROOT = CASE_ROOT.parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from scripts.test.bounded_process import run as run_bounded_process  # noqa: E402
+
 STRICT_FLAGS = (
     "-std=c11",
     "-Wall",
@@ -163,8 +168,8 @@ EVAL_CASES = {
         probes=(
             EvalProbe(
                 "caxeflow.hxml",
-                "caxeflow: 10 events, 12 predicates, 19 actions; "
-                "stable order/repeat/defer/sequence/budgets; trace=-670871898\n",
+                "caxeflow: 13 events, 14 predicates, 19 actions; "
+                "context/trace/per-actor/repeat/defer/sequence/budgets; trace=-670871898\n",
             ),
         ),
         alternate_locale=True,
@@ -218,11 +223,17 @@ EVAL_CASES = {
         case_id="editor",
         probes=(
             EvalProbe(
-				"editor.hxml",
-				"caxemap-editor: 21 command round trips, 50 protocol checks, "
-				"33 focus checks, 18 navigation checks, 13 2D checks, 19 3D "
-				"checks, 13 active-level checks, 1890 canonical bytes; bounded "
-				"history/test-play/recovery; trace=835811628\n",
+                "editor.hxml",
+				"caxemap-editor: 22 command round trips, 51 protocol checks, "
+				"47 focus checks, 18 navigation checks, 62 Build-control checks, "
+				"28 2D checks, 31 3D "
+				"checks, 31 runtime-terrain checks, 13 active-level checks, 18 advanced-text checks, "
+				"1891 canonical bytes; bounded history/test-play/recovery; trace=946017188\n",
+            ),
+            EvalProbe(
+                "editor-package-session.hxml",
+                "editor-package-session: one shared session, rejected saves preserve "
+                "the draft, canonical save/reopen and clean undo/redo passed\n",
             ),
         ),
         source_audits=(
@@ -230,6 +241,14 @@ EVAL_CASES = {
             SourceAudit("src/caxecraft/input/NavigationInput.hx", TARGET_NEUTRAL_PATTERNS),
             SourceAudit(
                 "src/caxecraft/app/RaylibNavigationInput.hx",
+                (
+                    r"raylib\.raw\.",
+                    r"IsGamepadButton(?:Down|Pressed)\([^,]+,\s*[0-9]",
+                    r"GetGamepadAxisMovement\([^,]+,\s*[0-9]",
+                ),
+            ),
+            SourceAudit(
+                "src/caxecraft/app/RaylibGameInput.hx",
                 (
                     r"raylib\.raw\.",
                     r"IsGamepadButton(?:Down|Pressed)\([^,]+,\s*[0-9]",
@@ -247,10 +266,10 @@ EVAL_CASES = {
     "scenario-model": EvalTestCase(
         case_id="scenario-model",
         probes=(
-            EvalProbe("scenario-model.hxml", "scenario-model: -1725217016\n"),
+            EvalProbe("scenario-model.hxml", "scenario-model: -1919555730\n"),
             EvalProbe(
                 "scenario-codec.hxml",
-                "scenario-codec: 1192 + 4027 + 15634 bytes, staged round-trip and "
+                "scenario-codec: 1192 + 4027 + 15610 bytes, staged round-trip and "
                 "exact malformed-input audit\n",
             ),
         ),
@@ -277,7 +296,7 @@ EVAL_CASES = {
         probes=(
             EvalProbe(
                 "scenario-codec.hxml",
-                "scenario-codec: 1192 + 4027 + 15634 bytes, staged round-trip and "
+                "scenario-codec: 1192 + 4027 + 15610 bytes, staged round-trip and "
                 "exact malformed-input audit\n",
             ),
         ),
@@ -416,6 +435,12 @@ CASES = {
         forbidden_source_markers=("goto ",),
         output_line_count=1,
         success_line="0",
+        expected_runtime_features=(
+            "runtime-base",
+            "status",
+            "alloc",
+            "array",
+        ),
     ),
     "aquatics": HaxeCTestCase(
         case_id="aquatics",
@@ -459,6 +484,37 @@ CASES = {
         forbidden_source_markers=("goto ",),
         output_line_count=1,
         success_line="0",
+        split_source_checks=(
+            GeneratedSourceCheck(
+                path="src/modules/caxecraft/input/GamepadInput.c",
+                required_markers=(
+                    "GamepadInput_gamepadInput",
+                    "GamepadInput_mergeGameInput",
+                ),
+                forbidden_markers=("raylib", "Dynamic", "Reflect", "goto "),
+            ),
+        ),
+    ),
+    "player-camera": HaxeCTestCase(
+        case_id="player-camera",
+        eval_hxml="player-camera.hxml",
+        c_hxml="player-camera-c.hxml",
+        native_harness="test/native/player_camera_harness.c",
+        generated_source="src/modules/caxecraft/domain/PlayerCamera.c",
+        required_source_markers=(
+            "PlayerCamera_resolvePlayerCamera",
+            "PlayerCamera_clearBoomDistance",
+            "hxc_f64_sqrt",
+        ),
+        forbidden_source_markers=("goto ",),
+        output_line_count=1,
+        success_line="0",
+        expected_runtime_features=(
+            "runtime-base",
+            "status",
+            "alloc",
+            "array",
+        ),
     ),
     "package-store": HaxeCTestCase(
         case_id="package-store",
@@ -536,10 +592,11 @@ CASES = {
             "array",
             "string-literal",
             "bytes",
-            "object",
-            "gc",
             "string-scalar",
             "string",
+            "bytes-string",
+            "object",
+            "gc",
             "string-split",
         ),
         split_source_checks=(
@@ -673,10 +730,11 @@ CASES = {
             "array",
             "string-literal",
             "bytes",
-            "object",
-            "gc",
             "string-scalar",
             "string",
+            "bytes-string",
+            "object",
+            "gc",
         ),
         split_source_checks=(
             GeneratedSourceCheck(
@@ -719,11 +777,14 @@ CASES = {
             "alloc",
             "array",
             "string-literal",
-            "bytes",
-            "object",
-            "gc",
             "string-scalar",
             "string",
+            "array-join",
+            "bytes",
+            "bytes-string",
+            "object",
+            "gc",
+            "string-lower-case",
             "string-split",
         ),
         split_source_checks=(
@@ -772,11 +833,15 @@ CASES = {
             "array",
             "string-literal",
             "bytes",
-            "object",
-            "gc",
-            "int-map",
             "string-scalar",
             "string",
+            "bytes-string",
+            "object",
+            "gc",
+            "iterator",
+            "typed-map",
+            "gc-string-map",
+            "int-map",
             "string-map",
             "string-split",
         ),
@@ -900,6 +965,8 @@ CASES = {
         forbidden_source_markers=("ScenarioLexer", "ScenarioParser", "goto "),
         output_line_count=15,
         success_line="0",
+        # The lexer converts Bytes to String; validation stores managed records
+        # in StringMaps, whose reviewed closure includes typed-map and iterator.
         expected_runtime_features=(
             "runtime-base",
             "status",
@@ -907,11 +974,15 @@ CASES = {
             "array",
             "string-literal",
             "bytes",
-            "object",
-            "gc",
-            "int-map",
             "string-scalar",
             "string",
+            "bytes-string",
+            "object",
+            "gc",
+            "iterator",
+            "typed-map",
+            "gc-string-map",
+            "int-map",
             "string-map",
             "string-split",
         ),
@@ -948,6 +1019,8 @@ CASES = {
         forbidden_source_markers=("FirstPlayableLevel", "goto "),
         output_line_count=4,
         success_line="0",
+        # The lexer converts Bytes to String; validation stores managed records
+        # in StringMaps, whose reviewed closure includes typed-map and iterator.
         expected_runtime_features=(
             "runtime-base",
             "status",
@@ -955,11 +1028,15 @@ CASES = {
             "array",
             "string-literal",
             "bytes",
-            "object",
-            "gc",
-            "int-map",
             "string-scalar",
             "string",
+            "bytes-string",
+            "object",
+            "gc",
+            "iterator",
+            "typed-map",
+            "gc-string-map",
+            "int-map",
             "string-map",
             "string-split",
         ),
@@ -1012,11 +1089,15 @@ CASES = {
             "array",
             "string-literal",
             "bytes",
-            "object",
-            "gc",
-            "int-map",
             "string-scalar",
             "string",
+            "bytes-string",
+            "object",
+            "gc",
+            "iterator",
+            "typed-map",
+            "gc-string-map",
+            "int-map",
             "string-map",
             "string-split",
         ),
@@ -1054,8 +1135,20 @@ CASES = {
                 required_markers=("ActiveContent_publish",),
                 forbidden_markers=("FirstPlayable", "goto "),
             ),
+            GeneratedSourceCheck(
+                path="src/modules/caxecraft/content/ContentGenerationSequence.c",
+                required_markers=("ContentGenerationSequence_allocate",),
+                forbidden_markers=("1000000", "goto "),
+            ),
+            GeneratedSourceCheck(
+                path="src/modules/caxecraft/app/EditorTestPlayRuntime.c",
+                required_markers=("ContentGenerationSequence_allocate",),
+                forbidden_markers=("1000000", "goto "),
+            ),
         ),
-        runs_generated_main=True,
+        # The independent harness owns collector setup so it can force one
+        # collection after the Haxe Test Play lifecycle has dropped every root.
+        runs_generated_main=False,
         haxe_defines=("caxecraft_posix_hosted",),
         native_defines=("_POSIX_C_SOURCE=200809L", "_DARWIN_C_SOURCE=1"),
         native_runs_from_case_root=True,
@@ -1088,11 +1181,12 @@ CASES = {
             "array",
             "string-literal",
             "bytes",
+            "string-scalar",
+            "string",
+            "bytes-string",
             "object",
             "gc",
             "int-map",
-            "string-scalar",
-            "string",
             "string-map",
             "string-split",
         ),
@@ -1116,14 +1210,16 @@ CASES = {
                 required_markers=("ScenarioValidator_validate",),
                 forbidden_markers=("goto ",),
             ),
+            GeneratedSourceCheck(
+                path="src/modules/caxecraft/content/ContentPackageStore.c",
+                required_markers=("ContentPackageStore_open", "ContentPackageStore_read"),
+                forbidden_markers=("LoadFileData", "goto "),
+            ),
         ),
         runs_generated_main=True,
-        embedded_source_path="scenarios/first-playable/map.caxemap",
-        embedded_haxe_path="test/caxecraft/qa/ScenarioNativeCodecProbe.hx",
-        embedded_source_functions=(
-            "firstPlayablePrefix",
-            "firstPlayableSuffix",
-        ),
+        haxe_defines=("caxecraft_posix_hosted",),
+        native_defines=("_POSIX_C_SOURCE=200809L", "_DARWIN_C_SOURCE=1"),
+        native_runs_from_case_root=True,
     ),
     "water": HaxeCTestCase(
         case_id="water",
@@ -1202,6 +1298,20 @@ CASES = {
         forbidden_source_markers=("goto ", "malloc(", "calloc("),
         output_line_count=1,
         success_line="0",
+        split_source_checks=(
+            GeneratedSourceCheck(
+                path="src/modules/caxecraft/app/TerrainChunkLayout.c",
+                required_markers=(
+                    "TerrainChunkLayout_chunkFor",
+                    "TerrainChunkLayout_chunkOriginZ",
+                    "TerrainChunkLayout_unpackKind",
+                ),
+                forbidden_markers=(
+                    "hxc_f64_divide",
+                    "hxc_f64_to_i32",
+                ),
+            ),
+        ),
     ),
 }
 
@@ -1248,7 +1358,7 @@ def run(
     """Run one bounded process and preserve stdout and stderr on failure."""
 
     try:
-        result = subprocess.run(
+        result = run_bounded_process(
             arguments,
             cwd=cwd,
             env={
@@ -1571,7 +1681,7 @@ def run_eval_probe(
         command.extend(("--connect", connection))
     command.extend(arguments)
     try:
-        result = subprocess.run(
+        result = run_bounded_process(
             command,
             cwd=CASE_ROOT,
             env=pinned_haxe_environment(locale, installation),
@@ -1604,7 +1714,7 @@ def run_shim_eval_probe(test_case: EvalTestCase, probe: EvalProbe) -> str:
     """Run a cold Eval case through the checkout's ordinary Haxe shim."""
 
     try:
-        result = subprocess.run(
+        result = run_bounded_process(
             [development_tool("haxe"), "--cwd", str(CASE_ROOT), probe.hxml],
             cwd=ROOT,
             env={**os.environ, "HAXE_NO_SERVER": "1", "LC_ALL": "C"},
@@ -1654,7 +1764,7 @@ def validate_negative_compile(
         command = [str(installation.compiler), *arguments]
         environment = pinned_haxe_environment("C", installation)
     try:
-        result = subprocess.run(
+        result = run_bounded_process(
             command,
             cwd=ROOT if installation is None else CASE_ROOT,
             env=environment,
@@ -1787,7 +1897,7 @@ def sanitizer_supported(compiler: str, root: Path) -> bool:
     executable = root / "sanitizer-probe"
     source.write_text("int main(void) { return 0; }\n", encoding="utf-8", newline="\n")
     try:
-        result = subprocess.run(
+        result = run_bounded_process(
             [compiler, *SANITIZER_FLAGS, str(source), "-o", str(executable)],
             cwd=ROOT,
             env={**os.environ, "LC_ALL": "C"},

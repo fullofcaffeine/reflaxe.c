@@ -56,15 +56,21 @@ the final link with address and undefined-behavior checks enabled.
 The fixture-local extern subset is integration evidence, not yet the public
 RaylibHx raw binding.
 The generic-specialization suite adds full semantic-key sharing, closed
-primitive/function/enum instances, recursive worklist closure, bounded
-code-size reporting, exact dynamic/open/budget rejection, and runtime-free
-strict-C11 execution.
+primitive/function/enum instances, closed generic class and abstract owners,
+recursive worklist closure, bounded code-size reporting, exact
+dynamic/open/multiple-target/budget rejection, and runtime-free strict-C11
+execution.
 The runtime-feature suite
 adds deterministic graph/policy, selective provisional native-seed packaging,
 and the exact compiler-selected literal-output closure. The string-runtime suite
 adds a bounded native UTF-8/scalar/CString contract plus an Eval differential
 trace. The array-runtime suite adds bounded native primitive/reference growth,
 aliasing, lifecycle, and failure evidence plus a common Eval mutation trace.
+The Vector/List differential composes those layers through unchanged pinned
+Haxe source. It proves typed List nodes, mutation during traversal, the Vector
+Array carrier, closed owner and constructor report identity, deterministic
+project layouts, strict native execution, C++ header consumption, and
+sanitizers.
 The string-char-at suite adds the first ordinary-Haxe scalar String method. It
 compares ASCII, a non-BMP character, embedded NUL, empty input, and invalid
 indices with Eval; then it checks split/package/unity output, exact
@@ -86,8 +92,12 @@ The enum suite also carries a nominal abstract-over-String literal through
 construction, copy, projection, and content equality. The string-output suite
 adds the narrow generated-Haxe output proof. It checks literal
 `Sys.println`/default `trace`, statically typed borrowed and freshly managed
-String values, one-time evaluation, exact cleanup on success, and cleanup
-before output fail-stop. It does not claim Dynamic formatting or general
+String values, one-time evaluation, and cleanup on success or output failure.
+The separate `npm run test:typed-output` command covers Int/Bool/Float formatting
+and direct or nested String conditionals. It compares independently specified
+bytes with Eval and strict native C at O0/O2, then runs sanitizers.
+Both commands run in the core CI shard; the existing output deadline stays unchanged.
+It does not claim Dynamic formatting or general
 `Sys.print`. The declared `examples/hello` product proof composes that
 same reusable compiler slice into the first ordinary Haxe-to-C executable. The
 declared `examples/caxecraft` domain proof adds a realistic 16 KiB finite voxel
@@ -184,6 +194,28 @@ regression when a stable lower owner exists, while the representative real
 boundary remains. This “double lock” is not duplicate testing: one test
 diagnoses the semantic rule and the other proves that the cross-language
 contract is still connected.
+
+## Tier-1 platform qualification
+
+`npm run test:platform-matrix` checks the release-blocking platform plan without
+starting remote builds. The plan has eight exact lanes: Linux on x86_64 and
+aarch64 with GCC and Clang, macOS on arm64 and x86_64 with Apple Clang, Windows
+on x86_64 with clang-cl, and an emulated Cortex-M3 lane with GNU Arm Embedded
+GCC. The JSON file in `docs/specs` owns these facts. The workflow does not keep
+a second hand-written list.
+
+Each CI lane first checks that its runner matches the planned operating system
+and architecture. Hosted lanes compile, link, and run native C, and consume a
+checked C ABI from C++. Linux also runs the required sanitizers. Windows makes
+both static and dynamic libraries. The Cortex-M lane cross-compiles and links a
+freestanding image, checks its linker map and reset symbol, and runs it with
+QEMU semihosting.
+
+Every lane uploads one normalized report. The aggregate job requires exactly
+one passing report for every planned lane and requires one source revision in
+all reports. It then archives `hxc-platform-matrix.json` as release metadata.
+A cross-compile report cannot satisfy a native-run duty, and a missing job or
+artifact makes the aggregate fail.
 
 ## Product-surface scorecards
 
@@ -505,7 +537,7 @@ compiles as C++17. See [closed-world virtual dispatch](virtual-dispatch.md).
 positive/negative/snapshot/runtime suite. It distinguishes native fieldless
 enums from payload tagged unions, emits two concrete primitive generic
 instances, preserves constructor operand order, and records checked projection
-plus exhaustive tag-switch edges in schema-23 HxcIR. Recursive values use
+plus exhaustive tag-switch edges in schema-27 HxcIR. Recursive values use
 allocator-backed uniquely owned tree edges, and closed records compose managed
 enum fields through explicit retain/release helpers. Cycle-capable graphs,
 unsupported reference payloads, and non-exhaustive source patterns fail closed
@@ -530,6 +562,12 @@ source reasons, recursion, isolated function bytes and hashes, conservative
 specialized enum declaration/assertion bytes, payload totals, and the
 64/64/524,288 hard limits. An unrelated ordinary enum cannot consume that
 specialization budget.
+Separate `Box<Int>`/`Box<Payload>` fixtures prove closed class layouts,
+constructors, and methods even when calls are discovered before construction.
+`FirstBox<Int>` proves that a generic abstract implementation retains its owner
+argument over an Array carrier. A reachable generic base and child reject the
+provisional direct call because the method has two effective targets; the
+compiler does not depend on graph traversal order.
 Repeated isolated roots, reversed typed modules, another locale, a warm
 compiler server before and after rejection, and portable/metal/runtime-none
 payloads must be byte-identical; a successful non-generic same-root replacement
@@ -608,7 +646,7 @@ a 32 × 16 × 32 `UInt8` volume; mutable and const local borrows; direct indexin
 ordinary-Haxe three-dimensional linearization; and exact-width span `for`
 iteration. Repeated and reversed renders cover both profiles and all three
 build modes. The suite keeps zero initialization and checked/static/loop bounds
-policies visible in schema-23 HxcIR, executes mutation and iteration at O0/O2,
+policies visible in schema-27 HxcIR, executes mutation and iteration at O0/O2,
 and runs dynamic negative and upper fail-stop paths across the six-way
 configuration matrix. Exact-span negatives reject zero/negative/nonconstant/
 overflowing/over-budget lengths, unsupported element storage, static out-of-
@@ -720,7 +758,7 @@ parity or a public layout. See the [array runtime contract](array-runtime.md).
 `test/string_output` is the focused E2.T07
 positive/negative/AST/snapshot/runtime/differential suite. It lowers real
 compiler-known ASCII, non-ASCII, embedded-NUL, and default-trace literals through
-schema-23 HxcIR; checks exact byte lengths, runtime root reasons, stdlib reachability,
+schema-27 HxcIR; checks exact byte lengths, runtime root reasons, stdlib reachability,
 and the `runtime-base + status + string-literal + io` closure; and compares the
 generated executable's raw stdout with Eval. Portable `auto` and metal `minimal`
 both pass, `runtime=none` and freestanding fail before output, and diagnostic

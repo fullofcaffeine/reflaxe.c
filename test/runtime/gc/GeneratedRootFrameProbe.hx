@@ -7,12 +7,17 @@ import reflaxe.c.emit.CProjectLayout.CProjectLayout;
 import reflaxe.c.emit.CProjectLayout.CProjectLayoutPlanner;
 import reflaxe.c.emit.CStaticFunctionProjectEmitter;
 import reflaxe.c.ir.HxcIR;
+import reflaxe.c.ir.HxcIRValidator;
 import reflaxe.c.ir.HxcSourceSpan;
 import reflaxe.c.interop.CImportRegistry.CLoweredImports;
 import reflaxe.c.lowering.CBodyDispatch.CBodyDispatchGraph;
 import reflaxe.c.lowering.CBodyDispatch.CLoweredBodyDispatch;
 import reflaxe.c.lowering.CBodyDispatch.CPreparedBodyDispatch;
+import reflaxe.c.lowering.CBodyDynamic.CLoweredBodyDynamicPlan;
 import reflaxe.c.lowering.CBodyEmitter;
+import reflaxe.c.lowering.CBodyClass.CPreparedBodyClass;
+import reflaxe.c.lowering.CBodyClass.CLoweredBodyClass;
+import reflaxe.c.naming.CSymbolRequest;
 import reflaxe.c.lowering.CBodyLowering.CBodyLoweringResult;
 import reflaxe.c.lowering.CBodyLowering.CLoweredBodyFunction;
 import reflaxe.c.lowering.CBodyLowering.CManagedProgramNames;
@@ -55,8 +60,10 @@ class GeneratedRootFrameProbe {
 		rootFrames.set(normal.id, new CIdentifier("hxc_normal_frame"));
 		rootArrays.set(failure.id, new CIdentifier("hxc_failure_roots"));
 		rootFrames.set(failure.id, new CIdentifier("hxc_failure_frame"));
-		final names = new CManagedProgramNames(new CIdentifier("hxc_program_gc"), new CIdentifier("hxc_program_thread"), rootArrays, rootFrames);
-		final emitter = new CBodyEmitter(null, null, null, null, null, null, null, null, null, null, names);
+		final rootExceptionCleanups:Map<String, CIdentifier> = [];
+		final names = new CManagedProgramNames(new CIdentifier("hxc_program_gc"), new CIdentifier("hxc_program_thread"), rootArrays, rootFrames,
+			rootExceptionCleanups);
+		final emitter = new CBodyEmitter(null, null, null, null, null, null, null, null, null, null, null, names);
 		final unit = new CTranslationUnit();
 		for (header in ["stdbool.h", "stddef.h", "stdlib.h", "hxrt/gc.h"])
 			unit.includes.push({path: header, kind: System});
@@ -97,34 +104,64 @@ class GeneratedRootFrameProbe {
 		header ownership in unity, module-split, and package-coalesced output.
 	**/
 	static function managedProjects():Array<GeneratedRootProject> {
+		// Project emission requires a validated managed type, not an arbitrary void pointer.
+		// The lower-level emitter probe above still isolates raw root-slot emission.
+		final typeRequest = new CSymbolRequest(CSKType, ["fixture", "ManagedObject"], CNSTag("translation-unit"), CSVInternal);
+		final preparedObject = new CPreparedBodyClass("fixture.ManagedObject", "fixture-object", "fixture.ManagedObject", "ManagedObject", [],
+			"fixture.ManagedRoots", span(), typeRequest);
+		preparedObject.managedByCollector = true;
+		final objectClass = new CLoweredBodyClass(preparedObject, new CIdentifier("hxc_fixture_object"), null, null, new CIdentifier("empty_anchor"), [],
+			new CIdentifier("hxc_fixture_object_descriptor"), null, null);
 		final root = rootFunction("fn.project.root", false);
 		root.blocks[0].instructions.resize(0);
+		root.parameters[0] = {id: "value.object", type: IRTPointer(IRTInstance(preparedObject.instanceId), true), source: span()};
 		final entry = emptyFunction("fn.project.entry");
 		final rootArrays:Map<String, CIdentifier> = [root.id => new CIdentifier("hxc_project_roots")];
 		final rootFrames:Map<String, CIdentifier> = [root.id => new CIdentifier("hxc_project_frame")];
-		final names = new CManagedProgramNames(new CIdentifier("hxc_project_gc"), new CIdentifier("hxc_project_thread"), rootArrays, rootFrames);
-		final emitter = new CBodyEmitter(null, null, null, null, null, null, null, null, null, null, names);
+		final rootExceptionCleanups:Map<String, CIdentifier> = [];
+		final names = new CManagedProgramNames(new CIdentifier("hxc_project_gc"), new CIdentifier("hxc_project_thread"), rootArrays, rootFrames,
+			rootExceptionCleanups);
+		final emitter = new CBodyEmitter(null, null, [objectClass], null, null, null, null, null, null, null, null, names);
 		final rootNames:Map<String, CIdentifier> = ["value.object" => new CIdentifier("value_object")];
 		final loweredRoot = loweredFunction(emitter, root, "fixture.ManagedRoots", new CIdentifier("hxc_project_root"), rootNames);
 		final loweredEntry = loweredFunction(emitter, entry, "fixture.ManagedRoots", new CIdentifier("hxc_project_entry"), []);
 		final preparedDispatch = new CPreparedBodyDispatch(CBodyDispatchGraph.empty(), [], [], [], [], [], []);
 		final dispatch = new CLoweredBodyDispatch(preparedDispatch, [], [], [], []);
 		final program:HxcIRProgram = {
-			schemaVersion: 21,
+			schemaVersion: HxcIRValidator.SCHEMA_VERSION,
+			dynamicPlan: {
+				types: [],
+				members: [],
+				callShapes: [],
+				operations: []
+			},
 			dispatch: {layouts: [], slots: [], tables: []},
 			modules: [
 				{
 					id: "fixture.ManagedRoots",
-					types: [],
-					typeInstances: [],
+					types: [preparedObject.declaration()],
+					typeInstances: [preparedObject.instance()],
 					globals: [],
 					functions: [root, entry],
 					source: span()
 				}
 			]
 		};
-		final lowered = new CBodyLoweringResult(program, [loweredRoot, loweredEntry], [], [], [], [], [], [], [], [], [], [], dispatch,
-			CLoweredImports.empty(), [], [], {
+		final dynamicPlan = new CLoweredBodyDynamicPlan(program.dynamicPlan, [], [], [], []);
+		final validated = new HxcIRValidator().requireValid(program, "portable");
+		final lowered = new CBodyLoweringResult(validated, [loweredRoot, loweredEntry], [], // globals
+			[], // aggregates
+			[], // enums
+			[objectClass], // classes
+			[], // arrays
+			[], // iterators
+			[], // IntMap instances
+			[], // StringMap instances
+			[], // typed map instances
+			[], // Bytes instances
+			[], // optional instances
+			dynamicPlan, [], // constructors
+			dispatch, CLoweredImports.empty(), [], [], {
 				schemaVersion: 1,
 				algorithm: "synthetic-root-frame",
 				symbols: [],

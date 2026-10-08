@@ -63,11 +63,17 @@ function resize(world:ScenarioWorld, nextSize:VoxelSize):EditorWorldResult {
 	});
 }
 
-/** Rewrite one voxel while preserving the world's existing chunk identities. */
+/**
+	Rewrite one voxel while preserving every unaffected chunk.
+
+	A private editor image records whether this complete chunk layout already
+	passed `decode`. Trusted layouts patch only the owning run list. An invalid or
+	unproven draft keeps the full decoder so repair-mode editing cannot accept a
+	malformed world by inspecting only the pointed chunk.
+**/
 @:noCompletion
-function paint(world:ScenarioWorld, point:VoxelPoint, paletteCode:Int):EditorWorldResult {
-	return paintMany(world, [point], paletteCode);
-}
+function paint(world:ScenarioWorld, point:VoxelPoint, paletteCode:Int, trustedEditableLayout:Bool):EditorWorldResult
+	return trustedEditableLayout ? patchVoxel(world, point, paletteCode) : paintMany(world, [point], paletteCode);
 
 /** Decode and rewrite one chunk set for an entire UI paint gesture. */
 @:noCompletion
@@ -189,6 +195,55 @@ function decode(world:ScenarioWorld):Null<Array<Int>> {
 	return cells;
 }
 
+/** Validate the complete chunk partition once when an editor image is created. */
+@:noCompletion
+function isEditable(world:ScenarioWorld):Bool
+	return decode(world) != null;
+
+/**
+	Read one voxel from compact chunk runs without expanding the complete world.
+
+	The session uses this after a validated single-voxel command to record the
+	value that Undo must restore. The function rejects missing, overlapping, or
+	malformed owning chunks, so history never records a plausible partial value.
+**/
+@:noCompletion
+function paletteCodeAt(world:ScenarioWorld, point:VoxelPoint):Null<Int> {
+	if (!validSize(world.size) || !containsPoint(world.size, point))
+		return null;
+	var result:Null<Int> = null;
+	for (chunk in world.chunks) {
+		if (!containsBounds(world.size, {origin: chunk.origin, size: chunk.size}))
+			return null;
+		final inside = point.x >= chunk.origin.x
+			&& point.y >= chunk.origin.y
+			&& point.z >= chunk.origin.z
+			&& point.x < chunk.origin.x + chunk.size.width
+			&& point.y < chunk.origin.y + chunk.size.height
+			&& point.z < chunk.origin.z + chunk.size.depth;
+		if (!inside)
+			continue;
+		if (result != null)
+			return null;
+		final localX = point.x - chunk.origin.x;
+		final localY = point.y - chunk.origin.y;
+		final localZ = point.z - chunk.origin.z;
+		final wanted = (localZ * chunk.size.height + localY) * chunk.size.width + localX;
+		final expected = volume(chunk.size);
+		var offset = 0;
+		for (run in chunk.runs) {
+			if (run.count <= 0 || offset > expected - run.count)
+				return null;
+			if (wanted >= offset && wanted < offset + run.count)
+				result = run.paletteCode;
+			offset += run.count;
+		}
+		if (offset != expected || result == null)
+			return null;
+	}
+	return result;
+}
+
 private function rewriteChunks(chunks:Array<VoxelChunk>, worldSize:VoxelSize, cells:Array<Int>):Array<VoxelChunk> {
 	final result:Array<VoxelChunk> = [];
 	for (chunk in chunks) {
@@ -205,6 +260,75 @@ private function rewriteChunks(chunks:Array<VoxelChunk>, worldSize:VoxelSize, ce
 		});
 	}
 	return result;
+}
+
+/** Split and merge runs in only the trusted chunk that owns one point. */
+private function patchVoxel(world:ScenarioWorld, point:VoxelPoint, paletteCode:Int):EditorWorldResult {
+	if (!containsPoint(world.size, point))
+		return WorldRejected(PointOutsideWorld(point));
+	var ownerIndex = -1;
+	for (chunkIndex in 0...world.chunks.length) {
+		final chunk = world.chunks[chunkIndex];
+		if (point.x >= chunk.origin.x
+			&& point.y >= chunk.origin.y
+			&& point.z >= chunk.origin.z
+			&& point.x < chunk.origin.x + chunk.size.width
+			&& point.y < chunk.origin.y + chunk.size.height
+			&& point.z < chunk.origin.z + chunk.size.depth) {
+			if (ownerIndex >= 0)
+				return WorldRejected(DraftWorldIsNotEditable);
+			ownerIndex = chunkIndex;
+		}
+	}
+	if (ownerIndex < 0)
+		return WorldRejected(DraftWorldIsNotEditable);
+	final owner = world.chunks[ownerIndex];
+	final localX = point.x - owner.origin.x;
+	final localY = point.y - owner.origin.y;
+	final localZ = point.z - owner.origin.z;
+	final wanted = (localZ * owner.size.height + localY) * owner.size.width + localX;
+	final expected = volume(owner.size);
+	final patchedRuns:Array<VoxelRun> = [];
+	var offset = 0;
+	var replaced = false;
+	for (run in owner.runs) {
+		if (run.count <= 0 || offset > expected - run.count)
+			return WorldRejected(DraftWorldIsNotEditable);
+		if (wanted >= offset && wanted < offset + run.count) {
+			pushRun(patchedRuns, run.paletteCode, wanted - offset);
+			pushRun(patchedRuns, paletteCode, 1);
+			pushRun(patchedRuns, run.paletteCode, offset + run.count - wanted - 1);
+			replaced = true;
+		} else
+			pushRun(patchedRuns, run.paletteCode, run.count);
+		offset += run.count;
+	}
+	if (offset != expected || !replaced)
+		return WorldRejected(DraftWorldIsNotEditable);
+	final chunks = world.chunks.copy();
+	chunks[ownerIndex] = {
+		id: owner.id,
+		origin: owner.origin,
+		size: owner.size,
+		runs: patchedRuns
+	};
+	return WorldReady({
+		size: world.size,
+		palette: world.palette.copy(),
+		chunks: chunks,
+		fluids: world.fluids.copy()
+	});
+}
+
+/** Append one positive run and merge it with the preceding equal code. */
+private function pushRun(target:Array<VoxelRun>, paletteCode:Int, count:Int):Void {
+	if (count <= 0)
+		return;
+	final lastIndex = target.length - 1;
+	if (lastIndex >= 0 && target[lastIndex].paletteCode == paletteCode)
+		target[lastIndex] = {paletteCode: paletteCode, count: target[lastIndex].count + count};
+	else
+		target.push({paletteCode: paletteCode, count: count});
 }
 
 private function buildChunks(size:VoxelSize, cells:Array<Int>):Array<VoxelChunk> {

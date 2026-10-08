@@ -124,11 +124,17 @@ REQUIRED_GATE_FILES = (
     "test/differential/array-runtime/case.json",
     "test/differential/array-runtime/oracle.hxml",
     "test/differential/array-runtime/run.py",
+    "test/differential/dynamic-runtime/case.json",
+    "test/differential/dynamic-runtime/fixtures/Main.hx",
+    "test/differential/dynamic-runtime/scalar/Main.hx",
+    "test/differential/dynamic-runtime/typed/Main.hx",
+    "test/differential/dynamic-runtime/run.py",
+    "test/runtime/dynamic/case.json",
+    "test/runtime/dynamic/run.py",
     "test/differential/int-map/case.json",
     "test/differential/int-map/generated/Main.hx",
     "test/differential/int-map/generated/oracle.hxml",
     "test/differential/int-map/int_map_runtime.c",
-    "test/differential/int-map/negative/get/Main.hx",
     "test/differential/int-map/negative/value_type/Main.hx",
     "test/differential/int-map/run.py",
     "test/differential/string-map/case.json",
@@ -170,6 +176,7 @@ REQUIRED_GATE_FILES = (
     "scripts/test/c_fixture_harness.py",
     "test/c_ast/ASTFixtureCompiler.hx",
     "test/c_ast/ASTFixtureCompilerProbe.hx",
+    "test/c_ast/CASTFuzzCompiler.hx",
     "test/c_ast/CASTGolden.hx",
     "test/c_ast/ExpressionGolden.hx",
     "test/c_ast/c_ast.hxml",
@@ -182,6 +189,11 @@ REQUIRED_GATE_FILES = (
     "test/c_ast/expected/src/ast_fixture.c",
     "test/c_ast/expected/src/main.c",
     "test/c_ast/run.py",
+    "test/c_ast/run_fuzz.py",
+    "test/c_ast/fuzz/README.md",
+    "test/c_ast/fuzz/seeds.tsv",
+    "test/c_ast/fuzz/dictionary.tsv",
+    "test/c_ast/fuzz/regressions/minimizer.json",
     "test/ast/c-ast-roundtrip/case.json",
     "test/declaration_plan/DeclarationPlanGolden.hx",
     "test/declaration_plan/declaration_plan.hxml",
@@ -904,6 +916,18 @@ REQUIRED_GATE_FILES = (
     "test/snapshot/raylib-provisioning/case.json",
     "test/runtime/raylib-provisioning/case.json",
     "test/abi/raylib-provisioning/case.json",
+    "docs/specs/platform-support-matrix.json",
+    "docs/specs/platform-support-matrix.schema.json",
+    "scripts/ci/platform_matrix.py",
+    "test/platform_matrix/run.py",
+    "test/platform_matrix/test_platform_matrix.py",
+    "test/platform_matrix/fixtures/hosted/hello_consumer.cpp",
+    "test/platform_matrix/fixtures/windows/library.h",
+    "test/platform_matrix/fixtures/windows/library.c",
+    "test/platform_matrix/fixtures/windows/consumer.c",
+    "test/platform_matrix/fixtures/windows/consumer.cpp",
+    "test/platform_matrix/fixtures/cortex_m3/smoke.c",
+    "test/platform_matrix/fixtures/cortex_m3/link.ld",
     "scripts/ci/runtime_smoke.py",
 )
 
@@ -923,6 +947,9 @@ REQUIRED_WORKFLOW_SNIPPETS = (
     "  pinned-toolchain:\n    runs-on: ubuntu-latest\n    timeout-minutes: 5\n    needs:\n      - toolchain-shards\n    if: ${{ always() }}\n",
     "          TOOLCHAIN_SHARDS_RESULT: ${{ needs['toolchain-shards'].result }}\n",
     "  native-smoke:\n",
+    "  platform-matrix-plan:\n",
+    "  platform-matrix:\n",
+    "  platform-matrix-aggregate:\n",
     "  build-adapters:\n",
     "  raylib-headless:\n",
     "  raylib-desktop:\n",
@@ -940,6 +967,14 @@ REQUIRED_WORKFLOW_SNIPPETS = (
     "npx --no-install haxelib install formatter 1.18.0 --quiet",
     "npm run format:haxe:check",
     'python3 scripts/ci/runtime_smoke.py --toolchain "${{ matrix.toolchain }}"',
+    'python3 scripts/ci/platform_matrix.py plan --github-output "$GITHUB_OUTPUT"',
+    "python3 scripts/ci/platform_matrix.py execute",
+    "python3 scripts/ci/platform_matrix.py aggregate",
+    "matrix: ${{ fromJSON(needs.platform-matrix-plan.outputs.matrix) }}",
+    "gcc-arm-none-eabi",
+    "qemu-system-arm",
+    "name: hxc-platform-matrix",
+    "retention-days: 90",
     'python3 test/primitive_semantics/run.py --native-only --toolchain "${{ matrix.toolchain }}"',
     'python3 test/body_lowering/run.py --native-only --toolchain "${{ matrix.toolchain }}"',
     'python3 test/function_lowering/run.py --native-only --toolchain "${{ matrix.toolchain }}"',
@@ -1093,6 +1128,8 @@ def validate() -> list[str]:
         errors.append("package.json must retain the test:diagnostics entry point")
     if scripts.get("test:c-ast") != "python3 test/c_ast/run.py":
         errors.append("package.json must retain the test:c-ast entry point")
+    if scripts.get("test:c-ast-fuzz") != "python3 test/c_ast/run_fuzz.py":
+        errors.append("package.json must retain the test:c-ast-fuzz entry point")
     if scripts.get("test:c-import") != "python3 test/c_import/run.py":
         errors.append("package.json must retain the test:c-import entry point")
     if (
@@ -1100,6 +1137,8 @@ def validate() -> list[str]:
         != "python3 test/raylib_provisioning/run.py"
     ):
         errors.append("package.json must retain the test:raylib-provisioning entry point")
+    if scripts.get("test:platform-matrix") != "python3 test/platform_matrix/run.py":
+        errors.append("package.json must retain the test:platform-matrix entry point")
     if scripts.get("test:raygui-binding") != "python3 test/raygui_binding/test_binding.py":
         errors.append("package.json must retain the test:raygui-binding entry point")
     if scripts.get("test:declaration-plan") != "python3 test/declaration_plan/run.py":
@@ -1122,6 +1161,10 @@ def validate() -> list[str]:
         )
     if scripts.get("test:runtime-features") != "python3 test/runtime/runtime-feature-graph/run.py":
         errors.append("package.json must retain the test:runtime-features entry point")
+    if scripts.get("test:dynamic-runtime") != "python3 test/runtime/dynamic/run.py":
+        errors.append("package.json must retain the test:dynamic-runtime entry point")
+    if scripts.get("test:dynamic-lowering") != "python3 test/differential/dynamic-runtime/run.py":
+        errors.append("package.json must retain the test:dynamic-lowering entry point")
     if scripts.get("test:array-runtime") != "python3 test/differential/array-runtime/run.py":
         errors.append("package.json must retain the test:array-runtime entry point")
     if scripts.get("test:int-map") != "python3 test/differential/int-map/run.py":
@@ -1136,8 +1179,12 @@ def validate() -> list[str]:
         errors.append("package.json must retain the test:bytes-runtime entry point")
     if scripts.get("test:gc-runtime") != "python3 test/runtime/gc/run.py":
         errors.append("package.json must retain the test:gc-runtime entry point")
+    if scripts.get("test:runtime-stress") != "python3 test/runtime_stress/run.py":
+        errors.append("package.json must retain the test:runtime-stress entry point")
     if scripts.get("test:string-runtime") != "python3 test/differential/string-runtime/run.py":
         errors.append("package.json must retain the test:string-runtime entry point")
+    if scripts.get("test:typed-output") != "python3 test/string_output/run.py --typed-only":
+        errors.append("package.json must retain the test:typed-output entry point")
     if scripts.get("test:string-output") != "python3 test/string_output/run.py":
         errors.append("package.json must retain the test:string-output entry point")
     if scripts.get("test:hello") != "python3 examples/hello/run.py":
@@ -1246,6 +1293,8 @@ def validate() -> list[str]:
         errors.append("package.json must retain the Caxecraft app-screen gate")
     if scripts.get("test:caxecraft-presentation") != "python3 examples/caxecraft/run_haxe_c_test.py presentation":
         errors.append("package.json must retain the Caxecraft presentation gate")
+    if scripts.get("test:caxecraft-player-camera") != "python3 examples/caxecraft/run_haxe_c_test.py player-camera":
+        errors.append("package.json must retain the Caxecraft player-camera gate")
     if scripts.get("test:caxecraft-terrain-chunks") != "python3 examples/caxecraft/run_haxe_c_test.py terrain-chunks":
         errors.append("package.json must retain the Caxecraft terrain-chunk gate")
     if scripts.get("test:caxecraft-domain:full") != "python3 examples/caxecraft/run.py --full":
@@ -1331,6 +1380,8 @@ def validate() -> list[str]:
         errors.append("package.json must retain the bounded parallel toolchain runner")
     if "npm run test:c-ast" not in str(scripts.get("test:toolchain", "")):
         errors.append("package.json test:toolchain must execute test:c-ast")
+    if "npm run test:c-ast-fuzz" not in str(scripts.get("test:toolchain", "")):
+        errors.append("package.json test:toolchain must execute test:c-ast-fuzz")
     if "npm run test:diagnostics" not in str(scripts.get("test:toolchain", "")):
         errors.append("package.json test:toolchain must execute test:diagnostics")
     if "npm run test:declaration-plan" not in str(scripts.get("test:toolchain", "")):
@@ -1341,6 +1392,10 @@ def validate() -> list[str]:
         errors.append("package.json test:toolchain must execute test:project-emitter")
     if "npm run test:runtime-features" not in str(scripts.get("test:toolchain", "")):
         errors.append("package.json test:toolchain must execute test:runtime-features")
+    if "npm run test:dynamic-runtime" not in str(scripts.get("test:toolchain", "")):
+        errors.append("package.json test:toolchain must execute test:dynamic-runtime")
+    if "npm run test:dynamic-lowering" not in str(scripts.get("test:toolchain", "")):
+        errors.append("package.json test:toolchain must execute test:dynamic-lowering")
     if "npm run test:array-runtime" not in str(scripts.get("test:toolchain", "")):
         errors.append("package.json test:toolchain must execute test:array-runtime")
     if "npm run test:int-map" not in str(scripts.get("test:toolchain", "")):
@@ -1355,8 +1410,12 @@ def validate() -> list[str]:
         errors.append("package.json test:toolchain must execute test:bytes-runtime")
     if "npm run test:gc-runtime" not in str(scripts.get("test:toolchain", "")):
         errors.append("package.json test:toolchain must execute test:gc-runtime")
+    if "npm run test:runtime-stress" not in str(scripts.get("test:toolchain", "")):
+        errors.append("package.json test:toolchain must execute test:runtime-stress")
     if "npm run test:string-runtime" not in str(scripts.get("test:toolchain", "")):
         errors.append("package.json test:toolchain must execute test:string-runtime")
+    if "npm run test:typed-output" not in str(scripts.get("test:toolchain", "")):
+        errors.append("package.json test:toolchain must execute test:typed-output")
     if "npm run test:string-output" not in str(scripts.get("test:toolchain", "")):
         errors.append("package.json test:toolchain must execute test:string-output")
     if "npm run test:hello" not in str(scripts.get("test:toolchain", "")):
@@ -1463,6 +1522,8 @@ def validate() -> list[str]:
         errors.append("package.json test:toolchain must execute test:caxecraft-app-screen")
     if "npm run test:caxecraft-presentation" not in str(scripts.get("test:toolchain", "")):
         errors.append("package.json test:toolchain must execute test:caxecraft-presentation")
+    if "npm run test:caxecraft-player-camera" not in str(scripts.get("test:toolchain", "")):
+        errors.append("package.json test:toolchain must execute test:caxecraft-player-camera")
     if "npm run test:caxecraft-terrain-chunks" not in str(scripts.get("test:toolchain", "")):
         errors.append("package.json test:toolchain must execute test:caxecraft-terrain-chunks")
     if "npm run test:caxecraft-domain:full" not in str(scripts.get("test:toolchain", "")):
@@ -1941,6 +2002,8 @@ def validate() -> list[str]:
         "run_eval_oracle",
         "-fsanitize=address,undefined",
         "hxc_string_map_ref_get_copy",
+        "hxc_string_map_ref_copy",
+        'runtime(feature="string-map",operation="copy")',
         "allocation rollback",
         "hxc_gc",
         "nm",
@@ -1966,8 +2029,13 @@ def validate() -> list[str]:
         "render_server_pair",
         "-fsanitize=address,undefined",
         "hxc_int_bool_map_ref_exists",
+        "hxc_int_bool_map_ref_get",
+        "hxc_int_bool_map_ref_remove",
+        "hxc_int_bool_map_ref_clear",
+        "hxc_int_bool_map_ref_copy",
         "runtime-none",
-        "IntMap.get:not-yet-admitted",
+        'runtime(feature="int-map",operation="get")',
+        'runtime(feature="int-map",operation="copy")',
         "nm",
     ):
         if required_int_map_contract not in int_map_runner:
@@ -2226,7 +2294,9 @@ def validate() -> list[str]:
         "_Static_assert(",
         "checked-abort",
         "payload-enum-equality-requires-structural-semantics",
-        "recursive-enum-with-collector-payload",
+        "check_recursive_collector_payload(requested_toolchain=args.toolchain)",
+        "check_recursive_collector_observer(",
+        "enum-recursive-collector-sanitized",
     ):
         if required_enum_contract not in enum_runner:
             errors.append(
@@ -2265,10 +2335,39 @@ def validate() -> list[str]:
         errors.append(
             "generic-specialization runner must expose the required native matrix seam"
         )
-    if "compiler_family" not in generic_runner or '"--version"' not in generic_runner:
+    compiler_discovery = read_text(
+        ROOT / "scripts/test/compiler_discovery.py", errors
+    )
+    shared_generic_compiler_identity = (
+        "from scripts.test.compiler_discovery import compiler_family, resolve_compiler"
+        in generic_runner
+        and "def compiler_family" in compiler_discovery
+        and "def resolve_compiler" in compiler_discovery
+        and '"--version"' in compiler_discovery
+        and 'base = "g++" if language == "c++" else "gcc"' in compiler_discovery
+    )
+    local_generic_compiler_identity = (
+        "def compiler_family" in generic_runner and '"--version"' in generic_runner
+    )
+    if not (shared_generic_compiler_identity or local_generic_compiler_identity):
         errors.append(
             "generic-specialization runner must verify required compiler-family identity"
         )
+
+    vector_list_runner = read_text(
+        ROOT / "test/differential/vector-list/run.py", errors
+    )
+    for required_vector_list_toolchain_contract in (
+        "from scripts.test.compiler_discovery import resolve_compiler",
+        'resolve_compiler(family, "c++")',
+        'choices=("auto", *TOOLCHAINS)',
+        "toolchain.cpp_compiler",
+    ):
+        if required_vector_list_toolchain_contract not in vector_list_runner:
+            errors.append(
+                "Vector/List runner lost identity-matching C/C++ toolchain contract "
+                + required_vector_list_toolchain_contract
+            )
 
     evaluation_runner = read_text(ROOT / "test/evaluation_order/run.py", errors)
     for required_evaluation_flag in (

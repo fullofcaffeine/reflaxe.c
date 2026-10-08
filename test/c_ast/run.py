@@ -19,6 +19,8 @@ from typing import Iterable, Mapping
 ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
+from scripts.test.bounded_process import run as run_bounded_process  # noqa: E402
+
 
 from scripts.test.c_fixture_harness import (  # noqa: E402
     CFixtureFailure,
@@ -112,7 +114,7 @@ def macro_call(output: Path) -> str:
 def run_fixture_compiler(output: Path, *, label: str) -> None:
     environment = os.environ.copy()
     environment["HAXE_NO_SERVER"] = "1"
-    result = subprocess.run(
+    result = run_bounded_process(
         [
             development_tool("haxe"),
             str(HXML),

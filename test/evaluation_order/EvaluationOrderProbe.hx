@@ -434,6 +434,11 @@ class EvaluationOrderProbe {
 			type: IRTBool,
 			source: source
 		};
+		final exceptionPayload:HxcIRParameter = {
+			id: "exception-payload",
+			type: IRTInt(32, true),
+			source: source
+		};
 		final diamond = syntheticFunction("synthetic.reducible-diamond", [condition], "entry", [
 			syntheticBlock("entry", IRTBranch("condition", plainEdge("when-true"), plainEdge("when-false")), source),
 			syntheticBlock("when-true", IRTJump(plainEdge("join")), source),
@@ -447,8 +452,26 @@ class EvaluationOrderProbe {
 		switch diamondPlan {
 			case CCFStructured(_, _):
 				verifier.requireValid(diamond, diamondPlan);
-			case CCFLegacyIrreducible(_):
+			case CCFLegacyIrreducible(_) | CCFExceptionContinuations(_):
 				throw new haxe.Exception("reducible diamond selected the irreducible fallback");
+		}
+		final directException = syntheticFunction("synthetic.direct-exception", [exceptionPayload], "entry", [
+			syntheticBlock("entry", IRTThrow("exception-payload", {
+				kind: IRFException,
+				target: IRFTBlock("catch"),
+				arguments: [],
+				cleanup: []
+			}), source),
+			syntheticBlock("catch", IRTReturn(null, []), source)
+		], source);
+		final directExceptionPlan = planner.plan(directException);
+		switch directExceptionPlan {
+			case CCFExceptionContinuations(targets):
+				if (targets.join(",") != "catch")
+					throw new haxe.Exception('direct exception target proof drifted: ${targets.join(",")}');
+				verifier.requireValid(directException, directExceptionPlan);
+			case CCFStructured(_, _) | CCFLegacyIrreducible(_):
+				throw new haxe.Exception("direct exception did not report its explicit continuation strategy");
 		}
 		if (diamondResult.work.immediatePostDominatorQueries <= diamondResult.work.immediatePostDominatorComputations)
 			throw new haxe.Exception("reducible diamond did not reuse its immediate post-dominator fact during plan validation");
@@ -479,10 +502,9 @@ class EvaluationOrderProbe {
 			throw new haxe.Exception('early-return ladder used ${ladderResult.work.normalJoinCandidateProofs} candidate proofs for '
 				+ '${ladderResult.work.normalJoinSearches} searches; ranked search should need at most one build proof and one validation proof per branch');
 		final maximumCompletionWork = ladderResult.work.completionSetSearches * earlyReturnLadder.blocks.length;
-		if (ladderResult.work.completionSetInitialBlockScans != maximumCompletionWork)
-			throw new haxe.Exception('early-return ladder scanned ${ladderResult.work.completionSetInitialBlockScans} completion blocks; '
-				+ 'one seed scan for each of ${ladderResult.work.completionSetSearches} searches over ${earlyReturnLadder.blocks.length} blocks '
-				+ 'requires exactly $maximumCompletionWork');
+		if (ladderResult.work.completionSetInitialBlockScans * 4 >= maximumCompletionWork * 3)
+			throw new haxe.Exception('early-return ladder initialized ${ladderResult.work.completionSetInitialBlockScans} completion rules; '
+				+ 'lazy reverse discovery must stay below three quarters of the $maximumCompletionWork rules required by full-graph scans');
 		if (ladderResult.work.completionSetWorklistDequeues > maximumCompletionWork)
 			throw new haxe.Exception('early-return ladder dequeued ${ladderResult.work.completionSetWorklistDequeues} completion blocks; '
 				+ 'the reverse worklist may resolve each block at most once per search');
@@ -512,7 +534,7 @@ class EvaluationOrderProbe {
 		switch loopPlan {
 			case CCFStructured(_, _):
 				verifier.requireValid(loopWithBreak, loopPlan);
-			case CCFLegacyIrreducible(_):
+			case CCFLegacyIrreducible(_) | CCFExceptionContinuations(_):
 				throw new haxe.Exception("reducible loop with an early break selected the irreducible fallback");
 		}
 		final loopWithReturn = syntheticFunction("synthetic.loop-with-return", [condition], "loop-header", [
@@ -526,7 +548,7 @@ class EvaluationOrderProbe {
 		switch loopReturnPlan {
 			case CCFStructured(_, _):
 				verifier.requireValid(loopWithReturn, loopReturnPlan);
-			case CCFLegacyIrreducible(_):
+			case CCFLegacyIrreducible(_) | CCFExceptionContinuations(_):
 				throw new haxe.Exception("reducible loop with an early return selected the irreducible fallback");
 		}
 		final loopWithBranchedReturnValue = syntheticFunction("synthetic.loop-with-branched-return-value", [condition], "loop-header", [
@@ -643,7 +665,7 @@ class EvaluationOrderProbe {
 				verifier.requireValid(loopSwitchAbruptTail, loopSwitchAbruptPlan);
 				if (deferredBreakTargets.length != 0 || countDeferredSwitchBreaks(root) != 0)
 					throw new haxe.Exception("loop switch return tail retained a needless structural goto");
-			case CCFLegacyIrreducible(_):
+			case CCFLegacyIrreducible(_) | CCFExceptionContinuations(_):
 				throw new haxe.Exception("reducible loop switch return selected the irreducible fallback");
 		}
 		final loopSwitchBreak = syntheticFunction("synthetic.loop-switch-break", [condition, selector], "loop-header", [
@@ -666,8 +688,36 @@ class EvaluationOrderProbe {
 				verifier.requireValid(loopSwitchBreak, loopSwitchPlan);
 				if (deferredBreakTargets.join(",") != "exit" || countDeferredSwitchBreaks(root) != 1)
 					throw new haxe.Exception("loop switch break did not retain its single bounded structural escape");
-			case CCFLegacyIrreducible(_):
+			case CCFLegacyIrreducible(_) | CCFExceptionContinuations(_):
 				throw new haxe.Exception("reducible loop switch break selected the irreducible fallback");
+		}
+		final loopSwitchBreakWithSharedContinue = syntheticFunction("synthetic.loop-switch-break-with-shared-continue", [condition, selector], "loop-header", [
+			syntheticBlock("loop-header", IRTBranch("condition", plainEdge("dispatch"), plainEdge("exit")), source),
+			syntheticBlock("dispatch", IRTSwitch("selector", [
+				{
+					value: IRCInt("1"),
+					edge: plainEdge("break-arm")
+				},
+				{value: IRCInt("2"), edge: plainEdge("first-continuing-arm")},
+				{value: IRCInt("3"), edge: plainEdge("second-continuing-arm")}
+			],
+				plainEdge("shared-continue")),
+				source),
+			syntheticBlock("break-arm", IRTJump(plainEdge("exit")), source),
+			syntheticBlock("first-continuing-arm", IRTJump(plainEdge("shared-continue")), source),
+			syntheticBlock("second-continuing-arm", IRTJump(plainEdge("shared-continue")), source),
+			syntheticBlock("shared-continue", IRTJump(plainEdge("loop-header")), source),
+			syntheticBlock("exit", IRTJump(plainEdge("function-return")), source),
+			syntheticBlock("function-return", IRTReturn(null, []), source)
+		], source);
+		final loopSwitchSharedContinuePlan = planner.plan(loopSwitchBreakWithSharedContinue);
+		switch loopSwitchSharedContinuePlan {
+			case CCFStructured(root, deferredBreakTargets):
+				verifier.requireValid(loopSwitchBreakWithSharedContinue, loopSwitchSharedContinuePlan);
+				if (deferredBreakTargets.join(",") != "exit" || countDeferredSwitchBreaks(root) != 1)
+					throw new haxe.Exception("loop switch with a shared continuing tail lost its one bounded break");
+			case CCFLegacyIrreducible(_) | CCFExceptionContinuations(_):
+				throw new haxe.Exception("reducible loop switch with a shared continuing tail selected the irreducible fallback");
 		}
 		final loopSwitchWithAbruptDefault = syntheticFunction("synthetic.loop-switch-with-abrupt-default", [condition, selector], "loop-header", [
 			syntheticBlock("loop-header", IRTBranch("condition", plainEdge("dispatch"), plainEdge("exit")), source),
@@ -720,7 +770,7 @@ class EvaluationOrderProbe {
 				if (entries.join(",") != "left-entry,right-entry")
 					throw new haxe.Exception('irreducible entry proof drifted: ${entries.join(",")}');
 				verifier.requireValid(irreducible, irreduciblePlan);
-			case CCFStructured(_, _):
+			case CCFStructured(_, _) | CCFExceptionContinuations(_):
 				throw new haxe.Exception("irreducible graph was incorrectly structuralized");
 		}
 		final nestedIrreducible = syntheticFunction("synthetic.nested-irreducible", [condition, selector], "entry", [
@@ -743,7 +793,7 @@ class EvaluationOrderProbe {
 				if (entries.join(",") != "left-entry,right-entry")
 					throw new haxe.Exception('nested irreducible entry proof drifted: ${entries.join(",")}');
 				verifier.requireValid(nestedIrreducible, nestedIrreduciblePlan);
-			case CCFStructured(_, _):
+			case CCFStructured(_, _) | CCFExceptionContinuations(_):
 				throw new haxe.Exception("nested irreducible graph was incorrectly structuralized");
 		}
 		final sharedAbruptPrefixes = syntheticFunction("synthetic.shared-abrupt-prefixes", [condition, selector], "entry", [
@@ -799,6 +849,8 @@ class EvaluationOrderProbe {
 			syntheticBlock("failure", IRTReturn(null, []), source)
 		], source)));
 		requirePlanFailure("malformed-region", () -> verifier.requireValid(diamond, CCFStructured(new CBodyControlFlowRegion([], CFCClosed), [])));
+		requirePlanFailure("exception-plan-without-exception", () -> verifier.requireValid(diamond, CCFExceptionContinuations([])));
+		requirePlanFailure("wrong-exception-target", () -> verifier.requireValid(directException, CCFExceptionContinuations(["entry"])));
 		requirePlanFailure("swapped-branch-edges", () -> verifier.requireValid(diamond, CCFStructured(new CBodyControlFlowRegion([
 			CFNIf("entry", "condition", new CBodyControlFlowRegion([CFNBlock("when-false")], CFCFallthrough),
 				new CBodyControlFlowRegion([CFNBlock("when-true")], CFCFallthrough), CBPPostDominator("join")),
@@ -815,7 +867,7 @@ class EvaluationOrderProbe {
 
 		final emission = syntheticControlFlowEmission(loopSwitchBreak, loopSwitchPlan, nestedIrreducible, nestedIrreduciblePlan);
 		return {
-			summary: "typed-region-plan:reducible-diamond-normal-joins-loop-break-return-converging-abrupt-escapes-inverted-pre-post-and-bounded-switch-escape-structured;maximal-and-nested-irreducible-fallback;malformed-unreachable-cleanup-and-instruction-failure-region-edge-mapping-and-sequence-order-rejected",
+			summary: "typed-region-plan:direct-exception-continuation-reported;reducible-diamond-normal-joins-loop-break-return-converging-abrupt-escapes-inverted-pre-post-and-bounded-switch-escape-structured;maximal-and-nested-irreducible-fallback;malformed-unreachable-cleanup-and-instruction-failure-region-edge-mapping-and-sequence-order-rejected",
 			emissionC: emission.source,
 			gotoProvenance: emission.gotoProvenance
 		};
@@ -825,7 +877,7 @@ class EvaluationOrderProbe {
 		switch plan {
 			case CCFStructured(_, _):
 				verifier.requireValid(fn, plan);
-			case CCFLegacyIrreducible(_):
+			case CCFLegacyIrreducible(_) | CCFExceptionContinuations(_):
 				throw new haxe.Exception('reducible $label selected the irreducible fallback');
 		}
 	}
@@ -919,6 +971,8 @@ class EvaluationOrderProbe {
 					for (targetBlockId in targets)
 						appendGotoProvenance(result, EGCIrreducibleCfg, fn, cName, block.id, targetBlockId, labelNames);
 				}
+			case CCFExceptionContinuations(_):
+				throw new haxe.Exception('synthetic exception graph `${fn.id}` needs dedicated exception-goto provenance');
 		}
 	}
 
@@ -949,7 +1003,7 @@ class EvaluationOrderProbe {
 				verifier.requireValid(fn, plan);
 				if (countLoopPolarity(root, postTest, false) != 1)
 					throw new haxe.Exception('inverted $label loop lost its continue-on-false polarity');
-			case CCFLegacyIrreducible(_):
+			case CCFLegacyIrreducible(_) | CCFExceptionContinuations(_):
 				throw new haxe.Exception('reducible inverted $label loop selected the irreducible fallback');
 		}
 	}

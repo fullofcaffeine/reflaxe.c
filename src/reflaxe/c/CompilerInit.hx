@@ -79,7 +79,8 @@ class CompilerInit {
 			expressionPreprocessors: [],
 			ignoreBodilessFunctions: false,
 			ignoreExterns: true,
-			trackUsedTypes: true,
+			// Whole-program lowering owns reachability; callback-local type usage is never consumed.
+			trackUsedTypes: false,
 			trackClassHierarchy: true,
 			deleteOldOutput: true,
 			reservedVarNames: []

@@ -1,5 +1,6 @@
 package caxecraft.qa;
 
+import caxecraft.app.AgentWorldProjection.horizontalDistanceSquaredMilliBlocks;
 import caxecraft.pilot.GameInputFrame;
 import caxecraft.pilot.GameInputFrame.GameInputFrames;
 import caxecraft.pilot.GameInputSource;
@@ -36,6 +37,7 @@ final class PilotProbe {
 		checkpoints += checkSmoothMotion();
 		checkpoints += checkEditorShell();
 		checkpoints += checkCampaignTravel();
+		checkpoints += checkAgentDistance();
 		checkSharedInterface();
 
 		Sys.println('caxecraft-pilot: $scripts compiled scripts, $sampledFrames deterministic frames, $checkpoints checkpoints; bounded quit and shared input interface');
@@ -211,7 +213,7 @@ final class PilotProbe {
 			&& PilotScript.sample(name, 5).hotbarCycle == 1
 			&& PilotScript.sample(name, 6).pausePressed,
 			"editor-shell script must mutate and stop two disposable runs");
-		final screenshot = PilotScript.checkpoint(name, 7);
+		final screenshot = PilotScript.checkpoint(name, 10);
 		require(screenshot != null && screenshot.kind == CaptureScreenshot && screenshot.label == "editor-shell.return",
 			"editor-shell return screenshot checkpoint changed");
 		return 1;
@@ -226,6 +228,16 @@ final class PilotProbe {
 		final screenshot = PilotScript.checkpoint(name, 3);
 		require(screenshot != null && screenshot.kind == CaptureScreenshot && screenshot.label == "campaign-travel.frame",
 			"campaign travel screenshot checkpoint changed");
+		return 1;
+	}
+
+	/** Protect distance order across the complete finite world. */
+	static function checkAgentDistance():Int {
+		final nearby = horizontalDistanceSquaredMilliBlocks(0.0, 0.0, 12.0, 0.0);
+		final far = horizontalDistanceSquaredMilliBlocks(0.0, 0.0, 63.0, 0.0);
+		final farther = horizontalDistanceSquaredMilliBlocks(0.0, 0.0, 63.0, 31.0);
+		require(nearby == 144000000, "agent distance changed at the nearby boundary");
+		require(far > nearby && farther > far, "agent distance wrapped or lost world-scale order");
 		return 1;
 	}
 

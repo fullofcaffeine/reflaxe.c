@@ -66,6 +66,7 @@ enum abstract PilotAction(Int) to Int {
 	var RightJump = 35;
 	var LeftDescend = 36;
 	var RightRise = 37;
+	var ToggleCamera = 38;
 }
 
 /**
@@ -214,6 +215,10 @@ final class PilotScript {
 	public static inline function capturePressed(action:PilotAction):Bool
 		return action == Capture;
 
+	/** Request the same first-/third-person camera transition as interactive F5. */
+	public static inline function cameraTogglePressed(action:PilotAction):Bool
+		return action == ToggleCamera;
+
 	public static inline function quitPressed(action:PilotAction):Bool
 		return action == Quit;
 
@@ -248,7 +253,7 @@ final class PilotScript {
 			case SmoothMotion:
 				frameNumber == 10 ? new PilotCheckpoint("smooth-motion.frame", CaptureScreenshot) : null;
 			case EditorShell:
-				frameNumber == 7 ? new PilotCheckpoint("editor-shell.return", CaptureScreenshot) : null;
+				frameNumber == 10 ? new PilotCheckpoint("editor-shell.return", CaptureScreenshot) : null;
 			case CampaignTravel:
 				frameNumber == 3 ? new PilotCheckpoint("campaign-travel.frame", CaptureScreenshot) : null;
 			case _: null;

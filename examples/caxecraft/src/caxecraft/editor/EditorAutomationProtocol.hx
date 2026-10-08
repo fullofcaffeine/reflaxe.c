@@ -12,7 +12,6 @@ import caxecraft.editor.EditorTypes.EditorMutation;
 import caxecraft.editor.EditorTypes.EditorMutationResult;
 import caxecraft.editor.EditorTypes.EditorObservation;
 import caxecraft.editor.EditorTypes.EditorQuery;
-import caxecraft.editor.EditorWorldViewport.projectWorld;
 import caxecraft.scenario.ScenarioGeometry.VoxelPoint;
 import haxe.io.Bytes;
 
@@ -255,9 +254,9 @@ private function encodeState(editor:EditorPackageSession, requestId:Int):String 
 }
 
 private function encodeSurface(editor:EditorPackageSession, requestId:Int):String {
-	return switch editor.query(InspectDraft) {
-		case DraftObserved(revision, draft):
-			final projection = projectWorld(draft.world);
+	return switch editor.query(InspectPresentation) {
+		case PresentationObserved(revision, presentation):
+			final projection = presentation.projection;
 			if (projection == null)
 				return errorFor(requestId, "draft world cannot be projected");
 			final output = new StringBuf();
@@ -289,9 +288,9 @@ private function encodeSurface(editor:EditorPackageSession, requestId:Int):Strin
 }
 
 private function encodeColumn(editor:EditorPackageSession, requestId:Int, x:Int, z:Int):String {
-	return switch editor.query(InspectDraft) {
-		case DraftObserved(revision, draft):
-			final projection = projectWorld(draft.world);
+	return switch editor.query(InspectPresentation) {
+		case PresentationObserved(revision, presentation):
+			final projection = presentation.projection;
 			if (projection == null)
 				return errorFor(requestId, "draft world cannot be projected");
 			if (x < 0 || z < 0 || x >= projection.width || z >= projection.depth)
@@ -314,7 +313,7 @@ private function encodeColumn(editor:EditorPackageSession, requestId:Int, x:Int,
 
 private function encodeMutation(requestId:Int, result:EditorMutationResult):String {
 	return switch result {
-		case MutationApplied(_, changes, revision, undoDepth, redoDepth):
+		case MutationApplied(_, changes, _, revision, undoDepth, redoDepth):
 			successStart(requestId, "mutation") + ',"revision":$revision,"changed":${changes.length},"undoDepth":$undoDepth,"redoDepth":$redoDepth}';
 		case MutationUnchanged(_, revision): successStart(requestId, "unchanged") + ',"revision":$revision}';
 		case MutationRejected(error, revision): errorFor(requestId, '${Std.string(error)} at revision $revision');

@@ -7,17 +7,27 @@ import caxecraft.editor.EditorTypes.EditorSettings;
 import caxecraft.editor.EditorWorldGrid.EditorWorldResult;
 import caxecraft.editor.EditorWorldGrid.fill as fillWorld;
 import caxecraft.editor.EditorWorldGrid.paintMany as paintWorld;
+import caxecraft.editor.EditorWorldGrid.paint as paintWorldVoxel;
 import caxecraft.editor.EditorWorldGrid.resize as resizeWorld;
+import caxecraft.editor.EditorEnvironment.copyEnvironment;
+import caxecraft.editor.EditorObjectRename.renameScenarioObject;
 import caxecraft.scenario.CaxeFlow.FlowRule;
+import caxecraft.scenario.CaxeFlow.FlowSequence;
+import caxecraft.scenario.CaxeFlow.FlowVariable;
+import caxecraft.scenario.CaxeFlowCopy.copyFlowSequence;
+import caxecraft.scenario.CaxeFlowCopy.copyFlowVariable;
+import caxecraft.scenario.CaxeFlowCopy.copyFlowRule;
 import caxecraft.scenario.ContentId;
 import caxecraft.scenario.LocaleId;
 import caxecraft.scenario.MessageId;
 import caxecraft.scenario.Scenario;
+import caxecraft.scenario.ScenarioEnvironment;
 import caxecraft.scenario.ScenarioGeometry.ScenarioTransform;
 import caxecraft.scenario.ScenarioGeometry.VoxelBounds;
 import caxecraft.scenario.ScenarioGeometry.VoxelPoint;
 import caxecraft.scenario.ScenarioGeometry.VoxelSize;
 import caxecraft.scenario.ScenarioId;
+import caxecraft.scenario.ScenarioId.isValidScenarioIdText;
 import caxecraft.scenario.ScenarioObject;
 import caxecraft.scenario.ScenarioObject.ObjectPlacement;
 import caxecraft.scenario.ScenarioStory.ScenarioDialogue;
@@ -35,6 +45,13 @@ import caxecraft.scenario.ScenarioWorld.ScenarioFluid;
 typedef EditorReduction = {
 	final scenario:Scenario;
 	final family:EditorCommandFamily;
+}
+
+/** Private image facts that make one reducer decision safe and explicit. */
+@:noCompletion
+typedef EditorReductionContext = {
+	final settings:EditorSettings;
+	final worldGridEditable:Bool;
 }
 
 /** Internal typed result for candidate command application. */
@@ -60,10 +77,12 @@ enum EditorReductionResult {
 	access check or runtime behavior for it.
 **/
 @:noCompletion
-function apply(scenario:Scenario, command:EditorCommand, settings:EditorSettings):EditorReductionResult {
+function apply(scenario:Scenario, command:EditorCommand, context:EditorReductionContext):EditorReductionResult {
 	return switch command {
 		case SetTitle(title):
 			setTitle(scenario, title);
+		case SetEnvironment(environment):
+			ready(withEnvironment(scenario, environment), DocumentMetadata);
 		case ResizeWorld(size):
 			switch resizeWorld(scenario.world, size) {
 				case WorldRejected(error): ReductionRejected(error);
@@ -72,13 +91,13 @@ function apply(scenario:Scenario, command:EditorCommand, settings:EditorSettings
 		case SetPaletteEntry(code, blockType):
 			setPaletteEntry(scenario, code, blockType);
 		case PaintVoxel(point, paletteCode):
-			paint(scenario, [point], paletteCode, settings.selectionCells);
+			paintVoxel(scenario, point, paletteCode, context.settings.selectionCells, context.worldGridEditable);
 		case EraseVoxel(point):
-			paint(scenario, [point], 0, settings.selectionCells);
+			paintVoxel(scenario, point, 0, context.settings.selectionCells, context.worldGridEditable);
 		case PaintVoxels(points, paletteCode):
-			paint(scenario, points, paletteCode, settings.selectionCells);
+			paint(scenario, points, paletteCode, context.settings.selectionCells);
 		case EraseVoxels(points):
-			paint(scenario, points, 0, settings.selectionCells);
+			paint(scenario, points, 0, context.settings.selectionCells);
 		case FillBounds(bounds, paletteCode):
 			fillBounds(scenario, bounds, paletteCode);
 		case PutFluid(fluid):
@@ -91,6 +110,12 @@ function apply(scenario:Scenario, command:EditorCommand, settings:EditorSettings
 			ready(withObjects(scenario, putObject(scenario.objects, object)), Placement);
 		case MoveObjectBy(id, delta):
 			moveObjectBy(scenario, id, delta);
+		case RotateObjectBy(id, degrees):
+			rotateObjectBy(scenario, id, degrees);
+		case ResizeTriggerTo(id, size):
+			resizeTriggerTo(scenario, id, size);
+		case RenameObject(before, after):
+			renamePlacedObject(scenario, before, after);
 		case RemoveObject(id):
 			removePlacedObject(scenario, id);
 		case PutDialogue(dialogue):
@@ -105,6 +130,10 @@ function apply(scenario:Scenario, command:EditorCommand, settings:EditorSettings
 			ready(withRules(scenario, putRule(scenario.flow.rules, rule)), Rule);
 		case RemoveRule(id):
 			removeFlowRule(scenario, id);
+		case PutFlowVariable(variable):
+			ready(withFlowDefinitions(scenario, putFlowVariable(scenario.flow.variables, variable), scenario.flow.sequences), Rule);
+		case PutFlowSequence(sequence):
+			ready(withFlowDefinitions(scenario, scenario.flow.variables, putFlowSequence(scenario.flow.sequences, sequence)), Rule);
 		case SetDefaultLocale(locale):
 			setDefaultLocale(scenario, locale);
 		case PutLocale(locale):
@@ -118,6 +147,26 @@ function apply(scenario:Scenario, command:EditorCommand, settings:EditorSettings
 		case RestoreLastPlayable:
 			ReductionRejected(NoPlayableScenario);
 	}
+}
+
+/** Replace the optional presentation value while retaining the complete scenario. */
+private function withEnvironment(scenario:Scenario, environment:Null<ScenarioEnvironment>):Scenario {
+	return {
+		formatVersion: scenario.formatVersion,
+		requiredFeatures: scenario.requiredFeatures.copy(),
+		optionalFeatures: scenario.optionalFeatures.copy(),
+		id: scenario.id,
+		assetPack: scenario.assetPack,
+		messages: scenario.messages,
+		title: scenario.title,
+		mode: scenario.mode,
+		environment: environment == null ? null : copyEnvironment(environment),
+		world: scenario.world,
+		objects: scenario.objects,
+		story: scenario.story,
+		flow: scenario.flow,
+		extensions: scenario.extensions.copy()
+	};
 }
 
 /**
@@ -235,7 +284,7 @@ private function stampPrefab(scenario:Scenario, id:ScenarioId, prefabType:Conten
 	if (hasObject(scenario, id))
 		return ReductionRejected(DuplicateObject(id));
 	final objects = scenario.objects.copy();
-	objects.push({id: id, tags: tags.copy(), placement: Prefab(prefabType, transform)});
+	objects.push({id: id, tags: tags.copy(), placement: Prefab(prefabType, copyTransform(transform))});
 	return ready(withObjects(scenario, objects), Prefab);
 }
 
@@ -260,6 +309,81 @@ private function moveObjectBy(scenario:Scenario, id:ScenarioId, delta:VoxelPoint
 	})), Placement);
 }
 
+/** Rotate one directional placement while preserving every role-specific payload field. */
+private function rotateObjectBy(scenario:Scenario, id:ScenarioId, degrees:Int):EditorReductionResult {
+	final existing = findObject(scenario.objects, id);
+	if (existing == null)
+		return ReductionRejected(MissingObject(id));
+	final placement = rotatePlacement(existing.placement, degrees);
+	if (placement == null)
+		return ReductionRejected(ObjectCannotRotate(id));
+	return ready(withObjects(scenario, putObject(scenario.objects, {
+		id: existing.id,
+		tags: existing.tags.copy(),
+		placement: placement
+	})), Placement);
+}
+
+/** Resize one bounded trigger while preserving its origin, identity, tags, and role. */
+private function resizeTriggerTo(scenario:Scenario, id:ScenarioId, size:VoxelSize):EditorReductionResult {
+	final existing = findObject(scenario.objects, id);
+	if (existing == null)
+		return ReductionRejected(MissingObject(id));
+	final bounds = switch existing.placement {
+		case TriggerZone(value): value;
+		case _: return ReductionRejected(ObjectCannotResize(id));
+	};
+	if (size.width <= 0 || size.height <= 0 || size.depth <= 0)
+		return ReductionRejected(InvalidTriggerSize(id, size));
+	if (!canResizeBounds(bounds, scenario.world.size, size))
+		return ReductionRejected(ObjectResizeOutsideWorld(id, size));
+	return ready(withObjects(scenario, putObject(scenario.objects, {
+		id: existing.id,
+		tags: existing.tags.copy(),
+		placement: TriggerZone({origin: copyPoint(bounds.origin), size: copySize(size)})
+	})), Placement);
+}
+
+/** Rename one object only when its new canonical identity is valid and unused. */
+private function renamePlacedObject(scenario:Scenario, before:ScenarioId, after:ScenarioId):EditorReductionResult {
+	if (!hasObject(scenario, before))
+		return ReductionRejected(MissingObject(before));
+	if (!isValidScenarioIdText(after.text()))
+		return ReductionRejected(InvalidObjectName(after));
+	if (!same(before, after) && hasObject(scenario, after))
+		return ReductionRejected(DuplicateObject(after));
+	return ready(renameScenarioObject(scenario, before, after), Placement);
+}
+
+/** Apply yaw only to placements that store an authored transform. */
+private function rotatePlacement(placement:ObjectPlacement, degrees:Int):Null<ObjectPlacement> {
+	return switch placement {
+		case PlayerSpawn(transform): PlayerSpawn(rotatedTransform(transform, degrees));
+		case Checkpoint(transform): Checkpoint(rotatedTransform(transform, degrees));
+		case Item(itemType, quantity, transform): Item(itemType, quantity, rotatedTransform(transform, degrees));
+		case Entity(entityType, transform): Entity(entityType, rotatedTransform(transform, degrees));
+		case Npc(npcType, dialogue, transform): Npc(npcType, dialogue, rotatedTransform(transform, degrees));
+		case Prefab(prefabType, transform): Prefab(prefabType, rotatedTransform(transform, degrees));
+		case TriggerZone(_): null;
+		case StatefulObject(objectType, initialState, transform): StatefulObject(objectType, initialState, rotatedTransform(transform, degrees));
+	};
+}
+
+/** Normalize an arbitrary signed request before adding it to validated yaw. */
+private function rotatedTransform(transform:ScenarioTransform, degrees:Int):ScenarioTransform {
+	var yaw = transform.yawDegrees + degrees % 360;
+	if (yaw < 0)
+		yaw += 360;
+	if (yaw >= 360)
+		yaw -= 360;
+	return {
+		xMilli: transform.xMilli,
+		yMilli: transform.yMilli,
+		zMilli: transform.zMilli,
+		yawDegrees: yaw
+	};
+}
+
 /** Translate each closed CAXEMAP placement role by the same voxel delta. */
 private function movePlacement(placement:ObjectPlacement, worldSize:VoxelSize, delta:VoxelPoint):Null<ObjectPlacement> {
 	return switch placement {
@@ -272,7 +396,7 @@ private function movePlacement(placement:ObjectPlacement, worldSize:VoxelSize, d
 		case TriggerZone(bounds):
 			if (!canMoveBounds(bounds, worldSize, delta)) null; else TriggerZone({
 				origin: {x: bounds.origin.x + delta.x, y: bounds.origin.y + delta.y, z: bounds.origin.z + delta.z},
-				size: bounds.size
+				size: copySize(bounds.size)
 			});
 		case StatefulObject(objectType, initialState, transform):
 			movedTransform(transform, worldSize, delta, value -> StatefulObject(objectType, initialState, value));
@@ -310,6 +434,15 @@ private inline function canMoveBounds(bounds:VoxelBounds, worldSize:VoxelSize, d
 		&& delta.z >= -bounds.origin.z
 		&& delta.z <= worldSize.depth - bounds.size.depth - bounds.origin.z;
 
+/** Compare remaining axis capacity before addition so hostile sizes cannot overflow. */
+private inline function canResizeBounds(bounds:VoxelBounds, worldSize:VoxelSize, size:VoxelSize):Bool
+	return bounds.origin.x >= 0
+		&& bounds.origin.y >= 0
+		&& bounds.origin.z >= 0
+		&& size.width <= worldSize.width - bounds.origin.x
+		&& size.height <= worldSize.height - bounds.origin.y
+		&& size.depth <= worldSize.depth - bounds.origin.z;
+
 private function removeWorldFluid(scenario:Scenario, id:ScenarioId):EditorReductionResult {
 	if (!hasFluid(scenario, id))
 		return ReductionRejected(MissingFluid(id));
@@ -340,6 +473,18 @@ private function paint(scenario:Scenario, points:Array<VoxelPoint>, paletteCode:
 	if (!hasPaletteCode(scenario, paletteCode))
 		return ReductionRejected(UnknownPaletteCode(paletteCode));
 	return switch paintWorld(scenario.world, points, paletteCode) {
+		case WorldRejected(error): ReductionRejected(error);
+		case WorldReady(world): ready(withWorld(scenario, world), Voxel);
+	}
+}
+
+/** Apply one trusted chunk-local voxel change through the shared palette gate. */
+private function paintVoxel(scenario:Scenario, point:VoxelPoint, paletteCode:Int, maximumCells:Int, worldGridEditable:Bool):EditorReductionResult {
+	if (maximumCells < 1)
+		return ReductionRejected(VoxelEditTooLarge(1, maximumCells));
+	if (!hasPaletteCode(scenario, paletteCode))
+		return ReductionRejected(UnknownPaletteCode(paletteCode));
+	return switch paintWorldVoxel(scenario.world, point, paletteCode, worldGridEditable) {
 		case WorldRejected(error): ReductionRejected(error);
 		case WorldReady(world): ready(withWorld(scenario, world), Voxel);
 	}
@@ -419,14 +564,49 @@ private function putObject(values:Array<ScenarioObject>, replacement:ScenarioObj
 	for (value in values)
 		if (same(value.id, replacement.id)) {
 			if (!replaced)
-				result.push({id: replacement.id, tags: replacement.tags.copy(), placement: replacement.placement});
+				result.push(copyObject(replacement));
 			replaced = true;
 		} else
 			result.push(value);
 	if (!replaced)
-		result.push({id: replacement.id, tags: replacement.tags.copy(), placement: replacement.placement});
+		result.push(copyObject(replacement));
 	return result;
 }
+
+/** Copy one placement command payload so later caller mutation cannot enter the draft. */
+private function copyObject(value:ScenarioObject):ScenarioObject
+	return {id: value.id, tags: value.tags.copy(), placement: copyPlacement(value.placement)};
+
+/** Deep-copy every closed placement role while preserving its semantic payload. */
+private function copyPlacement(value:ObjectPlacement):ObjectPlacement {
+	return switch value {
+		case PlayerSpawn(transform): PlayerSpawn(copyTransform(transform));
+		case Checkpoint(transform): Checkpoint(copyTransform(transform));
+		case Item(itemType, quantity, transform): Item(itemType, quantity, copyTransform(transform));
+		case Entity(entityType, transform): Entity(entityType, copyTransform(transform));
+		case Npc(npcType, dialogue, transform): Npc(npcType, dialogue, copyTransform(transform));
+		case Prefab(prefabType, transform): Prefab(prefabType, copyTransform(transform));
+		case TriggerZone(bounds): TriggerZone({origin: copyPoint(bounds.origin), size: copySize(bounds.size)});
+		case StatefulObject(objectType, initialState, transform): StatefulObject(objectType, initialState, copyTransform(transform));
+	};
+}
+
+/** Copy one authored transform record at the editor ownership boundary. */
+private inline function copyTransform(value:ScenarioTransform):ScenarioTransform
+	return {
+		xMilli: value.xMilli,
+		yMilli: value.yMilli,
+		zMilli: value.zMilli,
+		yawDegrees: value.yawDegrees
+	};
+
+/** Copy one voxel coordinate record at the editor ownership boundary. */
+private inline function copyPoint(value:VoxelPoint):VoxelPoint
+	return {x: value.x, y: value.y, z: value.z};
+
+/** Copy one voxel extent record at the editor ownership boundary. */
+private inline function copySize(value:VoxelSize):VoxelSize
+	return {width: value.width, height: value.height, depth: value.depth};
 
 private function putFluid(values:Array<ScenarioFluid>, replacement:ScenarioFluid):Array<ScenarioFluid> {
 	final result = [for (value in values) if (!same(value.id, replacement.id)) value];
@@ -460,14 +640,27 @@ private function removeObjective(values:Array<ScenarioObjective>, id:ScenarioId)
 
 private function putRule(values:Array<FlowRule>, replacement:FlowRule):Array<FlowRule> {
 	final result = [for (value in values) if (!same(value.id, replacement.id)) value];
-	result.push({
-		id: replacement.id,
-		priority: replacement.priority,
-		repeat: replacement.repeat,
-		event: replacement.event,
-		predicate: replacement.predicate,
-		actions: replacement.actions.copy()
-	});
+	result.push(copyFlowRule(replacement));
+	return result;
+}
+
+/** Insert or replace one copy-owned variable without changing registry order. */
+private function putFlowVariable(values:Array<FlowVariable>, replacement:FlowVariable):Array<FlowVariable> {
+	final result = [
+		for (value in values)
+			if (!same(value.id, replacement.id)) copyFlowVariable(value)
+	];
+	result.push(copyFlowVariable(replacement));
+	return result;
+}
+
+/** Insert or replace one copy-owned sequence without retaining caller arrays. */
+private function putFlowSequence(values:Array<FlowSequence>, replacement:FlowSequence):Array<FlowSequence> {
+	final result = [
+		for (value in values)
+			if (!same(value.id, replacement.id)) copyFlowSequence(value)
+	];
+	result.push(copyFlowSequence(replacement));
 	return result;
 }
 
@@ -554,6 +747,29 @@ private function withObjectives(scenario:Scenario, objectives:Array<ScenarioObje
 
 private function withRules(scenario:Scenario, rules:Array<FlowRule>):Scenario
 	return copy(scenario, scenario.messages, scenario.title, scenario.world, scenario.objects, scenario.story.dialogues, scenario.story.objectives, rules);
+
+/** Replace reusable flow definitions while retaining rules and all document data. */
+private function withFlowDefinitions(scenario:Scenario, variables:Array<FlowVariable>, sequences:Array<FlowSequence>):Scenario
+	return {
+		formatVersion: scenario.formatVersion,
+		requiredFeatures: scenario.requiredFeatures.copy(),
+		optionalFeatures: scenario.optionalFeatures.copy(),
+		id: scenario.id,
+		assetPack: scenario.assetPack,
+		messages: scenario.messages,
+		title: scenario.title,
+		mode: scenario.mode,
+		environment: scenario.environment,
+		world: scenario.world,
+		objects: scenario.objects,
+		story: scenario.story,
+		flow: {
+			variables: [for (variable in variables) copyFlowVariable(variable)],
+			sequences: [for (sequence in sequences) copyFlowSequence(sequence)],
+			rules: [for (rule in scenario.flow.rules) copyFlowRule(rule)]
+		},
+		extensions: scenario.extensions.copy()
+	};
 
 private function withMessages(scenario:Scenario, messages:ScenarioMessages):Scenario
 	return copy(scenario, messages, scenario.title, scenario.world, scenario.objects, scenario.story.dialogues, scenario.story.objectives, scenario.flow.rules);

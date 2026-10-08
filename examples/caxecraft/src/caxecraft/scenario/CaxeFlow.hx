@@ -48,6 +48,35 @@ enum FlowEvent {
 	TimerExpired(timer:ScenarioId);
 	ObjectiveChanged(objective:ScenarioId);
 	StateChanged(variable:ScenarioId);
+	LevelEntered(level:ScenarioId);
+	CampaignExitRequested(exit:ScenarioId);
+}
+
+/** Integer world position retained only for deterministic event context. */
+typedef FlowEventPosition = {
+	final xMilli:Int;
+	final yMilli:Int;
+	final zMilli:Int;
+}
+
+/**
+	Closed runtime facts paired with one authored event source.
+
+	Canonical CaxeFlow text stores only `FlowEvent`, which is the source pattern a
+	rule matches. Engine adapters add this context when the fact occurs. Keeping
+	the two values separate lets rules inspect an actor or a swept zone crossing
+	without adding dynamic payload maps to authored content.
+**/
+enum FlowEventContext {
+	NoEventContext;
+	ActorEventContext(actor:ScenarioId);
+	SpatialEventContext(actor:ScenarioId, previous:FlowEventPosition, current:FlowEventPosition, swept:Bool);
+}
+
+/** One validated source occurrence observed at a fixed simulation boundary. */
+typedef FlowEventOccurrence = {
+	final source:FlowEvent;
+	final context:FlowEventContext;
 }
 
 enum FlowComparison {
@@ -72,6 +101,8 @@ enum FlowPredicate {
 	ObjectiveIs(objective:ScenarioId, expected:ObjectiveState);
 	NearObject(actor:ScenarioId, objectId:ScenarioId, maximumMilliBlocks:Int);
 	ModeIs(mode:ScenarioMode);
+	EventActorIs(actor:ScenarioId);
+	EventSweptIs(expected:Bool);
 }
 
 enum FlowArgument {
@@ -121,6 +152,8 @@ enum FlowRepeatPolicy {
 	Once;
 	Repeat;
 	Cooldown(ticks:Int);
+	OncePerActor;
+	CooldownPerActor(ticks:Int);
 }
 
 typedef FlowRule = {

@@ -165,6 +165,10 @@ final class Main {
 		final joined = labels.join(observedSeparator("|"));
 		final emptyJoined = ([] : Array<String>).join("");
 		final singletonJoined = ["solo"].join("ignored");
+		final labelsAlias = labels;
+		final stringified = labelsAlias.toString();
+		final emptyStringified = ([] : Array<String>).toString();
+		final singletonStringified = [fromCode(0x1F642)].toString();
 		final alias = values;
 		final history = new History();
 		final absentHistory = history.takeNewest();
@@ -176,10 +180,53 @@ final class Main {
 		final scalarCodes = [65, 0x1F600];
 		final freshComprehension = [for (code in scalarCodes) fromCode(code)];
 		final borrowedComprehension = [for (label in labels) label];
+		final methodValues = [1, 2, 3, 2];
+		final concatenatedValues = methodValues.concat([4, 5]);
+		final middleValues = methodValues.slice(1, 3);
+		final negativeSlice = methodValues.slice(-3, -1);
+		final clampedSlice = methodValues.slice(-99, 99);
+		final emptySlice = methodValues.slice(99, 100);
+		final reversedValues = methodValues;
+		final reversedAlias = reversedValues;
+		reversedValues.reverse();
+		reversedValues.unshift(9);
+		final containsThree = reversedValues.contains(3);
+		final missingValue = reversedValues.contains(99);
+		final firstTwo = reversedValues.indexOf(2);
+		final secondTwo = reversedValues.indexOf(2, firstTwo + 1);
+		final negativeTwo = reversedValues.indexOf(2, -2);
+		final lastTwo = reversedValues.lastIndexOf(2);
+		final earlierTwo = reversedValues.lastIndexOf(2, lastTwo - 1);
+		final removedThree = reversedValues.remove(3);
+		final removedMissing = reversedValues.remove(99);
+		final managedMethodValues = [labels[0], labels[1], labels[0]];
+		final managedConcatenated = managedMethodValues.concat([labels[2]]);
+		final managedSlice = managedMethodValues.slice(1);
+		managedMethodValues.reverse();
+		final managedRemoved = managedMethodValues.remove(labels[1]);
 		alias.push(12);
 		var sum = 0;
 		for (value in values)
 			sum += value;
+		final explicitIterator = values.iterator();
+		var explicitIteratorSum = 0;
+		while (explicitIterator.hasNext())
+			explicitIteratorSum += explicitIterator.next();
+		final pairIterator = values.keyValueIterator();
+		var pairIteratorTrace = 0;
+		while (pairIterator.hasNext()) {
+			final pair = pairIterator.next();
+			pairIteratorTrace += pair.key * 100 + pair.value;
+		}
+		final mappedValues = values.map(value -> value + 1);
+		final filteredValues = values.filter(value -> value >= 12);
+		final liveIterationValues = [2, 3];
+		final liveIterator = makeIntegerIterator(liveIterationValues);
+		final liveIteratorFirst = liveIterator.next();
+		liveIterationValues.push(5);
+		var liveIteratorRest = 0;
+		while (liveIterator.hasNext())
+			liveIteratorRest += liveIterator.next();
 
 		history.add(sum, before, after, {minimum: 5, maximum: 15});
 		final poppedHistory = history.takeNewest();
@@ -199,7 +246,7 @@ final class Main {
 		final shiftedEmpty = shiftedIntegers.shift();
 		final splicedIntegers = [10, 20, 30, 40];
 		final splicedIntegersAlias = splicedIntegers;
-		splicedIntegers.splice(1, 1);
+		final removedInteger = splicedIntegers.splice(1, 1);
 		splicedIntegers.splice(-1, 1);
 		splicedIntegers.splice(99, 1);
 		splicedIntegers.splice(-99, 1);
@@ -207,7 +254,31 @@ final class Main {
 		emptySplice.splice(0, 1);
 		final splicedLabels = labels.copy();
 		final splicedLabelsAlias = splicedLabels;
-		splicedLabels.splice(1, 1);
+		final removedLabel = splicedLabels.splice(1, 1);
+		final rangeSplicedIntegers = [1, 2, 3, 4, 5];
+		final rangeSplicedIntegersAlias = rangeSplicedIntegers;
+		final removedIntegerRange = rangeSplicedIntegers.splice(-4, 3);
+		final negativeLengthSplice = rangeSplicedIntegers.splice(0, -2);
+		final discardedIntegerRange = [6, 7, 8, 9];
+		discardedIntegerRange.splice(1, 2);
+		final rangeSplicedLabels = [labels[0], labels[1], labels[2], labels[0]];
+		final removedLabelRange = rangeSplicedLabels.splice(1, 2);
+		var shrinkLength = 2;
+		final dynamicallyResized = [7, 8, 9, 10];
+		final dynamicallyResizedAlias = dynamicallyResized;
+		dynamicallyResized.resize(shrinkLength);
+		final dynamicallyResizedLabels = [labels[0], labels[1], labels[2]];
+		dynamicallyResizedLabels.resize(shrinkLength);
+		final insertedIntegers = [20, 30];
+		final insertedIntegersAlias = insertedIntegers;
+		insertedIntegers.insert(0, 10);
+		insertedIntegers.insert(-1, 25);
+		insertedIntegers.insert(-99, 5);
+		insertedIntegers.insert(99, 40);
+		final insertedLabels:Array<String> = ["middle"];
+		final insertedLabelsAlias = insertedLabels;
+		insertedLabels.insert(0, fromCode(65));
+		insertedLabels.insert(99, labels[1]);
 
 		final row:Array<Int> = [1];
 		final rows:Array<Array<Int>> = [row];
@@ -218,13 +289,21 @@ final class Main {
 		final arguments:Array<ManagedCommand> = [Number(7)];
 		final scheduled = makeSchedule(arguments);
 		final copied = scheduled;
+		discardManagedEnvelope(copied);
 		final returnedRecord = returnedManagedRecord();
 		final envelopes:Array<ManagedEnvelope> = [];
 		envelopes.push(Idle);
 		envelopes.push(copied);
+		replaceManagedEnvelope(envelopes, 0, copied);
 		switch envelopes[1] {
 			case Schedule(projected):
 				projected.push(Number(9));
+			case Idle:
+		}
+		var replacedPayloadLength = -1;
+		switch envelopes[0] {
+			case Schedule(projected):
+				replacedPayloadLength = projected.length;
 			case Idle:
 		}
 		var managedPayloadLength = 0;
@@ -327,6 +406,9 @@ final class Main {
 			|| joined != "ready|café|a\u0000b"
 			|| emptyJoined != ""
 			|| singletonJoined != "solo"
+			|| stringified != "[ready,café,a\u0000b]"
+			|| emptyStringified != "[]"
+			|| singletonStringified != "[🙂]"
 			|| mixedLiteral.length != 4
 			|| mixedLiteral[0] != "literal"
 			|| mixedLiteral[1] != "ready"
@@ -339,8 +421,56 @@ final class Main {
 			|| borrowedComprehension[0] != "ready"
 			|| borrowedComprehension[1] != "café"
 			|| borrowedComprehension[2] != "a\u0000b"
+			|| concatenatedValues.length != 6
+			|| concatenatedValues[0] != 1
+			|| concatenatedValues[5] != 5
+			|| middleValues.length != 2
+			|| middleValues[0] != 2
+			|| middleValues[1] != 3
+			|| negativeSlice.length != 2
+			|| negativeSlice[0] != 2
+			|| negativeSlice[1] != 3
+			|| clampedSlice.length != 4
+			|| emptySlice.length != 0
+			|| reversedAlias.length != 4
+			|| reversedAlias[0] != 9
+			|| reversedAlias[3] != 1
+			|| reversedValues.length != 4
+			|| reversedValues[0] != 9
+			|| reversedValues[1] != 2
+			|| reversedValues[2] != 2
+			|| reversedValues[3] != 1
+			|| !containsThree
+			|| missingValue
+			|| firstTwo != 1
+			|| secondTwo != 3
+			|| negativeTwo != 3
+			|| lastTwo != 3
+			|| earlierTwo != 1
+			|| !removedThree
+			|| removedMissing
+			|| managedConcatenated.length != 4
+			|| managedConcatenated[3] != "a\u0000b"
+			|| managedSlice.length != 2
+			|| managedSlice[0] != "café"
+			|| managedSlice[1] != "ready"
+			|| !managedRemoved
+			|| managedMethodValues.length != 2
+			|| managedMethodValues[0] != "ready"
+			|| managedMethodValues[1] != "ready"
 			|| joinSeparatorEvaluations != 1
 			|| sum != 42
+			|| explicitIteratorSum != 42
+			|| pairIteratorTrace != 342
+			|| mappedValues.length != 3
+			|| mappedValues[0] != 11
+			|| mappedValues[1] != 21
+			|| mappedValues[2] != 13
+			|| filteredValues.length != 2
+			|| filteredValues[0] != 20
+			|| filteredValues[1] != 12
+			|| liveIteratorFirst != 2
+			|| liveIteratorRest != 8
 			|| history.depth() != 1
 			|| history.lastRevision() != 42
 			|| history.lastAfterByte() != 11
@@ -358,13 +488,52 @@ final class Main {
 			|| shiftedEight != 8
 			|| shiftedEmpty != null
 			|| shiftedIntegersAlias.length != 0
+			|| removedInteger.length != 1
+			|| removedInteger[0] != 20
 			|| splicedIntegersAlias.length != 1
 			|| splicedIntegersAlias[0] != 30
 			|| emptySplice.length != 0
+			|| removedLabel.length != 1
+			|| removedLabel[0] != "café"
 			|| splicedLabelsAlias.length != 2
 			|| splicedLabelsAlias[0] != "ready"
 			|| splicedLabelsAlias[1] != "a\u0000b"
+			|| removedIntegerRange.length != 3
+			|| removedIntegerRange[0] != 2
+			|| removedIntegerRange[1] != 3
+			|| removedIntegerRange[2] != 4
+			|| rangeSplicedIntegersAlias.length != 2
+			|| rangeSplicedIntegersAlias[0] != 1
+			|| rangeSplicedIntegersAlias[1] != 5
+			|| negativeLengthSplice.length != 0
+			|| discardedIntegerRange.length != 2
+			|| discardedIntegerRange[0] != 6
+			|| discardedIntegerRange[1] != 9
+			|| removedLabelRange.length != 2
+			|| removedLabelRange[0] != "café"
+			|| removedLabelRange[1] != "a\u0000b"
+			|| rangeSplicedLabels.length != 2
+			|| rangeSplicedLabels[0] != "ready"
+			|| rangeSplicedLabels[1] != "ready"
+			|| dynamicallyResizedAlias.length != 2
+			|| dynamicallyResizedAlias[0] != 7
+			|| dynamicallyResizedAlias[1] != 8
+			|| dynamicallyResizedLabels.length != 2
+			|| dynamicallyResizedLabels[0] != "ready"
+			|| dynamicallyResizedLabels[1] != "café"
+			|| insertedIntegersAlias.length != 6
+			|| insertedIntegersAlias[0] != 5
+			|| insertedIntegersAlias[1] != 10
+			|| insertedIntegersAlias[2] != 20
+			|| insertedIntegersAlias[3] != 25
+			|| insertedIntegersAlias[4] != 30
+			|| insertedIntegersAlias[5] != 40
+			|| insertedLabelsAlias.length != 3
+			|| insertedLabelsAlias[0] != "A"
+			|| insertedLabelsAlias[1] != "middle"
+			|| insertedLabelsAlias[2] != "café"
 			|| managedPayloadLength != 3
+			|| replacedPayloadLength != 2
 			|| recordCopy.commands.length != 3
 			|| firstShiftedRecord == null
 			|| firstShiftedRecord.commands.length != 1
@@ -391,6 +560,10 @@ final class Main {
 			|| row.length != 2
 			|| nestedArrayLength != 2) {}
 	}
+
+	/** Return the standard live Array iterator across an ordinary call boundary. */
+	static function makeIntegerIterator(values:Array<Int>):haxe.iterators.ArrayIterator<Int>
+		return values.iterator();
 
 	/**
 		Read an Array element after a conditional chooses its index.
@@ -536,6 +709,24 @@ final class Main {
 	/** Return transfers the newly constructed enum owner to the caller. */
 	static function makeSchedule(arguments:Array<ManagedCommand>):ManagedEnvelope
 		return Schedule(arguments);
+
+	/** Return a separate enum owner while preserving the payload Array identity. */
+	static function copyManagedEnvelope(value:ManagedEnvelope):ManagedEnvelope
+		return value;
+
+	/** Discard one fresh enum copy without releasing the caller's borrowed owner. */
+	static function discardManagedEnvelope(value:ManagedEnvelope):Void
+		copyManagedEnvelope(value);
+
+	/**
+	 * Replace one existing Array slot with a fresh managed enum result.
+	 *
+	 * `copyManagedEnvelope` returns one new temporary owner. Indexed assignment
+	 * copies that value into the destination slot, so the temporary must remain
+	 * cleanup-owned until Array set succeeds and must then be released once.
+	 */
+	static function replaceManagedEnvelope(values:Array<ManagedEnvelope>, index:Int, value:ManagedEnvelope):Void
+		values[index] = copyManagedEnvelope(value);
 
 	/**
 		Return either an absent Array or one newly owned Array through the same pointer.

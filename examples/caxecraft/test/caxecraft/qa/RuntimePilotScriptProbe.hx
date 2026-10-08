@@ -1,6 +1,7 @@
 package caxecraft.qa;
 
 import caxecraft.pilot.PilotScript.PilotAction;
+import caxecraft.pilot.PilotScript;
 import caxecraft.pilot.RuntimePilotScript;
 import caxecraft.pilot.RuntimePilotScript.RuntimePilotExpectationKind;
 import caxecraft.pilot.RuntimePilotScript.RuntimePilotObservation;
@@ -35,7 +36,7 @@ final class RuntimePilotScriptProbe {
 			+ "expect 1 objective objective.synthetic\n" + "expect 1 dialogue dialogue.synthetic\n" + "expect 1 journal journal.synthetic\n"
 			+ "expect 1 generation 2\n" + "expect 1 publications 1\n" + "action 5 forward-descend\n" + "expect 5 medium submerged\n"
 			+ "expect 5 equipment synthetic-gear\n" + "expect 5 lanterns 2\n" + "expect 5 sand 1\n" + "expect 5 position 4,3,2\n"
-			+ "expect 5 object-state synthetic.gate=synthetic:open\n" + "end\n");
+			+ "expect 5 object-state synthetic.gate=synthetic:open\n" + "action 6 toggle-camera\n" + "end\n");
 		final script = switch RuntimePilotScript.read(source, "synthetic.piloscript") {
 			case RuntimePilotReady(value): value;
 			case RuntimePilotRejected(diagnostic):
@@ -47,6 +48,8 @@ final class RuntimePilotScriptProbe {
 		require(script.actionAt(1) == PilotAction.MenuConfirm, "the second action changed");
 		require(script.actionAt(2) == PilotAction.Forward && script.actionAt(4) == PilotAction.Forward, "the held action range changed");
 		require(script.actionAt(5) == PilotAction.ForwardDescend, "the downward-swim action changed");
+		require(script.actionAt(6) == PilotAction.ToggleCamera
+			&& PilotScript.cameraTogglePressed(script.actionAt(6)), "the camera-toggle action changed");
 		require(script.actionAt(7) == PilotAction.Quit && script.actionAt(9) == PilotAction.Quit, "the bounded quit rule changed");
 		final checkpoint = script.checkpointAt(1);
 		require(checkpoint != null && checkpoint.label == "title-selection", "the capture checkpoint changed");

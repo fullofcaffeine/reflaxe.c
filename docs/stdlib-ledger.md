@@ -46,18 +46,15 @@ or permission to expose either C target capability. E5.T11 still owns the C
 adapter, memory-model, collector-root, and race evidence.
 
 At this snapshot the ledger contains 183 source modules and 2,311 public API
-records. Exactly the typed `Std.int(Float):Int` row is `conformant`, based on the
-existing ADR 0008 differential, strict-C, optimization, and UBSan suite.
-Thirty-three rows are `partial`: statically typed `String` values passed to
-`Sys.println`, literal-only default `haxe.Log.trace`, twelve bounded
-`haxe.io.Bytes` entries, eight bounded `String` entries, four bounded
-`StringBuf` entries, bounded `Array.copy`, `Array.shift`, `Array.sort`,
-`Array.splice`, literal `Array.resize(0)`, and `Array<String>.join` entries, and
-one `Std.string` entry covering typed `Bool`, `Int`, hosted `Float`, and String identity.
-The other 2,277 rows are `planned`. A partial row means only its named operation
-shapes have executable evidence; it does not claim the entire type or
-neighboring overloads. This deliberately preserves the current narrow compiler
-claim.
+records. Twenty-two rows are `conformant`, including the typed
+`Std.int(Float):Int` row and the bounded Date and timer surfaces with their
+executable evidence. One hundred eighty-one rows are `partial`, including bounded
+Array and iterator, List, Vector, IntMap, StringMap, ObjectMap, EnumValueMap,
+Bytes, String, StringTools, StringBuf, `Std.string`, output, and mathematical
+operations with executable evidence. The other 2,108 rows are `planned`. A
+partial row means only its named operation shapes have executable evidence; it
+does not claim the entire type or neighboring overloads. This deliberately
+preserves the current narrow compiler claim.
 
 ## Per-row contract
 

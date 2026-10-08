@@ -84,14 +84,13 @@ struct hxc_gc_thread {
 /**
  * One lexical stack frame containing compiler-maintained managed base values.
  *
- * `slots` points at an array of `const void *` values. Generated code updates
- * those values when locals change. This avoids the invalid and alias-unsafe
- * conversion from a typed `T **` to `void **`.
+ * `slots` points at volatile `const void *` values. The volatile pointer slots
+ * remain defined when an exception frame returns through `longjmp`.
  */
 struct hxc_gc_root_frame {
   hxc_gc_thread *thread;
   hxc_gc_root_frame *previous;
-  const void **slots;
+  const void *volatile *slots;
   size_t slot_count;
   bool active;
 };
@@ -194,11 +193,14 @@ HXC_API hxc_status hxc_gc_thread_unregister(hxc_gc_thread *thread);
 /** Push/pop a lexical root frame in strict last-in, first-out order. */
 HXC_API hxc_status hxc_gc_root_frame_push(
   hxc_gc_thread *thread,
-  const void **slots,
+  const void *volatile *slots,
   size_t slot_count,
   hxc_gc_root_frame *frame
 );
 HXC_API hxc_status hxc_gc_root_frame_pop(hxc_gc_root_frame *frame);
+
+/** Exception-cleanup adapter for a generated automatic root frame. */
+HXC_API hxc_status hxc_gc_root_frame_pop_cleanup(void *context);
 
 /** Register/unregister a mutable exact global-root table. */
 HXC_API hxc_status hxc_gc_root_table_register(

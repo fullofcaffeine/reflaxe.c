@@ -3,6 +3,7 @@ package caxecraft.editor;
 import caxecraft.editor.EditorTypes.EditorCommandFamily;
 import caxecraft.editor.EditorTypes.EditorChangeId;
 import caxecraft.editor.EditorTypes.EditorSettings;
+import caxecraft.editor.EditorTypes.EditorTerrainChange;
 import haxe.io.Bytes;
 
 /**
@@ -15,6 +16,19 @@ import haxe.io.Bytes;
 typedef EditorHistoryEntry = {
 	final family:EditorCommandFamily;
 	final changes:Array<EditorChangeId>;
+
+	/** Smallest safe terrain refresh after restoring `before`. */
+	final undoTerrain:EditorTerrainChange;
+
+	/** Smallest safe terrain refresh after restoring `after`. */
+	final redoTerrain:EditorTerrainChange;
+
+	/** Stable identity of the draft restored by Undo. */
+	final beforeStateIdentity:Int;
+
+	/** Stable identity of the draft restored by Redo. */
+	final afterStateIdentity:Int;
+
 	final before:Bytes;
 	final after:Bytes;
 	final byteCost:Int;
@@ -52,6 +66,29 @@ final class EditorHistory {
 
 	public inline function byteCount():Int
 		return usedBytes;
+
+	/** Count distinct private byte buffers retained by focused allocation tests. */
+	@:noCompletion
+	public function byteBufferCount():Int {
+		final buffers:Array<Bytes> = [];
+		for (entry in undoEntries) {
+			rememberByteBuffer(buffers, entry.before);
+			rememberByteBuffer(buffers, entry.after);
+		}
+		for (entry in redoEntries) {
+			rememberByteBuffer(buffers, entry.before);
+			rememberByteBuffer(buffers, entry.after);
+		}
+		return buffers.length;
+	}
+
+	/** Add one buffer by object identity so equal snapshots remain distinguishable. */
+	function rememberByteBuffer(buffers:Array<Bytes>, candidate:Bytes):Void {
+		for (buffer in buffers)
+			if (buffer == candidate)
+				return;
+		buffers.push(candidate);
+	}
 
 	public inline function canRecord(byteCost:Int):Bool
 		return byteCost <= settings.historyBytes;

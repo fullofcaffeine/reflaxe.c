@@ -12,13 +12,21 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from scripts.test.bounded_process import run as run_bounded_process  # noqa: E402
+
+
 HXML = Path(__file__).with_name("all_sources.hxml")
+HXC_HXML = Path(__file__).with_name("hxc_sources.hxml")
 SUCCESS_SENTINEL = "all-sources: OK"
+HXC_SUCCESS_SENTINEL = "hxc-sources: OK"
 LOWERING_DIAGNOSTIC_ID = "HXC1001"
 LOWERING_DETAIL = (
     "Unsupported typed Haxe node `TField(static:SIDECAR_PATHS:reference-Array-non-null)`"
 )
-LOWERING_SOURCE = "CProjectEmitter.hx:278: lines 278-289"
+LOWERING_SOURCE = "CProjectEmitter.hx:282: lines 282-297"
 MACRO_BRANCH_MARKERS = (
     "Typing macro reflaxe.c.CompilerBootstrap.Start",
     "Typing macro reflaxe.c.BuildDetection.isCBuild",
@@ -44,12 +52,13 @@ def development_tool(name: str) -> str:
 
 
 def run_haxe(
-    arguments: list[str], *, expected_code: int, label: str
+    hxml: Path, arguments: list[str], *, expected_code: int, label: str
 ) -> subprocess.CompletedProcess[str]:
     environment = os.environ.copy()
     environment["HAXE_NO_SERVER"] = "1"
-    result = subprocess.run(
-        [development_tool("haxe"), str(HXML), *arguments],
+    result = run_bounded_process(
+        [development_tool("haxe"), str(hxml), *arguments],
+        phase=label,
         cwd=ROOT,
         env=environment,
         check=False,
@@ -70,14 +79,22 @@ def owned_haxe_sources() -> list[Path]:
 
 
 def check_complete_eval_graph() -> None:
-    result = run_haxe(["--interp", "-v"], expected_code=0, label="all-source Eval graph")
+    result = run_haxe(HXML, ["--interp", "-v"], expected_code=0, label="compiler-source Eval graph")
     if result.stdout.strip().splitlines()[-1:] != [SUCCESS_SENTINEL]:
         raise AllSourcesFailure(
             "all-source Eval graph missed its runtime sentinel\n"
             f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
         )
 
-    verbose_output = (result.stdout + result.stderr).replace("\\", "/")
+    hxc_result = run_haxe(HXC_HXML, ["--interp", "-v"], expected_code=0, label="hxc-source Eval graph")
+    if hxc_result.stdout.strip().splitlines()[-1:] != [HXC_SUCCESS_SENTINEL]:
+        raise AllSourcesFailure(
+            "hxc-source Eval graph missed its runtime sentinel\n"
+            f"stdout:\n{hxc_result.stdout}\nstderr:\n{hxc_result.stderr}"
+        )
+
+    verbose_output = (result.stdout + result.stderr + hxc_result.stdout + hxc_result.stderr).replace("\\", "/")
+    parsed_sources = [line.removeprefix("Parsed ") for line in verbose_output.splitlines() if line.startswith("Parsed ")]
     missing_sources = [
         source.relative_to(ROOT).as_posix()
         for source in owned_haxe_sources()
@@ -85,7 +102,11 @@ def check_complete_eval_graph() -> None:
         # traverse a workspace or home-directory symlink. Match the stable
         # repository-relative suffix so the gate behaves identically locally
         # and in CI.
-        if f"/{source.relative_to(ROOT).as_posix()}" not in verbose_output
+        if not any(
+            parsed == source.relative_to(ROOT).as_posix()
+            or parsed.endswith(f"/{source.relative_to(ROOT).as_posix()}")
+            for parsed in parsed_sources
+        )
     ]
     if missing_sources:
         raise AllSourcesFailure(
@@ -107,6 +128,7 @@ def check_production_boundary() -> None:
     with tempfile.TemporaryDirectory(prefix="reflaxe-c-all-sources-") as temporary:
         output = Path(temporary) / "generated"
         result = run_haxe(
+            HXML,
             ["--custom-target", f"c={output}", "-v"],
             expected_code=1,
             label="all-source production boundary",
@@ -132,8 +154,9 @@ def check_production_boundary() -> None:
 
 
 def main() -> int:
-    if not HXML.is_file():
-        print(f"all-sources: ERROR: missing dedicated HXML: {HXML}", file=sys.stderr)
+    missing_hxml = [path for path in (HXML, HXC_HXML) if not path.is_file()]
+    if missing_hxml:
+        print(f"all-sources: ERROR: missing dedicated HXML: {missing_hxml[0]}", file=sys.stderr)
         return 1
     if shutil.which(development_tool("haxe")) is None:
         print("all-sources: ERROR: pinned Haxe executable is unavailable", file=sys.stderr)

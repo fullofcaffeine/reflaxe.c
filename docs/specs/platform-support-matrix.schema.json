@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://reflaxe-c.dev/schemas/platform-support-matrix.schema.json",
+  "title": "haxe.c release-blocking platform qualification matrix",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$schema", "schemaVersion", "matrixId", "authority", "releaseBlocking", "lanes"],
+  "properties": {
+    "$schema": {"const": "platform-support-matrix.schema.json"},
+    "schemaVersion": {"const": 1},
+    "matrixId": {"const": "hxc-tier1-v1"},
+    "authority": {"const": "docs/adr/0007-strict-c11-target-and-platform-baseline.md"},
+    "releaseBlocking": {"const": true},
+    "lanes": {
+      "type": "array",
+      "minItems": 8,
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/lane"}
+    }
+  },
+  "$defs": {
+    "identifier": {"type": "string", "pattern": "^[a-z0-9]+(?:[-_][a-z0-9]+)*$"},
+    "nonEmptyText": {"type": "string", "minLength": 1},
+    "stringSet": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/identifier"}
+    },
+    "lane": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "tier", "runner", "os", "environment", "architecture", "toolchain", "profile", "runtimePolicy", "execution", "evidence", "artifactKinds"],
+      "properties": {
+        "id": {"$ref": "#/$defs/identifier"},
+        "tier": {"const": 1},
+        "runner": {"$ref": "#/$defs/nonEmptyText"},
+        "os": {"enum": ["linux", "macos", "windows", "bare-metal"]},
+        "environment": {"enum": ["hosted", "freestanding"]},
+        "architecture": {"enum": ["x86_64", "aarch64", "arm64", "armv7-m"]},
+        "toolchain": {"enum": ["gcc", "clang", "clang-cl", "arm-none-eabi-gcc"]},
+        "profile": {"enum": ["portable", "metal"]},
+        "runtimePolicy": {"enum": ["auto", "minimal"]},
+        "execution": {"enum": ["native", "emulated"]},
+        "evidence": {"$ref": "#/$defs/stringSet"},
+        "artifactKinds": {"$ref": "#/$defs/stringSet"}
+      }
+    }
+  }
+}

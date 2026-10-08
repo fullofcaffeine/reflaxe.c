@@ -47,6 +47,20 @@ typedef struct hxc_borrowed_cstring {
   const hxc_string *owner;
 } hxc_borrowed_cstring;
 
+/**
+ * NUL-terminated text borrowed or temporarily copied for one native call.
+ *
+ * `temporary` is empty when `owner` already ends at an owned NUL byte. An
+ * interior String view instead owns exactly one terminated allocation until
+ * `hxc_call_cstring_dispose` runs after the native consumer returns.
+ */
+typedef struct hxc_call_cstring {
+  const char *data;
+  size_t byte_length;
+  const hxc_string *owner;
+  hxc_allocation temporary;
+} hxc_call_cstring;
+
 /** Allocator-owned NUL-terminated bytes. Move only by convention. */
 typedef struct hxc_owned_cstring {
   char *data;
@@ -60,6 +74,8 @@ typedef struct hxc_owned_cstring {
   { HXC_ALLOCATION_INITIALIZER, 0u }
 #define HXC_BORROWED_CSTRING_INITIALIZER \
   { NULL, 0u, NULL }
+#define HXC_CALL_CSTRING_INITIALIZER \
+  { NULL, 0u, NULL, HXC_ALLOCATION_INITIALIZER }
 #define HXC_OWNED_CSTRING_INITIALIZER \
   { NULL, 0u, HXC_ALLOCATION_INITIALIZER }
 
@@ -79,6 +95,7 @@ HXC_API hxc_status hxc_string_retain(hxc_string value);
  * reset the slot because their bytes live for the whole program.
  */
 HXC_API hxc_status hxc_string_release(hxc_string *value);
+HXC_API hxc_status hxc_string_release_slot(void *context);
 
 /**
  * Construct one valid UTF-8 scalar as an independently owned Haxe String.
@@ -114,6 +131,13 @@ HXC_API hxc_status hxc_string_from_int32(
 HXC_API hxc_status hxc_string_concat_ref(
   hxc_string left,
   hxc_string right,
+  hxc_allocator allocator,
+  hxc_string *out_string
+);
+
+/** Copy one valid String into an independently reference-counted Haxe value. */
+HXC_API hxc_status hxc_string_copy_ref(
+  hxc_string source,
   hxc_allocator allocator,
   hxc_string *out_string
 );
@@ -212,6 +236,22 @@ HXC_API hxc_status hxc_string_borrow_cstring(
   const hxc_string *source,
   hxc_borrowed_cstring *out_cstring
 );
+
+/**
+ * Prepare immutable NUL-terminated text for one non-retaining native call.
+ *
+ * A source whose view owns the following NUL byte is borrowed without an
+ * allocation. An interior view receives one allocator-owned terminated copy.
+ * Embedded NUL and invalid UTF-8 fail without publishing an output value.
+ */
+HXC_API hxc_status hxc_string_prepare_call_cstring(
+  const hxc_string *source,
+  hxc_allocator allocator,
+  hxc_call_cstring *out_cstring
+);
+
+/** Release optional temporary storage and reset the call-scoped value. */
+HXC_API hxc_status hxc_call_cstring_dispose(hxc_call_cstring *value);
 
 /** Copy to explicitly owned NUL-terminated storage; embedded NUL is rejected. */
 HXC_API hxc_status hxc_string_to_cstring_owned(

@@ -20,6 +20,11 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from scripts.test.bounded_process import run as run_bounded_process  # noqa: E402
+
 HXML = Path(__file__).with_name("evaluation_order.hxml")
 ORACLE_HXML = Path(__file__).with_name("oracle.hxml")
 INDEX_ORACLE_HXML = ROOT / "test/hxc_ir/oracle.hxml"
@@ -175,7 +180,7 @@ def render(
         raise EvaluationOrderFailure(f"unknown evaluation-order profile {profile!r}")
     environment = os.environ.copy()
     environment["HAXE_NO_SERVER"] = "1"
-    result = subprocess.run(
+    result = run_bounded_process(
         command,
         cwd=ROOT,
         env=environment,
@@ -433,7 +438,11 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
         raise EvaluationOrderFailure("value-coalescing adversarial proof drifted")
     control_flow_proof = required_text(report, "controlFlowPlanProof")
     if control_flow_proof != (
-        "typed-region-plan:reducible-diamond-normal-joins-loop-break-return-converging-abrupt-escapes-inverted-pre-post-and-bounded-switch-escape-structured;"
+        # Closed exception regions now report their direct continuation before
+        # the older structural-plan facts. Keep the complete value exact so a
+        # missing exception or control-flow proof still fails this owner.
+        "typed-region-plan:direct-exception-continuation-reported;"
+        "reducible-diamond-normal-joins-loop-break-return-converging-abrupt-escapes-inverted-pre-post-and-bounded-switch-escape-structured;"
         "maximal-and-nested-irreducible-fallback;"
         "malformed-unreachable-cleanup-and-instruction-failure-region-edge-mapping-and-sequence-order-rejected"
     ):
@@ -1058,7 +1067,7 @@ def check_snapshots(report: dict[str, object]) -> None:
 def check_oracle() -> str:
     environment = os.environ.copy()
     environment["HAXE_NO_SERVER"] = "1"
-    result = subprocess.run(
+    result = run_bounded_process(
         [development_tool("haxe"), str(ORACLE_HXML)],
         cwd=ROOT,
         env=environment,
@@ -1078,7 +1087,7 @@ def check_oracle() -> str:
 def check_indexed_oracle() -> None:
     environment = os.environ.copy()
     environment["HAXE_NO_SERVER"] = "1"
-    result = subprocess.run(
+    result = run_bounded_process(
         [development_tool("haxe"), str(INDEX_ORACLE_HXML)],
         cwd=ROOT,
         env=environment,
@@ -1099,7 +1108,7 @@ def check_indexed_oracle() -> None:
 
 
 def compiler_identity(executable: str) -> tuple[str, str]:
-    result = subprocess.run(
+    result = run_bounded_process(
         [executable, "--version"], capture_output=True, text=True, timeout=10
     )
     combined = (result.stdout + result.stderr).strip()
@@ -1209,7 +1218,7 @@ def compile_and_run_project(
             "-o",
             str(target),
         ]
-        compiled = subprocess.run(command, capture_output=True, text=True, timeout=30)
+        compiled = run_bounded_process(command, capture_output=True, text=True, timeout=30)
         if compiled.returncode != 0 or compiled.stdout or compiled.stderr:
             raise EvaluationOrderFailure(
                 f"{toolchain.family} {optimization} rejected generated C\n"
@@ -1217,7 +1226,7 @@ def compile_and_run_project(
             )
         objects.append(target)
     harness_object = root / f"harness-{toolchain.family}-{optimization[1:]}.o"
-    compiled_harness = subprocess.run(
+    compiled_harness = run_bounded_process(
         [
             toolchain.compiler,
             *STRICT_FLAGS,
@@ -1238,7 +1247,7 @@ def compile_and_run_project(
             f"{toolchain.family} rejected differential harness\n{compiled_harness.stdout}{compiled_harness.stderr}"
         )
     executable = root / f"evaluation-{toolchain.family}-{optimization[1:]}"
-    linked = subprocess.run(
+    linked = run_bounded_process(
         [toolchain.compiler, *objects, str(harness_object), "-o", str(executable)],
         capture_output=True,
         text=True,
@@ -1248,7 +1257,7 @@ def compile_and_run_project(
         raise EvaluationOrderFailure(
             f"{toolchain.family} failed to link evaluation fixture\n{linked.stdout}{linked.stderr}"
         )
-    ran = subprocess.run(
+    ran = run_bounded_process(
         [str(executable)], capture_output=True, text=True, timeout=10
     )
     if ran.returncode != 0 or ran.stdout or ran.stderr:
@@ -1302,7 +1311,7 @@ def custom_target(
     command.extend(["--custom-target", f"c={output}"])
     environment = os.environ.copy()
     environment["HAXE_NO_SERVER"] = "1"
-    return subprocess.run(
+    return run_bounded_process(
         command,
         cwd=ROOT,
         env=environment,
@@ -1540,7 +1549,7 @@ def check_synthetic_control_flow_native(
                 executable = root / (
                     f"synthetic-control-flow-{toolchain.family}-{optimization[1:]}"
                 )
-                compiled = subprocess.run(
+                compiled = run_bounded_process(
                     [
                         toolchain.compiler,
                         *STRICT_FLAGS,
@@ -1558,7 +1567,7 @@ def check_synthetic_control_flow_native(
                         f"{toolchain.family} {optimization} rejected synthetic control-flow C\n"
                         f"stdout:\n{compiled.stdout}stderr:\n{compiled.stderr}"
                     )
-                ran = subprocess.run(
+                ran = run_bounded_process(
                     [str(executable)], capture_output=True, text=True, timeout=10
                 )
                 if ran.returncode != 0 or ran.stdout or ran.stderr:
@@ -1623,7 +1632,10 @@ def main(arguments: Iterable[str] = ()) -> int:
         reverse_payload, reverse = render("reverse evaluation-order render", reverse=True)
         metal_payload, metal = render("metal evaluation-order render", profile="metal")
         if first_payload != second_payload or first != second:
-            raise EvaluationOrderFailure("repeated evaluation-order renders differed")
+            raise EvaluationOrderFailure(
+                "repeated evaluation-order renders differed:\n"
+                + difference(first_payload + "\n", second_payload + "\n", "evaluation-order-report.json")
+            )
         if first_payload != reverse_payload or first != reverse:
             raise EvaluationOrderFailure("evaluation-order render changed with input order")
         validate(first)

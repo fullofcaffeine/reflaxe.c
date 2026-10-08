@@ -16,6 +16,11 @@ from typing import Mapping
 
 
 ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from scripts.test.bounded_process import run as run_bounded_process  # noqa: E402
+
 SUITE = Path(__file__).resolve().parent
 VALID = SUITE / "fixtures/valid/hxc.json"
 INVALID = SUITE / "fixtures/invalid"
@@ -85,7 +90,7 @@ def run_probe(
     environment["LC_ALL"] = "C"
     if environment_updates is not None:
         environment.update(environment_updates)
-    result = subprocess.run(
+    result = run_bounded_process(
         haxe_command(
             mode,
             config,

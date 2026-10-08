@@ -119,6 +119,18 @@ native owner still compiled and executed three generated projects through the
 raw manifest and CMake; Meson was unavailable locally and remains mandatory in
 the hosted `test:build-adapters` job.
 
+One August 27, 2026 macOS arm64 diagnostic sample found that the focused GC
+runtime lane spent 33.26 of about 37 seconds in two independent, server-disabled
+Haxe renders. All native builds and executions together took about 3.7 seconds.
+Running the two isolated cold renders concurrently retained the byte-for-byte
+determinism comparison and reduced the complete Clang lane to 20.30 seconds.
+An isolated detached worktree containing only the scoped change repeated the
+complete lane in 20.10 seconds.
+The native-smoke parent therefore keeps its ordinary 30-second child timeout;
+the measured result has about 9.7 seconds of local margin. A deterministic unit
+test also requires both render jobs to overlap and preserves their result order.
+These values are one before/after sample, not a cross-platform percentile claim.
+
 For an AI-agent loop, “focused owner passes” is the normal signal to continue
 implementation. “R1 passes” is the normal signal to create the task commit.
 R2 through R5 are independent hosted or qualification evidence: an agent
@@ -174,6 +186,41 @@ active inventory, harness self-test, and a tiny real official-source
 compile → strict-C-build → runtime smoke. Until those artifacts exist, the
 planner reports `readiness-only-not-a-pass`; expected failures remain
 nonpassing and visible rather than being converted into exclusions.
+
+### Stock Haxe macro string processing
+
+The largest backend modules use ordinary string concatenation for diagnostic
+text and semantic keys. The pinned Haxe compiler reparses each braced
+interpolation expression at its source offset. Repeating that work in a large
+module adds substantial startup cost before application lowering begins.
+
+The startup repair in `CBodyLowering`, `CBodyEmitter`, and `HxcIRValidator`
+uses the expression trees produced by stock `MacroStringTools.formatString`.
+Complex operands retain explicit grouping. A structural round-trip check
+compares each node and its ordered children; printed text alone cannot prove
+that conditional or arithmetic grouping survived. The conversion also checks
+that a deliberately misgrouped conditional produces a different tree.
+
+The normal [symbol-registry](../test/symbol_registry/run.py),
+[HxcIR](../test/hxc_ir/run.py), and
+[bootstrap/package](../test/bootstrap/run.py) checks pass with this source form.
+They preserve exact snapshots, negative diagnostics, compiler registration,
+and server isolation.
+
+The combined repair also skips unused Reflaxe callback preparation, shares the
+existing streaming SHA-256 implementation with source provenance, and avoids
+repeated conversions of exact compiler positions. On September 12, 2026, the
+unchanged all-sources lane passed each 30-second phase at normal priority; the
+complete lane took 13.6 seconds. Runtime-content generation passed its
+60-second Haxe limit, Eval/native assertions, and sanitizers; the complete lane,
+including native checks, took 69.4 seconds. The ordinary game then compiled
+within its 120-second Haxe limit and initialized the desktop display. Its
+generated project retained the preceding build's content identity.
+
+These are bounded acceptance runs, not stable timing medians. Earlier
+background-priority diagnostics remain correctness evidence and must not be
+used to claim that normal-priority budgets failed. Task `haxe_c-w26f` owns the
+repair and its integration evidence. No compiler pin or timeout was changed.
 
 ## Baseline and trigger
 
@@ -372,6 +419,11 @@ ephemeral loopback ports, and repository inputs are read-only. Warm-server,
 stale-output, and mode-switch sequences remain serial inside their shard.
 
 ### Resource contention and timeout interpretation
+
+Every bounded Haxe-focused runner starts its command in a separate operating-system process group. The runner stops that complete group when its timeout expires.
+POSIX hosts use a new session. Windows hosts use a new process group and `taskkill /T /F`.
+This rule prevents a stopped Node or Lix wrapper from leaving its Haxe child active. Successful output, error output, and exit handling stay unchanged.
+[`scripts/test/bounded_process.py`](../scripts/test/bounded_process.py) owns this behavior. Its governance fixture starts three process levels and checks repeated timeout cleanup.
 
 Process isolation protects correctness state; it does not reserve the machine.
 A Haxe job in another checkout cannot legitimately change this repository's
@@ -1185,6 +1237,32 @@ compilation, native linking, Raylib, and game execution. Native compile/run
 timing belongs to the separate Caxecraft differential lane, so a slow target
 compiler pass is not confused with native-toolchain work.
 
+The runtime-level-loader workload uses the exact HXML from its focused
+generated-C test. Use it to compare one cold request with one warm request:
+
+```sh
+python3 examples/caxecraft/profile_compiler.py \
+  --runs 1 --transport both --workload runtime-level-loader
+```
+
+The command uses one owned Haxe server for the warm request. It requires the
+cold and warm requests to produce identical generated C files. The report
+separates Haxe frontend time from each Reflaxe.C phase. Do not use a report
+that labels the host as `contended` for a performance budget.
+
+The editor-shell workload matches the Haxe request from the graphical editor
+pilot. It selects the memory renderer, hosted package reader, concise runtime
+report, and compiled editor pilot. Use one cold diagnostic before changing a
+compiler timeout or optimizing compiler code:
+
+```sh
+python3 examples/caxecraft/profile_compiler.py \
+  --runs 1 --transport cold --workload editor-shell
+```
+
+The report labels a sample as contended when other work can distort its elapsed
+time. Do not use a contended sample as a performance baseline.
+
 The first full-playable structured profile found one avoidable control-flow
 cost. A *dominator* is a block that every route from the function entry must
 pass through before reaching another block. Null-check coalescing and HxcIR
@@ -1569,6 +1647,18 @@ payloads with Haxe's implementation around every one-block/two-block padding
 boundary and across many blocks. This is an execution optimization, not a
 weaker or different content identity.
 
+The shared module lives at `src/reflaxe/c/CContentDigest.hx`. Function and
+named-record source provenance use it to hash source bytes as well. Their
+SHA-256 values and cache-key formats stay the same. The focused typed-AST
+source-identity and source-anchor checks cover changed files and repeated,
+reordered, and profile-changing compiler-server requests.
+
+The C adapter captures the complete typed program before Reflaxe prepares
+individual class and enum callbacks. Those callbacks emit nothing, so the
+adapter declines their preparation and disables their unused type-usage
+tracker. Whole-program validation and emission still run in `onCompileEnd`;
+the bootstrap lane protects activation and server isolation.
+
 The formatter itself now reuses one indentation prefix per nesting depth,
 returns immediately for empty qualifier/specifier lists, and joins already
 validated non-empty tokens without intermediate filter and join arrays. The
@@ -1875,6 +1965,14 @@ ordinary construction path; use
 `reflaxe_c_body_function_replay_cache_report` when a server test needs the
 machine-readable lifecycle result.
 
+Each lifecycle report also includes `frontendSourcePlanHits` and
+`frontendSourcePlanFallbacks`. These counters distinguish functions that reuse
+the frontend source plan from functions that use the ordinary fallback. The
+source plan contains canonical typed text and expression positions for the
+current request. It is not retained as cache authority. These counters measure
+avoided duplicate printing and traversal. They do not prove an elapsed-time
+improvement.
+
 ### Exact invalidation catalog and bounded server state
 
 `npm run test:incremental-backend` answers a different question from the
@@ -2169,6 +2267,29 @@ The remaining time is distributed through real expression-to-HxcIR
 construction and its ownership, lifetime, instruction, and provenance
 bookkeeping. A future optimization must attribute one of those owners rather
 than treating the two large request counts as cost by themselves.
+
+### Closed generic owner test boundary
+
+The generic-specialization suite now proves closed class and abstract owners
+across split, package, and unity output. It also proves that multiple reachable
+instance targets fail closed. These checks require six independent generated-C
+builds in addition to the existing specialization matrix.
+
+One complete local run took about 450 seconds on a shared host. This is a
+timeout-sizing observation, not a compiler performance baseline. The fixture
+catalog and central snapshot post-update validator therefore give this
+exhaustive owner 600 seconds. A run near that ceiling requires decomposition
+or optimization; it must not receive another timeout increase without new
+evidence and an owning Beads issue.
+
+Vector and List changes use
+`python3 test/differential/vector-list/run.py --toolchain clang` as their narrow
+owner. The command took about 90 seconds on the same shared host and proves the
+Eval/generated-C behavior, reports, native C, C++ header use, sanitizers,
+runtime plans, and linked symbols needed for those two standard-library types.
+Run the exhaustive generic-specialization owner once at the task boundary; do
+not repeat it merely to rediscover evidence already produced by the focused
+Vector/List owner.
 
 ### Span-lowering compiler-process reuse
 

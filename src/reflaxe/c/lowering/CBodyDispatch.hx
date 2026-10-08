@@ -19,7 +19,9 @@ import reflaxe.c.lowering.CBodyLowering.CBodyFunctionInput;
 import reflaxe.c.lowering.CGenericSpecialization.CGenericFunctionSpecialization;
 import reflaxe.c.lowering.CGenericSpecialization.CGenericSpecializationReason;
 import reflaxe.c.lowering.CGenericSpecialization.CGenericTypeArgument;
+import reflaxe.c.lowering.CGenericSpecialization.CGenericTypeCanonicalizer;
 import reflaxe.c.lowering.CGenericSpecialization.CGenericCallResolver;
+import reflaxe.c.lowering.CGenericSpecializationContract;
 import reflaxe.c.naming.CSymbolRegistry;
 import reflaxe.c.naming.CSymbolRequest;
 
@@ -32,6 +34,7 @@ class CBodyDispatch {
 typedef CBodyInstanceCallAccess = {
 	final receiver:TypedExpr;
 	final owner:Ref<ClassType>;
+	final ownerArguments:Array<Type>;
 	final field:Ref<ClassField>;
 	final calleeType:Type;
 }
@@ -60,6 +63,21 @@ class CBodyDispatchCallInput {
 		this.kind = kind;
 		this.source = source;
 	}
+}
+
+/** One exact closed class construction used by monomorphic call admission. */
+private typedef CBodyConstructedClassInput = {
+	final reference:Ref<ClassType>;
+	final arguments:Array<CGenericTypeArgument>;
+}
+
+/** One provisional direct call validated after reachable construction discovery. */
+private typedef CBodyClosedGenericCallAdmission = {
+	final methodId:String;
+	final receiverKey:String;
+	final declaration:Ref<ClassType>;
+	final position:Position;
+	final sourcePath:String;
 }
 
 /** One source-level virtual slot before target representation validation. */
@@ -127,6 +145,21 @@ class CBodyDispatchGraph {
 	public function slotForMethodId(methodId:String):Null<CBodyVirtualSlotInput>
 		return slotsByMethodId.get(methodId);
 
+	/** Recover the authoritative call decision for one exact typed call site. */
+	public function callFor(callerFunctionId:String, source:HxcSourceSpan):Null<CBodyDispatchCallInput> {
+		for (call in calls)
+			if (call.callerFunctionId == callerFunctionId && sameSource(call.source, source))
+				return call;
+		return null;
+	}
+
+	static function sameSource(left:HxcSourceSpan, right:HxcSourceSpan):Bool
+		return left.file == right.file
+			&& left.startLine == right.startLine
+			&& left.startColumn == right.startColumn
+			&& left.endLine == right.endLine
+			&& left.endColumn == right.endColumn;
+
 	public static function empty():CBodyDispatchGraph
 		return new CBodyDispatchGraph([], [], [], []);
 }
@@ -140,6 +173,8 @@ class CBodyDispatchCatalog {
 	final methodsById:Map<String, CBodyFunctionInput> = [];
 	final sourcePathsByClass:Map<String, String> = [];
 	final constructedClasses:Map<String, Ref<ClassType>> = [];
+	final constructedClosedClasses:Map<String, CBodyConstructedClassInput> = [];
+	final closedGenericCallAdmissions:Array<CBodyClosedGenericCallAdmission> = [];
 	final slotsById:Map<String, CBodyVirtualSlotInput> = [];
 	final slotsByMethodId:Map<String, CBodyVirtualSlotInput> = [];
 	final calls:Array<CBodyDispatchCallInput> = [];
@@ -149,8 +184,21 @@ class CBodyDispatchCatalog {
 		indexProgram(program);
 	}
 
-	public function markConstructed(reference:Ref<ClassType>):Array<CBodyFunctionInput> {
+	public function markConstructed(reference:Ref<ClassType>, parameters:Array<Type>, callerSpecialization:Null<CGenericFunctionSpecialization>,
+			position:Position, callerSourcePath:String):Array<CBodyFunctionInput> {
 		final path = classPath(reference.get());
+		if (reference.get().params.length != parameters.length)
+			unsupportedAt(position, callerSourcePath, 'TNew(constructed-class-argument-count:${parameters.length}-for-${reference.get().params.length}:$path)');
+		if (parameters.length != 0) {
+			final canonicalizer = new CGenericTypeCanonicalizer(context.profile);
+			final arguments = parameters.map(parameter ->
+				canonicalizer.normalize(callerSpecialization == null ? parameter : callerSpecialization.apply(parameter), position,
+				(failurePosition, node) -> unsupportedAt(failurePosition, callerSourcePath, node), 'TNew(constructed-class:$path)'));
+			final key = CGenericSpecializationContract.classInstanceKey(path, arguments.map(argument -> argument.key));
+			if (!constructedClosedClasses.exists(key))
+				constructedClosedClasses.set(key, {reference: reference, arguments: arguments});
+			return [];
+		}
 		if (!constructedClasses.exists(path))
 			constructedClasses.set(path, reference);
 		return selectedImplementations();
@@ -173,22 +221,52 @@ class CBodyDispatchCatalog {
 		final staticReceiver = receiverClass(access.receiver);
 		final receiverPath = staticReceiver == null ? classPath(declaration.get()) : classPath(staticReceiver.get());
 		final source = HaxeSourceSpan.fromPosition(expression.pos, callerSourcePath);
-		final directReason = directReason(access.receiver, declaration, field);
+		var directReason = directReason(access.receiver, declaration, field);
+		if (directReason == null && declaration.get().params.length != 0) {
+			if (declaration.get().isInterface)
+				unsupportedAt(expression.pos, callerSourcePath, 'TCall(generic-interface-dispatch-not-admitted:$methodId)');
+			if (declaration.get().params.length != access.ownerArguments.length)
+				unsupportedAt(expression.pos, callerSourcePath,
+					'TCall(instance-owner-argument-count:${access.ownerArguments.length}-for-${declaration.get().params.length}:$methodId)');
+			final canonicalizer = new CGenericTypeCanonicalizer(context.profile);
+			final closedArguments = access.ownerArguments.map(argument ->
+				canonicalizer.normalize(callerSpecialization == null ? argument : callerSpecialization.apply(argument), expression.pos,
+				(position, node) -> unsupportedAt(position, callerSourcePath, node), 'TCall(instance-owner-specialization:$methodId)'));
+			final receiverKey = CGenericSpecializationContract.classInstanceKey(classPath(declaration.get()), closedArguments.map(argument -> argument.key));
+			closedGenericCallAdmissions.push({
+				methodId: methodId,
+				receiverKey: receiverKey,
+				declaration: declaration,
+				position: expression.pos,
+				sourcePath: callerSourcePath
+			});
+			directReason = "closed-generic-one-effective-target";
+		}
 		if (directReason != null) {
 			var target = methodsById.get(methodId);
 			if (target == null)
 				unsupportedAt(field.pos, sourcePath(declaration), 'TCall(unavailable-instance-target:$methodId)');
-			if (target != null && field.params.length != 0) {
-				final resolved = CGenericCallResolver.resolve(methodId, field.type, field.params, access.calleeType,
+			if (target != null && (declaration.get().params.length != 0 || field.params.length != 0)) {
+				if (declaration.get().params.length != access.ownerArguments.length)
+					unsupportedAt(expression.pos, callerSourcePath,
+						'TCall(instance-owner-argument-count:${access.ownerArguments.length}-for-${declaration.get().params.length}:$methodId)');
+				final canonicalizer = new CGenericTypeCanonicalizer(context.profile);
+				final ownerArguments = access.ownerArguments.map(argument ->
+					canonicalizer.normalize(callerSpecialization == null ? argument : callerSpecialization.apply(argument), expression.pos,
+					(position, node) -> unsupportedAt(position, callerSourcePath, node), 'TCall(instance-owner-specialization:$methodId)'));
+				final ownerClosedFieldType = TypeTools.applyTypeParameters(field.type, declaration.get()
+					.params, ownerArguments.map(argument -> argument.type));
+				final methodArguments = CGenericCallResolver.resolve(methodId, ownerClosedFieldType, field.params, access.calleeType,
 					call.arguments.map(argument -> argument.t), callerSpecialization, context.profile, expression.pos,
-					(position, node) -> unsupportedAt(position, callerSourcePath, node));
-				target = specialize(target, resolved.arguments, new CGenericSpecializationReason(callerFunctionId, source, expression.pos));
+					(position, node) -> unsupportedAt(position, callerSourcePath, node))
+					.arguments;
+				target = specialize(target, ownerArguments.concat(methodArguments), new CGenericSpecializationReason(callerFunctionId, source, expression.pos));
 			}
 			final targetId = target == null ? methodId : CBodyLowering.functionInputId(target);
 			calls.push(new CBodyDispatchCallInput(callerFunctionId, targetId, receiverPath, CBDDirect(targetId, directReason), source));
 			return target == null ? [] : [target];
 		}
-		if (field.params.length != 0)
+		if (declaration.get().params.length != 0 || field.params.length != 0)
 			unsupportedAt(field.pos, sourcePath(declaration), 'virtual-slot-generic-requires-specialization:$methodId');
 		switch field.kind {
 			case FMethod(MethDynamic):
@@ -212,7 +290,32 @@ class CBodyDispatchCatalog {
 		return selectedImplementations();
 	}
 
+	/**
+		Select the one implementation owned by a source-proven Dynamic class.
+
+		This is graph discovery only: it makes the exact callable available to HxcIR
+		lowering. It does not create a virtual slot, runtime member-name table, or
+		fallback search, so an unresolved receiver remains unsupported.
+	**/
+	public function exactDynamicMethod(reference:Ref<ClassType>, name:String):Null<CBodyFunctionInput> {
+		var current:Null<Ref<ClassType>> = reference;
+		while (current != null) {
+			final definition = current.get();
+			for (field in definition.fields.get()) {
+				if (field.name != name)
+					continue;
+				return switch field.kind {
+					case FMethod(MethNormal) | FMethod(MethInline): methodsById.get(CBodyLowering.methodId(classPath(definition), field.name));
+					case FMethod(MethDynamic) | FMethod(MethMacro) | FVar(_, _): null;
+				};
+			}
+			current = definition.superClass == null ? null : definition.superClass.t;
+		}
+		return null;
+	}
+
 	public function finish():CBodyDispatchGraph {
+		validateClosedGenericCalls();
 		selectedImplementations();
 		final slots = [for (slot in slotsById) slot];
 		slots.sort((left, right) -> compareUtf8(left.id, right.id));
@@ -275,6 +378,31 @@ class CBodyDispatchCatalog {
 		return new CBodyDispatchGraph(slots, tables, calls, slotsByMethodId);
 	}
 
+	/**
+		Validate provisional generic-owner calls against the complete reachable graph.
+
+		A call makes its declared specialization reachable immediately, so method
+		bodies can reveal more constructions. Validation waits until that work queue
+		reaches a fixpoint. This keeps source traversal order from deciding whether a
+		call compiles while still rejecting every hierarchy with another possible
+		target before C is emitted.
+	**/
+	function validateClosedGenericCalls():Void {
+		for (admission in closedGenericCallAdmissions) {
+			if (!constructedClosedClasses.exists(admission.receiverKey))
+				unsupportedAt(admission.position, admission.sourcePath, 'TCall(generic-owner-has-no-reachable-construction:${admission.methodId})');
+			for (candidate in constructedClasses)
+				if (isDistinctDescendant(candidate, admission.declaration))
+					unsupportedAt(admission.position, admission.sourcePath, 'TCall(generic-owner-has-multiple-effective-targets:${admission.methodId})');
+			for (candidate in constructedClosedClasses)
+				if (isDistinctDescendant(candidate.reference, admission.declaration))
+					unsupportedAt(admission.position, admission.sourcePath, 'TCall(generic-owner-has-multiple-effective-targets:${admission.methodId})');
+		}
+	}
+
+	static function isDistinctDescendant(candidate:Ref<ClassType>, ancestor:Ref<ClassType>):Bool
+		return classPath(candidate.get()) != classPath(ancestor.get()) && isDescendant(candidate, ancestor);
+
 	function indexProgram(program:TypedProgramInput):Void {
 		for (declaration in program.declarations) {
 			final classReference = switch declaration.raw {
@@ -295,7 +423,11 @@ class CBodyDispatchCatalog {
 							sourceOrder: field.sourceOrder,
 							fieldType: field.rawClassField.type,
 							expression: field.expression,
+							declarationPosition: field.rawClassField.pos,
+							sourcePositionOverrides: field.sourcePositionOverrides,
+							functionSourcePlan: field.functionSourcePlan,
 							typeParameters: field.rawClassField.params,
+							ownerTypeParameters: classReference.get().params,
 							specialization: null,
 							instanceOwner: classReference
 						};
@@ -463,9 +595,10 @@ class CBodyDispatchCatalog {
 
 	public static function instanceAccess(callee:TypedExpr):Null<CBodyInstanceCallAccess> {
 		return switch callee.expr {
-			case TField(receiver, FInstance(owner, _, field)): {
+			case TField(receiver, FInstance(owner, ownerArguments, field)): {
 					receiver: receiver,
 					owner: owner,
+					ownerArguments: ownerArguments,
 					field: field,
 					calleeType: callee.t
 				};
@@ -791,6 +924,42 @@ class CPreparedBodyDispatch {
 
 	public function tableForInterface(classInstanceId:String, interfaceInstanceId:String):Null<CPreparedVirtualTable>
 		return tablesByInstanceAndLayout.get(tableLookupKey(classInstanceId, interfaceInstanceId));
+
+	/**
+		Give every direct interface value a concrete object/table pair layout.
+
+		A class can remain reachable only as another field's declared type. Its own
+		interface-valued field still needs a complete C value type even when no
+		constructor, implementation, method call, or dispatch table is reachable.
+		Such a value-only layout has no slots and emits only the pair definition plus
+		an incomplete table declaration; a real interface dispatch layout continues
+		to own all callable slots and concrete tables.
+	**/
+	public function completeInterfaceValueLayouts(interfaces:Array<CPreparedBodyInterface>, context:CompilationContext):Void {
+		final represented:Map<String, Bool> = [];
+		for (layout in layouts)
+			if (layout.rootInterface != null)
+				represented.set(layout.rootInterface.instanceId, true);
+		for (value in interfaces) {
+			if (represented.exists(value.instanceId))
+				continue;
+			final id = 'interface.value-layout.${value.digest}';
+			final tagRequest = new CSymbolRequest(CSKType, ["compiler", "interface-dispatch", value.haxePath, "table-layout"], CNSTag("translation-unit"),
+				CSVInternal);
+			final valueTagRequest = new CSymbolRequest(CSKType, ["compiler", "interface-dispatch", value.haxePath, "value"], CNSTag("translation-unit"),
+				CSVInternal);
+			final objectMemberRequest = new CSymbolRequest(CSKField, ["compiler", "interface-dispatch", value.haxePath, "value", "object"],
+				CNSMember('interface-value:$id'), CSVInternal, "object", [], [], 0);
+			final tableMemberRequest = new CSymbolRequest(CSKField, ["compiler", "interface-dispatch", value.haxePath, "value", "table"],
+				CNSMember('interface-value:$id'), CSVInternal, "table", [], [], 1);
+			context.symbols.register(tagRequest);
+			context.symbols.register(valueTagRequest);
+			context.symbols.register(objectMemberRequest);
+			context.symbols.register(tableMemberRequest);
+			layouts.push(new CPreparedVirtualLayout(id, null, value, value.source, tagRequest, valueTagRequest, objectMemberRequest, tableMemberRequest, []));
+		}
+		layouts.sort((left, right) -> CBodyDispatchCatalog.compareUtf8(left.id, right.id));
+	}
 
 	/**
 		Pair every reachable child-interface table with the same class's parent table.

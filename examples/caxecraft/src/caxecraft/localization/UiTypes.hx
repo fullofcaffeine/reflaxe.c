@@ -3,9 +3,11 @@ package caxecraft.localization;
 /**
 	Closed identities shared by runtime UI data and its typed Haxe consumers.
 
-	The JSON decoder verifies that its locale and message order matches these
-	identities before publishing a catalog. This module owns no player-visible
-	text, filesystem path, rendering behavior, or package selection.
+	Each message value is only a stable lookup key used by a real call site. The
+	JSON catalog independently owns membership, canonical order, and translated
+	prose, so adding or reordering data never requires a parallel code table. This
+	module owns no player-visible text, filesystem path, rendering behavior, or
+	package selection.
 **/
 /** Locale position inside one admitted runtime catalog. */
 enum abstract LocaleCursor(Int) {
@@ -13,66 +15,114 @@ enum abstract LocaleCursor(Int) {
 	var Locale1 = 1;
 }
 
-/** Stable message identity understood by the current application surface. */
-enum abstract UiMessage(Int) {
-	var AquaticGearEquipped = 0;
-	var Brand = 1;
-	var CapturePrompt = 2;
-	var Controls = 3;
-	var DebugCells = 4;
-	var DebugDraws = 5;
-	var DebugFrame = 6;
-	var DebugTick = 7;
-	var DebugVisible = 8;
-	var EditorAdvanced = 9;
-	var EditorBack = 10;
-	var EditorCanvasHelp = 11;
-	var EditorInvalid = 12;
-	var EditorName = 13;
-	var EditorNewWorld = 14;
-	var EditorReady = 15;
-	var EditorRedo = 16;
-	var EditorStopTest = 17;
-	var EditorTest = 18;
-	var EditorTesting = 19;
-	var EditorTitle = 20;
-	var EditorToolList = 21;
-	var EditorUndo = 22;
-	var EditorValid = 23;
-	var EditorValidate = 24;
-	var HealthFull = 25;
-	var MenuAdventure = 26;
-	var MenuCreative = 27;
-	var MenuEditor = 28;
-	var MenuInstructions = 29;
-	var NoBlockInReach = 30;
-	var PauseHelp = 31;
-	var PauseTitle = 32;
-	var PlaceBlocked = 33;
-	var TitleFallback = 34;
+/** Stable catalog key understood by one typed application call site. */
+enum abstract UiMessage(String) {
+	var AquaticGearEquipped = "aquatic_gear_equipped";
+	var CapturePrompt = "capture_prompt";
+	var CapturePromptGamepad = "capture_prompt_gamepad";
+	var Controls = "controls";
+	var ControlsGamepad = "controls_gamepad";
+	var DebugDraws = "debug_draws";
+	var DebugFrame = "debug_frame";
+	var DebugTick = "debug_tick";
+	var DebugVisible = "debug_visible";
+	var EditorBack = "editor_back";
+	var EditorAssetBrowser = "editor_asset_browser";
+	var EditorAssetCategoryEnemy = "editor_asset_category_enemy";
+	var EditorAssetCategoryItem = "editor_asset_category_item";
+	var EditorAssetCategoryMechanism = "editor_asset_category_mechanism";
+	var EditorAssetCategoryNpc = "editor_asset_category_npc";
+	var EditorAssetCategoryTerrain = "editor_asset_category_terrain";
+	var EditorAssetClose = "editor_asset_close";
+	var EditorAssetEmpty = "editor_asset_empty";
+	var EditorAssetSearch = "editor_asset_search";
+	var EditorAssetShortcut = "editor_asset_shortcut";
+	var EditorCanvasHelp = "editor_canvas_help";
+	var EditorInvalid = "editor_invalid";
+	var EditorToolNeedsAdjacentCell = "editor_tool_needs_adjacent_cell";
+	var EditorToolNeedsAsset = "editor_tool_needs_asset";
+	var EditorToolNeedsDialogue = "editor_tool_needs_dialogue";
+	var EditorToolNeedsSelection = "editor_tool_needs_selection";
+	var EditorToolNeedsWaveSpace = "editor_tool_needs_wave_space";
+	var EditorReady = "editor_ready";
+	var EditorRedo = "editor_redo";
+	var EditorTest = "editor_test";
+	var EditorTesting = "editor_testing";
+	var EditorText = "editor_text";
+	var EditorTextAddLine = "editor_text_add_line";
+	var EditorTextApply = "editor_text_apply";
+	var EditorTextClean = "editor_text_clean";
+	var EditorTextClose = "editor_text_close";
+	var EditorTextDeleteLine = "editor_text_delete_line";
+	var EditorTextDirty = "editor_text_dirty";
+	var EditorTextHelp = "editor_text_help";
+	var EditorTextInvalid = "editor_text_invalid";
+	var EditorTextReset = "editor_text_reset";
+	var EditorTextStale = "editor_text_stale";
+	var EditorTextTitle = "editor_text_title";
+	var EditorTitle = "editor_title";
+	var EditorUndo = "editor_undo";
+	var EditorValid = "editor_valid";
+	var HealthFull = "health_full";
+	var InteractionControlGamepad = "interaction_control_gamepad";
+	var MenuAdventure = "menu_adventure";
+	var MenuCreative = "menu_creative";
+	var MenuEditor = "menu_editor";
+	var MenuInstructions = "menu_instructions";
+	var MenuInstructionsGamepad = "menu_instructions_gamepad";
+	var NoBlockInReach = "no_block_in_reach";
+	var PauseHelp = "pause_help";
+	var PauseHelpGamepad = "pause_help_gamepad";
+	var PauseTitle = "pause_title";
+	var PlaceBlocked = "place_blocked";
+	var TitleFallback = "title_fallback";
+	var EditorBuild = "editor_build";
+	var EditorCoordinates = "editor_coordinates";
+	var EditorErase = "editor_erase";
+	var EditorGround = "editor_ground";
+	var EditorKeepEditing = "editor_keep_editing";
+	var EditorLeaveWithoutSaving = "editor_leave_without_saving";
+	var EditorMaterial = "editor_material";
+	var EditorMoreDetails = "editor_more_details";
+	var EditorPlan = "editor_plan";
+	var EditorSelect = "editor_select";
+	var EditorUnsavedChanges = "editor_unsaved_changes";
+	var EditorWorldList = "editor_world_list";
+	var EditorCheckpoint = "editor_checkpoint";
+	var EditorDelete = "editor_delete";
+	var EditorDuplicate = "editor_duplicate";
+	var EditorEnvironment = "editor_environment";
+	var EditorEnvironmentClouds = "editor_environment_clouds";
+	var EditorEnvironmentDone = "editor_environment_done";
+	var EditorEnvironmentEast = "editor_environment_east";
+	var EditorEnvironmentEnabled = "editor_environment_enabled";
+	var EditorEnvironmentNorth = "editor_environment_north";
+	var EditorEnvironmentOff = "editor_environment_off";
+	var EditorEnvironmentOn = "editor_environment_on";
+	var EditorEnvironmentRadius = "editor_environment_radius";
+	var EditorEnvironmentSeed = "editor_environment_seed";
+	var EditorEnvironmentSky = "editor_environment_sky";
+	var EditorEnvironmentSouth = "editor_environment_south";
+	var EditorEnvironmentSun = "editor_environment_sun";
+	var EditorEnvironmentWater = "editor_environment_water";
+	var EditorEnvironmentWest = "editor_environment_west";
+	var EditorSave = "editor_save";
+	var EditorSaveFailed = "editor_save_failed";
+	var EditorSaved = "editor_saved";
+	var EditorLayer = "editor_layer";
+	var EditorTrigger = "editor_trigger";
+	var ConversationHelp = "conversation_help";
+	var ConversationHelpGamepad = "conversation_help_gamepad";
+	var ConversationNarrator = "conversation_narrator";
+	var ReturnPrompt = "return_prompt";
+	var ReturnPromptGamepad = "return_prompt_gamepad";
+	var PlayerFallen = "player_fallen";
+	var EditorCamera = "editor_camera";
+	var EditorCameraWalk = "editor_camera_walk";
+	var EditorCameraFly = "editor_camera_fly";
+	var EditorCameraOrbit = "editor_camera_orbit";
 
-	/** Appended so existing message codes remain stable. Catalog storage stays ID-sorted. */
-	var EditorScene = 35;
-
-	var EditorBuild = 36;
-	var EditorCoordinates = 37;
-	var EditorErase = 38;
-	var EditorGround = 39;
-	var EditorKeepEditing = 40;
-	var EditorLeaveWithoutSaving = 41;
-	var EditorMaterial = 42;
-	var EditorMoreDetails = 43;
-	var EditorPlan = 44;
-	var EditorSelect = 45;
-	var EditorUnsavedChanges = 46;
-	var EditorWorldList = 47;
-
-	/** Appended so existing message codes remain stable. Catalog storage stays ID-sorted. */
-	var EditorCheckpoint = 48;
-
-	/** Appended so existing message codes remain stable. Catalog storage stays ID-sorted. */
-	var EditorDelete = 49;
-
-	/** Appended so existing message codes remain stable. Catalog storage stays ID-sorted. */
-	var EditorDuplicate = 50;
+	/** Expose the stable data key without a cast or parallel ordinal table. */
+	public inline function text():String
+		return this;
 }

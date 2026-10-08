@@ -1,0 +1,3 @@
+-cp test/hxc_ir/fixtures
+-main DynamicSemantics
+--interp

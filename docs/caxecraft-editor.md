@@ -1,11 +1,14 @@
 # Caxecraft editor semantics
 
-Status: the renderer-independent command, history, validation, and test-play
-layer is implemented under `haxe_c-xge.19.5`. The native Raylib/Raygui screen
-now opens the same CAXEMAP bytes as the active game generation. It shows the
-map's visible height surface, all authored object placements, and the CaxeFlow
-rule count. It also lists each object's stable ID and draws a colored 3D gizmo
-for each closed placement role.
+Status: the renderer-independent command, history, validation, save, and
+test-play layer is implemented under `haxe_c-xge.19.5` and
+`haxe_c-xge.19.6.3.12`. The native Raylib/Raygui screen opens the same CAXEMAP
+bytes as the active game generation. Build shows the map's visible height
+surface with the terrain renderer and atlases from ordinary play. It also shows
+a grid at the selected layer. Plan shows the exact cells and objects that cross
+that layer. The screen shows the CaxeFlow rule count and each object's stable
+ID. Build uses validated pack art for NPCs, entities, items, and stateful
+objects. Player starts and checkpoints use clear editor markers.
 
 The editor core provides revision-checked changes, bounded command groups, and
 copy-owned observations. Its World Name field commits literal titles through
@@ -13,13 +16,27 @@ the same command and history boundary. Tab and Shift-Tab move through one
 device-neutral focus order. Enter or Space activates the focused control. A
 high-contrast ring shows the next target.
 
-The native screen edits one voxel layer. Its Test Play button starts a fresh
-ordinary game level from the editor's in-memory CAXEMAP bytes. The editor keeps
-the draft, camera, selection, tools, panels, history, and recovery state.
+The Text button, or `T`, opens the complete canonical CAXEMAP document. Source
+edits stay separate until Apply + Format succeeds. Invalid or stale text stays
+editable and cannot replace the visual draft or its last playable snapshot.
 
-Native source save, object transforms, visual CaxeFlow editing, cutscene
-editing, and layer tools remain separate work. A local JSON Lines process can
-open, inspect, edit, validate, and save one verified package level.
+The native screen can select and edit each horizontal voxel layer. The minus
+and plus controls change only presentation state; they do not create history,
+mark the package dirty, or alter Test Play. It moves and rotates selected
+objects and edits the world environment through typed commands. Its Test Play
+button starts a fresh ordinary game level from the editor's in-memory CAXEMAP
+bytes. The editor keeps the draft, camera, selection, tools, panels, history,
+and recovery state.
+
+Save and Ctrl/Cmd+S validate the draft, replace its package level, and update
+the campaign, runtime-content, and outer-package receipts as one planned
+operation. The native editor uses one package-backed `EditorSession`; Save and
+the visual controls cannot drift into separate drafts. A failed publication
+keeps the draft, history, and previous clean-state marker so the creator can
+retry. The current visual CaxeFlow slice edits canonical rules; the broader
+child card library and cutscene editor remain separate work. A local JSON Lines
+process can also open, inspect, edit,
+validate, and save one verified package level.
 
 ## What this layer owns
 
@@ -160,7 +177,8 @@ current CAXEMAP draft
     v
 cached read-only voxel volume
     |
-    +-- perspective drawing
+    +-- playable shape -> fixed-layout presentation copy -> TerrainRenderer
+    +-- custom shape -> compact surface fallback
     +-- camera ray -> visible voxel or empty floor cell
                          |
                          v
@@ -170,16 +188,94 @@ cached read-only voxel volume
 A **projection** means a read-only shape prepared for presentation.
 `EditorWorldViewport.projectWorld` decodes the complete finite draft into one
 volume ordered as `(z * height + y) * width + x`.
-`CaxecraftEditorScreen` caches that projection. The cache also contains a
-compact height surface for the native overview. Equal height and material cells
-merge into rectangular patches. This keeps a full authored map responsive in
-the headless renderer. Exact voxel cells remain available for picking and
-edits. The overview does not show hidden caves because layer inspection is not
-implemented.
+`CaxecraftEditorScreen` caches that projection. For a playable world shape, it
+also resolves palette codes into the fixed byte order used by gameplay. Build
+passes this read-only copy to the ordinary `TerrainRenderer`. This gives Build
+the same textured terrain while the CAXEMAP draft remains the only editable
+world.
 
-A normal displayed frame reads the cache. It does not serialize the CAXEMAP
-draft or allocate a replacement volume. New World, an accepted edit, undo, or
-redo rebuilds the cache from the session's new draft.
+The projection also contains a compact height surface. This surface is a
+fallback for custom-size or incomplete drafts that gameplay cannot represent.
+Exact voxel cells remain available for picking and edits in both paths. Plan
+reads one exact horizontal slice, so a creator can inspect hidden cells.
+
+A normal displayed frame reads both caches. It does not serialize the CAXEMAP
+draft or allocate a replacement volume. New World and broad terrain changes
+rebuild the caches from the session's new draft. A one-voxel paint, erase,
+undo, or redo patches that cell in the 3D cache and in the selected Plan layer.
+It does not copy every object, rebuild Flow links, or scan the complete Plan
+layer. If a cache is missing or inconsistent, the editor uses the complete
+rebuild path.
+
+Moving the pointer between cells also reads this cache. The screen translates
+the selected tool into a possible command, but it does not serialize the map or
+run a complete transaction for each new hover cell. A green placement ghost
+means that the visible gesture has its required local inputs. The click remains
+authoritative: `EditorSession.mutate` checks the revision, reducer, canonical
+format, and history budget before it changes the draft. If one of those checks
+rejects the command, the draft remains unchanged and the editor shows the
+invalid state.
+
+Each private editor image records whether its complete chunk layout passed the
+editor decoder. A one-voxel edit on a trusted layout splits or merges runs only
+in the owning chunk. It keeps every other chunk owner and does not expand the
+complete world into a temporary cell array. Repair-mode drafts without that
+evidence still use the complete decoder and fail closed on gaps, overlaps, or
+invalid runs.
+
+Voxel edits retain no caller-owned records. The session can therefore write
+canonical bytes and record history without parsing those bytes again on the
+click path. Validate, Save, and Test Play reconstruct exact source coordinates
+from the canonical bytes before they report diagnostics. Commands for
+placement deep-copy each retained record and tag array. These commands also
+defer the parse. Other structured commands keep the complete write-and-parse
+boundary.
+
+The interaction hierarchy puts direct in-world editing first. Creators can
+point at textured terrain, place or remove cells and objects, and see the result
+immediately. Authored NPCs, enemies, items, and mechanisms use the same
+validated atlas cells as ordinary play. Exact selection bounds appear when an
+object is selected or targeted.
+
+Build has one Ground card because the two mouse buttons select the terrain
+operation. The left button removes terrain. The right button places terrain.
+Plan keeps separate Ground and Erase cards for precise work.
+
+The Things to Add card opens a searchable asset browser. Press `B` from either
+editor view to open or close it. The browser lists every admitted terrain
+material, item, character, enemy, and editor mechanism. Its rows come from the
+validated content pack; translated names and help come from the UI catalog.
+Choosing terrain selects the Ground tool and adds a normal undoable map-palette
+entry only when the map does not have that material. Choosing another row
+selects the ordinary object-placement tool.
+
+The Text button opens advanced source authoring over the same scenario. Press
+`T` from Build or Plan to open or close it. Select a numbered row, edit its
+complete line, then use Apply + Format to publish valid source as one undoable
+document change. Add Line and Delete Line change only the isolated source
+draft. Reset from Visual discards those source-only edits.
+
+Apply runs the public UTF-8 decoder, lexer, parser, semantic validator, and
+canonical writer. A source-located diagnostic selects the first failing line.
+Malformed, incomplete, oversized, stale, or semantically invalid source stays
+in Text and leaves the visual model, history, selection, and Test Play snapshot
+unchanged. A successful Apply refreshes every visual view from the one typed
+scenario. Syntax colors distinguish structural records, flow events,
+conditions, and actions. Registry completion and jump-to-world references
+remain planned work.
+
+Plan is an advanced tool for hidden layers, trigger volumes, logic links, large
+selections, and fast navigation. It is not the default authoring experience.
+Build shows trigger bounds when the trigger tool is active or the creator
+targets that trigger. Plan keeps these volumes visible for precise work. Issue
+`haxe_c-xge.19.6.3` owns the remaining navigation and authoring work.
+
+History assigns a small state identity to each accepted edit, undo, and redo.
+Save records that identity only after publication succeeds, so a normal frame
+does not serialize the draft to decide whether it is dirty. The CAXEMAP lexer
+also splits the decoded document once before it tokenizes short lines. This
+avoids repeatedly scanning the full UTF-8 document from its beginning during
+an interaction.
 
 Raylib turns one screen pixel into a **ray**: a starting point and direction in
 the 3D world. `EditorWorldViewport.pickWorld` enters the finite map once. It
@@ -191,17 +287,40 @@ the floor of the current edit layer. This path lets a creator paint an empty
 cell. The selected tool converts the typed `VoxelPoint` into the same
 `EditorCommand` that history uses. An invalid pick changes nothing.
 
+Build now starts with the pointer released so the creator can use the toolbar.
+A click inside the 3D world captures the pointer and changes Build to direct
+first-person control. The first click only enters the world; it does not also
+apply a tool. A centered crosshair then owns the target ray. This removes the
+old need to hold the right mouse button while looking.
+
 The current controls are:
 
 - use Tab and Shift-Tab to move the visible focus ring through editor controls;
 - press Enter or Space to activate the focused control;
 - use a connected controller's D-pad or left stick to move the same ring;
 - press the south face button to activate or the east face button to return;
-- hold the right mouse button and move the pointer to look;
+- click inside Build to capture the pointer, then move the mouse to look;
+- press Escape once to release the pointer; press it again to cancel the
+  selected tool or leave through the normal editor flow;
+- press 1 through 5 to choose the five visible Build cards;
+- press B to open or close Things to Add;
+- press T to open or close the complete CAXEMAP Text workspace;
+- in Things to Add, use left/right to change category, up/down to choose a row,
+  Enter to use it, and Tab to enter or leave search text;
 - use W/S to move forward/back, A/D to strafe, and Q/E to move vertically;
 - use the wheel to move along the view direction;
-- press F to restore the deterministic whole-world view; and
-- left-click to apply the selected tool.
+- press F to restore the deterministic whole-world view;
+- use the minus and plus layer controls to move the Build grid and Plan slice;
+  and
+- left-click at the crosshair to remove terrain or use the selected object tool;
+  and
+- right-click at the crosshair to place terrain.
+
+Switching to Plan, opening the environment panel, starting Test Play, leaving
+the editor, or losing window focus also releases the pointer. Plan keeps its
+free pointer because it is the precise overview for hidden layers, trigger
+volumes, logic links, and navigation. Build hotkeys change only the active
+tool. They do not change draft bytes or history until a click is accepted.
 
 The focus order is target-neutral: it names editor actions, not Raylib key
 codes, controller brands, or screen coordinates. Keyboard and controller
@@ -240,10 +359,10 @@ they are not saved in CAXEMAP, do not participate in undo, and cannot mutate
 terrain. Raylib's scissor region clips all 3D drawing to the canvas, so even a
 nearby voxel cannot cover the toolbar, sidebar, or status bar.
 
-The older renderer-independent `EditorViewport` module still owns exact
-top-down layer projection and pixel-edge mapping. It remains tested as the
-foundation for a later optional planning view or minimap, but the shipped
-native canvas no longer uses it as the primary editor.
+The renderer-independent `EditorViewport` module owns exact top-down layer
+projection and pixel-edge mapping. The shipped Plan view uses it directly.
+Layer changes copy one compact slice from the cached volume instead of parsing
+or serializing CAXEMAP again.
 
 Opening the editor starts from a copy of the active runtime generation. The
 copy prevents an editor change from changing the running game without a
@@ -291,6 +410,9 @@ evicts the oldest undo entries deterministically. If one entry cannot fit the
 configured byte budget, the command is rejected before the draft changes. The
 byte figure counts the exact before/after CAXEMAP payload; the separate entry
 bound also caps the small bookkeeping and selection records around those bytes.
+Adjacent entries share their private immutable state buffer instead of copying
+the same middle state twice. This reduces interaction-time allocation without
+weakening the logical byte budget or exposing mutable history storage.
 Selections have their own 65,536-cell absolute bound. The same setting limits
 the number of points submitted by one batch paint or erase gesture, including
 duplicate points; it is the editor's shared “one gesture” work budget. Smaller
@@ -302,11 +424,38 @@ grouped into one all-or-nothing edit. It does not raise the voxel gesture,
 selection, history-entry, or history-byte bounds: every command inside the
 transaction must still satisfy those existing limits.
 
-This full-snapshot strategy favors simple, trustworthy recovery for the first
-bounded editor. Later editor slices must measure real map sizes and gesture
-latency. If snapshots become the bottleneck, they may introduce typed
-command-specific inverse data while retaining bounded paint gestures, exact
-undo bytes, hard memory limits, and the same public commands. A later
+The editor keeps exact canonical bytes after each accepted edit. Voxel and
+placement reducers also own all changed arrays and records. These reducers can
+defer the parse that restores source coordinates until validation, Save, or
+Test Play needs it. Other commands still use the complete write-and-parse path.
+
+This boundary reduced a repeated Frostmere object rotation from an 18.811 ms
+median to 2.144 ms on the same loaded development host. The diagnostic used 60
+accepted edits before and after the change. This result describes interaction
+latency on that host, not an uncontended compiler or game benchmark.
+
+The native screen does not request a complete scenario copy after an accepted
+edit. It asks `EditorSession` for fresh presentation values from the retained
+draft. Exact history continues to use canonical before-and-after bytes.
+
+Build displays a voxel selection as one exact outer volume. It does not draw a
+separate wire box for every selected cell. A maximum 65,536-cell selection
+therefore keeps one selection draw call per frame instead of making rendering
+work grow with the selected volume.
+
+Plan caches the non-air cells on its selected layer after an edit. Steady
+frames draw one empty background, those painted cells, shared grid lines, and
+at most two lines around the complete selection. Empty cells and selected cells
+do not each add their own border calls.
+
+The screen resolves a selected object's stable ID to its projected gizmo index
+when selection or presentation changes. Frame drawing, prompts, and direct
+Build controls reuse that index instead of repeatedly scanning up to 4,096
+objects and copying the same workspace selection.
+
+If history snapshots become the next bottleneck, a later slice can introduce
+typed command-specific inverse data. It must retain bounded paint gestures,
+exact undo bytes, hard memory limits, and the same public commands. A later
 optimization must not trade correctness for an unmeasured speedup.
 
 ## Reversible test play
@@ -324,12 +473,19 @@ Escape or focus loss removes the disposable runtime before another game tick.
 The application then restores the exact normal play state and returns to the
 same editor object. A second start creates a new runtime generation.
 
+One process-owned sequence issues generation IDs for normal loads, campaign
+preloads, transitions, and Test Play. A rejected load still consumes its ID.
+Therefore, renderer caches cannot confuse a later level with rejected or
+retired content. This is a process-lifetime guarantee, not a persistent or
+cross-process identity. If the positive integer range is exhausted, allocation
+returns an invalid ID and level construction fails before publication.
+
 There is intentionally no “keep whatever happened while playing” operation in
 this version. Importing selected play changes later would need its own closed
 command and clear ownership rules. Silent import would make a test run mutate
 the map and defeat reversible experimentation.
 
-## Planned visual event and cinematic authoring
+## Current visual event authoring and planned cinematic depth
 
 The native editor will not have separate trigger systems for doors, encounters,
 music, quests, and cutscenes. They all use one CaxeFlow relationship:
@@ -338,21 +494,35 @@ music, quests, and cutscenes. They all use one CaxeFlow relationship:
 event source -> conditions -> ordered actions
 ```
 
-A spatial volume is one event source. The world view will let a creator place,
-name, resize, filter, enable, duplicate, and select its visible gizmo. The card
-view will show the same data as icon-and-text WHEN/IF/DO sentences and will pick
-objects or actions from the world and shared registries instead of asking a
-child to type IDs. An event-flow overlay and bounded test trace will explain
-which source fired, why each condition passed or failed, which actions ran, and
-which signals or state changes were deferred.
+A spatial volume is one event source. The world view can place, name, resize,
+duplicate, and select its visible gizmo. A selected volume shows localized
+WHEN/IF/DO cards projected from the canonical typed rule. The current compact
+controls can switch enter/leave, replace a condition with a picked event actor
+or `Always`, insert a picked-object `Spawn` action, switch `Spawn` and
+`Despawn`, reorder or remove actions, and replace compatible object references
+by selecting the object in the world. The renderer-independent command also
+supports replacing any closed event, predicate, or admitted action plus changing
+priority and repeat policy. Every gesture commits the ordinary `PutRule`
+command, so Undo, Redo, validation, save, and Advanced mode observe the same
+CaxeFlow data. A world-pick gesture records the document revision and rejects a
+stale target instead of applying it to a changed card.
+
+The shared renderer-independent trace projection bounds and classifies source,
+predicate, action, and deferred-event rows. Native Test Play retains the latest
+non-empty bounded trace and draws it under the selected cards after the creator
+returns. A live overlay while the game screen is still open, polished
+registry-driven field forms, filters/enabled controls, and non-world document
+pickers remain planned work. The current screen is a complete minimal spatial
+rule editor, not yet the complete child-facing card library.
 
 The same typed draft has three authoring depths. **Guided** mode uses large
 icon-and-sentence cards, templates, and world picking. **Advanced visual** mode
-reveals nested predicates, event context, variables, branches, sequences, and
-timing while preserving those cards. **Text** mode edits the exact bounded
-CaxeMap/CaxeFlow source with syntax coloring, shared-registry completion,
-formatting, source-positioned diagnostics, and jump-to-world references. It is
-especially useful for experienced creators and automation agents.
+will reveal nested predicates, event context, variables, branches, sequences,
+and timing while preserving those cards. **Text** mode now edits the exact
+bounded CaxeMap/CaxeFlow source. It provides line editing, syntax colors,
+canonical formatting, and source-positioned diagnostics. It is useful for
+experienced creators and automation agents. Shared-registry completion and
+jump-to-world references remain planned.
 
 Moving between views must parse and validate the same model. Text mode cannot
 call a mechanic unavailable to cards, and the visual views cannot flatten or
@@ -365,10 +535,11 @@ Starting a cutscene is one possible action, not a privileged trigger. Its
 focused editor will arrange named camera anchors, actor staging markers,
 ordered beats, limited parallel movement/camera/audio lanes, localized cards,
 fades, choices, and persistent CaxeFlow changes. Normal and skip previews must
-reach the same required persistent state and restore camera and controls. This
-work is planned under `haxe_c-xge.19.10`, `haxe_c-xge.19.6`, and
-`haxe_c-xge.20.3`; the implemented renderer-independent editor described above
-does not yet provide these native visual tools.
+reach the same required persistent state and restore camera and controls. The
+remaining visual depth is tracked under `haxe_c-xge.19.6` and cinematic
+authoring under `haxe_c-xge.20.3`. The current native trigger-card slice does not
+yet provide the complete card library, advanced visual tree, registry-backed
+text completion, jump-to-world references, or cinematic timeline.
 
 ## Executable evidence
 
@@ -385,9 +556,10 @@ every command family, canonical serialize/reload, invalid-draft recovery,
 deterministic history eviction, byte and gesture limits, two independent
 test-play sessions, the optional top-down projection, complete-volume
 projection, camera bounds, solid and empty-space ray picking, and all four tool
-translations. It runs under C and a second installed locale (Spanish when
-available) and scans the reusable editor sources for C, Raylib,
-target-condition, raw-code, and untyped-boundary leakage.
+translations. It also checks complete Text round trips, invalid and stale
+recovery, advanced CaxeFlow forms, undo/redo, and Test Play. It runs under C and
+a second installed locale (Spanish when available). It scans reusable editor
+sources for C, Raylib, target-condition, raw-code, and untyped-boundary leakage.
 
 The native graphical proof uses the real renderer in Raylib's deterministic
 in-memory configuration:
@@ -401,20 +573,26 @@ python3 examples/caxecraft/play.py \
 
 That pilot compiles the application through haxe.c. It enters the editor from
 the title screen and opens the active level bytes. It changes one literal
-title, moves the production camera, and paints the first available air cell.
-It then selects that cell through `CaxecraftEditorScreen` and `EditorSession`.
+title, selects layer 2, moves the production camera, paints the first available
+air cell, and saves the resulting package. It applies one valid Text edit, then
+keeps one invalid closing record isolated with its visible diagnostic. It then
+selects the painted cell through `CaxecraftEditorScreen` and `EditorSession`.
 
-The framebuffer check requires the toolbar, sidebar, scene list, authored
-terrain colors, sky, and selection outline. The pilot repeats the journey and
-requires identical semantic reports and screenshots. The headless software
-renderer has a 90-second process limit for this complete editor and game
-journey.
+The framebuffer check requires the toolbar, sidebar, scene list, textured
+terrain, sky, and selection outline. It requires enough terrain color variation
+to reject the former flat overview. The pilot repeats the journey and requires
+identical reports and screenshots. The headless software renderer has a
+90-second process limit for this complete editor and game journey.
 
-The pilot proves active-level presentation, one terrain change, the object
-list, scene gizmos, the rule count, and the title path. It starts and stops two
-ordinary-engine Test Play runs in one process. Each run completes a fixed game
-tick and uses a new disposable generation.
+The pilot proves active-level presentation, a revision-neutral layer change,
+one terrain change, the object list, scene gizmos, the rule count, the title
+path, and native package Save. It checks the changed map and refreshed receipts
+and rejects leftover staging or backup files. The runner restores the source
+package before each repeat, so both runs must publish the same bytes. It also
+starts and stops two ordinary-engine Test Play runs in one process. Each run
+completes a fixed game tick and uses a new disposable generation.
 
 The final report also proves that the normal generation and publication count
-did not change. It does not prove native source save, object transforms,
-localized-title editing, layer tools, visual CaxeFlow editing, or cutscenes.
+did not change. The renderer-independent proof covers canonical CaxeFlow card
+edits and typed world picks; native pointer-control coverage, cutscenes, and
+crash-durable filesystem publication remain separate evidence.

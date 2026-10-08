@@ -1,7 +1,11 @@
 package caxecraft.editor;
 
 import caxecraft.editor.EditorSession;
+import caxecraft.editor.EditorPresentation.EditorPresentationSnapshot;
+import caxecraft.editor.EditorPresentation.EditorPresentationDetails;
 import caxecraft.scenario.CaxeFlow.FlowRule;
+import caxecraft.scenario.CaxeFlow.FlowSequence;
+import caxecraft.scenario.CaxeFlow.FlowVariable;
 import caxecraft.scenario.ContentId;
 import caxecraft.scenario.LocaleId;
 import caxecraft.scenario.MessageId;
@@ -11,6 +15,7 @@ import caxecraft.scenario.ScenarioGeometry.VoxelBounds;
 import caxecraft.scenario.ScenarioGeometry.VoxelPoint;
 import caxecraft.scenario.ScenarioGeometry.VoxelSize;
 import caxecraft.scenario.Scenario;
+import caxecraft.scenario.ScenarioEnvironment;
 import caxecraft.scenario.ScenarioId;
 import caxecraft.scenario.ScenarioObject;
 import caxecraft.scenario.ScenarioStory.ScenarioDialogue;
@@ -43,6 +48,9 @@ enum EditorCommand {
 	**/
 	SetTitle(title:ScenarioText);
 
+	/** Replace the optional visual environment with one complete typed value. */
+	SetEnvironment(environment:Null<ScenarioEnvironment>);
+
 	ResizeWorld(size:VoxelSize);
 	SetPaletteEntry(code:Int, blockType:ContentId);
 	PaintVoxel(point:VoxelPoint, paletteCode:Int);
@@ -58,6 +66,15 @@ enum EditorCommand {
 	/** Move one existing placement by whole voxel cells without changing its identity or role. */
 	MoveObjectBy(id:ScenarioId, delta:VoxelPoint);
 
+	/** Rotate one transform-backed placement without changing its position, identity, or role. */
+	RotateObjectBy(id:ScenarioId, degrees:Int);
+
+	/** Resize one trigger volume to an exact positive voxel size without changing its origin or identity. */
+	ResizeTriggerTo(id:ScenarioId, size:VoxelSize);
+
+	/** Rename one object and every typed object-role reference as one atomic edit. */
+	RenameObject(before:ScenarioId, after:ScenarioId);
+
 	RemoveObject(id:ScenarioId);
 	PutDialogue(dialogue:ScenarioDialogue);
 	RemoveDialogue(id:ScenarioId);
@@ -65,6 +82,8 @@ enum EditorCommand {
 	RemoveObjective(id:ScenarioId);
 	PutRule(rule:FlowRule);
 	RemoveRule(id:ScenarioId);
+	PutFlowVariable(variable:FlowVariable);
+	PutFlowSequence(sequence:FlowSequence);
 	SetDefaultLocale(locale:LocaleId);
 	PutLocale(locale:ScenarioLocaleCatalog);
 	RemoveLocale(locale:LocaleId);
@@ -76,6 +95,10 @@ enum EditorCommand {
 /** Stable command groups used by history, UI labels, and acceptance traces. */
 enum EditorCommandFamily {
 	DocumentMetadata;
+
+	/** One complete validated CAXEMAP source replacement from Text workspace. */
+	Text;
+
 	WorldShape;
 	Voxel;
 	Fluid;
@@ -108,10 +131,24 @@ enum EditorChangeId {
 	ChangedObject(id:ScenarioId);
 	ChangedDialogue(id:ScenarioId);
 	ChangedObjective(id:ScenarioId);
+	ChangedVariable(id:ScenarioId);
+	ChangedSequence(id:ScenarioId);
 	ChangedRule(id:ScenarioId);
 	ChangedLocalization;
 	ChangedLocale(id:LocaleId);
 	ChangedMessage(locale:LocaleId, message:MessageId);
+}
+
+/** Exact terrain footprint published with one accepted mutation or history step. */
+enum EditorTerrainChange {
+	/** The mutation cannot change voxel bytes or palette interpretation. */
+	TerrainUnchanged;
+
+	/** The mutation changed one voxel to this palette code. */
+	TerrainVoxelChanged(point:VoxelPoint, paletteCode:Int);
+
+	/** The mutation can change several voxels, world shape, or palette meaning. */
+	TerrainChanged;
 }
 
 /** Fixed editor-tree groups whose children retain their own semantic IDs. */
@@ -198,6 +235,15 @@ enum EditorError {
 	/** A pack-driven placement tool had no validated selected recipe. */
 	MissingEditorObjectRecipe;
 
+	/** An NPC recipe needs one authored dialogue before it can become playable. */
+	MissingEditorDialogue;
+
+	/** A linked placement needs a neighboring world cell for its second object. */
+	EditorTemplateNeedsAdjacentCell;
+
+	/** An enemy wave needs three distinct cells around its trigger. */
+	EditorEnemyWaveNeedsSpace;
+
 	InvalidSetting(setting:EditorSetting, minimum:Int, maximum:Int);
 	UnsupportedFormatVersion(actual:Int, supported:Int);
 	SnapshotRejected(diagnostics:Array<ScenarioDiagnostic>);
@@ -215,10 +261,23 @@ enum EditorError {
 	UnknownPaletteCode(code:Int);
 	MissingFluid(id:ScenarioId);
 	DuplicateObject(id:ScenarioId);
+	InvalidObjectName(id:ScenarioId);
 	MissingObject(id:ScenarioId);
 
 	/** The requested whole-voxel move would place some or all of the object outside the finite world. */
 	ObjectMoveOutsideWorld(id:ScenarioId, delta:VoxelPoint);
+
+	/** The selected placement has bounds but no authored facing direction. */
+	ObjectCannotRotate(id:ScenarioId);
+
+	/** The selected placement stores a transform rather than trigger bounds. */
+	ObjectCannotResize(id:ScenarioId);
+
+	/** A trigger volume must span at least one voxel on every axis. */
+	InvalidTriggerSize(id:ScenarioId, size:VoxelSize);
+
+	/** The exact requested size would extend the trigger beyond the finite world. */
+	ObjectResizeOutsideWorld(id:ScenarioId, size:VoxelSize);
 
 	MissingDialogue(id:ScenarioId);
 	MissingObjective(id:ScenarioId);
@@ -261,6 +320,15 @@ enum EditorError {
 enum EditorMutation {
 	Apply(command:EditorCommand);
 	ApplyBatch(commands:Array<EditorCommand>);
+
+	/**
+		Parse, validate, canonicalize, and replace one complete text draft.
+
+		The payload is copied before publication. Rejected source remains owned by
+		the caller and cannot change the typed scenario, history, or recovery state.
+	**/
+	ApplyText(source:Bytes);
+
 	Undo;
 	Redo;
 }
@@ -319,10 +387,12 @@ enum EditorPreviewResult {
 	An applied result advances the revision exactly once. `families` lists the
 	individual command groups for a batch. `changes` is a deterministic,
 	deduplicated list of semantic identities stored with history and therefore
-	available again on undo and redo.
+	available again on undo and redo. `terrain` is the smallest safe presentation
+	refresh for the state now visible to the caller.
 **/
 enum EditorMutationResult {
-	MutationApplied(families:Array<EditorCommandFamily>, changes:Array<EditorChangeId>, revision:Int, undoDepth:Int, redoDepth:Int);
+	MutationApplied(families:Array<EditorCommandFamily>, changes:Array<EditorChangeId>, terrain:EditorTerrainChange, revision:Int, undoDepth:Int,
+		redoDepth:Int);
 	MutationUnchanged(families:Array<EditorCommandFamily>, revision:Int);
 	MutationRejected(error:EditorError, revision:Int);
 }
@@ -334,6 +404,12 @@ enum EditorQuery {
 
 	/** Read one deep copy of the current typed scenario draft. */
 	InspectDraft;
+
+	/** Read fresh values needed by a visual editor without parsing CAXEMAP again. */
+	InspectPresentation;
+
+	/** Read copy-owned visual details without decoding unchanged terrain. */
+	InspectPresentationDetails;
 
 	/** Read one copied deterministic CAXEMAP spelling of the current draft. */
 	InspectCanonicalDraft;
@@ -381,6 +457,8 @@ typedef EditorStateObservation = {
 enum EditorObservation {
 	StateObserved(state:EditorStateObservation);
 	DraftObserved(revision:Int, draft:Scenario);
+	PresentationObserved(revision:Int, presentation:EditorPresentationSnapshot);
+	PresentationDetailsObserved(revision:Int, presentation:EditorPresentationDetails);
 	CanonicalDraftObserved(revision:Int, canonical:Bytes);
 	TreeObserved(revision:Int, nodes:Array<EditorTreeNode>);
 	NodeObserved(revision:Int, node:Null<EditorTreeNode>);
@@ -393,13 +471,13 @@ enum EditorOpenResult {
 }
 
 enum EditorEditResult {
-	EditApplied(family:EditorCommandFamily, changes:Array<EditorChangeId>, undoDepth:Int, redoDepth:Int);
+	EditApplied(family:EditorCommandFamily, changes:Array<EditorChangeId>, terrain:EditorTerrainChange, undoDepth:Int, redoDepth:Int);
 	EditUnchanged(family:EditorCommandFamily);
 	EditRejected(error:EditorError);
 }
 
 enum EditorHistoryResult {
-	HistoryApplied(family:EditorCommandFamily, changes:Array<EditorChangeId>, undoDepth:Int, redoDepth:Int);
+	HistoryApplied(family:EditorCommandFamily, changes:Array<EditorChangeId>, terrain:EditorTerrainChange, undoDepth:Int, redoDepth:Int);
 	HistoryRejected(error:EditorError);
 }
 

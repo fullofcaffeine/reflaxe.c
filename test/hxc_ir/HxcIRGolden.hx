@@ -2,7 +2,14 @@ import haxe.Json;
 import reflaxe.c.ir.HxcIR;
 import reflaxe.c.ir.HxcIRDiagnostic;
 import reflaxe.c.ir.HxcIRDumper;
+import reflaxe.c.ir.HxcIRTraversal.HxcIRTraversalSite;
+import reflaxe.c.ir.HxcIRTraversal.HxcIRTraversalVisitor;
+import reflaxe.c.ir.HxcIRTraversal.HXC_IR_TRAVERSAL_SCHEMA_VERSION;
+import reflaxe.c.ir.HxcIRTraversal.walkHxcIR;
 import reflaxe.c.ir.HxcIRValidator;
+import reflaxe.c.ir.HxcIRValidator.ValidatedHxcIRProgram;
+import reflaxe.c.ir.HxcIRManagedRootPlanner;
+import reflaxe.c.ir.HxcIRManagedRootPaths;
 import reflaxe.c.ir.HxcSourceSpan;
 import reflaxe.c.lowering.CBodyNullCheckCoalescing;
 
@@ -12,6 +19,106 @@ private enum ManagedCarrierLinearMutation {
 	LinearDuplicateAcquire;
 	LinearDuplicateMove;
 	LinearOwnedExit;
+}
+
+/** Check the exact-layout boundary without granting arbitrary pointer casts. */
+private enum CollectorNodeViewMutation {
+	NodeViewValid;
+	NodeViewReverse;
+	NodeViewOtherDeclaration;
+	NodeViewOtherArguments;
+}
+
+/** Select one focused mutation of the mutable-record borrow contract. */
+private enum MutableAggregateBorrowMutation {
+	MutableBorrowValid;
+	MutableBorrowNullableParameter;
+	MutableBorrowImmutableField;
+	MutableBorrowReturnEscape;
+}
+
+/** Count each typed visitor family without taking ownership of recursion. */
+private class HxcIRTraversalSentinel extends HxcIRTraversalVisitor {
+	public var programs(default, null) = 0;
+	public var modules(default, null) = 0;
+	public var declarations(default, null) = 0;
+	public var typeRefs(default, null) = 0;
+	public var functions(default, null) = 0;
+	public var blocks(default, null) = 0;
+	public var instructions(default, null) = 0;
+	public var places(default, null) = 0;
+	public var implementations(default, null) = 0;
+	public var failures(default, null) = 0;
+	public var cleanupSteps(default, null) = 0;
+	public var blockEdges(default, null) = 0;
+	public var cleanupActions(default, null) = 0;
+	public var terminators(default, null) = 0;
+	public var boundsPolicies(default, null) = 0;
+	public var nullPolicies(default, null) = 0;
+	public var tagPolicies(default, null) = 0;
+	public var managedRoots(default, null) = 0;
+	public var managedRootProjections(default, null) = 0;
+
+	public function new() {
+		super();
+	}
+
+	override public function onProgram(program:ValidatedHxcIRProgram):Void
+		programs++;
+
+	override public function onModule(module:HxcIRModule, site:HxcIRTraversalSite):Void
+		modules++;
+
+	override public function onTypeDeclaration(declaration:HxcIRTypeDeclaration, site:HxcIRTraversalSite):Void
+		declarations++;
+
+	override public function onTypeRef(type:HxcIRTypeRef, site:HxcIRTraversalSite):Void
+		typeRefs++;
+
+	override public function onFunction(fn:HxcIRFunction, site:HxcIRTraversalSite):Void
+		functions++;
+
+	override public function onBlock(block:HxcIRBlock, site:HxcIRTraversalSite):Void
+		blocks++;
+
+	override public function onInstruction(instruction:HxcIRInstruction, site:HxcIRTraversalSite):Void
+		instructions++;
+
+	override public function onPlace(place:HxcIRPlace, site:HxcIRTraversalSite):Void
+		places++;
+
+	override public function onImplementation(implementation:HxcIRImplementation, site:HxcIRTraversalSite):Void
+		implementations++;
+
+	override public function onFailureEdge(edge:HxcIRFailureEdge, site:HxcIRTraversalSite):Void
+		failures++;
+
+	override public function onCleanupStep(step:HxcIRCleanupStep, site:HxcIRTraversalSite):Void
+		cleanupSteps++;
+
+	override public function onBlockEdge(edge:HxcIRBlockEdge, site:HxcIRTraversalSite):Void
+		blockEdges++;
+
+	override public function onCleanupAction(action:HxcIRCleanupAction, site:HxcIRTraversalSite):Void
+		cleanupActions++;
+
+	override public function onTerminator(terminator:HxcIRTerminator, site:HxcIRTraversalSite):Void
+		terminators++;
+
+	override public function onBoundsPolicy(policy:HxcIRBoundsPolicy, site:HxcIRTraversalSite):Void
+		boundsPolicies++;
+
+	override public function onNullCheckPolicy(policy:HxcIRNullCheckPolicy, site:HxcIRTraversalSite):Void
+		nullPolicies++;
+
+	override public function onTagCheckPolicy(policy:HxcIRTagCheckPolicy, site:HxcIRTraversalSite):Void
+		tagPolicies++;
+
+	override public function onManagedRoot(root:HxcIRManagedRoot, site:HxcIRTraversalSite):Void
+		managedRoots++;
+
+	override public function onManagedRootProjection(projection:HxcIRManagedRootProjection, site:HxcIRTraversalSite):Void
+		managedRootProjections++;
 }
 
 /** Builds deterministic semantic IR fixtures without invoking C emission. */
@@ -24,23 +131,101 @@ class HxcIRGolden {
 
 	static function main():Void {
 		HxcIRControlFlowGolden.run();
+		BodyControlFlowOrderProbe.run();
 		final validator = new HxcIRValidator();
+		checkCollectorNodeViews(validator);
 		final dumper = new HxcIRDumper();
+		if (HXC_IR_TRAVERSAL_SCHEMA_VERSION != HxcIRValidator.SCHEMA_VERSION)
+			throw "HxcIR traversal schema sentinel was not reviewed with the validator schema";
 		final semantic = semanticProgram(false);
-		validator.requireValid(semantic, PROFILE);
-		final semanticDump = dumper.dump(semantic);
-		verifyDumpSnapshot(dumper, semantic, semanticDump);
-		final reorderedDump = dumper.dump(semanticProgram(true));
+		final validatedSemantic = validator.requireValid(semantic, PROFILE);
+		requireValidatedFunctionOwnershipBoundary(validatedSemantic, semantic);
+		final semanticDump = dumper.dump(validatedSemantic);
+		verifyDumpSnapshot(dumper, validatedSemantic, semanticDump);
+		final reorderedDump = dumper.dump(validator.requireValid(semanticProgram(true), PROFILE));
 		if (semanticDump != reorderedDump) {
 			throw "HxcIR dump changed when unordered program collections were reversed";
 		}
 
 		final coverage = coverageProgram();
-		validator.requireValid(coverage, PROFILE);
+		final validatedCoverage = validator.requireValid(coverage, PROFILE);
+		final coverageBeforeTraversal = dumper.dump(validatedCoverage);
+		verifyTraversalSentinel([
+			validatedSemantic,
+			validatedCoverage,
+			validator.requireValid(managedRootProgram(false), PROFILE),
+			validator.requireValid(dynamicContractProgram(), PROFILE)
+		]);
+		if (dumper.dump(validatedSemantic) != semanticDump || dumper.dump(validatedCoverage) != coverageBeforeTraversal)
+			throw "HxcIR traversal mutated its validated read-only input";
+		requireInvalidMarker(dynamicContractWrongOperationProgram(), "requires a box operation", "mismatched Dynamic operation");
+		requireInvalidMarker(dynamicContractMissingRootProgram(), "missing exact root path `dynamic-payload`", "unrooted Dynamic payload");
+		requireInvalidMarker(dynamicContractWrongFailureProgram(), "requires a result-error edge", "Dynamic failure kind");
+		requireInvalidMarker(dynamicContractManagedGlobalProgram(), "require a general global-root plan", "managed Dynamic global");
+		requireInvalidMarker(genericDynamicConversionProgram(), "require dedicated plan-owned instructions", "generic Dynamic conversion");
+		requireInvalidMarker(containedExceptionWithoutRegionProgram(), "requires an explicit region or unwind terminator",
+			"contained exception without an owner");
+		requireInvalidMarker(unknownExceptionRegionProgram(), "unknown region", "unknown exception frame operation");
+		validator.requireValid(integralDivisionProgram("6"), PROFILE);
+		validator.requireValid(integralDivisionProgram("2147483647"), PROFILE);
+		for (sample in [
+			{text: "-128", width: 8, signed: true},
+			{text: "127", width: 8, signed: true},
+			{text: "255", width: 8, signed: false},
+			{text: "-32768", width: 16, signed: true},
+			{text: "32767", width: 16, signed: true},
+			{text: "65535", width: 16, signed: false},
+			{text: "-2147483648", width: 32, signed: true},
+			{text: "2147483647", width: 32, signed: true},
+			{text: "4294967295", width: 32, signed: false},
+			{text: "-9223372036854775808", width: 64, signed: true},
+			{text: "9223372036854775807", width: 64, signed: true},
+			{text: "18446744073709551615", width: 64, signed: false},
+		])
+			validator.requireValid(fixedWidthConstantProgram(sample.text, sample.width, sample.signed), PROFILE);
+		for (sample in [
+			{text: "-129", width: 8, signed: true},
+			{text: "128", width: 8, signed: true},
+			{text: "256", width: 8, signed: false},
+			{text: "-32769", width: 16, signed: true},
+			{text: "32768", width: 16, signed: true},
+			{text: "65536", width: 16, signed: false},
+			{text: "-2147483649", width: 32, signed: true},
+			{text: "2147483648", width: 32, signed: true},
+			{text: "4294967296", width: 32, signed: false},
+			{text: "-9223372036854775809", width: 64, signed: true},
+			{text: "9223372036854775808", width: 64, signed: true},
+			{text: "18446744073709551616", width: 64, signed: false},
+			{text: "-1", width: 32, signed: false},
+			{text: "9999999999999999999999999999999999999999", width: 64, signed: false},
+		])
+			requireInvalidMarker(fixedWidthConstantProgram(sample.text, sample.width, sample.signed),
+				'integer constant `${sample.text}` is outside the ${sample.signed ? "signed" : "unsigned"} ${sample.width}-bit range',
+				"fixed-width integer constant range");
+		requireInvalidMarker(fixedWidthGlobalConstantProgram("2147483648"), "integer constant `2147483648` is outside the signed 32-bit range",
+			"fixed-width global integer constant range");
+		requireInvalidMarker(fixedWidthSwitchConstantProgram("2147483648"), "integer constant `2147483648` is outside the signed 32-bit range",
+			"fixed-width switch integer constant range");
+		requireInvalidMarker(integralDivisionProgram("0"), "requires two Int operands, a direct positive constant divisor", "zero integral division proof");
+		requireInvalidMarker(integralDivisionProgram("-1"), "requires two Int operands, a direct positive constant divisor", "forged integral division proof");
+		requireInvalidMarker(integralDivisionProgram("4294967297"), "integer constant `4294967297` is outside the signed 32-bit range",
+			"out-of-range integral division proof");
+		requireInvalidMarker(integralDivisionProgram("6", "value.updated"), "requires two Int operands, a direct positive constant divisor",
+			"indirect integral division proof");
+		requireInvalidMarker(integralDivisionProgram("6", null, IRIRuntime("runtime-base")), "requires two Int operands, a direct positive constant divisor",
+			"runtime integral division proof");
+		requireInvalidMarker(integralDivisionProgram("6", null, null, IRTInt(64, true)), "requires two Int operands, a direct positive constant divisor",
+			"wrong-result integral division proof");
 		validator.requireValid(nativeConstantAggregateProgram(), PROFILE);
 		validator.requireValid(borrowedClassAliasProgram(), PROFILE);
 		validator.requireValid(borrowedClassOwnedFieldReleaseProgram(), PROFILE);
 		validator.requireValid(borrowedInterfaceAliasProgram(), PROFILE);
+		validator.requireValid(mutableAggregateBorrowProgram(MutableBorrowValid), PROFILE);
+		requireInvalidMarker(mutableAggregateBorrowProgram(MutableBorrowNullableParameter), "must be a non-null direct-record pointer",
+			"nullable mutable-record borrow");
+		requireInvalidMarker(mutableAggregateBorrowProgram(MutableBorrowImmutableField),
+			"store cannot change immutable field `x` through a mutable-record borrow", "immutable field below mutable-record borrow");
+		requireInvalidMarker(mutableAggregateBorrowProgram(MutableBorrowReturnEscape), "escapes through a return", "returned mutable-record borrow");
 		validator.requireValid(borrowedSpanReturnProgram(false), PROFILE);
 		validator.requireValid(borrowedSpanReturnProgram(false, true), PROFILE);
 		final unrootedManagedSpanDiagnostics = invalidDiagnostics(unrootedManagedBorrowedSpanReturnProgram());
@@ -62,7 +247,7 @@ class HxcIRGolden {
 		validator.requireValid(managedAggregateCarrierValidationProgram(false), PROFILE);
 		validator.requireValid(interfaceUpcastProgram(null), PROFILE);
 		verifyReceiverReassignmentCoalescing(validator);
-		final coverageDump = dumper.dump(coverage);
+		final coverageDump = coverageBeforeTraversal;
 
 		Sys.println(REPORT_PREFIX + Json.stringify({
 			semantic: semanticDump,
@@ -182,6 +367,33 @@ class HxcIRGolden {
 		}));
 	}
 
+	/** Prove the coverage corpus reaches every public structural visitor family. */
+	static function verifyTraversalSentinel(programs:Array<ValidatedHxcIRProgram>):Void {
+		final sentinel = new HxcIRTraversalSentinel();
+		for (program in programs)
+			walkHxcIR(program, sentinel);
+		if (sentinel.programs != programs.length
+			|| sentinel.modules == 0
+			|| sentinel.declarations == 0
+			|| sentinel.typeRefs == 0
+			|| sentinel.functions == 0
+			|| sentinel.blocks == 0
+			|| sentinel.instructions == 0
+			|| sentinel.places == 0
+			|| sentinel.implementations == 0
+			|| sentinel.failures == 0
+			|| sentinel.cleanupSteps == 0
+			|| sentinel.blockEdges == 0
+			|| sentinel.cleanupActions == 0
+			|| sentinel.terminators == 0
+			|| sentinel.boundsPolicies == 0
+			|| sentinel.nullPolicies == 0
+			|| sentinel.tagPolicies == 0
+			|| sentinel.managedRoots == 0
+			|| sentinel.managedRootProjections == 0)
+			throw 'HxcIR traversal sentinel lost one structural visitor family: cleanupSteps=${sentinel.cleanupSteps}, blockEdges=${sentinel.blockEdges}, managedRootProjections=${sentinel.managedRootProjections}';
+	}
+
 	/**
 		Prove one exhaustive rendering can serve both reports and function keys.
 
@@ -190,7 +402,7 @@ class HxcIRGolden {
 		child. This check also proves key-only mode does not retain the full
 		program string.
 	**/
-	static function verifyDumpSnapshot(dumper:HxcIRDumper, program:HxcIRProgram, expectedComplete:String):Void {
+	static function verifyDumpSnapshot(dumper:HxcIRDumper, program:reflaxe.c.ir.HxcIRValidator.ValidatedHxcIRProgram, expectedComplete:String):Void {
 		final complete = dumper.dumpSnapshot(program, true);
 		if (complete.complete != expectedComplete)
 			throw "complete HxcIR snapshot differed from the canonical dump";
@@ -310,7 +522,12 @@ class HxcIRGolden {
 			mainModule.functions[0].blocks.reverse();
 			modules.reverse();
 		}
-		return {schemaVersion: HxcIRValidator.SCHEMA_VERSION, dispatch: emptyDispatch(), modules: modules};
+		return {
+			schemaVersion: HxcIRValidator.SCHEMA_VERSION,
+			dynamicPlan: emptyDynamic(),
+			dispatch: emptyDispatch(),
+			modules: modules
+		};
 	}
 
 	static function sideEffectFunction():HxcIRFunction {
@@ -388,6 +605,70 @@ class HxcIRGolden {
 			],
 			source: span(MAIN_SOURCE, 12, 24)
 		};
+	}
+
+	/** Build one valid or forged direct integral-division proof. */
+	static function integralDivisionProgram(divisor:String, ?rightValueId:String, ?implementation:HxcIRImplementation,
+			?quotientType:HxcIRTypeRef):HxcIRProgram {
+		final program = semanticProgram(false);
+		final entry = program.modules[0].functions[0].blocks[0];
+		final selectedRight = rightValueId == null ? "value.divisor" : rightValueId;
+		if (rightValueId == null)
+			entry.instructions.push(instruction("i08.divisor", result(selectedRight, IRTInt(32, true)), IRIOConstant(IRCInt(divisor)), MAIN_SOURCE, 19));
+		entry.instructions.push(instruction("i09.integral-division", result("value.quotient", quotientType == null ? IRTInt(32, true) : quotientType),
+			IRIOBinary("haxe.i32.divide.positive-constant", "value.updated", selectedRight, implementation == null ? IRIStatic : implementation), MAIN_SOURCE,
+			19));
+		return program;
+	}
+
+	/** Build one fixed-width constant at its independent validation boundary. */
+	static function fixedWidthConstantProgram(text:String, width:Int, signed:Bool):HxcIRProgram {
+		final program = semanticProgram(false);
+		final entry = program.modules[0].functions[0].blocks[0];
+		entry.instructions.push(instruction("i08.fixed-width", result("value.fixed-width", IRTInt(width, signed)), IRIOConstant(IRCInt(text)), MAIN_SOURCE,
+			19));
+		return program;
+	}
+
+	/** Put one forged signed-32 literal at the global-initialization boundary. */
+	static function fixedWidthGlobalConstantProgram(text:String):HxcIRProgram {
+		final program = semanticProgram(false);
+		program.modules[0].globals[0] = {
+			id: "global.calls",
+			type: IRTInt(32, true),
+			mutable: true,
+			initialization: IRGIConstant(IRCInt(text)),
+			source: span(MAIN_SOURCE, 10)
+		};
+		return program;
+	}
+
+	/** Put one forged signed-32 literal at the switch-case boundary. */
+	static function fixedWidthSwitchConstantProgram(text:String):HxcIRProgram {
+		final file = "test/negative/FixedWidthSwitchConstant.hx";
+		final loopEdge:HxcIRBlockEdge = {targetBlockId: "entry", arguments: [], cleanup: []};
+		return minimalProgram("invalid.FixedWidthSwitchConstant", [
+			instruction("switch.subject", result("value.subject", IRTInt(32, true)), IRIOConstant(IRCInt("0")), file, 2)
+		], terminator(IRTSwitch("value.subject", [
+			{
+				value: IRCInt(text),
+				edge: loopEdge
+			}
+			], loopEdge), file, 3), [], [], file);
+	}
+
+	/** Prove that a matching function ID from another raw graph cannot reuse a proof. */
+	static function requireValidatedFunctionOwnershipBoundary(validated:ValidatedHxcIRProgram, program:HxcIRProgram):Void {
+		validated.requireOwnedFunction(program.modules[0].functions[0]);
+		final foreign = semanticProgram(false).modules[0].functions[0];
+		var rejected = false;
+		try {
+			validated.requireOwnedFunction(foreign);
+		} catch (error:String) {
+			rejected = error.indexOf("does not belong to this program") != -1;
+		}
+		if (!rejected)
+			throw "validated HxcIR accepted a foreign raw function with a matching ID";
 	}
 
 	static function fullCleanupPath():Array<HxcIRCleanupStep> {
@@ -558,6 +839,24 @@ class HxcIRGolden {
 		];
 		return {
 			schemaVersion: HxcIRValidator.SCHEMA_VERSION,
+			dynamicPlan: {
+				types: [
+					{
+						id: "dynamic.type.int",
+						typeId: 1,
+						sourceType: IRTInt(32, true),
+						category: IRDCInt,
+						storage: IRDSInlineInt32,
+						source: span(COVERAGE_SOURCE, 19)
+					}
+				],
+				members: [],
+				callShapes: [],
+				operations: [
+					{id: "dynamic.operation.box-int", kind: IRDOKBox("dynamic.type.int"), source: span(COVERAGE_SOURCE, 19)},
+					{id: "dynamic.operation.unbox-int", kind: IRDOKUnbox("dynamic.type.int"), source: span(COVERAGE_SOURCE, 19)}
+				]
+			},
 			dispatch: {
 				layouts: [
 					{
@@ -635,7 +934,269 @@ class HxcIRGolden {
 	}
 
 	/**
-		Exercise the schema-23 exact-root contract without involving C emission.
+		Exercise every schema-27 Dynamic operation without selecting a C carrier.
+
+		The object and function adapters use typed managed wrappers, so every
+		Dynamic value has one explicit `dynamic-payload` root. This proves that the
+		semantic plan, checked failures, value order, and collector projection agree
+		before runtime representation or C spelling exists.
+	**/
+	static function dynamicContractProgram():HxcIRProgram {
+		final source = span(COVERAGE_SOURCE, 76);
+		final objectType:HxcIRTypeDeclaration = {
+			id: "type.dynamic-object",
+			displayName: "coverage.DynamicObject",
+			kind: IRTKAggregate([
+				{
+					name: "value",
+					type: IRTInt(32, true),
+					mutable: true,
+					source: source
+				}
+			]),
+			source: source
+		};
+		final objectInstance:HxcIRTypeInstance = {
+			id: "instance.dynamic-object",
+			declarationId: objectType.id,
+			arguments: [],
+			representation: IRRDirect,
+			source: source
+		};
+		final failure:HxcIRFailureEdge = {
+			kind: IRFResultError,
+			target: IRFTBlock("result-error"),
+			arguments: [],
+			cleanup: []
+		};
+		final instructions:Array<HxcIRInstruction> = [
+			instruction("dynamic.01.box", result("value.boxed", IRTDynamic), IRIODynamic(IRDBox("value.int", "dynamic.operation.box-int")), COVERAGE_SOURCE,
+				76),
+			instruction("dynamic.02.unbox", result("value.unboxed", IRTInt(32, true)),
+				IRIODynamic(IRDUnbox("value.boxed", "dynamic.operation.unbox-int", failure)), COVERAGE_SOURCE, 76),
+			instruction("dynamic.03.get", result("value.got", IRTDynamic), IRIODynamic(IRDGet("value.receiver", "dynamic.operation.get-field", failure)),
+				COVERAGE_SOURCE, 76),
+			instruction("dynamic.04.set", result("value.set", IRTDynamic),
+				IRIODynamic(IRDSet("value.receiver", "value.member", "dynamic.operation.set-field", failure)), COVERAGE_SOURCE, 76),
+			instruction("dynamic.05.call", result("value.called", IRTDynamic),
+				IRIODynamic(IRDCall("value.callable", ["value.argument"], "dynamic.operation.call-function", failure)), COVERAGE_SOURCE, 76),
+			instruction("dynamic.06.invoke", result("value.invoked", IRTDynamic),
+				IRIODynamic(IRDInvoke("value.receiver", ["value.argument"], "dynamic.operation.invoke-method", failure)), COVERAGE_SOURCE, 76),
+			instruction("dynamic.07.equal", result("value.equal", IRTBool),
+				IRIODynamic(IRDEqual("value.boxed", "value.argument", "dynamic.operation.equal-int")), COVERAGE_SOURCE, 76)
+		];
+		final rootedValues = [
+			"value.receiver",
+			"value.member",
+			"value.callable",
+			"value.argument",
+			"value.boxed",
+			"value.got",
+			"value.set",
+			"value.called",
+			"value.invoked"
+		];
+		final roots:Array<HxcIRManagedRoot> = [];
+		for (valueId in rootedValues)
+			roots.push({
+				id: 'root.$valueId',
+				valueId: valueId,
+				projections: [IRMRPDynamicPayload],
+				source: source
+			});
+		final fn:HxcIRFunction = {
+			id: "fn.dynamic-contract",
+			displayName: "coverage.dynamicContract",
+			parameters: [
+				parameter("value.int", IRTInt(32, true), COVERAGE_SOURCE, 76),
+				parameter("value.receiver", IRTDynamic, COVERAGE_SOURCE, 76),
+				parameter("value.member", IRTDynamic, COVERAGE_SOURCE, 76),
+				parameter("value.callable", IRTDynamic, COVERAGE_SOURCE, 76),
+				parameter("value.argument", IRTDynamic, COVERAGE_SOURCE, 76)
+			],
+			borrowedClassParameterIds: [],
+			borrowedClassLocalIds: [],
+			managedRoots: roots,
+			locals: [],
+			returnType: IRTVoid,
+			failureConvention: IRFCInfallible,
+			entryBlockId: "entry",
+			blocks: [
+				{
+					id: "entry",
+					parameters: [],
+					instructions: instructions,
+					terminator: terminator(IRTReturn(null, []), COVERAGE_SOURCE, 76),
+					source: source
+				},
+				{
+					id: "result-error",
+					parameters: [],
+					instructions: [],
+					terminator: terminator(IRTReturn(null, []), COVERAGE_SOURCE, 76),
+					source: source
+				}
+			],
+			cleanupRegions: [],
+			source: source
+		};
+		return {
+			schemaVersion: HxcIRValidator.SCHEMA_VERSION,
+			dynamicPlan: {
+				types: [
+					{
+						id: "dynamic.type.function",
+						typeId: 3,
+						sourceType: IRTFunction([IRTInt(32, true)], IRTInt(32, true)),
+						category: IRDCFunction,
+						storage: IRDSManagedWrapper,
+						source: source
+					},
+					{
+						id: "dynamic.type.int",
+						typeId: 1,
+						sourceType: IRTInt(32, true),
+						category: IRDCInt,
+						storage: IRDSInlineInt32,
+						source: source
+					},
+					{
+						id: "dynamic.type.null",
+						typeId: 0,
+						category: IRDCNull,
+						storage: IRDSInlineNull,
+						source: source
+					},
+					{
+						id: "dynamic.type.object",
+						typeId: 2,
+						sourceType: IRTInstance(objectInstance.id),
+						category: IRDCObject,
+						storage: IRDSManagedWrapper,
+						source: source
+					}
+				],
+				members: [
+					{
+						id: "dynamic.member.field",
+						ownerTypeId: "dynamic.type.object",
+						token: 1,
+						sourceName: "value",
+						kind: IRDMField("dynamic.type.int", true),
+						source: source
+					},
+					{
+						id: "dynamic.member.method",
+						ownerTypeId: "dynamic.type.object",
+						token: 2,
+						sourceName: "measure",
+						kind: IRDMMethod(["dynamic.shape.int-to-int"]),
+						source: source
+					}
+				],
+				callShapes: [
+					{
+						id: "dynamic.shape.int-to-int",
+						parameterTypeIds: ["dynamic.type.int"],
+						resultTypeId: "dynamic.type.int",
+						source: source
+					}
+				],
+				operations: [
+					{id: "dynamic.operation.box-int", kind: IRDOKBox("dynamic.type.int"), source: source},
+					{
+						id: "dynamic.operation.call-function",
+						kind: IRDOKCall("dynamic.type.function", "dynamic.shape.int-to-int"),
+						source: source
+					},
+					{id: "dynamic.operation.equal-int", kind: IRDOKEqual("dynamic.type.int", "dynamic.type.int"), source: source},
+					{id: "dynamic.operation.get-field", kind: IRDOKGet("dynamic.member.field"), source: source},
+					{
+						id: "dynamic.operation.invoke-method",
+						kind: IRDOKInvoke("dynamic.member.method", "dynamic.shape.int-to-int"),
+						source: source
+					},
+					{id: "dynamic.operation.set-field", kind: IRDOKSet("dynamic.member.field"), source: source},
+					{id: "dynamic.operation.unbox-int", kind: IRDOKUnbox("dynamic.type.int"), source: source}
+				]
+			},
+			dispatch: emptyDispatch(),
+			modules: [
+				{
+					id: "coverage.DynamicContract",
+					types: [objectType],
+					typeInstances: [objectInstance],
+					globals: [],
+					functions: [fn],
+					source: source
+				}
+			]
+		};
+	}
+
+	static function dynamicContractWrongOperationProgram():HxcIRProgram {
+		final program = dynamicContractProgram();
+		final instructions = program.modules[0].functions[0].blocks[0].instructions;
+		final original = instructions[0];
+		instructions[0] = {
+			id: original.id,
+			result: original.result,
+			kind: IRIODynamic(IRDBox("value.int", "dynamic.operation.unbox-int")),
+			source: original.source
+		};
+		return program;
+	}
+
+	static function dynamicContractMissingRootProgram():HxcIRProgram {
+		final program = dynamicContractProgram();
+		final roots = program.modules[0].functions[0].managedRoots;
+		if (roots == null)
+			throw "Dynamic contract fixture lost its roots";
+		roots.pop();
+		return program;
+	}
+
+	static function dynamicContractWrongFailureProgram():HxcIRProgram {
+		final program = dynamicContractProgram();
+		final wrongFailure:HxcIRFailureEdge = {
+			kind: IRFNativeStatus,
+			target: IRFTBlock("result-error"),
+			arguments: [],
+			cleanup: []
+		};
+		final instructions = program.modules[0].functions[0].blocks[0].instructions;
+		final original = instructions[1];
+		instructions[1] = {
+			id: original.id,
+			result: original.result,
+			kind: IRIODynamic(IRDUnbox("value.boxed", "dynamic.operation.unbox-int", wrongFailure)),
+			source: original.source
+		};
+		return program;
+	}
+
+	static function dynamicContractManagedGlobalProgram():HxcIRProgram {
+		final program = dynamicContractProgram();
+		program.modules[0].globals.push({
+			id: "global.dynamic",
+			type: IRTDynamic,
+			mutable: true,
+			initialization: IRGIUninitialized,
+			source: span(COVERAGE_SOURCE, 76)
+		});
+		return program;
+	}
+
+	static function genericDynamicConversionProgram():HxcIRProgram {
+		final file = "test/negative/GenericDynamicConversion.hx";
+		return minimalProgram("invalid.GenericDynamicConversion", [
+			instruction("value.one", result("value.one", IRTInt(32, true)), IRIOConstant(IRCInt("1")), file, 2),
+			instruction("bad.box", result("value.boxed", IRTDynamic), IRIOConvert("value.one", IRCBox, IRTDynamic, IRIRuntime("dynamic"), null), file, 3)
+		], terminator(IRTReturn(null, []), file, 4), [], [], file);
+	}
+
+	/**
+		Exercise the schema-27 exact-root contract without involving C emission.
 
 		The negative variant deliberately roots an Int. A collector cannot learn
 		anything from that address-shaped mistake, so validation must reject it
@@ -689,6 +1250,7 @@ class HxcIRGolden {
 		};
 		return {
 			schemaVersion: HxcIRValidator.SCHEMA_VERSION,
+			dynamicPlan: emptyDynamic(),
 			dispatch: emptyDispatch(),
 			modules: [
 				{
@@ -885,10 +1447,10 @@ class HxcIRGolden {
 							IRIOConvert("value.one", IRCNullableInject, IRTNullable(IRTInt(32, true), IRNTagged), IRIStatic, null), COVERAGE_SOURCE, 19),
 						instruction("c01.nullable-unwrap", result("value.unwrapped-one", IRTInt(32, true)),
 							IRIOConvert("value.nullable-one", IRCNullableUnwrap, IRTInt(32, true), IRIStatic, resultFailure), COVERAGE_SOURCE, 19),
-						instruction("c01.box", result("value.boxed", IRTDynamic), IRIOConvert("value.one", IRCBox, IRTDynamic, IRIRuntime("dynamic"), null),
+						instruction("c01.box", result("value.boxed", IRTDynamic), IRIODynamic(IRDBox("value.one", "dynamic.operation.box-int")),
 							COVERAGE_SOURCE, 19),
 						instruction("c01.unbox", result("value.unboxed", IRTInt(32, true)),
-							IRIOConvert("value.boxed", IRCUnbox, IRTInt(32, true), IRIRuntime("dynamic"), null), COVERAGE_SOURCE, 19),
+							IRIODynamic(IRDUnbox("value.boxed", "dynamic.operation.unbox-int", resultFailure)), COVERAGE_SOURCE, 19),
 						instruction("c02.function-reference", result("value.direct-callable", IRTFunction([], IRTVoid)),
 							IRIOFunctionReference("fn.coverage.target"), COVERAGE_SOURCE, 20),
 						instruction("c02.function-reference-call", null, IRIOCall(call(IRCDClosure("value.direct-callable"), [], IRTVoid)), COVERAGE_SOURCE,
@@ -1098,6 +1660,7 @@ class HxcIRGolden {
 		};
 		return {
 			schemaVersion: HxcIRValidator.SCHEMA_VERSION,
+			dynamicPlan: emptyDynamic(),
 			dispatch: emptyDispatch(),
 			modules: [
 				{
@@ -1165,6 +1728,7 @@ class HxcIRGolden {
 		};
 		return {
 			schemaVersion: HxcIRValidator.SCHEMA_VERSION,
+			dynamicPlan: emptyDynamic(),
 			dispatch: emptyDispatch(),
 			modules: [
 				{
@@ -1267,6 +1831,81 @@ class HxcIRGolden {
 		return minimalProgram("invalid.ConstantTypeMismatch", [
 			instruction("bad.constant", result("value.bad", IRTInt(32, true)), IRIOConstant(IRCBool(true)), file, 2)
 		], terminator(IRTReturn(null, []), file, 3), [], [], file);
+	}
+
+	/** An exact node view preserves its source root and cannot forge a GC owner. */
+	static function checkCollectorNodeViews(validator:HxcIRValidator):Void {
+		final program = collectorNodeViewProgram(NodeViewValid);
+		validator.requireValid(program, PROFILE);
+		final paths = new HxcIRManagedRootPaths(program).collect(IRTInstance("instance.node-value"));
+		if (paths.length != 1 || HxcIRManagedRootPaths.key(paths[0]) != "tag(instance.node-value,Link,0)")
+			throw "recursive node root planning lost its finite exact child pointer";
+		for (mutation in [NodeViewReverse, NodeViewOtherDeclaration, NodeViewOtherArguments])
+			requireInvalidMarker(collectorNodeViewProgram(mutation), "pointer conversion may only preserve its pointee type",
+				"collector node view must preserve exact layout and ownership direction");
+	}
+
+	/** Build a pointer view with one recursive tag and independently chosen identities. */
+	static function collectorNodeViewProgram(mutation:CollectorNodeViewMutation):HxcIRProgram {
+		final file = "test/hxc_ir/fixtures/CollectorNodeView.hx";
+		final source = span(file, 1, 8);
+		final nodeType = IRTPointer(IRTInstance("instance.node-storage"), true);
+		final valueType = IRTPointer(IRTInstance("instance.node-value"), true);
+		final fromType = mutation == NodeViewReverse ? valueType : nodeType;
+		final toType = mutation == NodeViewReverse ? nodeType : valueType;
+		final program = minimalProgram("coverage.CollectorNodeView", [
+			instruction("view", result("value.view", toType), IRIOConvert("parameter.node", IRCPointer, toType, IRIStatic, null), file, 2)
+		], terminator(IRTReturn(null, []), file, 3), [], [], file);
+		final module = program.modules[0];
+		module.types.push({
+			id: "type.node-value",
+			displayName: "NodeValue",
+			kind: IRTKTaggedUnion([
+				{
+					name: "End",
+					tagValue: 0,
+					payload: [],
+					source: source
+				},
+				{
+					name: "Link",
+					tagValue: 1,
+					payload: [{name: "child", type: nodeType, source: source}],
+					source: source
+				}
+			]),
+			source: source
+		});
+		module.types.push({
+			id: "type.other-value",
+			displayName: "OtherValue",
+			kind: IRTKTaggedUnion([
+				{
+					name: "End",
+					tagValue: 0,
+					payload: [],
+					source: source
+				}
+			]),
+			source: source
+		});
+		module.typeInstances.push({
+			id: "instance.node-storage",
+			declarationId: "type.node-value",
+			arguments: [IRTInt(32, true)],
+			representation: IRRManaged("gc"),
+			source: source
+		});
+		module.typeInstances.push({
+			id: "instance.node-value",
+			declarationId: mutation == NodeViewOtherDeclaration ? "type.other-value" : "type.node-value",
+			arguments: [mutation == NodeViewOtherArguments ? IRTBool : IRTInt(32, true)],
+			representation: IRRTagged,
+			source: source
+		});
+		module.functions[0].parameters.push(parameter("parameter.node", fromType, file, 1));
+		new HxcIRManagedRootPlanner().run(program);
+		return program;
 	}
 
 	/**
@@ -1993,6 +2632,75 @@ class HxcIRGolden {
 			representation: IRRDirect,
 			source: span(file, 1)
 		});
+		return program;
+	}
+
+	/**
+	 * Build the smallest explicit mutable-record borrow and malformed neighbors.
+	 *
+	 * The valid shape initializes one automatic pointer alias, reloads it, and
+	 * stores through a mutable field. Variants independently test non-null ABI,
+	 * field mutability, and the rule that caller-owned storage cannot be returned.
+	 */
+	static function mutableAggregateBorrowProgram(mutation:MutableAggregateBorrowMutation):HxcIRProgram {
+		final file = mutation == MutableBorrowValid ? "test/hxc_ir/fixtures/MutableAggregateBorrow.hx" : "test/negative/MutableAggregateBorrow.hx";
+		final nullable = mutation == MutableBorrowNullableParameter;
+		final pointerType = IRTPointer(IRTInstance("instance.record"), nullable);
+		final instructions = [
+			instruction("borrow.alias-initialize", null, IRIOInitialize(IRPLocal("local.borrow"), "value.borrowed", IRISUninitialized, IRISInitialized), file,
+				2),
+			instruction("borrow.alias-load", result("value.reloaded", pointerType), IRIOLoad(IRPLocal("local.borrow")), file, 3),
+			instruction("borrow.field-store", null, IRIOStore(IRPField(IRPDereference("value.reloaded"), "x"), "value.next"), file, 4)
+		];
+		final program = aggregateProgram(file, instructions, [local("local.borrow", pointerType, IRLSAutomatic, IRISUninitialized, file, 1)],
+			"fixture.MutableAggregateBorrow");
+		final declaration = program.modules[0].types[0];
+		program.modules[0].types[0] = switch declaration.kind {
+			case IRTKAggregate(fields):
+				{
+					id: declaration.id,
+					displayName: declaration.displayName,
+					kind: IRTKAggregate([
+						{
+							name: fields[0].name,
+							type: fields[0].type,
+							mutable: mutation != MutableBorrowImmutableField,
+							source: fields[0].source
+						},
+						fields[1]
+					]),
+					source: declaration.source
+				};
+			case _: declaration;
+		};
+		final fn = program.modules[0].functions[0];
+		fn.parameters.push(parameter("value.borrowed", pointerType, file, 1));
+		fn.parameters.push(parameter("value.next", IRTInt(32, true), file, 1));
+		final borrowParameters = fn.mutableAggregateBorrowParameterIds;
+		final borrowLocals = fn.mutableAggregateBorrowLocalIds;
+		if (borrowParameters == null || borrowLocals == null)
+			throw "mutable-record borrow fixture lost its explicit ownership lists";
+		borrowParameters.push("value.borrowed");
+		borrowLocals.push("local.borrow");
+		if (mutation == MutableBorrowReturnEscape) {
+			program.modules[0].functions[0] = {
+				id: fn.id,
+				displayName: fn.displayName,
+				parameters: fn.parameters,
+				borrowedClassParameterIds: fn.borrowedClassParameterIds,
+				mutableAggregateBorrowParameterIds: borrowParameters,
+				borrowedClassLocalIds: fn.borrowedClassLocalIds,
+				mutableAggregateBorrowLocalIds: borrowLocals,
+				managedRoots: fn.managedRoots,
+				locals: fn.locals,
+				returnType: pointerType,
+				failureConvention: fn.failureConvention,
+				entryBlockId: fn.entryBlockId,
+				blocks: [block("entry", instructions, IRTReturn("value.borrowed", []), file, 5)],
+				cleanupRegions: fn.cleanupRegions,
+				source: fn.source
+			};
+		}
 		return program;
 	}
 
@@ -2970,6 +3678,7 @@ class HxcIRGolden {
 		};
 		return {
 			schemaVersion: HxcIRValidator.SCHEMA_VERSION,
+			dynamicPlan: emptyDynamic(),
 			dispatch: emptyDispatch(),
 			modules: [
 				{
@@ -3042,6 +3751,7 @@ class HxcIRGolden {
 		};
 		return {
 			schemaVersion: HxcIRValidator.SCHEMA_VERSION,
+			dynamicPlan: emptyDynamic(),
 			dispatch: emptyDispatch(),
 			modules: [
 				{
@@ -3111,6 +3821,7 @@ class HxcIRGolden {
 		};
 		return {
 			schemaVersion: HxcIRValidator.SCHEMA_VERSION,
+			dynamicPlan: emptyDynamic(),
 			dispatch: emptyDispatch(),
 			modules: [
 				{
@@ -3197,6 +3908,7 @@ class HxcIRGolden {
 		};
 		return {
 			schemaVersion: HxcIRValidator.SCHEMA_VERSION,
+			dynamicPlan: emptyDynamic(),
 			dispatch: emptyDispatch(),
 			modules: [
 				{
@@ -3291,6 +4003,7 @@ class HxcIRGolden {
 		};
 		return {
 			schemaVersion: HxcIRValidator.SCHEMA_VERSION,
+			dynamicPlan: emptyDynamic(),
 			dispatch: emptyDispatch(),
 			modules: [
 				{
@@ -3352,6 +4065,7 @@ class HxcIRGolden {
 		};
 		return {
 			schemaVersion: HxcIRValidator.SCHEMA_VERSION,
+			dynamicPlan: emptyDynamic(),
 			dispatch: emptyDispatch(),
 			modules: [
 				{
@@ -3472,12 +4186,31 @@ class HxcIRGolden {
 		return program;
 	}
 
+	/** Reject a runtime strategy that owns neither a handler frame nor an unwind. */
+	static function containedExceptionWithoutRegionProgram():HxcIRProgram {
+		final file = "test/hxc_ir/fixtures/InvalidContainedException.hx";
+		return minimalProgram("fixture.InvalidContainedException", [], terminator(IRTReturn(null, []), file, 2), [], [], file, null, null,
+			IRESContainedRuntime);
+	}
+
+	/** Reject an exception operation whose frame is absent from function metadata. */
+	static function unknownExceptionRegionProgram():HxcIRProgram {
+		final file = "test/hxc_ir/fixtures/UnknownExceptionRegion.hx";
+		return minimalProgram("fixture.UnknownExceptionRegion", [
+			instruction("exception.push", null, IRIOException(IREFramePush("exception.region.missing")), file, 2)
+		], terminator(IRTReturn(null, []), file, 3), [], [], file, null, null,
+			IRESContainedRuntime);
+	}
+
 	static function minimalProgram(moduleId:String, instructions:Array<HxcIRInstruction>, terminatorValue:Null<HxcIRTerminator>, locals:Array<HxcIRLocal>,
-			regions:Array<HxcIRCleanupRegion>, file:String, ?returnType:HxcIRTypeRef, ?failureConvention:HxcIRFunctionFailureConvention):HxcIRProgram {
+			regions:Array<HxcIRCleanupRegion>, file:String, ?returnType:HxcIRTypeRef, ?failureConvention:HxcIRFunctionFailureConvention,
+			?exceptionStrategy:HxcIRExceptionStrategy, ?exceptionRegions:Array<HxcIRExceptionRegion>,
+			?exceptionCleanups:Array<HxcIRExceptionCleanup>):HxcIRProgram {
 		final functionReturnType = returnType == null ? IRTVoid : returnType;
 		final functionFailureConvention = failureConvention == null ? IRFCInfallible : failureConvention;
 		return {
 			schemaVersion: HxcIRValidator.SCHEMA_VERSION,
+			dynamicPlan: emptyDynamic(),
 			dispatch: emptyDispatch(),
 			modules: [
 				{
@@ -3491,9 +4224,14 @@ class HxcIRGolden {
 							displayName: '$moduleId.main',
 							parameters: [],
 							borrowedClassParameterIds: [],
+							mutableAggregateBorrowParameterIds: [],
 							borrowedClassLocalIds: [],
+							mutableAggregateBorrowLocalIds: [],
 							managedRoots: [],
 							locals: locals,
+							exceptionStrategy: exceptionStrategy,
+							exceptionRegions: exceptionRegions == null ? [] : exceptionRegions,
+							exceptionCleanups: exceptionCleanups == null ? [] : exceptionCleanups,
 							returnType: functionReturnType,
 							failureConvention: functionFailureConvention,
 							entryBlockId: "entry",
@@ -3519,6 +4257,14 @@ class HxcIRGolden {
 	static function emptyDispatch():HxcIRDispatchPlan
 		return {layouts: [], slots: [], tables: []};
 
+	static function emptyDynamic():HxcIRDynamicPlan
+		return {
+			types: [],
+			members: [],
+			callShapes: [],
+			operations: []
+		};
+
 	static function invalidDiagnostics(program:HxcIRProgram):Array<String> {
 		final diagnostics = new HxcIRValidator().validate(program, PROFILE);
 		if (diagnostics.length == 0) {
@@ -3531,6 +4277,15 @@ class HxcIRGolden {
 			}
 		}
 		return diagnostics.map(diagnostic -> diagnostic.render());
+	}
+
+	/** Require one malformed focused fixture to expose its intended contract. */
+	static function requireInvalidMarker(program:HxcIRProgram, marker:String, label:String):Void {
+		final diagnostics = invalidDiagnostics(program);
+		for (diagnostic in diagnostics)
+			if (diagnostic.indexOf(marker) != -1)
+				return;
+		throw '$label did not report `$marker`';
 	}
 
 	static function voidFunction(id:String, displayName:String, file:String, line:Int, ?failureConvention:HxcIRFunctionFailureConvention):HxcIRFunction {

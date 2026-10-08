@@ -6,37 +6,37 @@
         "kind": "enum-constructor"
       },
       {
-        "count": 16,
+        "count": 25,
         "kind": "method-inline"
       },
       {
-        "count": 80,
+        "count": 77,
         "kind": "method-normal"
       },
       {
-        "count": 8,
+        "count": 12,
         "kind": "variable"
       }
     ],
     "expressionKinds": [
       {
-        "count": 2,
+        "count": 14,
         "kind": "array-access"
       },
       {
-        "count": 2,
+        "count": 3,
         "kind": "array-declaration"
       },
       {
-        "count": 10,
+        "count": 87,
         "kind": "binary-operator"
       },
       {
-        "count": 27,
+        "count": 56,
         "kind": "block"
       },
       {
-        "count": 15,
+        "count": 21,
         "kind": "call"
       },
       {
@@ -44,7 +44,7 @@
         "kind": "cast"
       },
       {
-        "count": 19,
+        "count": 108,
         "kind": "constant"
       },
       {
@@ -56,19 +56,19 @@
         "kind": "enum-parameter"
       },
       {
-        "count": 18,
+        "count": 55,
         "kind": "field-access"
       },
       {
-        "count": 19,
+        "count": 34,
         "kind": "function"
       },
       {
-        "count": 3,
+        "count": 25,
         "kind": "if"
       },
       {
-        "count": 53,
+        "count": 162,
         "kind": "local"
       },
       {
@@ -80,11 +80,15 @@
         "kind": "new"
       },
       {
-        "count": 6,
+        "count": 1,
+        "kind": "object-declaration"
+      },
+      {
+        "count": 35,
         "kind": "parenthesis"
       },
       {
-        "count": 17,
+        "count": 28,
         "kind": "return"
       },
       {
@@ -100,15 +104,15 @@
         "kind": "type-expression"
       },
       {
-        "count": 2,
+        "count": 12,
         "kind": "unary-operator"
       },
       {
-        "count": 17,
+        "count": 43,
         "kind": "variable"
       },
       {
-        "count": 2,
+        "count": 9,
         "kind": "while"
       }
     ],
@@ -146,6 +150,10 @@
         "kind": ":allow"
       },
       {
+        "count": 1,
+        "kind": ":coreApi"
+      },
+      {
         "count": 9,
         "kind": ":coreType"
       },
@@ -174,11 +182,7 @@
         "kind": ":forward.variance"
       },
       {
-        "count": 1,
-        "kind": ":ifFeature"
-      },
-      {
-        "count": 8,
+        "count": 6,
         "kind": ":keep"
       },
       {
@@ -214,21 +218,21 @@
         "kind": ":using"
       },
       {
-        "count": 2,
+        "count": 4,
         "kind": ":value"
       }
     ],
     "typeKinds": [
       {
-        "count": 114,
+        "count": 459,
         "kind": "abstract"
       },
       {
-        "count": 4,
+        "count": 5,
         "kind": "anonymous"
       },
       {
-        "count": 38,
+        "count": 67,
         "kind": "dynamic"
       },
       {
@@ -236,11 +240,11 @@
         "kind": "enum"
       },
       {
-        "count": 137,
+        "count": 164,
         "kind": "function"
       },
       {
-        "count": 55,
+        "count": 144,
         "kind": "instance"
       },
       {
@@ -250,6 +254,87 @@
     ]
   },
   "expressionRoots": [
+    {
+      "expressionKind": "function",
+      "typeKind": "function",
+      "ownerModulePath": "Array",
+      "sourceOrder": 1,
+      "fieldName": "concat",
+      "ownerDeclarationPath": "Array",
+      "role": "member"
+    },
+    {
+      "expressionKind": "function",
+      "typeKind": "function",
+      "ownerModulePath": "Array",
+      "sourceOrder": 5,
+      "fieldName": "reverse",
+      "ownerDeclarationPath": "Array",
+      "role": "member"
+    },
+    {
+      "expressionKind": "function",
+      "typeKind": "function",
+      "ownerModulePath": "Array",
+      "sourceOrder": 7,
+      "fieldName": "slice",
+      "ownerDeclarationPath": "Array",
+      "role": "member"
+    },
+    {
+      "expressionKind": "function",
+      "typeKind": "function",
+      "ownerModulePath": "Array",
+      "sourceOrder": 10,
+      "fieldName": "toString",
+      "ownerDeclarationPath": "Array",
+      "role": "member"
+    },
+    {
+      "expressionKind": "function",
+      "typeKind": "function",
+      "ownerModulePath": "Array",
+      "sourceOrder": 11,
+      "fieldName": "unshift",
+      "ownerDeclarationPath": "Array",
+      "role": "member"
+    },
+    {
+      "expressionKind": "function",
+      "typeKind": "function",
+      "ownerModulePath": "Array",
+      "sourceOrder": 13,
+      "fieldName": "remove",
+      "ownerDeclarationPath": "Array",
+      "role": "member"
+    },
+    {
+      "expressionKind": "function",
+      "typeKind": "function",
+      "ownerModulePath": "Array",
+      "sourceOrder": 14,
+      "fieldName": "contains",
+      "ownerDeclarationPath": "Array",
+      "role": "member"
+    },
+    {
+      "expressionKind": "function",
+      "typeKind": "function",
+      "ownerModulePath": "Array",
+      "sourceOrder": 15,
+      "fieldName": "indexOf",
+      "ownerDeclarationPath": "Array",
+      "role": "member"
+    },
+    {
+      "expressionKind": "function",
+      "typeKind": "function",
+      "ownerModulePath": "Array",
+      "sourceOrder": 16,
+      "fieldName": "lastIndexOf",
+      "ownerDeclarationPath": "Array",
+      "role": "member"
+    },
     {
       "expressionKind": "function",
       "typeKind": "function",
@@ -438,6 +523,60 @@
       "fieldName": "getIndex",
       "ownerDeclarationPath": "haxe.EnumValueTools",
       "role": "static"
+    },
+    {
+      "expressionKind": "function",
+      "typeKind": "function",
+      "ownerModulePath": "haxe.iterators.ArrayIterator",
+      "sourceOrder": 0,
+      "fieldName": "new",
+      "ownerDeclarationPath": "haxe.iterators.ArrayIterator",
+      "role": "constructor"
+    },
+    {
+      "expressionKind": "function",
+      "typeKind": "function",
+      "ownerModulePath": "haxe.iterators.ArrayIterator",
+      "sourceOrder": 2,
+      "fieldName": "hasNext",
+      "ownerDeclarationPath": "haxe.iterators.ArrayIterator",
+      "role": "member"
+    },
+    {
+      "expressionKind": "function",
+      "typeKind": "function",
+      "ownerModulePath": "haxe.iterators.ArrayIterator",
+      "sourceOrder": 3,
+      "fieldName": "next",
+      "ownerDeclarationPath": "haxe.iterators.ArrayIterator",
+      "role": "member"
+    },
+    {
+      "expressionKind": "function",
+      "typeKind": "function",
+      "ownerModulePath": "haxe.iterators.ArrayKeyValueIterator",
+      "sourceOrder": 0,
+      "fieldName": "new",
+      "ownerDeclarationPath": "haxe.iterators.ArrayKeyValueIterator",
+      "role": "constructor"
+    },
+    {
+      "expressionKind": "function",
+      "typeKind": "function",
+      "ownerModulePath": "haxe.iterators.ArrayKeyValueIterator",
+      "sourceOrder": 2,
+      "fieldName": "hasNext",
+      "ownerDeclarationPath": "haxe.iterators.ArrayKeyValueIterator",
+      "role": "member"
+    },
+    {
+      "expressionKind": "function",
+      "typeKind": "function",
+      "ownerModulePath": "haxe.iterators.ArrayKeyValueIterator",
+      "sourceOrder": 3,
+      "fieldName": "next",
+      "ownerDeclarationPath": "haxe.iterators.ArrayKeyValueIterator",
+      "role": "member"
     }
   ],
   "modules": [
@@ -530,8 +669,8 @@
               "typeDisplay": "(a : Array<Array.T>) -> Array<Array.T>",
               "isPublic": true,
               "isExtern": false,
-              "kind": "method-normal",
-              "hasExpression": false,
+              "kind": "method-inline",
+              "hasExpression": true,
               "metadata": [],
               "role": "member"
             },
@@ -578,8 +717,8 @@
               "typeDisplay": "() -> Void",
               "isPublic": true,
               "isExtern": false,
-              "kind": "method-normal",
-              "hasExpression": false,
+              "kind": "method-inline",
+              "hasExpression": true,
               "metadata": [],
               "role": "member"
             },
@@ -602,8 +741,8 @@
               "typeDisplay": "(pos : Int, ?end : Null<Int>) -> Array<Array.T>",
               "isPublic": true,
               "isExtern": false,
-              "kind": "method-normal",
-              "hasExpression": false,
+              "kind": "method-inline",
+              "hasExpression": true,
               "metadata": [],
               "role": "member"
             },
@@ -638,8 +777,8 @@
               "typeDisplay": "() -> String",
               "isPublic": true,
               "isExtern": false,
-              "kind": "method-normal",
-              "hasExpression": false,
+              "kind": "method-inline",
+              "hasExpression": true,
               "metadata": [],
               "role": "member"
             },
@@ -650,8 +789,8 @@
               "typeDisplay": "(x : Array.T) -> Void",
               "isPublic": true,
               "isExtern": false,
-              "kind": "method-normal",
-              "hasExpression": false,
+              "kind": "method-inline",
+              "hasExpression": true,
               "metadata": [],
               "role": "member"
             },
@@ -674,8 +813,8 @@
               "typeDisplay": "(x : Array.T) -> Bool",
               "isPublic": true,
               "isExtern": false,
-              "kind": "method-normal",
-              "hasExpression": false,
+              "kind": "method-inline",
+              "hasExpression": true,
               "metadata": [],
               "role": "member"
             },
@@ -686,8 +825,8 @@
               "typeDisplay": "(x : Array.T) -> Bool",
               "isPublic": true,
               "isExtern": false,
-              "kind": "method-normal",
-              "hasExpression": false,
+              "kind": "method-inline",
+              "hasExpression": true,
               "metadata": [
                 {
                   "arguments": [],
@@ -703,8 +842,8 @@
               "typeDisplay": "(x : Array.T, ?fromIndex : Null<Int>) -> Int",
               "isPublic": true,
               "isExtern": false,
-              "kind": "method-normal",
-              "hasExpression": false,
+              "kind": "method-inline",
+              "hasExpression": true,
               "metadata": [],
               "role": "member"
             },
@@ -715,8 +854,8 @@
               "typeDisplay": "(x : Array.T, ?fromIndex : Null<Int>) -> Int",
               "isPublic": true,
               "isExtern": false,
-              "kind": "method-normal",
-              "hasExpression": false,
+              "kind": "method-inline",
+              "hasExpression": true,
               "metadata": [],
               "role": "member"
             },
@@ -829,7 +968,12 @@
           "representedTypeKind": null,
           "isExtern": true,
           "kind": "class",
-          "metadata": [],
+          "metadata": [
+            {
+              "arguments": [],
+              "name": ":coreApi"
+            }
+          ],
           "sourcePath": "Array.hx",
           "ownership": "primary"
         }
@@ -3025,7 +3169,75 @@
       "sourcePath": "haxe/iterators/ArrayIterator.hx",
       "declarations": [
         {
-          "fields": [],
+          "fields": [
+            {
+              "typeKind": "function",
+              "name": "new",
+              "sourceOrder": 0,
+              "typeDisplay": "(array : Array<haxe.iterators.ArrayIterator.T>) -> Void",
+              "isPublic": true,
+              "isExtern": false,
+              "kind": "method-normal",
+              "hasExpression": true,
+              "metadata": [],
+              "role": "constructor"
+            },
+            {
+              "typeKind": "instance",
+              "name": "array",
+              "sourceOrder": 0,
+              "typeDisplay": "Array<haxe.iterators.ArrayIterator.T>",
+              "isPublic": false,
+              "isExtern": false,
+              "kind": "variable",
+              "hasExpression": false,
+              "metadata": [],
+              "role": "member"
+            },
+            {
+              "typeKind": "abstract",
+              "name": "current",
+              "sourceOrder": 1,
+              "typeDisplay": "Int",
+              "isPublic": false,
+              "isExtern": false,
+              "kind": "variable",
+              "hasExpression": false,
+              "metadata": [
+                {
+                  "arguments": [
+                    "0"
+                  ],
+                  "name": ":value"
+                }
+              ],
+              "role": "member"
+            },
+            {
+              "typeKind": "function",
+              "name": "hasNext",
+              "sourceOrder": 2,
+              "typeDisplay": "() -> Bool",
+              "isPublic": true,
+              "isExtern": false,
+              "kind": "method-normal",
+              "hasExpression": true,
+              "metadata": [],
+              "role": "member"
+            },
+            {
+              "typeKind": "function",
+              "name": "next",
+              "sourceOrder": 3,
+              "typeDisplay": "() -> haxe.iterators.ArrayIterator.T",
+              "isPublic": true,
+              "isExtern": false,
+              "kind": "method-normal",
+              "hasExpression": true,
+              "metadata": [],
+              "role": "member"
+            }
+          ],
           "classKind": "normal",
           "isAbstract": false,
           "ownerModulePath": "haxe.iterators.ArrayIterator",
@@ -3038,12 +3250,7 @@
           "representedTypeKind": null,
           "isExtern": false,
           "kind": "class",
-          "metadata": [
-            {
-              "arguments": [],
-              "name": ":keep"
-            }
-          ],
+          "metadata": [],
           "sourcePath": "haxe/iterators/ArrayIterator.hx",
           "ownership": "primary"
         }
@@ -3054,7 +3261,75 @@
       "sourcePath": "haxe/iterators/ArrayKeyValueIterator.hx",
       "declarations": [
         {
-          "fields": [],
+          "fields": [
+            {
+              "typeKind": "function",
+              "name": "new",
+              "sourceOrder": 0,
+              "typeDisplay": "(array : Array<haxe.iterators.ArrayKeyValueIterator.T>) -> Void",
+              "isPublic": true,
+              "isExtern": false,
+              "kind": "method-normal",
+              "hasExpression": true,
+              "metadata": [],
+              "role": "constructor"
+            },
+            {
+              "typeKind": "instance",
+              "name": "array",
+              "sourceOrder": 0,
+              "typeDisplay": "Array<haxe.iterators.ArrayKeyValueIterator.T>",
+              "isPublic": false,
+              "isExtern": false,
+              "kind": "variable",
+              "hasExpression": false,
+              "metadata": [],
+              "role": "member"
+            },
+            {
+              "typeKind": "abstract",
+              "name": "current",
+              "sourceOrder": 1,
+              "typeDisplay": "Int",
+              "isPublic": false,
+              "isExtern": false,
+              "kind": "variable",
+              "hasExpression": false,
+              "metadata": [
+                {
+                  "arguments": [
+                    "0"
+                  ],
+                  "name": ":value"
+                }
+              ],
+              "role": "member"
+            },
+            {
+              "typeKind": "function",
+              "name": "hasNext",
+              "sourceOrder": 2,
+              "typeDisplay": "() -> Bool",
+              "isPublic": true,
+              "isExtern": false,
+              "kind": "method-normal",
+              "hasExpression": true,
+              "metadata": [],
+              "role": "member"
+            },
+            {
+              "typeKind": "function",
+              "name": "next",
+              "sourceOrder": 3,
+              "typeDisplay": "() -> { value : haxe.iterators.ArrayKeyValueIterator.T, key : Int }",
+              "isPublic": true,
+              "isExtern": false,
+              "kind": "method-normal",
+              "hasExpression": true,
+              "metadata": [],
+              "role": "member"
+            }
+          ],
           "classKind": "normal",
           "isAbstract": false,
           "ownerModulePath": "haxe.iterators.ArrayKeyValueIterator",
@@ -3067,19 +3342,7 @@
           "representedTypeKind": null,
           "isExtern": false,
           "kind": "class",
-          "metadata": [
-            {
-              "arguments": [],
-              "name": ":keep"
-            },
-            {
-              "arguments": [
-                "\"anon_read.keyValueIterator\"",
-                "\"dynamic_read.keyValueIterator\""
-              ],
-              "name": ":ifFeature"
-            }
-          ],
+          "metadata": [],
           "sourcePath": "haxe/iterators/ArrayKeyValueIterator.hx",
           "ownership": "primary"
         }
@@ -3089,10 +3352,10 @@
   "status": "normalized-typed-input-before-body-lowering",
   "schemaVersion": 1,
   "totals": {
-    "fields": 120,
-    "expressionRoots": 21,
+    "fields": 130,
+    "expressionRoots": 36,
     "modules": 19,
-    "expressions": 235,
+    "expressions": 716,
     "declarations": 42
   },
   "entryPoint": {

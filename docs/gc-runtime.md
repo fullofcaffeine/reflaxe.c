@@ -179,16 +179,17 @@ correctness-first backend, not a high-performance or low-latency collector.
 
 E4.T06 owns the backend, exact root/pin contracts, pressure behavior, reports,
 and selective `runtime-base + status + alloc + object + gc` package. HxcIR
-schema 24 records exact managed parameters, instruction results, and typed
-paths to managed references embedded in direct records, enums, or optionals; and
-generated functions emit balanced frames for normal and early propagated
-returns. The project emitter owns one request-local collector and main
+schema 27 records exact managed parameters, instruction results, call-bounded
+mutable-record borrows, and typed paths to managed references in direct records,
+enums, optionals, or a validated Dynamic payload. Typed-only programs keep the
+Dynamic plan empty. Generated functions emit balanced frames for normal and
+early propagated returns. The project emitter owns one request-local collector and main
 execution-context chain in unity, module-split, and package-coalesced layouts.
 It initializes them before the Haxe entry function and unregisters/disposes them
 afterward.
 
-`haxe_c-53k.2.1.2` connects this foundation to one bounded generated-Haxe
-graph: a concrete class used through `Array<Class>`. Whole-program
+`haxe_c-53k.2.1.2` first connected this foundation to one bounded generated-
+Haxe graph: a concrete class used through `Array<Class>`. Whole-program
 representation settling marks the class and array as collector-managed,
 generated `new` publishes its allocation in a root before construction, and
 exact descriptors trace class fields and live array slots. The class finalizer
@@ -200,6 +201,16 @@ collection, and checks that every remaining graph payload was reclaimed; both
 paths run under strict C11 and sanitizers. A runtime-none request rejects this
 graph, while the existing direct-class and primitive-array fixtures remain
 collector-free.
+
+`haxe_c-0t3q` extends that selection rule to cyclic value graphs. The compiler
+walks an Array's closed element type through records, optionals, and enum
+payloads. It promotes the Array to collector storage when the walk returns to
+the same Array specialization or reaches another collector-managed Array.
+Enum trace functions switch on the stored tag and inspect only the active
+payload. The generated fixture proves self-cycles, mutual cycles, explicit
+cycle breakup, deep graphs, and pressure collection through
+`Array -> enum -> record -> Array`. A structurally acyclic enum/record fixture
+keeps reference counting and does not select `object` or `gc`.
 
 This is still not general escaping-class support. Managed virtual hierarchies,
 interfaces, generic classes, inline owned-class fields, and other unproved

@@ -40,6 +40,14 @@ import reflaxe.c.runtime.RuntimeFeaturePackager.RuntimeArtifactSource;
 import reflaxe.c.runtime.RuntimeFeaturePlanner;
 import reflaxe.c.runtime.RuntimeFeatureRegistry;
 
+/**
+ * Builds the review snapshots for the selective runtime graph.
+ *
+ * The fixture starts from the typed catalog, asks the real planner for focused
+ * closures, packages those exact files, and prints canonical JSON for the
+ * Python native harness. This keeps graph, package, and native evidence under
+ * one deterministic owner.
+ */
 private typedef RuntimePackageFileRecord = {
 	final path:String;
 	final kind:GeneratedFileKind;
@@ -54,6 +62,7 @@ private typedef RuntimeFailureRecord = {
 	final blockers:Array<RuntimePolicyBlockerRecord>;
 }
 
+/** Exercises successful and malformed runtime plans before native compilation. */
 class RuntimeFeatureGraphGolden {
 	static inline final CATALOG_PREFIX = "HXC_RUNTIME_FEATURE_CATALOG=";
 	static inline final PLANS_PREFIX = "HXC_RUNTIME_FEATURE_PLANS=";
@@ -77,10 +86,16 @@ class RuntimeFeatureGraphGolden {
 		final array = planner.plan(featureRequest(CRuntimePolicy.Auto, [reason("fixture.array", "array")], []));
 		final intMap = planner.plan(featureRequest(CRuntimePolicy.Auto, [reason("fixture.int-map", "int-map")], []));
 		final stringMap = planner.plan(featureRequest(CRuntimePolicy.Auto, [reason("fixture.string-map", "string-map")], []));
+		final typedMap = planner.plan(featureRequest(CRuntimePolicy.Auto, [reason("fixture.typed-map", "typed-map")], []));
+		final objectMap = planner.plan(featureRequest(CRuntimePolicy.Auto, [reason("fixture.object-map", "object-map")], []));
+		final enumValueMap = planner.plan(featureRequest(CRuntimePolicy.Auto, [reason("fixture.enum-value-map", "enum-value-map")], []));
+		final stringLowerCase = planner.plan(featureRequest(CRuntimePolicy.Auto, [reason("fixture.string-lower-case", "string-lower-case")], []));
 		final stringFloat = planner.plan(featureRequest(CRuntimePolicy.Auto, [reason("fixture.string-float", "string-float")], []));
 		final stringSplit = planner.plan(featureRequest(CRuntimePolicy.Auto, [reason("fixture.string-split", "string-split")], []));
 		final bytes = planner.plan(featureRequest(CRuntimePolicy.Auto, [reason("fixture.bytes", "bytes")], []));
 		final bytesString = planner.plan(featureRequest(CRuntimePolicy.Auto, [reason("fixture.bytes-string", "bytes-string")], []));
+		final dynamicPlan = planner.plan(featureRequest(CRuntimePolicy.Auto, [reason("fixture.dynamic", "dynamic")], []));
+		final exceptionPlan = planner.plan(featureRequest(CRuntimePolicy.Auto, [reason("fixture.exception", "exception")], []));
 		final objectPlan = planner.plan(featureRequest(CRuntimePolicy.Auto, [reason("fixture.object", "object")], []));
 		final gc = planner.plan(featureRequest(CRuntimePolicy.Auto, [reason("fixture.gc", "gc")], []));
 		final stringScalar = planner.plan(featureRequest(CRuntimePolicy.Auto, [reason("fixture.string-scalar", "string-scalar")], []));
@@ -105,9 +120,13 @@ class RuntimeFeatureGraphGolden {
 		final arrayFiles = packager.packageFiles(array, repositorySource);
 		final intMapFiles = packager.packageFiles(intMap, repositorySource);
 		final stringMapFiles = packager.packageFiles(stringMap, repositorySource);
+		final typedMapFiles = packager.packageFiles(typedMap, repositorySource);
+		final stringLowerCaseFiles = packager.packageFiles(stringLowerCase, repositorySource);
 		final stringSplitFiles = packager.packageFiles(stringSplit, repositorySource);
 		final bytesFiles = packager.packageFiles(bytes, repositorySource);
 		final bytesStringFiles = packager.packageFiles(bytesString, repositorySource);
+		final dynamicFiles = packager.packageFiles(dynamicPlan, repositorySource);
+		final exceptionFiles = packager.packageFiles(exceptionPlan, repositorySource);
 		final objectFiles = packager.packageFiles(objectPlan, repositorySource);
 		final gcFiles = packager.packageFiles(gc, repositorySource);
 		final stringScalarFiles = packager.packageFiles(stringScalar, repositorySource);
@@ -157,10 +176,16 @@ class RuntimeFeatureGraphGolden {
 			array: array,
 			intMap: intMap,
 			stringMap: stringMap,
+			typedMap: typedMap,
+			objectMap: objectMap,
+			enumValueMap: enumValueMap,
+			stringLowerCase: stringLowerCase,
 			stringFloat: stringFloat,
 			stringSplit: stringSplit,
 			bytes: bytes,
 			bytesString: bytesString,
+			dynamicCarrier: dynamicPlan,
+			exception: exceptionPlan,
 			object: objectPlan,
 			gc: gc,
 			stringScalar: stringScalar,
@@ -208,9 +233,13 @@ class RuntimeFeatureGraphGolden {
 			array: packageRecords(arrayFiles),
 			intMap: packageRecords(intMapFiles),
 			stringMap: packageRecords(stringMapFiles),
+			typedMap: packageRecords(typedMapFiles),
+			stringLowerCase: packageRecords(stringLowerCaseFiles),
 			stringSplit: packageRecords(stringSplitFiles),
 			bytes: packageRecords(bytesFiles),
 			bytesString: packageRecords(bytesStringFiles),
+			dynamicCarrier: packageRecords(dynamicFiles),
+			exception: packageRecords(exceptionFiles),
 			object: packageRecords(objectFiles),
 			gc: packageRecords(gcFiles),
 			stringScalar: packageRecords(stringScalarFiles),

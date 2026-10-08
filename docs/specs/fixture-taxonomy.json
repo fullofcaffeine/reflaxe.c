@@ -28,6 +28,7 @@
         "bootstrap",
         "diagnostics",
         "hxc-configuration",
+        "hxc-project-templates",
         "typed-c",
         "c-import",
         "raylib-provisioning",
@@ -37,6 +38,7 @@
         "primitive-semantics",
         "stdlib-ledger",
         "body-lowering",
+        "exception-lowering",
         "function-lowering",
         "aggregate-lowering",
         "class-layout",
@@ -51,6 +53,7 @@
         "span-lowering",
         "project-layout",
         "runtime-feature-graph",
+        "date-time",
         "string-output",
         "hello",
         "caxecraft-domain"
@@ -71,6 +74,7 @@
         "bootstrap",
         "diagnostics",
         "hxc-configuration",
+        "hxc-project-templates",
         "typed-c",
         "c-import",
         "raylib-provisioning",
@@ -92,6 +96,7 @@
         "span-lowering",
         "project-layout",
         "runtime-feature-graph",
+        "date-time",
         "string-output"
       ]
     },
@@ -107,6 +112,7 @@
       ],
       "suiteIds": [
         "c-ast",
+        "c-ast-fuzz",
         "declaration-plan",
         "project-emitter",
         "hxc-ir",
@@ -171,7 +177,9 @@
         "c-import",
         "raylib-provisioning",
         "c-ast",
+        "c-ast-fuzz",
         "body-lowering",
+        "exception-lowering",
         "function-lowering",
         "aggregate-lowering",
         "class-layout",
@@ -187,11 +195,13 @@
         "span-lowering",
         "project-layout",
         "gc-runtime",
+        "runtime-stress",
         "runtime-feature-graph",
         "array-runtime",
         "string-map",
         "bytes-runtime",
         "string-runtime",
+        "date-time",
         "string-output",
         "hello",
         "caxecraft-domain"
@@ -209,6 +219,7 @@
       ],
       "suiteIds": [
         "hxc-ir",
+        "exception-lowering",
         "evaluation-order",
         "static-initialization",
         "arithmetic-semantics",
@@ -217,6 +228,7 @@
         "string-map",
         "bytes-runtime",
         "string-runtime",
+        "date-time",
         "string-output",
         "hello",
         "project-layout",
@@ -241,7 +253,8 @@
         "string-map",
         "bytes-runtime",
         "gc-runtime",
-        "string-runtime"
+        "string-runtime",
+        "date-time"
       ]
     },
     {
@@ -332,6 +345,25 @@
         "compiler defaults, environment presets, project values, named overlays, CLI flags, and direct defines resolve in documented order with source provenance on every effective field",
         "config-relative paths and effective reports are byte-stable across process cwd, CRLF, locale, input order, repeated cold runs, and warm compiler-server requests",
         "unknown or duplicate keys and defines, malformed JSON/Unicode, invalid values/combinations, and path traversal fail with HXC0003 before compilation without exposing a host path"
+      ]
+    },
+    {
+      "id": "hxc-project-templates",
+      "directory": "test/hxc_new",
+      "runner": [
+        "python3",
+        "test/hxc_new/run.py"
+      ],
+      "types": [
+        "positive",
+        "negative"
+      ],
+      "status": "active",
+      "assertions": [
+        "app, C export-intent library, and freestanding projects have deterministic file inventories and bytes across clean directories",
+        "every generated hxc.json passes the typed schema-1 loader and every generated Haxe module type-checks",
+        "default mode refuses existing targets, merge preserves existing template files, force replaces only template-owned files, and preflight conflicts leave no partial output",
+        "unsafe project, module, license, option, path-prefix, and symbolic-link inputs fail with stable CLI categories before an unintended write"
       ]
     },
     {
@@ -443,6 +475,24 @@
         "the direct AST corpus covers declarations, precedence, initializers, control flow, typed GNU attributes, and a structurally guarded header/source split",
         "the reusable argument-array harness records compiler family and version, normalized compile/link/run commands, source hashes, exit codes, stdout, and stderr without host paths",
         "required GCC and Clang native-smoke lanes compile, link, and run every corpus project without hxrt"
+      ]
+    },
+    {
+      "id": "c-ast-fuzz",
+      "directory": "test/c_ast/fuzz",
+      "runner": [
+        "python3",
+        "test/c_ast/run_fuzz.py"
+      ],
+      "types": [
+        "ast",
+        "runtime"
+      ],
+      "status": "active",
+      "assertions": [
+        "checked-in seeds and adversarial text produce prefix-stable structural C AST programs within explicit case, byte, process, and time limits",
+        "two Reflaxe-owned renders are byte-identical and a lexical observer rejects unterminated comments, strings, characters, or injected directives",
+        "identity-verified strict C11 compilers build and run every seed while a checked-in synthetic regression protects failure-prefix minimization"
       ]
     },
     {
@@ -591,6 +641,29 @@
       ]
     },
     {
+      "id": "exception-lowering",
+      "directory": "test/exception_lowering",
+      "runner": [
+        "python3",
+        "test/exception_lowering/run.py"
+      ],
+      "types": [
+        "positive",
+        "runtime",
+        "differential"
+      ],
+      "status": "active",
+      "assertions": [
+        "closed exact-type try/catch regions lower to explicit HxcIR exception continuations and ordinary C labels without selecting the exception runtime",
+        "nested catch and rethrow order matches pinned Haxe Eval, and an earlier incompatible exact catch introduces no payload storage",
+        "managed owners created inside a protected region release exactly once before its catch continuation while normal completion retains its separate cleanup path",
+        "the separately selectable strict-C11 exception runtime preserves nested same-thread frames, scalar and managed Dynamic payloads, reverse cleanup, partial initialization, recursive-raise rejection, and volatile live-across-setjmp state",
+        "generated cross-call unwinding removes skipped collector root frames, transfers the caught payload into an exact generated root slot, and tears down frames on normal return without releasing transferred owners",
+        "hxc_runtime=none rejects the contained strategy with its exception selection reason while closed exact-type regions remain runtime-free",
+        "runtime-free generated C and packaged runtime consumers compile and execute under available strict Clang and GCC identities at O0 and O2, while frame types remain forbidden from public application ABI"
+      ]
+    },
+    {
       "id": "function-lowering",
       "directory": "test/function_lowering",
       "runner": [
@@ -718,7 +791,7 @@
         "ordinary overridable calls through a base reference use one deterministic hierarchy slot, while final methods, final receiver classes, private methods, super calls, and @:nonVirtual methods remain direct with an explicit reason",
         "only constructed dynamic classes receive tables, only reachable virtual methods receive slots, the root alone owns the table pointer, and typed self adapters preserve exact implementation receiver types",
         "ordinary interface values lower to compact object-pointer plus table-pointer C structs; inherited methods retain the child interface identity, one concrete class may provide multiple interface tables, and an unused interface emits no table",
-        "schema-23 HxcIR retains root header intent, table binding, direct and indirect call choices, exact receiver values, child-interface to parent-interface table mappings, and representation-identical override signatures before structural strict C emission",
+        "schema-27 HxcIR retains root header intent, table binding, direct and indirect call choices, exact receiver values, child-interface to parent-interface table mappings, and representation-identical override signatures before structural strict C emission",
         "covariant return and contravariant argument overrides admitted by pinned Haxe fail closed at their source positions when their C representations differ, with HXC1001 and no generated artifact",
         "schema-2 hxc.dispatch.json explains every reachable class or interface instance call and is byte-identical across repeated roots, reversed modules, locale changes, portable/metal profiles, and runtime-none policy where configuration fields do not apply",
         "the dispatch slice selects no hxrt feature, exports no public ABI, and passes identity-verified GCC and Clang O0/O2 C11 execution plus strict C++17 private-header consumption"
@@ -760,6 +833,7 @@
         "python3",
         "test/generic_specialization/run.py"
       ],
+      "snapshotValidationTimeoutSeconds": 600,
       "types": [
         "positive",
         "negative",
@@ -886,7 +960,7 @@
         "typed nonempty CArray literals and positive compiler-known CArray.zero products lower to structural automatic C arrays, with zero storage emitted as a C11 aggregate initializer and no allocation or memset",
         "the shared fixed-array policy admits exact-size integer, binary32, or binary64 elements up to 65536 bytes per zero-initialized array and rejects invalid, unknown, overflowing, over-budget, or unsupported storage at exact source spans",
         "Span or ConstSpan borrows lower to typed pointer-and-length views without iterator objects; reached direct static parameters and nested forwarding retain one semantic HxcIR span argument plus an explicit callee borrow, while one final instance method may lend an immediate receiver-owned fixed-array field as a read-only return for direct consumption; strict C11 receives correctly qualified pointer-and-size_t values with no wrapper",
-        "compile-time and loop-guarded bounds proofs remain explicit in schema-23 HxcIR, statically out-of-range indexes fail before C emission, and dynamic local or parameter indexing emits a signed and size_t fail-stop check against the exact local or forwarded element count in every profile and build mode",
+        "compile-time and loop-guarded bounds proofs remain explicit in schema-27 HxcIR, statically out-of-range indexes fail before C emission, and dynamic local or parameter indexing emits a signed and size_t fail-stop check against the exact local or forwarded element count in every profile and build mode",
         "ordinary-Haxe 32 by 16 by 32 linearization, repeated UInt8 mutation, and exact-width span iteration compile to element-scaled guarded access whose generated C is byte-identical across profile and build mode",
         "mutable returns, local-owner returns, retaining a returned read-only view, field or global span storage, uncontracted instance or virtual dispatch, callbacks, recursion, and other language-level span escapes fail with source-positioned HXC1001, while exported or native ABI boundaries fail with source-positioned HXC3000; neither family leaves a plausible artifact",
         "portable and metal runtime-none projects carry a structured reachable-program proof and compile and execute as strict C11 under required GCC and Clang O0, O2, and sanitizer lanes with no allocation or hxrt artifact, include, library, or symbol",
@@ -938,6 +1012,26 @@
       ]
     },
     {
+      "id": "runtime-stress",
+      "directory": "test/runtime_stress",
+      "runner": [
+        "python3",
+        "test/runtime_stress/run.py"
+      ],
+      "types": [
+        "runtime"
+      ],
+      "status": "active",
+      "assertions": [
+        "one fixed seed and bounded limit drive repeatable String, Array, deep cyclic collector, and exception-cleanup stress",
+        "fail-at sweeps reach allocator allocate and reallocate callback classes and every observed allocation attempt in the required String, Array, and collector scenarios",
+        "each injected failure leaves no live allocation, release underflow, partial publication, or stale exception cleanup",
+        "malformed UTF-8 and invalid collector descriptors fail before allocation",
+        "strict C11 O0/O2 and address/undefined sanitizer reports are identical under every available identified compiler; leak sanitizer runs where the platform toolchain provides it",
+        "every failure names compiler identity, runtime ABI, selected feature set, seed, limit, and phase; operating-system thread stress remains explicitly inapplicable until the runtime has a thread feature"
+      ]
+    },
+    {
       "id": "array-runtime",
       "directory": "test/differential/array-runtime",
       "runner": [
@@ -975,7 +1069,7 @@
       "assertions": [
         "ordinary Haxe Bytes preserves shared mutation, independent sub copies, low-eight-bit writes, overlap-safe blit, and Haxe comparison under Eval and generated native C",
         "every signed position and range is checked before pointer arithmetic, invalid arguments remain distinct from out-of-range values, and output values stay unchanged on failure",
-        "an ordinary Haxe Bytes owner can lend NUL-terminated mutable storage to exactly one independent direct C call; schema-23 HxcIR rejects storage, return, indirect, second-call, temporary-owner, wrong-carrier, missing-intrinsic, and retained-declaration escapes",
+        "an ordinary Haxe Bytes owner can lend NUL-terminated mutable storage to exactly one independent direct C call; schema-27 HxcIR rejects storage, return, indirect, second-call, temporary-owner, wrong-carrier, missing-intrinsic, and retained-declaration escapes",
         "fresh and aliased owners retain and release explicitly while allocation rollback and final-release counts balance under failure injection and sanitizers",
         "the target _std declaration prevents early inlining without claiming unsupported methods, which fail at their Haxe source position and leave no plausible output",
         "the selected runtime closure contains only base, status, allocator, literal-view, and Bytes slices and links no Array, object, GC, reflection, or dynamic symbols"
@@ -995,11 +1089,11 @@
       ],
       "status": "active",
       "assertions": [
-        "ordinary Haxe Map<String, Bool>, Map<String, Int>, Map<String, FieldlessEnum>, and Map<String, ClosedRecord> preserve shared mutation, exact String content keys, stored zero/false versus absence, replacement, removal, clear, parameters, returned owners, and nested Array aliases under Eval and generated native C",
-        "validated HxcIR retains String plus exact Bool, signed Int, nominal enum, or closed-record specialization identity, nullable lookup, ownership, failure, and string-map runtime intent before C syntax is selected",
-        "generated C uses one typed hxc_string_map_ref pointer per map specialization, exact sizeof/_Alignof storage, byte copies for Bool, signed int32_t, and native enums, plus a complete type-specific copy/assign/destroy callback trio for records with managed children, without Dynamic or universal boxing",
+        "ordinary Haxe Map<String, Bool>, Map<String, Int>, Map<String, String>, Map<String, NominalString>, Map<String, FieldlessEnum>, and Map<String, ClosedRecord> preserve shared mutation, exact String content keys, stored zero/false versus absence, replacement, removal, clear, parameters, returned owners, and nested Array aliases under Eval and generated native C",
+        "validated HxcIR retains String plus exact Bool, signed Int, raw or nominal String, nominal enum, or closed-record specialization identity, nullable lookup, ownership, failure, and string-map runtime intent before C syntax is selected",
+        "generated C uses one typed hxc_string_map_ref pointer per map specialization, exact sizeof/_Alignof storage, byte copies for Bool, signed int32_t, and native enums, plus complete type-specific copy/assign/destroy callbacks for managed Strings and records with managed children, without Dynamic or universal boxing",
         "key copying, growth, replacement, injected allocation/callback failure, absent lookup, and malformed native calls preserve logical contents and balance allocator/value ownership under strict and sanitizer lanes",
-        "unsupported key/value families including Float, classes, and tagged payload enums, plus iteration and owner-replacing assignment, fail before output rather than emitting incomplete collection or pointer-lifetime semantics",
+        "unsupported key/value families including Float, classes hidden behind abstracts, and tagged payload enums, plus iteration and owner-replacing assignment, fail before output rather than emitting incomplete collection or pointer-lifetime semantics",
         "split, package, unity, reversed discovery, warm compiler-server, C++ private headers, runtime-none diagnostics, and selective symbols remain deterministic and fail closed"
       ]
     },
@@ -1025,6 +1119,29 @@
       ]
     },
     {
+      "id": "date-time",
+      "directory": "test/date_time",
+      "runner": [
+        "python3",
+        "test/date_time/run.py"
+      ],
+      "types": [
+        "positive",
+        "negative",
+        "runtime",
+        "differential",
+        "abi"
+      ],
+      "status": "active",
+      "assertions": [
+        "ordinary Date values preserve Float milliseconds, fresh object identity, deterministic Gregorian UTC fields, and Eval-compatible fractional projection without selecting hosted calendar services",
+        "hosted local constructors, timezone offsets, wall-clock milliseconds, and monotonic seconds use four distinct checked status/out operations with exact generated-C and runtime-plan evidence",
+        "three process-owned POSIX timezone rules cover UTC, a fractional positive offset, daylight transitions, missing local time, repeated local time, and one documented Eval offset inconsistency",
+        "strict C11, C++17 headers, and address plus undefined-behavior sanitizers cover the generated program and the allocation-free native adapter",
+        "time_t overflow, unsupported Date.fromString, freestanding, and WASI fail before plausible C output with exact source or runtime-policy diagnostics"
+      ]
+    },
+    {
       "id": "string-output",
       "directory": "test/string_output",
       "runner": [
@@ -1040,7 +1157,7 @@
       ],
       "status": "active",
       "assertions": [
-        "real typed String literals lower through schema-23 HxcIR into explicit UTF-8 byte-counted C values, including non-BMP scalars and embedded NUL",
+        "real typed String literals lower through schema-27 HxcIR into explicit UTF-8 byte-counted C values, including non-BMP scalars and embedded NUL",
         "literal Sys.println and default literal trace select only the dependency-closed runtime-base, status, string-literal, and io feature graph while allocator, full string operations, object, GC, dynamic, reflection, and exception machinery remains absent",
         "Sys.println also accepts a statically typed borrowed or freshly created runtime String, evaluates a fresh expression exactly once, and releases its owner on both successful output and fail-stop output failure",
         "portable auto and metal minimal builds emit source-rooted runtime diagnostics; runtime none reports all four sorted operation/surface/source blockers with both dependency chains before output; freestanding and neighboring unsupported surfaces fail closed",
@@ -1401,7 +1518,9 @@
           "test/enum_lowering/expected/program.h",
           "test/enum_lowering/expected/program.c",
           "test/enum_lowering/expected/enums.json",
-          "test/enum_lowering/expected/symbols.json"
+          "test/enum_lowering/expected/symbols.json",
+          "test/enum_lowering/expected/statement_early_return.hxcir",
+          "test/enum_lowering/expected/statement_early_return.c"
         ],
         "formats": [
           "c",

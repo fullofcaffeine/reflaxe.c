@@ -19,6 +19,7 @@ import caxecraft.scenario.Scenario;
 function changesFor(command:EditorCommand):Array<EditorChangeId> {
 	return switch command {
 		case SetTitle(_): [ChangedTitle];
+		case SetEnvironment(_): [ChangedDocument];
 		case ResizeWorld(_): [ChangedWorldShape];
 		case SetPaletteEntry(code, _): [ChangedPalette(code)];
 		case PaintVoxel(_, _) | EraseVoxel(_) | PaintVoxels(_, _) | EraseVoxels(_) | FillBounds(_, _): [ChangedTerrain];
@@ -26,7 +27,8 @@ function changesFor(command:EditorCommand):Array<EditorChangeId> {
 		case RemoveFluid(id): [ChangedFluid(id)];
 		case StampPrefab(id, _, _, _): [ChangedObject(id)];
 		case PutObject(object): [ChangedObject(object.id)];
-		case MoveObjectBy(id, _): [ChangedObject(id)];
+		case MoveObjectBy(id, _) | RotateObjectBy(id, _) | ResizeTriggerTo(id, _): [ChangedObject(id)];
+		case RenameObject(_, _): [ChangedDocument];
 		case RemoveObject(id): [ChangedObject(id)];
 		case PutDialogue(dialogue): [ChangedDialogue(dialogue.id)];
 		case RemoveDialogue(id): [ChangedDialogue(id)];
@@ -34,6 +36,8 @@ function changesFor(command:EditorCommand):Array<EditorChangeId> {
 		case RemoveObjective(id): [ChangedObjective(id)];
 		case PutRule(rule): [ChangedRule(rule.id)];
 		case RemoveRule(id): [ChangedRule(id)];
+		case PutFlowVariable(variable): [ChangedVariable(variable.id)];
+		case PutFlowSequence(sequence): [ChangedSequence(sequence.id)];
 		case SetDefaultLocale(_): [ChangedLocalization];
 		case PutLocale(locale): [ChangedLocale(locale.id)];
 		case RemoveLocale(locale): [ChangedLocale(locale)];
@@ -213,70 +217,50 @@ function sameNodeRef(left:EditorNodeRef, right:EditorNodeRef):Bool {
 
 private function sameChange(left:EditorChangeId, right:EditorChangeId):Bool {
 	return switch left {
-		case ChangedDocument:
-			switch right {
-				case ChangedDocument: true;
-				case _: false;
-			}
-		case ChangedTitle:
-			switch right {
-				case ChangedTitle: true;
-				case _: false;
-			}
-		case ChangedWorldShape:
-			switch right {
-				case ChangedWorldShape: true;
-				case _: false;
-			}
-		case ChangedTerrain:
-			switch right {
-				case ChangedTerrain: true;
-				case _: false;
-			}
-		case ChangedPalette(code):
-			switch right {
+		case ChangedDocument: right == ChangedDocument;
+		case ChangedTitle: right == ChangedTitle;
+		case ChangedWorldShape: right == ChangedWorldShape;
+		case ChangedTerrain: right == ChangedTerrain;
+		case ChangedPalette(code): switch right {
 				case ChangedPalette(other): code == other;
 				case _: false;
-			}
-		case ChangedFluid(id):
-			switch right {
+			};
+		case ChangedFluid(id): switch right {
 				case ChangedFluid(other): id.text() == other.text();
 				case _: false;
-			}
-		case ChangedObject(id):
-			switch right {
+			};
+		case ChangedObject(id): switch right {
 				case ChangedObject(other): id.text() == other.text();
 				case _: false;
-			}
-		case ChangedDialogue(id):
-			switch right {
+			};
+		case ChangedDialogue(id): switch right {
 				case ChangedDialogue(other): id.text() == other.text();
 				case _: false;
-			}
-		case ChangedObjective(id):
-			switch right {
+			};
+		case ChangedObjective(id): switch right {
 				case ChangedObjective(other): id.text() == other.text();
 				case _: false;
-			}
-		case ChangedRule(id):
-			switch right {
+			};
+		case ChangedVariable(id): switch right {
+				case ChangedVariable(other): id.text() == other.text();
+				case _: false;
+			};
+		case ChangedSequence(id): switch right {
+				case ChangedSequence(other): id.text() == other.text();
+				case _: false;
+			};
+		case ChangedRule(id): switch right {
 				case ChangedRule(other): id.text() == other.text();
 				case _: false;
-			}
-		case ChangedLocalization:
-			switch right {
-				case ChangedLocalization: true;
-				case _: false;
-			}
-		case ChangedLocale(id):
-			switch right {
+			};
+		case ChangedLocalization: right == ChangedLocalization;
+		case ChangedLocale(id): switch right {
 				case ChangedLocale(other): id.text() == other.text();
 				case _: false;
-			}
-		case ChangedMessage(locale, message):
-			switch right {
+			};
+		case ChangedMessage(locale, message): switch right {
 				case ChangedMessage(otherLocale, otherMessage): locale.text() == otherLocale.text() && message.text() == otherMessage.text();
 				case _: false;
-			}
+			};
 	};
 }

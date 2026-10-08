@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://haxe-c.dev/schemas/hxc-cli-response.schema.json",
+  "title": "hxc CLI response",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "command",
+    "status",
+    "exitCategory",
+    "exitCode",
+    "stdout",
+    "stderr",
+    "signal",
+    "diagnostics"
+  ],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "command": { "type": "string", "minLength": 1 },
+    "status": { "enum": ["ok", "error"] },
+    "exitCategory": {
+      "enum": ["success", "usage", "unavailable", "command", "internal"]
+    },
+    "exitCode": { "type": "integer", "minimum": 0, "maximum": 255 },
+    "stdout": { "type": "string" },
+    "stderr": { "type": "string" },
+    "signal": { "type": ["string", "null"] },
+    "diagnostics": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["code", "message", "remediation"],
+        "properties": {
+          "code": { "type": "string", "pattern": "^HXC-CLI-[0-9]{4}$" },
+          "message": { "type": "string", "minLength": 1 },
+          "remediation": { "type": "string", "minLength": 1 }
+        }
+      }
+    }
+  }
+}

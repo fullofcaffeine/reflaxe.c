@@ -32,6 +32,12 @@ class ASTFixtureCompiler {
 			new GeneratedFile("src/main.c", strict.printTranslationUnit(buildConsumerUnit()), GeneratedFileKind.Source)
 		];
 
+		writeFiles(outputDirectory, files);
+		Sys.println("c-ast-fixture-macro: OK");
+	}
+
+	/** Writes owned generated files through the same Reflaxe lifecycle as production output. */
+	public static function writeFiles(outputDirectory:String, files:Array<GeneratedFile>):Void {
 		final compiler = new ASTFixtureOutputCompiler(files);
 		compiler.setOptions({
 			fileOutputType: BaseCompilerFileOutputType.Manual,
@@ -41,7 +47,6 @@ class ASTFixtureCompiler {
 		});
 		compiler.setOutputDir(outputDirectory);
 		compiler.generateFiles();
-		Sys.println("c-ast-fixture-macro: OK");
 	}
 
 	static function buildAttributeUnit():CTranslationUnit {

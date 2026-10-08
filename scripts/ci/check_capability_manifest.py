@@ -620,9 +620,15 @@ def validate(root: Path, manifest: Manifest) -> list[str]:
         or not doctor.manifest_consumer_required
     ):
         errors.append("doctor contract must remain absent/unsupported and owned by E8.T06")
-    if (root / "src/Run.hx").exists() and not doctor.implemented:
+    cli = next(
+        (capability for capability in manifest.capabilities if capability.id == "hxc-cli"),
+        None,
+    )
+    if (root / "src/Run.hx").exists() != (
+        cli is not None and cli.status == "implemented"
+    ):
         errors.append(
-            "src/Run.hx exists while the manifest still says hxc doctor is absent"
+            "src/Run.hx and the implemented hxc-cli capability must exist together"
         )
     validate_owner(doctor.owner_beads, "doctor.ownerBeads", plan_keys, errors)
 
@@ -721,9 +727,6 @@ def validate(root: Path, manifest: Manifest) -> list[str]:
         or doctor.owner_beads not in doctor_capability.owners
     ):
         errors.append("hxc-doctor capability and doctor contract disagree")
-    if by_id.get("hxc-cli") is None or by_id["hxc-cli"].status != "unsupported":
-        errors.append("hxc-cli must remain explicitly unsupported while Run.hx is absent")
-
     try:
         readme = (root / README_PATH).read_text(encoding="utf-8")
     except (OSError, UnicodeError) as error:
@@ -749,12 +752,12 @@ def validate(root: Path, manifest: Manifest) -> list[str]:
     for required_prd_text in (
         "docs/specs/bootstrap-inventory.json",
         "Implemented | Scaffold-only | Experimental | Unsupported",
-        "No CLI source, schema, or template is present",
+        "The schema-1 router implements help, version, stable exits and JSON framing, deterministic app/library/embedded project creation, manifest-backed inspection, and schema-4 Clang semantic/ABI lock capture.",
     ):
         if required_prd_text not in prd:
             errors.append(f"docs/PRD.md lost capability contract: {required_prd_text}")
-    if "| Development runner and future CLI (`development-cli`) | `src/Run.hx`" in prd:
-        errors.append("docs/PRD.md still claims the absent Run.hx inventory seed")
+    if "No CLI source, schema, or template is present" in prd:
+        errors.append("docs/PRD.md still claims the implemented CLI source is absent")
 
     try:
         agents = (root / "AGENTS.md").read_text(encoding="utf-8")

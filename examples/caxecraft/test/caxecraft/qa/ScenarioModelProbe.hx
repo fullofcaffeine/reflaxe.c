@@ -112,7 +112,9 @@ final class ScenarioModelProbe {
 			TimerExpired(objectId),
 			ObjectiveChanged(objectId),
 			StateChanged(objectId),
-			ItemCollected(content)
+			ItemCollected(content),
+			LevelEntered(objectId),
+			CampaignExitRequested(otherId)
 		];
 		final scopes:Array<FlowScope> = [FlowScope.Map, FlowScope.Player, FlowScope.Quest, FlowScope.Local(otherId)];
 		final values:Array<FlowValue> = [FlowValue.Flag(false), FlowValue.Counter(0), FlowValue.State(content)];
@@ -130,7 +132,9 @@ final class ScenarioModelProbe {
 			InventoryHas(objectId, content, FlowComparison.Equal, 1),
 			ObjectiveIs(objectId, ObjectiveState.Active),
 			NearObject(objectId, otherId, 1000),
-			ModeIs(ScenarioMode.Creative)
+			ModeIs(ScenarioMode.Creative),
+			EventActorIs(objectId),
+			EventSweptIs(true)
 		];
 		final arguments:Array<FlowArgument> = [Value(FlowValue.Flag(true)), Variable(objectId)];
 		final tokenKinds:Array<ScenarioLexTokenKind> = [BareToken, QuotedText];
@@ -165,7 +169,7 @@ final class ScenarioModelProbe {
 			RuleAction(objectId, 0),
 			Extension(content, objectId)
 		];
-		final repeatPolicies:Array<FlowRepeatPolicy> = [Once, Repeat, Cooldown(1)];
+		final repeatPolicies:Array<FlowRepeatPolicy> = [Once, Repeat, Cooldown(1), OncePerActor, CooldownPerActor(1)];
 		final choice:FlowChoice = {weight: 1, actions: [EmitSignal(content)]};
 		final actions:Array<FlowAction> = [
 			ShowDialogue(objectId),
@@ -294,6 +298,7 @@ final class ScenarioModelProbe {
 			UnresolvedContent(content),
 			ImpossiblePlacement(objectId),
 			InvalidRule(objectId),
+			InvalidRuleReference(objectId, "event.zone", otherId, "trigger-zone"),
 			RuleCycle(objectId),
 			InvalidExtension(objectId),
 			EventBudgetExhausted(1),
@@ -523,6 +528,8 @@ final class ScenarioModelProbe {
 			case ObjectiveChanged(_): 9;
 			case StateChanged(_): 10;
 			case ItemCollected(_): 11;
+			case LevelEntered(_): 12;
+			case CampaignExitRequested(_): 13;
 		};
 
 	static function scopeCode(value:FlowScope):Int
@@ -571,6 +578,8 @@ final class ScenarioModelProbe {
 			case ObjectiveIs(_, _): 10;
 			case NearObject(_, _, _): 11;
 			case ModeIs(_): 12;
+			case EventActorIs(_): 13;
+			case EventSweptIs(_): 14;
 		};
 
 	static function actionCode(value:FlowAction):Int
@@ -648,6 +657,8 @@ final class ScenarioModelProbe {
 			case Once: 1;
 			case Repeat: 2;
 			case Cooldown(_): 3;
+			case OncePerActor: 4;
+			case CooldownPerActor(_): 5;
 		};
 
 	static function objectiveStateCode(value:ObjectiveState):Int
@@ -696,6 +707,7 @@ final class ScenarioModelProbe {
 			case UnresolvedContent(_): 16;
 			case ImpossiblePlacement(_): 17;
 			case InvalidRule(_): 18;
+			case InvalidRuleReference(_, _, _, _): 29;
 			case RuleCycle(_): 19;
 			case InvalidExtension(_): 20;
 			case EventBudgetExhausted(_): 21;

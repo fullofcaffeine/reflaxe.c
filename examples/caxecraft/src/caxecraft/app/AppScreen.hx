@@ -5,10 +5,12 @@ package caxecraft.app;
  *
  * This closed enum replaces loosely related Boolean values for title, pause,
  * editor, and pointer capture. Each variant describes one complete valid state:
- * the title, campaign-selection, pause, and editor screens stop simulation and
- * release the pointer, while playing advances simulation and captures it.
- * Keeping those rules here makes impossible combinations unrepresentable and
- * keeps Raylib device calls at the application edge.
+ * the title, campaign-selection, pause, and editor screens stop simulation,
+ * while playing advances simulation and captures the pointer. Editor releases
+ * the gameplay pointer; its Build workspace can temporarily capture a separate
+ * first-person editing pointer and releases it before a screen transition.
+ * Keeping the top-level rules here makes impossible simulation combinations
+ * unrepresentable and keeps gameplay pointer effects at the application edge.
  *
  * Loading is a real one-frame boundary between an authored campaign exit and
  * the checked level publication on the next outer frame. It pauses simulation

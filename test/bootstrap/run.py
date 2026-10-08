@@ -16,6 +16,11 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from scripts.test.bounded_process import run as run_bounded_process  # noqa: E402
+
 FIXTURE = Path(__file__).resolve().parent
 EXPECTED_TARGET_CONTRACT = FIXTURE / "expected/target-contract.json"
 PROBE_DEFINE = "reflaxe_c_lifecycle_probe"
@@ -54,7 +59,7 @@ def run(
         environment["HAXE_NO_SERVER"] = "1"
     else:
         environment.pop("HAXE_NO_SERVER", None)
-    result = subprocess.run(
+    result = run_bounded_process(
         command,
         cwd=cwd,
         env=environment,
@@ -375,7 +380,7 @@ def check_reversed_order_fails() -> None:
         "--custom-target",
         "c=bootstrap-probe-output",
     ]
-    result = subprocess.run(
+    result = run_bounded_process(
         command,
         cwd=FIXTURE,
         env={**os.environ, "HAXE_NO_SERVER": "1"},

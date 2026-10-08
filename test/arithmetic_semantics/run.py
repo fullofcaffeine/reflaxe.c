@@ -18,14 +18,22 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from scripts.test.bounded_process import run as run_bounded_process  # noqa: E402
+
 HXML = Path(__file__).with_name("arithmetic_semantics.hxml")
 ORACLE_HXML = Path(__file__).with_name("oracle.hxml")
 FIXTURE = Path(__file__).with_name("fixtures")
 EXPECTED = Path(__file__).with_name("expected")
 REPORT_PREFIX = "HXC_ARITHMETIC_SEMANTICS="
+# Eval's infinity-to-Int result varies by host. Its zero-divisor entry compares
+# equivalent Eval inputs; the independent native harness still requires INT32_MAX.
 EXPECTED_ORACLE = (
     "-2147483648,2147483647,-2,-2147483648,2147483648,0,-2147483648,-1,1,"
-    "85,95,90,-1,-1,3,0,2147483647,-2147483648,1,18,6\n"
+    "85,95,90,-1,-1,3,0,1,1,1,1,5,3,268435455,-268435456,357913941,"
+    "-357913941,0,-1,2147483647,71,5,1,-2147483648,5,5,0,2147483647,-2147483648,1,18,6\n"
 )
 STRICT_FLAGS = (
     "-std=c11",
@@ -51,6 +59,7 @@ SANITIZER_FLAGS = (
 EXPECTED_HELPERS = [
     "hxc.f64.divide.zero-safe",
     "hxc.f64.modulo",
+    "hxc.f64.sqrt",
     "hxc.f64.to.i32.saturating",
     "hxc.i32.add.wrapping",
     "hxc.i32.bit-and",
@@ -97,7 +106,7 @@ def render(
         raise ArithmeticSemanticsFailure(f"unknown arithmetic profile {profile!r}")
     environment = os.environ.copy()
     environment["HAXE_NO_SERVER"] = "1"
-    result = subprocess.run(
+    result = run_bounded_process(
         command,
         cwd=ROOT,
         env=environment,
@@ -250,6 +259,7 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
         ("haxe.i32.unsigned-shift-right.masked", 'program-local("hxc.i32.unsigned-shift-right.masked")'),
         ("haxe.f64.divide", 'program-local("hxc.f64.divide.zero-safe")'),
         ("haxe.f64.modulo", 'program-local("hxc.f64.modulo")'),
+        ("haxe.f64.sqrt", 'program-local("hxc.f64.sqrt")'),
         ("haxe.u32.add", "static"),
         ("haxe.u32.shift-left.masked", "static"),
         ("haxe.u32.unsigned-shift-right.masked", "static"),
@@ -285,6 +295,40 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
         hxcir,
     ) is None:
         raise ArithmeticSemanticsFailure("HxcIR lost the UB-safe Std.int conversion")
+    for field in (
+        "intQuotientByEight",
+        "intQuotientBySix",
+        "intQuotientByMaximum",
+        "intQuotientByOne",
+        "intQuotientSideEffect",
+    ):
+        marker = (
+            rf'function "function\.ArithmeticFixture\.{field}"[\s\S]+?'
+            r'operation="haxe\.i32\.divide\.positive-constant"[^\n]+'
+            r'implementation=static[\s\S]+?'
+            rf'end function "function\.ArithmeticFixture\.{field}"'
+        )
+        if re.search(marker, hxcir) is None:
+            raise ArithmeticSemanticsFailure(
+                f"{field} lost its proven direct integral division in HxcIR"
+            )
+    for field in (
+        "intQuotientByVariable",
+        "intQuotientByZero",
+        "intQuotientByNegativeOne",
+        "floatQuotientByEight",
+        "intQuotientThroughFloatCast",
+    ):
+        marker = (
+            rf'function "function\.ArithmeticFixture\.{field}"[\s\S]+?'
+            r'operation="haxe\.f64\.divide"[^\n]+'
+            r'program-local\("hxc\.f64\.divide\.zero-safe"\)[\s\S]+?'
+            rf'end function "function\.ArithmeticFixture\.{field}"'
+        )
+        if re.search(marker, hxcir) is None:
+            raise ArithmeticSemanticsFailure(
+                f"{field} incorrectly left the general floating division path"
+            )
     required_conversion_ir = (
         ("literalToU8", "numeric-wrapping", "u8"),
         ("i32ToU8", "numeric-wrapping", "u8"),
@@ -322,6 +366,7 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
         "INT32_MIN",
         "return NAN;",
         "return fmod(",
+        "return sqrt(",
     ):
         if marker not in header:
             raise ArithmeticSemanticsFailure(f"helper header lost {marker!r}")
@@ -371,6 +416,30 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
         if cast_spelling not in body or "hxc_primitive" in body:
             raise ArithmeticSemanticsFailure(
                 f"{field} stopped lowering to one structural direct C cast"
+            )
+    for field in (
+        "intQuotientByEight",
+        "intQuotientBySix",
+        "intQuotientByMaximum",
+        "intQuotientByOne",
+        "intQuotientSideEffect",
+    ):
+        body = function_body(source, function_c_name(symbols, field))
+        if " / " not in body or "hxc_f64_divide" in body or "hxc_f64_to_i32" in body:
+            raise ArithmeticSemanticsFailure(
+                f"{field} stopped emitting one readable direct C integer division"
+            )
+    for field in (
+        "intQuotientByVariable",
+        "intQuotientByZero",
+        "intQuotientByNegativeOne",
+        "floatQuotientByEight",
+        "intQuotientThroughFloatCast",
+    ):
+        body = function_body(source, function_c_name(symbols, field))
+        if "hxc_f64_divide" not in body or "hxc_f64_to_i32" not in body:
+            raise ArithmeticSemanticsFailure(
+                f"{field} stopped emitting the complete general Float conversion path"
             )
 
 
@@ -422,7 +491,7 @@ def check_snapshots(report: dict[str, object]) -> None:
 def check_oracle() -> None:
     environment = os.environ.copy()
     environment["HAXE_NO_SERVER"] = "1"
-    result = subprocess.run(
+    result = run_bounded_process(
         [development_tool("haxe"), str(ORACLE_HXML)],
         cwd=ROOT,
         env=environment,
@@ -439,7 +508,7 @@ def check_oracle() -> None:
 
 
 def compiler_identity(executable: str) -> tuple[str, str]:
-    result = subprocess.run(
+    result = run_bounded_process(
         [executable, "--version"], capture_output=True, text=True, timeout=10
     )
     combined = (result.stdout + result.stderr).strip()
@@ -482,7 +551,7 @@ def sanitizer_supported(toolchain: NativeToolchain, root: Path) -> bool:
     source = root / f"sanitizer-probe-{toolchain.family}.c"
     executable = root / f"sanitizer-probe-{toolchain.family}"
     source.write_text("int main(void) { return 0; }\n", encoding="utf-8", newline="\n")
-    result = subprocess.run(
+    result = run_bounded_process(
         [toolchain.compiler, *SANITIZER_FLAGS, str(source), "-o", str(executable)],
         capture_output=True,
         text=True,
@@ -503,7 +572,10 @@ def harness_source(symbols: dict[str, object]) -> str:
         for field in (
             "iadd", "isub", "imul", "ineg", "idiv", "imod", "ishl", "ishr",
             "iushr", "iand", "ior", "ixor", "inot", "iless", "fadd", "fsub",
-            "fmul", "fneg", "fdiv", "fmod", "fint", "fequal", "uadd", "umod", "ushl",
+            "fmul", "fneg", "fdiv", "fmod", "fsqrt", "fint", "intQuotientByEight",
+            "intQuotientBySix", "intQuotientByMaximum", "intQuotientByOne", "intQuotientSideEffect",
+            "intQuotientByVariable", "intQuotientByZero", "intQuotientByNegativeOne",
+            "floatQuotientByEight", "intQuotientThroughFloatCast", "fequal", "uadd", "umod", "ushl",
             "ushr", "literalToU8", "i32ToU8", "u8ToI32", "i64ToU16",
             "u32ToU64", "u32ToU8", "u8ToI16", "update", "updateParameter",
         )
@@ -550,6 +622,13 @@ int main(void)
   if (!isnan({names["fmod"]}(1.0, 0.0))) return 27;
   if ({names["fmod"]}(-7.0, 3.0) != -1.0) return 28;
   if (!signbit({names["fmod"]}(-0.0, 3.0))) return 29;
+  if ({names["fsqrt"]}(9.0) != 3.0) return 56;
+  if ({names["fsqrt"]}(0.0) != 0.0) return 57;
+  if (!signbit({names["fsqrt"]}(-0.0))) return 62;
+  if (!isnan({names["fsqrt"]}(-1.0))) return 58;
+  if (!isinf({names["fsqrt"]}(INFINITY))) return 59;
+  if (!isnan({names["fsqrt"]}(NAN))) return 60;
+  if ({names["fsqrt"]}(3.0 * 3.0 + 4.0 * 4.0) != 5.0) return 61;
   if ({names["fint"]}(NAN) != INT32_C(0)) return 30;
   if ({names["fint"]}(INFINITY) != INT32_MAX) return 31;
   if ({names["fint"]}(-INFINITY) != INT32_MIN) return 32;
@@ -557,6 +636,19 @@ int main(void)
   if ({names["fint"]}(-2147483649.0) != INT32_MIN) return 34;
   if ({names["fint"]}(-3.75) != -INT32_C(3)) return 35;
   if ({names["fint"]}(-0.0) != INT32_C(0)) return 36;
+  if ({names["intQuotientByEight"]}(INT32_MAX) != INT32_C(268435455)) return 63;
+  if ({names["intQuotientByEight"]}(INT32_MIN) != -INT32_C(268435456)) return 64;
+  if ({names["intQuotientBySix"]}(INT32_MAX) != INT32_C(357913941)) return 65;
+  if ({names["intQuotientBySix"]}(INT32_MIN) != -INT32_C(357913941)) return 66;
+  if ({names["intQuotientByMaximum"]}(INT32_MAX - INT32_C(1)) != INT32_C(0)) return 71;
+  if ({names["intQuotientByMaximum"]}(INT32_MIN) != -INT32_C(1)) return 72;
+  if ({names["intQuotientByOne"]}(INT32_MAX) != INT32_MAX) return 73;
+  if ({names["intQuotientSideEffect"]}(INT32_C(47)) != INT32_C(71)) return 74;
+  if ({names["intQuotientByVariable"]}(INT32_C(47), INT32_C(8)) != INT32_C(5)) return 70;
+  if ({names["intQuotientByZero"]}(INT32_C(1)) != INT32_MAX) return 67;
+  if ({names["intQuotientByNegativeOne"]}(INT32_MIN) != INT32_MAX) return 68;
+  if ({names["floatQuotientByEight"]}(47.0) != INT32_C(5)) return 69;
+  if ({names["intQuotientThroughFloatCast"]}(INT32_C(47)) != INT32_C(5)) return 75;
   if ({names["fequal"]}(NAN, NAN)) return 37;
   if ({names["uadd"]}(UINT32_MAX, UINT32_C(1)) != UINT32_C(0)) return 38;
   if ({names["umod"]}(UINT32_MAX, UINT32_C(0)) != UINT32_C(0)) return 39;
@@ -581,7 +673,7 @@ int main(void)
 
 
 def run_command(command: list[str], label: str, *, timeout: int = 30) -> None:
-    result = subprocess.run(command, capture_output=True, text=True, timeout=timeout)
+    result = run_bounded_process(command, capture_output=True, text=True, timeout=timeout)
     if result.returncode != 0 or result.stdout or result.stderr:
         raise ArithmeticSemanticsFailure(
             f"{label} failed\nexit={result.returncode}\n"
@@ -733,6 +825,7 @@ def custom_target(
     main_class: str = "ArithmeticFixture",
     profile: str = "portable",
     runtime: str | None = None,
+    layout: str = "unity",
 ) -> subprocess.CompletedProcess[str]:
     command = [
         development_tool("haxe"),
@@ -747,10 +840,10 @@ def custom_target(
         command.extend(["-D", "reflaxe_c_profile=metal"])
     if runtime is not None:
         command.extend(["-D", f"hxc_runtime={runtime}"])
-    command.extend(["-D", "hxc_project_layout=unity", "--custom-target", f"c={output}"])
+    command.extend(["-D", f"hxc_project_layout={layout}", "--custom-target", f"c={output}"])
     environment = os.environ.copy()
     environment["HAXE_NO_SERVER"] = "1"
-    return subprocess.run(
+    return run_bounded_process(
         command,
         cwd=ROOT,
         env=environment,
@@ -833,6 +926,8 @@ def check_production(selected: str | None = None) -> None:
         repeated = root / "repeated"
         metal = root / "metal"
         no_runtime = root / "none"
+        split = root / "split"
+        split_repeated = root / "split-repeated"
         for label, output, profile, runtime in (
             ("portable", portable, "portable", None),
             ("repeat", repeated, "portable", None),
@@ -845,8 +940,17 @@ def check_production(selected: str | None = None) -> None:
                     f"{label} production compile failed\n"
                     f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
                 )
+        for label, output in (("split", split), ("split repeat", split_repeated)):
+            result = custom_target(output, layout="split")
+            if result.returncode != 0 or result.stdout or result.stderr:
+                raise ArithmeticSemanticsFailure(
+                    f"{label} production compile failed\n"
+                    f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
+                )
         if generated_tree(portable) != generated_tree(repeated):
             raise ArithmeticSemanticsFailure("repeated arithmetic outputs are not byte-identical")
+        if generated_tree(split) != generated_tree(split_repeated):
+            raise ArithmeticSemanticsFailure("repeated split arithmetic outputs are not byte-identical")
         for relative in ("include/hxc/program.h", "src/program.c"):
             if (portable / relative).read_bytes() != (metal / relative).read_bytes():
                 raise ArithmeticSemanticsFailure(
@@ -876,6 +980,8 @@ def check_production(selected: str | None = None) -> None:
             raise ArithmeticSemanticsFailure("primitive arithmetic selected hxrt")
         symbols = json.loads((portable / "hxc.symbols.json").read_text())
         sources = sorted((portable / "src").glob("*.c"))
+        split_symbols = json.loads((split / "hxc.symbols.json").read_text())
+        split_sources = sorted((split / "src").rglob("*.c"))
         for toolchain in available_compilers(selected):
             compile_and_run_project(portable, sources, symbols, toolchain, "-O0")
             compile_and_run_project(portable, sources, symbols, toolchain, "-O2")
@@ -883,6 +989,8 @@ def check_production(selected: str | None = None) -> None:
                 compile_and_run_project(
                     portable, sources, symbols, toolchain, "-O1", sanitizer=True
                 )
+            compile_and_run_project(split, split_sources, split_symbols, toolchain, "-O0")
+            compile_and_run_project(split, split_sources, split_symbols, toolchain, "-O2")
 
 
 def snapshot_native_report() -> dict[str, object]:

@@ -21,6 +21,7 @@ class SymbolRegistryGolden {
 
 	static function main():Void {
 		verifyUtf8Order();
+		verifySemanticComponentControls();
 		final requests = corpus();
 		final forward = registry(requests);
 		final reverseRequests = requests.copy();
@@ -86,6 +87,41 @@ class SymbolRegistryGolden {
 				if ((expected < 0) != (actual < 0) || (expected == 0) != (actual == 0) || (expected > 0) != (actual > 0))
 					throw 'shared UTF-8 order differs for `${left}` and `${right}`: expected=$expected actual=$actual';
 			}
+		}
+	}
+
+	/** Preserve the exact name policy across native and portable control checks. */
+	static function verifySemanticComponentControls():Void {
+		final constructors:Array<String->CSymbolRequest> = [
+			value -> new CSymbolRequest(CSKMethod, [value], CNSOrdinary("global")),
+			value -> new CSymbolRequest(CSKMethod, ["method"], CNSOrdinary(value)),
+			value -> new CSymbolRequest(CSKMethod, ["method"], CNSOrdinary("global"), null, null, [value]),
+			value -> new CSymbolRequest(CSKMethod, ["method"], CNSOrdinary("global"), null, null, null, [value]),
+			value -> new CSymbolRequest(CSKMethod, ["method"], CNSOrdinary("global"), null, null, null, null, null, [value])
+		];
+		for (code in 0...128) {
+			if (code >= 0x20 && code != 0x7F)
+				continue;
+			final control = String.fromCharCode(code);
+			for (value in [control + "name", "na" + control + "me", "name" + control]) {
+				for (construct in constructors) {
+					var rejected = false;
+					try {
+						construct(value);
+					} catch (error:CSymbolRegistryError) {
+						if (error.diagnosticId != CDiagnosticId.InternalCompilerError)
+							throw "control character changed the diagnostic identity";
+						rejected = true;
+					}
+					if (!rejected)
+						throw 'symbol component accepted ASCII control $code';
+				}
+			}
+		}
+		// C1 controls and Unicode separators are outside this existing ASCII rule.
+		for (value in ["name with space", "Café", "雪🙂", "a\u0085b", "a\u009Fb", "a\u2028b"]) {
+			for (construct in constructors)
+				construct(value);
 		}
 	}
 

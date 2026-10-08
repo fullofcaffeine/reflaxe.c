@@ -23,12 +23,30 @@ program-local specialization. No primitive operation may select `hxrt`.
 | `UInt` `%` | Unsigned remainder; zero produces `0` | Guard zero in a static-inline helper |
 | `Float` arithmetic | Binary64 NaN, infinity, and signed-zero behavior | Direct `double`, except zero-safe division and `fmod` |
 | `Std.int(Float)` | Truncate finite in-range input; NaN to `0`; overflow/infinity saturates | Compare first, then perform only an in-range C conversion |
+| `Std.int(Int / positiveConstant)` | The same truncation as binary64 division followed by `Std.int` | Record a proven integral HxcIR operation and emit direct signed C division |
 
 The zero result for integer modulo by zero is an intentional deterministic
 target refinement. Haxe leaves this exceptional edge target-specific; the C
 target fixes it so generated programs never execute undefined native division.
 `INT32_MIN / -1` is not signed integer division at all because Haxe `/` returns
 `Float`; exact conversion happens before the binary64 operation.
+
+The combined `Std.int(Int / positiveConstant)` form has a narrower direct path.
+Every 32-bit `Int` is exact in binary64. Let `n` be the numerator and `d` be the
+positive divisor. If `n / d` is not integral, its distance from an integer is
+at least `1 / d`. A binary64 unit in the last place (ULP) is the distance
+between adjacent values. For this quotient, one ULP is at most `2^-21 / d`.
+Thus, the truncation boundary is at least `2^21` ULPs away. Binary64 rounding
+moves the exact result by at most one-half ULP.
+
+C11 signed division truncates in the same direction as `Std.int`. The positive
+constant excludes division by zero and the one overflowing C case,
+`INT32_MIN / -1`. HxcIR records this proof as
+`haxe.i32.divide.positive-constant`, and validation requires the divisor to be
+a directly defined positive `Int` constant. Zero, negative, nonconstant,
+nullable, `UInt`, `Dynamic`, real `Float`, and cast-wrapped forms stay with
+their existing general lowering. Shapes that were unsupported there still fail
+closed.
 
 Floating modulo calls `fmod` and records the exact `m` link fact in the compiler
 manifest with the requesting module as provenance. A build-library fact is not

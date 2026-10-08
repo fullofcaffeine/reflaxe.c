@@ -1,3 +1,4 @@
+#include "hxrt/string_lower_case.h"
 #include "hxrt/string_split.h"
 
 #include <inttypes.h>
@@ -106,6 +107,13 @@ static bool hxc_bytes_equal(
     }
   }
   return true;
+}
+
+static bool hxc_test_string_slot_is_empty(hxc_string value) {
+  return value.data == NULL
+    && value.byte_length == 0u
+    && !value.has_trailing_nul
+    && value.owner == NULL;
 }
 
 static hxc_status hxc_test_string_copy(
@@ -273,6 +281,8 @@ static int hxc_test_split(
 static int hxc_test_literals_and_scalars(hxc_test_arena *arena) {
   const hxc_string missing = HXC_STRING_INITIALIZER;
   const hxc_string empty = HXC_STRING_EMPTY_INITIALIZER;
+  const hxc_string ascii = HXC_STRING_LITERAL("plain");
+  const hxc_string ascii_middle = HXC_STRING_LITERAL("lai");
   const hxc_string nul = HXC_STRING_LITERAL("\0");
   const hxc_string emoji = HXC_STRING_LITERAL("\xF0\x9F\x98\x80");
   const hxc_string embedded = HXC_STRING_LITERAL("a\0b");
@@ -334,6 +344,56 @@ static int hxc_test_literals_and_scalars(hxc_test_arena *arena) {
   HXC_TEST_CHECK(hxc_bytes_equal(slice.data, emoji.data, emoji.byte_length));
   HXC_TEST_CHECK(hxc_string_slice(sequence, 2u, 1u, &slice) == HXC_STATUS_OK);
   HXC_TEST_CHECK(slice.byte_length == 2u && slice.has_trailing_nul);
+  HXC_TEST_CHECK(
+    hxc_string_substr(ascii, 1, true, 3, &slice) == HXC_STATUS_OK
+  );
+  HXC_TEST_CHECK(
+    hxc_bytes_equal(slice.data, ascii_middle.data, ascii_middle.byte_length)
+  );
+  HXC_TEST_CHECK(
+    hxc_string_substr(sequence, 1, false, 0, &slice) == HXC_STATUS_OK
+  );
+  HXC_TEST_CHECK(
+    slice.byte_length == emoji_accent.byte_length && slice.has_trailing_nul
+  );
+  HXC_TEST_CHECK(
+    hxc_bytes_equal(slice.data, emoji_accent.data, emoji_accent.byte_length)
+  );
+  HXC_TEST_CHECK(
+    hxc_string_substr(sequence, -1, true, 1, &slice) == HXC_STATUS_OK
+  );
+  HXC_TEST_CHECK(slice.byte_length == composed.byte_length);
+  HXC_TEST_CHECK(
+    hxc_bytes_equal(slice.data, composed.data, composed.byte_length)
+  );
+  HXC_TEST_CHECK(
+    hxc_string_substr(sequence, -99, true, 1, &slice) == HXC_STATUS_OK
+  );
+  HXC_TEST_CHECK(slice.byte_length == 1u && slice.data[0] == (uint8_t)'x');
+  HXC_TEST_CHECK(
+    hxc_string_substr(sequence, 1, true, 99, &slice) == HXC_STATUS_OK
+  );
+  HXC_TEST_CHECK(slice.byte_length == emoji_accent.byte_length);
+  HXC_TEST_CHECK(
+    hxc_string_substr(sequence, 1, true, -1, &slice) == HXC_STATUS_OK
+  );
+  HXC_TEST_CHECK(slice.byte_length == 0u && !slice.has_trailing_nul);
+  HXC_TEST_CHECK(
+    hxc_string_substr(sequence, 99, false, 0, &slice) == HXC_STATUS_OK
+  );
+  HXC_TEST_CHECK(slice.byte_length == 0u && slice.has_trailing_nul);
+  HXC_TEST_CHECK(
+    hxc_string_substr(sequence, 0, false, 0, NULL)
+      == HXC_STATUS_INVALID_ARGUMENT
+  );
+  slice = emoji;
+  HXC_TEST_CHECK(
+    hxc_string_substr(missing, 0, false, 0, &slice)
+      == HXC_STATUS_INVALID_UTF8
+  );
+  HXC_TEST_CHECK(
+    slice.data == emoji.data && slice.byte_length == emoji.byte_length
+  );
   HXC_TEST_CHECK(
     hxc_string_index_of(sequence, emoji, 0, &found) == HXC_STATUS_OK
   );
@@ -805,6 +865,114 @@ static int hxc_test_builder(
   return 0;
 }
 
+static int hxc_test_lower_case(
+  hxc_test_arena *arena,
+  hxc_allocator allocator
+) {
+  static const uint8_t invalid_bytes[] = { UINT8_C(0xC0) };
+  const hxc_string source = HXC_STRING_LITERAL(
+    "AZ\0\xC3\x84\xC4\xB0\xE1\xBA\x9E\xF0\x90\x90\x80"
+    "\xEF\xBC\xA1\xEF\xBD\x80"
+  );
+  const hxc_string expected = HXC_STRING_LITERAL(
+    "az\0\xC3\xA4i\xC3\x9F\xF0\x90\x90\x80"
+    "\xEF\xBD\x81\xEF\xBD\x80"
+  );
+  const hxc_string empty = HXC_STRING_LITERAL("");
+  const hxc_string unchanged = HXC_STRING_LITERAL("already");
+  const hxc_string long_source = HXC_STRING_LITERAL(
+    "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+  );
+  const hxc_string runtime_prefix = HXC_STRING_LITERAL("\xC3\x84");
+  const hxc_string runtime_suffix = HXC_STRING_LITERAL("BC");
+  const hxc_string runtime_expected = HXC_STRING_LITERAL("\xC3\xA4" "bc");
+  hxc_string invalid = HXC_STRING_INITIALIZER;
+  hxc_string lowered = HXC_STRING_INITIALIZER;
+  hxc_string empty_result = HXC_STRING_INITIALIZER;
+  hxc_string unchanged_result = HXC_STRING_INITIALIZER;
+  hxc_string runtime_source = HXC_STRING_INITIALIZER;
+  hxc_string runtime_result = HXC_STRING_INITIALIZER;
+  hxc_string failed = HXC_STRING_INITIALIZER;
+  size_t allowed_allocations;
+  size_t allocations = arena->allocation_count;
+  size_t releases = arena->release_count;
+
+  HXC_TEST_CHECK(
+    hxc_string_to_lower_case(source, allocator, &lowered) == HXC_STATUS_OK
+  );
+  HXC_TEST_CHECK(hxc_test_string_equals(lowered, expected));
+  HXC_TEST_CHECK(lowered.owner != NULL && lowered.data != source.data);
+  HXC_TEST_CHECK(hxc_string_release(&lowered) == HXC_STATUS_OK);
+  HXC_TEST_CHECK(
+    arena->release_count - releases == arena->allocation_count - allocations
+  );
+
+  HXC_TEST_CHECK(
+    hxc_string_to_lower_case(empty, allocator, &empty_result) == HXC_STATUS_OK
+  );
+  HXC_TEST_CHECK(empty_result.byte_length == 0u && empty_result.owner != NULL);
+  HXC_TEST_CHECK(hxc_string_release(&empty_result) == HXC_STATUS_OK);
+
+  HXC_TEST_CHECK(
+    hxc_string_to_lower_case(unchanged, allocator, &unchanged_result)
+      == HXC_STATUS_OK
+  );
+  HXC_TEST_CHECK(hxc_test_string_equals(unchanged_result, unchanged));
+  HXC_TEST_CHECK(
+    unchanged_result.owner != NULL && unchanged_result.data != unchanged.data
+  );
+  HXC_TEST_CHECK(hxc_string_release(&unchanged_result) == HXC_STATUS_OK);
+
+  HXC_TEST_CHECK(
+    hxc_string_concat_ref(
+      runtime_prefix,
+      runtime_suffix,
+      allocator,
+      &runtime_source
+    ) == HXC_STATUS_OK
+  );
+  HXC_TEST_CHECK(
+    hxc_string_to_lower_case(runtime_source, allocator, &runtime_result)
+      == HXC_STATUS_OK
+  );
+  HXC_TEST_CHECK(hxc_string_release(&runtime_source) == HXC_STATUS_OK);
+  HXC_TEST_CHECK(hxc_test_string_equals(runtime_result, runtime_expected));
+  HXC_TEST_CHECK(hxc_string_release(&runtime_result) == HXC_STATUS_OK);
+
+  invalid.data = invalid_bytes;
+  invalid.byte_length = sizeof(invalid_bytes);
+  invalid.has_trailing_nul = false;
+  invalid.owner = NULL;
+  HXC_TEST_CHECK(
+    hxc_string_to_lower_case(invalid, allocator, &failed)
+      == HXC_STATUS_INVALID_UTF8
+  );
+  HXC_TEST_CHECK(hxc_test_string_slot_is_empty(failed));
+
+  /*
+   * The long input uses three payload allocations (16, 32, then 64 bytes)
+   * before finish_ref allocates its owner. Fail each point in turn. Every
+   * successful temporary allocation must be released exactly once.
+   */
+  for (allowed_allocations = 0u;
+    allowed_allocations < 4u;
+    allowed_allocations++) {
+    releases = arena->release_count;
+    arena->bounded_failure = true;
+    arena->allocations_before_failure = allowed_allocations;
+    HXC_TEST_CHECK(
+      hxc_string_to_lower_case(long_source, allocator, &failed)
+        == HXC_STATUS_OUT_OF_MEMORY
+    );
+    arena->bounded_failure = false;
+    HXC_TEST_CHECK(hxc_test_string_slot_is_empty(failed));
+    HXC_TEST_CHECK(
+      arena->release_count == releases + allowed_allocations
+    );
+  }
+  return 0;
+}
+
 static int hxc_test_cstrings(
   hxc_test_arena *arena,
   const hxc_allocator *allocator
@@ -814,8 +982,10 @@ static int hxc_test_cstrings(
   const hxc_string whole = HXC_STRING_LITERAL("slice");
   hxc_string interior = HXC_STRING_INITIALIZER;
   hxc_borrowed_cstring borrowed = HXC_BORROWED_CSTRING_INITIALIZER;
+  hxc_call_cstring call_text = HXC_CALL_CSTRING_INITIALIZER;
   hxc_owned_cstring owned = HXC_OWNED_CSTRING_INITIALIZER;
   size_t allocations = arena->allocation_count;
+  size_t releases = arena->release_count;
 
   HXC_TEST_CHECK(
     hxc_string_borrow_cstring(&stable, &borrowed) == HXC_STATUS_OK
@@ -824,6 +994,15 @@ static int hxc_test_cstrings(
   HXC_TEST_CHECK(borrowed.byte_length == stable.byte_length);
   HXC_TEST_CHECK(borrowed.data[borrowed.byte_length] == '\0');
   HXC_TEST_CHECK(arena->allocation_count == allocations);
+  HXC_TEST_CHECK(
+    hxc_string_prepare_call_cstring(&stable, *allocator, &call_text)
+      == HXC_STATUS_OK
+  );
+  HXC_TEST_CHECK(call_text.owner == &stable);
+  HXC_TEST_CHECK(call_text.temporary.memory == NULL);
+  HXC_TEST_CHECK(arena->allocation_count == allocations);
+  HXC_TEST_CHECK(hxc_call_cstring_dispose(&call_text) == HXC_STATUS_OK);
+  HXC_TEST_CHECK(arena->release_count == releases);
 
   borrowed = (hxc_borrowed_cstring)HXC_BORROWED_CSTRING_INITIALIZER;
   HXC_TEST_CHECK(
@@ -831,6 +1010,10 @@ static int hxc_test_cstrings(
   );
   HXC_TEST_CHECK(
     hxc_string_to_cstring_owned(&embedded, allocator, &owned)
+      == HXC_STATUS_EMBEDDED_NUL
+  );
+  HXC_TEST_CHECK(
+    hxc_string_prepare_call_cstring(&embedded, *allocator, &call_text)
       == HXC_STATUS_EMBEDDED_NUL
   );
   HXC_TEST_CHECK(arena->allocation_count == allocations);
@@ -842,9 +1025,20 @@ static int hxc_test_cstrings(
       == HXC_STATUS_BORROW_UNAVAILABLE
   );
   HXC_TEST_CHECK(
-    hxc_string_to_cstring_owned(&interior, allocator, &owned) == HXC_STATUS_OK
+    hxc_string_prepare_call_cstring(&interior, *allocator, &call_text)
+      == HXC_STATUS_OK
   );
   HXC_TEST_CHECK(arena->allocation_count == allocations + 1u);
+  HXC_TEST_CHECK(call_text.owner == NULL);
+  HXC_TEST_CHECK(
+    call_text.byte_length == 4u && call_text.data[4] == '\0'
+  );
+  HXC_TEST_CHECK(hxc_call_cstring_dispose(&call_text) == HXC_STATUS_OK);
+  HXC_TEST_CHECK(arena->release_count == releases + 1u);
+  HXC_TEST_CHECK(
+    hxc_string_to_cstring_owned(&interior, allocator, &owned) == HXC_STATUS_OK
+  );
+  HXC_TEST_CHECK(arena->allocation_count == allocations + 2u);
   HXC_TEST_CHECK(owned.byte_length == 4u && owned.data[4] == '\0');
   HXC_TEST_CHECK(hxc_allocator_same_identity(allocator, &owned.storage.allocator));
   HXC_TEST_CHECK(hxc_owned_cstring_dispose(&owned) == HXC_STATUS_OK);
@@ -872,6 +1066,7 @@ int main(void) {
   HXC_TEST_CHECK(hxc_test_reference_owned_strings(&arena, allocator) == 0);
   HXC_TEST_CHECK(hxc_test_split(&arena, allocator) == 0);
   HXC_TEST_CHECK(hxc_test_builder(&arena, &allocator) == 0);
+  HXC_TEST_CHECK(hxc_test_lower_case(&arena, allocator) == 0);
   HXC_TEST_CHECK(hxc_test_cstrings(&arena, &allocator) == 0);
   HXC_TEST_CHECK(
     hxc_string_scalar_length(emoji, &emoji_length) == HXC_STATUS_OK

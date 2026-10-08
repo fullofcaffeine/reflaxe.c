@@ -6,6 +6,7 @@ import haxe.io.Bytes;
 import haxe.macro.Context;
 import haxe.macro.Expr.Position;
 import haxe.macro.Type;
+import haxe.macro.TypeTools;
 import haxe.macro.TypedExprTools;
 import reflaxe.c.CompilationContext;
 import reflaxe.c.ast.CAST.CIdentifier;
@@ -13,6 +14,9 @@ import reflaxe.c.ir.HxcIR;
 import reflaxe.c.ir.HxcSourceSpan;
 import reflaxe.c.lowering.CBodyAggregate.CBodyValueType;
 import reflaxe.c.lowering.CBodyInterface.CPreparedBodyInterface;
+import reflaxe.c.lowering.CGenericSpecialization.CGenericTypeArgument;
+import reflaxe.c.lowering.CGenericSpecialization.CGenericTypeCanonicalizer;
+import reflaxe.c.lowering.CGenericSpecializationContract;
 import reflaxe.c.naming.CSymbolRegistry;
 import reflaxe.c.naming.CSymbolRequest;
 
@@ -82,13 +86,15 @@ class CPreparedBodyClassField {
 	}
 }
 
-/** One non-generic nominal class after recursive layout discovery. */
+/** One closed nominal class after recursive layout discovery. */
 class CPreparedBodyClass {
 	public final semanticKey:String;
 	public final digest:String;
 	public final declarationId:String;
 	public final instanceId:String;
 	public final haxePath:String;
+	public final displayName:String;
+	public final typeArguments:Array<CGenericTypeArgument>;
 	public final ownerModule:String;
 	public final source:HxcSourceSpan;
 	public final typeRequest:CSymbolRequest;
@@ -106,12 +112,15 @@ class CPreparedBodyClass {
 	public var traceRequest:Null<CSymbolRequest> = null;
 	public var finalizerRequest:Null<CSymbolRequest> = null;
 
-	public function new(semanticKey:String, digest:String, haxePath:String, ownerModule:String, source:HxcSourceSpan, typeRequest:CSymbolRequest) {
+	public function new(semanticKey:String, digest:String, haxePath:String, displayName:String, typeArguments:Array<CGenericTypeArgument>, ownerModule:String,
+			source:HxcSourceSpan, typeRequest:CSymbolRequest) {
 		this.semanticKey = semanticKey;
 		this.digest = digest;
 		this.declarationId = 'type.class.$digest';
 		this.instanceId = 'instance.class.$digest';
 		this.haxePath = haxePath;
+		this.displayName = displayName;
+		this.typeArguments = typeArguments.copy();
 		this.ownerModule = ownerModule;
 		this.source = source;
 		this.typeRequest = typeRequest;
@@ -120,7 +129,7 @@ class CPreparedBodyClass {
 	public function declaration():HxcIRTypeDeclaration {
 		return {
 			id: declarationId,
-			displayName: haxePath,
+			displayName: displayName,
 			kind: IRTKClass({
 				baseInstanceId: base == null ? null : base.instanceId,
 				fields: fields.map(field -> {
@@ -209,11 +218,11 @@ class CLoweredBodyClass {
 	}
 }
 
-/** Request-local nominal discovery with base-first deterministic layout order. */
+/** Request-local closed nominal discovery with base-first deterministic layout order. */
 class CBodyClassRegistry {
 	final context:CompilationContext;
 	final resolveValue:CBodyClassValueResolver;
-	final byPath:Map<String, CPreparedBodyClass> = [];
+	final bySemanticKey:Map<String, CPreparedBodyClass> = [];
 	final semanticKeysByDigest:Map<String, String> = [];
 	final preparing:Map<String, Bool> = [];
 
@@ -225,7 +234,7 @@ class CBodyClassRegistry {
 	/** Count class representations prepared so far without finalizing layout order. */
 	@:noCompletion
 	public function preparedCount():Int
-		return countValues(byPath);
+		return countValues(bySemanticKey);
 
 	public function valueType(reference:Ref<ClassType>, parameters:Array<Type>, position:Position, ownerModule:String, ownerSourcePath:String,
 			fail:(Position, String) -> Void, node:String):CBodyValueType {
@@ -254,14 +263,17 @@ class CBodyClassRegistry {
 			case _:
 				return rejected(fail, position, '$node:unsupported-class-kind:${Std.string(definition.kind)}:$path');
 		}
-		if (definition.params.length != 0 || parameters.length != 0) {
-			return rejected(fail, position, '$node:generic-class-reference-requires-bounded-class-specialization:$path');
-		}
-		final existing = byPath.get(path);
+		if (definition.params.length != parameters.length)
+			return rejected(fail, position, '$node:class-type-argument-count:${parameters.length}-for-${definition.params.length}:$path');
+		final canonicalizer = new CGenericTypeCanonicalizer(context.profile);
+		final arguments:Array<CGenericTypeArgument> = [];
+		for (index in 0...parameters.length)
+			arguments.push(canonicalizer.normalize(parameters[index], position, fail, '$node:class-type-argument:${definition.params[index].name}'));
+		final semanticKey = CGenericSpecializationContract.classInstanceKey(path, arguments.map(argument -> argument.key));
+		final existing = bySemanticKey.get(semanticKey);
 		if (existing != null)
 			return existing;
 
-		final semanticKey = 'haxe-class-v1(${canonicalPart(path)})';
 		final digest = Sha256.encode(semanticKey);
 		final priorKey = semanticKeysByDigest.get(digest);
 		if (priorKey != null && priorKey != semanticKey) {
@@ -270,20 +282,21 @@ class CBodyClassRegistry {
 		semanticKeysByDigest.set(digest, semanticKey);
 		final sourcePath = definition.module == ownerModule ? ownerSourcePath : moduleSourcePath(definition.module);
 		final source = HaxeSourceSpan.fromPosition(definition.pos, sourcePath);
-		final typeRequest = new CSymbolRequest(CSKType, ["compiler", "haxe-class", path], CNSTag("translation-unit"), CSVInternal, null, [], [], null,
-			path.split("."));
+		final argumentKeys = arguments.map(argument -> argument.key);
+		final displayName = arguments.length == 0 ? path : path + "<" + arguments.map(argument -> argument.displayName).join(", ") + ">";
+		final typeRequest = new CSymbolRequest(CSKType, ["compiler", "haxe-class", path], CNSTag("translation-unit"), CSVInternal, null, [], argumentKeys,
+			null, path.split("."));
 		context.symbols.register(typeRequest);
-		final prepared = new CPreparedBodyClass(semanticKey, digest, path, definition.module, source, typeRequest);
-		byPath.set(path, prepared);
-		preparing.set(path, true);
+		final prepared = new CPreparedBodyClass(semanticKey, digest, path, displayName, arguments, definition.module, source, typeRequest);
+		bySemanticKey.set(semanticKey, prepared);
+		preparing.set(semanticKey, true);
 
 		if (definition.superClass != null) {
 			final superClass = definition.superClass;
-			if (superClass.params.length != 0) {
-				return rejected(fail, definition.pos, '$node:generic-base-class-requires-bounded-class-specialization:$path');
-			}
-			final base = require(superClass.t, superClass.params, definition.pos, definition.module, sourcePath, fail, '$node.base');
-			if (preparing.exists(base.haxePath))
+			final closedBaseParameters = superClass.params.map(parameter -> TypeTools.applyTypeParameters(parameter, definition.params,
+				arguments.map(argument -> argument.type)));
+			final base = require(superClass.t, closedBaseParameters, definition.pos, definition.module, sourcePath, fail, '$node.base');
+			if (preparing.exists(base.semanticKey))
 				return rejected(fail, definition.pos, '$node:cyclic-class-inheritance:$path->${base.haxePath}');
 			prepared.base = base;
 			prepared.baseMemberRequest = new CSymbolRequest(CSKField, ["compiler", "haxe-class", path, "base"], CNSMember(prepared.declarationId),
@@ -317,15 +330,16 @@ class CBodyClassRegistry {
 				authoritative distinction and remains false for that property.
 			 */
 			final mutable = !field.isFinal;
-			final fixedArray = CBodyFixedArray.shape(field.type, context.profile, field.pos, fail, '$node.field:${field.name}');
+			final closedFieldType = TypeTools.applyTypeParameters(field.type, definition.params, arguments.map(argument -> argument.type));
+			final fixedArray = CBodyFixedArray.shape(closedFieldType, context.profile, field.pos, fail, '$node.field:${field.name}');
 			final fieldType = if (fixedArray == null) {
-				final resolved = resolveValue(field.type, field.pos, definition.module, sourcePath, fail, '$node.field:${field.name}');
+				final resolved = resolveValue(closedFieldType, field.pos, definition.module, sourcePath, fail, '$node.field:${field.name}');
 				final child = resolved.classValue();
 				final initializer = child == null ? null : fieldInitializer(definition, field, fail, '$node.field:${field.name}', field.isFinal);
 				if (child != null && initializer != null && initializedClassPath(initializer) == child.haxePath) {
 					if (mutable)
 						return rejected(fail, field.pos, '$node.field:${field.name}:owned-class-field-must-be-final');
-					if (preparing.exists(child.haxePath))
+					if (preparing.exists(child.semanticKey))
 						return rejected(fail, field.pos, '$node.field:${field.name}:cyclic-owned-class-layout:$path->${child.haxePath}');
 					CBodyValueType.ownedClass(child);
 				} else {
@@ -343,11 +357,11 @@ class CBodyClassRegistry {
 			if (fieldType.irType == IRTVoid)
 				return rejected(fail, field.pos, '$node.field:${field.name}:Void-not-an-object-field');
 			final request = new CSymbolRequest(CSKField, ["compiler", "haxe-class", path, "field", field.name], CNSMember(prepared.declarationId),
-				CSVInternal, null, [], [], storageOrdinal++, [field.name]);
+				CSVInternal, null, [], argumentKeys, storageOrdinal++, [field.name]);
 			context.symbols.register(request);
 			prepared.fields.push(new CPreparedBodyClassField(field.name, fieldType, mutable, HaxeSourceSpan.fromPosition(field.pos, sourcePath), request));
 		}
-		preparing.remove(path);
+		preparing.remove(semanticKey);
 		return prepared;
 	}
 
@@ -532,20 +546,24 @@ class CBodyClassRegistry {
 						continue;
 
 					// An interface C value contains a pointer to its concrete object
-					// plus the exact dispatch table. Once a class retains that value,
-					// both the owner and every reachable concrete implementation need
-					// stable collector storage. The owner's trace callback follows the
-					// object pointer; the object header then selects its exact layout.
-					if (!value.managedByCollector) {
+					// plus the exact dispatch table. A field declaration alone does not
+					// prove that this graph can exist: whole-program discovery can retain
+					// a class only as another field's type without reaching its constructor
+					// or any concrete interface implementation. Mark the owner only when a
+					// reachable table proves that an object can inhabit this field.
+					var matched = false;
+					for (implementation in interfaceImplementations)
+						if (implementation.interfaceValue.instanceId == interfaceValue.instanceId) {
+							matched = true;
+							if (!implementation.classValue.managedByCollector) {
+								implementation.classValue.managedByCollector = true;
+								changed = true;
+							}
+						}
+					if (matched && !value.managedByCollector) {
 						value.managedByCollector = true;
 						changed = true;
 					}
-					for (implementation in interfaceImplementations)
-						if (implementation.interfaceValue.instanceId == interfaceValue.instanceId
-							&& !implementation.classValue.managedByCollector) {
-							implementation.classValue.managedByCollector = true;
-							changed = true;
-						}
 				}
 			for (value in canonicalClasses()) {
 				if (!value.managedByCollector)
@@ -588,8 +606,8 @@ class CBodyClassRegistry {
 						if (!implementation.classValue.managedByCollector)
 							throw new CBodyEmissionError('retained interface `${interfaceValue.haxePath}` left `${implementation.classValue.haxePath}` outside collector ownership');
 					}
-				if (!matched)
-					throw new CBodyEmissionError('retained interface field `${value.haxePath}.${field.name}` has no reachable concrete dispatch table');
+				// No match means no reachable constructor can populate this field.
+				// Such a declaration needs neither collector ownership nor a table.
 			}
 		for (value in canonicalClasses())
 			if (value.managedByCollector)
@@ -646,7 +664,7 @@ class CBodyClassRegistry {
 		visitedEnums.set(enumValue.instanceId, true);
 		for (tagCase in enumValue.cases)
 			for (payload in tagCase.payload)
-				if (!payload.indirect && markCollectorClasses(payload.valueType, visitedEnums, ownedClasses))
+				if (markCollectorClasses(payload.valueType, visitedEnums, ownedClasses))
 					changed = true;
 		return changed;
 	}
@@ -675,17 +693,18 @@ class CBodyClassRegistry {
 	function registerManagedNames(value:CPreparedBodyClass):Void {
 		if (value.descriptorRequest != null)
 			return;
+		final argumentKeys = value.typeArguments.map(argument -> argument.key);
 		value.descriptorRequest = new CSymbolRequest(CSKTypeDescriptor, ["compiler", "gc", "class", value.haxePath, "descriptor"],
-			CNSOrdinary("translation-unit"), CSVInternal, null, [], [], 0, [value.haxePath, "descriptor"]);
+			CNSOrdinary("translation-unit"), CSVInternal, null, [], argumentKeys, 0, [value.haxePath, "descriptor"]);
 		context.symbols.register(value.descriptorRequest);
 		if (classNeedsTrace(value)) {
 			value.traceRequest = new CSymbolRequest(CSKMethod, ["compiler", "gc", "class", value.haxePath, "trace"], CNSOrdinary("translation-unit"),
-				CSVInternal, null, [], [], 1, [value.haxePath, "trace"]);
+				CSVInternal, null, [], argumentKeys, 1, [value.haxePath, "trace"]);
 			context.symbols.register(value.traceRequest);
 		}
 		if (classNeedsFinalizer(value)) {
 			value.finalizerRequest = new CSymbolRequest(CSKMethod, ["compiler", "gc", "class", value.haxePath, "finalize"], CNSOrdinary("translation-unit"),
-				CSVInternal, null, [], [], 2, [value.haxePath, "finalize"]);
+				CSVInternal, null, [], argumentKeys, 2, [value.haxePath, "finalize"]);
 			context.symbols.register(value.finalizerRequest);
 		}
 	}
@@ -745,6 +764,10 @@ class CBodyClassRegistry {
 	}
 
 	static function containsManagedReference(value:CBodyValueType, visitedEnums:Map<String, Bool>):Bool {
+		// A collected map is an exact graph edge even when its keys are Strings.
+		// The containing class must trace it after constructor-local roots end.
+		if (value.typedMapValue() != null)
+			return true;
 		final classValue = value.classValue();
 		if (classValue != null)
 			return classValue.managedByCollector;
@@ -771,7 +794,7 @@ class CBodyClassRegistry {
 	}
 
 	public function canonicalClasses():Array<CPreparedBodyClass> {
-		final values = [for (value in byPath) value];
+		final values = [for (value in bySemanticKey) value];
 		values.sort((left, right) -> compareUtf8(left.semanticKey, right.semanticKey));
 		final result:Array<CPreparedBodyClass> = [];
 		final emitted:Map<String, Bool> = [];

@@ -29,6 +29,7 @@ from scripts.test.c_fixture_harness import (  # noqa: E402
     run_c_fixture_corpus,
     validate_report,
 )
+from scripts.test.bounded_process import run as run_bounded_process  # noqa: E402
 
 
 HXML = Path(__file__).with_name("function_lowering.hxml")
@@ -40,6 +41,7 @@ MODULE_FIELDS_UNSUPPORTED = FIXTURES / "module_fields_unsupported"
 DEFAULT_ARGUMENT = FIXTURES / "default"
 OPTIONAL_ARGUMENT = FIXTURES / "optional"
 CLOSURE_ESCAPE = FIXTURES / "closure_escape"
+INCOMPATIBLE_FUNCTION_FLOW = FIXTURES / "incompatible_function_flow"
 NATIVE = Path(__file__).with_name("native")
 EXPECTED = Path(__file__).with_name("expected")
 REPORT_PREFIX = "HXC_FUNCTION_LOWERING="
@@ -104,8 +106,9 @@ def render(
         raise FunctionLoweringFailure(f"unknown function profile {profile!r}")
     environment = os.environ.copy()
     environment["HAXE_NO_SERVER"] = "1"
-    result = subprocess.run(
+    result = run_bounded_process(
         command,
+        phase=label,
         cwd=ROOT,
         env=environment,
         check=False,
@@ -240,6 +243,34 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
         if marker not in hxcir:
             raise FunctionLoweringFailure(f"recursive call graph omitted {marker}")
     for marker in (
+        'function "function.FunctionFixture.chooseConditional"',
+        'type=function(i32)->i32 ownership=owned-or-value storage=automatic state=uninitialized',
+        'conditional-result-declare" result=- declare-uninitialized',
+        'function "function.FunctionFixture.chooseSwitch"',
+        'switch-function-result-declare" result=- declare-uninitialized',
+        'function "function.FunctionFixture.recursiveThroughValue"',
+    ):
+        if marker not in hxcir:
+            raise FunctionLoweringFailure(
+                f"non-capturing function flow omitted HxcIR marker {marker!r}"
+            )
+    recursive_value_start = hxcir.find(
+        'function "function.FunctionFixture.recursiveThroughValue"'
+    )
+    recursive_value_end = hxcir.find(
+        'end function "function.FunctionFixture.recursiveThroughValue"',
+        recursive_value_start,
+    )
+    recursive_value_ir = hxcir[recursive_value_start:recursive_value_end]
+    if (
+        recursive_value_start == -1
+        or recursive_value_end == -1
+        or 'call dispatch=closure(' not in recursive_value_ir
+    ):
+        raise FunctionLoweringFailure(
+            "recursion through a non-capturing function value lost its indirect call"
+        )
+    for marker in (
         "representation=stack-closure(i32)->i32",
         'name="FunctionFixture.captureRoundTrip.LambdaEnvironment"',
         "stack-closure-capture:calls",
@@ -329,6 +360,18 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
         )
 
     header = required_text(report, "header")
+    callback_record = header.find("struct hxc_FunctionFixture_CallbackPoint {\n")
+    callback_carrier = header.find(
+        "(*hxc_invoke)(void *, struct hxc_FunctionFixture_CallbackPoint)"
+    )
+    if (
+        callback_record == -1
+        or callback_carrier == -1
+        or callback_record > callback_carrier
+    ):
+        raise FunctionLoweringFailure(
+            "by-value callback carrier preceded its complete record declaration"
+        )
     program_source = sources["src/program.c"]
     mutual_left_source = sources["src/nonreturn_0000.c"]
     mutual_right_source = sources["src/nonreturn_0001.c"]
@@ -432,6 +475,17 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
             raise FunctionLoweringFailure(
                 f"generated C omitted stack-closure evidence {marker!r}"
             )
+    for marker in (
+        "(*hxc_FunctionFixture_chooseConditional(bool hxc_l_enabled))(int32_t)",
+        "(*hxc_FunctionFixture_chooseSwitch(int32_t hxc_l_mode))(int32_t)",
+        "hxc_l_tmp_conditional_result",
+        "hxc_l_tmp_switch_function_result",
+        "hxc_l_next(false)",
+    ):
+        if marker not in program_source:
+            raise FunctionLoweringFailure(
+                f"generated C omitted non-capturing function-flow evidence {marker!r}"
+            )
     mutable_source_start = program_source.find(
         "int32_t hxc_FunctionFixture_mutateParameters("
     )
@@ -499,7 +553,7 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
         )
 
     functions = report.get("functions")
-    if not isinstance(functions, list) or len(functions) != 21:
+    if not isinstance(functions, list) or len(functions) != 29:
         raise FunctionLoweringFailure("function report omitted admitted functions")
     by_field = {
         entry.get("field"): entry
@@ -507,10 +561,12 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
         if isinstance(entry, dict) and isinstance(entry.get("field"), str)
     }
     if (
-        len(by_field) != 21
+        len(by_field) != 29
         or by_field.get("main", {}).get("parameters") != []
         or len(by_field.get("first", {}).get("parameters", [])) != 2
         or len(by_field.get("apply", {}).get("parameters", [])) != 2
+        or len(by_field.get("applyPoint", {}).get("parameters", [])) != 2
+        or len(by_field.get("pointValue", {}).get("parameters", [])) != 1
         or len(by_field.get("applyTwice", {}).get("parameters", [])) != 2
         or len(by_field.get("captureRoundTrip", {}).get("parameters", [])) != 1
         or len(by_field.get("mutateParameters", {}).get("parameters", [])) != 3
@@ -598,7 +654,7 @@ def normalized_profile(report: dict[str, object]) -> dict[str, object]:
 
 
 def compiler_identity(executable: str) -> tuple[str, str]:
-    result = subprocess.run(
+    result = run_bounded_process(
         [executable, "--version"],
         cwd=ROOT,
         check=False,
@@ -674,9 +730,12 @@ def check_native(
     with tempfile.TemporaryDirectory(prefix="hxc-function-native-") as temporary:
         root = Path(temporary)
         sources = write_native_project(report, root)
-        header = root / "include/hxc/program.h"
+        # Check the public header as a consumer includes it. Compiling the header
+        # itself as the main C file misclassifies its unused inline helpers.
+        header_consumer = root / "header_consumer.c"
+        header_consumer.write_text('#include "hxc/program.h"\n', encoding="utf-8")
         for toolchain in available_compilers(selected):
-            header_result = subprocess.run(
+            header_result = run_bounded_process(
                 [
                     toolchain.compiler,
                     *STRICT_FLAGS,
@@ -685,7 +744,7 @@ def check_native(
                     "-x",
                     "c",
                     "-fsyntax-only",
-                    str(header),
+                    str(header_consumer),
                 ],
                 cwd=ROOT,
                 check=False,
@@ -700,7 +759,7 @@ def check_native(
                 )
             for optimization in ("-O0", "-O2"):
                 executable = root / f"program-{toolchain.family}-{optimization[1:]}"
-                compiled = subprocess.run(
+                compiled = run_bounded_process(
                     [
                         toolchain.compiler,
                         *STRICT_FLAGS,
@@ -722,7 +781,7 @@ def check_native(
                         f"{toolchain.family} {optimization} rejected function C\n"
                         f"stdout:\n{compiled.stdout}\nstderr:\n{compiled.stderr}"
                     )
-                ran = subprocess.run(
+                ran = run_bounded_process(
                     [str(executable)],
                     cwd=ROOT,
                     check=False,
@@ -736,7 +795,7 @@ def check_native(
                         f"exit={ran.returncode} stdout={ran.stdout!r} stderr={ran.stderr!r}"
                     )
             sanitized = root / f"program-{toolchain.family}-sanitized"
-            sanitizer_compile = subprocess.run(
+            sanitizer_compile = run_bounded_process(
                 [
                     toolchain.compiler,
                     *STRICT_FLAGS,
@@ -765,7 +824,7 @@ def check_native(
                     f"stdout:\n{sanitizer_compile.stdout}"
                     f"stderr:\n{sanitizer_compile.stderr}"
                 )
-            sanitized_run = subprocess.run(
+            sanitized_run = run_bounded_process(
                 [str(sanitized)],
                 cwd=ROOT,
                 check=False,
@@ -787,7 +846,7 @@ def check_native(
 
 def check_eval_oracle() -> None:
     """Run the same closure assertions through Haxe Eval as an independent oracle."""
-    result = subprocess.run(
+    result = run_bounded_process(
         [
             development_tool("haxe"),
             "-cp",
@@ -851,7 +910,7 @@ def custom_target(
         environment["HAXE_NO_SERVER"] = "1"
     else:
         environment.pop("HAXE_NO_SERVER", None)
-    return subprocess.run(
+    return run_bounded_process(
         command,
         cwd=ROOT,
         env=environment,
@@ -986,7 +1045,7 @@ def check_production() -> None:
         production_sources = sorted((first / "src").glob("*.c"))
         if not production_sources:
             raise FunctionLoweringFailure("production project emitted no C sources")
-        compiled = subprocess.run(
+        compiled = run_bounded_process(
             [
                 compiler.compiler,
                 *STRICT_FLAGS,
@@ -1006,7 +1065,7 @@ def check_production() -> None:
             raise FunctionLoweringFailure(
                 f"production generated C failed strict compile\n{compiled.stdout}{compiled.stderr}"
             )
-        ran = subprocess.run(
+        ran = run_bounded_process(
             [str(executable)],
             cwd=ROOT,
             check=False,
@@ -1155,7 +1214,7 @@ def check_module_fields() -> None:
                 "generated C leaked Haxe's hidden module-fields container"
             )
 
-        oracle = subprocess.run(
+        oracle = run_bounded_process(
             [development_tool("haxe"), "-cp", str(MODULE_FIELDS), "-main", "ModuleFunctions", "--interp"],
             cwd=ROOT,
             env={**os.environ, "HAXE_NO_SERVER": "1"},
@@ -1169,7 +1228,7 @@ def check_module_fields() -> None:
 
         toolchain = available_compilers()[0]
         executable = root / "module-fields"
-        native = subprocess.run(
+        native = run_bounded_process(
             [
                 toolchain.compiler,
                 *STRICT_FLAGS,
@@ -1190,7 +1249,7 @@ def check_module_fields() -> None:
             raise FunctionLoweringFailure(
                 f"module-field generated C failed strict native compilation\n{native.stdout}{native.stderr}"
             )
-        ran = subprocess.run(
+        ran = run_bounded_process(
             [str(executable)],
             cwd=ROOT,
             check=False,
@@ -1352,7 +1411,7 @@ def check_direct_argument_defaults(selected: str | None) -> None:
             ("default", DEFAULT_ARGUMENT),
             ("optional", OPTIONAL_ARGUMENT),
         ):
-            oracle = subprocess.run(
+            oracle = run_bounded_process(
                 [development_tool("haxe"), "-cp", str(fixture), "-main", "Main", "--interp"],
                 cwd=ROOT,
                 env={**os.environ, "HAXE_NO_SERVER": "1"},
@@ -1427,7 +1486,7 @@ def check_direct_argument_defaults(selected: str | None) -> None:
             runtime_sources = planned_runtime_sources(outputs["split"])
             for optimization in ("-O0", "-O2"):
                 executable = root / f"{name}-{toolchain.family}-{optimization[1:]}"
-                native = subprocess.run(
+                native = run_bounded_process(
                     [
                         toolchain.compiler,
                         *STRICT_FLAGS,
@@ -1452,7 +1511,7 @@ def check_direct_argument_defaults(selected: str | None) -> None:
                         f"{name} {optimization} generated C failed strict compilation\n"
                         f"stdout:\n{native.stdout}stderr:\n{native.stderr}"
                     )
-                ran = subprocess.run(
+                ran = run_bounded_process(
                     [str(executable)],
                     cwd=ROOT,
                     check=False,
@@ -1471,7 +1530,7 @@ def check_direct_argument_defaults(selected: str | None) -> None:
                 "-fno-omit-frame-pointer",
                 "-fsanitize=address,undefined",
             )
-            sanitizer_compile = subprocess.run(
+            sanitizer_compile = run_bounded_process(
                 [
                     toolchain.compiler,
                     *STRICT_FLAGS,
@@ -1496,7 +1555,7 @@ def check_direct_argument_defaults(selected: str | None) -> None:
                     f"{name} generated C failed the address/undefined-behavior sanitizer build\n"
                     f"stdout:\n{sanitizer_compile.stdout}stderr:\n{sanitizer_compile.stderr}"
                 )
-            sanitized_run = subprocess.run(
+            sanitized_run = run_bounded_process(
                 [str(sanitized)],
                 cwd=ROOT,
                 check=False,
@@ -1600,6 +1659,26 @@ def check_argument_diagnostics() -> None:
                     f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
                 )
 
+    with tempfile.TemporaryDirectory(prefix="hxc-function-signature-negative-") as temporary:
+        output = Path(temporary) / "generated"
+        result = custom_target(INCOMPATIBLE_FUNCTION_FLOW, output)
+        combined = (result.stdout + result.stderr).replace("\\", "/")
+        required = (
+            "fixtures/incompatible_function_flow/Main.hx:19:",
+            "error: Float should be Int",
+            "have: (...) -> Float",
+            "want: (...) -> Int",
+        )
+        if (
+            result.returncode != 1
+            or any(marker not in combined for marker in required)
+            or list(output.rglob("*"))
+        ):
+            raise FunctionLoweringFailure(
+                "incompatible function-flow diagnostic was not exact and output-free\n"
+                f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
+            )
+
 
 def snapshot_native_report() -> dict[str, object]:
     return {
@@ -1664,7 +1743,7 @@ def main(arguments: Iterable[str] = ()) -> int:
         return 1
     print(
         "function-lowering: OK: typed read-only/mutable parameters, calls/conversions, recursive private "
-        "prototypes/unity+split+package source partitions, readable module-level functions, direct optional/default completion, exact rest diagnostics, strict int main(void), "
+        "prototypes/unity+split+package source partitions, non-capturing function selection and recursion, readable module-level functions, direct optional/default completion, exact function/rest diagnostics, strict int main(void), "
         "and zero-runtime production artifacts passed"
     )
     return 0

@@ -19,11 +19,13 @@ enum HotbarFrame {
 	Selected;
 }
 
-/** Closed semantic names for the health cells used by the first HUD. */
+/** Closed semantic names for the reviewed HUD cells used during play. */
 enum HudGlyph {
 	HealthFull;
 	HealthHalf;
 	HealthEmpty;
+	Crosshair;
+	QuestMarker;
 }
 
 /**
@@ -108,16 +110,23 @@ final class CaxecraftAtlas {
 		return true;
 	}
 
+	/** Draw one semantic HUD glyph without exposing atlas coordinates to layout code. */
 	public static function drawHudGlyph(texture:Texture2D, glyph:HudGlyph, x:Int, y:Int, size:Int):Void {
 		var column = 0;
+		var row = 0;
 		switch (glyph) {
 			case HealthFull:
 			case HealthHalf:
 				column = 1;
 			case HealthEmpty:
 				column = 2;
+			case Crosshair:
+				row = 3;
+			case QuestMarker:
+				column = 2;
+				row = 3;
 		}
-		CaxecraftTextures.drawAtlasCell(texture, column, 0, 4, 4, x, y, size, size, CaxecraftPalette.textureTint());
+		CaxecraftTextures.drawAtlasCell(texture, column, row, 4, 4, x, y, size, size, CaxecraftPalette.textureTint());
 	}
 
 	public static function drawHotbarFrame(texture:Texture2D, frame:HotbarFrame, x:Int, y:Int, size:Int):Void {

@@ -206,8 +206,11 @@ The emitter owns these independently versioned sidecars:
   capabilities;
 - `hxc.specializations.json`: omitted when no generic instance is reachable;
   otherwise a schema-2 `hxc-generic-specialization-v2` record containing full
-  collision-checked semantic keys, normalized arguments, source-rooted reasons,
-  recursion, hard limits, and conservative function/enum code-size attribution.
+  collision-checked semantic keys, normalized owner-then-method arguments,
+  source-rooted reasons, recursion, hard limits, and conservative function/enum
+  code-size attribution. Closed constructors use the same record with a
+  `constructor.specialization.` instance prefix; ordinary functions use
+  `function.specialization.`.
   The emitter revalidates its counts, order, hashes, sources, reason totals, and
   complete payload totals before accepting it.
 - `hxc.dispatch.json`: omitted when no instance call is reachable; otherwise a
@@ -273,7 +276,7 @@ evidence. `CProjectEmitter` rejects any unrelated runtime plan or payload. See
 
 Because every selected closure includes `runtime-base`, the private generated
 program header also carries one structural C11 assertion that the runtime ABI
-major matches the compiler's internal 0.16.0 contract. Same-major minor changes
+major matches the compiler's internal 0.19.0 contract. Same-major minor changes
 remain compatible; a changed major fails before linking. Runtime-free projects
 contain no `hxrt` include, version marker, or compatibility assertion. This is
 not a public application ABI: primitive production emission rejects public

@@ -19,6 +19,11 @@ from typing import Iterable
 
 
 ROOT = Path(__file__).resolve().parents[3]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from scripts.test.bounded_process import run as run_bounded_process  # noqa: E402
+
 CASE = Path(__file__).resolve().parent
 ORACLE_HXML = CASE / "oracle.hxml"
 FIXTURE = CASE / "array_runtime.c"
@@ -27,6 +32,7 @@ INCLUDE = ROOT / "runtime/hxrt/include"
 SOURCES = (
     ROOT / "runtime/hxrt/src/allocator.c",
     ROOT / "runtime/hxrt/src/array.c",
+    ROOT / "runtime/hxrt/src/iterator.c",
 )
 JOIN_SOURCES = (
     ROOT / "runtime/hxrt/src/allocator.c",
@@ -37,8 +43,13 @@ JOIN_SOURCES = (
 )
 EXPECTED_TRACE = "5:1,3,1,1,0\n"
 GENERATED = CASE / "generated"
+GENERATED_ACYCLIC = CASE / "generated-acyclic"
 GENERATED_CLASS = CASE / "generated-class"
+GENERATED_CYCLE = CASE / "generated-cycle"
+GENERATED_FUNCTION = CASE / "generated-function"
+GENERATED_TO_STRING = CASE / "generated-to-string"
 GENERATED_CLASS_GC_DRIVER = ROOT / "test/native/array_class_gc_driver.c"
+GENERATED_CYCLE_GC_DRIVER = ROOT / "test/native/array_cycle_gc_driver.c"
 NEGATIVE = CASE / "negative"
 REPORT_PREFIX = "HXC_STATIC_INITIALIZATION="
 TOOLCHAINS = ("gcc", "clang")
@@ -90,7 +101,7 @@ def development_tool(name: str) -> str:
 
 
 def compiler_identity(executable: str) -> tuple[str, str]:
-    result = subprocess.run(
+    result = run_bounded_process(
         [executable, "--version"],
         cwd=ROOT,
         check=False,
@@ -152,7 +163,7 @@ def run_oracle() -> str:
     environment["HAXE_NO_SERVER"] = "1"
     outputs: list[str] = []
     for label in ("first", "second"):
-        result = subprocess.run(
+        result = run_bounded_process(
             [development_tool("haxe"), str(ORACLE_HXML)],
             cwd=ROOT,
             env=environment,
@@ -179,7 +190,7 @@ def run_oracle() -> str:
 def run_generated_eval_oracle() -> None:
     """Run the ordinary-Haxe ownership fixture before compiling it to C."""
 
-    result = subprocess.run(
+    result = run_bounded_process(
         [development_tool("haxe"), "oracle.hxml"],
         cwd=GENERATED,
         env=haxe_environment(),
@@ -235,7 +246,7 @@ def compile_generated_haxe(
     for define in defines:
         command.extend(["-D", define])
     command.extend(["--custom-target", f"c={output}"])
-    return subprocess.run(
+    return run_bounded_process(
         command,
         cwd=ROOT,
         env=haxe_environment(server=connect is not None),
@@ -310,12 +321,23 @@ def validate_generated_hxcir(hxcir: str) -> None:
         'runtime(feature="array",operation="copy")',
         'runtime(feature="array",operation="length")',
         'runtime(feature="array",operation="get-checked")',
+        'runtime(feature="array",operation="insert")',
         'runtime(feature="array",operation="push")',
         'runtime(feature="array",operation="pop")',
         'runtime(feature="array",operation="shift")',
         'runtime(feature="array",operation="splice-one-discard")',
+        'runtime(feature="array",operation="splice-one-copy")',
+        'runtime(feature="array",operation="splice-discard")',
+        'runtime(feature="array",operation="splice-copy")',
         'runtime(feature="array",operation="resize-zero")',
+        'runtime(feature="array",operation="resize-default")',
+        'runtime(feature="array",operation="set")',
         'runtime(feature="array",operation="sort")',
+        'representation=managed("iterator")',
+        'runtime(feature="iterator",operation="create-array-values")',
+        'runtime(feature="iterator",operation="create-array-key-values")',
+        'runtime(feature="iterator",operation="has-next")',
+        'runtime(feature="iterator",operation="next")',
         'function-reference target="function.lambda.function.Main.main.',
         'implementation=program-local("array-element-lifecycle:instance.closed-record.',
         'array-element-owner-initialize',
@@ -412,6 +434,12 @@ def validate_generated_hxcir(hxcir: str) -> None:
     choose_array = hxcir_function(hxcir, "function.Main.chooseArray")
     selected_pair_sum = hxcir_function(hxcir, "function.Main.selectedPairSum")
     delayed_plan = hxcir_function(hxcir, "function.Main.delayedPlanLength")
+    managed_element_assignment = hxcir_function(
+        hxcir, "function.Main.replaceManagedEnvelope"
+    )
+    discarded_managed_element = hxcir_function(
+        hxcir, "function.Main.discardManagedEnvelope"
+    )
     field_self_assignment = hxcir_function(
         hxcir, "method.ArrayFieldOwner.assignToSelf"
     )
@@ -427,6 +455,55 @@ def validate_generated_hxcir(hxcir: str) -> None:
     field_conditional_assignment = hxcir_function(
         hxcir, "method.ArrayFieldOwner.replaceConditional"
     )
+    managed_owner = managed_element_assignment.find(
+        "array-set-element-owner-initialize"
+    )
+    managed_set = managed_element_assignment.find(
+        'operation="set"', managed_owner
+    )
+    managed_return = managed_element_assignment.find(
+        "terminator return", managed_set
+    )
+    if (
+        managed_owner == -1
+        or managed_set == -1
+        or managed_return == -1
+        or not managed_owner < managed_set < managed_return
+        or re.search(
+            r'"enum-temporary\.local\.\d+\.release"',
+            managed_element_assignment[managed_return:],
+        )
+        is None
+    ):
+        raise ArrayRuntimeFailure(
+            "fresh managed enum Array replacement lost its bounded temporary owner"
+        )
+    discarded_call = discarded_managed_element.find(
+        'dispatch=direct("function.Main.copyManagedEnvelope")'
+    )
+    discarded_owner = discarded_managed_element.find(
+        "discarded-enum-owner-initialize", discarded_call
+    )
+    discarded_destroy = discarded_managed_element.find(
+        "destroy-discarded-enum", discarded_owner
+    )
+    discarded_return = discarded_managed_element.find(
+        "terminator return value=none cleanup=[]", discarded_destroy
+    )
+    if (
+        discarded_call == -1
+        or discarded_owner == -1
+        or discarded_destroy == -1
+        or discarded_return == -1
+        or not discarded_call
+        < discarded_owner
+        < discarded_destroy
+        < discarded_return
+        or discarded_managed_element.count("destroy-discarded-enum") != 1
+    ):
+        raise ArrayRuntimeFailure(
+            "discarded fresh managed enum lost its immediate exact-once cleanup"
+        )
     require_ordered_events(
         field_self_assignment,
         "same-container alias",
@@ -648,11 +725,25 @@ def validate_generated_hxcir(hxcir: str) -> None:
             "Array.shift coverage no longer contains primitive and managed "
             "present, repeated, and empty ownership transfers"
         )
-    if entry.count('runtime(feature="array",operation="splice-one-discard")') != 6:
+    if entry.count('runtime(feature="array",operation="splice-one-discard")') != 7:
         raise ArrayRuntimeFailure(
-            "discarded Array.splice coverage no longer contains primitive "
-            "middle/negative/out-of-range/clamped/empty cases plus one managed "
-            "String removal"
+            "discarded one-element Array.splice coverage no longer contains the "
+            "three pinned remove delegations plus negative, out-of-range, clamped, "
+            "and empty direct cases"
+        )
+    if entry.count('runtime(feature="array",operation="splice-one-copy")') != 2:
+        raise ArrayRuntimeFailure(
+            "returned Array.splice coverage no longer contains primitive and "
+            "managed String ownership transfers"
+        )
+    if entry.count('runtime(feature="array",operation="splice-discard")') != 1:
+        raise ArrayRuntimeFailure(
+            "discarded arbitrary-length Array.splice coverage drifted"
+        )
+    if entry.count('runtime(feature="array",operation="splice-copy")') != 3:
+        raise ArrayRuntimeFailure(
+            "returned arbitrary-length Array.splice coverage lost primitive, "
+            "negative-length, or managed ownership cases"
         )
     if (
         entry.count('runtime(feature="array",operation="resize-zero")') != 2
@@ -661,6 +752,14 @@ def validate_generated_hxcir(hxcir: str) -> None:
         raise ArrayRuntimeFailure(
             "Array.resize(0) lost its two typed clear operations or their "
             "dominating receiver checks"
+        )
+    if (
+        entry.count('runtime(feature="array",operation="resize-default")') != 2
+        or entry.count("array-resize-receiver-null-check") != 2
+    ):
+        raise ArrayRuntimeFailure(
+            "Array.resize with a dynamic nonzero length lost primitive or managed "
+            "default initialization"
         )
     if (
         'action "optional-local.' not in entry
@@ -814,6 +913,7 @@ def validate_generated_project(output: Path) -> None:
         "string",
         "array-join",
         "bytes",
+        "iterator",
     ]:
         raise ArrayRuntimeFailure("generated Array program selected the wrong runtime closure")
     reasons = plan.get("rootReasons")
@@ -856,16 +956,21 @@ def validate_generated_project(output: Path) -> None:
         "copy",
         "create-literal",
         "get-checked",
+		"insert",
         "length",
         "managed-type-representation",
         "pop",
         "push",
         "retain",
         "resize-zero",
+        "resize-default",
         "set",
         "shift",
         "sort",
+        "splice-one-copy",
         "splice-one-discard",
+        "splice-copy",
+        "splice-discard",
     }
     if operations != expected:
         raise ArrayRuntimeFailure(
@@ -879,6 +984,24 @@ def validate_generated_project(output: Path) -> None:
     if join_operations != {"join"}:
         raise ArrayRuntimeFailure(
             f"generated Array join operations drifted: {sorted(join_operations)!r}"
+        )
+    iterator_operations = {
+        reason.get("operationId")
+        for reason in reasons
+        if isinstance(reason, dict) and reason.get("featureId") == "iterator"
+    }
+    expected_iterator_operations = {
+        "cleanup-release",
+        "create-array-key-values",
+        "create-array-values",
+        "has-next",
+        "managed-type-representation",
+        "next",
+    }
+    if iterator_operations != expected_iterator_operations:
+        raise ArrayRuntimeFailure(
+            "generated Array iterator operations drifted: "
+            f"{sorted(iterator_operations)!r}"
         )
     sources = "\n".join(
         path.read_text(encoding="utf-8")
@@ -894,13 +1017,23 @@ def validate_generated_project(output: Path) -> None:
         "hxc_array_ref_copy(",
         "hxc_array_ref_retain",
         "hxc_array_ref_release",
+		"hxc_array_ref_insert_copy",
         "hxc_array_ref_push_copy",
         "hxc_array_ref_pop_move",
         "hxc_array_ref_shift_move",
         "hxc_array_ref_splice_one_discard",
+        "hxc_array_ref_splice_discard",
+        "hxc_array_ref_splice_copy",
+		"hxc_array_ref_insert_copy",
         "hxc_array_ref_get_copy",
         "hxc_array_resize",
+        "hxc_array_ref_resize_default",
         "hxc_array_ref_sort",
+        "hxc_iterator_ref_create_array_values",
+        "hxc_iterator_ref_create_array_pairs",
+        "hxc_iterator_ref_has_next",
+        "hxc_iterator_ref_next_move",
+        "hxc_iterator_ref_release",
         "hxc_array_string_join",
         "_element_copy(",
         "_element_assign(",
@@ -912,6 +1045,22 @@ def validate_generated_project(output: Path) -> None:
     ):
         if marker not in sources:
             raise ArrayRuntimeFailure(f"generated C omitted {marker}")
+    for result_marker in (
+        "iterator_create_array_values_result",
+        "iterator_create_array_key_values_result",
+    ):
+        declarations = [
+            line.strip()
+            for line in sources.splitlines()
+            if "struct hxc_iterator_ref *" in line and result_marker in line
+        ]
+        if not declarations or any(
+            not declaration.endswith(" = NULL;") for declaration in declarations
+        ):
+            raise ArrayRuntimeFailure(
+                "generated Iterator creation did not zero-initialize every "
+                f"{result_marker} out-result"
+            )
     if "struct hxc_array_ref *hxc_Main_maybeValues(bool" not in headers:
         raise ArrayRuntimeFailure(
             "Null<Array<Int>> acquired storage beyond the existing Array pointer"
@@ -921,18 +1070,39 @@ def validate_generated_project(output: Path) -> None:
 
 
 def render_generated_pair(root: Path) -> Path:
-    normal = root / "generated-normal"
-    reverse = root / "generated-reverse"
-    first = compile_generated_haxe(GENERATED, normal, report=True)
-    second = compile_generated_haxe(GENERATED, reverse, reverse=True)
-    for label, result in (("normal", first), ("reverse", second)):
-        if result.returncode != 0:
+    canonical_by_layout: dict[str, dict[str, bytes]] = {}
+    first_result: subprocess.CompletedProcess[str] | None = None
+    normal_split: Path | None = None
+    for layout in ("split", "package", "unity"):
+        normal = root / f"generated-{layout}-normal"
+        reverse = root / f"generated-{layout}-reverse"
+        first = compile_generated_haxe(
+            GENERATED, normal, report=layout == "split", layout=layout
+        )
+        second = compile_generated_haxe(
+            GENERATED, reverse, reverse=True, layout=layout
+        )
+        for label, result in (
+            (f"{layout}-normal", first),
+            (f"{layout}-reverse", second),
+        ):
+            if result.returncode != 0:
+                raise ArrayRuntimeFailure(
+                    f"{label} generated Array compile failed\n"
+                    f"stdout={result.stdout!r}\nstderr={result.stderr!r}"
+                )
+        canonical = generated_tree(normal)
+        if canonical != generated_tree(reverse):
             raise ArrayRuntimeFailure(
-                f"{label} generated Array compile failed\n"
-                f"stdout={result.stdout!r}\nstderr={result.stderr!r}"
+                f"generated Array {layout} project changed under reversed discovery"
             )
-    if generated_tree(normal) != generated_tree(reverse):
-        raise ArrayRuntimeFailure("generated Array project changed under reversed discovery")
+        canonical_by_layout[layout] = canonical
+        if layout == "split":
+            normal_split = normal
+            first_result = first
+
+    if normal_split is None or first_result is None:
+        raise ArrayRuntimeFailure("generated Array lost its split reference build")
     metal_normal = root / "generated-metal-normal"
     metal_reverse = root / "generated-metal-reverse"
     metal_defines = ("reflaxe_c_profile=metal",)
@@ -958,13 +1128,17 @@ def render_generated_pair(root: Path) -> Path:
         raise ArrayRuntimeFailure(
             "generated metal Array project changed under reversed discovery"
         )
-    validate_generated_hxcir(extract_hxcir(first))
+    validate_generated_hxcir(extract_hxcir(first_result))
     server_first, server_second = render_server_pair(root)
-    canonical = generated_tree(normal)
-    if generated_tree(server_first) != canonical or generated_tree(server_second) != canonical:
-        raise ArrayRuntimeFailure("generated Array project changed under warm compiler-server reuse")
-    validate_generated_project(normal)
-    oracle = subprocess.run(
+    if (
+        generated_tree(server_first) != canonical_by_layout["split"]
+        or generated_tree(server_second) != canonical_by_layout["split"]
+    ):
+        raise ArrayRuntimeFailure(
+            "generated Array project changed under warm compiler-server reuse"
+        )
+    validate_generated_project(normal_split)
+    oracle = run_bounded_process(
         [development_tool("haxe"), "oracle.hxml"],
         cwd=GENERATED,
         env=haxe_environment(),
@@ -978,7 +1152,7 @@ def render_generated_pair(root: Path) -> Path:
             "ordinary-Haxe generated fixture oracle failed: "
             f"exit={oracle.returncode} stdout={oracle.stdout!r} stderr={oracle.stderr!r}"
         )
-    return normal
+    return normal_split
 
 
 def render_managed_class_pair(root: Path) -> Path:
@@ -1024,7 +1198,7 @@ def render_managed_class_pair(root: Path) -> Path:
             "generated Array<Class> project changed under warm compiler-server reuse"
         )
 
-    oracle = subprocess.run(
+    oracle = run_bounded_process(
         [development_tool("haxe"), "oracle.hxml"],
         cwd=GENERATED_CLASS,
         env=haxe_environment(),
@@ -1109,15 +1283,410 @@ def render_managed_class_pair(root: Path) -> Path:
     return normal_split
 
 
+def render_collection_cycle_pair(root: Path) -> tuple[Path, Path, int, int]:
+    """Render cyclic and neighboring acyclic enum/record Array programs."""
+    references: dict[str, Path] = {}
+    reports: dict[str, subprocess.CompletedProcess[str]] = {}
+    for fixture, prefix in (
+        (GENERATED_CYCLE, "generated-cycle"),
+        (GENERATED_ACYCLIC, "generated-acyclic"),
+    ):
+        for layout in ("split", "package", "unity"):
+            normal = root / f"{prefix}-{layout}-normal"
+            reverse = root / f"{prefix}-{layout}-reverse"
+            first = compile_generated_haxe(
+                fixture, normal, report=layout == "split", layout=layout
+            )
+            second = compile_generated_haxe(
+                fixture, reverse, reverse=True, layout=layout
+            )
+            for label, result in (("normal", first), ("reverse", second)):
+                if result.returncode != 0:
+                    raise ArrayRuntimeFailure(
+                        f"{prefix} {layout} {label} compile failed\n"
+                        f"stdout={result.stdout!r}\nstderr={result.stderr!r}"
+                    )
+            if generated_tree(normal) != generated_tree(reverse):
+                raise ArrayRuntimeFailure(
+                    f"{prefix} {layout} changed under reversed discovery"
+                )
+            if layout == "split":
+                references[prefix] = normal
+                reports[prefix] = first
+
+        oracle = run_bounded_process(
+            [development_tool("haxe"), "oracle.hxml"],
+            cwd=fixture,
+            env=haxe_environment(),
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        if oracle.returncode != 0 or oracle.stdout or oracle.stderr:
+            raise ArrayRuntimeFailure(
+                f"{prefix} Eval oracle failed: exit={oracle.returncode} "
+                f"stdout={oracle.stdout!r} stderr={oracle.stderr!r}"
+            )
+
+    cycle = references["generated-cycle"]
+    acyclic = references["generated-acyclic"]
+    cycle_hxcir = extract_hxcir(reports["generated-cycle"])
+    for marker in (
+        'representation=managed("gc")',
+        'path="tag(instance.enum.',
+        '/field(instance.closed-record.',
+        'runtime(feature="array",operation="create-literal")',
+        'managed-root "root.',
+    ):
+        if marker not in cycle_hxcir:
+            raise ArrayRuntimeFailure(
+                f"collection-cycle HxcIR omitted {marker!r}"
+            )
+
+    cycle_plan = json.loads(
+        (cycle / "hxc.runtime-plan.json").read_text(encoding="utf-8")
+    )
+    if cycle_plan.get("features") != [
+        "runtime-base",
+        "status",
+        "alloc",
+        "array",
+        "object",
+        "gc",
+    ] or "exact-traced-haxe-object-graph" not in cycle_plan.get(
+        "directDecisions", []
+    ):
+        raise ArrayRuntimeFailure(
+            "cyclic Array/record/enum graph selected the wrong collector closure"
+        )
+
+    acyclic_plan = json.loads(
+        (acyclic / "hxc.runtime-plan.json").read_text(encoding="utf-8")
+    )
+    if acyclic_plan.get("features") != [
+        "runtime-base",
+        "status",
+        "alloc",
+        "array",
+    ] or "exact-traced-haxe-object-graph" in acyclic_plan.get(
+        "directDecisions", []
+    ):
+        raise ArrayRuntimeFailure(
+            "acyclic enum/record Array lost its smaller selective runtime path"
+        )
+
+    support = (cycle / "src/hxc/support.c").read_text(encoding="utf-8")
+    trace = re.search(
+        r"(static void hxc_array_[0-9a-f]+_trace\(.*?\n\})\n\n"
+        r"static void hxc_array_[0-9a-f]+_finalize",
+        support,
+        re.DOTALL,
+    )
+    if trace is None:
+        raise ArrayRuntimeFailure("collection-cycle C omitted its Array trace function")
+    trace_body = trace.group(1)
+    for marker in (
+        "case hxc_GraphNode_Empty:",
+        "case hxc_GraphNode_Linked:",
+        "case hxc_GraphNode_Marker:",
+        ".hxc_Linked.hxc_edge.hxc_next",
+    ):
+        if marker not in trace_body:
+            raise ArrayRuntimeFailure(
+                f"collection-cycle trace omitted active-tag marker {marker!r}"
+            )
+    if trace_body.count("_trace_visit(") != 1:
+        raise ArrayRuntimeFailure(
+            "collection-cycle trace visited inactive enum union storage"
+        )
+
+    cycle_application = "".join(
+        path.read_text(encoding="utf-8")
+        for path in sorted((cycle / "src").rglob("*.c"))
+    )
+    acyclic_application = "".join(
+        path.read_text(encoding="utf-8")
+        for path in sorted((acyclic / "src").rglob("*.c"))
+    )
+    if "hxc_gc_allocate" not in cycle_application:
+        raise ArrayRuntimeFailure(
+            "collector-owned collection cycle omitted generated GC allocation"
+        )
+    if (
+        "hxc_array_ref_retain" in cycle_application
+        or "hxc_array_ref_release" in cycle_application
+    ):
+        raise ArrayRuntimeFailure(
+            "collector-owned collection cycle retained reference-count operations"
+        )
+    cycle_bytes = sum(path.stat().st_size for path in cycle.rglob("*.c"))
+    acyclic_bytes = sum(path.stat().st_size for path in acyclic.rglob("*.c"))
+    if cycle_bytes <= acyclic_bytes or not acyclic_application:
+        raise ArrayRuntimeFailure(
+            "collection-cycle code-size evidence did not preserve the smaller acyclic path"
+        )
+    return cycle, acyclic, cycle_bytes, acyclic_bytes
+
+
+def validate_function_array_hxcir(hxcir: str) -> None:
+    """Prove that callable signatures and Array operations remain typed in HxcIR."""
+    for marker in (
+        'function(i32)->i32',
+        'function(i32,i32)->i32',
+        'runtime(feature="array",operation="create-literal")',
+        'runtime(feature="array",operation="push")',
+        'runtime(feature="array",operation="set")',
+        'runtime(feature="array",operation="copy")',
+        'runtime(feature="array",operation="get-checked")',
+        'runtime(feature="array",operation="sort")',
+        'function-reference target="function.Main.increment"',
+        'function-reference target="function.Main.multiply"',
+        'function-reference target="function.lambda.function.Main.main.',
+    ):
+        if marker not in hxcir:
+            raise ArrayRuntimeFailure(f"function-valued Array HxcIR omitted {marker}")
+    if " raw" in hxcir or str(ROOT) in hxcir:
+        raise ArrayRuntimeFailure(
+            "function-valued Array HxcIR used raw syntax or leaked a local path"
+        )
+
+
+def validate_function_array_project(output: Path) -> None:
+    """Check the unboxed layout, exact runtime closure, and strict C declarators."""
+    plan = json.loads((output / "hxc.runtime-plan.json").read_text(encoding="utf-8"))
+    if plan.get("features") != [
+        "runtime-base",
+        "status",
+        "alloc",
+        "array",
+        "string-literal",
+    ]:
+        raise ArrayRuntimeFailure(
+            "function-valued Array selected an unrelated callable runtime"
+        )
+    operations = {
+        reason.get("operationId")
+        for reason in plan.get("rootReasons", [])
+        if isinstance(reason, dict) and reason.get("featureId") == "array"
+    }
+    expected_operations = {
+        "cleanup-release",
+        "copy",
+        "create-literal",
+        "get-checked",
+        "length",
+        "managed-type-representation",
+        "push",
+        "set",
+        "sort",
+    }
+    if operations != expected_operations:
+        raise ArrayRuntimeFailure(
+            "function-valued Array operations drifted: "
+            f"{sorted(operations)!r}"
+        )
+
+    application = "\n".join(
+        path.read_text(encoding="utf-8")
+        for path in sorted((output / "src").rglob("*.c"))
+    )
+    for marker in (
+        "hxc_array_ref_create_trivial",
+        "sizeof(int32_t (*)(int32_t))",
+        "sizeof(int32_t (*)(int32_t, int32_t))",
+        "_Alignof(int32_t (*)(int32_t))",
+        "_Alignof(int32_t (*)(int32_t, int32_t))",
+        "int32_t (*const *)(int32_t)",
+        "int32_t (*const *)(int32_t, int32_t)",
+    ):
+        if marker not in application:
+            raise ArrayRuntimeFailure(f"function-valued Array C omitted {marker}")
+    for forbidden in (
+        "_element_copy(",
+        "_element_assign(",
+        "_element_destroy(",
+        "hxc_dynamic",
+        "stack_closure",
+    ):
+        if forbidden in application:
+            raise ArrayRuntimeFailure(
+                f"function-valued Array C gained forbidden carrier {forbidden}"
+            )
+
+
+def render_function_array_pair(root: Path) -> Path:
+    """Render one reversed-discovery pair and keep the split project as evidence."""
+    normal = root / "generated-function-split-normal"
+    reverse = root / "generated-function-split-reverse"
+    first = compile_generated_haxe(GENERATED_FUNCTION, normal, report=True)
+    second = compile_generated_haxe(GENERATED_FUNCTION, reverse, reverse=True)
+    for label, result in (("normal", first), ("reverse", second)):
+        if result.returncode != 0:
+            raise ArrayRuntimeFailure(
+                f"{label} function-valued Array compile failed\n"
+                f"stdout={result.stdout!r}\nstderr={result.stderr!r}"
+            )
+    if generated_tree(normal) != generated_tree(reverse):
+        raise ArrayRuntimeFailure(
+            "function-valued Array project changed under reversed discovery"
+        )
+    validate_function_array_hxcir(extract_hxcir(first))
+    validate_function_array_project(normal)
+    oracle = run_bounded_process(
+        [development_tool("haxe"), "oracle.hxml"],
+        cwd=GENERATED_FUNCTION,
+        env=haxe_environment(),
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    if oracle.returncode != 0 or oracle.stdout or oracle.stderr:
+        raise ArrayRuntimeFailure(
+            "function-valued Array Eval oracle failed: "
+            f"exit={oracle.returncode} stdout={oracle.stdout!r} "
+            f"stderr={oracle.stderr!r}"
+        )
+    return normal
+
+
+def run_function_array_negative_cases(root: Path) -> None:
+    """Keep captured environments and mismatched signatures fail-closed."""
+    expected = {
+        "function_element_capture": "TFunction(capturing-closure:outer-local:offset)",
+        "function_element_signature_mismatch": (
+            "(left : Int, right : Int) -> Int should be Int -> Int"
+        ),
+    }
+    for name, marker in expected.items():
+        output = root / f"negative-{name}"
+        result = compile_generated_haxe(NEGATIVE / name, output)
+        if result.returncode == 0 or marker not in result.stderr:
+            raise ArrayRuntimeFailure(
+                f"negative function-valued Array case {name} drifted\n"
+                f"exit={result.returncode} stdout={result.stdout!r} "
+                f"stderr={result.stderr!r}"
+            )
+        if output.exists() and any(output.rglob("*")):
+            raise ArrayRuntimeFailure(
+                f"negative function-valued Array case {name} left output"
+            )
+
+
+def validate_to_string_project(output: Path) -> None:
+    """Require only the typed Array and String closure used by toString."""
+    plan = json.loads((output / "hxc.runtime-plan.json").read_text(encoding="utf-8"))
+    if plan.get("features") != [
+        "runtime-base",
+        "status",
+        "alloc",
+        "array",
+        "string-literal",
+        "string-scalar",
+        "string",
+        "array-join",
+    ]:
+        raise ArrayRuntimeFailure("Array<String>.toString selected the wrong runtime closure")
+    operations_by_feature = {
+        feature: {
+            reason.get("operationId")
+            for reason in plan.get("rootReasons", [])
+            if isinstance(reason, dict) and reason.get("featureId") == feature
+        }
+        for feature in ("array", "array-join", "string")
+    }
+    if operations_by_feature != {
+        "array": {
+            "cleanup-release",
+            "create-literal",
+            "managed-type-representation",
+            "retain",
+        },
+        "array-join": {"join"},
+        "string": {"cleanup-release", "concat", "from-scalar"},
+    }:
+        raise ArrayRuntimeFailure(
+            "Array<String>.toString runtime roots drifted: "
+            f"{operations_by_feature!r}"
+        )
+    application = (output / "src/modules/Main.c").read_text(encoding="utf-8")
+    if application.count("hxc_array_string_join(") != 3:
+        raise ArrayRuntimeFailure("Array<String>.toString did not emit three typed joins")
+    if application.count("hxc_string_concat_ref(") != 6:
+        raise ArrayRuntimeFailure("Array<String>.toString did not emit bracket composition")
+    for forbidden in ("hxc_dynamic", "void *"):
+        if forbidden in application:
+            raise ArrayRuntimeFailure(
+                f"Array<String>.toString gained forbidden carrier {forbidden}"
+            )
+
+
+def render_to_string_pair(root: Path) -> Path:
+    """Render one deterministic focused pair and compare it with pinned Eval."""
+    normal = root / "generated-to-string-normal"
+    reverse = root / "generated-to-string-reverse"
+    first = compile_generated_haxe(GENERATED_TO_STRING, normal, report=True)
+    second = compile_generated_haxe(GENERATED_TO_STRING, reverse, reverse=True)
+    for label, result in (("normal", first), ("reverse", second)):
+        if result.returncode != 0:
+            raise ArrayRuntimeFailure(
+                f"{label} Array<String>.toString compile failed\n"
+                f"stdout={result.stdout!r}\nstderr={result.stderr!r}"
+            )
+    if generated_tree(normal) != generated_tree(reverse):
+        raise ArrayRuntimeFailure(
+            "Array<String>.toString project changed under reversed discovery"
+        )
+    hxcir = extract_hxcir(first)
+    for marker in (
+        'runtime(feature="array-join",operation="join")',
+        'runtime(feature="string",operation="concat")',
+    ):
+        if marker not in hxcir:
+            raise ArrayRuntimeFailure(f"Array<String>.toString HxcIR omitted {marker}")
+    validate_to_string_project(normal)
+    oracle = run_bounded_process(
+        [development_tool("haxe"), "oracle.hxml"],
+        cwd=GENERATED_TO_STRING,
+        env=haxe_environment(),
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    if oracle.returncode != 0 or oracle.stdout or oracle.stderr:
+        raise ArrayRuntimeFailure(
+            "Array<String>.toString Eval oracle failed: "
+            f"exit={oracle.returncode} stdout={oracle.stdout!r} "
+            f"stderr={oracle.stderr!r}"
+        )
+    return normal
+
+
+def run_to_string_negative_case(root: Path) -> None:
+    """Keep non-String Array element formatting fail-closed."""
+    output = root / "negative-to-string-non-string"
+    result = compile_generated_haxe(NEGATIVE / "to_string_non_string", output)
+    marker = "TCall(Array.join:element-not-managed-String:"
+    if result.returncode == 0 or marker not in result.stderr:
+        raise ArrayRuntimeFailure(
+            "negative Array.toString element contract drifted\n"
+            f"exit={result.returncode} stdout={result.stdout!r} "
+            f"stderr={result.stderr!r}"
+        )
+    if output.exists() and any(output.rglob("*")):
+        raise ArrayRuntimeFailure("negative Array.toString case left output")
+
+
 def run_generated_negative_cases(root: Path) -> None:
     expected = {
         "indirect_fresh_argument": "TCall(indirect-managed-argument-needs-explicit-ownership:0)",
         "join_non_string": "TCall(Array.join:element-not-managed-String:",
         "reassignment": "TBinop(OpAssign:managed-Array-reassignment-not-admitted)",
-        "resize_dynamic": "TCall(Array.resize:only-literal-zero-admitted)",
-        "resize_nonzero": "TCall(Array.resize:only-literal-zero-admitted)",
+        "resize_no_default": "TCall(Array.resize:element-has-no-exact-static-default:",
         "sort_capturing_comparator": "TFunction(capturing-closure:outer-local:direction)",
-        "splice_return": "TCall(Array.splice:returned-Array-not-yet-admitted)",
+        "to_string_non_string": "TCall(Array.join:element-not-managed-String:",
     }
     for name, marker in expected.items():
         output = root / f"negative-{name}"
@@ -1159,7 +1728,7 @@ def compile_and_run(
         "-o",
         str(executable),
     ]
-    compiled = subprocess.run(
+    compiled = run_bounded_process(
         command,
         cwd=ROOT,
         check=False,
@@ -1173,7 +1742,7 @@ def compile_and_run(
             f"command={command!r}\nstdout={compiled.stdout!r}\n"
             f"stderr={compiled.stderr!r}"
         )
-    executed = subprocess.run(
+    executed = run_bounded_process(
         [str(executable)],
         cwd=ROOT,
         check=False,
@@ -1205,7 +1774,7 @@ def compile_and_run_join_contract(
         "-o",
         str(executable),
     ]
-    compiled = subprocess.run(
+    compiled = run_bounded_process(
         command,
         cwd=ROOT,
         check=False,
@@ -1219,7 +1788,7 @@ def compile_and_run_join_contract(
             f"command={command!r}\nstdout={compiled.stdout!r}\n"
             f"stderr={compiled.stderr!r}"
         )
-    executed = subprocess.run(
+    executed = run_bounded_process(
         [str(executable)],
         cwd=ROOT,
         check=False,
@@ -1256,7 +1825,7 @@ def compile_and_run_generated(
         "-o",
         str(executable),
     ]
-    compiled = subprocess.run(
+    compiled = run_bounded_process(
         command,
         cwd=ROOT,
         check=False,
@@ -1269,7 +1838,7 @@ def compile_and_run_generated(
             f"{toolchain.family} {label} generated compile failed\n"
             f"command={command!r}\nstdout={compiled.stdout!r}\nstderr={compiled.stderr!r}"
         )
-    executed = subprocess.run(
+    executed = run_bounded_process(
         [str(executable)],
         cwd=ROOT,
         check=False,
@@ -1290,6 +1859,8 @@ def compile_and_run_generated_gc_reclamation(
     generated: Path,
     flags: tuple[str, ...],
     label: str,
+    *,
+    driver: Path = GENERATED_CLASS_GC_DRIVER,
 ) -> None:
     """Use an independent driver to prove the generated cycle is collected."""
     executable = build / label
@@ -1305,11 +1876,11 @@ def compile_and_run_generated_gc_reclamation(
         f"-I{generated / 'include'}",
         f"-I{generated / 'runtime/include'}",
         *(str(source) for source in sources),
-        str(GENERATED_CLASS_GC_DRIVER),
+        str(driver),
         "-o",
         str(executable),
     ]
-    compiled = subprocess.run(
+    compiled = run_bounded_process(
         command,
         cwd=ROOT,
         check=False,
@@ -1322,7 +1893,7 @@ def compile_and_run_generated_gc_reclamation(
             f"{toolchain.family} {label} reclamation driver compile failed\n"
             f"command={command!r}\nstdout={compiled.stdout!r}\nstderr={compiled.stderr!r}"
         )
-    executed = subprocess.run(
+    executed = run_bounded_process(
         [str(executable)],
         cwd=ROOT,
         check=False,
@@ -1337,11 +1908,53 @@ def compile_and_run_generated_gc_reclamation(
         )
 
 
+def run_collection_cycle_lane(toolchains: list[Toolchain]) -> tuple[int, int]:
+    """Prove composed collection cycles and the neighboring acyclic path."""
+    with tempfile.TemporaryDirectory(
+        prefix="reflaxe-c-array-cycle-runtime-"
+    ) as temporary:
+        root = Path(temporary)
+        cycle, acyclic, cycle_bytes, acyclic_bytes = render_collection_cycle_pair(
+            root
+        )
+        for toolchain in toolchains:
+            build = root / toolchain.family
+            build.mkdir(parents=True)
+            for flags, suffix in (
+                (("-O0",), "o0"),
+                (("-O2",), "o2"),
+                (SANITIZER_FLAGS, "sanitized"),
+            ):
+                compile_and_run_generated(
+                    toolchain,
+                    build,
+                    cycle,
+                    flags,
+                    f"generated-collection-cycle-{suffix}",
+                )
+                compile_and_run_generated_gc_reclamation(
+                    toolchain,
+                    build,
+                    cycle,
+                    flags,
+                    f"generated-collection-cycle-reclamation-{suffix}",
+                    driver=GENERATED_CYCLE_GC_DRIVER,
+                )
+                compile_and_run_generated(
+                    toolchain,
+                    build,
+                    acyclic,
+                    flags,
+                    f"generated-collection-acyclic-{suffix}",
+                )
+        return cycle_bytes, acyclic_bytes
+
+
 def inspect_symbols(executable: Path, family: str) -> None:
     nm = shutil.which("nm")
     if nm is None:
         raise ArrayRuntimeFailure(f"{family} array runtime requires nm evidence")
-    result = subprocess.run(
+    result = run_bounded_process(
         [nm, str(executable)],
         cwd=ROOT,
         check=False,
@@ -1360,11 +1973,20 @@ def inspect_symbols(executable: Path, family: str) -> None:
         "hxc_array_ref_init_in_place",
         "hxc_array_ref_release",
         "hxc_array_ref_retain",
+        "hxc_iterator_ref_create_array_pairs",
+        "hxc_iterator_ref_create_array_values",
+        "hxc_iterator_ref_has_next",
+        "hxc_iterator_ref_next_move",
+        "hxc_iterator_ref_release",
+        "hxc_iterator_ref_retain",
         "hxc_array_pop_move",
         "hxc_array_ref_pop_move",
         "hxc_array_shift_move",
         "hxc_array_ref_shift_move",
         "hxc_array_ref_splice_one_discard",
+        "hxc_array_ref_splice_discard",
+        "hxc_array_ref_splice_copy",
+        "hxc_array_ref_resize_default",
         "hxc_array_resize",
         "hxc_array_remove_at",
     ):
@@ -1465,13 +2087,135 @@ def run_native(
             inspect_symbols(debug, toolchain.family)
 
 
+def run_function_array_lane(toolchains: list[Toolchain]) -> None:
+    """Verify only the exact function-pointer Array specialization slice."""
+    with tempfile.TemporaryDirectory(
+        prefix="reflaxe-c-function-array-runtime-"
+    ) as temporary:
+        root = Path(temporary)
+        generated = render_function_array_pair(root)
+        run_function_array_negative_cases(root)
+        for toolchain in toolchains:
+            build = root / toolchain.family
+            build.mkdir(parents=True)
+            compile_and_run_generated(
+                toolchain,
+                build,
+                generated,
+                ("-O0",),
+                "generated-function-array-o0",
+            )
+            compile_and_run_generated(
+                toolchain,
+                build,
+                generated,
+                ("-O2",),
+                "generated-function-array-o2",
+            )
+            compile_and_run_generated(
+                toolchain,
+                build,
+                generated,
+                SANITIZER_FLAGS,
+                "generated-function-array-sanitized",
+            )
+
+
+def run_to_string_lane(toolchains: list[Toolchain]) -> None:
+    """Verify only bounded Array<String>.toString composition."""
+    with tempfile.TemporaryDirectory(
+        prefix="reflaxe-c-array-to-string-"
+    ) as temporary:
+        root = Path(temporary)
+        generated = render_to_string_pair(root)
+        run_to_string_negative_case(root)
+        for toolchain in toolchains:
+            build = root / toolchain.family
+            build.mkdir(parents=True)
+            compile_and_run_generated(
+                toolchain,
+                build,
+                generated,
+                ("-O0",),
+                "generated-array-to-string-o0",
+            )
+            compile_and_run_generated(
+                toolchain,
+                build,
+                generated,
+                ("-O2",),
+                "generated-array-to-string-o2",
+            )
+            compile_and_run_generated(
+                toolchain,
+                build,
+                generated,
+                SANITIZER_FLAGS,
+                "generated-array-to-string-sanitized",
+            )
+
+
+def run_reference_comparison_lane(toolchains: list[Toolchain]) -> None:
+    """Check fresh comparison operands against Eval and count native cleanup."""
+    fixture = CASE / "generated-reference-comparison"
+    oracle = run_bounded_process(
+        [development_tool("haxe"), "-cp", str(fixture), "-main", "Main", "--interp"],
+        cwd=ROOT, env=haxe_environment(), check=False,
+        capture_output=True, text=True, timeout=30,
+    )
+    if oracle.returncode or oracle.stdout or oracle.stderr:
+        raise ArrayRuntimeFailure(f"reference comparison Eval failed: {oracle.stdout}{oracle.stderr}")
+    with tempfile.TemporaryDirectory(prefix="hxc-array-reference-comparison-") as directory:
+        root = Path(directory)
+        generated = root / "generated"
+        result = compile_generated_haxe(fixture, generated, layout="unity")
+        if result.returncode:
+            raise ArrayRuntimeFailure(f"reference comparison compile failed: {result.stdout}{result.stderr}")
+        observer = root / "observer/main.c"
+        observer.parent.mkdir()
+        observer.write_text((CASE / "reference_comparison_observer.c.in").read_text(encoding="utf-8"), encoding="utf-8")
+        sources = [*sorted((generated / "runtime/src").glob("*.c")), observer]
+        for toolchain in toolchains:
+            variants = [("o0", ("-O0",)), ("o2", ("-O2",))]
+            if toolchain.family == "clang":
+                variants.append(("sanitized", SANITIZER_FLAGS))
+            for label, flags in variants:
+                executable = root / f"{toolchain.family}-{label}"
+                command = [toolchain.compiler, *GENERATED_STRICT_FLAGS, *flags,
+                           f"-I{generated / 'include'}", f"-I{generated / 'runtime/include'}",
+                           *(str(source) for source in sources), "-o", str(executable)]
+                built = run_bounded_process(command, cwd=ROOT, check=False, capture_output=True, text=True, timeout=60)
+                if built.returncode or built.stdout or built.stderr:
+                    raise ArrayRuntimeFailure(f"reference comparison native compile failed: {built.stdout}{built.stderr}")
+                observed = run_bounded_process([str(executable)], cwd=ROOT, check=False, capture_output=True, text=True, timeout=30)
+                if observed.returncode or observed.stdout or observed.stderr:
+                    raise ArrayRuntimeFailure(f"reference comparison {label} failed: exit={observed.returncode} {observed.stdout}{observed.stderr}")
+
+
 def parse_args(argv: Iterable[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--toolchain", choices=("auto", *TOOLCHAINS), default="auto")
+    parser.add_argument("--reference-comparison-only", action="store_true",
+                        help="check fresh Array comparison values and native cleanup")
     parser.add_argument(
         "--native-only",
         action="store_true",
         help="use the checked semantic trace without requiring Haxe",
+    )
+    parser.add_argument(
+        "--function-values-only",
+        action="store_true",
+        help="run only the focused function-valued Array compiler and native lane",
+    )
+    parser.add_argument(
+        "--to-string-only",
+        action="store_true",
+        help="run only the focused Array<String>.toString compiler and native lane",
+    )
+    parser.add_argument(
+        "--collection-cycles-only",
+        action="store_true",
+        help="run only Array/record/enum cycle collection and acyclic selectivity",
     )
     return parser.parse_args(list(argv))
 
@@ -1479,11 +2223,74 @@ def parse_args(argv: Iterable[str]) -> argparse.Namespace:
 def main(argv: Iterable[str] = ()) -> int:
     args = parse_args(argv)
     try:
+        toolchains = selected_toolchains(args.toolchain)
+        focused = sum(
+            (
+                args.function_values_only,
+                args.to_string_only,
+                args.collection_cycles_only,
+                args.reference_comparison_only,
+            )
+        )
+        if focused > 1:
+            raise ArrayRuntimeFailure(
+                "choose only one focused Array lane"
+            )
+        if args.reference_comparison_only:
+            if args.native_only:
+                raise ArrayRuntimeFailure("--reference-comparison-only requires generated Haxe")
+            run_reference_comparison_lane(toolchains)
+            print("array-runtime: OK: fresh reference comparison Eval, native and cleanup checks passed")
+            return 0
+        if args.collection_cycles_only:
+            if args.native_only:
+                raise ArrayRuntimeFailure(
+                    "--collection-cycles-only requires generated Haxe and cannot use --native-only"
+                )
+            cycle_bytes, acyclic_bytes = run_collection_cycle_lane(toolchains)
+            families = ", ".join(toolchain.family for toolchain in toolchains)
+            print(
+                "array-runtime: OK: "
+                f"{families}; Array/record/enum self, mutual, broken, deep, and "
+                f"pressure cycles collected; active-tag tracing and acyclic "
+                f"selectivity passed (cycle C bytes={cycle_bytes}, "
+                f"acyclic C bytes={acyclic_bytes})"
+            )
+            return 0
+        if args.to_string_only:
+            if args.native_only:
+                raise ArrayRuntimeFailure(
+                    "--to-string-only requires generated Haxe and cannot use --native-only"
+                )
+            run_to_string_lane(toolchains)
+            families = ", ".join(toolchain.family for toolchain in toolchains)
+            print(
+                "array-runtime: OK: "
+                f"{families}; Array<String>.toString Eval parity, typed composition, "
+                "determinism, rejection, strict C, and sanitizers passed"
+            )
+            return 0
+        if args.function_values_only:
+            if args.native_only:
+                raise ArrayRuntimeFailure(
+                    "--function-values-only requires generated Haxe and cannot use --native-only"
+                )
+            run_function_array_lane(toolchains)
+            families = ", ".join(toolchain.family for toolchain in toolchains)
+            print(
+                "array-runtime: OK: "
+                f"{families}; exact function-valued Array signatures, unboxed storage, "
+                "runtime operations, determinism, negatives, strict C, and sanitizers passed"
+            )
+            return 0
         expected_trace = EXPECTED_TRACE if args.native_only else run_oracle()
         if not args.native_only:
             run_generated_eval_oracle()
-        toolchains = selected_toolchains(args.toolchain)
         run_native(toolchains, expected_trace, generated_haxe=not args.native_only)
+        if not args.native_only:
+            run_function_array_lane(toolchains)
+            run_collection_cycle_lane(toolchains)
+            run_reference_comparison_lane(toolchains)
     except (
         OSError,
         UnicodeError,
@@ -1494,7 +2301,11 @@ def main(argv: Iterable[str] = ()) -> int:
         return 1
     families = ", ".join(toolchain.family for toolchain in toolchains)
     oracle = "checked Array trace" if args.native_only else "pinned Haxe Eval oracle"
-    generated = "" if args.native_only else "generated ordinary-Haxe Array ownership plus "
+    generated = (
+        ""
+        if args.native_only
+        else "generated ordinary-Haxe Array ownership and exact function-valued elements plus "
+    )
     print(
         "array-runtime: OK: "
         f"{families}; {oracle}; {generated}primitive/reference growth, traced class identity, live pressure tracing, cycle reclamation, aliasing, "

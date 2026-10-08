@@ -70,7 +70,10 @@ class CPreparedBodyArray {
 	public final ownerModule:String;
 	public final source:HxcSourceSpan;
 	public final position:Position;
-	public final lifecycle:CBodyArrayElementLifecycle;
+
+	/** Final element ownership strategy, conservatively prepared then settled. */
+	public var lifecycle:CBodyArrayElementLifecycle;
+
 	public final copyRequest:Null<CSymbolRequest>;
 	public final assignRequest:Null<CSymbolRequest>;
 	public final destroyRequest:Null<CSymbolRequest>;
@@ -79,7 +82,17 @@ class CPreparedBodyArray {
 	public final destroyParameterRequests:Array<CSymbolRequest>;
 	public final copyStatusRequest:Null<CSymbolRequest>;
 	public final assignStatusRequest:Null<CSymbolRequest>;
-	public final managedByCollector:Bool;
+
+	/**
+		Whether the precise collector owns this Array's stable outer identity.
+
+		Preparation can set this immediately for an element that already exposes a
+		class reference. The program-wide completion pass can promote it later when
+		the complete type graph reveals an Array/record/enum cycle. No function body
+		is lowered before that pass settles this mutable planning fact.
+	**/
+	public var managedByCollector:Bool;
+
 	public var sortAdapterRequest:Null<CSymbolRequest> = null;
 	public var sortAdapterParameterRequests:Array<CSymbolRequest> = [];
 	public var descriptorRequest:Null<CSymbolRequest> = null;
@@ -254,6 +267,13 @@ class CLoweredBodyArray {
 		return copyName != null;
 }
 
+/** One explicit question asked while walking a prepared collection type graph. */
+private enum CBodyArrayReachability {
+	CBARClass;
+	CBARTarget(target:CPreparedBodyArray);
+	CBARManagedArray;
+}
+
 /** Request-local, element-specialized Array identity registry. */
 class CBodyArrayRegistry {
 	final context:CompilationContext;
@@ -270,6 +290,106 @@ class CBodyArrayRegistry {
 	@:noCompletion
 	public function preparedCount():Int
 		return countValues(bySemanticKey);
+
+	/**
+		Promote exactly the Array specializations that can participate in a cycle.
+
+		A cycle is a type path from an Array element back to the same Array identity,
+		possibly through tagged enum payloads, records, optionals, or another Array.
+		Those containers need tracing collection because local reference counting
+		cannot reclaim an unreachable source-level cycle. Arrays that can reach a
+		class or an already-promoted Array also join the collector graph so their
+		descriptor can trace that child. Proven acyclic scalar and managed-value
+		Arrays retain the smaller reference-counted representation.
+	**/
+	public function completeManagedRepresentations():Void {
+		final values = canonicalArrays();
+		for (value in values) {
+			if (value.managedByCollector)
+				continue;
+			if (graphReaches(value.element, CBARClass, [], []) || graphReaches(value.element, CBARTarget(value), [], []))
+				promote(value);
+		}
+		var changed = true;
+		while (changed) {
+			changed = false;
+			for (value in values) {
+				if (value.managedByCollector)
+					continue;
+				if (graphReaches(value.element, CBARManagedArray, [], [])) {
+					promote(value);
+					changed = true;
+				}
+			}
+		}
+	}
+
+	/**
+		Remove provisional callbacks after collector promotion settles nested owners.
+
+		Recursive enum preparation deliberately requests lifecycle names before the
+		whole type graph is complete. If its only owned edge later becomes a traced
+		collector Array, copying that pointer is trivial and the Array specialization
+		must not retain it or emit empty callback work.
+	**/
+	public function completeElementLifetimes():Void {
+		for (value in canonicalArrays()) {
+			final settled = elementLifecycle(value.element);
+			if (settled == null)
+				throw new CBodyEmissionError('Array `${value.semanticKey}` lost its settled element lifetime');
+			final needsCallbacks = switch settled {
+				case CBAELTrivial | CBAELManagedClass(_): false;
+				case _: true;
+			};
+			if (needsCallbacks && value.copyRequest == null)
+				throw new CBodyEmissionError('Array `${value.semanticKey}` discovered late element ownership after symbol preparation');
+			value.lifecycle = settled;
+		}
+	}
+
+	function promote(value:CPreparedBodyArray):Void {
+		value.managedByCollector = true;
+		registerManagedNames(value);
+	}
+
+	/** Answer one reachability question without duplicating recursive type walks. */
+	static function graphReaches(type:CBodyValueType, query:CBodyArrayReachability, visitedArrays:Map<String, Bool>, visitedEnums:Map<String, Bool>):Bool {
+		if (query.match(CBARClass) && type.classValue() != null)
+			return true;
+		final array = type.arrayValue();
+		if (array != null) {
+			switch query {
+				case CBARTarget(target) if (array == target):
+					return true;
+				case CBARManagedArray if (array.managedByCollector):
+					return true;
+				case _:
+			}
+			if (visitedArrays.exists(array.instanceId))
+				return false;
+			visitedArrays.set(array.instanceId, true);
+			return graphReaches(array.element, query, visitedArrays, visitedEnums);
+		}
+		final aggregate = type.aggregateValue();
+		if (aggregate != null) {
+			for (field in aggregate.fields)
+				if (graphReaches(field.type, query, visitedArrays, visitedEnums))
+					return true;
+			return false;
+		}
+		final optional = type.optionalValue();
+		if (optional != null)
+			return graphReaches(optional.payload, query, visitedArrays, visitedEnums);
+		final enumValue = type.enumValue();
+		if (enumValue == null || visitedEnums.exists(enumValue.instanceId))
+			return false;
+		visitedEnums.set(enumValue.instanceId, true);
+		for (tagCase in enumValue.cases)
+			for (payload in tagCase.payload)
+				if (graphReaches(payload.valueType, query, visitedArrays, visitedEnums))
+					return true;
+		return false;
+	}
 
 	/** Return null when `type` is not the standard Haxe `Array<T>`. */
 	public function valueType(type:Type, position:Position, ownerModule:String, sourcePath:String, fail:(Position, String) -> Void,
@@ -349,16 +469,22 @@ class CBodyArrayRegistry {
 	/**
 		Choose the smallest complete lifetime rule for one element type.
 
-		Plain scalars need no callbacks. Managed String, Bytes, Array, admitted class,
-		and closed aggregate elements use their exact copy/assign/destroy callbacks,
-		so each logical copy retains its owned storage and each destruction releases
-		it once. A shape whose nested lifetime is not modeled still fails here:
+		Plain scalars and exact non-capturing function pointers need no callbacks.
+		Managed String, Bytes, Array, admitted class, and closed aggregate elements
+		use their exact copy/assign/destroy callbacks, so each logical copy retains
+		its owned storage and each destruction releases it once. A shape whose nested
+		lifetime is not modeled still fails here:
 		admitting it requires a proven ownership and cycle policy, not a byte copy or
 		a generic boxed fallback.
 	**/
 	static function elementLifecycle(element:CBodyValueType):Null<CBodyArrayElementLifecycle>
 		return switch element.kind {
 			case CBVKPrimitive(_): element.irType != IRTVoid && element.irType != IRTString ? CBAELTrivial : null;
+			// A direct function value is one typed C function pointer. It has no
+			// environment or cleanup owner, so Array growth can relocate it as bytes.
+			// Stack closures remain a separate rejected kind until their captured
+			// environment has an Array-owned lifetime contract.
+			case CBVKFunction(_, _): CBAELTrivial;
 			// The bytes behind this view belong to compiler-emitted static literals.
 			// Copying the three scalar fields cannot outlive or double-free that storage.
 			case CBVKStaticString(_): CBAELTrivial;
@@ -394,6 +520,12 @@ class CBodyArrayRegistry {
 	static function enumLifecycle(value:reflaxe.c.lowering.CBodyEnum.CPreparedBodyEnumInstance):Null<CBodyArrayElementLifecycle> {
 		if (value.representation == CBERNativeEnum)
 			return CBAELTrivial;
+		// Seeing a tagged enum before all of its payloads are prepared means the
+		// element type reached itself through an owning reference such as Array.
+		// Treat that cycle as managed now; caching a temporary trivial Array plan
+		// would later shallow-copy the completed enum's managed payload.
+		if (!value.complete)
+			return CBAELEnum(value);
 		if (value.cases.length == 0)
 			return null;
 		return value.managedLifetime ? CBAELEnum(value) : CBAELTrivial;
@@ -402,15 +534,14 @@ class CBodyArrayRegistry {
 	static function aggregateLifecycle(aggregate:CPreparedBodyAggregate):Null<CBodyArrayElementLifecycle> {
 		if (aggregate.fields.length == 0)
 			return null;
-		var managed = false;
-		for (field in aggregate.fields) {
-			final nested = elementLifecycle(field.type);
-			if (nested == null)
+		for (field in aggregate.fields)
+			if (elementLifecycle(field.type) == null)
 				return null;
-			if (nested != CBAELTrivial)
-				managed = true;
-		}
-		return managed ? CBAELAggregate(aggregate) : CBAELTrivial;
+		// Collector references are traced by the Array descriptor and copy as
+		// ordinary pointers. Only the aggregate's proven reference-counted fields
+		// need element callbacks; emitting empty callbacks creates misleading work
+		// and unused strict-C locals.
+		return aggregate.managedLifetime ? CBAELAggregate(aggregate) : CBAELTrivial;
 	}
 
 	function lifecycleRequest(digest:String, operation:String, ordinal:Int):CSymbolRequest

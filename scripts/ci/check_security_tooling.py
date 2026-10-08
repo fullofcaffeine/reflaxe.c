@@ -24,6 +24,7 @@ PACKAGE = ROOT / "package.json"
 EXPECTED_BEADS_VERSION = "1.1.2"
 EXPECTED_ACTIONS = {
     "actions/checkout": "9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0",
+    "actions/download-artifact": "d3f86a106a0bac45b974a628896c90dbdf5c8093",
     "actions/setup-node": "249970729cb0ef3589644e2896645e5dc5ba9c38",
     "actions/upload-artifact": "ea165f8d65b6e75b540449e92b4886f43607fa02",
 }

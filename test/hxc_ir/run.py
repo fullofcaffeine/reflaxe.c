@@ -10,12 +10,26 @@ import re
 import shutil
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from scripts.test.bounded_process import run as run_bounded_process  # noqa: E402
+
 HXML = Path(__file__).with_name("hxc_ir.hxml")
 ORACLE_HXML = Path(__file__).with_name("oracle.hxml")
+DYNAMIC_ORACLE_HXML = Path(__file__).with_name("dynamic_oracle.hxml")
+RAW_PROGRAM_CONSUMER_HXML = Path(__file__).with_name("raw_program_consumer.hxml")
+RAW_BODY_EMITTER_CONSUMER_HXML = Path(__file__).with_name(
+    "raw_body_emitter_consumer.hxml"
+)
+VALIDATED_PROGRAM_CONSTRUCTOR_CONSUMER_HXML = Path(__file__).with_name(
+    "validated_program_constructor_consumer.hxml"
+)
 EXPECTED = Path(__file__).with_name("expected")
 REPORT_PREFIX = "HXC_IR_REPORT="
 
@@ -32,7 +46,7 @@ def development_tool(name: str) -> str:
 def render(label: str) -> tuple[str, dict[str, object]]:
     environment = os.environ.copy()
     environment["HAXE_NO_SERVER"] = "1"
-    result = subprocess.run(
+    result = run_bounded_process(
         [development_tool("haxe"), str(HXML)],
         cwd=ROOT,
         env=environment,
@@ -62,7 +76,7 @@ def render(label: str) -> tuple[str, dict[str, object]]:
 def check_oracle() -> None:
     environment = os.environ.copy()
     environment["HAXE_NO_SERVER"] = "1"
-    result = subprocess.run(
+    result = run_bounded_process(
         [development_tool("haxe"), str(ORACLE_HXML)],
         cwd=ROOT,
         env=environment,
@@ -74,6 +88,93 @@ def check_oracle() -> None:
     if result.returncode != 0 or result.stdout != "nextIndex,produce:8\n" or result.stderr:
         raise HxcIRFailure(
             "Haxe side-effect oracle drifted\n"
+            f"exit: {result.returncode}\nstdout:\n{result.stdout}\nstderr:\n{result.stderr}"
+        )
+
+
+def check_dynamic_oracle() -> None:
+    """Record interpreter-owned Dynamic semantics before target lowering exists."""
+    environment = os.environ.copy()
+    environment["HAXE_NO_SERVER"] = "1"
+    result = run_bounded_process(
+        [development_tool("haxe"), str(DYNAMIC_ORACLE_HXML)],
+        cwd=ROOT,
+        env=environment,
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    expected = (
+        "DYNAMIC_ORACLE=cast:7;call:5;equal:true,true,true,false,true;"
+        "order:callee,left,right;ordered:3\n"
+    )
+    if result.returncode != 0 or result.stdout != expected or result.stderr:
+        raise HxcIRFailure(
+            "Haxe Dynamic semantic oracle drifted\n"
+            f"exit: {result.returncode}\nstdout:\n{result.stdout}\nstderr:\n{result.stderr}"
+        )
+
+
+def check_raw_program_boundary() -> None:
+    """Prove downstream analysis rejects a raw program before execution."""
+    environment = os.environ.copy()
+    environment["HAXE_NO_SERVER"] = "1"
+    result = run_bounded_process(
+        [development_tool("haxe"), str(RAW_PROGRAM_CONSUMER_HXML)],
+        cwd=ROOT,
+        env=environment,
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    output = result.stdout + result.stderr
+    if result.returncode == 0 or "ValidatedHxcIRProgram" not in output:
+        raise HxcIRFailure(
+            "raw HxcIR crossed the validated production boundary\n"
+            f"exit: {result.returncode}\nstdout:\n{result.stdout}\nstderr:\n{result.stderr}"
+        )
+
+
+def check_raw_body_emitter_boundary() -> None:
+    """Prove a raw HxcIR producer cannot call structural C body emission."""
+    environment = os.environ.copy()
+    environment["HAXE_NO_SERVER"] = "1"
+    result = run_bounded_process(
+        [development_tool("haxe"), str(RAW_BODY_EMITTER_CONSUMER_HXML)],
+        cwd=ROOT,
+        env=environment,
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    output = result.stdout + result.stderr
+    if result.returncode == 0 or "CBodyEmitter has no field emitBody" not in output:
+        raise HxcIRFailure(
+            "raw HxcIR reached structural C body emission\n"
+            f"exit: {result.returncode}\nstdout:\n{result.stdout}\nstderr:\n{result.stderr}"
+        )
+
+
+def check_validated_program_constructor_boundary() -> None:
+    """Prove production code cannot forge the validator-owned proof wrapper."""
+    environment = os.environ.copy()
+    environment["HAXE_NO_SERVER"] = "1"
+    result = run_bounded_process(
+        [development_tool("haxe"), str(VALIDATED_PROGRAM_CONSTRUCTOR_CONSUMER_HXML)],
+        cwd=ROOT,
+        env=environment,
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    output = result.stdout + result.stderr
+    if result.returncode == 0 or "Cannot access private constructor" not in output:
+        raise HxcIRFailure(
+            "production code forged the validator-owned HxcIR proof\n"
             f"exit: {result.returncode}\nstdout:\n{result.stdout}\nstderr:\n{result.stderr}"
         )
 
@@ -155,8 +256,17 @@ def check_semantics(semantic: str, coverage: str) -> None:
     ):
         if failure_shape not in coverage:
             raise HxcIRFailure(f"coverage dump lost an explicit failure shape: {failure_shape}")
-    if 'kind=box target=dynamic implementation=runtime("dynamic")' not in coverage:
-        raise HxcIRFailure("coverage dump lost explicit boxing/runtime intent")
+    for dynamic_shape in (
+        'type "dynamic.type.int" tag=1 source-type=i32 category=int storage=inline-int32',
+        'operation "dynamic.operation.box-int" box type="dynamic.type.int"',
+        'dynamic-box value="value.one" operation="dynamic.operation.box-int"',
+        'dynamic-unbox value="value.boxed" operation="dynamic.operation.unbox-int" '
+        'failure=failure(kind=result-error',
+    ):
+        if dynamic_shape not in coverage:
+            raise HxcIRFailure(
+                f"coverage dump lost an explicit Dynamic semantic shape: {dynamic_shape}"
+            )
     primitive_shapes = (
         'type=abi-int(size)',
         'type=nullable(pointer,instance("instance.object"))',
@@ -226,12 +336,60 @@ def check_diagnostics(report: dict[str, object]) -> None:
         raise HxcIRFailure("diagnostics leaked machine-local path spelling")
 
 
+def check_json_strings() -> None:
+    """Keep compiler-host quoting and the portable fallback byte-compatible."""
+    command = [development_tool("haxe"), "-cp", str(ROOT / "src"),
+               "-cp", str(Path(__file__).parent), "-main", "HxcJsonStringProbe"]
+    environment = os.environ.copy()
+    environment["HAXE_NO_SERVER"] = "1"
+    with tempfile.TemporaryDirectory(prefix="hxc-json-string-") as temporary:
+        script = Path(temporary) / "probe.js"
+        for arguments in (["--interp"], ["-js", str(script)]):
+            result = run_bounded_process(command + arguments, cwd=ROOT, env=environment,
+                                         check=False, capture_output=True, text=True, timeout=30)
+            expected = "HXC_JSON_STRING_OK" if arguments == ["--interp"] else ""
+            if result.returncode or result.stdout.strip() != expected or result.stderr:
+                raise HxcIRFailure(f"JSON string compilation/check failed\n{result.stdout}\n{result.stderr}")
+        result = run_bounded_process(["node", str(script)], cwd=ROOT, check=False,
+                                     capture_output=True, text=True, timeout=30)
+        if result.returncode or result.stdout.strip() != "HXC_JSON_STRING_OK" or result.stderr:
+            raise HxcIRFailure(f"portable JSON string check failed\n{result.stdout}\n{result.stderr}")
+
+
+def check_nominal_cache() -> None:
+    """Check request-local type reuse without starting the target compiler."""
+    command = [development_tool("haxe"), "-cp", str(ROOT / "src"),
+               "-cp", str(ROOT / "vendor/reflaxe/src"), "-cp", str(Path(__file__).parent),
+               "--macro", "NominalCacheProbe.install()", "-main", "NominalCacheFixture", "--interp"]
+    environment = os.environ.copy()
+    environment["HAXE_NO_SERVER"] = "1"
+    result = run_bounded_process(command, cwd=ROOT, env=environment, check=False,
+                                 capture_output=True, text=True, timeout=30)
+    if result.returncode or result.stdout.strip() != "NOMINAL_CACHE_OK" or result.stderr:
+        raise HxcIRFailure(f"nominal cache check failed\n{result.stdout}\n{result.stderr}")
+
+
 def main() -> int:
     if shutil.which(development_tool("haxe")) is None:
         print("hxc-ir: ERROR: pinned Haxe executable is unavailable", file=sys.stderr)
         return 1
     try:
+        if sys.argv[1:] not in ([], ["--json-strings-only"], ["--nominal-cache-only"]):
+            raise HxcIRFailure("usage: test/hxc_ir/run.py [--json-strings-only | --nominal-cache-only]")
+        if sys.argv[1:] != ["--json-strings-only"]:
+            check_nominal_cache()
+        if sys.argv[1:] == ["--nominal-cache-only"]:
+            print("hxc-ir: OK: request-local nominal type cache")
+            return 0
+        check_json_strings()
+        if sys.argv[1:] == ["--json-strings-only"]:
+            print("hxc-ir: OK: canonical JSON string bytes on Eval and JavaScript")
+            return 0
         check_oracle()
+        check_dynamic_oracle()
+        check_raw_program_boundary()
+        check_raw_body_emitter_boundary()
+        check_validated_program_constructor_boundary()
         first_payload, first = render("first HxcIR render")
         second_payload, _ = render("second HxcIR render")
         if first_payload != second_payload:
@@ -246,8 +404,8 @@ def main() -> int:
 
     print(
         "hxc-ir: OK: deterministic source-aware dumps, explicit side effects/cleanup, "
-        "typed dispatch/runtime intent, Float32 conversions, switch validation, "
-        "exact warm-plan keys, and stable negative diagnostics"
+        "typed Dynamic and dispatch plans, Float32 conversions, switch validation, "
+        "reference oracles, exact warm-plan keys, and stable negative diagnostics"
     )
     return 0
 

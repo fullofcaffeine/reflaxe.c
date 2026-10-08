@@ -19,7 +19,7 @@ expect 2 screen playing
 expect 2 mode adventure
 expect 2 level evergrove
 expect 2 objective objective.prologue
-expect 2 generation 2
+expect 2 generation 3
 expect 2 publications 1
 
 # Walk to Nia, receive the western-road objective, and close the dialogue.
@@ -27,7 +27,6 @@ hold 3 10 forward
 action 11 interact
 expect 15 dialogue dialogue.nia.welcome
 expect 15 objective objective.explore
-checkpoint 15 capture final
 action 16 interact
 action 17 interact
 
@@ -39,11 +38,13 @@ hold 98 121 left-jump
 expect 126 screen playing
 expect 126 level western-falls
 expect 126 objective objective.find-fallskeeper
-expect 126 generation 3
+expect 126 generation 4
 expect 126 publications 2
 
 hold 127 160 turn-left
+action 161 toggle-camera
 action 162 pause
+checkpoint 162 capture final
 expect 162 screen paused
 expect 162 level western-falls
 end

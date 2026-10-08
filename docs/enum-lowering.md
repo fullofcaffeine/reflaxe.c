@@ -1,7 +1,7 @@
 # Haxe enum lowering
 
 E3.T02 adds a bounded production path for Haxe algebraic enums. Concrete enum
-values lower from pinned-Haxe `TypedExpr` through schema-23 HxcIR and the HxcIR
+values lower from pinned-Haxe `TypedExpr` through schema-27 HxcIR and the HxcIR
 validator before structural strict C11 is selected. The emitted definitions are
 private compiler implementation details in both `portable` and `metal`; this
 work does not establish a public C ABI or support broader generic classes and
@@ -124,8 +124,8 @@ not a fabricated Haxe constructor: HxcIR still treats the carrier as
 uninitialized until one arm assigns it. This distinction keeps inactive union
 bytes deterministic when GNU GCC checks a later whole-record copy.
 
-Recursive managed enums remain a fail-closed boundary for this graph. Retaining
-a borrowed recursive value deep-copies its owned child and can fail while
+Recursive enums with uniquely owned child nodes remain a fail-closed boundary
+for this graph. Retaining a borrowed value deep-copies its child and can fail while
 allocating. Until carrier acquisition has a typed failure edge, the compiler
 reports `HXC1001` at the Haxe temporary instead of emitting an infallible copy.
 
@@ -162,10 +162,46 @@ still making collection exact. A mixed value may both trace a class pointer and
 run typed copy/destroy callbacks for an independently reference-counted Array or
 Bytes field; tracing and ownership are deliberately separate plans.
 
-Recursive enums that also reach collector references remain fail-closed. Their
-owned child chain can be arbitrarily deep, so a finite list of stack projection
-paths would be unsound. Supporting that combination needs one explicit
-recursive trace owner rather than pretending the first few links are enough.
+Recursive enums that reach collector references use shared, collector-owned
+child nodes. Each node stores the enum's existing finite C struct. Its
+descriptor traces only the active constructor. Further nodes contribute exact
+collector pointers, so stack-root planning never expands an unbounded chain.
+The collector detects cycles during tracing.
+
+HxcIR gives node storage a distinct identity from the ordinary enum value.
+A borrowed pointer view must preserve the exact declaration and type arguments.
+The reverse conversion cannot turn ordinary memory into a collector allocation.
+Copies share immutable node storage and preserve the identity of mutable class,
+Array, and Bytes payloads. A node finalizer releases its independently owned
+payloads; the collector releases referenced nodes separately. Allocation failure
+takes the existing explicit abort path. This does not add recoverable allocation
+failure or exception cleanup semantics.
+
+Application integration remains tracked by **haxe_c-7jb8**. Its positive reduction uses
+`Leaf(Int)`, `Group(Array<Tree>)`, and `Wrapped(Tree)`. It needs no class payload:
+the mutable Array can contain its parent enum and form a cycle. The compiler
+therefore selects collection for the Array. The indirect `Wrapped` node then
+needs to keep that Array reachable.
+
+Run the focused positive contract with:
+
+```sh
+python3 test/enum_lowering/run.py --recursive-collector-payload-only --toolchain clang
+```
+
+The Array fixture must print `18`, `18`, and `1` on separate lines. Both enum
+copies must see the same Array mutation. The final observation reads one edge
+of a cycle without recursively traversing it. Successful compilation must then
+pass the same output checks with strict native C and address/undefined-behavior
+sanitizers. A second fixture checks class and Bytes identity through returned
+nodes and fresh/borrowed conditional results. Both checks also run in the
+default enum suite. The former recursive-class rejection is now a positive test.
+
+A native observer checks actual pressure collections and final reclamation.
+After the Haxe frames return, it requires zero collector objects and zero
+tracked allocations. It also injects node-allocation failure and requires the
+generated abort path. The observer includes generated C without editing it;
+the source remains part of the recorded native test inputs.
 
 ## Matching and checked projection
 
@@ -196,16 +232,17 @@ gaining a C default.
 ## Recursive values and their ownership boundary
 
 The enum registry analyzes concrete instance dependencies before finalizing
-storage. A recursive payload edge becomes an explicit non-null pointer to one
+storage. For a graph without collector references, a recursive payload edge
+becomes an explicit non-null pointer to one
 allocator-backed child, making the C struct finite. The pointer is not shared:
 each parent uniquely owns its child. Copying a recursive enum deep-copies that
 tree; destroying it walks the active tag, destroys nested managed payloads,
 then frees the child. Calls borrow parameters, while returns and fresh
 construction transfer or retain ownership explicitly.
 
-This rule supports finite acyclic trees. A value graph with back-edges or shared
-recursive nodes would need cycle-aware identity, so it still fails closed until
-the tracing collector owns that representation. Non-stationary recursive
+This smaller ownership rule supports finite acyclic trees. Graphs that reach
+collector references use the shared node representation described above;
+cycles through mutable Arrays stay within the collector's graph. Non-stationary recursive
 generic arguments also fail closed under the existing specialization budgets.
 
 ## Runtime, project, and ABI effects
@@ -213,7 +250,8 @@ generic arguments also fail closed under the existing specialization budgets.
 Bounded enum values add the direct compiler decision
 `bounded-haxe-enum-values` to the runtime plan. Unmanaged enum programs remain
 runtime-free. A recursive owned enum selects `alloc`; an Array payload selects
-`array` and its dependency-closed allocator/status/base features. The runtime
+`array` and its dependency-closed allocator/status/base features. Shared traced
+enum nodes select `gc` through their explicit storage and allocation reasons. The runtime
 plan records each root operation and source reason, so the compiler never adds
 a broad unconditional runtime core. Portable and metal preserve the same
 private enum representation.
@@ -232,8 +270,7 @@ invocation; public exported enums still require the E7 ABI contract for layout,
 ownership, calling convention, and versioning.
 
 Owned/dynamic String payloads, StringMap payloads, interface payloads,
-payload-enum equality, reflection, arbitrary patterns, recursive enums
-containing collector references, cycle-capable recursive graphs, and public
+payload-enum equality, reflection, arbitrary patterns, and public
 export remain unsupported. StringMap is useful elsewhere in the admitted
 compiler slice, but an enum-specific copy/destroy policy for it has not been
 implemented. Rejecting that combination prevents a generated enum copy from
@@ -284,7 +321,7 @@ runner retains the integrated proof.
 
 The required native matrix uses GCC/G++ and Clang/Clang++ at `-O0` and `-O2`,
 while negative fixtures cover unsupported references, source
-non-exhaustiveness, recursive collector payloads, a recursive carrier whose
+non-exhaustiveness, invalid collector-node pointer views, a recursive carrier whose
 retain could fail, branch/switch paths that reach a carrier read or move
 without first supplying a value, and validator-only malformed tag/root
 operations.

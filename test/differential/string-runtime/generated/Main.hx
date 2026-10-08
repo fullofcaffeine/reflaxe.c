@@ -14,6 +14,8 @@ final class Main {
 
 	static var floatEvaluations:Int = 0;
 
+	static var lowerCaseEvaluations:Int = 0;
+
 	/** Return one observable Boolean while recording that its source ran once. */
 	static function observedBool(value:Bool):Bool {
 		boolEvaluations += 1;
@@ -30,6 +32,12 @@ final class Main {
 	static function observedFloat(value:Float):Float {
 		floatEvaluations += 1;
 		return value;
+	}
+
+	/** Build one managed lowercase receiver while recording exact evaluation. **/
+	static function observedLowerCaseSource():String {
+		lowerCaseEvaluations += 1;
+		return fromCode(0x00C4) + "BC";
 	}
 
 	/** Keep an Int parameter and converted String return visible across a call. */
@@ -120,6 +128,28 @@ final class Main {
 		return appendConditionalScalar(97, true) == "prefix:a" && appendConditionalScalar(97, false) == "prefix:A";
 
 	/**
+		Exercise Eval-compatible simple lowercase mapping and fresh result ownership.
+
+		Eval maps every listed scalar to exactly one scalar and leaves unlisted values
+		unchanged. The side-effecting runtime-created receiver proves one evaluation,
+		call-bounded borrowing, and a distinct managed result owner.
+	**/
+	static function lowerCaseContractHolds():Bool {
+		lowerCaseEvaluations = 0;
+		final runtimeResult = observedLowerCaseSource().toLowerCase();
+		return "".toLowerCase() == ""
+			&& "AZaz09".toLowerCase() == "azaz09"
+			&& "ÄÉÑÖÜẞß".toLowerCase() == "äéñöüßß"
+			&& "ΣΟΣ".toLowerCase() == "σοσ"
+			&& "İIıi".toLowerCase() == "iiıi"
+			&& "Ａ｀".toLowerCase() == "ａ｀"
+			&& "𐐀𐐨".toLowerCase() == "𐐀𐐨"
+			&& "A\x00Z".toLowerCase() == "a\x00z"
+			&& runtimeResult == "äbc"
+			&& lowerCaseEvaluations == 1;
+	}
+
+	/**
 		Exercise the statically typed Boolean slice of Haxe's general conversion.
 
 		`Std.string` accepts `Dynamic` at its public boundary, but Haxe's typed
@@ -181,6 +211,10 @@ final class Main {
 	static function fromCode(code:Int):String
 		return String.fromCharCode(code);
 
+	/** Evaluate and immediately release one ignored runtime-created String. */
+	static function discardFromCode(code:Int):Void
+		fromCode(code);
+
 	/**
 		Prove that `Std.string(String)` is an ownership-preserving identity.
 
@@ -214,6 +248,28 @@ final class Main {
 		output.addChar(accent);
 		output.addChar(emoji);
 		return output.toString();
+	}
+
+	/**
+		Compose the upstream mutable buffer and advanced String helpers.
+
+		The managed input makes retained substring ownership observable. Clearing the
+		buffer also proves that later mutation does not alter its earlier result.
+	**/
+	static function extendedStringToolsContractHolds(value:String):Bool {
+		final output = new StringBuf();
+		output.add("A");
+		output.addSub(value, 1, 1);
+		final built = output.toString();
+		final builtLength = output.length;
+		output.clear();
+		return builtLength == 2
+			&& built == "Aé"
+			&& output.length == 0
+			&& StringTools.lpad("x", "🙂", 3) == "🙂🙂x"
+			&& StringTools.rpad("x", "🙂", 3) == "x🙂🙂"
+			&& StringTools.replace("AéA", "A", "🙂") == "🙂é🙂"
+			&& StringTools.hex(0x1AF, 5) == "001AF";
 	}
 
 	/** Search without a start argument so omission remains visible to lowering. */
@@ -410,6 +466,7 @@ final class Main {
 		shared UTF-8 allocation alive until its own cleanup.
 	**/
 	static function contractHolds(enabled:Bool):Bool {
+		discardFromCode(0x1F600);
 		final built = build(0xE9, 0x1F600);
 		final direct = fromCode(0xE9) + fromCode(0x1F600);
 		final repeated = built + built;
@@ -435,7 +492,9 @@ final class Main {
 			&& stringIdentityContractHolds()
 			&& conditionalViewContractHolds()
 			&& conditionalCompoundContractHolds()
+			&& lowerCaseContractHolds()
 			&& splitContractHolds()
+			&& extendedStringToolsContractHolds(selected)
 			&& copiedAggregateAliasesHold()
 			&& switchJoinContractHolds(alias)
 			&& alias.length == 3
@@ -444,6 +503,21 @@ final class Main {
 			&& selected.substring(2, 1) == "é"
 			&& selected.substring(-3, 1) == "A"
 			&& selected.substring(99) == ""
+			&& selected.substr(1) == "é😀"
+			&& selected.substr(-1) == "😀"
+			&& selected.substr(-99, 1) == "A"
+			&& selected.substr(1, 1) == "é"
+			&& selected.substr(1, 99) == "é😀"
+			&& selected.substr(99) == ""
+			&& selected.toString() == selected
+			&& StringTools.contains(selected, "é")
+			&& StringTools.startsWith(selected, "Aé")
+			&& StringTools.endsWith(selected, "😀")
+			&& StringTools.isSpace("\t", 0)
+			&& !StringTools.isSpace(selected, 0)
+			&& StringTools.ltrim(" \t" + selected) == selected
+			&& StringTools.rtrim(selected + "\n ") == selected
+			&& StringTools.trim(" \t" + selected + "\n ") == selected
 			&& selected.charCodeAt(2) == 0x1F600
 			&& values[2] == "😀"
 			&& reassigned == built

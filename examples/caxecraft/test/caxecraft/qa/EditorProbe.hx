@@ -1,20 +1,97 @@
 package caxecraft.qa;
 
 import caxecraft.editor.EditorActionPalette.availableScenarioActions;
+import caxecraft.editor.EditorBuildControls.EditorBuildPointerState;
+import caxecraft.editor.EditorBuildControls.EditorBuildPrompt;
+import caxecraft.editor.EditorBuildControls.EditorBuildPromptInput;
+import caxecraft.editor.EditorBuildControls.EditorBuildObjectAction;
+import caxecraft.editor.EditorBuildControls.EditorBuildObjectInput;
+import caxecraft.editor.EditorBuildControls.EditorBuildObjectGrab;
+import caxecraft.editor.EditorBuildControls.EditorBuildTerrainAction;
+import caxecraft.editor.EditorBuildControls.EditorObjectShortcutAction;
+import caxecraft.editor.EditorBuildControls.cycleBuildHotbarTool;
+import caxecraft.editor.EditorBuildControls.cycleBuildPaletteCode;
+import caxecraft.editor.EditorBuildControls.buildPrompt;
+import caxecraft.editor.EditorBuildControls.moveBuildFocus;
+import caxecraft.editor.EditorBuildControls.nextPointerState;
+import caxecraft.editor.EditorBuildControls.nextObjectGrab;
+import caxecraft.editor.EditorBuildControls.immersiveWorkspaceActive;
+import caxecraft.editor.EditorBuildControls.normalizeBuildFocus;
+import caxecraft.editor.EditorBuildControls.normalizeBuildTool;
+import caxecraft.editor.EditorBuildControls.normalizeBuildPaletteCode;
+import caxecraft.editor.EditorBuildControls.objectAction;
+import caxecraft.editor.EditorBuildControls.objectGrabActive;
+import caxecraft.editor.EditorBuildControls.objectGrabCandidate;
+import caxecraft.editor.EditorBuildControls.objectPlacementDelta;
+import caxecraft.editor.EditorBuildControls.objectShortcutAction;
+import caxecraft.editor.EditorBuildControls.pickBuildPaletteCode;
+import caxecraft.editor.EditorBuildControls.terrainAction;
+import caxecraft.editor.EditorBuildControls.toolForBuildHotbarSlot;
+import caxecraft.editor.EditorBuildControls.usesDirectTerrainControls;
 import caxecraft.editor.EditorFocus.EditorFocusMove;
 import caxecraft.editor.EditorFocus.EditorFocusTarget;
 import caxecraft.editor.EditorFocus.initialFocus;
 import caxecraft.editor.EditorFocus.moveFocus;
+import caxecraft.editor.EditorFlowProjection.EditorZoneRuleProjection;
+import caxecraft.editor.EditorFlowProjection.EditorFlowCard;
+import caxecraft.editor.EditorFlowProjection.EditorFlowNestedCard;
+import caxecraft.editor.EditorFlowReferences.EditorFlowReferenceRole;
+import caxecraft.editor.EditorFlowProjection.EditorFlowTraceRow;
+import caxecraft.editor.EditorFlowProjection.projectFlowRules;
+import caxecraft.editor.EditorFlowProjection.projectFlowTrace;
+import caxecraft.editor.EditorFlowProjection.projectTriggerOverlaps;
+import caxecraft.editor.EditorFlowProjection.retainLatestFlowTrace;
+import caxecraft.editor.EditorFlowProjection.projectZoneRules;
+import caxecraft.editor.EditorFlowAuthoring.EditorFlowAuthoringResult;
+import caxecraft.editor.EditorFlowAuthoring.EditorFlowAuthoringError;
+import caxecraft.editor.EditorFlowAuthoring.EditorFlowCardAddress;
+import caxecraft.editor.EditorFlowAuthoring.EditorFlowCardEdit;
+import caxecraft.editor.EditorFlowAuthoring.applyFlowDocumentPick;
+import caxecraft.editor.EditorFlowAuthoring.applyFlowWorldPick;
+import caxecraft.editor.EditorFlowAuthoring.connectZone;
+import caxecraft.editor.EditorFlowAuthoring.editFlowCard;
+import caxecraft.editor.EditorFlowAuthoring.isWorldPickableFlowRole;
+import caxecraft.editor.EditorFlowAuthoring.nextZoneConnectionRuleId;
+import caxecraft.editor.EditorFlowAuthoring.worldPickFor;
+import caxecraft.editor.EditorFlowCardLibrary.EditorFlowActionChoice;
+import caxecraft.editor.EditorFlowCardLibrary.EditorFlowContentChoices;
+import caxecraft.editor.EditorFlowCardLibrary.EditorFlowEventChoice;
+import caxecraft.editor.EditorFlowCardLibrary.EditorFlowPredicateChoice;
+import caxecraft.editor.EditorFlowCardLibrary.actionCardChoices;
+import caxecraft.editor.EditorFlowCardLibrary.eventCardChoices;
+import caxecraft.editor.EditorFlowCardLibrary.predicateCardChoices;
+import caxecraft.editor.EditorEnvironment.EditorEnvironmentControl;
+import caxecraft.editor.EditorEnvironment.EditorEnvironmentDirection;
+import caxecraft.editor.EditorEnvironment.editEnvironment;
+import caxecraft.editor.EditorEnvironment.firstEnvironmentControl;
+import caxecraft.editor.EditorEnvironment.moveEnvironmentControl;
 import caxecraft.editor.EditorPolicy.MAX_HISTORY_ENTRIES;
 import caxecraft.editor.EditorPolicy.MAX_TRANSACTION_COMMANDS;
 import caxecraft.editor.EditorPolicy.defaults as defaultEditorSettings;
 import caxecraft.editor.EditorPlacement.checkpointCommand;
+import caxecraft.editor.EditorPlacement.checkpointTemplate;
 import caxecraft.editor.EditorObjectDuplicate.duplicateObject;
-import caxecraft.editor.EditorPlacement.objectRecipeCommand;
+import caxecraft.editor.EditorObjectDuplicate.duplicateObjectWithConnectedRules;
+import caxecraft.editor.EditorObjectDelete.deleteObjectWithConnectedRules;
+import caxecraft.editor.EditorPlacement.EditorObjectTemplateResult;
+import caxecraft.editor.EditorPlacement.objectRecipeTemplate;
+import caxecraft.editor.EditorPlacement.triggerZoneCommand;
+import caxecraft.editor.EditorObservationPlan.changesFor;
+import caxecraft.editor.EditorPresentation.EditorPresentationWorld;
 import caxecraft.content.EditorObjectCatalog.EditorObjectRecipe;
 import caxecraft.content.EditorObjectCatalog.EditorObjectRecipeKind;
 import caxecraft.editor.EditorScenarioFactory.create as createEditorScenario;
+import caxecraft.editor.EditorRuntimeTerrain.EditorRuntimeTerrainResult;
+import caxecraft.editor.EditorRuntimeTerrain.projectRuntimeTerrain;
+import caxecraft.editor.EditorRuntimeTerrain.runtimeCodeForPalette;
+import caxecraft.editor.EditorTerrainRefresh.EditorTerrainRefreshRequest;
+import caxecraft.editor.EditorTerrainRefresh.forBatch as terrainRefreshForBatch;
+import caxecraft.editor.EditorTerrainRefresh.forCommand as terrainRefreshForCommand;
+import caxecraft.editor.EditorTerrainRefresh.forTerrainChange as terrainRefreshForTerrainChange;
 import caxecraft.editor.EditorSession;
+import caxecraft.editor.EditorTextAuthoring.EditorTextDocument;
+import caxecraft.editor.EditorTextAuthoring.EditorTextDocumentOpenResult;
+import caxecraft.editor.EditorTextAuthoring.EditorTextEditResult;
 import caxecraft.editor.EditorTypes.EditorCommand;
 import caxecraft.editor.EditorTypes.EditorCommandFamily;
 import caxecraft.editor.EditorTypes.EditorChangeId;
@@ -30,35 +107,74 @@ import caxecraft.editor.EditorTypes.EditorSelection;
 import caxecraft.editor.EditorTypes.EditorSelectionResult;
 import caxecraft.editor.EditorTypes.EditorSettings;
 import caxecraft.editor.EditorTypes.EditorTestPlayResult;
+import caxecraft.editor.EditorTypes.EditorTerrainChange;
 import caxecraft.editor.EditorTypes.EditorValidationObservation;
 import caxecraft.editor.EditorTypes.EditorValidationResult;
 import caxecraft.editor.EditorViewport.EditorTool;
 import caxecraft.editor.EditorViewport.EditorToolCommandResult;
 import caxecraft.editor.EditorViewport.commandFor as commandForTool;
+import caxecraft.editor.EditorViewport.boundsIntersectLayer;
+import caxecraft.editor.EditorViewport.clampLayer;
 import caxecraft.editor.EditorViewport.layout as layoutViewport;
+import caxecraft.editor.EditorViewport.inspectorVisible;
 import caxecraft.editor.EditorViewport.paletteCodeAt;
 import caxecraft.editor.EditorViewport.paletteCodeForBlock;
+import caxecraft.editor.EditorViewport.patchProjectedVoxel as patchPlanVoxel;
 import caxecraft.editor.EditorViewport.pointAt as viewportPointAt;
 import caxecraft.editor.EditorViewport.project as projectViewport;
+import caxecraft.editor.EditorViewport.projectFromCells;
+import caxecraft.editor.EditorViewport.projectFromWorld;
 import caxecraft.editor.EditorViewport.toolFromIndex;
+import caxecraft.editor.EditorWorldGrid.EditorWorldResult;
+import caxecraft.editor.EditorWorldGrid.isEditable as isWorldGridEditable;
+import caxecraft.editor.EditorWorldGrid.paint as paintWorldVoxel;
+import caxecraft.editor.EditorWorldGrid.paintMany as paintWorldMany;
 import caxecraft.editor.EditorWorldViewport.cameraTarget;
+import caxecraft.editor.EditorWorldViewport.cameraMode;
+import caxecraft.editor.EditorWorldViewport.cameraPose;
+import caxecraft.editor.EditorWorldViewport.cycleCameraMode;
+import caxecraft.editor.EditorWorldViewport.EditorCameraMode;
+import caxecraft.editor.EditorWorldViewport.EditorObjectFacing;
+import caxecraft.editor.EditorWorldViewport.EditorObjectGizmo;
 import caxecraft.editor.EditorWorldViewport.EditorObjectGizmoKind;
+import caxecraft.editor.EditorWorldViewport.EditorWorldProjection;
+import caxecraft.editor.EditorWorldViewport.EditorWorldVector;
+import caxecraft.editor.EditorWorldViewport.EditorWorldHit;
 import caxecraft.editor.EditorWorldViewport.focusCamera;
+import caxecraft.editor.EditorWorldViewport.gizmoIntersectsLayer;
 import caxecraft.editor.EditorWorldViewport.paletteCodeAtWorld;
+import caxecraft.editor.EditorWorldViewport.patchProjectedVoxel;
 import caxecraft.editor.EditorWorldViewport.pickObject;
 import caxecraft.editor.EditorWorldViewport.pickWorld;
 import caxecraft.editor.EditorWorldViewport.projectObjects;
+import caxecraft.editor.EditorWorldViewport.projectSelection;
 import caxecraft.editor.EditorWorldViewport.projectWorld;
+import caxecraft.editor.EditorWorldViewport.retargetOrbitCamera;
 import caxecraft.editor.EditorWorldViewport.surfaceTopAt;
+import caxecraft.editor.EditorWorldGrid.paletteCodeAt as worldPaletteCodeAt;
 import caxecraft.editor.EditorWorldViewport.stepCamera;
 import caxecraft.input.NavigationInput.NavigationCommand;
 import caxecraft.input.NavigationInput.NavigationRepeater;
 import caxecraft.input.NavigationInput.NavigationSample;
 import caxecraft.scenario.CaxeFlow.FlowAction;
+import caxecraft.scenario.CaxeFlow.FlowArgument;
 import caxecraft.scenario.CaxeFlow.FlowEvent;
+import caxecraft.scenario.CaxeFlow.FlowEventContext;
 import caxecraft.scenario.CaxeFlow.FlowPredicate;
 import caxecraft.scenario.CaxeFlow.FlowRepeatPolicy;
+import caxecraft.scenario.CaxeFlow.FlowRule;
+import caxecraft.scenario.CaxeFlow.FlowScope;
+import caxecraft.scenario.CaxeFlow.FlowValue;
 import caxecraft.scenario.CaxeFlowActionRegistry.flowActionArgumentRoles;
+import caxecraft.scenario.CaxeFlowActionRegistry.flowActionDescriptor;
+import caxecraft.scenario.CaxeFlowEventRegistry.flowEventDescriptor;
+import caxecraft.scenario.CaxeFlowEventRegistry.flowEventOccurrence;
+import caxecraft.scenario.CaxeFlowPredicateRegistry.allFlowPredicateDescriptors;
+import caxecraft.scenario.CaxeFlowPredicateRegistry.validateFlowPredicateDescriptors;
+import caxecraft.scenario.CaxeFlowRegistry.caxeFlowRegistry;
+import caxecraft.scenario.CaxeFlowRuntime.FlowTraceEntry;
+import caxecraft.scenario.CaxeFlowRuntime.FlowTick;
+import caxecraft.scenario.CaxeFlowRuntime.FlowPresentationEvent;
 import caxecraft.scenario.ContentId;
 import caxecraft.scenario.LogicalPath;
 import caxecraft.scenario.LocaleId;
@@ -69,10 +185,14 @@ import caxecraft.scenario.ScenarioCodecModel.ScenarioReadResult;
 import caxecraft.scenario.ScenarioContentRegistry;
 import caxecraft.scenario.ScenarioDiagnostic.ScenarioDiagnosticKind;
 import caxecraft.scenario.ScenarioDiagnostic.ScenarioExpectedRecord;
+import caxecraft.scenario.ScenarioDiagnosticText.scenarioDiagnosticMessage;
 import caxecraft.scenario.ScenarioGeometry.VoxelBounds;
 import caxecraft.scenario.ScenarioGeometry.VoxelPoint;
+import caxecraft.scenario.ScenarioGeometry.VoxelSize;
 import caxecraft.scenario.ScenarioId;
+import caxecraft.scenario.ScenarioEnvironment.ScenarioHorizonEdge;
 import caxecraft.scenario.ScenarioObject;
+import caxecraft.scenario.ScenarioWorld;
 import caxecraft.scenario.ScenarioLexer;
 import caxecraft.scenario.ScenarioMessages;
 import caxecraft.scenario.ScenarioMessages.ScenarioLocaleCatalog;
@@ -117,12 +237,24 @@ final class EditorProbe {
 		final protocolChecks = checkRevisionedProtocol() + checkTitleProtocol();
 		final focusChecks = checkFocusNavigation();
 		final navigationChecks = checkNavigationInput();
+		final buildControlChecks = checkBuildControls();
 		final viewportChecks = checkViewport();
 		final worldViewportChecks = checkWorldViewport();
+		final runtimeTerrainChecks = checkRuntimeTerrainProjection() + checkTerrainHistoryFootprints();
+		checkChunkLocalVoxelEditing();
+		checkZoneRuleProjection();
+		checkFlowAuthoring();
+		checkFlowCardLibrary();
+		checkLocalizedScenarioDiagnostics();
 		final activeLevelChecks = checkActiveLevelProjection();
 		checkEnvironmentTextRoundTrip();
+		final textChecks = checkAdvancedTextAuthoring();
 		checkObjectMovement();
+		checkObjectRotation();
+		checkObjectRename();
+		checkTriggerResize();
 		checkCheckpointPlacement();
+		checkTriggerPlacement();
 		checkCatalogObjectPlacement();
 		checkObjectDuplication();
 		final session = open(defaultEditorSettings());
@@ -160,6 +292,7 @@ final class EditorProbe {
 		}), Dialogue);
 		commandChecks += roundTrip(session, PutObject({id: CHECKPOINT, tags: [], placement: Checkpoint(transform(1500, 0, 1500))}), Placement);
 		commandChecks += roundTrip(session, MoveObjectBy(CHECKPOINT, {x: 1, y: 0, z: 0}), Placement);
+		commandChecks += roundTrip(session, RotateObjectBy(CHECKPOINT, 90), Placement);
 		commandChecks += roundTrip(session, PutObject({
 			id: ZONE,
 			tags: [new ScenarioTag("finish")],
@@ -190,14 +323,499 @@ final class EditorProbe {
 		checkHardBounds();
 		checkHistoryStateChanges();
 		checkSnapshotFidelity();
+		checkPlacementInputIsolation();
+		checkRuleInputIsolation();
+		checkDeferredPlacementValidation();
 		checkTestPlayLocksEditing();
 		checkExternalTestPlayAtomicity();
 		checkImmediateRejections(session);
 
 		final finalBytes = expectValid(session, "final recovered scenario");
-		final trace = hash(finalBytes) ^ (commandChecks * 65537) ^ (protocolChecks * 8191) ^ (focusChecks * 2053) ^ (navigationChecks * 1031) ^ (viewportChecks * 4099) ^ (worldViewportChecks * 257) ^ (activeLevelChecks * 131) ^ session.historyEntries();
-		Sys.println('caxemap-editor: $commandChecks command round trips, $protocolChecks protocol checks, $focusChecks focus checks, $navigationChecks navigation checks, $viewportChecks 2D checks, $worldViewportChecks 3D checks, $activeLevelChecks active-level checks, ${finalBytes.length} canonical bytes; bounded history/test-play/recovery; trace=$trace');
+		final trace = hash(finalBytes) ^ (commandChecks * 65537) ^ (protocolChecks * 8191) ^ (focusChecks * 2053) ^ (navigationChecks * 1031) ^ (buildControlChecks * 521) ^ (viewportChecks * 4099) ^ (worldViewportChecks * 257) ^ (runtimeTerrainChecks * 67) ^ (activeLevelChecks * 131) ^ (textChecks * 97) ^ session.historyEntries();
+		Sys.println('caxemap-editor: $commandChecks command round trips, $protocolChecks protocol checks, $focusChecks focus checks, $navigationChecks navigation checks, $buildControlChecks Build-control checks, $viewportChecks 2D checks, $worldViewportChecks 3D checks, $runtimeTerrainChecks runtime-terrain checks, $activeLevelChecks active-level checks, $textChecks advanced-text checks, ${finalBytes.length} canonical bytes; bounded history/test-play/recovery; trace=$trace');
 	}
+
+	/**
+		Prove invalid source isolation and one lossless typed text/card round trip.
+
+		The advanced scenario deliberately includes nested predicates, variables,
+		sequences, a fixed-tick delay, a signal, and seeded choices. Text Apply must
+		preserve all of them through canonical bytes and the visual projection.
+	**/
+	static function checkAdvancedTextAuthoring():Int {
+		final seed = id("text.seed");
+		final ready = id("text.ready");
+		final sequenceId = id("text.sequence");
+		final signal = content("caxecraft:coverage-signal");
+		final base = baseScenario();
+		final extensionFeature = content("caxecraft:text-extension");
+		final optionalFeatures = base.optionalFeatures.copy();
+		optionalFeatures.push(extensionFeature);
+		final advanced:Scenario = {
+			formatVersion: base.formatVersion,
+			requiredFeatures: base.requiredFeatures,
+			optionalFeatures: optionalFeatures,
+			id: base.id,
+			assetPack: base.assetPack,
+			messages: base.messages,
+			title: Literal("Advanced source"),
+			mode: base.mode,
+			environment: base.environment,
+			world: base.world,
+			objects: base.objects,
+			story: base.story,
+			flow: {
+				variables: [
+					{id: ready, scope: Map, initial: Flag(false)},
+					{id: seed, scope: Player, initial: Counter(3)}
+				],
+				sequences: [
+					{
+						id: sequenceId,
+						parameters: [{id: id("text.enabled"), initial: Flag(true)}],
+						actions: [EmitSignal(signal)]
+					}
+				],
+				rules: [
+					{
+						id: id("text.rule"),
+						priority: 7,
+						repeat: Cooldown(2),
+						event: Interact(PLAYER),
+						predicate: All([FlagIs(ready, false), Not(ModeIs(Adventure))]),
+						actions: [
+							SetFlag(ready, true),
+							Schedule(id("text.timer"), 3, sequenceId, [Value(Flag(true))]),
+							ChooseSeeded(seed, [
+								{
+									weight: 1,
+									actions: [EmitSignal(signal)]
+								},
+								{weight: 2, actions: [SetFlag(ready, false)]}
+							])
+						]
+					}
+				]
+			},
+			extensions: [{feature: extensionFeature, id: id("text.extension"), data: "advanced=true"}]
+		};
+		final expected = ScenarioWriter.write(advanced);
+		final sourceDocument = openTextDocument(expected);
+		expectTextEdit(sourceDocument.insertLineAfter(0, "# retained until successful Apply"), "insert text comment");
+		final destination = open(defaultEditorSettings());
+		expectSelection(destination, NodeSelection(ObjectNode(PLAYER)), "select before Text Apply");
+		final revision = destination.revision();
+		final history = destination.historyEntries();
+		switch destination.mutate({baseRevision: revision, mutation: ApplyText(sourceDocument.snapshot())}) {
+			case MutationApplied(families, changes, TerrainChanged, nextRevision, undoDepth, redoDepth):
+				require(families.length == 1 && families[0] == Text, "Text Apply reported the wrong history family");
+				require(changes.length == 1, "Text Apply did not report one whole-document change");
+				switch changes[0] {
+					case ChangedDocument:
+					case _: throw "Text Apply reported a partial semantic change";
+				}
+				require(nextRevision == revision + 1 && undoDepth == 1 && redoDepth == 0, "Text Apply did not publish exactly one revision and history entry");
+			case other:
+				throw 'valid advanced Text Apply failed: $other';
+		}
+		require(destination.canonicalDraft().compare(expected) == 0, "Text Apply retained comments or changed canonical advanced source");
+		require(destination.historyEntries() == history + 1, "Text Apply recorded more than one history entry");
+		switch destination.query(InspectPresentationDetails) {
+			case PresentationDetailsObserved(_, presentation):
+				require(presentation.flowRuleCount == 1 && presentation.flowRules.length == 1, "visual cards did not reopen the text-authored rule");
+				require(presentation.flowRules[0].nestedCards.length >= 4, "visual cards hid nested text-authored predicates or choices");
+			case _:
+				throw "Text Apply returned the wrong visual projection";
+		}
+		expectHistory(destination.undo(), Text, "undo Text Apply");
+		require(destination.canonicalDraft().compare(expected) != 0, "Text undo retained the replacement document");
+		expectHistory(destination.redo(), Text, "redo Text Apply");
+		require(destination.canonicalDraft().compare(expected) == 0, "Text redo did not restore exact canonical source");
+		requireTestStarted(destination.enterTestPlay(), "text-authored Test Play");
+		require(destination.leaveTestPlay(), "text-authored Test Play did not return to the draft");
+
+		final invalid = openTextDocument(destination.canonicalDraft());
+		expectTextEdit(invalid.removeLine(invalid.lineCount() - 1), "remove end-map");
+		final beforeRejected = destination.canonicalDraft();
+		final beforeRejectedRevision = destination.revision();
+		final beforeRejectedHistory = destination.historyEntries();
+		final beforeRejectedSelection = selectionKey(destination);
+		final beforeRejectedPlayable = destination.lastPlayableSnapshot();
+		require(beforeRejectedPlayable != null, "Text rejection fixture lost its playable snapshot");
+		final beforeRejectedPlayableBytes = ScenarioWriter.write(beforeRejectedPlayable);
+		switch destination.mutate({baseRevision: beforeRejectedRevision, mutation: ApplyText(invalid.snapshot())}) {
+			case MutationRejected(SnapshotRejected(diagnostics), actual):
+				require(actual == beforeRejectedRevision && diagnostics.length > 0, "invalid Text Apply lost its source diagnostic");
+			case other:
+				throw 'incomplete Text Apply did not fail closed: $other';
+		}
+		final afterRejectedPlayable = destination.lastPlayableSnapshot();
+		require(afterRejectedPlayable != null
+			&& ScenarioWriter.write(afterRejectedPlayable).compare(beforeRejectedPlayableBytes) == 0
+			&& destination.canonicalDraft().compare(beforeRejected) == 0
+			&& destination.revision() == beforeRejectedRevision
+			&& destination.historyEntries() == beforeRejectedHistory
+			&& selectionKey(destination) == beforeRejectedSelection,
+			"invalid Text Apply changed the typed draft, history, selection, or recovery state");
+		require(invalid.isDirty() && invalid.snapshot().compare(beforeRejected) != 0, "invalid source was not retained for repair");
+
+		final malformed = Bytes.alloc(1);
+		malformed.set(0, 255);
+		switch destination.mutate({baseRevision: destination.revision(), mutation: ApplyText(malformed)}) {
+			case MutationRejected(SnapshotRejected(diagnostics), _):
+				require(diagnostics.length == 1, "malformed Text Apply returned the wrong diagnostic count");
+			case other:
+				throw 'malformed Text Apply did not fail closed: $other';
+		}
+
+		final staleSource = destination.canonicalDraft();
+		final staleRevision = destination.revision();
+		expectApplied(destination.apply(SetTitle(Literal("newer visual edit"))), DocumentMetadata, "prepare stale Text Apply");
+		switch destination.mutate({baseRevision: staleRevision, mutation: ApplyText(staleSource)}) {
+			case MutationRejected(RevisionConflict(expectedRevision, actualRevision), _):
+				require(expectedRevision == destination.revision()
+					&& actualRevision == staleRevision, "stale Text Apply reported the wrong revisions");
+			case other:
+				throw 'stale Text Apply was not rejected before parsing: $other';
+		}
+
+		final oversized = new StringBuf();
+		for (_ in 0...EditorTextDocument.MAX_LINE_BYTES + 1)
+			oversized.add("x");
+		switch invalid.replaceLine(0, oversized.toString()) {
+			case TextEditRejected(LineTooLarge(bytes, maximum)):
+				require(bytes == maximum + 1, "oversized text line reported the wrong byte bound");
+			case other:
+				throw 'oversized text line was accepted: $other';
+		}
+		return 18;
+	}
+
+	/** Open one text draft or fail the focused acceptance probe. */
+	static function openTextDocument(source:Bytes):EditorTextDocument {
+		return switch EditorTextDocument.open(source) {
+			case TextDocumentOpened(document): document;
+			case TextDocumentOpenRejected(error): throw 'text document did not open: $error';
+		};
+	}
+
+	/** Require one source-line mutation without depending on enum equality. */
+	static function expectTextEdit(result:EditorTextEditResult, label:String):Void {
+		switch result {
+			case TextEditApplied:
+			case TextEditUnchanged:
+				throw '$label changed no source';
+			case TextEditRejected(error):
+				throw '$label was rejected: $error';
+		}
+	}
+
+	/** Prove that a valid editor draft becomes the gameplay renderer's fixed layout. */
+	static function checkRuntimeTerrainProjection():Int {
+		final registry = new Registry();
+		final width = 32;
+		final height = 16;
+		final depth = 32;
+		final sourceCells = [for (_ in 0...width * height * depth) 0];
+		final authoredStoneIndex = (7 * height + 5) * width + 31;
+		sourceCells[authoredStoneIndex] = 1;
+		final world:EditorPresentationWorld = {
+			size: {width: width, height: height, depth: depth},
+			palette: [{code: 0, blockType: AIR}, {code: 1, blockType: STONE}]
+		};
+		final projection:EditorWorldProjection = {
+			width: width,
+			height: height,
+			depth: depth,
+			cells: sourceCells,
+			columns: [],
+			surfaceTops: [],
+			surfacePatches: []
+		};
+		var checks = 0;
+		switch projectRuntimeTerrain(world, projection, registry) {
+			case RuntimeTerrainReady(cells):
+				require(cells.length == 64 * 16 * 32, "runtime terrain did not fill the fixed gameplay volume");
+				checks++;
+				final runtimeStoneIndex = 31 + 64 * (5 + 16 * 7);
+				require(cells[runtimeStoneIndex] == 3, "runtime terrain changed palette resolution or cell order");
+				checks++;
+				final paddedIndex = 32 + 64 * (5 + 16 * 7);
+				require(cells[paddedIndex] == 0, "compact runtime terrain did not pad the unused half with air");
+				checks++;
+			case RuntimeTerrainUnavailable:
+				throw "an admitted editor world did not project for the gameplay renderer";
+		}
+		final fullWidthCells = [for (_ in 0...64 * height * depth) 0];
+		final fullWidthStoneIndex = 63 + 64 * (15 + height * 31);
+		fullWidthCells[fullWidthStoneIndex] = 1;
+		final fullWidthWorld:EditorPresentationWorld = {
+			size: {width: 64, height: height, depth: depth},
+			palette: world.palette
+		};
+		final fullWidthProjection:EditorWorldProjection = {
+			width: 64,
+			height: height,
+			depth: depth,
+			cells: fullWidthCells,
+			columns: [],
+			surfaceTops: [],
+			surfacePatches: []
+		};
+		switch projectRuntimeTerrain(fullWidthWorld, fullWidthProjection, registry) {
+			case RuntimeTerrainReady(cells):
+				require(cells[fullWidthStoneIndex] == 3, "full-width runtime terrain lost its far boundary cell");
+				checks++;
+			case RuntimeTerrainUnavailable:
+				throw "the full gameplay world did not project for the ordinary terrain renderer";
+		}
+		final unsupportedProjection:EditorWorldProjection = {
+			width: 12,
+			height: 1,
+			depth: 12,
+			cells: [for (_ in 0...144) 0],
+			columns: [],
+			surfaceTops: [],
+			surfacePatches: []
+		};
+		final unsupportedWorld:EditorPresentationWorld = {
+			size: {width: 12, height: 1, depth: 12},
+			palette: [{code: 0, blockType: AIR}]
+		};
+		require(projectRuntimeTerrain(unsupportedWorld, unsupportedProjection, registry) == RuntimeTerrainUnavailable,
+			"a custom-size draft bypassed the editor overview fallback");
+		checks++;
+		final missingPaletteCells = sourceCells.copy();
+		missingPaletteCells[0] = 2;
+		final missingPaletteProjection:EditorWorldProjection = {
+			width: width,
+			height: height,
+			depth: depth,
+			cells: missingPaletteCells,
+			columns: [],
+			surfaceTops: [],
+			surfacePatches: []
+		};
+		require(projectRuntimeTerrain(world, missingPaletteProjection, registry) == RuntimeTerrainUnavailable,
+			"a cell without a palette mapping became plausible runtime terrain");
+		checks++;
+		require(runtimeCodeForPalette(world, 0, registry) == 0 && runtimeCodeForPalette(world, 1, registry) == 3,
+			"incremental terrain palette resolution disagreed with the complete projection");
+		checks++;
+		require(runtimeCodeForPalette(world, 2, registry) == -1, "incremental terrain palette resolution admitted a missing code");
+		checks++;
+		final duplicatePaletteWorld:EditorPresentationWorld = {
+			size: world.size,
+			palette: [{code: 0, blockType: AIR}, {code: 1, blockType: STONE}, {code: 1, blockType: AIR}]
+		};
+		require(runtimeCodeForPalette(duplicatePaletteWorld, 1, registry) == -1, "incremental terrain palette resolution admitted a duplicate code");
+		checks++;
+		switch terrainRefreshForCommand(PaintVoxel({x: 4, y: 5, z: 6}, 1)) {
+			case RefreshTerrainVoxel(point, paletteCode):
+				require(point.x == 4 && point.y == 5 && point.z == 6 && paletteCode == 1, "paint lost its incremental terrain change");
+			case KeepTerrain | RefreshAllTerrain:
+				throw "paint requested a broad terrain refresh";
+		}
+		checks++;
+		switch terrainRefreshForCommand(EraseVoxel({x: 7, y: 8, z: 9})) {
+			case RefreshTerrainVoxel(point, paletteCode):
+				require(point.x == 7 && point.y == 8 && point.z == 9 && paletteCode == 0, "erase lost its incremental terrain change");
+			case KeepTerrain | RefreshAllTerrain:
+				throw "erase requested a broad terrain refresh";
+		}
+		checks++;
+		for (command in [
+			PaintVoxels([{x: 1, y: 0, z: 1}], 1),
+			EraseVoxels([{x: 1, y: 0, z: 1}]),
+			FillBounds({origin: {x: 0, y: 0, z: 0}, size: {width: 1, height: 1, depth: 1}}, 1),
+			ResizeWorld({width: 64, height: 16, depth: 32}),
+			SetPaletteEntry(1, STONE),
+			RestoreLastPlayable
+		]) {
+			switch terrainRefreshForCommand(command) {
+				case RefreshAllTerrain:
+				case KeepTerrain | RefreshTerrainVoxel(_, _):
+					throw "a broad terrain change requested a narrow refresh";
+			}
+			checks++;
+		}
+		switch terrainRefreshForCommand(SetTitle(Literal("Presentation only"))) {
+			case KeepTerrain:
+			case RefreshTerrainVoxel(_, _) | RefreshAllTerrain:
+				throw "a title edit invalidated terrain";
+		}
+		checks++;
+		switch terrainRefreshForBatch([SetTitle(Literal("Metadata batch"))]) {
+			case KeepTerrain:
+			case RefreshTerrainVoxel(_, _) | RefreshAllTerrain:
+				throw "a metadata-only batch invalidated terrain";
+		}
+		checks++;
+		switch terrainRefreshForBatch([SetTitle(Literal("Mixed batch")), PaintVoxel({x: 1, y: 0, z: 1}, 1)]) {
+			case RefreshAllTerrain:
+			case KeepTerrain | RefreshTerrainVoxel(_, _):
+				throw "a terrain batch requested an incremental refresh";
+		}
+		checks++;
+		return checks;
+	}
+
+	/**
+	 * Prove that one voxel keeps an exact direction-aware history footprint.
+	 *
+	 * The screen can apply each footprint to its retained projection. Comparing
+	 * that projection with a fresh decode protects both the fast path and the
+	 * visible terrain after Apply, Undo, and Redo.
+	 */
+	static function checkTerrainHistoryFootprints():Int {
+		var checks = 0;
+		final session = open(defaultEditorSettings());
+		expectApplied(session.apply(ResizeWorld({width: 4, height: 2, depth: 3})), WorldShape, "terrain history world size");
+		expectApplied(session.apply(SetPaletteEntry(1, STONE)), Voxel, "terrain history palette");
+		final point:VoxelPoint = {x: 1, y: 1, z: 1};
+		final retained = projectWorld(session.draftSnapshot().world);
+		require(retained != null
+			&& worldPaletteCodeAt(session.draftSnapshot().world, point) == 0, "compact voxel lookup lost an authored air cell");
+		checks++;
+
+		applyTerrainFootprint(retained, session.mutate({
+			baseRevision: session.revision(),
+			mutation: Apply(PaintVoxel(point, 1))
+		}), point, 1, "paint");
+		checks++;
+		require(worldPaletteCodeAt(session.draftSnapshot().world, point) == 1, "compact voxel lookup lost an authored solid cell");
+		checks++;
+		requireProjectionMatches(retained, session, "paint");
+		checks++;
+
+		applyTerrainFootprint(retained, session.mutate({baseRevision: session.revision(), mutation: Undo}), point, 0, "undo");
+		checks++;
+		requireProjectionMatches(retained, session, "undo");
+		checks++;
+		applyTerrainFootprint(retained, session.mutate({baseRevision: session.revision(), mutation: Redo}), point, 1, "redo");
+		checks++;
+		requireProjectionMatches(retained, session, "redo");
+		checks++;
+
+		switch session.mutate({baseRevision: session.revision(), mutation: Apply(SetTitle(Literal("Footprint metadata")))}) {
+			case MutationApplied(_, _, TerrainUnchanged, _, _, _):
+			case _:
+				throw "metadata edit did not retain terrain";
+		}
+		checks++;
+		switch session.mutate({
+			baseRevision: session.revision(),
+			mutation: ApplyBatch([SetTitle(Literal("Footprint batch")), EraseVoxel(point)])
+		}) {
+			case MutationApplied(_, _, TerrainChanged, _, _, _):
+			case _:
+				throw "terrain batch exposed an unsafe narrow footprint";
+		}
+		checks++;
+		require(worldPaletteCodeAt(session.draftSnapshot().world, {x: 4, y: 0, z: 0}) == null, "compact voxel lookup admitted an excluded coordinate");
+		checks++;
+		return checks;
+	}
+
+	/**
+	 * Compare the trusted one-chunk edit with the complete editing-grid oracle.
+	 *
+	 * The fast path must keep untouched chunk owners, canonical bytes, run
+	 * merging, and malformed-draft rejection identical to the original path.
+	 */
+	static function checkChunkLocalVoxelEditing():Void {
+		final session = open(defaultEditorSettings());
+		expectApplied(session.apply(ResizeWorld({width: 64, height: 1, depth: 1})), WorldShape, "chunk-local world size");
+		expectApplied(session.apply(SetPaletteEntry(7, STONE)), Voxel, "chunk-local palette");
+		final before = session.draftSnapshot();
+		require(before.world.chunks.length == 2 && isWorldGridEditable(before.world), "chunk-local fixture did not create two trusted chunks");
+		final point:VoxelPoint = {x: 31, y: 0, z: 0};
+		final local = readyWorld(paintWorldVoxel(before.world, point, 7, true), "trusted chunk-local paint");
+		final complete = readyWorld(paintWorldMany(before.world, [point], 7), "complete-grid paint oracle");
+		require(local.chunks[0] != before.world.chunks[0] && local.chunks[1] == before.world.chunks[1],
+			"one-voxel paint replaced an unaffected chunk or retained its changed owner");
+		require(ScenarioWriter.write(withWorld(before, local)).compare(ScenarioWriter.write(withWorld(before, complete))) == 0,
+			"chunk-local paint disagreed with the complete-grid canonical oracle");
+		final erased = readyWorld(paintWorldVoxel(local, point, 0, true), "trusted chunk-local erase");
+		require(erased.chunks[0].runs.length == 1 && erased.chunks[0].runs[0].paletteCode == 0 && erased.chunks[0].runs[0].count == 32,
+			"chunk-local erase did not merge equal neighboring runs");
+
+		final malformedWorld:ScenarioWorld = {
+			size: before.world.size,
+			palette: before.world.palette,
+			chunks: [before.world.chunks[0]],
+			fluids: before.world.fluids
+		};
+		require(!isWorldGridEditable(malformedWorld), "missing chunk coverage became a trusted editor grid");
+		final malformed = withWorld(before, malformedWorld);
+		final invalidSession = switch EditorSession.open(malformed, new Registry(), defaultEditorSettings()) {
+			case EditorOpened(value): value;
+			case EditorOpenRejected(error): throw 'repair-mode editor did not open a representable malformed world: $error';
+		};
+		switch invalidSession.apply(PaintVoxel({x: 1, y: 0, z: 0}, 7)) {
+			case EditRejected(DraftWorldIsNotEditable):
+			case _:
+				throw "untrusted one-voxel paint bypassed complete malformed-world rejection";
+		}
+	}
+
+	/** Return one successful internal world edit or fail with its exact label. */
+	static function readyWorld(result:EditorWorldResult, label:String):ScenarioWorld {
+		return switch result {
+			case WorldReady(world): world;
+			case WorldRejected(error): throw '$label was rejected: $error';
+		};
+	}
+
+	/** Apply one expected narrow mutation footprint to a retained projection. */
+	static function applyTerrainFootprint(projection:EditorWorldProjection, result:EditorMutationResult, expectedPoint:VoxelPoint, expectedPaletteCode:Int,
+			operation:String):Void {
+		switch result {
+			case MutationApplied(_, _, terrain, _, _, _):
+				switch terrainRefreshForTerrainChange(terrain) {
+					case RefreshTerrainVoxel(point, paletteCode):
+						require(point.x == expectedPoint.x && point.y == expectedPoint.y && point.z == expectedPoint.z && paletteCode == expectedPaletteCode,
+							'$operation returned the wrong terrain footprint');
+						require(patchProjectedVoxel(projection, point, paletteCode), '$operation footprint did not patch the retained projection');
+					case KeepTerrain | RefreshAllTerrain:
+						throw '$operation did not return one exact voxel footprint';
+				}
+			case MutationUnchanged(_, _) | MutationRejected(_, _):
+				throw '$operation did not commit';
+		}
+	}
+
+	/** Compare the mutable fast-path cells and derived surfaces with a full decode. */
+	static function requireProjectionMatches(retained:EditorWorldProjection, session:EditorSession, operation:String):Void {
+		final fresh = projectWorld(session.draftSnapshot().world);
+		require(fresh != null
+			&& intArraysEqual(retained.cells, fresh.cells)
+			&& intArraysEqual(retained.surfaceTops, fresh.surfaceTops)
+			&& projectionColumnsKey(retained) == projectionColumnsKey(fresh)
+			&& projectionPatchesKey(retained) == projectionPatchesKey(fresh),
+			'$operation retained projection disagreed with a full decode');
+	}
+
+	/** Compare two integer arrays without relying on target-specific array identity. */
+	static function intArraysEqual(left:Array<Int>, right:Array<Int>):Bool {
+		if (left.length != right.length)
+			return false;
+		for (index in 0...left.length)
+			if (left[index] != right[index])
+				return false;
+		return true;
+	}
+
+	/** Serialize the small derived column view for deterministic comparison. */
+	static function projectionColumnsKey(projection:EditorWorldProjection):String
+		return [for (column in projection.columns) '${column.x}:${column.z}:${column.topY}'].join("|");
+
+	/** Serialize the compact surface patches for deterministic comparison. */
+	static function projectionPatchesKey(projection:EditorWorldProjection):String
+		return [
+			for (patch in projection.surfacePatches)
+				'${patch.x}:${patch.z}:${patch.width}:${patch.depth}:${patch.topY}:${patch.paletteCode}'
+		].join("|");
 
 	/** Prove that a creator gesture becomes one collision-free reloadable object. */
 	static function checkCheckpointPlacement():Void {
@@ -217,9 +835,106 @@ final class EditorProbe {
 			case _:
 				throw "checkpoint placement did not use the normal object command";
 		}
+		final reservedRuleIds = [id("editor.rule.checkpoint.n3")];
+		final allocated = checkpointTemplate({x: 2, y: 1, z: 3}, existing, reservedRuleIds);
+		require(allocated.objectId.text() == "editor.checkpoint.n4", "checkpoint template reused a suffix reserved by a rule");
+		switch allocated.commands {
+			case [PutObject(object), PutRule(rule)]:
+				require(object.id.text() == allocated.objectId.text() && rule.id.text() == "editor.rule.checkpoint.n4",
+					"checkpoint template did not keep deterministic paired identities");
+				switch [rule.event, rule.actions] {
+					case [Interact(eventId), [SetCheckpoint(actionId)]]:
+						require(eventId.text() == allocated.objectId.text() && actionId.text() == allocated.objectId.text(),
+							"checkpoint template did not connect interaction to checkpoint state");
+					case _: throw "checkpoint template changed its playable CaxeFlow rule";
+				}
+			case _:
+				throw "checkpoint template did not emit object and rule commands";
+		}
 
 		final session = open(defaultEditorSettings());
 		roundTrip(session, checkpointCommand({x: 0, y: 0, z: 0}, session.draftSnapshot().objects), Placement);
+
+		final draft = session.draftSnapshot();
+		final template = checkpointTemplate({x: 0, y: 0, z: 0}, draft.objects, [for (rule in draft.flow.rules) rule.id]);
+		require(template.commands.length == 2, "checkpoint template did not keep object and behavior in one batch");
+		final beforeBytes = session.canonicalDraft();
+		final beforeHistory = session.historyEntries();
+		switch session.preview({baseRevision: session.revision(), commands: template.commands}) {
+			case PreviewAccepted(families, _, _):
+				require(families.length == 2 && families[0] == Placement && families[1] == Rule, "checkpoint template preview changed command ownership");
+			case other:
+				throw 'checkpoint template preview failed: $other';
+		}
+		require(session.canonicalDraft().compare(beforeBytes) == 0 && session.historyEntries() == beforeHistory,
+			"checkpoint template preview changed the live draft");
+		final missingObject = id("editor.missing.checkpoint-template");
+		switch session.mutate({baseRevision: session.revision(), mutation: ApplyBatch([template.commands[0], RemoveObject(missingObject)])}) {
+			case MutationRejected(MissingObject(id), _):
+				require(id.text() == missingObject.text(), "checkpoint template partial failure reported the wrong object");
+			case other:
+				throw 'checkpoint template partial failure was not atomic: $other';
+		}
+		require(session.canonicalDraft().compare(beforeBytes) == 0 && session.historyEntries() == beforeHistory,
+			"checkpoint template partial failure changed bytes or history");
+		switch session.mutate({baseRevision: session.revision(), mutation: ApplyBatch(template.commands)}) {
+			case MutationApplied(families, _, _, _, undoDepth, redoDepth):
+				require(families.length == 2 && families[0] == Placement && families[1] == Rule && undoDepth == beforeHistory + 1 && redoDepth == 0,
+					"checkpoint template did not commit as one reversible transaction");
+			case other:
+				throw 'checkpoint template commit failed: $other';
+		}
+		final committed = expectValid(session, "playable checkpoint template");
+		requireTestStarted(session.enterTestPlay(), "playable checkpoint template");
+		final test = session.testPlay();
+		require(test != null, "checkpoint template Test Play did not start");
+		test.runTick({events: [flowEventOccurrence(Interact(template.objectId), ActorEventContext(PLAYER))], positions: []});
+		final activeCheckpoint = test.checkpoint();
+		require(activeCheckpoint != null && activeCheckpoint.text() == template.objectId.text(),
+			"checkpoint template interaction did not change Test Play checkpoint state");
+		require(session.leaveTestPlay(), "checkpoint template Test Play did not return to editing");
+		require(session.canonicalDraft().compare(committed) == 0, "checkpoint template Test Play changed canonical bytes");
+		switch session.mutate({baseRevision: session.revision(), mutation: Undo}) {
+			case MutationApplied(_, _, _, _, _, _):
+			case other:
+				throw 'checkpoint template undo failed: $other';
+		}
+		require(session.canonicalDraft().compare(beforeBytes) == 0, "checkpoint template undo left a partial object or rule");
+	}
+
+	/** Prove one visual gesture creates exact one-cell trigger bounds. */
+	static function checkTriggerPlacement():Void {
+		final existing:Array<ScenarioObject> = [
+			{id: id("editor.trigger.n1"), tags: [], placement: TriggerZone({origin: {x: 0, y: 0, z: 0}, size: {width: 1, height: 1, depth: 1}})},
+			{id: id("editor.trigger.n3"), tags: [], placement: TriggerZone({origin: {x: 2, y: 0, z: 0}, size: {width: 1, height: 1, depth: 1}})}
+		];
+		final command = triggerZoneCommand({x: 2, y: 1, z: 3}, existing);
+		final triggerId = id("editor.trigger.n2");
+		switch command {
+			case PutObject(object):
+				require(object.id.text() == triggerId.text(), "trigger placement did not fill the first available ID gap");
+				require(object.tags.length == 0, "trigger placement invented campaign-specific tags");
+				switch object.placement {
+					case TriggerZone(bounds):
+						require(bounds.origin.x == 2 && bounds.origin.y == 1 && bounds.origin.z == 3, "trigger placement changed the selected voxel");
+						require(bounds.size.width == 1 && bounds.size.height == 1 && bounds.size.depth == 1,
+							"trigger placement did not create one-cell bounds");
+					case _: throw "trigger placement emitted the wrong CAXEMAP role";
+				}
+			case _:
+				throw "trigger placement did not use the normal object command";
+		}
+		final changes = changesFor(command);
+		require(changes.length == 1 && isObjectChange(changes[0], triggerId), "trigger placement lost its changed-object identity");
+
+		final session = open(defaultEditorSettings());
+		expectApplied(session.apply(ResizeWorld({width: 4, height: 3, depth: 4})), WorldShape, "prepare trigger placement world");
+		roundTrip(session, triggerZoneCommand({x: 2, y: 1, z: 3}, session.draftSnapshot().objects), Placement);
+		final canonical = expectValid(session, "placed trigger");
+		require(canonical.compare(session.canonicalDraft()) == 0, "trigger placement changed canonical save bytes during validation");
+		requireTestStarted(session.enterTestPlay(), "placed trigger Test Play");
+		require(session.leaveTestPlay(), "placed trigger Test Play did not return to editing");
+		require(session.canonicalDraft().compare(canonical) == 0, "placed trigger Test Play changed the editor draft");
 	}
 
 	/** Prove one reloadable recipe crosses the canonical editor history boundary. */
@@ -227,7 +942,15 @@ final class EditorProbe {
 		final recipe = new EditorObjectRecipe("mechanism", "MECHANISM", "MECANISMO",
 			EditorStatefulObject(new ContentId("caxecraft:mechanism"), new ContentId("caxecraft:idle")));
 		final session = open(defaultEditorSettings());
-		final command = objectRecipeCommand(recipe, {x: 1, y: 0, z: 2}, session.draftSnapshot().objects);
+		expectApplied(session.apply(ResizeWorld({width: 4, height: 3, depth: 4})), WorldShape, "prepare browser placement world");
+		final worldSize:VoxelSize = {width: 4, height: 3, depth: 4};
+		final command = switch objectRecipeTemplate(recipe, {x: 1, y: 0, z: 2},
+			templateContext(session.draftSnapshot().id, worldSize, session.draftSnapshot().objects, [], [])) {
+			case ObjectTemplateRejected(error): throw 'catalog placement rejected a stateful recipe: $error';
+			case ObjectTemplateReady(value):
+				require(value.commands.length == 1, "stateful catalog placement invented extra behavior");
+				value.commands[0];
+		};
 		switch command {
 			case PutObject(object):
 				require(object.id.text() == "editor.mechanism.n1", "catalog placement chose the wrong independent identity");
@@ -245,7 +968,364 @@ final class EditorProbe {
 				throw "catalog placement did not use the canonical object command";
 		}
 		roundTrip(session, command, Placement);
+
+		final point:VoxelPoint = {x: 2, y: 1, z: 3};
+		final itemCommand = requiredRecipeCommand(new EditorObjectRecipe("item", "ITEM", "OBJETO", EditorItem(content("caxecraft:item"), 1)), point,
+			session.draftSnapshot().objects, []);
+		switch itemCommand {
+			case PutObject({placement: Item(itemType, 1, position)}):
+				require(itemType.text() == "caxecraft:item" && position.xMilli == 2500 && position.yMilli == 1000 && position.zMilli == 3500,
+					"item browser recipe changed its content, quantity, or snapped transform");
+			case _:
+				throw "item browser recipe emitted the wrong placement role";
+		}
+		roundTrip(session, itemCommand, Placement);
+
+		expectApplied(session.apply(PutDialogue({
+			id: DIALOGUE,
+			lines: [{speaker: null, text: Message(DIALOGUE_MESSAGE)}]
+		})), Dialogue, "prepare browser NPC dialogue");
+		final npcRecipe = new EditorObjectRecipe("npc", "NPC", "PNJ", EditorNpc(content("caxecraft:ivvy")));
+		switch objectRecipeTemplate(npcRecipe, point, templateContext(session.draftSnapshot().id, worldSize, [], [], [])) {
+			case ObjectTemplateRejected(MissingEditorDialogue):
+			case _:
+				throw "NPC browser recipe invented a missing dialogue reference";
+		}
+		final occupiedRule = id("editor.rule.npc.n1");
+		final readyNpcTemplate = switch objectRecipeTemplate(npcRecipe, point,
+			templateContext(session.draftSnapshot().id, worldSize, session.draftSnapshot().objects, [DIALOGUE], [occupiedRule])) {
+			case ObjectTemplateRejected(error): throw 'NPC browser rejected an authored dialogue: $error';
+			case ObjectTemplateReady(value): value;
+		};
+		switch readyNpcTemplate.commands {
+			case [PutObject({id: objectId, placement: Npc(npcType, dialogueId, _)}), PutRule(rule)]:
+				require(readyNpcTemplate.objectId.text() == "editor.npc.n2"
+					&& objectId.text() == readyNpcTemplate.objectId.text()
+					&& npcType.text() == "caxecraft:ivvy"
+					&& dialogueId.text() == DIALOGUE.text(),
+					"NPC dialogue template changed its collision-free object or content references");
+				require(rule.id.text() == "editor.rule.npc.n2" && rule.repeat == Repeat && rule.priority == 0,
+					"NPC dialogue template changed its collision-free rule identity or policy");
+				switch rule.event {
+					case Interact(interacted): require(interacted.text() == objectId.text(), "NPC dialogue rule targeted the wrong object");
+					case _: throw "NPC dialogue template emitted the wrong WHEN card";
+				}
+				switch rule.predicate {
+					case Always:
+					case _: throw "NPC dialogue template emitted the wrong IF card";
+				}
+				switch rule.actions {
+					case [ShowDialogue(dialogue)]:
+						require(dialogue.text() == DIALOGUE.text(), "NPC dialogue template emitted the wrong DO card");
+					case _: throw "NPC dialogue template emitted the wrong DO card count";
+				}
+			case _:
+				throw "NPC browser did not create one atomic placement and dialogue rule";
+		}
+		final beforeNpcHistory = session.historyEntries();
+		switch session.mutate({baseRevision: session.revision(), mutation: ApplyBatch(readyNpcTemplate.commands)}) {
+			case MutationApplied(families, _, _, _, undoDepth, redoDepth):
+				require(families.length == 2 && families[0] == Placement && families[1] == Rule && undoDepth == beforeNpcHistory + 1 && redoDepth == 0,
+					"NPC dialogue template did not commit as one reversible transaction");
+			case other:
+				throw 'NPC dialogue template commit failed: $other';
+		}
+
+		final bridgeRecipe = new EditorObjectRecipe("bridge-switch", "BRIDGE + SWITCH", "PUENTE + INTERRUPTOR", EditorLinkedStatefulPair({
+			objectType: content("caxecraft:mechanism"),
+			initialState: content("caxecraft:idle"),
+			activeState: content("caxecraft:active")
+		}, {
+			objectType: content("caxecraft:mechanism"),
+			initialState: content("caxecraft:idle"),
+			activeState: content("caxecraft:active")
+		}));
+		switch objectRecipeTemplate(bridgeRecipe, {x: 0, y: 0, z: 0},
+			templateContext(session.draftSnapshot().id, {width: 1, height: 3, depth: 1}, [], [], [])) {
+			case ObjectTemplateRejected(EditorTemplateNeedsAdjacentCell):
+			case _:
+				throw "linked template did not reject a world without a neighboring cell";
+		}
+		final readyBridgeTemplate = switch objectRecipeTemplate(bridgeRecipe, {x: 0, y: 0, z: 0},
+			templateContext(session.draftSnapshot().id, worldSize, session.draftSnapshot().objects, [], [id("editor.rule.bridge-switch.n1")])) {
+			case ObjectTemplateRejected(error): throw 'bridge template rejected admitted data: $error';
+			case ObjectTemplateReady(value): value;
+		};
+		switch readyBridgeTemplate.commands {
+			case [
+				PutObject({id: sourceId, placement: StatefulObject(_, sourceInitial, sourcePosition)}),
+				PutObject({id: targetId, placement: StatefulObject(_, targetInitial, targetPosition)}),
+				PutRule(rule)
+			]:
+				require(readyBridgeTemplate.objectId.text() == "editor.bridge-switch.source.n2"
+					&& sourceId.text() == readyBridgeTemplate.objectId.text()
+					&& targetId.text() == "editor.bridge-switch.target.n2"
+					&& sourceInitial.text() == "caxecraft:idle"
+					&& targetInitial.text() == "caxecraft:idle"
+					&& sourcePosition.zMilli == 500
+					&& targetPosition.zMilli == 1500,
+					"bridge template changed its collision-free identities, states, or adjacent placement");
+				require(rule.id.text() == "editor.rule.bridge-switch.n2" && rule.repeat == Repeat && rule.priority == 0,
+					"bridge template changed its rule identity or policy");
+				switch rule.event {
+					case Interact(id): require(id.text() == sourceId.text(), "bridge template WHEN card targeted the wrong switch");
+					case _: throw "bridge template emitted the wrong WHEN card";
+				}
+				switch rule.predicate {
+					case All([
+						ObjectStateIs(actualSource, sourceState),
+						ObjectStateIs(actualTarget, targetState)
+					]):
+						require(actualSource.text() == sourceId.text()
+							&& actualTarget.text() == targetId.text()
+							&& sourceState.text() == "caxecraft:idle"
+							&& targetState.text() == "caxecraft:idle",
+							"bridge template IF card lost one initial-state guard");
+					case _: throw "bridge template emitted the wrong IF card";
+				}
+				switch rule.actions {
+					case [
+						SetObjectState(actualSource, sourceState),
+						SetObjectState(actualTarget, targetState)
+					]:
+						require(actualSource.text() == sourceId.text()
+							&& actualTarget.text() == targetId.text()
+							&& sourceState.text() == "caxecraft:active"
+							&& targetState.text() == "caxecraft:active",
+							"bridge template DO cards lost their paired active states");
+					case _: throw "bridge template emitted the wrong ordered DO cards";
+				}
+			case _:
+				throw "bridge template did not produce two objects and one rule";
+		}
+		final beforeBridgeHistory = session.historyEntries();
+		switch session.mutate({baseRevision: session.revision(), mutation: ApplyBatch(readyBridgeTemplate.commands)}) {
+			case MutationApplied(families, _, _, _, undoDepth, redoDepth):
+				require(families.length == 3
+					&& families[0] == Placement
+					&& families[1] == Placement
+					&& families[2] == Rule
+					&& undoDepth == beforeBridgeHistory + 1
+					&& redoDepth == 0,
+					"bridge template did not commit as one reversible transaction");
+			case other:
+				throw 'bridge template commit failed: $other';
+		}
+
+		final waveRecipe = new EditorObjectRecipe("enemy-wave-entity", "ENTITY WAVE", "OLEADA DE ENTIDADES", EditorEnemyWave(content("caxecraft:entity")));
+		switch objectRecipeTemplate(waveRecipe, {x: 0, y: 0, z: 0}, templateContext(session.draftSnapshot().id, {width: 1, height: 3, depth: 1}, [], [], [])) {
+			case ObjectTemplateRejected(EditorEnemyWaveNeedsSpace):
+			case _:
+				throw "enemy-wave template did not reject a world without three surrounding cells";
+		}
+		final readyWaveTemplate = switch objectRecipeTemplate(waveRecipe, {x: 2, y: 1, z: 3},
+			templateContext(session.draftSnapshot().id, worldSize, session.draftSnapshot().objects, [], [id("editor.rule.enemy-wave-entity.hide.n1")])) {
+			case ObjectTemplateRejected(error): throw 'enemy-wave template rejected admitted data: $error';
+			case ObjectTemplateReady(value): value;
+		};
+		switch readyWaveTemplate.commands {
+			case [
+				PutObject({id: zoneId, placement: TriggerZone(zone)}),
+				PutObject({id: enemy1, placement: Entity(type1, position1)}),
+				PutObject({id: enemy2, placement: Entity(type2, position2)}),
+				PutObject({id: enemy3, placement: Entity(type3, position3)}),
+				PutRule(hideRule),
+				PutRule(spawnRule)
+			]:
+				require(readyWaveTemplate.objectId.text() == "editor.enemy-wave-entity.zone.n2"
+					&& zoneId.text() == readyWaveTemplate.objectId.text()
+					&& zone.origin.x == 2
+					&& zone.origin.y == 1
+					&& zone.origin.z == 3
+					&& enemy1.text() == "editor.enemy-wave-entity.enemy.n2.i1"
+					&& enemy2.text() == "editor.enemy-wave-entity.enemy.n2.i2"
+					&& enemy3.text() == "editor.enemy-wave-entity.enemy.n2.i3"
+					&& type1.text() == "caxecraft:entity"
+					&& type2.text() == "caxecraft:entity"
+					&& type3.text() == "caxecraft:entity"
+					&& position1.xMilli == 1500
+					&& position1.zMilli == 2500
+					&& position2.xMilli == 2500
+					&& position2.zMilli == 2500
+					&& position3.xMilli == 3500
+					&& position3.zMilli == 2500,
+					"enemy-wave template changed its collision-safe identities or nearest-cell layout");
+				switch hideRule.event {
+					case LevelEntered(level):
+						require(level.text() == session.draftSnapshot().id.text()
+							&& hideRule.id.text() == "editor.rule.enemy-wave-entity.hide.n2"
+							&& hideRule.priority == 0
+							&& hideRule.repeat == Once,
+							"enemy-wave setup rule changed its level, identity, priority, or policy");
+					case _: throw "enemy-wave setup rule emitted the wrong WHEN card";
+				}
+				switch hideRule.actions {
+					case [Despawn(hidden1), Despawn(hidden2), Despawn(hidden3)]:
+						require(hidden1.text() == enemy1.text() && hidden2.text() == enemy2.text() && hidden3.text() == enemy3.text(),
+							"enemy-wave setup rule did not hide every authored enemy in order");
+					case _: throw "enemy-wave setup rule emitted the wrong DO cards";
+				}
+				switch spawnRule.event {
+					case EnterZone(actualZone):
+						require(actualZone.text() == zoneId.text()
+							&& spawnRule.id.text() == "editor.rule.enemy-wave-entity.spawn.n2"
+							&& spawnRule.priority == 0
+							&& spawnRule.repeat == Once,
+							"enemy-wave trigger rule changed its zone, identity, priority, or policy");
+					case _: throw "enemy-wave trigger rule emitted the wrong WHEN card";
+				}
+				switch spawnRule.actions {
+					case [Spawn(spawned1), Spawn(spawned2), Spawn(spawned3)]:
+						require(spawned1.text() == enemy1.text() && spawned2.text() == enemy2.text() && spawned3.text() == enemy3.text(),
+							"enemy-wave trigger rule did not reveal every authored enemy in order");
+					case _: throw "enemy-wave trigger rule emitted the wrong DO cards";
+				}
+			case _:
+				throw "enemy-wave template did not produce one trigger, three enemies, and two rules";
+		}
+		final beforeWaveHistory = session.historyEntries();
+		switch session.mutate({baseRevision: session.revision(), mutation: ApplyBatch(readyWaveTemplate.commands)}) {
+			case MutationApplied(families, _, _, _, undoDepth, redoDepth):
+				require(families.length == 6 && families[0] == Placement && families[1] == Placement && families[2] == Placement
+					&& families[3] == Placement && families[4] == Rule && families[5] == Rule && undoDepth == beforeWaveHistory + 1 && redoDepth == 0,
+					"enemy-wave template did not commit as one reversible transaction");
+			case other:
+				throw 'enemy-wave template commit failed: $other';
+		}
+
+		final enemyCommand = requiredRecipeCommand(new EditorObjectRecipe("enemy", "ENEMY", "ENEMIGO", EditorEnemy(content("caxecraft:entity"))), point,
+			session.draftSnapshot().objects, []);
+		switch enemyCommand {
+			case PutObject({placement: Entity(entityType, _)}):
+				require(entityType.text() == "caxecraft:entity", "enemy browser recipe changed its entity type");
+			case _:
+				throw "enemy browser recipe emitted the wrong placement role";
+		}
+		roundTrip(session, enemyCommand, Placement);
+		final canonical = expectValid(session, "browser placement kinds");
+		expectCodecRoundTrip(canonical);
+		requireTestStarted(session.enterTestPlay(), "browser placement kinds");
+		final testPlay = switch session.testPlay() {
+			case null: throw "NPC dialogue template Test Play did not start";
+			case value: value;
+		};
+		final waveSetupTick = testPlay.runTick({
+			events: [flowEventOccurrence(LevelEntered(session.draftSnapshot().id))],
+			positions: []
+		});
+		switch waveSetupTick.presentation {
+			case [ObjectDespawned(enemy1), ObjectDespawned(enemy2), ObjectDespawned(enemy3)]:
+				require(enemy1.text() == "editor.enemy-wave-entity.enemy.n2.i1"
+					&& enemy2.text() == "editor.enemy-wave-entity.enemy.n2.i2"
+					&& enemy3.text() == "editor.enemy-wave-entity.enemy.n2.i3",
+					"enemy-wave setup hid the wrong Test Play objects");
+			case _:
+				throw "enemy-wave setup did not hide its enemies in Test Play";
+		}
+		require(!testPlay.objectActive(id("editor.enemy-wave-entity.enemy.n2.i1"))
+			&& !testPlay.objectActive(id("editor.enemy-wave-entity.enemy.n2.i2"))
+			&& !testPlay.objectActive(id("editor.enemy-wave-entity.enemy.n2.i3")),
+			"enemy-wave setup left an enemy active before entry");
+		final waveSpawnTick = testPlay.runTick({
+			events: [
+				flowEventOccurrence(EnterZone(readyWaveTemplate.objectId), SpatialEventContext(PLAYER, {
+					xMilli: 1500,
+					yMilli: 1000,
+					zMilli: 3500
+				}, {
+					xMilli: 2500,
+					yMilli: 1000,
+					zMilli: 3500
+				}, false))
+			],
+			positions: []
+		});
+		switch waveSpawnTick.presentation {
+			case [ObjectSpawned(enemy1), ObjectSpawned(enemy2), ObjectSpawned(enemy3)]:
+				require(enemy1.text() == "editor.enemy-wave-entity.enemy.n2.i1"
+					&& enemy2.text() == "editor.enemy-wave-entity.enemy.n2.i2"
+					&& enemy3.text() == "editor.enemy-wave-entity.enemy.n2.i3",
+					"enemy-wave trigger revealed the wrong Test Play objects");
+			case _:
+				throw "enemy-wave trigger did not reveal its enemies in Test Play";
+		}
+		require(testPlay.objectActive(id("editor.enemy-wave-entity.enemy.n2.i1"))
+			&& testPlay.objectActive(id("editor.enemy-wave-entity.enemy.n2.i2"))
+			&& testPlay.objectActive(id("editor.enemy-wave-entity.enemy.n2.i3")),
+			"enemy-wave trigger did not retain all active enemies");
+		final npcTick = testPlay.runTick({
+			events: [
+				flowEventOccurrence(Interact(readyNpcTemplate.objectId), ActorEventContext(PLAYER))
+			],
+			positions: []
+		});
+		switch npcTick.presentation {
+			case [DialogueRequested(dialogue)]:
+				require(dialogue.text() == DIALOGUE.text(), "NPC interaction requested the wrong dialogue in Test Play");
+			case _:
+				throw "NPC interaction did not request one dialogue in Test Play";
+		}
+		final bridgeTick = testPlay.runTick({
+			events: [
+				flowEventOccurrence(Interact(readyBridgeTemplate.objectId), ActorEventContext(PLAYER))
+			],
+			positions: []
+		});
+		switch bridgeTick.presentation {
+			case [
+				ObjectStateChanged(sourceId, sourceState),
+				ObjectStateChanged(targetId, targetState)
+			]:
+				require(sourceId.text() == readyBridgeTemplate.objectId.text()
+					&& sourceState.text() == "caxecraft:active"
+					&& targetId.text() == "editor.bridge-switch.target.n2"
+					&& targetState.text() == "caxecraft:active",
+					"bridge switch Test Play changed the wrong object states");
+			case _:
+				throw "bridge switch did not publish its paired state changes in Test Play";
+		}
+		require(testPlay.objectState(readyBridgeTemplate.objectId).text() == "caxecraft:active"
+			&& testPlay.objectState(id("editor.bridge-switch.target.n2")).text() == "caxecraft:active",
+			"bridge switch Test Play did not retain both active states");
+		require(session.leaveTestPlay(), "browser placement Test Play did not return to editing");
+		require(session.canonicalDraft().compare(canonical) == 0, "browser placement Test Play changed the editor draft");
 	}
+
+	/** Require one browser recipe to produce an ordinary canonical command. */
+	static function requiredRecipeCommand(recipe:EditorObjectRecipe, point:VoxelPoint, objects:Array<ScenarioObject>,
+			dialogueIds:Array<ScenarioId>):EditorCommand
+		return switch objectRecipeTemplate(recipe, point, templateContext(id("editor.qa"), {width: 4, height: 3, depth: 4}, objects, dialogueIds, [])) {
+			case ObjectTemplateRejected(error): throw 'browser recipe ${recipe.id} was rejected: $error';
+			case ObjectTemplateReady(value):
+				if (value.commands.length != 1)
+					throw 'browser recipe ${recipe.id} unexpectedly required a command batch';
+				value.commands[0];
+		};
+
+	/** Build named recipe facts for tests without repeating positional payloads. */
+	static function templateContext(scenarioId:ScenarioId, worldSize:VoxelSize, objects:Array<ScenarioObject>, dialogueIds:Array<ScenarioId>,
+			ruleIds:Array<ScenarioId>):caxecraft.editor.EditorPlacement.EditorObjectTemplateContext
+		return {
+			scenarioId: scenarioId,
+			worldSize: worldSize,
+			objects: objects,
+			dialogueIds: dialogueIds,
+			ruleIds: ruleIds
+		};
+
+	/** Build the viewport's named draft facts with the focused probe palette. */
+	static function viewportToolContext(worldSize:VoxelSize, selection:Null<VoxelBounds>, objects:Array<ScenarioObject>, ruleIds:Array<ScenarioId>,
+			dialogueIds:Array<ScenarioId>, recipe:Null<EditorObjectRecipe>):caxecraft.editor.EditorViewport.EditorToolContext
+		return {
+			scenarioId: id("editor.viewport"),
+			worldSize: worldSize,
+			paletteCode: 1,
+			selection: selection,
+			objects: objects,
+			ruleIds: ruleIds,
+			dialogueIds: dialogueIds,
+			recipe: recipe
+		};
 
 	/** Prove one selected object becomes a distinct canonical copy with the same payload. */
 	static function checkObjectDuplication():Void {
@@ -290,6 +1370,82 @@ final class EditorProbe {
 		final checkpointCopy = duplicateObject(checkpointId, session.draftSnapshot().objects);
 		require(checkpointCopy != null, "object duplication lost a selected checkpoint");
 		roundTrip(session, checkpointCopy.command, Placement);
+
+		final triggerId = id("duplicate.trigger");
+		final triggerPlan = duplicateObjectWithConnectedRules(triggerId, [
+			{id: triggerId, tags: [], placement: TriggerZone({origin: {x: 0, y: 0, z: 0}, size: {width: 2, height: 2, depth: 2}})}
+		], [
+			{
+				id: id("rule.trigger-enter"),
+				priority: 1,
+				repeat: Once,
+				event: EnterZone(triggerId),
+				predicate: Always,
+				actions: [Spawn(checkpointId)]
+			},
+			{
+				id: id("rule.unrelated"),
+				priority: 2,
+				repeat: Repeat,
+				event: Interact(checkpointId),
+				predicate: Always,
+				actions: []
+			}
+		]);
+		if (triggerPlan == null)
+			throw "normal trigger duplication lost its source";
+		require(triggerPlan.commands.length == 2, "normal trigger duplication omitted connected behavior or copied an unrelated rule");
+		switch triggerPlan.commands[1] {
+			case PutRule(rule):
+				switch rule.event {
+					case EnterZone(zone):
+						require(zone.text() == triggerPlan.id.text() && rule.id.text() == "rule.trigger-enter.copy.n1",
+							"trigger behavior copy retained the old source or rule identity");
+					case _: throw "trigger behavior copy changed its event kind";
+				}
+			case _:
+				throw "trigger behavior copy did not use the canonical rule command";
+		}
+
+		final lifecycle = open(defaultEditorSettings());
+		final lifecycleTrigger = id("duplicate.lifecycle-trigger");
+		expectApplied(lifecycle.apply(PutObject({
+			id: lifecycleTrigger,
+			tags: [],
+			placement: TriggerZone({origin: {x: 0, y: 0, z: 0}, size: {width: 1, height: 1, depth: 1}})
+		})), Placement, "prepare trigger lifecycle");
+		expectApplied(lifecycle.apply(PutRule({
+			id: id("rule.lifecycle-enter"),
+			priority: 1,
+			repeat: Once,
+			event: EnterZone(lifecycleTrigger),
+			predicate: Always,
+			actions: []
+		})), Rule, "prepare connected trigger behavior");
+		final lifecycleCopy = duplicateObjectWithConnectedRules(lifecycleTrigger, lifecycle.draftSnapshot().objects, lifecycle.draftSnapshot().flow.rules);
+		if (lifecycleCopy == null)
+			throw "trigger lifecycle copy lost its source";
+		switch lifecycle.mutate({baseRevision: lifecycle.revision(), mutation: ApplyBatch(lifecycleCopy.commands)}) {
+			case MutationApplied(_, _, _, _, _, _):
+			case other:
+				throw 'trigger lifecycle copy failed: $other';
+		}
+		final deletePlan = deleteObjectWithConnectedRules(lifecycleCopy.id, lifecycle.draftSnapshot().flow.rules);
+		require(deletePlan.commands.length == 2, "trigger deletion did not include its copied rule");
+		switch lifecycle.mutate({baseRevision: lifecycle.revision(), mutation: ApplyBatch(deletePlan.commands)}) {
+			case MutationApplied(families, changes, _, _, _, _):
+				require(families.length == 2 && families[0] == Rule && families[1] == Placement, "trigger deletion changed command ownership");
+				require(changes.length == 2, "trigger deletion lost the copied object or rule identity");
+			case other:
+				throw 'trigger lifecycle deletion failed: $other';
+		}
+		switch lifecycle.query(InspectValidation) {
+			case ValidationObserved(_, DraftPlayable(_)):
+			case ValidationObserved(_, DraftInvalid(diagnostics)):
+				throw 'trigger deletion left an invalid draft: ${Std.string(diagnostics[0])}';
+			case _:
+				throw "trigger deletion returned the wrong validation observation";
+		}
 	}
 
 	/** Preserve an optional environment through the editor's text-byte boundary. */
@@ -302,6 +1458,120 @@ final class EditorProbe {
 		final environment = opened.draftSnapshot().environment;
 		require(environment != null && environment.edges.length == 0 && environment.sun == null, "editor text import lost the optional environment choices");
 		require(opened.canonicalDraft().compare(source) == 0, "editor text round-trip changed the environment bytes");
+
+		var focus = firstEnvironmentControl();
+		for (_ in 0...17)
+			focus = moveEnvironmentControl(focus, EditorEnvironmentDirection.Increase);
+		require(focus == EditorEnvironmentControl.Done
+			&& moveEnvironmentControl(focus, EditorEnvironmentDirection.Increase) == EditorEnvironmentControl.Enabled
+			&& moveEnvironmentControl(EditorEnvironmentControl.Enabled, EditorEnvironmentDirection.Decrease) == EditorEnvironmentControl.Done,
+			"environment controls did not remain reachable in both directions");
+
+		applyEnvironmentEdit(opened, EditorEnvironmentControl.SkyRed, EditorEnvironmentDirection.Increase);
+		applyEnvironmentEdit(opened, EditorEnvironmentControl.SkyGreen, EditorEnvironmentDirection.Decrease);
+		applyEnvironmentEdit(opened, EditorEnvironmentControl.SkyBlue, EditorEnvironmentDirection.Increase);
+		applyEnvironmentEdit(opened, EditorEnvironmentControl.SunEnabled, EditorEnvironmentDirection.Increase);
+		applyEnvironmentEdit(opened, EditorEnvironmentControl.SunX, EditorEnvironmentDirection.Increase);
+		applyEnvironmentEdit(opened, EditorEnvironmentControl.SunY, EditorEnvironmentDirection.Increase);
+		applyEnvironmentEdit(opened, EditorEnvironmentControl.SunZ, EditorEnvironmentDirection.Decrease);
+		applyEnvironmentEdit(opened, EditorEnvironmentControl.SunRadius, EditorEnvironmentDirection.Increase);
+		applyEnvironmentEdit(opened, EditorEnvironmentControl.CloudCount, EditorEnvironmentDirection.Increase);
+		applyEnvironmentEdit(opened, EditorEnvironmentControl.CloudSpeed, EditorEnvironmentDirection.Decrease);
+		applyEnvironmentEdit(opened, EditorEnvironmentControl.CloudSeed, EditorEnvironmentDirection.Increase);
+		applyEnvironmentEdit(opened, EditorEnvironmentControl.NorthEdge, EditorEnvironmentDirection.Increase);
+		applyEnvironmentEdit(opened, EditorEnvironmentControl.SouthEdge, EditorEnvironmentDirection.Increase);
+		applyEnvironmentEdit(opened, EditorEnvironmentControl.EastEdge, EditorEnvironmentDirection.Increase);
+		applyEnvironmentEdit(opened, EditorEnvironmentControl.WestEdge, EditorEnvironmentDirection.Increase);
+		applyEnvironmentEdit(opened, EditorEnvironmentControl.SouthEdge, EditorEnvironmentDirection.Decrease);
+		applyEnvironmentEdit(opened, EditorEnvironmentControl.ContinueWater, EditorEnvironmentDirection.Increase);
+		final edited = opened.draftSnapshot().environment;
+		if (edited == null)
+			throw "environment controls removed the enabled environment";
+		require(edited.sky.red == 97
+			&& edited.sky.green == 147
+			&& edited.sky.blue == 172
+			&& edited.sun != null
+			&& edited.sun.x == -299
+			&& edited.sun.y == 701
+			&& edited.sun.z == 249
+			&& edited.sun.radiusMilli == 301
+			&& edited.clouds.count == 3
+			&& edited.clouds.speedMilli == 499
+			&& edited.clouds.seed == 74
+			&& hasEnvironmentEdge(edited.edges, North)
+			&& !hasEnvironmentEdge(edited.edges, South)
+			&& hasEnvironmentEdge(edited.edges, East)
+			&& hasEnvironmentEdge(edited.edges, West)
+			&& edited.continueWater,
+			"environment controls changed the wrong field or lost an authored neighbor");
+		final editedBytes = opened.canonicalDraft();
+		final observedPresentationEnvironment = switch opened.query(InspectPresentation) {
+			case PresentationObserved(_, value):
+				switch value.environment {
+					case null: throw "presentation query lost the edited environment";
+					case environment: environment;
+				}
+			case _: throw "presentation query lost the edited environment";
+		};
+		observedPresentationEnvironment.edges.resize(0);
+		final freshPresentationEnvironment = switch opened.query(InspectPresentation) {
+			case PresentationObserved(_, value):
+				switch value.environment {
+					case null: throw "second presentation query lost the edited environment";
+					case environment: environment;
+				}
+			case _: throw "second presentation query lost the edited environment";
+		};
+		require(hasEnvironmentEdge(freshPresentationEnvironment.edges, North)
+			&& hasEnvironmentEdge(freshPresentationEnvironment.edges, East)
+			&& hasEnvironmentEdge(freshPresentationEnvironment.edges, West)
+			&& opened.canonicalDraft().compare(editedBytes) == 0,
+			"mutating presentation environment edges changed the editor draft or the next view");
+		final reopened = switch EditorSession.openBytes(editedBytes, new Registry(), defaultEditorSettings()) {
+			case EditorOpened(value): value;
+			case EditorOpenRejected(error): throw 'editor rejected its environment save: $error';
+		};
+		require(reopened.canonicalDraft().compare(editedBytes) == 0, "environment save and reload changed canonical bytes");
+		final playable = open(defaultEditorSettings());
+		expectApplied(playable.apply(SetEnvironment(edited)), DocumentMetadata, "prepare environment Test Play");
+		require(playable.draftDefersParserMetadata(), "environment edit reparsed canonical bytes before validation");
+		edited.edges.push(South);
+		final isolatedEnvironment = playable.draftSnapshot().environment;
+		require(isolatedEnvironment != null
+			&& !hasEnvironmentEdge(isolatedEnvironment.edges, South), "environment edit retained the caller-owned edge array");
+		final playableBytes = playable.canonicalDraft();
+		requireTestStarted(playable.enterTestPlay(), "environment test play");
+		require(playable.leaveTestPlay()
+			&& playable.canonicalDraft().compare(playableBytes) == 0, "environment Test Play changed the editor draft");
+
+		expectApplied(opened.apply(SetEnvironment(null)), DocumentMetadata, "remove environment");
+		require(opened.draftSnapshot().environment == null, "environment None choice did not restore fallback sky");
+		switch opened.mutate({baseRevision: opened.revision(), mutation: Undo}) {
+			case MutationApplied(_, _, _, _, _, _):
+			case other:
+				throw 'undo environment removal failed: $other';
+		}
+		require(opened.canonicalDraft().compare(editedBytes) == 0, "undo did not restore exact environment bytes");
+		switch opened.mutate({baseRevision: opened.revision(), mutation: Redo}) {
+			case MutationApplied(_, _, _, _, _, _):
+			case other:
+				throw 'redo environment removal failed: $other';
+		}
+		require(opened.draftSnapshot().environment == null, "redo did not remove the environment");
+	}
+
+	/** Submit one field-preserving environment value through normal history. */
+	static function applyEnvironmentEdit(session:EditorSession, control:EditorEnvironmentControl, direction:EditorEnvironmentDirection):Void {
+		final environment = editEnvironment(session.draftSnapshot().environment, control, direction);
+		expectApplied(session.apply(SetEnvironment(environment)), DocumentMetadata, 'edit environment control $control');
+	}
+
+	/** True when one closed horizon edge is present. */
+	static function hasEnvironmentEdge(edges:Array<ScenarioHorizonEdge>, expected:ScenarioHorizonEdge):Bool {
+		for (edge in edges)
+			if (edge == expected)
+				return true;
+		return false;
 	}
 
 	/** Prove every admitted placement role moves through one shared command. */
@@ -398,6 +1668,215 @@ final class EditorProbe {
 		require(payloadChecks == 4, "object movement payload proof did not inspect every representative record");
 	}
 
+	/** Prove every directional placement rotates while bounds-only volumes fail closed. */
+	static function checkObjectRotation():Void {
+		final session = open(defaultEditorSettings());
+		expectApplied(session.apply(PutDialogue({
+			id: DIALOGUE,
+			lines: [{speaker: null, text: Message(DIALOGUE_MESSAGE)}]
+		})), Dialogue, "prepare rotating NPC dialogue");
+		final objects:Array<ScenarioObject> = [
+			{id: id("rotate.checkpoint"), tags: [], placement: Checkpoint(transformYaw(500, 500, 500, 350))},
+			{id: id("rotate.item"), tags: [], placement: Item(content("caxecraft:item"), 2, transformYaw(500, 500, 500, 350))},
+			{id: id("rotate.entity"), tags: [], placement: Entity(content("caxecraft:entity"), transformYaw(500, 500, 500, 350))},
+			{id: id("rotate.npc"), tags: [], placement: Npc(NPC, DIALOGUE, transformYaw(500, 500, 500, 350))},
+			{id: id("rotate.prefab"), tags: [], placement: Prefab(PREFAB, transformYaw(500, 500, 500, 350))},
+			{
+				id: id("rotate.stateful"),
+				tags: [],
+				placement: StatefulObject(content("caxecraft:mechanism"), content("caxecraft:idle"), transformYaw(500, 500, 500, 350))
+			}
+		];
+		for (object in objects)
+			expectApplied(session.apply(PutObject(object)), Placement, 'prepare ${object.id.text()}');
+		final ids:Array<ScenarioId> = [PLAYER];
+		for (object in objects)
+			ids.push(object.id);
+		for (objectId in ids) {
+			roundTrip(session, RotateObjectBy(objectId, 370), Placement);
+			expectApplied(session.apply(RotateObjectBy(objectId, -10)), Placement, 'normalize negative yaw for ${objectId.text()}');
+		}
+		var rotated = 0;
+		for (object in session.draftSnapshot().objects)
+			for (objectId in ids)
+				if (object.id.text() == objectId.text()) {
+					switch objectFacing(object) {
+						case ObjectYaw(yaw):
+							require(yaw == (objectId.text() == PLAYER.text() ? 0 : 350), 'object rotation lost normalized yaw for ${objectId.text()}');
+						case NoObjectFacing:
+							throw 'object rotation lost facing for ${objectId.text()}';
+					}
+					rotated++;
+				}
+		require(rotated == ids.length, "object rotation lost a transform-backed placement");
+		requireRotatedObjectPayloads(session.draftSnapshot());
+
+		final triggerId = id("rotate.trigger");
+		expectApplied(session.apply(PutObject({
+			id: triggerId,
+			tags: [new ScenarioTag("volume")],
+			placement: TriggerZone({origin: {x: 0, y: 0, z: 0}, size: {width: 2, height: 1, depth: 2}})
+		})), Placement, "prepare non-rotatable trigger");
+		final beforeRejected = session.canonicalDraft();
+		final beforeRevision = session.revision();
+		final beforeUndo = session.undoDepth();
+		expectRejected(session.apply(RotateObjectBy(triggerId, 90)), error -> switch error {
+			case ObjectCannotRotate(id): id.text() == triggerId.text();
+			case _: false;
+		}, "bounds-only trigger rotation");
+		expectRejected(session.apply(RotateObjectBy(id("rotate.missing"), 90)), error -> switch error {
+			case MissingObject(id): id.text() == "rotate.missing";
+			case _: false;
+		}, "missing object rotation");
+		require(session.canonicalDraft().compare(beforeRejected) == 0
+			&& session.revision() == beforeRevision
+			&& session.undoDepth() == beforeUndo,
+			"rejected object rotation changed bytes, revision, or history");
+	}
+
+	/** Prove trigger resizing preserves identity and rejects every unsafe shape. */
+	static function checkTriggerResize():Void {
+		final session = open(defaultEditorSettings());
+		expectApplied(session.apply(ResizeWorld({width: 4, height: 3, depth: 4})), WorldShape, "prepare trigger resize world");
+		final triggerId = id("resize.trigger");
+		expectApplied(session.apply(PutObject({
+			id: triggerId,
+			tags: [new ScenarioTag("volume")],
+			placement: TriggerZone({origin: {x: 1, y: 1, z: 1}, size: {width: 1, height: 1, depth: 1}})
+		})), Placement, "prepare resizable trigger");
+		switch session.select({baseRevision: session.revision(), selection: NodeSelection(ObjectNode(triggerId))}) {
+			case SelectionApplied(_, _) | SelectionUnchanged(_, _):
+			case other:
+				throw 'could not select trigger before resize: $other';
+		}
+
+		final beforeResize = session.canonicalDraft();
+		final beforeSelection = selectionKey(session);
+		switch session.mutate({baseRevision: session.revision(), mutation: Apply(ResizeTriggerTo(triggerId, {width: 2, height: 2, depth: 2}))}) {
+			case MutationApplied(families, changes, _, _, _, _):
+				require(families.length == 1 && families[0] == Placement, "trigger resize reported the wrong command family");
+				require(changes.length == 1 && isObjectChange(changes[0], triggerId), "trigger resize lost its changed-object identity");
+			case other:
+				throw 'trigger resize did not commit exactly once: $other';
+		}
+		final afterResize = session.canonicalDraft();
+		require(beforeResize.compare(afterResize) != 0, "trigger resize changed no authored bytes");
+		switch session.mutate({baseRevision: session.revision(), mutation: Undo}) {
+			case MutationApplied(_, changes, _, _, _, _):
+				require(changes.length == 1 && isObjectChange(changes[0], triggerId), "trigger resize undo lost its changed-object identity");
+			case other:
+				throw 'trigger resize undo failed: $other';
+		}
+		require(session.canonicalDraft().compare(beforeResize) == 0 && selectionKey(session) == beforeSelection,
+			"trigger resize undo did not restore the exact prior state");
+		switch session.mutate({baseRevision: session.revision(), mutation: Redo}) {
+			case MutationApplied(_, changes, _, _, _, _):
+				require(changes.length == 1 && isObjectChange(changes[0], triggerId), "trigger resize redo lost its changed-object identity");
+			case other:
+				throw 'trigger resize redo failed: $other';
+		}
+		require(session.canonicalDraft().compare(afterResize) == 0 && selectionKey(session) == beforeSelection,
+			"trigger resize redo did not restore the exact command state");
+		require(expectValid(session, "resized trigger").compare(afterResize) == 0, "trigger resize changed canonical save bytes during validation");
+		requireTestStarted(session.enterTestPlay(), "resized trigger Test Play");
+		require(session.leaveTestPlay(), "resized trigger Test Play did not return to editing");
+		require(session.canonicalDraft().compare(afterResize) == 0, "resized trigger Test Play changed the editor draft");
+		var found = false;
+		for (object in session.draftSnapshot().objects)
+			if (object.id.text() == triggerId.text()) {
+				found = true;
+				require(object.tags.length == 1 && object.tags[0].text() == "volume", "trigger resize changed tags");
+				switch object.placement {
+					case TriggerZone(bounds):
+						require(bounds.origin.x == 1 && bounds.origin.y == 1 && bounds.origin.z == 1, "trigger resize changed origin");
+						require(bounds.size.width == 2 && bounds.size.height == 2 && bounds.size.depth == 2, "trigger resize lost target size");
+					case _:
+						throw "trigger resize changed placement role";
+				}
+			}
+		require(found, "trigger resize lost stable object identity");
+
+		final beforeRejected = session.canonicalDraft();
+		final beforeRevision = session.revision();
+		final beforeUndo = session.undoDepth();
+		expectRejected(session.apply(ResizeTriggerTo(PLAYER, {width: 1, height: 1, depth: 1})), error -> switch error {
+			case ObjectCannotResize(id): id.text() == PLAYER.text();
+			case _: false;
+		}, "transform-backed trigger resize");
+		expectRejected(session.apply(ResizeTriggerTo(id("resize.missing"), {width: 1, height: 1, depth: 1})), error -> switch error {
+			case MissingObject(id): id.text() == "resize.missing";
+			case _: false;
+		}, "missing trigger resize");
+		final invalidSize:VoxelSize = {width: 0, height: 1, depth: 1};
+		expectRejected(session.apply(ResizeTriggerTo(triggerId, invalidSize)), error -> switch error {
+			case InvalidTriggerSize(id, size): id.text() == triggerId.text() && size.width == 0;
+			case _: false;
+		}, "non-positive trigger resize");
+		final outsideSize:VoxelSize = {width: 4, height: 2, depth: 2};
+		expectRejected(session.apply(ResizeTriggerTo(triggerId, outsideSize)), error -> switch error {
+			case ObjectResizeOutsideWorld(id, size): id.text() == triggerId.text() && size.width == 4;
+			case _: false;
+		}, "out-of-world trigger resize");
+		require(session.canonicalDraft().compare(beforeRejected) == 0
+			&& session.revision() == beforeRevision
+			&& session.undoDepth() == beforeUndo,
+			"rejected trigger resize changed bytes, revision, or history");
+		switch session.selectionSnapshot() {
+			case NodeSelection(ObjectNode(id)):
+				require(id.text() == triggerId.text(), "trigger resize changed shared selection");
+			case _:
+				throw "trigger resize cleared shared selection";
+		}
+	}
+
+	/** Return the same closed facing model used by the visible editor marker. */
+	static function objectFacing(object:ScenarioObject):EditorObjectFacing {
+		return switch object.placement {
+			case PlayerSpawn(transform) | Checkpoint(transform) | Item(_, _, transform) | Entity(_, transform) | Npc(_, _, transform) | Prefab(_, transform) |
+				StatefulObject(_, _, transform): ObjectYaw(transform.yawDegrees);
+			case TriggerZone(_): NoObjectFacing;
+		};
+	}
+
+	/** Check that rotation changed neither role data nor authored position. */
+	static function requireRotatedObjectPayloads(scenario:Scenario):Void {
+		var payloadChecks = 0;
+		for (object in scenario.objects)
+			switch object.id.text() {
+				case "rotate.item":
+					switch object.placement {
+						case Item(itemType, 2, transform):
+							require(itemType.text() == "caxecraft:item" && unchangedRotatedPosition(transform), "rotation changed item payload or position");
+						case _: throw "rotation changed item role or quantity";
+					}
+					payloadChecks++;
+				case "rotate.npc":
+					switch object.placement {
+						case Npc(npcType, dialogue, transform):
+							require(npcType.text() == NPC.text() && dialogue.text() == DIALOGUE.text() && unchangedRotatedPosition(transform),
+								"rotation changed NPC links or position");
+						case _: throw "rotation changed NPC role";
+					}
+					payloadChecks++;
+				case "rotate.stateful":
+					switch object.placement {
+						case StatefulObject(objectType, initialState, transform):
+							require(objectType.text() == "caxecraft:mechanism"
+								&& initialState.text() == "caxecraft:idle"
+								&& unchangedRotatedPosition(transform),
+								"rotation changed stateful-object payload or position");
+						case _: throw "rotation changed stateful-object role";
+					}
+					payloadChecks++;
+				case _:
+			}
+		require(payloadChecks == 3, "rotation payload checks did not inspect every linked role");
+	}
+
+	/** True when rotation preserved all three authored position coordinates. */
+	static inline function unchangedRotatedPosition(transform:caxecraft.scenario.ScenarioGeometry.ScenarioTransform):Bool
+		return transform.xMilli == 500 && transform.yMilli == 500 && transform.zMilli == 500;
+
 	/**
 	 * Prove that validated map bytes and every CAXEMAP object role remain visible.
 	 *
@@ -456,10 +1935,12 @@ final class EditorProbe {
 				"gizmo.stateful"
 			][index], 'object projection changed identity $index');
 		}
-		require(close(objects[0].x, 0.5) && close(objects[0].y, 0.5) && close(objects[0].z, 0.5),
+		require(close(objects[0].x, 0.5) && close(objects[0].y, 0.5) && close(objects[0].z, 0.5) && objects[0].origin.x == 0 && objects[0].origin.y == 0
+			&& objects[0].origin.z == 0,
 			"point-object projection changed authored thousandth-block coordinates");
 		require(close(objects[6].x, 3.5) && close(objects[6].y, 2.0) && close(objects[6].z, 3.0) && close(objects[6].width, 3.0)
-			&& close(objects[6].height, 2.0) && close(objects[6].depth, 4.0),
+			&& close(objects[6].height,
+				2.0) && close(objects[6].depth, 4.0) && objects[6].origin.x == 2 && objects[6].origin.y == 1 && objects[6].origin.z == 1,
 			"trigger projection changed its exact half-open authored bounds");
 		return 13;
 	}
@@ -495,6 +1976,12 @@ final class EditorProbe {
 			require(descriptor.editorHelp.text() == 'editor.action.${expected[index]}.help', "editor action help key drifted");
 			require(flowActionArgumentRoles(descriptor.schema).length > 0, "editor action lost its typed form fields");
 		}
+		final predicates = allFlowPredicateDescriptors();
+		require(predicates.length == 14
+			&& validateFlowPredicateDescriptors(predicates).length == 0, "editor condition palette is incomplete or invalid");
+		final registry = caxeFlowRegistry();
+		require(registry.events.length == 13 && registry.predicates.length == 14 && registry.actions.length == 19,
+			"shared WHEN / IF / DO registry exposed a partial authoring language");
 	}
 
 	/**
@@ -506,17 +1993,24 @@ final class EditorProbe {
 	 */
 	static function checkFocusNavigation():Int {
 		final forward:Array<EditorFocusTarget> = [
+			EditorFocusTarget.Save,
 			EditorFocusTarget.WorldName,
 			EditorFocusTarget.Undo,
 			EditorFocusTarget.Redo,
 			EditorFocusTarget.Build,
 			EditorFocusTarget.Plan,
+			EditorFocusTarget.Text,
+			EditorFocusTarget.CameraMode,
+			EditorFocusTarget.PreviousLayer,
+			EditorFocusTarget.NextLayer,
+			EditorFocusTarget.Environment,
 			EditorFocusTarget.Play,
 			EditorFocusTarget.SelectTool,
 			EditorFocusTarget.GroundTool,
 			EditorFocusTarget.EraseTool,
 			EditorFocusTarget.CheckpointTool,
 			EditorFocusTarget.CatalogObjectTool,
+			EditorFocusTarget.TriggerZoneTool,
 			EditorFocusTarget.MoreDetails,
 			EditorFocusTarget.WorldList,
 			EditorFocusTarget.Back
@@ -524,17 +2018,24 @@ final class EditorProbe {
 		final backward:Array<EditorFocusTarget> = [
 			EditorFocusTarget.WorldList,
 			EditorFocusTarget.MoreDetails,
+			EditorFocusTarget.TriggerZoneTool,
 			EditorFocusTarget.CatalogObjectTool,
 			EditorFocusTarget.CheckpointTool,
 			EditorFocusTarget.EraseTool,
 			EditorFocusTarget.GroundTool,
 			EditorFocusTarget.SelectTool,
 			EditorFocusTarget.Play,
+			EditorFocusTarget.Environment,
+			EditorFocusTarget.NextLayer,
+			EditorFocusTarget.PreviousLayer,
+			EditorFocusTarget.CameraMode,
+			EditorFocusTarget.Text,
 			EditorFocusTarget.Plan,
 			EditorFocusTarget.Build,
 			EditorFocusTarget.Redo,
 			EditorFocusTarget.Undo,
 			EditorFocusTarget.WorldName,
+			EditorFocusTarget.Save,
 			EditorFocusTarget.Back
 		];
 		var checks = 1;
@@ -616,6 +2117,510 @@ final class EditorProbe {
 		return checks;
 	}
 
+	/** Prove that direct Build capture and hotbar input stay finite and explicit. */
+	static function checkBuildControls():Int {
+		var checks = 0;
+		checks += expectBuildPrompt(buildPrompt(buildPromptInput(PaintTool, true, true, true)), TerrainBuildPrompt(true, true),
+			"Ground did not advertise direct remove and place actions");
+		checks += expectBuildPrompt(buildPrompt(buildPromptInput(PaintTool, true, false, true)), TerrainBuildPrompt(false, true),
+			"Ground advertised removal from an empty target");
+		checks += expectBuildPrompt(buildPrompt(buildPromptInput(PaintTool, false, false, false)), NoBuildTarget,
+			"Ground advertised an action without a target");
+		checks += expectBuildPrompt(buildPrompt(buildPromptInput(SelectTool, true, true, false)), SelectBuildPrompt(false),
+			"Select did not explain its terrain target");
+		checks += expectBuildPrompt(buildPrompt(buildPromptInput(SelectTool, true, true, false, true)), SelectBuildPrompt(true),
+			"Select did not explain its object target");
+		checks += expectBuildPrompt(buildPrompt(buildPromptInput(CheckpointTool, true, true, false, false, false, false, true)), CreateBuildPrompt(true),
+			"creation prompt rejected an accepted typed preview");
+		checks += expectBuildPrompt(buildPrompt(buildPromptInput(TriggerZoneTool, true, true, false, false, false, false, false)), CreateBuildPrompt(false),
+			"creation prompt advertised a rejected typed preview");
+		checks += expectBuildPrompt(buildPrompt(buildPromptInput(SelectTool, true, true, false, true, true, true)), MoveBuildPrompt(true),
+			"held object did not replace the Select prompt with placement");
+		checks += expectBuildPrompt(buildPrompt(buildPromptInput(SelectTool, true, true, false, true, true, false)), MoveBuildPrompt(false),
+			"held object advertised a blocked placement");
+		var pointer = EditorBuildPointerState.Released;
+		pointer = nextPointerState(pointer, true, true, true, false);
+		require(pointer == EditorBuildPointerState.Captured, "a focused Build click did not capture the pointer");
+		checks++;
+		pointer = nextPointerState(pointer, true, true, false, false);
+		require(pointer == EditorBuildPointerState.Captured, "steady Build input released the pointer");
+		checks++;
+		pointer = nextPointerState(pointer, true, true, false, true);
+		require(pointer == EditorBuildPointerState.Released, "cancel did not release Build before leaving the editor");
+		checks++;
+		pointer = nextPointerState(EditorBuildPointerState.Captured, false, true, false, false);
+		require(pointer == EditorBuildPointerState.Released, "Plan retained first-person pointer capture");
+		checks++;
+		pointer = nextPointerState(EditorBuildPointerState.Captured, true, false, false, false);
+		require(pointer == EditorBuildPointerState.Released, "window focus loss retained first-person pointer capture");
+		checks++;
+		require(immersiveWorkspaceActive(true, true), "captured Build retained the desktop editor controls");
+		checks++;
+		require(!immersiveWorkspaceActive(true, false), "released Build hid the desktop editor controls");
+		checks++;
+		require(!immersiveWorkspaceActive(false, true), "Plan admitted the immersive Build workspace");
+		checks++;
+		checks += expectObjectShortcut(objectShortcutAction({
+			inputAvailable: true,
+			buildActive: false,
+			pointerCaptured: false,
+			selectToolActive: false,
+			objectSelected: true,
+			objectHeld: false,
+			duplicatePressed: true,
+			deletePressed: false
+		}), DuplicateSelectedObject, "Plan rejected the duplicate shortcut");
+		checks += expectObjectShortcut(objectShortcutAction({
+			inputAvailable: true,
+			buildActive: true,
+			pointerCaptured: true,
+			selectToolActive: true,
+			objectSelected: true,
+			objectHeld: false,
+			duplicatePressed: false,
+			deletePressed: true
+		}), DeleteSelectedObject, "captured Build Select rejected the delete shortcut");
+		checks += expectObjectShortcut(objectShortcutAction({
+			inputAvailable: true,
+			buildActive: true,
+			pointerCaptured: false,
+			selectToolActive: true,
+			objectSelected: true,
+			objectHeld: false,
+			duplicatePressed: true,
+			deletePressed: false
+		}), NoObjectShortcut, "released Build changed an object");
+		checks += expectObjectShortcut(objectShortcutAction({
+			inputAvailable: true,
+			buildActive: true,
+			pointerCaptured: true,
+			selectToolActive: true,
+			objectSelected: true,
+			objectHeld: true,
+			duplicatePressed: false,
+			deletePressed: true
+		}), NoObjectShortcut, "Build deleted an object during a hold");
+		checks += expectObjectShortcut(objectShortcutAction({
+			inputAvailable: false,
+			buildActive: false,
+			pointerCaptured: false,
+			selectToolActive: true,
+			objectSelected: true,
+			objectHeld: false,
+			duplicatePressed: true,
+			deletePressed: true
+		}), NoObjectShortcut, "a modal leaked an object shortcut");
+		checks += expectObjectShortcut(objectShortcutAction({
+			inputAvailable: true,
+			buildActive: false,
+			pointerCaptured: false,
+			selectToolActive: true,
+			objectSelected: true,
+			objectHeld: false,
+			duplicatePressed: true,
+			deletePressed: true
+		}), DuplicateSelectedObject,
+			"one key frame produced more than the priority shortcut");
+		final grabbedId = id("build.grabbed");
+		final hoveredId = id("build.hovered");
+		require(objectGrabCandidate(grabbedId, hoveredId, true) == hoveredId, "Grab did not prefer the crosshair object");
+		checks++;
+		require(objectGrabCandidate(grabbedId, hoveredId, false) == grabbedId, "steady aiming transferred the selected object");
+		checks++;
+		require(objectGrabCandidate(null, hoveredId, true) == hoveredId, "Grab required a prior selection");
+		checks++;
+		require(objectGrabCandidate(grabbedId, null, true) == grabbedId, "Grab lost the selected-object fallback");
+		checks++;
+		var grab = nextObjectGrab(NoObjectGrab, grabbedId, true, false);
+		switch grab {
+			case HoldingObject(value):
+				require(value == grabbedId, "Build grabbed a different stable object");
+			case NoObjectGrab:
+				require(false, "Build did not grab the selected object");
+		}
+		checks++;
+		grab = nextObjectGrab(grab, grabbedId, false, false);
+		require(objectGrabActive(grab), "steady aiming dropped the held object");
+		checks++;
+		require(!objectGrabActive(nextObjectGrab(grab, grabbedId, true, false)), "a second Grab press did not cancel holding");
+		checks++;
+		require(!objectGrabActive(nextObjectGrab(grab, id("build.other"), false, false)), "a selection change retained the old held object");
+		checks++;
+		require(!objectGrabActive(nextObjectGrab(grab, grabbedId, false, true)), "cancel retained the held object");
+		checks++;
+		final placementDelta = objectPlacementDelta({
+			id: grabbedId,
+			kind: EditorObjectGizmoKind.TriggerZoneGizmo,
+			origin: {x: 2, y: 1, z: 3},
+			x: 3.5,
+			y: 2.0,
+			z: 5.0,
+			width: 3.0,
+			height: 2.0,
+			depth: 4.0,
+			facing: NoObjectFacing
+		}, {x: 6, y: 0, z: 8});
+		require(placementDelta.x == 4 && placementDelta.y == -1 && placementDelta.z == 5,
+			"Build placement used a visual center instead of the authored object origin");
+		checks++;
+		checks += expectObjectNudge(objectAction({
+			pointerCaptured: true,
+			selectToolActive: true,
+			objectSelected: true,
+			objectCanTurn: true,
+			upPressed: true,
+			rightPressed: false,
+			downPressed: false,
+			leftPressed: false,
+			turnPressed: false,
+			lookX: 0.1,
+			lookZ: -0.9
+		}), 0, -1, "Build Up did not move the selected object away from the camera");
+		checks += expectObjectNudge(objectAction({
+			pointerCaptured: true,
+			selectToolActive: true,
+			objectSelected: true,
+			objectCanTurn: true,
+			upPressed: false,
+			rightPressed: true,
+			downPressed: false,
+			leftPressed: false,
+			turnPressed: false,
+			lookX: 0.1,
+			lookZ: -0.9
+		}), 1, 0, "Build Right did not move across the camera view");
+		checks += expectObjectNudge(objectAction({
+			pointerCaptured: true,
+			selectToolActive: true,
+			objectSelected: true,
+			objectCanTurn: true,
+			upPressed: false,
+			rightPressed: false,
+			downPressed: true,
+			leftPressed: false,
+			turnPressed: false,
+			lookX: 0.1,
+			lookZ: -0.9
+		}), 0, 1, "Build Down did not move the selected object toward the camera");
+		checks += expectObjectNudge(objectAction({
+			pointerCaptured: true,
+			selectToolActive: true,
+			objectSelected: true,
+			objectCanTurn: true,
+			upPressed: false,
+			rightPressed: false,
+			downPressed: false,
+			leftPressed: true,
+			turnPressed: false,
+			lookX: 0.1,
+			lookZ: -0.9
+		}), -1, 0, "Build Left did not move across the camera view");
+		checks += expectObjectNudge(objectAction({
+			pointerCaptured: true,
+			selectToolActive: true,
+			objectSelected: true,
+			objectCanTurn: true,
+			upPressed: true,
+			rightPressed: true,
+			downPressed: false,
+			leftPressed: false,
+			turnPressed: true,
+			lookX: 0.9,
+			lookZ: 0.2
+		}), 1, 0,
+			"Build did not snap movement to the dominant camera axis or keep one-action priority");
+		switch objectAction({
+			pointerCaptured: true,
+			selectToolActive: true,
+			objectSelected: true,
+			objectCanTurn: true,
+			upPressed: false,
+			rightPressed: false,
+			downPressed: false,
+			leftPressed: false,
+			turnPressed: true,
+			lookX: 0.0,
+			lookZ: -1.0
+		}) {
+			case TurnSelectedObject(90):
+			case NoObjectAction | NudgeSelectedObject(_) | TurnSelectedObject(_):
+				require(false, "Build R did not request one clockwise quarter turn");
+		}
+		checks++;
+		final inactiveObjectInputs:Array<EditorBuildObjectInput> = [
+			{
+				pointerCaptured: false,
+				selectToolActive: true,
+				objectSelected: true,
+				objectCanTurn: true,
+				upPressed: true,
+				rightPressed: false,
+				downPressed: false,
+				leftPressed: false,
+				turnPressed: false,
+				lookX: 0.0,
+				lookZ: -1.0
+			},
+			{
+				pointerCaptured: true,
+				selectToolActive: false,
+				objectSelected: true,
+				objectCanTurn: true,
+				upPressed: true,
+				rightPressed: false,
+				downPressed: false,
+				leftPressed: false,
+				turnPressed: false,
+				lookX: 0.0,
+				lookZ: -1.0
+			},
+			{
+				pointerCaptured: true,
+				selectToolActive: true,
+				objectSelected: false,
+				objectCanTurn: false,
+				upPressed: false,
+				rightPressed: false,
+				downPressed: false,
+				leftPressed: false,
+				turnPressed: true,
+				lookX: 0.0,
+				lookZ: -1.0
+			},
+			{
+				pointerCaptured: true,
+				selectToolActive: true,
+				objectSelected: true,
+				objectCanTurn: false,
+				upPressed: false,
+				rightPressed: false,
+				downPressed: false,
+				leftPressed: false,
+				turnPressed: true,
+				lookX: 0.0,
+				lookZ: -1.0
+			},
+			{
+				pointerCaptured: true,
+				selectToolActive: true,
+				objectSelected: true,
+				objectCanTurn: true,
+				upPressed: true,
+				rightPressed: false,
+				downPressed: false,
+				leftPressed: false,
+				turnPressed: false,
+				lookX: 0.0,
+				lookZ: 0.0
+			}
+		];
+		for (input in inactiveObjectInputs) {
+			switch objectAction(input) {
+				case NoObjectAction:
+				case NudgeSelectedObject(_) | TurnSelectedObject(_):
+					require(false, "Build edited an object without an eligible captured Select gesture");
+			}
+			checks++;
+		}
+		final solidHit:EditorWorldHit = {
+			point: {x: 3, y: 2, z: 1},
+			placement: {x: 3, y: 3, z: 1},
+			distance: 4.0,
+			solid: true
+		};
+		switch terrainAction(true, false, solidHit) {
+			case RemoveTerrain(point):
+				require(point.x == 3 && point.y == 2 && point.z == 1, "Build primary action did not remove the solid target");
+			case NoTerrainAction | PlaceTerrain(_):
+				require(false, "Build primary action did not resolve to terrain removal");
+		}
+		checks++;
+		switch terrainAction(false, true, solidHit) {
+			case PlaceTerrain(point):
+				require(point.x == 3 && point.y == 3 && point.z == 1, "Build secondary action did not use the adjacent empty cell");
+			case NoTerrainAction | RemoveTerrain(_):
+				require(false, "Build secondary action did not resolve to terrain placement");
+		}
+		checks++;
+		switch terrainAction(true, true, solidHit) {
+			case RemoveTerrain(_):
+			case NoTerrainAction | PlaceTerrain(_):
+				require(false, "Build did not give primary removal deterministic priority");
+		}
+		checks++;
+		final emptyHit:EditorWorldHit = {
+			point: {x: 2, y: 0, z: 2},
+			placement: {x: 2, y: 0, z: 2},
+			distance: 3.0,
+			solid: false
+		};
+		switch terrainAction(true, false, emptyHit) {
+			case NoTerrainAction:
+			case RemoveTerrain(_) | PlaceTerrain(_):
+				require(false, "Build primary action tried to remove an empty cell");
+		}
+		checks++;
+		switch terrainAction(false, true, emptyHit) {
+			case PlaceTerrain(point):
+				require(point.x == 2 && point.y == 0 && point.z == 2, "Build could not place in an empty world");
+			case NoTerrainAction | RemoveTerrain(_):
+				require(false, "Build rejected the empty-floor placement target");
+		}
+		checks++;
+		final blockedHit:EditorWorldHit = {
+			point: {x: 0, y: 1, z: 0},
+			placement: null,
+			distance: 0.0,
+			solid: true
+		};
+		switch terrainAction(false, true, blockedHit) {
+			case NoTerrainAction:
+			case RemoveTerrain(_) | PlaceTerrain(_):
+				require(false, "Build placed outside the finite world");
+		}
+		checks++;
+		switch terrainAction(false, false, solidHit) {
+			case NoTerrainAction:
+			case RemoveTerrain(_) | PlaceTerrain(_):
+				require(false, "Build edited terrain without a mouse-button edge");
+		}
+		checks++;
+		switch terrainAction(true, true, null) {
+			case NoTerrainAction:
+			case RemoveTerrain(_) | PlaceTerrain(_):
+				require(false, "Build edited terrain without a world target");
+		}
+		checks++;
+		require(!usesDirectTerrainControls(SelectTool)
+			&& usesDirectTerrainControls(PaintTool)
+			&& usesDirectTerrainControls(EraseTool)
+			&& !usesDirectTerrainControls(FillTool)
+			&& !usesDirectTerrainControls(CheckpointTool)
+			&& !usesDirectTerrainControls(CatalogObjectTool)
+			&& !usesDirectTerrainControls(TriggerZoneTool),
+			"Build direct terrain controls leaked into Select, object, or volume placement");
+		checks++;
+		final terrainPalette = [
+			{code: 0, blockType: new ContentId("caxecraft:air")},
+			{code: 7, blockType: new ContentId("caxecraft:grass")},
+			{code: 2, blockType: new ContentId("caxecraft:stone")}
+		];
+		require(normalizeBuildPaletteCode(terrainPalette, 2, 7) == 2
+			&& normalizeBuildPaletteCode(terrainPalette, 99, 7) == 7
+			&& normalizeBuildPaletteCode(terrainPalette, 99, 98) == 7,
+			"Build did not repair its terrain brush from the current map palette");
+		checks++;
+		require(cycleBuildPaletteCode(terrainPalette, 7, 7, 1) == 2
+			&& cycleBuildPaletteCode(terrainPalette, 2, 7, 1) == 7
+			&& cycleBuildPaletteCode(terrainPalette, 7, 7, -1) == 2
+			&& cycleBuildPaletteCode(terrainPalette, 7, 7, 0) == 7,
+			"Build terrain material cycling did not wrap through non-air entries");
+		checks++;
+		require(pickBuildPaletteCode(terrainPalette, 7, 7, true, 2) == 2
+			&& pickBuildPaletteCode(terrainPalette, 7, 7, false, 2) == 7
+			&& pickBuildPaletteCode(terrainPalette, 7, 7, true, 0) == 7
+			&& pickBuildPaletteCode(terrainPalette, 7, 7, true, 99) == 7,
+			"Build picked air or a terrain material outside the current map");
+		checks++;
+		final airOnlyPalette = [{code: 0, blockType: new ContentId("caxecraft:air")}];
+		require(normalizeBuildPaletteCode(airOnlyPalette, 7, 7) == -1 && cycleBuildPaletteCode(airOnlyPalette, 7, 7, 1) == -1,
+			"Build invented a placeable terrain material for an air-only map");
+		checks++;
+		require(toolForBuildHotbarSlot(1) == SelectTool
+			&& toolForBuildHotbarSlot(2) == PaintTool
+			&& toolForBuildHotbarSlot(3) == CheckpointTool
+			&& toolForBuildHotbarSlot(4) == CatalogObjectTool
+			&& toolForBuildHotbarSlot(5) == TriggerZoneTool
+			&& toolForBuildHotbarSlot(0) == null
+			&& toolForBuildHotbarSlot(6) == null,
+			"Build hotbar slots drifted from the five visible creation cards");
+		checks++;
+		require(cycleBuildHotbarTool(SelectTool, -1) == TriggerZoneTool
+			&& cycleBuildHotbarTool(TriggerZoneTool, 1) == SelectTool
+			&& cycleBuildHotbarTool(PaintTool, 1) == CheckpointTool
+			&& cycleBuildHotbarTool(CheckpointTool, -1) == PaintTool
+			&& cycleBuildHotbarTool(FillTool, 1) == CheckpointTool
+			&& cycleBuildHotbarTool(CatalogObjectTool, 0) == CatalogObjectTool,
+			"Build mouse-wheel selection did not cycle through the visible hotbar");
+		checks++;
+		require(normalizeBuildTool(EraseTool) == PaintTool
+			&& normalizeBuildTool(SelectTool) == SelectTool, "Build retained Plan's hidden Erase mode");
+		checks++;
+		require(normalizeBuildFocus(EditorFocusTarget.EraseTool) == EditorFocusTarget.GroundTool
+			&& normalizeBuildFocus(EditorFocusTarget.CheckpointTool) == EditorFocusTarget.CheckpointTool,
+			"Build retained focus on Plan's hidden Erase card");
+		checks++;
+		require(moveBuildFocus(EditorFocusTarget.GroundTool, EditorFocusMove.Forward) == EditorFocusTarget.CheckpointTool
+			&& moveBuildFocus(EditorFocusTarget.CheckpointTool, EditorFocusMove.Backward) == EditorFocusTarget.GroundTool,
+			"Build focus navigation visited Plan's hidden Erase card");
+		checks++;
+		return checks;
+	}
+
+	/** Build one complete prompt input while keeping each test case readable. */
+	static function buildPromptInput(tool:EditorTool, targetAvailable:Bool, targetSolid:Bool, placementAvailable:Bool, objectTarget:Bool = false,
+			objectHeld:Bool = false, heldPlacementAvailable:Bool = false, previewAllowed:Bool = false):EditorBuildPromptInput
+		return {
+			tool: tool,
+			targetAvailable: targetAvailable,
+			targetSolid: targetSolid,
+			placementAvailable: placementAvailable,
+			objectTarget: objectTarget,
+			objectHeld: objectHeld,
+			heldPlacementAvailable: heldPlacementAvailable,
+			previewAllowed: previewAllowed
+		};
+
+	/** Require one exact closed prompt without relying on enum equality lowering. */
+	static function expectBuildPrompt(actual:EditorBuildPrompt, expected:EditorBuildPrompt, message:String):Int {
+		final matches = switch actual {
+			case NoBuildTarget:
+				switch expected {
+					case NoBuildTarget: true;
+					case _: false;
+				}
+			case TerrainBuildPrompt(remove, place):
+				switch expected {
+					case TerrainBuildPrompt(expectedRemove, expectedPlace): remove == expectedRemove && place == expectedPlace;
+					case _: false;
+				}
+			case SelectBuildPrompt(objectTarget):
+				switch expected {
+					case SelectBuildPrompt(expectedObjectTarget): objectTarget == expectedObjectTarget;
+					case _: false;
+				}
+			case CreateBuildPrompt(allowed):
+				switch expected {
+					case CreateBuildPrompt(expectedAllowed): allowed == expectedAllowed;
+					case _: false;
+				}
+			case MoveBuildPrompt(allowed):
+				switch expected {
+					case MoveBuildPrompt(expectedAllowed): allowed == expectedAllowed;
+					case _: false;
+				}
+		};
+		require(matches, message);
+		return 1;
+	}
+
+	/** Require one horizontal nudge without weakening the exact action shape. */
+	static function expectObjectNudge(action:EditorBuildObjectAction, expectedX:Int, expectedZ:Int, message:String):Int {
+		switch action {
+			case NudgeSelectedObject(delta):
+				require(delta.x == expectedX && delta.y == 0 && delta.z == expectedZ, message);
+			case NoObjectAction | TurnSelectedObject(_):
+				require(false, message);
+		}
+		return 1;
+	}
+
+	/** Require one exact object shortcut action. */
+	static function expectObjectShortcut(action:EditorObjectShortcutAction, expected:EditorObjectShortcutAction, message:String):Int {
+		require(action == expected, message);
+		return 1;
+	}
+
 	/** Build one complete normalized input snapshot with concise test defaults. */
 	static function navigation(connected:Bool, horizontal:Float = 0.0, vertical:Float = 0.0, up:Bool = false, right:Bool = false, down:Bool = false,
 			left:Bool = false, confirmPressed:Bool = false, cancelPressed:Bool = false):NavigationSample
@@ -658,7 +2663,7 @@ final class EditorProbe {
 			baseRevision: initialState.revision,
 			mutation: Apply(ResizeWorld({width: 2, height: 1, depth: 2}))
 		}) {
-			case MutationApplied(families, changes, 1, 1, 0):
+			case MutationApplied(families, changes, _, 1, 1, 0):
 				require(families.length == 1 && families[0] == WorldShape, "single mutation lost its command family");
 				require(changes.length == 1 && isWorldShapeChange(changes[0]), "single mutation lost its changed world identity");
 			case _:
@@ -702,7 +2707,7 @@ final class EditorProbe {
 			baseRevision: 1,
 			mutation: ApplyBatch(batchCommands)
 		}) {
-			case MutationApplied(families, changes, 2, 2, 0):
+			case MutationApplied(families, changes, _, 2, 2, 0):
 				require(families.length == 2 && families[0] == Voxel && families[1] == Voxel, "atomic mutation lost its ordered command families");
 				require(changes.length == 2 && isPaletteChange(changes[0], 1) && isTerrainChange(changes[1]),
 					"atomic mutation did not deduplicate changed semantic identities in command order");
@@ -764,7 +2769,7 @@ final class EditorProbe {
 		}
 
 		switch session.mutate({baseRevision: 2, mutation: Undo}) {
-			case MutationApplied(families, changes, 3, 1, 1):
+			case MutationApplied(families, changes, _, 3, 1, 1):
 				require(families.length == 1 && families[0] == Transaction, "transaction undo lost its history family");
 				require(changes.length == 2, "transaction undo lost the stored changed identities");
 			case _:
@@ -773,7 +2778,7 @@ final class EditorProbe {
 		require(session.canonicalDraft().compare(afterResize) == 0, "transaction undo restored a partial batch");
 		require(selectionKey(session) == selectionBeforeHistory, "document undo rewound workspace selection");
 		switch session.mutate({baseRevision: 3, mutation: Redo}) {
-			case MutationApplied(families, changes, 4, 2, 0):
+			case MutationApplied(families, changes, _, 4, 2, 0):
 				require(families.length == 1 && families[0] == Transaction, "transaction redo lost its history family");
 				require(changes.length == 2, "transaction redo lost the stored changed identities");
 			case _:
@@ -806,6 +2811,54 @@ final class EditorProbe {
 		};
 		require(objectCount > 0 && freshDraft.objects.length == objectCount, "mutating an observed scenario changed the editor draft");
 
+		final observedPresentation = switch session.query(InspectPresentation) {
+			case PresentationObserved(4, value): value;
+			case _: throw "presentation query lost its revision";
+		};
+		final presentationObjectCount = observedPresentation.objects.length;
+		final presentationPaletteCount = observedPresentation.world.palette.length;
+		final presentationRuleCount = observedPresentation.ruleIds.length;
+		final observedProjection = switch observedPresentation.projection {
+			case null: throw "presentation query lost the finite world";
+			case value: value;
+		};
+		require(observedProjection.cells.length > 0, "presentation query returned an empty finite world");
+		final firstCell = observedProjection.cells[0];
+		observedProjection.cells[0] = firstCell == 0 ? 1 : 0;
+		observedPresentation.world.palette.resize(0);
+		observedPresentation.objects[0].tags.push(new ScenarioTag("caller-owned"));
+		observedPresentation.objects.resize(0);
+		observedPresentation.ruleIds.resize(0);
+		final freshPresentation = switch session.query(InspectPresentation) {
+			case PresentationObserved(4, value): value;
+			case _: throw "second presentation query lost its revision";
+		};
+		require(freshPresentation.objects.length == presentationObjectCount
+			&& freshPresentation.world.palette.length == presentationPaletteCount
+			&& freshPresentation.ruleIds.length == presentationRuleCount
+			&& freshPresentation.objects[0].tags.length == 0
+			&& freshPresentation.projection != null
+			&& freshPresentation.projection.cells[0] == firstCell
+			&& session.canonicalDraft().compare(afterBatch) == 0,
+			"mutating a presentation observation changed the editor draft or the next view");
+
+		final observedDetails = switch session.query(InspectPresentationDetails) {
+			case PresentationDetailsObserved(4, value): value;
+			case _: throw "presentation-details query lost its revision";
+		};
+		observedDetails.world.palette.resize(0);
+		observedDetails.objects.resize(0);
+		observedDetails.ruleIds.resize(0);
+		final freshDetails = switch session.query(InspectPresentationDetails) {
+			case PresentationDetailsObserved(4, value): value;
+			case _: throw "second presentation-details query lost its revision";
+		};
+		require(freshDetails.world.palette.length == presentationPaletteCount
+			&& freshDetails.objects.length == presentationObjectCount
+			&& freshDetails.ruleIds.length == presentationRuleCount
+			&& session.canonicalDraft().compare(afterBatch) == 0,
+			"mutating terrain-independent presentation details changed the editor draft or the next view");
+
 		final tree = switch session.query(InspectTree) {
 			case TreeObserved(4, nodes): nodes;
 			case _: throw "campaign-tree query lost its revision";
@@ -828,7 +2881,7 @@ final class EditorProbe {
 				PutObject({id: objectId, tags: [new ScenarioTag("updated")], placement: Checkpoint(transform(2000, 0, 1000))})
 			])
 		}) {
-			case MutationApplied(_, changes, 5, _, _):
+			case MutationApplied(_, changes, _, 5, _, _):
 				require(changes.length == 1 && isObjectChange(changes[0], objectId), "replacement batch did not deduplicate its stable object identity");
 			case _:
 				throw "replacement batch did not commit";
@@ -858,14 +2911,14 @@ final class EditorProbe {
 			case _: false;
 		}, "select missing authored object");
 		switch session.mutate({baseRevision: 5, mutation: Apply(RemoveObject(objectId))}) {
-			case MutationApplied(_, changes, 6, _, _):
+			case MutationApplied(_, changes, _, 6, _, _):
 				require(changes.length == 1 && isObjectChange(changes[0], objectId), "object deletion lost its stable identity");
 			case _:
 				throw "object deletion did not commit";
 		}
 		require(selectionKey(session) == "none", "deleting a selected object left a stale workspace target");
 		switch session.mutate({baseRevision: 6, mutation: Undo}) {
-			case MutationApplied(_, changes, 7, _, _):
+			case MutationApplied(_, changes, _, 7, _, _):
 				require(changes.length == 1 && isObjectChange(changes[0], objectId), "deletion undo lost its stored object identity");
 			case _:
 				throw "object deletion undo did not commit";
@@ -891,7 +2944,7 @@ final class EditorProbe {
 			case _:
 				throw "second invalid validation observation changed shape";
 		}
-		return 42;
+		return 43;
 	}
 
 	/**
@@ -905,7 +2958,7 @@ final class EditorProbe {
 		final session = open(defaultEditorSettings());
 		final before = session.canonicalDraft();
 		switch session.mutate({baseRevision: 0, mutation: Apply(SetTitle(Literal("Bosque de Ivvy")))}) {
-			case MutationApplied(families, changes, 1, 1, 0):
+			case MutationApplied(families, changes, _, 1, 1, 0):
 				require(families.length == 1 && families[0] == DocumentMetadata, "title mutation lost its document-metadata family");
 				require(changes.length == 1 && isTitleChange(changes[0]), "title mutation lost its stable changed-title identity");
 			case _:
@@ -927,7 +2980,7 @@ final class EditorProbe {
 		require(session.canonicalDraft().compare(renamed) == 0
 			&& session.undoDepth() == 1, "rejected title input changed canonical state or history");
 		switch session.mutate({baseRevision: 1, mutation: Undo}) {
-			case MutationApplied(families, changes, 2, 0, 1):
+			case MutationApplied(families, changes, _, 2, 0, 1):
 				require(families.length == 1 && families[0] == DocumentMetadata && changes.length == 1 && isTitleChange(changes[0]),
 					"title undo lost its family or changed identity");
 			case _:
@@ -935,7 +2988,7 @@ final class EditorProbe {
 		}
 		require(session.canonicalDraft().compare(before) == 0, "title undo changed unrelated canonical bytes");
 		switch session.mutate({baseRevision: 2, mutation: Redo}) {
-			case MutationApplied(families, changes, 3, 1, 0):
+			case MutationApplied(families, changes, _, 3, 1, 0):
 				require(families.length == 1 && families[0] == DocumentMetadata && changes.length == 1 && isTitleChange(changes[0]),
 					"title redo lost its family or changed identity");
 			case _:
@@ -1041,13 +3094,57 @@ final class EditorProbe {
 	 * caught before a graphical pilot has to diagnose it from pixels.
 	 */
 	static function checkViewport():Int {
+		require(!inspectorVisible(true, true, false, false), "Build selection opened the inspector without a creator request");
+		require(inspectorVisible(true, true, true, false), "Build details did not open the inspector");
+		require(inspectorVisible(true, false, false, true), "Build world list did not open the inspector");
+		require(inspectorVisible(false, true, false, false), "Plan selection did not show the precision inspector");
+		require(!inspectorVisible(false, false, false, false), "empty Plan opened an unused inspector");
 		final session = open(defaultEditorSettings());
 		expectApplied(session.apply(ResizeWorld({width: 4, height: 2, depth: 3})), WorldShape, "viewport world size");
 		expectApplied(session.apply(SetPaletteEntry(7, STONE)), Voxel, "viewport palette");
-		require(paletteCodeForBlock(session.draftSnapshot().world, STONE) == 7, "viewport brush assumed a global palette code");
+		require(paletteCodeForBlock(session.draftSnapshot().world.palette, STONE) == 7, "viewport brush assumed a global palette code");
 		expectApplied(session.apply(PaintVoxel({x: 3, y: 1, z: 2}, 7)), Voxel, "viewport upper-layer paint");
 		final upper = projectViewport(session.draftSnapshot().world, 1);
 		require(upper != null && upper.width == 4 && upper.depth == 3 && upper.cells.length == 12, "viewport projection lost its exact layer dimensions");
+		require(upper.paintedCells.length == 1 && upper.paintedCells[0].x == 3 && upper.paintedCells[0].z == 2 && upper.paintedCells[0].paletteCode == 7,
+			"viewport did not cache only its painted cells in canonical display order");
+		final volume = projectWorld(session.draftSnapshot().world);
+		final reused = volume == null ? null : projectFromWorld(volume, 1);
+		require(reused != null
+			&& reused.cells.join(",") == upper.cells.join(","), "viewport projection changed when it reused the decoded 3D cells");
+		final lower = volume == null ? null : projectFromWorld(volume, 0);
+		require(lower != null && lower.layerY == 0 && paletteCodeAt(lower, 3, 2) == 0, "selected-layer projection reused the wrong horizontal cells");
+		require(patchPlanVoxel(lower, {x: 0, y: 1, z: 0}, 7) && paletteCodeAt(lower, 0, 0) == 0,
+			"another layer invalidated or changed the retained Plan projection");
+		require(patchPlanVoxel(lower, {x: 2, y: 0, z: 1}, 7)
+			&& paletteCodeAt(lower, 2, 1) == 7
+			&& lower.paintedCells.length == 1
+			&& lower.paintedCells[0].x == 2
+			&& lower.paintedCells[0].z == 1,
+			"incremental Plan paint lost its compact ordered row");
+		require(patchPlanVoxel(lower, {x: 3, y: 0, z: 0}, 7)
+			&& lower.paintedCells.length == 2
+			&& lower.paintedCells[0].x == 3
+			&& lower.paintedCells[1].x == 2,
+			"incremental Plan paint lost row-major order");
+		require(patchPlanVoxel(lower, {x: 2, y: 0, z: 1}, 0)
+			&& paletteCodeAt(lower, 2, 1) == 0
+			&& lower.paintedCells.length == 1
+			&& lower.paintedCells[0].x == 3,
+			"incremental Plan erase left a stale painted row");
+		require(!patchPlanVoxel(lower, {x: 4, y: 0, z: 0}, 7), "incremental Plan patch admitted an excluded coordinate");
+		require(volume != null && projectFromWorld(volume, 2) == null, "selected-layer projection admitted a layer outside the cached world");
+		require(projectFromCells(session.draftSnapshot().world, [0], 1) == null, "viewport projection admitted a malformed decoded cell array");
+		require(clampLayer(-1, 2) == 0
+			&& clampLayer(0, 2) == 0
+			&& clampLayer(1, 2) == 1
+			&& clampLayer(2, 2) == 1
+			&& clampLayer(9, 0) == 0,
+			"selected-layer bounds did not clamp to the finite world");
+		require(boundsIntersectLayer({origin: {x: 0, y: 1, z: 0}, size: {width: 1, height: 2, depth: 1}}, 1)
+			&& boundsIntersectLayer({origin: {x: 0, y: 1, z: 0}, size: {width: 1, height: 2, depth: 1}}, 2)
+			&& !boundsIntersectLayer({origin: {x: 0, y: 1, z: 0}, size: {width: 1, height: 2, depth: 1}}, 0),
+			"selected-layer bounds used column overlap instead of vertical overlap");
 		require(paletteCodeAt(upper, 3, 2) == 7 && paletteCodeAt(upper, 0, 0) == 0 && paletteCodeAt(upper, 4, 0) == -1,
 			"viewport projection lost painted, air, or out-of-range cell semantics");
 		require(projectViewport(session.draftSnapshot().world, 2) == null, "viewport admitted a layer outside the world");
@@ -1068,12 +3165,14 @@ final class EditorProbe {
 			&& toolFromIndex(3) == FillTool
 			&& toolFromIndex(4) == CheckpointTool
 			&& toolFromIndex(5) == CatalogObjectTool
+			&& toolFromIndex(6) == TriggerZoneTool
 			&& toolFromIndex(-1) == null
-			&& toolFromIndex(6) == null,
+			&& toolFromIndex(7) == null,
 			"raygui tool indices drifted from the closed editor tool type");
 
 		final point:VoxelPoint = {x: 2, y: 1, z: 1};
-		switch commandForTool(SelectTool, point, 1, null, [], null) {
+		final worldSize:VoxelSize = {width: 4, height: 3, depth: 4};
+		switch commandForTool(SelectTool, point, viewportToolContext(worldSize, null, [], [], [], null)) {
 			case ToolSelectionReady(bounds):
 				require(bounds.origin.x == 2 && bounds.origin.y == 1 && bounds.origin.z == 1 && bounds.size.width == 1 && bounds.size.height == 1
 					&& bounds.size.depth == 1,
@@ -1081,32 +3180,98 @@ final class EditorProbe {
 			case _:
 				throw "select tool did not produce workspace bounds";
 		}
-		switch commandForTool(PaintTool, point, 1, null, [], null) {
+		switch commandForTool(PaintTool, point, viewportToolContext(worldSize, null, [], [], [], null)) {
 			case ToolCommandReady(PaintVoxel(actual, 1)):
 				require(actual.x == point.x && actual.y == point.y && actual.z == point.z, "paint tool changed the pointed voxel");
 			case _:
 				throw "paint tool did not produce a PaintVoxel command";
 		}
-		switch commandForTool(EraseTool, point, 1, null, [], null) {
+		switch commandForTool(EraseTool, point, viewportToolContext(worldSize, null, [], [], [], null)) {
 			case ToolCommandReady(EraseVoxel(actual)):
 				require(actual.x == point.x && actual.y == point.y && actual.z == point.z, "erase tool changed the pointed voxel");
 			case _:
 				throw "erase tool did not produce an EraseVoxel command";
 		}
-		switch commandForTool(FillTool, point, 1, null, [], null) {
+		switch commandForTool(FillTool, point, viewportToolContext(worldSize, null, [], [], [], null)) {
 			case ToolCommandRejected(NoSelection):
 			case _:
 				throw "fill tool did not reject a missing selection exactly";
 		}
 		final selected:VoxelBounds = {origin: {x: 1, y: 0, z: 1}, size: {width: 2, height: 1, depth: 2}};
-		switch commandForTool(FillTool, point, 1, selected, [], null) {
+		switch commandForTool(FillTool, point, viewportToolContext(worldSize, selected, [], [], [], null)) {
 			case ToolCommandReady(FillBounds(bounds, 1)):
 				require(bounds.origin.x == 1 && bounds.origin.z == 1 && bounds.size.width == 2 && bounds.size.depth == 2,
 					"fill tool changed its explicit workspace bounds");
 			case _:
 				throw "fill tool did not carry explicit typed bounds";
 		}
-		return 13;
+		switch commandForTool(CheckpointTool, point, viewportToolContext(worldSize, null, [], [], [], null)) {
+			case ToolBatchReady(commands, selectedObject):
+				require(commands.length == 2 && selectedObject.text() == "editor.checkpoint.n1",
+					"checkpoint tool did not produce one selectable atomic template");
+			case _:
+				throw "checkpoint tool did not produce a canonical command batch";
+		}
+		final npcRecipe = new EditorObjectRecipe("npc", "NPC", "PNJ", EditorNpc(content("caxecraft:ivvy")));
+		switch commandForTool(CatalogObjectTool, point, viewportToolContext(worldSize, null, [], [], [], npcRecipe)) {
+			case ToolCommandRejected(MissingEditorDialogue):
+			case _:
+				throw "catalog tool did not reject an NPC template without authored dialogue";
+		}
+		switch commandForTool(CatalogObjectTool, point, viewportToolContext(worldSize, null, [], [id("editor.rule.npc.n1")], [DIALOGUE], npcRecipe)) {
+			case ToolBatchReady(commands, selectedObject):
+				require(commands.length == 2 && selectedObject.text() == "editor.npc.n2",
+					"catalog tool did not expose the NPC dialogue template as one selectable batch");
+			case _:
+				throw "catalog tool did not route NPC placement through its dialogue template";
+		}
+		final bridgeRecipe = new EditorObjectRecipe("bridge-switch", "BRIDGE + SWITCH", "PUENTE + INTERRUPTOR", EditorLinkedStatefulPair({
+			objectType: content("caxecraft:mechanism"),
+			initialState: content("caxecraft:idle"),
+			activeState: content("caxecraft:active")
+		}, {
+			objectType: content("caxecraft:mechanism"),
+			initialState: content("caxecraft:idle"),
+			activeState: content("caxecraft:active")
+		}));
+		switch commandForTool(CatalogObjectTool, {x: 0, y: 0, z: 0}, viewportToolContext({width: 1, height: 3, depth: 1}, null, [], [], [], bridgeRecipe)) {
+			case ToolCommandRejected(EditorTemplateNeedsAdjacentCell):
+			case _:
+				throw "catalog tool did not explain a linked template that cannot fit";
+		}
+		switch commandForTool(CatalogObjectTool, point, viewportToolContext(worldSize, null, [], [], [], bridgeRecipe)) {
+			case ToolBatchReady(commands, selectedObject):
+				require(commands.length == 3 && selectedObject.text() == "editor.bridge-switch.source.n1",
+					"catalog tool did not expose the bridge switch as one selectable batch");
+			case _:
+				throw "catalog tool did not route the linked stateful recipe through its template";
+		}
+		final waveRecipe = new EditorObjectRecipe("enemy-wave-entity", "ENTITY WAVE", "OLEADA DE ENTIDADES", EditorEnemyWave(content("caxecraft:entity")));
+		switch commandForTool(CatalogObjectTool, {x: 0, y: 0, z: 0}, viewportToolContext({width: 1, height: 3, depth: 1}, null, [], [], [], waveRecipe)) {
+			case ToolCommandRejected(EditorEnemyWaveNeedsSpace):
+			case _:
+				throw "catalog tool did not explain an enemy wave that cannot fit";
+		}
+		switch commandForTool(CatalogObjectTool, point, viewportToolContext(worldSize, null, [], [], [], waveRecipe)) {
+			case ToolBatchReady(commands, selectedObject):
+				require(commands.length == 6 && selectedObject.text() == "editor.enemy-wave-entity.zone.n1",
+					"catalog tool did not expose the enemy wave as one selectable batch");
+			case _:
+				throw "catalog tool did not route the enemy-wave recipe through its template";
+		}
+		switch commandForTool(TriggerZoneTool, point, viewportToolContext(worldSize, null, [], [], [], null)) {
+			case ToolCommandReady(PutObject(object)):
+				require(object.id.text() == "editor.trigger.n1", "trigger tool changed its deterministic object ID");
+				switch object.placement {
+					case TriggerZone(bounds):
+						require(bounds.origin.x == point.x && bounds.origin.y == point.y && bounds.origin.z == point.z,
+							"trigger tool changed the selected layer or cell");
+					case _: throw "trigger tool changed its placement role";
+				}
+			case _:
+				throw "trigger tool did not produce one canonical object command";
+		}
+		return 28;
 	}
 
 	/**
@@ -1142,19 +3307,47 @@ final class EditorProbe {
 			&& paletteCodeAtWorld(projection, 0, 0, 0) == 0
 			&& paletteCodeAtWorld(projection, 4, 0, 0) == -1,
 			"3D viewport projection lost solid, air, or excluded coordinates");
+		final incrementalProjection = projectWorld(session.draftSnapshot().world);
+		require(incrementalProjection != null, "one-voxel projection fixture did not decode");
+		require(patchProjectedVoxel(incrementalProjection, {x: 1, y: 1, z: 1}, 0)
+			&& paletteCodeAtWorld(incrementalProjection, 1, 1, 1) == 0
+			&& surfaceTopAt(incrementalProjection, 1, 1) == 0
+			&& incrementalProjection.columns.length == 2
+			&& incrementalProjection.columns[0].topY == 0,
+			"one-voxel erase did not update the exact cell and derived surface");
+		require(patchProjectedVoxel(incrementalProjection, {x: 0, y: 1, z: 0}, 1)
+			&& paletteCodeAtWorld(incrementalProjection, 0, 1, 0) == 1
+			&& surfaceTopAt(incrementalProjection, 0, 0) == 1
+			&& incrementalProjection.columns.length == 3,
+			"one-voxel paint did not add its derived surface column");
+		final malformedProjection:EditorWorldProjection = {
+			width: incrementalProjection.width,
+			height: incrementalProjection.height,
+			depth: incrementalProjection.depth,
+			cells: incrementalProjection.cells.copy(),
+			columns: incrementalProjection.columns.copy(),
+			surfaceTops: [],
+			surfacePatches: incrementalProjection.surfacePatches.copy()
+		};
+		final cellBeforeRejectedPatch = malformedProjection.cells[0];
+		require(!patchProjectedVoxel(malformedProjection, {x: 0, y: 0, z: 0}, 0)
+			&& malformedProjection.cells[0] == cellBeforeRejectedPatch,
+			"a malformed projection was partially patched");
 
 		final focused = focusCamera(projection);
-		require(close(focused.x, 2.0)
-			&& close(focused.y, 5.6)
-			&& close(focused.z, 5.6)
-			&& close(focused.lookX, 0.0)
-			&& close(focused.lookY, -0.5)
-			&& close(focused.lookZ, -0.8660254037844386),
+		final focusedPose = cameraPose(focused);
+		require(cameraMode(focused) == EditorCameraMode.FlyCamera
+			&& close(focusedPose.x, 2.0)
+			&& close(focusedPose.y, 5.6)
+			&& close(focusedPose.z, 5.6)
+			&& close(focusedPose.lookX, 0.0)
+			&& close(focusedPose.lookY, -0.5)
+			&& close(focusedPose.lookZ, -0.8660254037844386),
 			"3D viewport focus did not frame the finite world deterministically");
 		final target = cameraTarget(focused);
-		require(close(target.x, focused.x + focused.lookX)
-			&& close(target.y, focused.y + focused.lookY)
-			&& close(target.z, focused.z + focused.lookZ),
+		require(close(target.x, focusedPose.x + focusedPose.lookX)
+			&& close(target.y, focusedPose.y + focusedPose.lookY)
+			&& close(target.z, focusedPose.z + focusedPose.lookZ),
 			"3D camera target drifted from its direction snapshot");
 		final moved = stepCamera(projection, focused, {
 			forward: 1.0,
@@ -1164,7 +3357,9 @@ final class EditorProbe {
 			pitch: 0.05,
 			wheel: 1.0
 		}, 0.05);
-		require(moved.x != focused.x && moved.y != focused.y && moved.z != focused.z && moved.lookX < 0.0 && moved.lookY > focused.lookY,
+		final movedPose = cameraPose(moved);
+		require(movedPose.x != focusedPose.x && movedPose.y != focusedPose.y && movedPose.z != focusedPose.z && movedPose.lookX < 0.0
+			&& movedPose.lookY > focusedPose.lookY,
 			"3D camera step ignored movement or look input");
 		final clamped = stepCamera(projection, moved, {
 			forward: 10000.0,
@@ -1174,58 +3369,140 @@ final class EditorProbe {
 			pitch: -10.0,
 			wheel: 10000.0
 		}, 10.0);
-		require(clamped.x >= -128.0
-			&& clamped.x <= projection.width + 128.0
-			&& clamped.y >= 0.25
-			&& clamped.y <= projection.height + 128.0
-			&& clamped.z >= -128.0
-			&& clamped.z <= projection.depth + 128.0
-			&& close(clamped.lookY, -0.90),
+		final clampedPose = cameraPose(clamped);
+		require(clampedPose.x >= -128.0
+			&& clampedPose.x <= projection.width + 128.0
+			&& clampedPose.y >= 0.25
+			&& clampedPose.y <= projection.height + 128.0
+			&& clampedPose.z >= -128.0
+			&& clampedPose.z <= projection.depth + 128.0
+			&& close(clampedPose.lookY, -0.90),
 			"3D camera failed to clamp frame time, position, yaw, or pitch");
 
+		final walking = focusCamera(projection, EditorCameraMode.WalkCamera);
+		final walkingPose = cameraPose(walking);
+		require(cameraMode(walking) == EditorCameraMode.WalkCamera
+			&& close(walkingPose.x, 2.0)
+			&& close(walkingPose.y, 1.62)
+			&& close(walkingPose.z, 2.5),
+			"Walk did not start inside the draft at player-like eye height");
+		final walked = stepCamera(projection, walking, {
+			forward: 0.0,
+			right: 1.0,
+			vertical: 1.0,
+			yaw: 0.0,
+			pitch: 0.0,
+			wheel: 100.0
+		}, 0.1);
+		final walkedAgain = stepCamera(projection, walked, {
+			forward: 0.0,
+			right: 1.0,
+			vertical: -1.0,
+			yaw: 0.0,
+			pitch: 0.0,
+			wheel: -100.0
+		}, 0.1);
+		final walkedPose = cameraPose(walkedAgain);
+		require(walkedPose.x > walkingPose.x && close(walkedPose.y, 2.62) && close(walkedPose.z, walkingPose.z),
+			"Walk did not follow the authored surface or ignored its no-flight contract");
+
+		final orbitTarget:EditorWorldVector = {x: 1.5, y: 1.0, z: 1.5};
+		final orbiting = focusCamera(projection, EditorCameraMode.OrbitCamera, orbitTarget, 4.0);
+		final orbitingPose = cameraPose(orbiting);
+		require(cameraMode(orbiting) == EditorCameraMode.OrbitCamera
+			&& close(cameraTarget(orbiting).x, orbitTarget.x)
+			&& close(cameraTarget(orbiting).y, orbitTarget.y)
+			&& close(cameraTarget(orbiting).z, orbitTarget.z),
+			"Orbit did not retain its explicit authored target");
+		final orbited = stepCamera(projection, orbiting, {
+			forward: 1.0,
+			right: 1.0,
+			vertical: 1.0,
+			yaw: 0.1,
+			pitch: 0.05,
+			wheel: 1.0
+		}, 0.1);
+		final orbitedPose = cameraPose(orbited);
+		require(orbitedPose.x != orbitingPose.x
+			&& orbitedPose.y != orbitingPose.y
+			&& orbitedPose.z != orbitingPose.z
+			&& close(cameraTarget(orbited).x, orbitTarget.x)
+			&& close(cameraTarget(orbited).y, orbitTarget.y)
+			&& close(cameraTarget(orbited).z, orbitTarget.z),
+			"Orbit did not rotate and zoom around its fixed target");
+		final nextOrbitTarget:EditorWorldVector = {x: 3.5, y: 1.0, z: 2.5};
+		final retargeted = retargetOrbitCamera(orbited, nextOrbitTarget);
+		final retargetedPose = cameraPose(retargeted);
+		require(close(cameraTarget(retargeted).x, nextOrbitTarget.x)
+			&& close(cameraTarget(retargeted).y, nextOrbitTarget.y)
+			&& close(cameraTarget(retargeted).z, nextOrbitTarget.z)
+			&& close(retargetedPose.lookX, orbitedPose.lookX)
+			&& close(retargetedPose.lookY, orbitedPose.lookY)
+			&& close(retargetedPose.lookZ, orbitedPose.lookZ),
+			"Orbit changed its viewing angle when selection moved its target");
+		require(cycleCameraMode(EditorCameraMode.WalkCamera) == EditorCameraMode.FlyCamera
+			&& cycleCameraMode(EditorCameraMode.FlyCamera) == EditorCameraMode.OrbitCamera
+			&& cycleCameraMode(EditorCameraMode.OrbitCamera) == EditorCameraMode.WalkCamera,
+			"the camera control did not cycle through one closed mode order");
+
 		final stacked = pickWorld(projection, {x: 1.5, y: 4.0, z: 1.5}, {x: 0.0, y: -1.0, z: 0.0}, 0, 16.0);
-		require(stacked != null && stacked.solid && stacked.point.x == 1 && stacked.point.y == 1 && stacked.point.z == 1 && close(stacked.distance, 2.0),
-			"3D picking did not choose the nearest visible solid");
+		require(stacked != null && stacked.solid && stacked.point.x == 1 && stacked.point.y == 1 && stacked.point.z == 1 && stacked.placement == null
+			&& close(stacked.distance, 2.0),
+			"3D picking did not reject placement outside the world above a solid");
+		final side = pickWorld(projection, {x: 0.25, y: 0.5, z: 1.5}, {x: 1.0, y: 0.0, z: 0.0}, 0, 16.0);
+		require(side != null && side.solid && side.point.x == 1 && side.point.y == 0 && side.point.z == 1 && side.placement != null
+			&& side.placement.x == 0 && side.placement.y == 0 && side.placement.z == 1,
+			"3D picking did not retain the adjacent empty cell before a solid");
 		final emptyFloor = pickWorld(projection, {x: 0.5, y: 4.0, z: 0.5}, {x: 0.0, y: -1.0, z: 0.0}, 0, 16.0);
 		require(emptyFloor != null && !emptyFloor.solid && emptyFloor.point.x == 0 && emptyFloor.point.y == 0 && emptyFloor.point.z == 0
+			&& emptyFloor.placement != null && emptyFloor.placement.x == 0 && emptyFloor.placement.y == 0 && emptyFloor.placement.z == 0
 			&& close(emptyFloor.distance, 4.0),
 			"3D picking did not preserve an editable empty-floor cell");
+		final upperEmpty = pickWorld(projection, {x: 0.5, y: 4.0, z: 0.5}, {x: 0.0, y: -1.0, z: 0.0}, 1, 16.0);
+		require(upperEmpty != null && !upperEmpty.solid && upperEmpty.point.y == 1 && close(upperEmpty.distance, 3.0),
+			"3D picking did not use the selected empty-cell layer");
 		require(pickWorld(projection, {x: -1.0, y: 2.0, z: -1.0}, {x: 0.0, y: -1.0, z: 0.0}, 0, 16.0) == null,
 			"3D picking admitted a floor point outside the draft");
 		require(pickWorld(projection, {x: 0.5, y: 4.0, z: 0.5}, {x: 1.0, y: 0.0, z: 0.0}, 0, 16.0) == null,
 			"3D picking invented a floor point for a parallel ray");
 		require(pickWorld(projection, {x: 0.5, y: 4.0, z: 0.5}, {x: 0.0, y: -1.0, z: 0.0}, 2, 16.0) == null, "3D picking admitted an unavailable edit layer");
 
-		final objectGizmos = [
+		final objectGizmos:Array<EditorObjectGizmo> = [
 			{
 				id: id("object.near"),
 				kind: EditorObjectGizmoKind.CheckpointGizmo,
+				origin: {x: 1, y: 0, z: 1},
 				x: 1.5,
 				y: 1.0,
 				z: 1.5,
 				width: 1.0,
 				height: 2.0,
-				depth: 1.0
+				depth: 1.0,
+				facing: ObjectYaw(0)
 			},
 			{
 				id: id("object.far"),
 				kind: EditorObjectGizmoKind.NpcGizmo,
+				origin: {x: 1, y: 0, z: 3},
 				x: 1.5,
 				y: 1.0,
 				z: 3.5,
 				width: 1.0,
 				height: 2.0,
-				depth: 1.0
+				depth: 1.0,
+				facing: ObjectYaw(90)
 			},
 			{
 				id: id("object.overlap"),
 				kind: EditorObjectGizmoKind.ItemGizmo,
+				origin: {x: 1, y: 0, z: 1},
 				x: 1.5,
 				y: 1.0,
 				z: 1.5,
 				width: 1.0,
 				height: 2.0,
-				depth: 1.0
+				depth: 1.0,
+				facing: ObjectYaw(180)
 			}
 		];
 		final objectHit = pickObject(objectGizmos, {x: 1.5, y: 1.0, z: -2.0}, {x: 0.0, y: 0.0, z: 1.0}, 16.0);
@@ -1235,8 +3512,724 @@ final class EditorProbe {
 			"3D object picking admitted a parallel ray outside every object");
 		require(pickObject(objectGizmos, {x: 1.5, y: 1.0, z: -2.0}, {x: 0.0, y: 0.0, z: 1.0}, 2.0) == null,
 			"3D object picking ignored the bounded ray distance");
-		return 19;
+		require(gizmoIntersectsLayer(objectGizmos[0], 0)
+			&& gizmoIntersectsLayer(objectGizmos[0], 1)
+			&& !gizmoIntersectsLayer(objectGizmos[0], 2),
+			"Plan object filtering lost exact vertical overlap");
+		final selection = projectSelection({origin: {x: 4, y: 2, z: 8}, size: {width: 64, height: 16, depth: 64}});
+		require(close(selection.x, 36.0) && close(selection.y, 10.0) && close(selection.z, 40.0) && close(selection.width, 64.0)
+			&& close(selection.height, 16.0) && close(selection.depth, 64.0),
+			"large selections did not collapse to one exact world-space volume");
+		return 31;
 	}
+
+	/** Prove that Plan logic links retain rule order and fail closed. */
+	static function checkZoneRuleProjection():Void {
+		final zone = id("zone.workshop");
+		final missing = id("zone.missing");
+		final bounds:VoxelBounds = {origin: {x: 1, y: 0, z: 2}, size: {width: 2, height: 3, depth: 4}};
+		final rules = [
+			{
+				id: id("rule.enter"),
+				priority: 0,
+				repeat: Once,
+				event: EnterZone(zone),
+				predicate: All([EventActorIs(PLAYER), EventSweptIs(false)]),
+				actions: [Spawn(CHECKPOINT), EmitSignal(content("caxecraft:card-signal"))]
+			},
+			{
+				id: id("rule.interact"),
+				priority: 1,
+				repeat: Once,
+				event: Interact(CHECKPOINT),
+				predicate: Always,
+				actions: []
+			},
+			{
+				id: id("rule.leave"),
+				priority: 2,
+				repeat: Repeat,
+				event: LeaveZone(missing),
+				predicate: Always,
+				actions: []
+			}
+		];
+		final links = projectZoneRules(rules, [{id: zone, tags: [], placement: TriggerZone(bounds)}]);
+		require(links.length == 2, "zone-rule projection included an unrelated event");
+		switch links[0] {
+			case ResolvedZoneRule(ruleId, zoneId, projected):
+				require(ruleId.text() == "rule.enter" && zoneId.text() == zone.text(), "resolved zone-rule projection lost stable IDs");
+				require(projected.origin.x == 1 && projected.origin.z == 2 && projected.size.width == 2 && projected.size.height == 3
+					&& projected.size.depth == 4,
+					"resolved zone-rule projection changed trigger bounds");
+			case _:
+				throw "valid zone-rule projection did not resolve";
+		}
+		switch links[1] {
+			case UnresolvedZoneRule(ruleId, zoneId):
+				require(ruleId.text() == "rule.leave" && zoneId.text() == missing.text(), "unresolved zone-rule projection lost stable IDs");
+			case _:
+				throw "missing zone-rule projection invented geometry";
+		}
+		final overlapZone = id("zone.overlap");
+		final touchingZone = id("zone.touching");
+		final overlapRules:Array<FlowRule> = [
+			{
+				id: id("rule.overlap-a"),
+				priority: 0,
+				repeat: Repeat,
+				event: EnterZone(zone),
+				predicate: Always,
+				actions: []
+			},
+			{
+				id: id("rule.overlap-b"),
+				priority: 0,
+				repeat: Repeat,
+				event: EnterZone(overlapZone),
+				predicate: Always,
+				actions: []
+			},
+			{
+				id: id("rule.touching"),
+				priority: 0,
+				repeat: Repeat,
+				event: EnterZone(touchingZone),
+				predicate: Always,
+				actions: []
+			}
+		];
+		final overlaps = projectTriggerOverlaps(overlapRules, [
+			{id: zone, tags: [], placement: TriggerZone(bounds)},
+			{id: overlapZone, tags: [], placement: TriggerZone({origin: {x: 2, y: 1, z: 3}, size: {width: 2, height: 2, depth: 2}})},
+			{id: touchingZone, tags: [], placement: TriggerZone({origin: {x: 3, y: 0, z: 2}, size: {width: 1, height: 1, depth: 1}})}
+		]);
+		require(overlaps.length == 1 && overlaps[0].first.text() == zone.text() && overlaps[0].second.text() == overlapZone.text(),
+			"connected overlap warning missed shared volume or treated a half-open face as overlap");
+		final cards = projectFlowRules(rules);
+		require(cards.length == 3 && cards[0].cards.length == 4, "rule cards lost WHEN, IF, or ordered DO rows");
+		switch cards[0].cards[0] {
+			case WhenFlowCard(descriptor, text, references):
+				require(descriptor.id.text() == "enter-zone"
+					&& text.message.text() == descriptor.editorLabel.text()
+					&& text.arguments.length == 1
+					&& text.arguments[0] == zone.text()
+					&& references.length == 1
+					&& references[0].id.text() == zone.text(),
+					"WHEN card lost its registry descriptor or world-picker reference");
+			case _:
+				throw "first rule card was not WHEN";
+		}
+		switch cards[0].cards[1] {
+			case IfFlowCard(descriptor, text, references):
+				require(descriptor.id.text() == "all"
+					&& text.message.text() == descriptor.editorLabel.text()
+					&& text.arguments.length == 1
+					&& text.arguments[0] == "2"
+					&& references.length == 1,
+					"IF card lost nested event context or its actor picker");
+			case _:
+				throw "second rule card was not IF";
+		}
+		switch cards[0].cards[2] {
+			case DoFlowCard(0, descriptor, text, references):
+				require(descriptor.id.text() == "spawn"
+					&& text.message.text() == descriptor.editorLabel.text()
+					&& text.arguments.length == 1
+					&& text.arguments[0] == CHECKPOINT.text()
+					&& references.length == 1,
+					"DO card lost ordered action metadata or its world picker");
+			case _:
+				throw "third rule card was not the first DO action";
+		}
+
+		final ready:FlowTick = {epoch: 0, offset: 2};
+		final trace = projectFlowTrace([
+			FlowTraceEntry.EventObserved(flowEventDescriptor(EnterZone(zone)).id, PLAYER),
+			FlowTraceEntry.PredicateEvaluated(rules[0].id, flowEventDescriptor(EnterZone(zone)).id, PLAYER, true),
+			FlowTraceEntry.ActionExecuted(rules[0].id, flowActionDescriptor(Spawn(CHECKPOINT)).id),
+			FlowTraceEntry.FollowUpDeferred(rules[0].id, flowEventDescriptor(SignalReceived(content("caxecraft:card-signal"))).id, ready),
+			FlowTraceEntry.SequenceDeferred(rules[0].id, id("timer.card"), id("sequence.card"), ready)
+		], 4);
+		require(trace.rows.length == 4 && trace.truncated, "event-flow overlay ignored its explicit row bound");
+		require(retainLatestFlowTrace(trace, [], 1) == trace, "quiet test-play tick erased the latest meaningful event-flow trace");
+		final replacedTrace = retainLatestFlowTrace(trace, [FlowTraceEntry.EventObserved(flowEventDescriptor(LeaveZone(zone)).id, PLAYER)], 1);
+		require(replacedTrace.rows.length == 1 && !replacedTrace.truncated, "new event-flow evidence did not replace the older bounded trace");
+		switch trace.rows[1] {
+			case PredicateTrace(ruleId, event, actor, true):
+				require(ruleId.text() == "rule.enter" && event == "enter-zone" && actor != null && actor.text() == PLAYER.text(),
+					"event-flow overlay lost predicate pass context");
+			case _:
+				throw "event-flow overlay lost its predicate row";
+		}
+	}
+
+	/** Prove visual cards edit canonical typed rules and reject wrong world kinds. */
+	static function checkFlowAuthoring():Void {
+		final zone = id("zone.authoring");
+		final target = id("object.authoring");
+		final actor = id("actor.authoring");
+		final predicateChildren:Array<FlowPredicate> = [EventActorIs(PLAYER)];
+		final sourceActions:Array<FlowAction> = [Spawn(CHECKPOINT)];
+		final connected = connectZone({
+			ruleId: id("rule.authoring"),
+			priority: 7,
+			repeat: OncePerActor,
+			zone: zone,
+			predicate: All(predicateChildren),
+			actions: sourceActions
+		});
+		require(nextZoneConnectionRuleId(zone, [id("editor.rule.zone.authoring.n1"), id("other")]).text() == "editor.rule.zone.authoring.n2",
+			"zone connection identity replaced an existing rule or depended on rule order");
+		predicateChildren.push(Always);
+		sourceActions[0] = Despawn(CHECKPOINT);
+		switch [connected.predicate, connected.actions[0]] {
+			case [All(children), Spawn(objectId)]:
+				require(children.length == 1 && objectId.text() == CHECKPOINT.text(), "zone connection retained caller-owned predicate or action arrays");
+			case _:
+				throw "zone connection changed its typed cards";
+		}
+
+		final triggerPick = worldPickFor({
+			id: id("zone.target"),
+			tags: [],
+			placement: TriggerZone({origin: {x: 0, y: 0, z: 0}, size: {width: 1, height: 1, depth: 1}})
+		});
+		final actorPick = worldPickFor({id: actor, tags: [], placement: Entity(content("caxecraft:mossling"), transform(0, 0, 0))});
+		final objectPick = worldPickFor({id: target, tags: [], placement: Checkpoint(transform(0, 0, 0))});
+		require(isWorldPickableFlowRole(triggerPick.roles[0]) && !isWorldPickableFlowRole(LevelFlowReference),
+			"world-picker role classification admitted a document-only level or rejected a zone");
+
+		final movedZone = authoredRule(applyFlowWorldPick(connected, WhenCardAddress, 0, triggerPick), "replace WHEN zone");
+		switch movedZone.event {
+			case EnterZone(id):
+				require(id.text() == "zone.target", "WHEN world pick did not replace the zone");
+			case _:
+				throw "WHEN world pick changed the event constructor";
+		}
+		switch applyFlowWorldPick(connected, WhenCardAddress, 0, actorPick) {
+			case FlowRuleAuthoringRejected(WrongReferenceRole(ZoneFlowReference)):
+			case _:
+				throw "WHEN world pick accepted an actor as a zone";
+		}
+		final movedAction = authoredRule(applyFlowWorldPick(connected, DoCardAddress(0), 0, objectPick), "replace DO object");
+		switch movedAction.actions[0] {
+			case Spawn(id):
+				require(id.text() == target.text(), "DO world pick did not replace the object");
+			case _:
+				throw "DO world pick changed the action constructor";
+		}
+
+		final nearRule = authoredRule(editFlowCard(connected, ReplaceIf(NearObject(PLAYER, CHECKPOINT, 2500))), "replace IF card");
+		final movedActor = authoredRule(applyFlowWorldPick(nearRule, IfCardAddress, 0, actorPick), "replace IF actor");
+		final movedNearObject = authoredRule(applyFlowWorldPick(movedActor, IfCardAddress, 1, triggerPick), "replace IF object");
+		switch movedNearObject.predicate {
+			case NearObject(actorId, objectId, 2500):
+				require(actorId.text() == actor.text() && objectId.text() == "zone.target", "nested IF world picks lost depth-first reference order");
+			case _:
+				throw "IF world pick changed the predicate constructor";
+		}
+		switch applyFlowWorldPick(nearRule, IfCardAddress, 0, triggerPick) {
+			case FlowRuleAuthoringRejected(WrongReferenceRole(ActorFlowReference)):
+			case _:
+				throw "IF world pick accepted a trigger as an actor";
+		}
+		switch applyFlowWorldPick(nearRule, IfCardAddress, 2, actorPick) {
+			case FlowRuleAuthoringRejected(InvalidReferenceIndex(2)):
+			case _:
+				throw "IF world pick admitted a missing reference slot";
+		}
+
+		final inserted = authoredRule(editFlowCard(connected, InsertDo(1, Despawn(target))), "insert DO card");
+		require(inserted.actions.length == 2, "card insertion lost ordered actions");
+		final moved = authoredRule(editFlowCard(inserted, MoveDo(1, 0)), "move DO card");
+		switch moved.actions[0] {
+			case Despawn(id):
+				require(id.text() == target.text(), "card movement changed the moved action");
+			case _:
+				throw "card movement did not preserve ordered action identity";
+		}
+		final configured = authoredRule(editFlowCard(authoredRule(editFlowCard(moved, SetPriority(9)), "set card priority"), SetRepeat(Repeat)),
+			"set card repeat");
+		require(configured.priority == 9 && configured.repeat == Repeat, "card configuration lost priority or per-actor repeat policy");
+		final replaced = authoredRule(editFlowCard(configured, ReplaceDo(0, EmitSignal(content("caxecraft:authored")))), "replace DO card");
+		final removed = authoredRule(editFlowCard(replaced, RemoveDo(1)), "remove DO card");
+		require(removed.actions.length == 1, "card removal did not preserve the remaining action");
+		switch editFlowCard(removed, RemoveDo(4)) {
+			case FlowRuleAuthoringRejected(InvalidDoIndex(4)):
+			case _:
+				throw "card edit admitted an out-of-range DO index";
+		}
+	}
+
+	/** Prove every shared descriptor has one complete or explicitly disabled card. */
+	static function checkFlowCardLibrary():Void {
+		final supportSession = open(defaultEditorSettings());
+		final supportBefore = supportSession.canonicalDraft();
+		switch supportSession.mutate({
+			baseRevision: supportSession.revision(),
+			mutation: ApplyBatch([
+				PutFlowVariable({id: id("counter.cards"), scope: Map, initial: Counter(0)}),
+				PutFlowSequence({id: id("sequence.cards"), parameters: [], actions: []})
+			])
+		}) {
+			case MutationApplied([Rule, Rule], changes, TerrainUnchanged, 1, 1, 0):
+				require(changes.length == 2, "flow-definition transaction lost its variable or sequence observation");
+			case _:
+				throw "typed flow-definition transaction did not commit atomically";
+		}
+		final supportAfter = supportSession.canonicalDraft();
+		require(supportAfter.compare(supportBefore) != 0, "flow-definition commands did not change canonical bytes");
+		expectHistory(supportSession.undo(), Transaction, "undo flow-definition transaction");
+		require(supportSession.canonicalDraft().compare(supportBefore) == 0, "flow-definition undo did not restore exact bytes");
+		expectHistory(supportSession.redo(), Transaction, "redo flow-definition transaction");
+		require(supportSession.canonicalDraft().compare(supportAfter) == 0, "flow-definition redo did not restore exact bytes");
+
+		final scenario = flowCardLibraryScenario();
+		final contentChoices:EditorFlowContentChoices = {
+			blocks: [STONE],
+			items: [content("caxecraft:item")],
+			states: [content("caxecraft:idle")],
+			effects: [content("caxecraft:spark")],
+			signals: []
+		};
+		final events = eventCardChoices(scenario, contentChoices);
+		final predicates = predicateCardChoices(scenario, EnterZone(id("zone.library")), contentChoices);
+		final actions = actionCardChoices(scenario, id("rule.library"), contentChoices);
+		final expectedEvents = [
+			"enter-zone",
+			"leave-zone",
+			"interact",
+			"block-changed",
+			"use-item",
+			"collect-item",
+			"entity-defeated",
+			"signal",
+			"timer",
+			"objective-changed",
+			"state-changed",
+			"level-entered",
+			"campaign-exit-requested"
+		];
+		final expectedPredicates = [
+			"always",
+			"all",
+			"any",
+			"not",
+			"flag",
+			"counter",
+			"state",
+			"object-state",
+			"inventory",
+			"objective",
+			"near",
+			"mode",
+			"event-actor",
+			"event-swept"
+		];
+		final expectedActions = [
+			"dialogue",
+			"journal",
+			"set-flag",
+			"set-counter",
+			"add-counter",
+			"set-state",
+			"give-item",
+			"take-item",
+			"spawn",
+			"despawn",
+			"set-object-state",
+			"checkpoint",
+			"objective",
+			"effect",
+			"campaign-exit",
+			"signal",
+			"schedule",
+			"call",
+			"choose"
+		];
+		require(events.length == expectedEvents.length, "event card library lost or duplicated a registry entry");
+		for (index in 0...events.length)
+			switch events[index] {
+				case ReadyEventChoice(descriptor, value):
+					require(descriptor.id.text() == expectedEvents[index], "event card order drifted from the shared registry");
+					checkPlayableLibraryRule(scenario, value, Always, scenario.flow.rules[0].actions, 'event ${descriptor.id.text()}');
+				case UnavailableEventChoice(descriptor, MissingSignalContent):
+					require(descriptor.id.text() == "signal" && expectedEvents[index] == "signal",
+						"only the pack-reserved signal event should be visibly unavailable");
+				case UnavailableEventChoice(descriptor, _):
+					throw 'rich event card ${descriptor.id.text()} was unexpectedly unavailable';
+			}
+		require(predicates.length == expectedPredicates.length, "predicate card library lost or duplicated a registry entry");
+		for (index in 0...predicates.length)
+			switch predicates[index] {
+				case ReadyPredicateChoice(descriptor, value):
+					require(descriptor.id.text() == expectedPredicates[index], "predicate card order drifted from the shared registry");
+					checkPlayableLibraryRule(scenario, EnterZone(id("zone.library")), value, scenario.flow.rules[0].actions,
+						'predicate ${descriptor.id.text()}');
+				case UnavailablePredicateChoice(descriptor, _):
+					throw 'rich predicate card ${descriptor.id.text()} was unexpectedly unavailable';
+			}
+		require(actions.length == expectedActions.length, "action card library lost or duplicated a registry entry");
+		for (index in 0...actions.length)
+			switch actions[index] {
+				case ReadyActionChoice(descriptor, value):
+					require(descriptor.id.text() == expectedActions[index], "action card order drifted from the shared registry");
+					final ordered = scenario.flow.rules[0].actions.copy();
+					ordered.push(value);
+					checkPlayableLibraryRule(scenario, EnterZone(id("zone.library")), Always, ordered, 'action ${descriptor.id.text()}');
+					if (descriptor.id.text() == "choose")
+						switch value {
+							case ChooseSeeded(_, choices):
+								require(choices.length == 1 && choices[0].actions.length == 1,
+									"nested choice card flattened or omitted its ordered child action");
+							case _:
+								throw "choose descriptor did not create a nested typed action";
+						}
+				case UnavailableActionChoice(descriptor, MissingSignalContent):
+					require(descriptor.id.text() == "signal" && expectedActions[index] == "signal",
+						"only the pack-reserved signal action should be visibly unavailable");
+				case UnavailableActionChoice(descriptor, _):
+					throw 'rich action card ${descriptor.id.text()} was unexpectedly unavailable';
+			}
+
+		final nestedActions = actionCardChoices(scenario, id("rule.library"), contentChoices, true);
+		switch nestedActions[nestedActions.length - 1] {
+			case UnavailableActionChoice(descriptor, _):
+				require(descriptor.id.text() == "choose", "nested action palette hid or moved the forbidden nested choice");
+			case ReadyActionChoice(_, _):
+				throw "nested action palette admitted a choice inside a choice";
+		}
+
+		final reboundSequence = authoredRule(applyFlowDocumentPick(scenario.flow.rules[0], DoCardAddress(0), 1, id("sequence.alternate"),
+			SequenceFlowReference, scenario),
+			"replace sequence document reference");
+		switch reboundSequence.actions[0] {
+			case Schedule(_, _, sequence, [Value(Flag(true)), Value(State(state))]):
+				require(sequence.text() == "sequence.alternate" && state.text() == "caxecraft:idle",
+					"sequence document pick did not use the selected schema defaults");
+			case _:
+				throw "sequence document pick retained arguments from the previous schema";
+		}
+
+		final nestedRule:FlowRule = {
+			id: id("rule.nested-library"),
+			priority: 0,
+			repeat: Once,
+			event: EnterZone(id("zone.library")),
+			predicate: All([Not(Always)]),
+			actions: [
+				ChooseSeeded(id("counter.library"), [
+					{
+						weight: 1,
+						actions: [Spawn(PLAYER)]
+					}
+				])
+			]
+		};
+		final nestedProjection = projectFlowRules([nestedRule])[0].nestedCards;
+		require(nestedProjection.length == 3, "compound cards did not expose every nested predicate and weighted action");
+		switch nestedProjection[0] {
+			case NestedIfFlowCard(path, 1, descriptor, _, _):
+				require(path.length == 1 && path[0] == 0 && descriptor.id.text() == "not", "nested predicate row lost its depth-first typed address");
+			case _:
+				throw "first nested row was not the NOT child";
+		}
+		switch nestedProjection[2] {
+			case NestedDoFlowCard(0, 0, 0, 1, descriptor, _, _):
+				require(descriptor.id.text() == "spawn", "weighted branch row lost its action descriptor");
+			case _:
+				throw "weighted action did not retain its branch and order address";
+		}
+		final nestedPredicateEdited = authoredRule(editFlowCard(nestedRule, ReplaceNestedIf([0, 0], ModeIs(Creative))), "replace nested IF card");
+		switch nestedPredicateEdited.predicate {
+			case All([Not(ModeIs(Creative))]):
+			case _:
+				throw "nested predicate edit flattened its parent cards";
+		}
+		final nestedActionEdited = authoredRule(editFlowCard(nestedPredicateEdited, ReplaceNestedChoiceDo(0, 0, 0, Despawn(PLAYER))), "replace nested DO card");
+		switch nestedActionEdited.actions[0] {
+			case ChooseSeeded(_, [{weight: 1, actions: [Despawn(id)]}]):
+				require(id.text() == PLAYER.text(), "nested action edit changed its selected object");
+			case _:
+				throw "nested action edit flattened its weighted branch";
+		}
+	}
+
+	/** Validate one card candidate through the same gate that opens playable drafts. */
+	static function checkPlayableLibraryRule(source:Scenario, event:FlowEvent, predicate:FlowPredicate, actions:Array<FlowAction>, label:String):Void {
+		final rule:FlowRule = {
+			id: id("rule.library"),
+			priority: 0,
+			repeat: Once,
+			event: event,
+			predicate: predicate,
+			actions: actions
+		};
+		final candidate = withFlowRules(source, [rule]);
+		switch EditorSession.open(candidate, new Registry(), defaultEditorSettings()) {
+			case EditorOpened(_):
+			case EditorOpenRejected(error):
+				throw '$label card did not form a playable rule: $error';
+		}
+	}
+
+	/** Build a rich synthetic document without teaching production code its facts. */
+	static function flowCardLibraryScenario():Scenario {
+		final source = baseScenario();
+		return {
+			formatVersion: source.formatVersion,
+			requiredFeatures: source.requiredFeatures,
+			optionalFeatures: source.optionalFeatures,
+			id: source.id,
+			assetPack: source.assetPack,
+			messages: source.messages,
+			title: source.title,
+			mode: source.mode,
+			environment: source.environment,
+			world: source.world,
+			objects: source.objects.concat([
+				{
+					id: id("zone.library"),
+					tags: [],
+					placement: TriggerZone({origin: {x: 0, y: 0, z: 0}, size: {width: 1, height: 1, depth: 1}})
+				},
+				{id: id("entity.library"), tags: [], placement: Entity(content("caxecraft:entity"), transform(0, 0, 0))},
+				{id: id("checkpoint.library"), tags: [], placement: Checkpoint(transform(0, 0, 0))},
+				{
+					id: id("mechanism.library"),
+					tags: [],
+					placement: StatefulObject(content("caxecraft:mechanism"), content("caxecraft:idle"), transform(0, 0, 0))
+				}
+			]),
+			story: {
+				speakerNames: [],
+				dialogues: [{id: id("dialogue.library"), lines: [{speaker: null, text: Literal("Hello")}]}],
+				journal: [
+					{id: id("journal.library"), title: Literal("Clue"), body: Literal("Look nearby")}
+				],
+				objectives: [
+					{
+						id: id("objective.library"),
+						title: Literal("Try cards"),
+						body: Literal("Open the library"),
+						initialState: Active
+					}
+				],
+				routes: []
+			},
+			flow: {
+				variables: [
+					{id: id("flag.library"), scope: Map, initial: Flag(false)},
+					{id: id("counter.library"), scope: Map, initial: Counter(0)},
+					{id: id("state.library"), scope: Map, initial: State(content("caxecraft:idle"))}
+				],
+				sequences: [
+					{
+						id: id("sequence.library"),
+						parameters: [{id: id("parameter.library"), initial: Counter(0)}],
+						actions: []
+					},
+					{
+						id: id("sequence.alternate"),
+						parameters: [
+							{id: id("parameter.alternate.flag"), initial: Flag(true)},
+							{id: id("parameter.alternate.state"), initial: State(content("caxecraft:idle"))}
+						],
+						actions: []
+					}
+				],
+				rules: [
+					{
+						id: id("rule.library"),
+						priority: 0,
+						repeat: Once,
+						event: EnterZone(id("zone.library")),
+						predicate: Always,
+						actions: [
+							Schedule(id("timer.library"), 1, id("sequence.library"), [Value(Counter(0))]),
+							RequestCampaignExit(id("exit.library"))
+						]
+					}
+				]
+			},
+			extensions: source.extensions
+		};
+	}
+
+	/** Replace only the rule array while retaining all rich document references. */
+	static function withFlowRules(source:Scenario, rules:Array<FlowRule>):Scenario
+		return {
+			formatVersion: source.formatVersion,
+			requiredFeatures: source.requiredFeatures,
+			optionalFeatures: source.optionalFeatures,
+			id: source.id,
+			assetPack: source.assetPack,
+			messages: source.messages,
+			title: source.title,
+			mode: source.mode,
+			environment: source.environment,
+			world: source.world,
+			objects: source.objects,
+			story: source.story,
+			flow: {
+				variables: source.flow.variables,
+				sequences: source.flow.sequences,
+				rules: rules
+			},
+			extensions: source.extensions
+		};
+
+	/** Keep scenario failures linked to data-owned messages and exact arguments. */
+	static function checkLocalizedScenarioDiagnostics():Void {
+		final stale = scenarioDiagnosticMessage({
+			coordinate: {line: 21, column: 5, record: 8},
+			kind: ScenarioDiagnosticKind.UnresolvedReference(id("object.gone"))
+		});
+		require(stale.message.text() == "scenario.diagnostic.stale-reference"
+			&& stale.arguments.length == 3
+			&& stale.arguments[0] == "object.gone"
+			&& stale.arguments[1] == "21"
+			&& stale.arguments[2] == "5",
+			"stale-reference diagnostic lost its key, reference, or coordinate arguments");
+		final cycle = scenarioDiagnosticMessage({coordinate: {line: 9, column: 1, record: 3}, kind: ScenarioDiagnosticKind.RuleCycle(id("sequence.loop"))});
+		require(cycle.message.text() == "scenario.diagnostic.rule-cycle"
+			&& cycle.arguments.length == 3
+			&& cycle.arguments[0] == "sequence.loop",
+			"sequence-cycle diagnostic lost its stable data-catalog request");
+	}
+
+	/** Prove `PutRule` recursively detaches every caller-owned CaxeFlow array. */
+	static function checkRuleInputIsolation():Void {
+		final session = open(defaultEditorSettings());
+		final children:Array<FlowPredicate> = [Always];
+		final branchActions:Array<FlowAction> = [Spawn(PLAYER)];
+		final choices = [{weight: 1, actions: branchActions}];
+		final ruleId = id("rule.input-isolation");
+		expectApplied(session.apply(PutRule({
+			id: ruleId,
+			priority: 0,
+			repeat: Repeat,
+			event: Interact(PLAYER),
+			predicate: All(children),
+			actions: [ChooseSeeded(id("seed.input-isolation"), choices)]
+		})), Rule, "put nested rule");
+		children.push(EventActorIs(PLAYER));
+		branchActions.push(Despawn(PLAYER));
+		choices.push({weight: 2, actions: [EmitSignal(content("caxecraft:leaked"))]});
+		expectApplied(session.apply(SetTitle(Literal("Alias check"))), DocumentMetadata, "edit after caller mutation");
+		final draft = session.draftSnapshot();
+		var found = false;
+		for (rule in draft.flow.rules)
+			if (rule.id.text() == ruleId.text()) {
+				found = true;
+				switch [rule.predicate, rule.actions[0]] {
+					case [All(retainedChildren), ChooseSeeded(_, retainedChoices)]:
+						require(retainedChildren.length == 1 && retainedChoices.length == 1 && retainedChoices[0].actions.length == 1,
+							"accepted rule retained caller-owned predicate, choice, or action arrays");
+					case _:
+						throw "accepted nested rule changed constructor shape";
+				}
+			}
+		require(found, "nested rule disappeared after the isolation check");
+	}
+
+	/** Prove a canonical object name and all object-role links change atomically. */
+	static function checkObjectRename():Void {
+		final session = open(defaultEditorSettings());
+		final renamed = id("player.renamed");
+		final ruleId = id("rule.rename");
+		expectApplied(session.apply(PutObject({id: CHECKPOINT, tags: [], placement: Checkpoint(transform(1500, 0, 1500))})), Placement,
+			"place rename collision object");
+		expectApplied(session.apply(PutRule({
+			id: ruleId,
+			priority: 0,
+			repeat: Repeat,
+			event: Interact(PLAYER),
+			predicate: All([EventActorIs(PLAYER), NearObject(PLAYER, PLAYER, 2000)]),
+			actions: [
+				GiveItem(PLAYER, content("caxecraft:stone"), 1),
+				Spawn(PLAYER),
+				PlayEffect(content("caxecraft:rename"), PLAYER),
+				ChooseSeeded(id("seed.rename"), [
+					{
+						weight: 1,
+						actions: [Despawn(PLAYER)]
+					}
+				])
+			]
+		})), Rule, "place rename reference rule");
+		final before = session.canonicalDraft();
+		expectApplied(session.apply(RenameObject(PLAYER, renamed)), Placement, "rename object");
+		final after = session.canonicalDraft();
+		require(after.compare(before) != 0, "object rename did not change canonical bytes");
+		final draft = session.draftSnapshot();
+		var foundObject = false;
+		var foundRule = false;
+		for (object in draft.objects)
+			if (object.id.text() == renamed.text())
+				foundObject = true;
+		for (rule in draft.flow.rules)
+			if (rule.id.text() == ruleId.text()) {
+				foundRule = true;
+				switch [
+					rule.event,
+					rule.predicate,
+					rule.actions[0],
+					rule.actions[1],
+					rule.actions[2],
+					rule.actions[3]
+				] {
+					case [
+						Interact(eventObject),
+						All([EventActorIs(eventActor), NearObject(nearActor, nearObject, _)]),
+						GiveItem(owner, _, _),
+						Spawn(spawned),
+						PlayEffect(_, effectObject),
+						ChooseSeeded(_, [
+							{
+								actions: [Despawn(hidden)]
+							}
+						])
+					]:
+						require(eventObject.text() == renamed.text()
+							&& eventActor.text() == renamed.text()
+							&& nearActor.text() == renamed.text()
+							&& nearObject.text() == renamed.text()
+							&& owner.text() == renamed.text()
+							&& spawned.text() == renamed.text()
+							&& effectObject != null
+							&& effectObject.text() == renamed.text()
+							&& hidden.text() == renamed.text(),
+							"object rename left a stale event, predicate, action, or nested choice reference");
+					case _:
+						throw "object rename changed the CaxeFlow constructor shape";
+				}
+			}
+		require(foundObject && foundRule, "object rename lost the placement or connected rule");
+		final accepted = session.canonicalDraft();
+		expectRejected(session.apply(RenameObject(renamed, new ScenarioId("Not Valid"))), error -> switch error {
+			case InvalidObjectName(_): true;
+			case _: false;
+		}, "reject invalid object name");
+		expectRejected(session.apply(RenameObject(renamed, CHECKPOINT)), error -> switch error {
+			case DuplicateObject(id): id.text() == CHECKPOINT.text();
+			case _: false;
+		}, "reject duplicate object name");
+		require(session.canonicalDraft().compare(accepted) == 0, "rejected object name changed canonical bytes");
+		expectHistory(session.undo(), Placement, "undo object rename");
+		require(session.canonicalDraft().compare(before) == 0, "object rename undo changed unrelated bytes");
+		expectHistory(session.redo(), Placement, "redo object rename");
+		require(session.canonicalDraft().compare(after) == 0, "object rename redo did not restore exact bytes");
+	}
+
+	/** Unwrap one expected side-effect-free authoring result for compact checks. */
+	static function authoredRule(result:EditorFlowAuthoringResult, label:String):caxecraft.scenario.CaxeFlow.FlowRule
+		return switch result {
+			case FlowRuleAuthored(rule): rule;
+			case FlowRuleUnchanged: throw '$label unexpectedly made no change';
+			case FlowRuleAuthoringRejected(error): throw '$label was rejected: $error';
+		};
 
 	static inline function close(actual:Float, expected:Float):Bool
 		return actual > expected - 0.000001 && actual < expected + 0.000001;
@@ -1246,7 +4239,7 @@ final class EditorProbe {
 		final test = session.testPlay();
 		require(test != null, "test play did not publish its disposable simulation");
 		require(test.objectiveState(OBJECTIVE) == Active, "test play did not start from authored objective state");
-		final result = test.runTick({events: [Interact(CHECKPOINT)], positions: []});
+		final result = test.runTick({events: [flowEventOccurrence(Interact(CHECKPOINT), ActorEventContext(PLAYER))], positions: []});
 		require(result.diagnostics.length == 0, "test-play rule execution failed");
 		require(test.objectiveState(OBJECTIVE) == Complete, "test-play rule did not mutate disposable state");
 		require(session.leaveTestPlay(), "leaving active test play failed");
@@ -1325,6 +4318,8 @@ final class EditorProbe {
 			expectApplied(session.apply(SetTitle(Literal('History $index'))), DocumentMetadata, "bounded document history");
 		require(session.historyEntries() == 3 && session.undoDepth() == 3, "history did not evict to its exact entry bound");
 		require(session.historyBytes() <= settings.historyBytes, "history exceeded its byte bound");
+		require(session.historyImageCacheCount() <= 8, "recent typed history images exceeded their fixed bound");
+		require(session.historyByteBufferCount() == 4, "three adjacent history entries did not share their four immutable state buffers");
 		expectSelectionRejected(session.select({
 			baseRevision: session.revision(),
 			selection: VoxelSelection({origin: {x: 0, y: 0, z: 0}, size: {width: 3, height: 1, depth: 2}})
@@ -1355,6 +4350,25 @@ final class EditorProbe {
 			case _: false;
 		}, "history byte budget");
 		require(tiny.canonicalDraft().compare(before) == 0, "rejected history entry changed the draft");
+
+		final deepHistory = open({
+			historyEntries: 12,
+			historyBytes: 1048576,
+			selectionCells: 4,
+			transactionCommands: 3
+		});
+		final deepBefore = deepHistory.canonicalDraft();
+		for (index in 0...10)
+			expectApplied(deepHistory.apply(SetTitle(Literal('Deep history $index'))), DocumentMetadata, "deep cached history");
+		require(deepHistory.historyImageCacheCount() == 8, "recent typed history cache did not reach its exact bound");
+		require(deepHistory.historyByteBufferCount() == 11, "ten adjacent history entries did not retain exactly eleven immutable state buffers");
+		for (_ in 0...10)
+			expectHistory(deepHistory.undo(), DocumentMetadata, "deep history undo");
+		require(deepHistory.canonicalDraft().compare(deepBefore) == 0, "deep history fallback did not restore initial bytes");
+		require(deepHistory.historyImageCacheCount() == 8, "deep history fallback exceeded the typed-image bound");
+		for (_ in 0...10)
+			expectHistory(deepHistory.redo(), DocumentMetadata, "deep history redo");
+		require(deepHistory.historyImageCacheCount() == 8, "deep history redo exceeded the typed-image bound");
 
 		final invalidSettings:EditorSettings = {
 			historyEntries: MAX_HISTORY_ENTRIES + 1,
@@ -1400,6 +4414,73 @@ final class EditorProbe {
 		final speaker = copy.story.dialogues[0].lines[0].speaker;
 		require(speaker != null && speaker.text() == "narrator", "editor snapshot changed narrator-named speaker into narration");
 	}
+
+	/** Prove a caller-owned mutable placement payload cannot mutate an accepted draft. */
+	static function checkPlacementInputIsolation():Void {
+		final session = open(defaultEditorSettings());
+		final tags = [new ScenarioTag("before")];
+		final objectId = id("placement.input-isolation");
+		expectApplied(session.apply(PutObject({
+			id: objectId,
+			tags: tags,
+			placement: Checkpoint(transform(1000, 0, 1000))
+		})), Placement, "place caller-owned object payload");
+		final accepted = session.canonicalDraft();
+
+		tags.push(new ScenarioTag("after"));
+		require(session.canonicalDraft().compare(accepted) == 0, "caller mutation changed accepted placement bytes");
+
+		var observed:Null<ScenarioObject> = null;
+		for (object in session.draftSnapshot().objects)
+			if (object.id.text() == objectId.text())
+				observed = object;
+		require(observed != null && observed.tags.length == 1, "caller tag mutation entered the accepted placement");
+	}
+
+	/** Prove a deferred placement snapshot reconstructs exact diagnostic coordinates. */
+	static function checkDeferredPlacementValidation():Void {
+		final session = open(defaultEditorSettings());
+		expectApplied(session.apply(ResizeWorld({width: 4, height: 1, depth: 1})), WorldShape, "resize deferred-validation world");
+		expectApplied(session.apply(SetPaletteEntry(1, STONE)), Voxel, "add deferred-validation palette entry");
+		final missing = id("missing.deferred-target");
+		expectApplied(session.apply(PutRule({
+			id: id("rule.deferred-validation"),
+			priority: 1,
+			repeat: Once,
+			event: Interact(missing),
+			predicate: Always,
+			actions: [SetCheckpoint(PLAYER)]
+		})), Rule, "add deferred-validation diagnostic");
+		expectApplied(session.apply(RotateObjectBy(PLAYER, 90)), Placement, "rotate through deferred snapshot path");
+
+		final observed = switch session.query(InspectValidation) {
+			case ValidationObserved(_, DraftInvalid(diagnostics)): diagnostics;
+			case _: throw "deferred placement snapshot did not retain its semantic diagnostic";
+		};
+		final expected = validationDiagnostics(session.canonicalDraft());
+		require(sameDiagnosticCoordinates(observed, expected),
+			'deferred placement validation did not reconstruct canonical source coordinates: observed=${diagnosticCoordinatesText(observed)} expected=${diagnosticCoordinatesText(expected)}');
+	}
+
+	/** Compare every semantic diagnostic location from the same canonical bytes. */
+	static function sameDiagnosticCoordinates(left:Array<caxecraft.scenario.ScenarioDiagnostic>, right:Array<caxecraft.scenario.ScenarioDiagnostic>):Bool {
+		if (left.length == 0 || left.length != right.length)
+			return false;
+		for (index in 0...left.length) {
+			final actual = left[index].coordinate;
+			final expected = right[index].coordinate;
+			if (actual.line != expected.line || actual.column != expected.column || actual.record != expected.record)
+				return false;
+		}
+		return true;
+	}
+
+	/** Format diagnostic coordinates only when the exact comparison fails. */
+	static function diagnosticCoordinatesText(values:Array<caxecraft.scenario.ScenarioDiagnostic>):String
+		return [
+			for (value in values)
+				'${value.coordinate.line}:${value.coordinate.column}:${value.coordinate.record}'
+		].join(",");
 
 	static function checkHistoryStateChanges():Void {
 		final session = open(defaultEditorSettings());
@@ -1529,6 +4610,7 @@ final class EditorProbe {
 		final before = session.canonicalDraft();
 		final beforeSelection = selectionKey(session);
 		expectApplied(session.apply(command), family, "apply command");
+		require(session.draftDefersParserMetadata(), 'visual $family command reparsed canonical bytes before validation');
 		final after = session.canonicalDraft();
 		final afterSelection = selectionKey(session);
 		require(before.compare(after) != 0, "accepted content command changed no authored bytes");
@@ -1537,7 +4619,9 @@ final class EditorProbe {
 			&& selectionKey(session) == beforeSelection, "undo did not restore exact prior state");
 		expectHistory(session.redo(), family, "redo command");
 		require(session.canonicalDraft().compare(after) == 0
-			&& selectionKey(session) == afterSelection, "redo did not restore exact command state");
+			&& selectionKey(session) == afterSelection
+			&& session.draftDefersParserMetadata(),
+			"redo did not restore the deferred exact command state");
 		return 1;
 	}
 
@@ -1555,6 +4639,22 @@ final class EditorProbe {
 			case ReadError(_): throw "editor bytes did not validate after reload";
 		};
 		require(ScenarioWriter.write(scenario).compare(bytes) == 0, "editor save/reload changed canonical bytes");
+	}
+
+	/** Read validation diagnostics directly from canonical bytes as an oracle. */
+	static function validationDiagnostics(bytes:Bytes):Array<caxecraft.scenario.ScenarioDiagnostic> {
+		final records = switch ScenarioLexer.read(bytes) {
+			case ReadOk(value): value;
+			case ReadError(_): throw "deferred-validation bytes did not lex";
+		};
+		final parsed = switch ScenarioParser.parse(records) {
+			case ReadOk(value): value;
+			case ReadError(_): throw "deferred-validation bytes did not parse";
+		};
+		return switch ScenarioValidator.validate(parsed, new Registry()) {
+			case ReadError(diagnostics): diagnostics;
+			case ReadOk(_): throw "deferred-validation oracle unexpectedly accepted the invalid rule";
+		}
 	}
 
 	static function expectValid(session:EditorSession, label:String):Bytes {
@@ -1575,7 +4675,7 @@ final class EditorProbe {
 
 	static function expectApplied(result:EditorEditResult, family:EditorCommandFamily, label:String):Void {
 		switch result {
-			case EditApplied(actual, _, _, _):
+			case EditApplied(actual, _, _, _, _):
 				require(actual == family, '$label reported the wrong command family');
 			case EditUnchanged(_):
 				throw '$label unexpectedly made no change';
@@ -1586,7 +4686,7 @@ final class EditorProbe {
 
 	static function expectHistory(result:EditorHistoryResult, family:EditorCommandFamily, label:String):Void {
 		switch result {
-			case HistoryApplied(actual, _, _, _):
+			case HistoryApplied(actual, _, _, _, _):
 				require(actual == family, '$label reported the wrong command family');
 			case HistoryRejected(error):
 				throw '$label was rejected: $error';
@@ -1720,12 +4820,34 @@ final class EditorProbe {
 			extensions: source.extensions
 		};
 
+	/** Replace only one private scenario's world for focused codec comparisons. */
+	static function withWorld(source:Scenario, world:ScenarioWorld):Scenario
+		return {
+			formatVersion: source.formatVersion,
+			requiredFeatures: source.requiredFeatures,
+			optionalFeatures: source.optionalFeatures,
+			id: source.id,
+			assetPack: source.assetPack,
+			messages: source.messages,
+			title: source.title,
+			mode: source.mode,
+			environment: source.environment,
+			world: world,
+			objects: source.objects,
+			story: source.story,
+			flow: source.flow,
+			extensions: source.extensions
+		};
+
 	static inline function transform(x:Int, y:Int, z:Int):caxecraft.scenario.ScenarioGeometry.ScenarioTransform
+		return transformYaw(x, y, z, 0);
+
+	static inline function transformYaw(x:Int, y:Int, z:Int, yawDegrees:Int):caxecraft.scenario.ScenarioGeometry.ScenarioTransform
 		return {
 			xMilli: x,
 			yMilli: y,
 			zMilli: z,
-			yawDegrees: 0
+			yawDegrees: yawDegrees
 		};
 
 	static function hash(bytes:Bytes):Int {
@@ -1767,6 +4889,9 @@ private final class Registry implements ScenarioContentRegistry {
 		return -1;
 	}
 
+	public function blockContentIdForStorageCode(code:Int):Null<ContentId>
+		return code == 0 ? new ContentId("caxecraft:air") : code == 3 ? new ContentId("caxecraft:stone") : null;
+
 	public function hasFluid(id:ContentId):Bool
 		return id.text() == "caxecraft:water";
 
@@ -1789,13 +4914,16 @@ private final class Registry implements ScenarioContentRegistry {
 		return id.text() == "caxecraft:mechanism";
 
 	public function hasState(id:ContentId):Bool
-		return id.text() == "caxecraft:idle";
+		return id.text() == "caxecraft:active" || id.text() == "caxecraft:idle";
+
+	public function statefulObjectHasState(objectType:ContentId, state:ContentId):Bool
+		return hasStatefulObject(objectType) && hasState(state);
 
 	public function hasEffect(id:ContentId):Bool
-		return false;
+		return id.text() == "caxecraft:spark";
 
 	public function hasSignal(id:ContentId):Bool
-		return false;
+		return id.text() == "caxecraft:coverage-signal";
 
 	public function maximumItemQuantity(id:ContentId):Int
 		return 64;

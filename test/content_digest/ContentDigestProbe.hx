@@ -1,6 +1,6 @@
 import haxe.crypto.Sha256;
 import haxe.io.Bytes;
-import reflaxe.c.emit.CContentDigest.sha256Hex;
+import reflaxe.c.CContentDigest.sha256Hex;
 
 /**
 	Checks the compiler's Eval-optimized SHA-256 against independent evidence.

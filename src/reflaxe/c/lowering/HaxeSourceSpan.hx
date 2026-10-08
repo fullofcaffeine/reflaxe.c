@@ -83,6 +83,7 @@ class HaxeSourceSpan {
 class HaxeSourceSpanResolver {
 	final fallbackPath:String;
 	final collectWork:Bool;
+	final positionOverrides:Map<String, Position>;
 	final spansByExactPosition:Map<String, HxcSourceSpan> = [];
 
 	/** Number of conversions requested while profiling was enabled. */
@@ -98,9 +99,10 @@ class HaxeSourceSpanResolver {
 	public var cpuSeconds(default, null) = 0.0;
 
 	/** Create a resolver for one logical source owner. */
-	public function new(fallbackPath:String, collectWork:Bool) {
+	public function new(fallbackPath:String, collectWork:Bool, ?positionOverrides:Map<String, Position>) {
 		this.fallbackPath = fallbackPath;
 		this.collectWork = collectWork;
+		this.positionOverrides = positionOverrides == null ? [] : positionOverrides;
 	}
 
 	/**
@@ -114,6 +116,9 @@ class HaxeSourceSpanResolver {
 		final started = collectWork ? Sys.cpuTime() : 0.0;
 		final info = Context.getPosInfos(position);
 		final key = info.file + "\n" + info.min + ":" + info.max;
+		final replacement = positionOverrides.get(key);
+		final resolvedPosition = replacement == null ? position : replacement;
+		final resolvedInfo = replacement == null ? info : Context.getPosInfos(replacement);
 		final cached = spansByExactPosition.get(key);
 		final result = if (cached != null) {
 			if (collectWork)
@@ -122,7 +127,7 @@ class HaxeSourceSpanResolver {
 		} else {
 			if (collectWork)
 				computationCount++;
-			final computed = HaxeSourceSpan.fromPositionInfo(position, info.file, fallbackPath);
+			final computed = HaxeSourceSpan.fromPositionInfo(resolvedPosition, resolvedInfo.file, fallbackPath);
 			spansByExactPosition.set(key, computed);
 			computed;
 		};

@@ -2,6 +2,7 @@ package reflaxe.c.ir;
 
 import haxe.io.Bytes;
 import reflaxe.c.ir.HxcIR;
+import reflaxe.c.ir.HxcIRValidator.ValidatedHxcIRProgram;
 
 /** Canonical, source-aware text dump for semantic review and golden tests. */
 class HxcIRDumper {
@@ -11,11 +12,27 @@ class HxcIRDumper {
 	public function new() {}
 
 	/** Render the complete canonical program text used by reports and snapshots. */
-	public function dump(program:HxcIRProgram):String {
+	public function dump(program:ValidatedHxcIRProgram):String {
 		final snapshot = dumpSnapshot(program, true);
 		final complete = snapshot.complete;
 		if (complete == null)
 			throw new haxe.Exception("complete HxcIR dump was not captured");
+		return complete;
+	}
+
+	/**
+		Render the function-free raw program used while constructing replay keys.
+
+		This is a builder-only exception to the validated freeze boundary. The
+		caller owns a deliberately incomplete program before function construction,
+		so it cannot pass validation yet. Production reports, analyses, and emission
+		must use `dump` or `dumpSnapshot` with `ValidatedHxcIRProgram`.
+	**/
+	public function dumpBuilderProgram(program:HxcIRProgram):String {
+		final snapshot = dumpProgram(program.schemaVersion, program.dynamicPlan, program.dispatch, program.modules, true);
+		final complete = snapshot.complete;
+		if (complete == null)
+			throw new haxe.Exception("complete builder HxcIR dump was not captured");
 		return complete;
 	}
 
@@ -27,12 +44,19 @@ class HxcIRDumper {
 		the ordinary dump gives both consumers one exhaustive HxcIR traversal
 		instead of inventing a second hash walker or rendering the program again.
 	**/
-	public function dumpSnapshot(program:HxcIRProgram, includeComplete:Bool):HxcIRDumpSnapshot {
-		output = ['hxcir schema=${program.schemaVersion}'];
+	public function dumpSnapshot(program:ValidatedHxcIRProgram, includeComplete:Bool):HxcIRDumpSnapshot {
+		return dumpProgram(program.schemaVersion, program.dynamicPlan, program.dispatch, program.modules, includeComplete);
+	}
+
+	function dumpProgram(schemaVersion:Int, dynamicPlan:HxcIRDynamicPlan, dispatch:HxcIRDispatchPlan, modules:Array<HxcIRModule>,
+			includeComplete:Bool):HxcIRDumpSnapshot {
+		output = ['hxcir schema=$schemaVersion'];
 		functionRanges = [];
-		if (program.dispatch.layouts.length > 0 || program.dispatch.slots.length > 0 || program.dispatch.tables.length > 0)
-			dumpDispatch(program.dispatch);
-		for (module in sorted(program.modules, item -> item.id)) {
+		if (dynamicPlan.types.length > 0 || dynamicPlan.members.length > 0 || dynamicPlan.callShapes.length > 0 || dynamicPlan.operations.length > 0)
+			dumpDynamic(dynamicPlan);
+		if (dispatch.layouts.length > 0 || dispatch.slots.length > 0 || dispatch.tables.length > 0)
+			dumpDispatch(dispatch);
+		for (module in sorted(modules, item -> item.id)) {
 			dumpModule(module);
 		}
 		final functions:Array<HxcIRFunctionDump> = [];
@@ -43,6 +67,24 @@ class HxcIRDumper {
 			});
 		}
 		return new HxcIRDumpSnapshot(includeComplete ? output.join("\n") + "\n" : null, functions);
+	}
+
+	function dumpDynamic(plan:HxcIRDynamicPlan):Void {
+		line("dynamic");
+		for (type in sorted(plan.types, item -> item.id)) {
+			final sourceType = type.sourceType == null ? "none" : typeRef(type.sourceType);
+			line('  type ${quote(type.id)} tag=${type.typeId} source-type=$sourceType category=${dynamicCategory(type.category)} storage=${dynamicStorage(type.storage)} ${source(type.source)}');
+		}
+		for (shape in sorted(plan.callShapes, item -> item.id)) {
+			final resultTypeId = shape.resultTypeId == null ? "void" : quote(shape.resultTypeId);
+			line('  call-shape ${quote(shape.id)} parameters=${strings(shape.parameterTypeIds)} result=$resultTypeId ${source(shape.source)}');
+		}
+		for (member in sorted(plan.members, item -> item.id)) {
+			line('  member ${quote(member.id)} owner=${quote(member.ownerTypeId)} token=${member.token} source-name=${quote(member.sourceName)} ${dynamicMember(member.kind)} ${source(member.source)}');
+		}
+		for (operation in sorted(plan.operations, item -> item.id))
+			line('  operation ${quote(operation.id)} ${dynamicOperation(operation.kind)} ${source(operation.source)}');
+		line("end dynamic");
 	}
 
 	function dumpDispatch(plan:HxcIRDispatchPlan):Void {
@@ -111,12 +153,20 @@ class HxcIRDumper {
 	function dumpFunction(fn:HxcIRFunction):Void {
 		final start = output.length;
 		final borrowedReturn = fn.borrowedSpanReturn == null ? "" : ' borrowed-span-return=${borrowedSpanReturn(fn.borrowedSpanReturn)}';
-		line('  function ${quote(fn.id)} name=${quote(fn.displayName)} returns=${typeRef(fn.returnType)}$borrowedReturn failure=${functionFailure(fn.failureConvention)} entry=${quote(fn.entryBlockId)} ${source(fn.source)}');
+		final exceptionStrategy = fn.exceptionStrategy == null ? "none" : renderExceptionStrategy(fn.exceptionStrategy);
+		line('  function ${quote(fn.id)} name=${quote(fn.displayName)} returns=${typeRef(fn.returnType)}$borrowedReturn failure=${functionFailure(fn.failureConvention)} exception-strategy=$exceptionStrategy entry=${quote(fn.entryBlockId)} ${source(fn.source)}');
 		final managedRoots = fn.managedRoots == null ? [] : fn.managedRoots;
 		for (root in managedRoots)
 			line('    managed-root ${quote(root.id)} value=${quote(root.valueId)} path=${quote(HxcIRManagedRootPaths.key(root.projections))} ${source(root.source)}');
+		final exceptionRegions = fn.exceptionRegions == null ? [] : fn.exceptionRegions;
+		for (region in exceptionRegions)
+			line('    exception-region ${quote(region.id)} frame=${quote(region.frameStorageId)} payload=${quote(region.payloadValueId)} ${source(region.source)}');
+		final exceptionCleanups = fn.exceptionCleanups == null ? [] : fn.exceptionCleanups;
+		for (cleanup in exceptionCleanups)
+			line('    exception-cleanup ${quote(cleanup.id)} storage=${quote(cleanup.storageId)} action=${quote(cleanup.actionId)} place=${renderPlace(cleanup.place)} implementation=${implementation(cleanup.implementation)} ${source(cleanup.source)}');
 		final borrowedInterfaceParameterIds = fn.borrowedInterfaceParameterIds == null ? [] : fn.borrowedInterfaceParameterIds;
 		final borrowedAggregateParameterIds = fn.borrowedAggregateParameterIds == null ? [] : fn.borrowedAggregateParameterIds;
+		final mutableAggregateBorrowParameterIds = fn.mutableAggregateBorrowParameterIds == null ? [] : fn.mutableAggregateBorrowParameterIds;
 		for (parameter in fn.parameters) {
 			final ownership = if (fn.borrowedClassParameterIds.indexOf(parameter.id) >= 0) {
 				"borrowed-class";
@@ -124,6 +174,8 @@ class HxcIRDumper {
 				"borrowed-interface";
 			} else if (borrowedAggregateParameterIds.indexOf(parameter.id) >= 0) {
 				"borrowed-interface-record";
+			} else if (mutableAggregateBorrowParameterIds.indexOf(parameter.id) >= 0) {
+				"mutable-aggregate-borrow";
 			} else {
 				"owned-or-value";
 			};
@@ -131,6 +183,7 @@ class HxcIRDumper {
 		}
 		final borrowedInterfaceLocalIds = fn.borrowedInterfaceLocalIds == null ? [] : fn.borrowedInterfaceLocalIds;
 		final borrowedAggregateLocalIds = fn.borrowedAggregateLocalIds == null ? [] : fn.borrowedAggregateLocalIds;
+		final mutableAggregateBorrowLocalIds = fn.mutableAggregateBorrowLocalIds == null ? [] : fn.mutableAggregateBorrowLocalIds;
 		for (local in sorted(fn.locals, item -> item.id)) {
 			final ownership = if (fn.borrowedClassLocalIds.indexOf(local.id) >= 0) {
 				"borrowed-class";
@@ -138,6 +191,8 @@ class HxcIRDumper {
 				"borrowed-interface";
 			} else if (borrowedAggregateLocalIds.indexOf(local.id) >= 0) {
 				"borrowed-interface-record";
+			} else if (mutableAggregateBorrowLocalIds.indexOf(local.id) >= 0) {
+				"mutable-aggregate-borrow";
 			} else {
 				"owned-or-value";
 			};
@@ -188,6 +243,8 @@ class HxcIRDumper {
 				'binary operation=${quote(operationId)} left=${quote(leftValueId)} right=${quote(rightValueId)} implementation=${implementation(selected)}';
 			case IRIOConvert(valueId, kind, targetType, selected, failure):
 				'convert value=${quote(valueId)} kind=${conversion(kind)} target=${typeRef(targetType)} implementation=${implementation(selected)} failure=${failure == null ? "none" : failureEdge(failure)}';
+			case IRIODynamic(operation): dynamicInstruction(operation);
+			case IRIOException(operation): exceptionInstruction(operation);
 			case IRIOCall(call): renderCall(call);
 			case IRIOConstructAggregate(instanceId, fields):
 				'construct-aggregate instance=${quote(instanceId)} fields=[${fields.map(field -> quote(field.name) + "=" + quote(field.valueId)).join(",")}]';
@@ -236,6 +293,87 @@ class HxcIRDumper {
 				'lifetime place=${renderPlace(place)} transition=${state(from)}->${state(to)} reason=${quote(reason)}';
 		}
 	}
+
+	function exceptionInstruction(operation:HxcIRExceptionInstruction):String
+		return switch operation {
+			case IREFramePush(regionId): 'exception-frame-push region=${quote(regionId)}';
+			case IREFrameSetJmp(regionId): 'exception-frame-setjmp region=${quote(regionId)}';
+			case IREFramePayload(regionId): 'exception-frame-payload region=${quote(regionId)}';
+			case IREFramePop(regionId): 'exception-frame-pop region=${quote(regionId)}';
+			case IRECleanupPush(cleanupId): 'exception-cleanup-push cleanup=${quote(cleanupId)}';
+			case IRECleanupRun(cleanupId): 'exception-cleanup-run cleanup=${quote(cleanupId)}';
+			case IRECleanupDiscard(cleanupId): 'exception-cleanup-discard cleanup=${quote(cleanupId)}';
+		};
+
+	function renderExceptionStrategy(value:HxcIRExceptionStrategy):String
+		return switch value {
+			case IRESClosedResult: "closed-result";
+			case IRESContainedRuntime: "contained-runtime";
+		};
+
+	function dynamicInstruction(operation:HxcIRDynamicInstruction):String
+		return switch operation {
+			case IRDBox(valueId, operationId):
+				'dynamic-box value=${quote(valueId)} operation=${quote(operationId)}';
+			case IRDBoxNull(operationId):
+				'dynamic-box-null operation=${quote(operationId)}';
+			case IRDBoxTypeToken(operationId):
+				'dynamic-box-type-token operation=${quote(operationId)}';
+			case IRDUnbox(valueId, operationId, failure):
+				'dynamic-unbox value=${quote(valueId)} operation=${quote(operationId)} failure=${failureEdge(failure)}';
+			case IRDGet(receiverValueId, operationId, failure):
+				'dynamic-get receiver=${quote(receiverValueId)} operation=${quote(operationId)} failure=${failureEdge(failure)}';
+			case IRDSet(receiverValueId, valueId, operationId, failure):
+				'dynamic-set receiver=${quote(receiverValueId)} value=${quote(valueId)} operation=${quote(operationId)} failure=${failureEdge(failure)}';
+			case IRDCall(callableValueId, arguments, operationId, failure):
+				'dynamic-call callable=${quote(callableValueId)} arguments=${strings(arguments)} operation=${quote(operationId)} failure=${failureEdge(failure)}';
+			case IRDInvoke(receiverValueId, arguments, operationId, failure):
+				'dynamic-invoke receiver=${quote(receiverValueId)} arguments=${strings(arguments)} operation=${quote(operationId)} failure=${failureEdge(failure)}';
+			case IRDEqual(leftValueId, rightValueId, operationId):
+				'dynamic-equal left=${quote(leftValueId)} right=${quote(rightValueId)} operation=${quote(operationId)}';
+		};
+
+	function dynamicCategory(category:HxcIRDynamicCategory):String
+		return switch category {
+			case IRDCNull: "null";
+			case IRDCBool: "bool";
+			case IRDCInt: "int";
+			case IRDCFloat: "float";
+			case IRDCString: "string";
+			case IRDCArray: "array";
+			case IRDCObject: "object";
+			case IRDCEnum: "enum";
+			case IRDCFunction: "function";
+			case IRDCTypeValue: "type-value";
+		};
+
+	function dynamicStorage(storage:HxcIRDynamicStorage):String
+		return switch storage {
+			case IRDSInlineNull: "inline-null";
+			case IRDSInlineBool: "inline-bool";
+			case IRDSInlineInt32: "inline-int32";
+			case IRDSInlineFloat64: "inline-float64";
+			case IRDSManagedReference: "managed-reference";
+			case IRDSManagedWrapper: "managed-wrapper";
+			case IRDSStaticToken: "static-token";
+		};
+
+	function dynamicMember(kind:HxcIRDynamicMemberKind):String
+		return switch kind {
+			case IRDMField(valueTypeId, mutable): 'field value-type=${quote(valueTypeId)} mutable=$mutable';
+			case IRDMMethod(callShapeIds): 'method call-shapes=${strings(callShapeIds)}';
+		};
+
+	function dynamicOperation(kind:HxcIRDynamicOperationKind):String
+		return switch kind {
+			case IRDOKBox(typeId): 'box type=${quote(typeId)}';
+			case IRDOKUnbox(typeId): 'unbox type=${quote(typeId)}';
+			case IRDOKGet(memberId): 'get member=${quote(memberId)}';
+			case IRDOKSet(memberId): 'set member=${quote(memberId)}';
+			case IRDOKCall(callableTypeId, callShapeId): 'call callable=${quote(callableTypeId)} shape=${quote(callShapeId)}';
+			case IRDOKInvoke(memberId, callShapeId): 'invoke member=${quote(memberId)} shape=${quote(callShapeId)}';
+			case IRDOKEqual(leftTypeId, rightTypeId): 'equal left=${quote(leftTypeId)} right=${quote(rightTypeId)}';
+		};
 
 	function managedCarrierAcquisition(acquisition:HxcIRManagedCarrierAcquisition):String
 		return switch acquisition {
@@ -316,6 +454,7 @@ class HxcIRDumper {
 		return switch value {
 			case IRFTBlock(blockId): 'block(${quote(blockId)})';
 			case IRFTPropagate: "propagate";
+			case IRFTUnwind: "unwind";
 			case IRFTAbort: "abort";
 		}
 	}

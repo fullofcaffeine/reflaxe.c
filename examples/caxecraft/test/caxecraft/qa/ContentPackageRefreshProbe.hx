@@ -59,7 +59,7 @@ final class ContentPackageRefreshProbe {
 		final normalized = ready(planContentPackageRefresh(store, "caxecraft.package.json", levelPath, crlf));
 		require(!normalized.hasChanges(), "an in-memory CRLF edit did not converge on the checked-in canonical package");
 
-		final changedBytes = Bytes.ofString(StringTools.replace(canonical.toString(), "Caxecraft: Evergrove Prologue", "Caxecraft: Evergrove Preview"));
+		final changedBytes = Bytes.ofString(StringTools.replace(canonical.toString(), "Caxecraft: Evergrove", "Caxecraft: Evergrove Preview"));
 		final changed = ready(planContentPackageRefresh(store, "caxecraft.package.json", levelPath, changedBytes));
 		require(changed.fileCount() == 4, "one runtime map edit did not plan four dependency-ordered files");
 		require(changed.fileAt(0).logicalPath == levelPath, "the map was not first in refresh order");

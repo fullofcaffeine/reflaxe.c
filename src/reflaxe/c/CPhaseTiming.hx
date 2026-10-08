@@ -18,8 +18,10 @@ import eval.vm.Gc;
 	A span is one timed region. Spans form a strict parent/child stack, so each
 	record can report both its complete duration and the duration left after
 	subtracting nested work. This prevents a parent such as "semantic lowering"
-	from being added to its children and counted twice. Normal builds create no
-	profile state and preserve the older text records when profiling is enabled.
+	from being added to its children and counted twice. A separate lightweight
+	progress define emits timing-free phase transitions for interactive hosts.
+	Normal builds create neither state, and profiling preserves its older text
+	records and structured schema.
 **/
 /** Closed names for the compiler phases exposed by the opt-in profiler. */
 enum abstract CPhaseTimingId(String) to String {
@@ -189,6 +191,16 @@ private typedef CProfileSpanRecord = {
 	final residentBytesAtEnd:Null<Float>;
 }
 
+/** One deterministic progress marker for an interactive compiler request. */
+private typedef CPhaseProgressRecord = {
+	final schemaVersion:Int;
+	final state:String;
+	final phase:Null<String>;
+	final profile:Null<String>;
+	final buildMode:Null<String>;
+	final status:Null<String>;
+}
+
 /**
 	Stable algorithmic work attached to one detailed compiler span.
 
@@ -233,6 +245,7 @@ typedef CProfileFunctionBuildWork = {
 	final addedArrays:Int;
 	final addedIntMaps:Int;
 	final addedStringMaps:Int;
+	final addedTypedMaps:Int;
 	final addedBytes:Int;
 	final addedOptionals:Int;
 	final addedImportTypes:Int;
@@ -454,62 +467,76 @@ class CDetailTimer {
 @:noCompletion
 class CPhaseTimer {
 	final id:CPhaseTimingId;
-	final span:CProfileSpan;
+	final span:Null<CProfileSpan>;
+	final reportsProgress:Bool;
 
-	public function new(id:CPhaseTimingId) {
+	public function new(id:CPhaseTimingId, collectsProfile:Bool, reportsProgress:Bool) {
 		this.id = id;
-		this.span = CPhaseTiming.openSpan("phase", Std.string(id), null, Context.timer("hxc " + Std.string(id)));
+		this.reportsProgress = reportsProgress;
+		this.span = collectsProfile ? CPhaseTiming.openSpan("phase", Std.string(id), null, Context.timer("hxc " + Std.string(id))) : null;
+		if (reportsProgress)
+			CPhaseTiming.emitProgress("phase-started", Std.string(id));
 	}
 
 	public function stop():Void {
-		final elapsedMicroseconds = CPhaseTiming.closeSpan(span, "ok");
-		Sys.println(CPhaseTiming.REPORT_PREFIX + Std.string(id) + "\t" + CPhaseTiming.legacyDuration(elapsedMicroseconds));
+		if (span != null) {
+			final elapsedMicroseconds = CPhaseTiming.closeSpan(span, "ok");
+			Sys.println(CPhaseTiming.REPORT_PREFIX + Std.string(id) + "\t" + CPhaseTiming.legacyDuration(elapsedMicroseconds));
+		}
+		if (reportsProgress)
+			CPhaseTiming.emitProgress("phase-completed", Std.string(id));
 	}
 }
 
 /**
-	Opt-in nested timing and bounded counters for the real C compiler pipeline.
+	Owns opt-in profiling and lightweight progress for the real C compiler pipeline.
 
 	Call `beginRequest` before the first typed-input span and `finishRequest`
 	after output ownership. `CDiagnostic.fatal` calls `abortRequest` so an
 	expected compiler failure closes every open span and reports which phase was
-	active. The structured JSON Lines stream is diagnostic output, never a
-	generated artifact or a cross-request cache.
+	active. The independent progress stream reports deterministic phase changes
+	without allocating the profiling graph. Both streams are diagnostic output,
+	never generated artifacts or cross-request caches.
 **/
 @:noCompletion
 class CPhaseTiming {
 	public static inline final DEFINE = "reflaxe_c_phase_timing";
+	public static inline final PROGRESS_DEFINE = "reflaxe_c_phase_progress";
 	public static inline final REPORT_PREFIX = "HXC_PHASE_TIMING\t";
 	public static inline final DETAIL_REPORT_PREFIX = "HXC_DETAIL_TIMING\t";
 	public static inline final PROFILE_REPORT_PREFIX = "HXC_PROFILE\t";
+	public static inline final PROGRESS_REPORT_PREFIX = "HXC_PHASE_PROGRESS\t";
 	public static inline final PROFILE_SCHEMA_VERSION = 11;
+	public static inline final PROGRESS_SCHEMA_VERSION = 1;
 
 	static var active:Null<CProfileRequestState> = null;
+	static var progressActive:Bool = false;
 
-	/** Start a fresh profile only when the opt-in define is present. */
+	/** Start fresh profile and progress state only for their independent defines. */
 	public static function beginRequest():Void {
-		if (!Context.defined(DEFINE)) {
-			active = null;
-			return;
-		}
-		if (active != null)
+		if (active != null || progressActive)
 			abortRequest("superseded");
-		active = new CProfileRequestState("request-1");
+		active = Context.defined(DEFINE) ? new CProfileRequestState("request-1") : null;
+		progressActive = Context.defined(PROGRESS_DEFINE);
+		if (progressActive)
+			emitProgress("request-started");
 	}
 
 	/** Attach stable request configuration after normal profile resolution. */
 	public static function describeRequest(profile:String, buildMode:String):Void {
 		final state = active;
-		if (state == null)
-			return;
-		state.profile = profile;
-		state.buildMode = buildMode;
-		final version = Context.definedValue("haxe");
-		state.haxeVersion = version == null || version == "" ? "unknown" : version;
+		if (state != null) {
+			state.profile = profile;
+			state.buildMode = buildMode;
+			final version = Context.definedValue("haxe");
+			state.haxeVersion = version == null || version == "" ? "unknown" : version;
+		}
+		if (progressActive)
+			emitProgress("request-configured", null, profile, buildMode);
 	}
 
 	public static function start(id:CPhaseTimingId):Null<CPhaseTimer> {
-		return active == null ? null : new CPhaseTimer(id);
+		return active == null && !progressActive ? null : new CPhaseTimer(id, active != null, progressActive);
 	}
 
 	public static function stop(timer:Null<CPhaseTimer>):Void {
@@ -558,12 +585,16 @@ class CPhaseTiming {
 	/** Emit counters and the final request record after every successful span closed. */
 	public static function finishRequest():Void {
 		final state = active;
-		if (state == null)
-			return;
-		if (state.spans.length != 0)
-			throw new haxe.Exception('compiler profile request ended with ${state.spans.length} open span(s)');
-		emitRequest(state, "ok");
-		active = null;
+		if (state != null) {
+			if (state.spans.length != 0)
+				throw new haxe.Exception('compiler profile request ended with ${state.spans.length} open span(s)');
+			emitRequest(state, "ok");
+			active = null;
+		}
+		if (progressActive) {
+			emitProgress("request-completed", null, null, null, "ok");
+			progressActive = false;
+		}
 	}
 
 	/**
@@ -575,14 +606,33 @@ class CPhaseTiming {
 	**/
 	public static function abortRequest(status:String = "failed"):Void {
 		final state = active;
-		if (state == null)
-			return;
-		while (state.spans.length > 0) {
-			final span = state.spans[state.spans.length - 1];
-			closeSpan(span, status);
+		if (state != null) {
+			while (state.spans.length > 0) {
+				final span = state.spans[state.spans.length - 1];
+				closeSpan(span, status);
+			}
+			emitRequest(state, status);
+			active = null;
 		}
-		emitRequest(state, status);
-		active = null;
+		if (progressActive) {
+			emitProgress("request-aborted", null, null, null, status);
+			progressActive = false;
+		}
+	}
+
+	/** Emit one flushed, timing-free marker that a launcher can retain on timeout. */
+	@:noCompletion
+	public static function emitProgress(state:String, ?phase:String, ?profile:String, ?buildMode:String, ?status:String):Void {
+		final record:CPhaseProgressRecord = {
+			schemaVersion: PROGRESS_SCHEMA_VERSION,
+			state: state,
+			phase: phase,
+			profile: profile,
+			buildMode: buildMode,
+			status: status
+		};
+		Sys.println(PROGRESS_REPORT_PREFIX + Json.stringify(record));
+		Sys.stdout().flush();
 	}
 
 	/**

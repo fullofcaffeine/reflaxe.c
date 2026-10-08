@@ -12,7 +12,13 @@ import reflaxe.c.lowering.CBodyLowering.CBodyFunctionInput;
 import reflaxe.c.lowering.CBodyLowering.CBodyGlobalInput;
 import reflaxe.c.lowering.CBodyLowering.CBodyInitializerInput;
 import reflaxe.c.lowering.CBodyConstructor.CBodyConstructorInput;
+import reflaxe.c.lowering.CBodyArray.CBodyArrayRecognition;
 import reflaxe.c.lowering.CBodyBytes.CBodyBytesRecognition;
+import reflaxe.c.lowering.CBodyDate.CBodyDateRecognition;
+import reflaxe.c.lowering.CBodyIntMap.CBodyIntMapRecognition;
+import reflaxe.c.lowering.CBodyIterator.CBodyIteratorRecognition;
+import reflaxe.c.lowering.CBodyStringMap.CBodyStringMapRecognition;
+import reflaxe.c.lowering.CBodyTypedMap.CBodyTypedMapRecognition;
 import reflaxe.c.lowering.CBodyDispatch.CBodyDispatchCatalog;
 import reflaxe.c.lowering.CBodyDispatch.CBodyDispatchGraph;
 import reflaxe.c.lowering.CBodyIntrinsicReceiver.CBodyIntrinsicReceiverFamily;
@@ -123,8 +129,18 @@ class CStaticFunctionGraphCollector {
 	function collectExpression(expression:TypedExpr, caller:CBodyFunctionInput, currentConstructor:Null<CBodyConstructorInput>,
 			available:Map<String, CBodyFunctionInput>, availableConstructors:Map<String, CBodyConstructorInput>, byId:Map<String, CBodyFunctionInput>,
 			pending:Array<CBodyFunctionInput>, constructorsById:Map<String, CBodyConstructorInput>, pendingConstructors:Array<CBodyConstructorInput>,
-			constructorDependencies:Map<String, Array<CConstructorDependency>>):Void {
+			constructorDependencies:Map<String, Array<CConstructorDependency>>, ?dynamicClasses:Map<Int, Ref<ClassType>>):Void {
+		final exactDynamicClasses:Map<Int, Ref<ClassType>> = dynamicClasses == null ? [] : dynamicClasses;
 		switch expression.expr {
+			case TVar(variable, initializer) if (isDynamicType(variable.t)):
+				if (initializer != null)
+					setExactDynamicClass(exactDynamicClasses, variable.id, exactDynamicClass(initializer, exactDynamicClasses));
+			case TBinop(OpAssign, left, right):
+				switch unwrapExpression(left).expr {
+					case TLocal(variable) if (isDynamicType(left.t)):
+						setExactDynamicClass(exactDynamicClasses, variable.id, exactDynamicClass(right, exactDynamicClasses));
+					case _:
+				}
 			case TField(_, FStatic(classReference, fieldReference)) if (isFunctionType(expression.t)):
 				final owner = classReference.get();
 				final field = fieldReference.get();
@@ -137,15 +153,25 @@ class CStaticFunctionGraphCollector {
 					if (target != null)
 						add(target, byId, pending);
 				}
-			case TNew(classReference, _, _):
-				final target = constructorForGraph(classReference, availableConstructors);
+			case TNew(classReference, _, _)
+				if (CBodyArrayRecognition.isCoreArray(classReference)
+					|| CBodyIntMapRecognition.isIntMap(classReference)
+					|| CBodyIteratorRecognition.arrayKind(classReference) != null
+					|| CBodyIteratorRecognition.isMapKeyValue(classReference)
+					|| CBodyStringMapRecognition.isStringMap(classReference)
+					|| CBodyTypedMapRecognition.family(classReference) != null):
+				// These standard containers have compiler-owned shared representations.
+				// Their target-source classes exist for natural Haxe typing, not ordinary
+				// construction, method reachability, or virtual-table discovery.
+			case TNew(classReference, parameters, _):
+				final target = constructorForGraph(classReference, parameters, caller, expression.pos, availableConstructors);
 				if (target != null) {
 					addConstructor(target, constructorsById, pendingConstructors);
 				}
 				if (currentConstructor != null && target != null) {
 					addConstructorDependency(currentConstructor.id, target.id, expression.pos, constructorDependencies);
 				}
-				for (method in requireDispatchCatalog().markConstructed(classReference))
+				for (method in requireDispatchCatalog().markConstructed(classReference, parameters, caller.specialization, expression.pos, caller.sourcePath))
 					add(method, byId, pending);
 			case TCall(callee, _) if (currentConstructor != null && isSuperCall(callee)):
 				final baseId = currentConstructor.baseConstructorId;
@@ -164,8 +190,22 @@ class CStaticFunctionGraphCollector {
 					add(method, byId, pending);
 			case TCall(callee, arguments)
 				if (!isCompilerIntrinsicCall(callee)
+					&& !isStructInitIntrinsicCall(callee)
 					&& !isBytesIntrinsicCall(callee)
+					&& !isDateIntrinsicCall(callee)
+					&& !isDateHostIntrinsicCall(callee)
+					&& !isTimerStampIntrinsicCall(callee)
 					&& !CBodyFixedArray.isZeroCall(callee, arguments.length)):
+				switch unwrapExpression(callee).expr {
+					case TField(receiver, FDynamic(name)):
+						final exactClass = exactDynamicClass(receiver, exactDynamicClasses);
+						if (exactClass != null) {
+							final method = requireDispatchCatalog().exactDynamicMethod(exactClass, name);
+							if (method != null)
+								add(method, byId, pending);
+						}
+					case _:
+				}
 				final baseTargetId = directStaticFunctionId(callee);
 				final target = baseTargetId == null ? null : available.get(baseTargetId);
 				if (target != null && baseTargetId != null) {
@@ -195,7 +235,7 @@ class CStaticFunctionGraphCollector {
 				// walking it for reachable calls and function values.
 				if (arguments.length > 0)
 					collectExpression(arguments[0], caller, currentConstructor, available, availableConstructors, byId, pending, constructorsById,
-						pendingConstructors, constructorDependencies);
+						pendingConstructors, constructorDependencies, exactDynamicClasses);
 			case TCall(callee, arguments):
 				// A direct static callee is owned by the TCall case above. Visiting its
 				// field node again would misclassify every ordinary direct call as a
@@ -204,15 +244,56 @@ class CStaticFunctionGraphCollector {
 				// function passed as an argument is still discovered.
 				if (directStaticFunctionId(callee) == null)
 					collectExpression(callee, caller, currentConstructor, available, availableConstructors, byId, pending, constructorsById,
-						pendingConstructors, constructorDependencies);
+						pendingConstructors, constructorDependencies, exactDynamicClasses);
 				for (argument in arguments)
 					collectExpression(argument, caller, currentConstructor, available, availableConstructors, byId, pending, constructorsById,
-						pendingConstructors, constructorDependencies);
+						pendingConstructors, constructorDependencies, exactDynamicClasses);
 			case _:
 				TypedExprTools.iter(expression,
 					child -> collectExpression(child, caller, currentConstructor, available, availableConstructors, byId, pending, constructorsById,
-						pendingConstructors, constructorDependencies));
+						pendingConstructors, constructorDependencies, exactDynamicClasses));
 		}
+	}
+
+	/** Remember one exact class for a Dynamic local, or invalidate an ambiguous flow. */
+	static function setExactDynamicClass(classes:Map<Int, Ref<ClassType>>, compilerId:Int, value:Null<Ref<ClassType>>):Void {
+		if (value == null)
+			classes.remove(compilerId);
+		else
+			classes.set(compilerId, value);
+	}
+
+	/** Recover only source-proven class identity; no name or hierarchy search widens it. */
+	static function exactDynamicClass(expression:TypedExpr, classes:Map<Int, Ref<ClassType>>):Null<Ref<ClassType>> {
+		return switch expression.expr {
+			case TNew(reference, _, _): reference;
+			case TLocal(variable) if (isDynamicType(expression.t)): classes.get(variable.id);
+			case TParenthesis(inner) | TMeta(_, inner) | TCast(inner, _): exactDynamicClass(inner, classes);
+			case _: null;
+		};
+	}
+
+	/** Recognize Dynamic through aliases without turning other broad types into it. */
+	static function isDynamicType(type:Type, depth:Int = 0):Bool {
+		if (depth > 32)
+			return false;
+		return switch type {
+			case TDynamic(_): true;
+			case TMono(reference): final resolved = reference.get(); resolved != null && isDynamicType(resolved, depth + 1);
+			case TLazy(resolve): isDynamicType(resolve(), depth + 1);
+			case TType(reference, parameters):
+				final definition = reference.get();
+				isDynamicType(TypeTools.applyTypeParameters(definition.type, definition.params, parameters), depth + 1);
+			case _: false;
+		};
+	}
+
+	/** Remove syntax wrappers while preserving the typed expression's exact origin. */
+	static function unwrapExpression(expression:TypedExpr):TypedExpr {
+		return switch expression.expr {
+			case TParenthesis(inner) | TMeta(_, inner) | TCast(inner, _): unwrapExpression(inner);
+			case _: expression;
+		};
 	}
 
 	static function isFunctionType(type:Type):Bool {
@@ -250,6 +331,61 @@ class CStaticFunctionGraphCollector {
 			case _: false;
 		};
 
+	/** Keep the compiler-owned Date surface out of ordinary function reachability. */
+	static function isDateIntrinsicCall(callee:TypedExpr):Bool
+		return switch callee.expr {
+			case TField(_, FStatic(classReference, fieldReference)) if (CBodyDateRecognition.isCoreDate(classReference)):
+				switch fieldReference.get().name {
+					case "fromTime" | "fromString": true;
+					case _: false;
+				}
+			case TParenthesis(inner) | TMeta(_, inner) | TCast(inner, _): isDateIntrinsicCall(inner);
+			case _: false;
+		};
+
+	/** Keep the private Date host-service declarations out of extern reachability. */
+	static function isDateHostIntrinsicCall(callee:TypedExpr):Bool
+		return switch callee.expr {
+			case TField(_, FStatic(classReference, fieldReference)) if (CBodyDateRecognition.isDateHost(classReference)):
+				switch fieldReference.get().name {
+					case "localToMilliseconds" | "timezoneOffsetAt" | "wallMilliseconds": true;
+					case _: false;
+				}
+			case TParenthesis(inner) | TMeta(_, inner) | TCast(inner, _): isDateHostIntrinsicCall(inner);
+			case _: false;
+		};
+
+	/** Keep the exact monotonic Timer.stamp service out of extern reachability. */
+	static function isTimerStampIntrinsicCall(callee:TypedExpr):Bool
+		return switch callee.expr {
+			case TField(_, FStatic(classReference, fieldReference)): CBodyDateRecognition.isCoreTimer(classReference) && fieldReference.get()
+					.name == "stamp";
+			case TParenthesis(inner) | TMeta(_, inner) | TCast(inner, _): isTimerStampIntrinsicCall(inner);
+			case _: false;
+		};
+
+	/**
+	 * Keep typed imported-struct initializers out of generic reachability.
+	 *
+	 * `c.StructInit.make` and `zero` are compiler intrinsics: body lowering
+	 * validates their imported result layout and emits structural HxcIR. Their
+	 * extern abstract implementation is not an ordinary generic Haxe function.
+	 * The caller still walks every argument below the call, so nested user calls
+	 * remain reachable without specializing the intrinsic implementation.
+	 */
+	static function isStructInitIntrinsicCall(callee:TypedExpr):Bool
+		return switch callee.expr {
+			case TField(_, FStatic(classReference, fieldReference)): final method = fieldReference.get()
+					.name; final implementation = classReference.get(); final semanticOwner = switch implementation.kind {
+					case KAbstractImpl(abstractReference): final owner = abstractReference.get(); owner.pack.join(".") == "c" && owner.name == "StructInit";
+					case _: false;
+				}; final implementationPath = implementation.pack.concat([implementation.name])
+					.join("."); (semanticOwner
+					|| implementationPath == "c._StructInit.StructInit_Impl_") && (method == "make" || method == "zero");
+			case TParenthesis(inner) | TMeta(_, inner) | TCast(inner, _): isStructInitIntrinsicCall(inner);
+			case _: false;
+		};
+
 	function requireDispatchCatalog():CBodyDispatchCatalog {
 		final value = dispatchCatalog;
 		if (value == null)
@@ -277,11 +413,39 @@ class CStaticFunctionGraphCollector {
 		}
 	}
 
-	static function constructorForGraph(reference:Ref<ClassType>, available:Map<String, CBodyConstructorInput>):Null<CBodyConstructorInput> {
+	function constructorForGraph(reference:Ref<ClassType>, parameters:Array<Type>, caller:CBodyFunctionInput, position:haxe.macro.Expr.Position,
+			available:Map<String, CBodyConstructorInput>):Null<CBodyConstructorInput> {
 		final definition = reference.get();
-		if (definition.isExtern || definition.meta.has(":c.layout") || definition.isInterface || definition.params.length != 0)
+		if (definition.isExtern || definition.meta.has(":c.layout") || definition.isInterface)
 			return null;
-		return available.get(CBodyConstructor.id(CBodyConstructor.classPath(reference)));
+		final base = available.get(CBodyConstructor.id(CBodyConstructor.classPath(reference)));
+		if (base == null || definition.params.length == 0)
+			return base;
+		if (definition.params.length != parameters.length)
+			unsupportedAt(position, caller.sourcePath,
+				'TNew(constructor-owner-argument-count:${parameters.length}-for-${definition.params.length}:${base.id})');
+		final canonicalizer = new CGenericTypeCanonicalizer(context.profile);
+		final arguments = parameters.map(parameter ->
+			canonicalizer.normalize(caller.specialization == null ? parameter : caller.specialization.apply(parameter), position,
+			(failurePosition, node) -> unsupportedAt(failurePosition, caller.sourcePath, node), 'TNew(constructor-specialization:${base.id})'));
+		final reason = new CGenericSpecializationReason(CBodyLowering.functionInputId(caller), HaxeSourceSpan.fromPosition(position, caller.sourcePath),
+			position);
+		final specialization = requireSpecializationParts(base.id, "new", definition.params, [], arguments, reason, "constructor.specialization");
+		return {
+			id: specialization.instanceId,
+			modulePath: base.modulePath,
+			declarationPath: base.declarationPath,
+			sourcePath: base.sourcePath,
+			sourceOrder: base.sourceOrder,
+			fieldType: base.fieldType,
+			expression: base.expression,
+			classReference: base.classReference,
+			classParameters: specialization.ownerArguments.map(argument -> argument.type),
+			specialization: specialization,
+			baseConstructorId: base.baseConstructorId,
+			elided: false,
+			canFail: false
+		};
 	}
 
 	static function addConstructor(input:CBodyConstructorInput, byId:Map<String, CBodyConstructorInput>, pending:Array<CBodyConstructorInput>):Void {
@@ -315,8 +479,12 @@ class CStaticFunctionGraphCollector {
 			sourceOrder: input.sourceOrder,
 			fieldType: input.fieldType,
 			expression: input.expression,
+			declarationPosition: input.declarationPosition,
+			sourcePositionOverrides: input.sourcePositionOverrides,
 			typeParameters: [],
-			specialization: null
+			ownerTypeParameters: input.classReference.get().params,
+			specialization: input.specialization,
+			instanceOwner: input.classReference
 		};
 
 	static function isSuperCall(callee:TypedExpr):Bool {
@@ -330,6 +498,12 @@ class CStaticFunctionGraphCollector {
 	function requireSpecialization(base:CBodyFunctionInput, arguments:Array<CGenericTypeArgument>,
 			reason:CGenericSpecializationReason):CGenericFunctionSpecialization {
 		final baseId = CBodyLowering.functionInputId(base);
+		return requireSpecializationParts(baseId, base.fieldName, ownerTypeParameters(base), methodTypeParameters(base), arguments, reason);
+	}
+
+	function requireSpecializationParts(baseId:String, fieldName:String, ownerParameters:Array<TypeParameter>, methodParameters:Array<TypeParameter>,
+			arguments:Array<CGenericTypeArgument>, reason:CGenericSpecializationReason,
+			instancePrefix:String = "function.specialization"):CGenericFunctionSpecialization {
 		final key = CGenericTypeCanonicalizer.functionKey(baseId, arguments);
 		final existing = specializationsByKey.get(key);
 		if (existing != null) {
@@ -342,7 +516,8 @@ class CStaticFunctionGraphCollector {
 				reason.source),
 				reason.position);
 		}
-		final specialization = new CGenericFunctionSpecialization(baseId, base.fieldName, typeParameters(base), arguments, reason);
+		final specialization = new CGenericFunctionSpecialization(baseId, fieldName, ownerParameters, arguments.slice(0, ownerParameters.length),
+			methodParameters, arguments.slice(ownerParameters.length), reason, instancePrefix);
 		final priorKey = specializationKeysByDigest.get(specialization.digest);
 		if (priorKey != null && priorKey != specialization.key) {
 			throw new CBodyEmissionError('generic specialization digest collision `${specialization.digest}` between `$priorKey` and `${specialization.key}`');
@@ -362,13 +537,23 @@ class CStaticFunctionGraphCollector {
 			sourceOrder: base.sourceOrder,
 			fieldType: base.fieldType,
 			expression: base.expression,
-			typeParameters: typeParameters(base),
+			declarationPosition: base.declarationPosition,
+			sourcePositionOverrides: base.sourcePositionOverrides,
+			functionSourcePlan: base.functionSourcePlan,
+			typeParameters: methodTypeParameters(base),
+			ownerTypeParameters: ownerTypeParameters(base),
 			specialization: specialization,
 			instanceOwner: base.instanceOwner
 		};
 
-	static function typeParameters(input:CBodyFunctionInput):Array<TypeParameter>
+	static function methodTypeParameters(input:CBodyFunctionInput):Array<TypeParameter>
 		return input.typeParameters == null ? [] : input.typeParameters;
+
+	static function ownerTypeParameters(input:CBodyFunctionInput):Array<TypeParameter>
+		return input.ownerTypeParameters == null ? [] : input.ownerTypeParameters;
+
+	static function typeParameters(input:CBodyFunctionInput):Array<TypeParameter>
+		return ownerTypeParameters(input).concat(methodTypeParameters(input));
 
 	static function isCompilerIntrinsicCall(callee:TypedExpr):Bool {
 		return switch callee.expr {
@@ -392,6 +577,14 @@ class CStaticFunctionGraphCollector {
 	static function staticFunctionInputs(program:TypedProgramInput):Map<String, CBodyFunctionInput> {
 		final result:Map<String, CBodyFunctionInput> = [];
 		for (declaration in program.declarations) {
+			final declarationTypeParameters = switch declaration.raw {
+				case TClassDecl(reference):
+					switch reference.get().kind {
+						case KAbstractImpl(abstractReference): abstractReference.get().params;
+						case _: reference.get().params;
+					}
+				case _: [];
+			};
 			for (field in declaration.fields) {
 				if (declaration.isExtern || field.role != "static" || field.isExtern || field.expression == null || field.rawClassField == null) {
 					continue;
@@ -407,7 +600,11 @@ class CStaticFunctionGraphCollector {
 							sourceOrder: field.sourceOrder,
 							fieldType: field.rawClassField.type,
 							expression: field.expression,
+							declarationPosition: field.rawClassField.pos,
+							sourcePositionOverrides: field.sourcePositionOverrides,
+							functionSourcePlan: field.functionSourcePlan,
 							typeParameters: field.rawClassField.params,
+							ownerTypeParameters: declarationTypeParameters.filter(parameter -> !hasNamedParameter(field.rawClassField.params, parameter.name)),
 							specialization: null
 						};
 						result.set(CBodyLowering.functionId(input.declarationPath, input.fieldName), input);
@@ -446,7 +643,11 @@ class CStaticFunctionGraphCollector {
 					sourceOrder: field.sourceOrder,
 					fieldType: field.rawClassField.type,
 					expression: field.expression,
+					declarationPosition: field.rawClassField.pos,
+					sourcePositionOverrides: field.sourcePositionOverrides,
 					classReference: classReference,
+					classParameters: [],
+					specialization: null,
 					baseConstructorId: baseConstructorId,
 					elided: false,
 					canFail: false
@@ -480,6 +681,8 @@ class CStaticFunctionGraphCollector {
 				fieldType: input.fieldType,
 				expression: input.expression,
 				classReference: input.classReference,
+				classParameters: input.classParameters,
+				specialization: input.specialization,
 				baseConstructorId: input.baseConstructorId,
 				elided: constructorIsTrivial(id, selected, trivial),
 				canFail: constructorCanFail(id, selected, dependencies, failing)
@@ -619,6 +822,14 @@ class CStaticFunctionGraphCollector {
 	**/
 	static function readableDeclarationPath(declaration:TypedAstDeclaration):Null<String>
 		return declaration.classKind == "module-fields" ? declaration.ownerModulePath : null;
+
+	/** A static method parameter with the same name shadows the abstract owner. */
+	static function hasNamedParameter(parameters:Array<TypeParameter>, name:String):Bool {
+		for (parameter in parameters)
+			if (parameter.name == name)
+				return true;
+		return false;
+	}
 
 	static function add(input:CBodyFunctionInput, byId:Map<String, CBodyFunctionInput>, pending:Array<CBodyFunctionInput>):Void {
 		final id = CBodyLowering.functionInputId(input);

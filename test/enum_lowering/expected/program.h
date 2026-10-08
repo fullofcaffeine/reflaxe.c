@@ -3,12 +3,21 @@
 
 #include <hxrt/allocator.h>
 #include <hxrt/array.h>
+#include <hxrt/gc.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdlib.h>
 
 typedef char hxc_runtime_abi_major_must_match[HXC_RUNTIME_ABI_MAJOR == 0U ? 1 : -1];
+
+extern struct hxc_gc hxc_program_gc;
+
+extern struct hxc_gc_thread hxc_program_gc_thread;
+
+extern const struct hxc_type_descriptor hxc_array_e4791f3e_descriptor;
+
+extern const struct hxc_type_descriptor hxc_array_eaf5e746_descriptor;
 
 static inline int32_t hxc_u32_to_i32_bits(uint32_t hxc_l_value)
 {
@@ -68,6 +77,8 @@ struct hxc_Option_h95f1c4a28dac;
 
 struct hxc_Chain;
 
+struct hxc_RecursiveAction;
+
 struct hxc_StrictCarrier;
 
 struct hxc_Choices;
@@ -75,6 +86,11 @@ struct hxc_Choices;
 struct hxc_IdentityValue;
 
 struct hxc_RuleEnvelope;
+
+struct hxc_RecursiveActionChoice {
+  struct hxc_array_ref *hxc_actions;
+  int32_t hxc_weight;
+};
 
 enum hxc_StrictCarrier_tag {
   hxc_StrictCarrier_StrictEmpty = 0,
@@ -160,6 +176,10 @@ struct hxc_Rule {
   struct hxc_Choices hxc_choices;
 };
 
+struct hxc_RecursiveActionPlan {
+  struct hxc_array_ref *hxc_actions;
+};
+
 enum hxc_Option_tag_h4f842caea9db {
   hxc_Option_None_h00cd578bb80f = 0,
   hxc_Option_Some_h33493695ace2 = 1
@@ -217,6 +237,29 @@ struct hxc_Option_h95f1c4a28dac {
 enum hxc_Mode {
   hxc_Mode_Off = 0,
   hxc_Mode_On = 1
+};
+
+enum hxc_RecursiveAction_tag {
+  hxc_RecursiveAction_LeafAction = 0,
+  hxc_RecursiveAction_ChooseAction = 1
+};
+
+struct hxc_RecursiveAction_LeafAction_payload {
+  int32_t hxc_value;
+};
+
+struct hxc_RecursiveAction_ChooseAction_payload {
+  struct hxc_array_ref *hxc_choices;
+};
+
+union hxc_RecursiveAction_payload {
+  struct hxc_RecursiveAction_LeafAction_payload hxc_LeafAction;
+  struct hxc_RecursiveAction_ChooseAction_payload hxc_ChooseAction;
+};
+
+struct hxc_RecursiveAction {
+  enum hxc_RecursiveAction_tag hxc_tag;
+  union hxc_RecursiveAction_payload hxc_payload;
 };
 
 enum hxc_IdentityKind {
@@ -301,13 +344,21 @@ bool hxc_EnumFixture_modeIsOn(enum hxc_Mode hxc_l_value);
 
 int32_t hxc_EnumFixture_modeValue(enum hxc_Mode hxc_l_value);
 
+struct hxc_Option_h95f1c4a28dac hxc_EnumFixture_observedOption(struct hxc_Option_h95f1c4a28dac hxc_l_value, struct hxc_array_ref *hxc_l_evaluations);
+
 bool hxc_EnumFixture_optionHasPositiveValue(struct hxc_Option_h95f1c4a28dac hxc_l_value_he8fa941d9290);
+
+bool hxc_EnumFixture_optionTagEquality(void);
 
 int32_t hxc_EnumFixture_optionValue(struct hxc_Option_h95f1c4a28dac hxc_l_value_h2c5c76013588);
 
 int32_t hxc_EnumFixture_optionalRuleValue(struct hxc_Option_h2a07afaff02e hxc_l_value_hffb395be3233);
 
 int32_t hxc_EnumFixture_pairedIdentityValue(enum hxc_IdentityKind hxc_l_kind, struct hxc_IdentityValue hxc_l_value_hc42edaab0080);
+
+struct hxc_RecursiveActionPlan hxc_EnumFixture_recursiveActionPlan(void);
+
+int32_t hxc_EnumFixture_recursiveActionPlanValue(struct hxc_RecursiveActionPlan hxc_l_plan);
 
 int32_t hxc_EnumFixture_recursiveLocal(void);
 

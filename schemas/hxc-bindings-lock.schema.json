@@ -1,0 +1,397 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://haxe.c.dev/schemas/hxc-bindings-lock.schema.json",
+  "title": "hxc Clang semantic binding lock",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "authority",
+    "generator",
+    "toolchain",
+    "configuration",
+    "configurationSha256",
+    "invocation",
+    "inputs",
+    "inputSetSha256",
+    "semanticModel",
+    "semanticSha256",
+    "primitiveAbiModel",
+    "primitiveAbiSha256",
+    "aggregateAbiModel",
+    "aggregateAbiSha256"
+  ],
+  "properties": {
+    "schemaVersion": { "const": 4 },
+    "authority": { "const": "clang-ast-json" },
+    "generator": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "model"],
+      "properties": {
+        "name": { "const": "hxc-bindgen" },
+        "model": { "const": "clang-semantic-translation-unit-v4" }
+      }
+    },
+    "toolchain": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["executable", "version", "dumpMachine", "resourceDirectory"],
+      "properties": {
+        "executable": { "type": "string", "minLength": 1 },
+        "version": { "type": "string", "minLength": 1 },
+        "dumpMachine": { "type": "string", "minLength": 1 },
+        "resourceDirectory": { "type": "string", "minLength": 1 }
+      }
+    },
+    "configuration": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["effective", "provenance"],
+      "properties": {
+        "effective": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["entryHeaders", "language", "target", "sysroot", "includeDirectories", "defines"],
+          "properties": {
+            "entryHeaders": {
+              "type": "array",
+              "minItems": 1,
+              "items": { "type": "string", "minLength": 1 }
+            },
+            "language": { "enum": ["c", "c++"] },
+            "target": { "type": "string", "minLength": 1 },
+            "sysroot": { "type": ["string", "null"] },
+            "includeDirectories": {
+              "type": "array",
+              "items": { "type": "string", "minLength": 1 }
+            },
+            "defines": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["name", "value"],
+                "properties": {
+                  "name": { "type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_]*$" },
+                  "value": { "type": ["string", "null"] }
+                }
+              }
+            }
+          }
+        },
+        "provenance": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["entryHeaders", "language", "target", "sysroot", "includeDirectories", "defines"],
+          "properties": {
+            "entryHeaders": { "const": "command-line" },
+            "language": { "enum": ["default", "command-line"] },
+            "target": { "enum": ["clang-default", "command-line"] },
+            "sysroot": { "enum": ["absent", "command-line"] },
+            "includeDirectories": { "enum": ["absent", "command-line"] },
+            "defines": { "enum": ["absent", "command-line"] }
+          }
+        }
+      }
+    },
+    "configurationSha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "invocation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "diagnosticArguments",
+        "semanticArguments",
+        "dependencyArguments",
+        "abiArguments",
+        "macroBaselineArguments",
+        "macroInventoryArguments",
+        "macroTypeArguments",
+        "macroValueArguments",
+        "aggregateArguments",
+        "generatedProbeSha256"
+      ],
+      "properties": {
+        "diagnosticArguments": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string" }
+        },
+        "semanticArguments": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string" }
+        },
+        "dependencyArguments": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string" }
+        },
+        "abiArguments": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string" }
+        },
+        "macroBaselineArguments": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string" }
+        },
+        "macroInventoryArguments": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string" }
+        },
+        "macroTypeArguments": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string" }
+        },
+        "macroValueArguments": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string" }
+        },
+        "aggregateArguments": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string" }
+        },
+        "generatedProbeSha256": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["primitive", "macroTypes", "macroValues"],
+          "properties": {
+            "primitive": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+            "macroTypes": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+            "macroValues": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+          }
+        }
+      }
+    },
+    "inputs": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "sha256"],
+        "properties": {
+          "path": { "type": "string", "minLength": 1 },
+          "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+        }
+      }
+    },
+    "inputSetSha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "semanticModel": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schemaVersion", "declarationCount", "translationUnit"],
+      "properties": {
+        "schemaVersion": { "const": 1 },
+        "declarationCount": { "type": "integer", "minimum": 0 },
+        "translationUnit": {
+          "type": "object",
+          "required": ["kind"],
+          "properties": { "kind": { "const": "TranslationUnitDecl" } }
+        }
+      }
+    },
+    "semanticSha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "primitiveAbiModel": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schemaVersion", "scalars", "typedefs", "enums", "macroConstants"],
+      "properties": {
+        "schemaVersion": { "const": 1 },
+        "scalars": {
+          "type": "array",
+          "minItems": 14,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "cSpelling", "category", "bitWidth", "signed", "haxeType"],
+            "properties": {
+              "id": { "type": "string", "minLength": 1 },
+              "cSpelling": { "type": "string", "minLength": 1 },
+              "category": { "enum": ["boolean", "integer", "floating"] },
+              "bitWidth": { "type": "integer", "minimum": 1 },
+              "signed": { "type": ["boolean", "null"] },
+              "haxeType": { "type": "string", "minLength": 1 }
+            }
+          }
+        },
+        "typedefs": { "type": "array", "items": { "$ref": "#/$defs/typedef" } },
+        "enums": { "type": "array", "items": { "$ref": "#/$defs/enum" } },
+        "macroConstants": { "type": "array", "items": { "$ref": "#/$defs/macroConstant" } }
+      }
+    },
+    "primitiveAbiSha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "aggregateAbiModel": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schemaVersion", "records"],
+      "properties": {
+        "schemaVersion": { "const": 1 },
+        "records": { "type": "array", "items": { "$ref": "#/$defs/aggregate" } }
+      }
+    },
+    "aggregateAbiSha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+  },
+  "$defs": {
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["file", "line", "column"],
+      "properties": {
+        "file": { "type": "string", "pattern": "^\\$(SOURCE|INCLUDE|SYSROOT)" },
+        "line": { "type": "integer", "minimum": 0 },
+        "column": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "typeRepresentation": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "scalar", "haxeType"],
+          "properties": {
+            "kind": { "const": "scalar" },
+            "scalar": { "type": "string", "minLength": 1 },
+            "haxeType": { "type": "string", "minLength": 1 }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "qualifiers", "inner"],
+          "properties": {
+            "kind": { "const": "qualified" },
+            "qualifiers": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "enum": ["const", "volatile", "restrict"] } },
+            "inner": { "$ref": "#/$defs/typeRepresentation" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "pointee"],
+          "properties": {
+            "kind": { "const": "pointer" },
+            "pointee": { "$ref": "#/$defs/typeRepresentation" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "nativeName"],
+          "properties": {
+            "kind": { "enum": ["typedef", "enum"] },
+            "nativeName": { "type": "string", "minLength": 1 }
+          }
+        }
+      ]
+    },
+    "typedef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["nativeName", "source", "representation"],
+      "properties": {
+        "nativeName": { "type": "string", "minLength": 1 },
+        "source": { "$ref": "#/$defs/source" },
+        "representation": { "$ref": "#/$defs/typeRepresentation" }
+      }
+    },
+    "enumConstant": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["nativeName", "value"],
+      "properties": {
+        "nativeName": { "type": "string", "minLength": 1 },
+        "value": { "type": "string", "pattern": "^-?[0-9]+$" }
+      }
+    },
+    "enum": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["stableName", "nativeTag", "nativeTypedef", "source", "valueCarrier", "storageBitWidth", "storageSigned", "haxeType", "constants"],
+      "properties": {
+        "stableName": { "type": "string", "minLength": 1 },
+        "nativeTag": { "type": ["string", "null"] },
+        "nativeTypedef": { "type": ["string", "null"] },
+        "source": { "$ref": "#/$defs/source" },
+        "valueCarrier": { "type": "string", "minLength": 1 },
+        "storageBitWidth": { "enum": [8, 16, 32, 64] },
+        "storageSigned": { "type": "boolean" },
+        "haxeType": { "type": "string", "minLength": 1 },
+        "constants": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/enumConstant" } }
+      }
+    },
+    "macroConstant": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["nativeName", "stableName", "category", "scalar", "haxeType", "value", "provenance"],
+      "properties": {
+        "nativeName": { "type": "string", "minLength": 1 },
+        "stableName": { "type": "string", "minLength": 1 },
+        "category": { "const": "integer" },
+        "scalar": { "type": "string", "minLength": 1 },
+        "haxeType": { "type": "string", "minLength": 1 },
+        "value": { "type": "string", "pattern": "^-?[0-9]+$" },
+        "provenance": { "const": "configured-header-closure" }
+      }
+    },
+    "aggregateFieldType": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "spelling", "canonicalSpelling"],
+      "properties": {
+        "kind": { "const": "declared" },
+        "spelling": { "type": "string", "minLength": 1 },
+        "canonicalSpelling": { "type": "string", "minLength": 1 }
+      }
+    },
+    "aggregateField": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["nativeName", "ordinal", "bitOffset", "bitWidth", "zeroWidthBitfield", "anonymous", "flexibleArray", "type"],
+      "properties": {
+        "nativeName": { "type": ["string", "null"] },
+        "ordinal": { "type": "integer", "minimum": 0 },
+        "bitOffset": { "type": "integer", "minimum": 0 },
+        "bitWidth": { "type": ["integer", "null"], "minimum": 0 },
+        "zeroWidthBitfield": { "type": "boolean" },
+        "anonymous": { "type": "boolean" },
+        "flexibleArray": { "type": "boolean" },
+        "type": { "$ref": "#/$defs/aggregateFieldType" }
+      }
+    },
+    "aggregateLayout": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sizeBits", "dataSizeBits", "alignmentBits", "packed", "requestedAlignmentBits"],
+      "properties": {
+        "sizeBits": { "type": "integer", "minimum": 0 },
+        "dataSizeBits": { "type": ["integer", "null"], "minimum": 0 },
+        "alignmentBits": { "type": "integer", "minimum": 1 },
+        "packed": { "type": "boolean" },
+        "requestedAlignmentBits": { "type": ["integer", "null"], "minimum": 1 }
+      }
+    },
+    "aggregate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["stableName", "nativeTag", "nativeTypedef", "source", "kind", "complete", "opaque", "layout", "fields"],
+      "properties": {
+        "stableName": { "type": "string", "minLength": 1 },
+        "nativeTag": { "type": ["string", "null"] },
+        "nativeTypedef": { "type": ["string", "null"] },
+        "source": { "$ref": "#/$defs/source" },
+        "kind": { "enum": ["struct", "union"] },
+        "complete": { "type": "boolean" },
+        "opaque": { "type": "boolean" },
+        "layout": { "oneOf": [{ "$ref": "#/$defs/aggregateLayout" }, { "type": "null" }] },
+        "fields": { "type": "array", "items": { "$ref": "#/$defs/aggregateField" } }
+      }
+    }
+  }
+}

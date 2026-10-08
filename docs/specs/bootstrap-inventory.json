@@ -19,7 +19,7 @@
     "profiles": "This manifest describes evidence only and does not change portable or metal semantics.",
     "runtimePolicy": "This manifest selects no hxrt feature and does not change auto, minimal, or none resolution.",
     "environments": "Native fixture evidence is not a supported environment or platform tuple; no support matrix is claimed.",
-    "generatedC": "Only the separately admitted primitive and closed-generic static-function, local fixed-array/span storage with bounded nonescaping internal span parameters and receiver-tied read-only span returns, closed anonymous-record (including unmanaged bounded payload-enum fields), bounded direct-value enum, compiler-known literal/output and managed String operations, managed Array, and haxe.io.Bytes slices have generated-C evidence. Statically uncaught ordinary Haxe throw now evaluates its payload, runs active cleanup, and fail-stops without changing the function signature; caught exceptions remain unsupported. The broader Caxecraft application now reaches the separately tracked managed-enum compiler-generated flow-carrier boundary.",
+    "generatedC": "Only the separately admitted primitive and closed-generic static-function, local fixed-array/span storage with bounded nonescaping internal span parameters and receiver-tied read-only span returns, closed anonymous-record (including unmanaged bounded payload-enum fields), bounded direct-value enum, compiler-known literal/output and managed String operations, managed Array, and haxe.io.Bytes slices have generated-C evidence. Statically uncaught ordinary Haxe throw evaluates its payload, runs active cleanup, and fail-stops without changing the function signature. A closed exact-type try/catch region uses explicit HxcIR exception continuations and ordinary C labels, including nested rethrow and reverse cleanup, without selecting the exception runtime. A catch-all Dynamic handler may instead select the contained same-thread exception runtime: generated frames transport scalar or exactly rooted managed payloads across calls, unwind registered Array and collector-root owners in reverse, support nested rethrow, and tear down or discard cleanups correctly on normal returns and ownership transfer. Runtime type matching beyond that catch-all boundary, foreign-frame transfer, and source-level finally syntax remain fail-closed. The broader Caxecraft application now reaches the separately tracked managed-enum compiler-generated flow-carrier boundary.",
     "publicAbi": "The target-facing vocabulary is provisional and no generated public C ABI is stable or supported."
   },
   "claimGates": [
@@ -75,7 +75,7 @@
         "E10.T01",
         "E10.T07"
       ],
-      "reason": "Current native CI is component evidence, not the complete ADR 0007 environment/runtime/architecture/compiler tuple matrix."
+      "reason": "The complete ADR 0007 matrix is now release-blocking CI, but supported-platform claims still require a passing archived aggregate and the E10.T07 compatibility qualification."
     },
     {
       "id": "supported-release",
@@ -145,19 +145,27 @@
     {
       "id": "bindgen",
       "area": "interop",
-      "status": "unsupported",
-      "disposition": "not-exposed",
-      "summary": "No Clang-backed binding generator or user bindgen command exists.",
-      "scope": "The PRD and Beads graph reserve deterministic parsing, mapping, locking, ABI probing, and wrapper work.",
+      "status": "experimental",
+      "disposition": "opt-in",
+      "summary": "The hxc bindgen command captures deterministic declarations and target ABI facts from Clang.",
+      "scope": "The generic stage records ordered entry roots, C/C++ mode, sysroot, target, normalized definitions/includes with provenance, exact Clang identity and arguments, transitive input hashes, canonical semantic declarations, primitive facts, and exact struct/union layouts. Complete aggregates include size, alignment, field offsets, bitfields, anonymous members, flexible arrays, and packing. Incomplete declarations remain opaque.",
       "evidence": [
-        "docs/PRD.md",
-        "docs/specs/beads-plan.json"
+        "src/hxc/bindgen/HxcBindgenDriver.hx",
+        "src/hxc/bindgen/HxcBindgenAbiModel.hx",
+        "src/hxc/bindgen/HxcBindgenAggregateModel.hx",
+        "schemas/hxc-bindings-lock.schema.json",
+        "docs/hxc-cli.md",
+        "test/hxc_bindgen/run.py"
       ],
       "owners": [
-        "E6.T01"
+        "E6.T01",
+        "E6.T02",
+        "E6.T03",
+        "E6.T04"
       ],
       "limitations": [
-        "Independent native C fixtures are not generated bindings."
+        "This stage does not yet generate Haxe externs, map functions or callbacks, apply ownership mappings, or publish drift reports.",
+        "C++ shims and the complete bindgen workflow remain unsupported."
       ]
     },
     {
@@ -270,7 +278,7 @@
       "status": "implemented",
       "disposition": "available",
       "summary": "Concrete non-generic Haxe classes emit private base-prefix structs with checked nullable-reference operations and safe upcasts.",
-      "scope": "Source-order own fields, embedded base storage, empty-root anchors, inherited reads/writes, identity, explicit null proofs, and null-preserving derived-to-base conversions lower through schema-23 HxcIR. Class graphs without retained reference edges run as runtime-free strict C11; a retained concrete-class, interface, or Array element edge instead promotes its exact reachable graph and inheritance chain to the selective nonmoving collector with typed pointer fields, exact roots, and descriptor-driven tracing.",
+      "scope": "Source-order own fields, embedded base storage, empty-root anchors, inherited reads/writes, identity, explicit null proofs, and null-preserving derived-to-base conversions lower through schema-27 HxcIR. Class graphs without retained reference edges run as runtime-free strict C11; a retained concrete-class, interface, or Array element edge instead promotes its exact reachable graph and inheritance chain to the selective nonmoving collector with typed pointer fields, exact roots, and descriptor-driven tracing.",
       "evidence": [
         "docs/class-layout.md",
         "src/reflaxe/c/lowering/CBodyClass.hx",
@@ -335,7 +343,7 @@
       "status": "implemented",
       "disposition": "available",
       "summary": "Concrete non-generic Haxe classes support bounded local and immediate-receiver stack construction, validated factories and other returned references through stable collector storage, final inline or traced child ownership, by-value closed-record, literal-backed nominal String, and unmanaged-enum arguments, plus call-only or retained interface arguments with exact order and cleanup.",
-      "scope": "Unconditional entry-block local new expressions and immediate nonescaping constructed method receivers lower through schema-23 HxcIR to default-initialized automatic storage and ordinary private C constructor functions. A concrete class that crosses a reachable function return instead receives one stable collector representation across its inheritance family, so a factory may validate input before construction, return `Null<Class>`, pass an existing instance through a helper, or expose a traced child without returning a pointer to ended automatic storage. An unnamed nonescaping receiver borrows automatic storage for its one method call; managed arguments retain their exact source order and temporary owners, managed method results transfer one returned owner, and a throwing constructor releases initialized fields plus older argument owners exactly once. A proven nonescaping parent may directly own an exact final child; HxcIR retains by-value ownership, child definitions precede parents, child references remain nonescaping borrows, and a fallible child propagates status with recursive partial-parent cleanup. When that child class crosses a return boundary, whole-program planning uses a traced managed field instead. Haxe-generated inline-method receiver aliases use an explicit non-owning automatic local, so they can be reloaded after lazy Boolean control flow without creating a second owner or extending the parent lifetime. Known ordinary Haxe functions and methods may use caller-owned class parameters during one direct call. Constructors may receive a validated closed record, an immutable literal-backed String view with exact nominal abstract identity, a direct fieldless enum tag, a tagged payload enum whose finalized graph has no managed lifetime, or an exact two-pointer interface value. A fresh closed record with managed fields receives one explicit caller owner across named, immediate-receiver, inline-child, super, and collector-managed construction; a stored field retains independently, and constructor failure destroys the partial-object and caller owners exactly once. A first final String-field initialization copies its program-long literal view without retain or release; a first final unmanaged-enum initialization copies its exact tag and active payload without lifetime work. Enum lifecycle facts are finalized before constructor symbol admission. Runtime-created Strings and managed or recursive payload-enum constructor values remain outside these direct-copy contracts. A call-only interface remains an explicit HxcIR borrow and allocation-free; the first initialization of the constructing object's own interface or concrete-class field instead selects exact collector storage for the reachable graph and traces the stored object pointer. The same constructor-only first-write rule admits `this` in its own managed class field, with a post-collection identity check proving the self-cycle. HxcIR rejects automatic-borrow reassignment, throw, unrelated storage, constructor capture, block-edge forwarding, and calls without a proven borrow or retained-field plan. Super calls, pinned-Haxe field/body order, trivial-chain elision, typed status propagation, and reverse partial-initialization cleanup remain native-verified.",
+      "scope": "Root-sequence local new expressions, path-scoped locals inside statement if arms, and immediate nonescaping constructed method receivers lower through schema-27 HxcIR to default-initialized automatic storage and ordinary private C constructor functions. A statement arm destroys its local objects in reverse construction order before return or join, while its sibling retains the earlier cleanup depth. A concrete class that crosses a reachable function return instead receives one stable collector representation across its inheritance family, so a factory may validate input before construction, return `Null<Class>`, pass an existing instance through a helper, or expose a traced child without returning a pointer to ended automatic storage. An unnamed nonescaping receiver borrows automatic storage for its one method call; managed arguments retain their exact source order and temporary owners, managed method results transfer one returned owner, and a throwing constructor releases initialized fields plus older argument owners exactly once. A proven nonescaping parent may directly own an exact final child; HxcIR retains by-value ownership, child definitions precede parents, child references remain nonescaping borrows, and a fallible child propagates status with recursive partial-parent cleanup. When that child class crosses a return boundary, whole-program planning uses a traced managed field instead. Haxe-generated inline-method receiver aliases use an explicit non-owning automatic local, so they can be reloaded after lazy Boolean control flow without creating a second owner or extending the parent lifetime. Known ordinary Haxe functions and methods may use caller-owned class parameters during one direct call. Constructors may receive a validated closed record, an immutable literal-backed String view with exact nominal abstract identity, a direct fieldless enum tag, a tagged payload enum whose finalized graph has no managed lifetime, or an exact two-pointer interface value. A fresh closed record with managed fields receives one explicit caller owner across named, immediate-receiver, inline-child, super, and collector-managed construction; a stored field retains independently, and constructor failure destroys the partial-object and caller owners exactly once. A first final String-field initialization copies its program-long literal view without retain or release; a first final unmanaged-enum initialization copies its exact tag and active payload without lifetime work. Enum lifecycle facts are finalized before constructor symbol admission. Runtime-created Strings and managed or recursive payload-enum constructor values remain outside these direct-copy contracts. A call-only interface remains an explicit HxcIR borrow and allocation-free; the first initialization of the constructing object's own interface or concrete-class field instead selects exact collector storage for the reachable graph and traces the stored object pointer. The same constructor-only first-write rule admits `this` in its own managed class field, with a post-collection identity check proving the self-cycle. HxcIR rejects automatic-borrow reassignment, throw, unrelated storage, constructor capture, block-edge forwarding, and calls without a proven borrow or retained-field plan. Super calls, pinned-Haxe field/body order, trivial-chain elision, typed status propagation, and reverse partial-initialization cleanup remain native-verified.",
       "evidence": [
         "docs/constructor-lowering.md",
         "src/reflaxe/c/lowering/CBodyConstructor.hx",
@@ -351,6 +359,8 @@
         "test/constructor_lowering/fixtures/managed_record_argument_failure/Main.hx",
         "test/constructor_lowering/fixtures/direct_receiver/Main.hx",
         "test/constructor_lowering/fixtures/direct_receiver_failure/Main.hx",
+        "test/constructor_lowering/fixtures/conditional/Main.hx",
+        "test/constructor_lowering/native/path_scoped_failure.c",
         "test/constructor_lowering/fixtures/factory_return/Main.hx",
         "test/constructor_lowering/native/factory_return_header_cpp.cpp",
         "examples/caxecraft/src/caxecraft/domain/GameSession.hx",
@@ -361,7 +371,7 @@
         "E3.T07"
       ],
       "limitations": [
-        "Unproved escaping, aliased, assigned, stored, thrown, or conditionally automatic object references and branch-local immediate receivers; managed or recursive payload-enum constructor values; interface or concrete-class retention outside an admitted returned-class or constructing-object field graph; mutable, reassigned, escaping, or type-mismatched owned children outside the validated fallible-cleanup contract; constructor-dependency or direct by-value layout cycles; native layouts; generic construction; broader heap allocation beyond admitted traced graphs; general exceptions; dynamic dispatch; reflection/type metadata; and public class ABI remain fail-closed."
+        "Unproved escaping, aliased, assigned, stored, or thrown automatic object references; automatic class locals in loops, switches, catches, conditional arms nested beneath those scopes, or other unproved control-flow regions; branch-local immediate receivers; managed or recursive payload-enum constructor values; interface or concrete-class retention outside an admitted returned-class or constructing-object field graph; mutable, reassigned, escaping, or type-mismatched owned children outside the validated fallible-cleanup contract; constructor-dependency or direct by-value layout cycles; native layouts; generic construction; broader heap allocation beyond admitted traced graphs; general exceptions; dynamic dispatch; reflection/type metadata; and public class ABI remain fail-closed."
       ]
     },
     {
@@ -407,7 +417,7 @@
       "status": "implemented",
       "disposition": "available",
       "summary": "Reached hand-authored extern declarations directly consume an authoritative C header and library through structural generated C.",
-      "scope": "Exact fixed-arity C functions, zero-optional-argument calls to explicitly marked variadic declarations, scalars including target-qualified binary32 float, typedef identity, direct one-level imported struct aliases, fieldless enum/constants, by-value imported structs and fields (including fields inside private closed Haxe records), typed aggregate constants, direct closed-literal or structural-zero imported struct construction through c.StructInit, borrowed CString arguments constructed from literals or proven literal-only selections, and call-scoped mutable scalar out parameters through c.Ref.to(addressableValue) lower through schema-23 HxcIR to runtime-free strict C11 with provenance-preserving include, link, pkg-config, and framework facts. c.StructInit.zero() is restricted to complete, wholly unmanaged imported structs. A separate c.CStringBufferRef.to(bytes) carrier selects the exact Bytes runtime slice, validates live non-empty NUL-containing storage, and lends its char pointer to exactly one direct imported call while the Bytes owner remains live. Typed program-local flow may propagate the static CString carrier; dynamic String conversion remains rejected. c.Ref and CStringBufferRef cannot escape their direct imported call and reject temporary owners, retained declarations, wrong carriers, missing intrinsics, and mismatched parameter kinds. Float32 narrowing/widening is explicit and generated headers assert the selected target format.",
+      "scope": "Exact fixed-arity C functions, zero-optional-argument calls to explicitly marked variadic declarations, scalars including target-qualified binary32 float, typedef identity, direct one-level imported struct aliases, fieldless enum/constants, by-value imported structs and fields (including fields inside private closed Haxe records), typed aggregate constants, direct closed-literal or structural-zero imported struct construction through c.StructInit, borrowed CString arguments constructed from literals or proven literal-only selections, and call-scoped mutable scalar out parameters through c.Ref.to(addressableValue) lower through schema-27 HxcIR to runtime-free strict C11 with provenance-preserving include, link, pkg-config, and framework facts. c.StructInit.zero() is restricted to complete, wholly unmanaged imported structs. A separate c.CStringBufferRef.to(bytes) carrier selects the exact Bytes runtime slice, validates live non-empty NUL-containing storage, and lends its char pointer to exactly one direct imported call while the Bytes owner remains live. Typed program-local flow may propagate the static CString carrier; dynamic String conversion remains rejected. c.Ref and CStringBufferRef cannot escape their direct imported call and reject temporary owners, retained declarations, wrong carriers, missing intrinsics, and mismatched parameter kinds. Float32 narrowing/widening is explicit and generated headers assert the selected target format.",
       "evidence": [
         "docs/typed-c-authoring.md",
         "std/c/CStringBufferRef.hx",
@@ -493,7 +503,7 @@
       "status": "unsupported",
       "disposition": "fails-closed",
       "summary": "General Haxe programs are not supported and stop at the first unsupported typed construct.",
-      "scope": "Only the separately listed primitive and closed-generic static-function, local fixed-array/span, closed anonymous-record, concrete class-reference/layout, bounded nonescaping constructor, closed-world virtual-dispatch, bounded direct-value enum, compiler-known literal-output, managed Array, haxe.io.Bytes, and exact direct-C-import subsets are admitted.",
+      "scope": "Only the separately listed primitive and closed-generic static-function, local fixed-array/span, closed anonymous-record, concrete class-reference/layout, bounded nonescaping constructor, closed-world virtual-dispatch, bounded direct-value enum, compiler-known literal-output, managed Array, haxe.io.Bytes, exact closed-world Dynamic, and direct-C-import subsets are admitted.",
       "evidence": [
         "src/reflaxe/c/CCompiler.hx",
         "test/all_sources/run.py",
@@ -504,7 +514,7 @@
         "E3.T10"
       ],
       "limitations": [
-        "General or escaping class allocation, unadmitted instance signatures, interface/dynamic calls, closures, generic classes/references or descriptor-driven bodies, general String values, Array and Bytes operations or ownership shapes outside their bounded slices, catch/finally and exception payloads, and dynamic/reflection semantics remain outside the admitted slice."
+        "General or escaping class allocation outside the admitted collector slice, unadmitted instance and interface calls, closures, generic classes/references or descriptor-driven bodies, general String values, Array and Bytes operations or ownership shapes outside their bounded slices, runtime-dependent typed catch matching beyond a catch-all Dynamic handler, exception transfer across foreign frames, managed Dynamic globals, computed reflection, bound methods, and unresolved Dynamic identities remain outside the admitted slice."
       ]
     },
     {
@@ -577,19 +587,34 @@
     {
       "id": "hxc-cli",
       "area": "cli",
-      "status": "unsupported",
-      "disposition": "not-exposed",
-      "summary": "No Run.hx, hxc command router, project schema, template, or packaged executable exists.",
-      "scope": "Direct Haxe/HXML remains the only user-program compiler invocation; E8 owns the optional orchestration layer.",
+      "status": "implemented",
+      "disposition": "available",
+      "summary": "The Eval bootstrap exposes deterministic project templates, stable command routing, help/version behavior, exit categories, schema-1 JSON framing, inspection, and schema-4 Clang semantic and ABI lock capture.",
+      "scope": "The router creates reviewed app, C export-intent library, and freestanding projects without implicit overwrites, and delegates inspection and bindgen through typed command owners. Bindgen records exact preprocessing inputs, a canonical Clang AST, primitive facts, and target-measured aggregate layouts. Direct Haxe/HXML remains the authoritative compiler path.",
       "evidence": [
-        "docs/PRD.md",
-        "docs/specs/beads-plan.json"
+        "src/Run.hx",
+        "src/hxc/cli/HxcCli.hx",
+        "src/hxc/cli/HxcProductExecutor.hx",
+        "src/hxc/project/HxcNewExecutor.hx",
+        "src/hxc/project/template-data/manifest.tsv",
+        "src/hxc/bindgen/HxcBindgenAbiModel.hx",
+        "src/hxc/bindgen/HxcBindgenAggregateModel.hx",
+        "docs/hxc-cli.md",
+        "schemas/hxc-cli-response.schema.json",
+        "test/hxc_cli/run.py",
+        "test/hxc_new/run.py"
       ],
       "owners": [
-        "E8.T02"
+        "E8.T02",
+        "E8.T03",
+        "E6.T03",
+        "E6.T04"
       ],
       "limitations": [
-        "Repository Python validation scripts are developer tooling and are not hxc commands."
+        "Build, run, test, clean, doctor, export, and a packaged native executable remain owned by later E8 tasks; recognized unfinished commands fail with the unavailable exit category.",
+        "Function mapping, raw Haxe module-file emission, wrappers, and drift workflows remain owned by later E6 tasks.",
+        "Bindgen currently stops at a semantic and ABI lock; later E6 tasks own generated externs, wrappers, and drift workflows.",
+        "Repository Python validation scripts are developer tooling and are not hxc command implementations."
       ]
     },
     {
@@ -608,6 +633,28 @@
       ],
       "limitations": [
         "No tool, SDK, sysroot, compiler, sanitizer, or writable-output probe is exposed as hxc doctor today."
+      ]
+    },
+    {
+      "id": "hxc-inspect",
+      "area": "cli",
+      "status": "implemented",
+      "disposition": "available",
+      "summary": "The Eval bootstrap validates compiler manifests and exposes versioned human and JSON views of configuration, semantic lowering, runtime, build, declaration, ABI, and size evidence.",
+      "scope": "Inspection is read-only and manifest-driven. Normal compiler sidecars remain authoritative; one opt-in compiler define publishes typed inventory, HxcIR, structural C AST, and typed declaration evidence without changing generated C semantics.",
+      "evidence": [
+        "src/hxc/inspect/HxcInspectExecutor.hx",
+        "src/hxc/inspect/HxcInspectManifest.hx",
+        "schemas/hxc-inspect-report.schema.json",
+        "docs/hxc-cli.md",
+        "test/hxc_inspect/run.py"
+      ],
+      "owners": [
+        "E8.T07"
+      ],
+      "limitations": [
+        "The current bootstrap inspects an existing compiler output; the unfinished hxc build command does not yet request inspection sidecars on the user's behalf.",
+        "Size reports contain exact artifact bytes and compiler allocation evidence, not runtime heap measurements."
       ]
     },
     {
@@ -674,8 +721,8 @@
       "area": "compiler",
       "status": "implemented",
       "disposition": "available",
-      "summary": "Hosted Sys.println accepts statically typed String values, while default trace accepts compiler-known literals; both preserve exact UTF-8/NUL bytes and explicit output failure handling.",
-      "scope": "Portable auto and metal builds lower hosted output through HxcIR. Literal-only output keeps the minimal runtime-base/status/string-literal/io closure; a runtime-created String retains its exact String dependencies and is released on success or output failure.",
+      "summary": "Hosted Sys.println accepts String, Int, Bool, Float, and String-valued conditionals; default trace accepts compiler-known literals. Output preserves exact UTF-8/NUL bytes and explicit failure handling.",
+      "scope": "Portable auto and metal builds lower hosted output through HxcIR. Literal and Bool output keep the minimal runtime-base/status/string-literal/io closure. Scalar formatting reuses typed Std.string conversions; fresh text is released on success or output failure.",
       "evidence": [
         "docs/specs/stdlib-ledger.json",
         "runtime/hxrt/include/hxrt/io.h",
@@ -685,13 +732,14 @@
         "test/string_output/expected/program.c",
         "test/string_output/expected/runtime-plan.json",
         "test/string_output/fixtures/nonliteral/Main.hx",
-        "test/string_output/run.py"
+        "test/string_output/run.py",
+        "test/differential/sys-println/case.json"
       ],
       "owners": [
         "E2.T07"
       ],
       "limitations": [
-        "Sys.println still rejects values that are not statically typed String; Dynamic formatting, Sys.print, runtime default trace, custom trace parameters, and trace rebinding remain fail-closed boundaries.",
+        "Actual Dynamic values, mixed-type conditionals, other formatting categories, Sys.print, runtime default trace, custom trace parameters, and trace rebinding remain fail-closed boundaries.",
         "The feature is hosted-only and does not establish general standard-library, platform, release, or public runtime ABI support."
       ]
     },
@@ -774,20 +822,23 @@
     {
       "id": "platform-support-matrix",
       "area": "platform",
-      "status": "unsupported",
-      "disposition": "not-validated",
-      "summary": "No operating-system, architecture, environment, runtime, and compiler tuple is currently a supported release lane.",
-      "scope": "ADR 0007 records the future Tier 1 gate; current local and CI compilers provide component evidence only.",
+      "status": "implemented",
+      "disposition": "available",
+      "summary": "One data-owned Tier 1 plan drives non-skippable native and emulated qualification jobs and a fail-closed release evidence aggregate.",
+      "scope": "The matrix covers the eight ADR 0007 operating-system, architecture, environment, runtime-policy, and compiler tuples without treating cross compilation as native execution.",
       "evidence": [
         "docs/adr/0007-strict-c11-target-and-platform-baseline.md",
-        "docs/specs/beads-plan.json"
+        "docs/specs/platform-support-matrix.json",
+        "scripts/ci/platform_matrix.py",
+        ".github/workflows/governance.yml",
+        "test/platform_matrix/test_platform_matrix.py"
       ],
       "owners": [
         "E10.T01",
         "E10.T07"
       ],
       "limitations": [
-        "Cross compilation or one native fixture cannot establish a supported platform tuple."
+        "The supported-platforms claim remains false until one complete remote aggregate is archived and E10.T07 completes compatibility qualification."
       ]
     },
     {
@@ -1056,17 +1107,21 @@
       "status": "implemented",
       "disposition": "available",
       "summary": "A typed deterministic feature graph resolves exact runtime closure under a versioned, provenance-locked internal ABI contract.",
-      "scope": "The schema-3 catalog pins per-feature semantic rationale, roots, documentation/evidence, internal ABI 0.16.0, same-major generated-C checks, forbidden application-export runtime types, source hashes, and strict C/C++ build baselines; schema-2 plans prove runtime-free programs or select exactly the justified closure.",
+      "scope": "The schema-3 catalog pins per-feature semantic rationale, roots, documentation/evidence, internal ABI 0.19.0, same-major generated-C checks, forbidden application-export runtime types, source hashes, and strict C/C++ build baselines; schema-2 plans prove runtime-free programs or select exactly the justified closure. Full Dynamic plans retain one source-positioned reason for every surviving operation; auto and minimal select equivalent packages, while none rejects every blocker before output.",
       "evidence": [
         "docs/adr/0001-direct-c-and-selective-runtime.md",
         "docs/hxrt.md",
         "docs/runtime-feature-planning.md",
         "runtime/hxrt/features.json",
         "runtime/hxrt/include/hxrt/base.h",
+        "runtime/hxrt/include/hxrt/dynamic.h",
+        "runtime/hxrt/src/dynamic.c",
         "src/reflaxe/c/runtime/RuntimeAbiContract.hx",
         "src/reflaxe/c/runtime/RuntimeNoRuntimeEligibilityAnalyzer.hx",
         "src/reflaxe/c/runtime/RuntimeRequirementAnalyzer.hx",
         "src/reflaxe/c/runtime/RuntimeFeaturePlanner.hx",
+        "src/reflaxe/c/lowering/CBodyDynamic.hx",
+        "test/differential/dynamic-runtime/case.json",
         "test/primitive_differential/run.py",
         "test/runtime/runtime-feature-graph/run.py",
         "test/span_lowering/run.py",
@@ -1080,13 +1135,14 @@
         "E4.T04",
         "E4.T05",
         "E4.T06",
+        "E4.T07",
         "E5.T03",
         "E4.T10",
         "E4.T11"
       ],
       "limitations": [
-        "Only the bounded literal-output, managed Array, and haxe.io.Bytes ordinary-source edges currently select hxrt; object and gc plans are registered for the following managed-class HxcIR integration, and unsupported neighboring Haxe semantics still fail during lowering rather than being guessed as runtime blockers.",
-        "Runtime ABI 0.16.0 is an internal same-major contract; it does not expose or stabilize a generated application public ABI and does not establish a supported release."
+        "Only bounded literal output, managed Array, haxe.io.Bytes, managed String, admitted managed-class operations, and exact closed-world Dynamic operations currently select hxrt from ordinary Haxe source. Managed Dynamic globals, computed names, bound methods, open generics, Dynamic map keys, payload-enum equality, and unresolved polymorphic identities still fail before output.",
+        "Runtime ABI 0.19.0 is an internal same-major contract; it does not expose or stabilize a generated application public ABI and does not establish a supported release."
       ]
     },
     {
@@ -1094,8 +1150,8 @@
       "area": "runtime",
       "status": "scaffold-only",
       "disposition": "reserved",
-      "summary": "Hardened allocator, UTF-8 scalar string, typed array, Bytes, status, hosted output, object descriptor, and collector slices coexist with other provisional runtime seeds.",
-      "scope": "Allocator ownership, string semantics, typed resizable arrays, fixed-length Bytes, hosted length-delimited output, immutable object descriptors, precise cyclic collection, exact roots/pins, C/C++ header consumption, drift-checked source contracts, and exact selected packages validate only bounded split runtime slices.",
+      "summary": "Hardened allocator, UTF-8 scalar string, typed array, Bytes, status, hosted output, object descriptor, collector, and Dynamic carrier slices coexist with other provisional runtime seeds.",
+      "scope": "Allocator ownership, string semantics, typed resizable arrays, fixed-length Bytes, hosted length-delimited output, immutable object descriptors, precise cyclic collection, exact roots/pins, a UB-safe tagged Dynamic carrier, C/C++ header consumption, drift-checked source contracts, and exact selected packages validate bounded runtime slices. The Dynamic slice also has generated per-type adapters, Eval/native parity, forced-collection evidence, and equivalent split, package, and unity plans.",
       "evidence": [
         "docs/allocator-abi.md",
         "docs/array-runtime.md",
@@ -1111,6 +1167,7 @@
         "runtime/hxrt/include/hxrt/base.h",
         "runtime/hxrt/include/hxrt/bytes.h",
         "runtime/hxrt/include/hxrt/bytes_string.h",
+        "runtime/hxrt/include/hxrt/dynamic.h",
         "runtime/hxrt/include/hxrt/gc.h",
         "runtime/hxrt/include/hxrt/io.h",
         "runtime/hxrt/include/hxrt/object.h",
@@ -1120,12 +1177,15 @@
         "runtime/hxrt/src/array.c",
         "runtime/hxrt/src/bytes.c",
         "runtime/hxrt/src/bytes_string.c",
+        "runtime/hxrt/src/dynamic.c",
         "runtime/hxrt/src/gc.c",
         "runtime/hxrt/src/io.c",
         "runtime/hxrt/src/object.c",
         "runtime/hxrt/src/string.c",
         "runtime/hxrt/features.json",
         "runtime/hxrt/test/allocator_contract.c",
+        "runtime/hxrt/test/dynamic_contract.c",
+        "runtime/hxrt/test/dynamic_header_cpp.cpp",
         "runtime/hxrt/test/gc_contract.c",
         "runtime/hxrt/test/gc_freestanding.c",
         "runtime/hxrt/test/public_header_cpp.cpp",
@@ -1133,8 +1193,10 @@
         "test/abi/allocator-contract/case.json",
         "test/differential/array-runtime/case.json",
         "test/differential/bytes-runtime/case.json",
+        "test/differential/dynamic-runtime/case.json",
         "test/differential/string-runtime/case.json",
         "test/runtime/gc/run.py",
+        "test/runtime/dynamic/case.json",
         "test/runtime/string-output/case.json"
       ],
       "owners": [
@@ -1145,11 +1207,12 @@
         "E4.T04",
         "E4.T05",
         "E4.T06",
+        "E4.T07",
         "E4.T11"
       ],
       "limitations": [
-        "Only literal hosted output and the bounded managed Array and Bytes ordinary-source slices currently select dependency-closed subsets; object/collector selection awaits the managed-class HxcIR integration, and there is still no unconditional runtime core or general fallback.",
-        "The allocator, string, array, Bytes, object, and collector structs are versioned internal contracts and are explicitly forbidden from a generated application public C ABI."
+        "Only admitted ordinary-source operations select dependency-closed subsets. Exact closed-world Dynamic source lowering uses generated adapters and integrated differential evidence; there is still no unconditional runtime core, reflection fallback, or universal box.",
+        "The allocator, string, array, Bytes, object, collector, and Dynamic structs are versioned internal contracts and are explicitly forbidden from a generated application public C ABI."
       ]
     },
     {
@@ -1186,7 +1249,7 @@
       "status": "unsupported",
       "disposition": "fails-closed",
       "summary": "General Haxe standard-library parity is not implemented.",
-      "scope": "Only exact compiler-recognized slices are covered: Std.int; Std.string for statically typed Bool, Int, and hosted Float values, including interpolation through the same typed conversions, plus identity conversion for values already typed as String; statically typed String Sys.println and compiler-known literal default trace in hosted builds; bounded haxe.io.Bytes alloc, ofString, length, get, set, sub, blit, fill, and compare; String charAt, charCodeAt, fromCharCode, indexOf, lastIndexOf, length, split, and substring; and the StringBuf type, constructor, addChar, and toString path.",
+      "scope": "Only exact compiler-recognized slices are covered: Std.int; Std.string for statically typed Bool, Int, and hosted Float values, including interpolation through the same typed conversions, plus identity conversion for values already typed as String; String/Int/Bool/Float and String-conditional Sys.println and compiler-known literal default trace in hosted builds; bounded haxe.io.Bytes alloc, ofString, length, get, set, sub, blit, fill, and compare; String charAt, charCodeAt, fromCharCode, indexOf, lastIndexOf, length, split, and substring; and the StringBuf type, constructor, addChar, and toString path.",
       "evidence": [
         "docs/specs/stdlib-ledger.json",
         "test/arithmetic_semantics/run.py",
@@ -1248,7 +1311,7 @@
       "status": "implemented",
       "disposition": "available",
       "summary": "A bounded Haxe enum graph emits private native enums or tagged unions and runs as runtime-free strict C11.",
-      "scope": "Fieldless enums with direct equality/inequality, primitive or admitted managed payloads, closed primitive generic instances, checked exhaustive matching, optimizer-produced one-case tag tests, allocator-backed uniquely owned recursive trees, managed closed-record composition, exact managed-class payload paths, and managed-enum conditional joins lower through schema-23 HxcIR. Internal TEnumIndex comparisons recover the nominal enum and named constructor instead of exposing numeric tags. Reference-counted conditional arms move fresh owners or retain borrowed values before one joined-owner move. A collector-bearing tagged enum instead uses a zero-initialized direct carrier and exact tag-aware roots, so an allocation in either arm cannot expose inactive union storage. Copies, calls, returns, Array elements, rollback, cleanup, and tracing retain explicit typed plans; recursive enums containing collector references and cyclic graphs remain unsupported. Generic instances enter the shared specialization key, reason, limit, and report contract.",
+      "scope": "Fieldless enums with direct equality/inequality, primitive or admitted managed payloads, closed primitive generic instances, checked exhaustive matching, optimizer-produced one-case tag tests, allocator-backed uniquely owned recursive trees, managed closed-record composition, exact managed-class payload paths, and managed-enum conditional joins lower through schema-27 HxcIR. Internal TEnumIndex comparisons recover the nominal enum and named constructor instead of exposing numeric tags. Reference-counted conditional arms move fresh owners or retain borrowed values before one joined-owner move. A collector-bearing tagged enum instead uses a zero-initialized direct carrier and exact tag-aware roots, so an allocation in either arm cannot expose inactive union storage. Copies, calls, returns, Array elements, rollback, cleanup, and tracing retain explicit typed plans; recursive enums containing collector references and cyclic graphs remain unsupported. Generic instances enter the shared specialization key, reason, limit, and report contract.",
       "evidence": [
         "docs/enum-lowering.md",
         "src/reflaxe/c/lowering/CBodyEnum.hx",
@@ -1407,7 +1470,7 @@
       "status": "implemented",
       "disposition": "available",
       "summary": "Reachable ordinary class and interface methods support deterministic minimal closed-world dispatch while statically known class calls remain direct.",
-      "scope": "Non-generic infallible class methods lower through schema-23 HxcIR with explicit caller-owned self, root-only reachable slots, constructed-class tables, typed receiver adapters, and exact override representation validation. Proven class-to-interface conversion builds a compact object/table pair. An ordinary child-interface to parent-interface conversion preserves the object and uses a complete closed-world map to select the same concrete class's parent table; two concrete implementations exercise both generated C branches. Inherited and multiple-interface views dispatch through exact program-local interface tables. Call-bounded constructor parameters carry separate borrow metadata and remain runtime-free. A constructor that initializes its own interface field instead selects collector storage for the owner and reachable concrete implementations; the owner's exact trace callback visits the stored object pointer and later dispatch remains valid after collection. The conditional report explains both class and interface calls. Generated C has no public exports.",
+      "scope": "Non-generic infallible class methods lower through schema-27 HxcIR with explicit caller-owned self, root-only reachable slots, constructed-class tables, typed receiver adapters, and exact override representation validation. Proven class-to-interface conversion builds a compact object/table pair. An ordinary child-interface to parent-interface conversion preserves the object and uses a complete closed-world map to select the same concrete class's parent table; two concrete implementations exercise both generated C branches. Inherited and multiple-interface views dispatch through exact program-local interface tables. Call-bounded constructor parameters carry separate borrow metadata and remain runtime-free. A constructor that initializes its own interface field instead selects collector storage for the owner and reachable concrete implementations; the owner's exact trace callback visits the stored object pointer and later dispatch remains valid after collection. The conditional report explains both class and interface calls. Generated C has no public exports.",
       "evidence": [
         "docs/virtual-dispatch.md",
         "docs/specs/dispatch-report.schema.json",

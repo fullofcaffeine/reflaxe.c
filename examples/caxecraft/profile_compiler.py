@@ -48,7 +48,9 @@ PINNED_HAXE_SOURCE_REVISION = "2c1e544e0a2c7524ef4c8e103f1b0580362ea538"
 PROFILE_WORKLOADS = (
     "runtime-free",
     "runtime-content-generation",
+    "runtime-level-loader",
     "playable",
+    "editor-shell",
 )
 PROFILE_TRANSPORTS = ("both", "cold", "warm")
 PHASES = (
@@ -2255,9 +2257,13 @@ def workload_arguments(output: Path, workload: str) -> tuple[str, ...]:
             times=True,
             phase_timing=True,
         )
-    elif workload == "runtime-content-generation":
+    elif workload in ("runtime-content-generation", "runtime-level-loader"):
+        hxml = {
+            "runtime-content-generation": "runtime-content-generation-c.hxml",
+            "runtime-level-loader": "runtime-level-loader-c.hxml",
+        }[workload]
         arguments = [
-            "runtime-content-generation-c.hxml",
+            hxml,
             "-D",
             "caxecraft_posix_hosted",
             *(("-D", "caxecraft_posix_darwin") if sys.platform == "darwin" else ()),
@@ -2269,7 +2275,7 @@ def workload_arguments(output: Path, workload: str) -> tuple[str, ...]:
             "--custom-target",
             f"c={output}",
         ]
-    elif workload == "playable":
+    elif workload in ("playable", "editor-shell"):
         platform_name = {
             "darwin": "macos",
             "linux": "linux",
@@ -2286,13 +2292,37 @@ def workload_arguments(output: Path, workload: str) -> tuple[str, ...]:
             "-D",
             f"raylib_platform_{platform_name}",
             "-D",
-            "raylib_configuration_desktop",
-            "-D",
-            "reflaxe_c_phase_timing",
-            "--times",
-            "--custom-target",
-            f"c={output}",
+            (
+                "raylib_configuration_desktop"
+                if workload == "playable"
+                else "raylib_configuration_memory"
+            ),
         ]
+        if workload == "editor-shell":
+            arguments.extend(
+                [
+                    "-D",
+                    "hxc_runtime_report=summary",
+                    "-D",
+                    "reflaxe_c_phase_progress",
+                ]
+            )
+            if platform_name in ("macos", "linux"):
+                arguments.extend(["-D", "caxecraft_posix_hosted"])
+            if platform_name == "macos":
+                arguments.extend(["-D", "caxecraft_posix_darwin"])
+            arguments.extend(
+                ["-D", "caxecraft_pilot", "-D", "caxecraft_pilot_editor_shell"]
+            )
+        arguments.extend(
+            [
+                "-D",
+                "reflaxe_c_phase_timing",
+                "--times",
+                "--custom-target",
+                f"c={output}",
+            ]
+        )
     else:
         raise CompilerProfileFailure(f"unknown compiler workload {workload!r}")
     return resolve_haxe_arguments(arguments, locale="C")
@@ -2444,7 +2474,9 @@ def profile(
                     "full" if workload == "runtime-free" else "summary"
                 ),
                 "runtimeReportDetail": (
-                    "summary" if workload == "playable" else "full"
+                    "summary"
+                    if workload in ("playable", "editor-shell")
+                    else "full"
                 ),
                 "normalArtifactCount": len(baseline),
                 "normalArtifactSha256": artifact_digest(baseline),

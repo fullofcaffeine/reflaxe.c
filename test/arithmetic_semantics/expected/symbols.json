@@ -260,6 +260,53 @@
     },
     {
       "overloadSignature": [
+        "f64"
+      ],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": null,
+      "readableName": [
+        "ArithmeticFixture",
+        "floatQuotientByEight"
+      ],
+      "requestedName": null,
+      "cName": "hxc_ArithmeticFixture_floatQuotientByEight",
+      "semanticKey": "6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture20:floatQuotientByEight|1:3:f64|0:|0:",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "method",
+      "specializationArguments": [],
+      "baseName": "hxc_ArithmeticFixture_floatQuotientByEight",
+      "sourceSymbol": "ArithmeticFixture.floatQuotientByEight(f64)"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "readableName": [
+        "value"
+      ],
+      "requestedName": null,
+      "cName": "hxc_l_value",
+      "semanticKey": "5:local|113:ordinary:100:6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture20:floatQuotientByEight|1:3:f64|0:|0:|3:17:ArithmeticFixture20:floatQuotientByEight5:value|0:|0:|1:0",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture20:floatQuotientByEight|1:3:f64|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_l_value",
+      "sourceSymbol": "ArithmeticFixture.floatQuotientByEight.value#0"
+    },
+    {
+      "overloadSignature": [
         "f64",
         "f64"
       ],
@@ -444,6 +491,53 @@
       "specializationArguments": [],
       "baseName": "hxc_l_value",
       "sourceSymbol": "ArithmeticFixture.fneg.value#0"
+    },
+    {
+      "overloadSignature": [
+        "f64"
+      ],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": null,
+      "readableName": [
+        "ArithmeticFixture",
+        "fsqrt"
+      ],
+      "requestedName": null,
+      "cName": "hxc_ArithmeticFixture_fsqrt",
+      "semanticKey": "6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture5:fsqrt|1:3:f64|0:|0:",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "method",
+      "specializationArguments": [],
+      "baseName": "hxc_ArithmeticFixture_fsqrt",
+      "sourceSymbol": "ArithmeticFixture.fsqrt(f64)"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "readableName": [
+        "value"
+      ],
+      "requestedName": null,
+      "cName": "hxc_l_value",
+      "semanticKey": "5:local|96:ordinary:84:6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture5:fsqrt|1:3:f64|0:|0:|3:17:ArithmeticFixture5:fsqrt5:value|0:|0:|1:0",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture5:fsqrt|1:3:f64|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_l_value",
+      "sourceSymbol": "ArithmeticFixture.fsqrt.value#0"
     },
     {
       "overloadSignature": [
@@ -1169,6 +1263,548 @@
       "specializationArguments": [],
       "baseName": "hxc_l_value",
       "sourceSymbol": "ArithmeticFixture.inot.value#0"
+    },
+    {
+      "overloadSignature": [
+        "i32"
+      ],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": null,
+      "readableName": [
+        "ArithmeticFixture",
+        "intQuotientByEight"
+      ],
+      "requestedName": null,
+      "cName": "hxc_ArithmeticFixture_intQuotientByEight",
+      "semanticKey": "6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture18:intQuotientByEight|1:3:i32|0:|0:",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "method",
+      "specializationArguments": [],
+      "baseName": "hxc_ArithmeticFixture_intQuotientByEight",
+      "sourceSymbol": "ArithmeticFixture.intQuotientByEight(i32)"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "readableName": [
+        "value"
+      ],
+      "requestedName": null,
+      "cName": "hxc_l_value",
+      "semanticKey": "5:local|110:ordinary:98:6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture18:intQuotientByEight|1:3:i32|0:|0:|3:17:ArithmeticFixture18:intQuotientByEight5:value|0:|0:|1:0",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture18:intQuotientByEight|1:3:i32|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_l_value",
+      "sourceSymbol": "ArithmeticFixture.intQuotientByEight.value#0"
+    },
+    {
+      "overloadSignature": [
+        "i32"
+      ],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": null,
+      "readableName": [
+        "ArithmeticFixture",
+        "intQuotientByMaximum"
+      ],
+      "requestedName": null,
+      "cName": "hxc_ArithmeticFixture_intQuotientByMaximum",
+      "semanticKey": "6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture20:intQuotientByMaximum|1:3:i32|0:|0:",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "method",
+      "specializationArguments": [],
+      "baseName": "hxc_ArithmeticFixture_intQuotientByMaximum",
+      "sourceSymbol": "ArithmeticFixture.intQuotientByMaximum(i32)"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "readableName": [
+        "value"
+      ],
+      "requestedName": null,
+      "cName": "hxc_l_value",
+      "semanticKey": "5:local|113:ordinary:100:6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture20:intQuotientByMaximum|1:3:i32|0:|0:|3:17:ArithmeticFixture20:intQuotientByMaximum5:value|0:|0:|1:0",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture20:intQuotientByMaximum|1:3:i32|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_l_value",
+      "sourceSymbol": "ArithmeticFixture.intQuotientByMaximum.value#0"
+    },
+    {
+      "overloadSignature": [
+        "i32"
+      ],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": null,
+      "readableName": [
+        "ArithmeticFixture",
+        "intQuotientByNegativeOne"
+      ],
+      "requestedName": null,
+      "cName": "hxc_ArithmeticFixture_intQuotientByNegativeOne",
+      "semanticKey": "6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture24:intQuotientByNegativeOne|1:3:i32|0:|0:",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "method",
+      "specializationArguments": [],
+      "baseName": "hxc_ArithmeticFixture_intQuotientByNegativeOne",
+      "sourceSymbol": "ArithmeticFixture.intQuotientByNegativeOne(i32)"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "readableName": [
+        "value"
+      ],
+      "requestedName": null,
+      "cName": "hxc_l_value",
+      "semanticKey": "5:local|117:ordinary:104:6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture24:intQuotientByNegativeOne|1:3:i32|0:|0:|3:17:ArithmeticFixture24:intQuotientByNegativeOne5:value|0:|0:|1:0",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture24:intQuotientByNegativeOne|1:3:i32|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_l_value",
+      "sourceSymbol": "ArithmeticFixture.intQuotientByNegativeOne.value#0"
+    },
+    {
+      "overloadSignature": [
+        "i32"
+      ],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": null,
+      "readableName": [
+        "ArithmeticFixture",
+        "intQuotientByOne"
+      ],
+      "requestedName": null,
+      "cName": "hxc_ArithmeticFixture_intQuotientByOne",
+      "semanticKey": "6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture16:intQuotientByOne|1:3:i32|0:|0:",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "method",
+      "specializationArguments": [],
+      "baseName": "hxc_ArithmeticFixture_intQuotientByOne",
+      "sourceSymbol": "ArithmeticFixture.intQuotientByOne(i32)"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "readableName": [
+        "value"
+      ],
+      "requestedName": null,
+      "cName": "hxc_l_value",
+      "semanticKey": "5:local|108:ordinary:96:6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture16:intQuotientByOne|1:3:i32|0:|0:|3:17:ArithmeticFixture16:intQuotientByOne5:value|0:|0:|1:0",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture16:intQuotientByOne|1:3:i32|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_l_value",
+      "sourceSymbol": "ArithmeticFixture.intQuotientByOne.value#0"
+    },
+    {
+      "overloadSignature": [
+        "i32"
+      ],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": null,
+      "readableName": [
+        "ArithmeticFixture",
+        "intQuotientBySix"
+      ],
+      "requestedName": null,
+      "cName": "hxc_ArithmeticFixture_intQuotientBySix",
+      "semanticKey": "6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture16:intQuotientBySix|1:3:i32|0:|0:",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "method",
+      "specializationArguments": [],
+      "baseName": "hxc_ArithmeticFixture_intQuotientBySix",
+      "sourceSymbol": "ArithmeticFixture.intQuotientBySix(i32)"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "readableName": [
+        "value"
+      ],
+      "requestedName": null,
+      "cName": "hxc_l_value",
+      "semanticKey": "5:local|108:ordinary:96:6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture16:intQuotientBySix|1:3:i32|0:|0:|3:17:ArithmeticFixture16:intQuotientBySix5:value|0:|0:|1:0",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture16:intQuotientBySix|1:3:i32|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_l_value",
+      "sourceSymbol": "ArithmeticFixture.intQuotientBySix.value#0"
+    },
+    {
+      "overloadSignature": [
+        "i32",
+        "i32"
+      ],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": null,
+      "readableName": [
+        "ArithmeticFixture",
+        "intQuotientByVariable"
+      ],
+      "requestedName": null,
+      "cName": "hxc_ArithmeticFixture_intQuotientByVariable",
+      "semanticKey": "6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture21:intQuotientByVariable|2:3:i323:i32|0:|0:",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "method",
+      "specializationArguments": [],
+      "baseName": "hxc_ArithmeticFixture_intQuotientByVariable",
+      "sourceSymbol": "ArithmeticFixture.intQuotientByVariable(i32, i32)"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 1,
+      "readableName": [
+        "divisor"
+      ],
+      "requestedName": null,
+      "cName": "hxc_l_divisor",
+      "semanticKey": "5:local|119:ordinary:106:6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture21:intQuotientByVariable|2:3:i323:i32|0:|0:|3:17:ArithmeticFixture21:intQuotientByVariable7:divisor|0:|0:|1:1",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture21:intQuotientByVariable|2:3:i323:i32|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_l_divisor",
+      "sourceSymbol": "ArithmeticFixture.intQuotientByVariable.divisor#1"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "readableName": [
+        "value"
+      ],
+      "requestedName": null,
+      "cName": "hxc_l_value",
+      "semanticKey": "5:local|119:ordinary:106:6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture21:intQuotientByVariable|2:3:i323:i32|0:|0:|3:17:ArithmeticFixture21:intQuotientByVariable5:value|0:|0:|1:0",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture21:intQuotientByVariable|2:3:i323:i32|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_l_value",
+      "sourceSymbol": "ArithmeticFixture.intQuotientByVariable.value#0"
+    },
+    {
+      "overloadSignature": [
+        "i32"
+      ],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": null,
+      "readableName": [
+        "ArithmeticFixture",
+        "intQuotientByZero"
+      ],
+      "requestedName": null,
+      "cName": "hxc_ArithmeticFixture_intQuotientByZero",
+      "semanticKey": "6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture17:intQuotientByZero|1:3:i32|0:|0:",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "method",
+      "specializationArguments": [],
+      "baseName": "hxc_ArithmeticFixture_intQuotientByZero",
+      "sourceSymbol": "ArithmeticFixture.intQuotientByZero(i32)"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "readableName": [
+        "value"
+      ],
+      "requestedName": null,
+      "cName": "hxc_l_value",
+      "semanticKey": "5:local|109:ordinary:97:6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture17:intQuotientByZero|1:3:i32|0:|0:|3:17:ArithmeticFixture17:intQuotientByZero5:value|0:|0:|1:0",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture17:intQuotientByZero|1:3:i32|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_l_value",
+      "sourceSymbol": "ArithmeticFixture.intQuotientByZero.value#0"
+    },
+    {
+      "overloadSignature": [
+        "i32"
+      ],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": null,
+      "readableName": [
+        "ArithmeticFixture",
+        "intQuotientSideEffect"
+      ],
+      "requestedName": null,
+      "cName": "hxc_ArithmeticFixture_intQuotientSideEffect",
+      "semanticKey": "6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture21:intQuotientSideEffect|1:3:i32|0:|0:",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "method",
+      "specializationArguments": [],
+      "baseName": "hxc_ArithmeticFixture_intQuotientSideEffect",
+      "sourceSymbol": "ArithmeticFixture.intQuotientSideEffect(i32)"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "readableName": [
+        "tmp",
+        "increment-load-result"
+      ],
+      "requestedName": null,
+      "cName": "hxc_l_tmp_increment_load_result_n0",
+      "semanticKey": "9:temporary|114:ordinary:101:6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture21:intQuotientSideEffect|1:3:i32|0:|0:|3:17:ArithmeticFixture21:intQuotientSideEffect21:increment-load-result|0:|0:|1:0",
+      "escapeReasons": [
+        "non-c-identifier-byte",
+        "separator-normalized"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture21:intQuotientSideEffect|1:3:i32|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_l_tmp_increment_load_result_n0",
+      "sourceSymbol": "ArithmeticFixture.intQuotientSideEffect.increment-load-result#0"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 1,
+      "readableName": [
+        "tmp",
+        "load-result"
+      ],
+      "requestedName": null,
+      "cName": "hxc_l_tmp_load_result_n1",
+      "semanticKey": "9:temporary|114:ordinary:101:6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture21:intQuotientSideEffect|1:3:i32|0:|0:|3:17:ArithmeticFixture21:intQuotientSideEffect11:load-result|0:|0:|1:1",
+      "escapeReasons": [
+        "non-c-identifier-byte",
+        "separator-normalized"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture21:intQuotientSideEffect|1:3:i32|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_l_tmp_load_result_n1",
+      "sourceSymbol": "ArithmeticFixture.intQuotientSideEffect.load-result#1"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 1,
+      "readableName": [
+        "observed"
+      ],
+      "requestedName": null,
+      "cName": "hxc_l_observed",
+      "semanticKey": "5:local|114:ordinary:101:6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture21:intQuotientSideEffect|1:3:i32|0:|0:|3:17:ArithmeticFixture21:intQuotientSideEffect8:observed|0:|0:|1:1",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture21:intQuotientSideEffect|1:3:i32|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_l_observed",
+      "sourceSymbol": "ArithmeticFixture.intQuotientSideEffect.observed#1"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 2,
+      "readableName": [
+        "quotient"
+      ],
+      "requestedName": null,
+      "cName": "hxc_l_quotient",
+      "semanticKey": "5:local|114:ordinary:101:6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture21:intQuotientSideEffect|1:3:i32|0:|0:|3:17:ArithmeticFixture21:intQuotientSideEffect8:quotient|0:|0:|1:2",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture21:intQuotientSideEffect|1:3:i32|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_l_quotient",
+      "sourceSymbol": "ArithmeticFixture.intQuotientSideEffect.quotient#2"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "readableName": [
+        "value"
+      ],
+      "requestedName": null,
+      "cName": "hxc_l_value",
+      "semanticKey": "5:local|114:ordinary:101:6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture21:intQuotientSideEffect|1:3:i32|0:|0:|3:17:ArithmeticFixture21:intQuotientSideEffect5:value|0:|0:|1:0",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture21:intQuotientSideEffect|1:3:i32|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_l_value",
+      "sourceSymbol": "ArithmeticFixture.intQuotientSideEffect.value#0"
+    },
+    {
+      "overloadSignature": [
+        "i32"
+      ],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": null,
+      "readableName": [
+        "ArithmeticFixture",
+        "intQuotientThroughFloatCast"
+      ],
+      "requestedName": null,
+      "cName": "hxc_ArithmeticFixture_intQuotientThroughFloatCast",
+      "semanticKey": "6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture27:intQuotientThroughFloatCast|1:3:i32|0:|0:",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "method",
+      "specializationArguments": [],
+      "baseName": "hxc_ArithmeticFixture_intQuotientThroughFloatCast",
+      "sourceSymbol": "ArithmeticFixture.intQuotientThroughFloatCast(i32)"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "readableName": [
+        "value"
+      ],
+      "requestedName": null,
+      "cName": "hxc_l_value",
+      "semanticKey": "5:local|120:ordinary:107:6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture27:intQuotientThroughFloatCast|1:3:i32|0:|0:|3:17:ArithmeticFixture27:intQuotientThroughFloatCast5:value|0:|0:|1:0",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture27:intQuotientThroughFloatCast|1:3:i32|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_l_value",
+      "sourceSymbol": "ArithmeticFixture.intQuotientThroughFloatCast.value#0"
     },
     {
       "overloadSignature": [
@@ -2566,6 +3202,29 @@
       "naming": "explicit",
       "sourceOrdinal": null,
       "readableName": [
+        "c-standard-library",
+        "sqrt"
+      ],
+      "requestedName": "sqrt",
+      "cName": "sqrt",
+      "semanticKey": "6:method|28:ordinary:16:translation-unit|2:18:c-standard-library4:sqrt|0:|0:|0:",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "external",
+      "kind": "method",
+      "specializationArguments": [],
+      "baseName": "sqrt",
+      "sourceSymbol": "c-standard-library.sqrt"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "explicit",
+      "sourceOrdinal": null,
+      "readableName": [
         "init",
         "compiler",
         "executable-entry-point",
@@ -2672,6 +3331,28 @@
       "specializationArguments": [],
       "baseName": "hxc_l_right",
       "sourceSymbol": "compiler.primitive-helper.hxc.f64.modulo.right#1"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "readableName": [
+        "value"
+      ],
+      "requestedName": null,
+      "cName": "hxc_l_value",
+      "semanticKey": "5:local|118:ordinary:105:14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:12:hxc.f64.sqrt|0:|4:8:compiler16:primitive-helper12:hxc.f64.sqrt5:value|0:|0:|1:0",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:12:hxc.f64.sqrt|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_l_value",
+      "sourceSymbol": "compiler.primitive-helper.hxc.f64.sqrt.value#0"
     },
     {
       "overloadSignature": [],
@@ -3298,6 +3979,31 @@
       ],
       "baseName": "hxc_f64_modulo",
       "sourceSymbol": "compiler.primitive-helper<hxc.f64.modulo>"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": null,
+      "readableName": [
+        "f64",
+        "sqrt"
+      ],
+      "requestedName": null,
+      "cName": "hxc_f64_sqrt",
+      "semanticKey": "14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:12:hxc.f64.sqrt|0:",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "specialization",
+      "specializationArguments": [
+        "hxc.f64.sqrt"
+      ],
+      "baseName": "hxc_f64_sqrt",
+      "sourceSymbol": "compiler.primitive-helper<hxc.f64.sqrt>"
     },
     {
       "overloadSignature": [],

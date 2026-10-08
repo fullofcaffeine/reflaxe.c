@@ -3,22 +3,28 @@
 This document records both the bounded E4.T04 native `hxrt` array storage and
 the first E5.T03 ordinary-Haxe lowering that selects it. A program can now use
 empty or nonempty `Array<T>` literals, aliases, `length`, checked indexing,
-`push`, `pop`, `shift`, discarded-result `splice(pos, 1)`, `copy`, literal
-`resize(0)`, in-place `sort`, and source-order
-iteration for the admitted element types described below. An exact managed
+`push`, `pop`, `shift`, arbitrary-range `splice`, `copy`, typed `resize`,
+in-place `sort`, and live value or key/value iteration for the admitted element
+types described below. The C target's typed Haxe standard-library override also
+provides `concat`, `reverse`, `slice`, `unshift`, `remove`, `contains`,
+`indexOf`, `lastIndexOf`, `map`, and `filter` through those same operations. An
+exact managed
 `Array<String>` also supports
-`join(separator)` with one explicit String separator. Elements may now be
-plain direct values,
+`join(separator)` with one explicit String separator. Its `toString()` method
+reuses that typed join and adds Eval-compatible square brackets. Elements may
+now be plain direct values,
 `haxe.io.Bytes`, another
 managed Array, a tagged enum with managed Array payloads, a closed record
 that recursively contains those values, or a concrete mutable class reference.
 Such a record may also contain
 the direct, unmanaged `Null<Record>` representation documented in
 [aggregate lowering](aggregate-lowering.md). This is deliberately not
-general collection parity: other methods, escaping element-copy ownership,
-other managed element families, and broad standard-library behavior still fail
-before C is written. `Array<Class>` is deliberately different from the earlier
-acyclic value families: it uses the precise collector and can reclaim cycles.
+general collection parity: unsupported callback shapes, escaping element-copy
+ownership, other managed element families, and remaining standard-library
+behavior still fail before C is written. An Array uses the precise collector
+when its element-type graph can return to that Array or reach a managed class.
+This includes cycles that pass through records and active enum payloads.
+Structurally acyclic value families keep the smaller reference-counted path.
 
 The original typed storage advanced the provisional same-major runtime
 Application Binary Interface (ABI) from 0.4.0 to 0.5.0. Adding the
@@ -29,6 +35,10 @@ Adding the ownership-transferring `pop` entry points advances it to 0.13.0, and
 the corresponding front-removing `shift` entry points advance the marker to
 0.14.0. The discarded one-element `splice` entry point advances the current
 marker to 0.15.0. Hosted Float formatting later advanced the marker to 0.16.0.
+Live Array cursors and arbitrary-range splice/resize advanced the marker to
+0.17.0. The separate lowercase String feature advances the current marker to
+0.18.0. The private tagged Dynamic carrier advances the current marker to
+0.19.0 without changing the Array layout.
 Other intervening additions are recorded in their owning
 runtime documents. The bounded `resize(0)` lowering reuses the existing
 `hxc_array_resize` entry point, so it does not add a new ABI symbol or advance
@@ -98,12 +108,15 @@ release operations treat `NULL` as a successful no-op, while still rejecting a
 malformed non-null reference. This makes cleanup of a dynamically nullable
 local safe without turning null into an empty Array.
 
-`Array<Class>` cannot use that local reference count. A class can point to an
-Array that points back to the same class, so neither side would ever reach a
-zero count. For this one graph-shaped family, the compiler instead asks the
-precise collector for stable outer Array storage. The resizable backing buffer
-still uses the same checked `hxc_array` implementation. Two matching operations
-make the ownership boundary explicit:
+Some Array type graphs cannot use that local reference count. For example, an
+enum can contain a record whose `next` field is an Array of the same enum.
+Source mutation can connect those values into a cycle, so no reference count
+reaches zero. A class and Array can form the same shape. The compiler walks the
+closed element-type graph before it emits C. If that graph returns to the same
+Array specialization or reaches a managed class, the compiler asks the precise
+collector for stable outer Array storage. The resizable backing buffer still
+uses the same checked `hxc_array` implementation. Two matching operations make
+the ownership boundary explicit:
 
 - `hxc_array_ref_init_in_place` initializes a zeroed Array payload that the
   collector already owns; and
@@ -111,9 +124,10 @@ make the ownership boundary explicit:
   collector sweeps that payload. It never frees the collector-owned outer
   address.
 
-The Array descriptor walks the live pointer slots and reports each non-null
-class base exactly. Pointer relocation during growth therefore moves pointer
-values, not class objects; aliases keep observing the same mutable instances.
+The Array descriptor walks each live element. It follows record fields and
+switches on an enum tag before it reads that tag's payload. It reports only
+the managed references in the active payload. Growth moves pointer values, not
+managed objects, so aliases keep observing the same instances.
 
 Every admitted element representation is byte-relocatable: moving the same live
 value to another correctly aligned address preserves it without invoking a
@@ -181,7 +195,12 @@ The narrower `Array<String>.join` method reads those owned elements, appends
 every element and separator to one checked UTF-8 builder, then moves that
 allocation into one fresh managed String owner. This makes runtime work linear
 in the output bytes and preserves embedded NUL bytes without repeated
-whole-result copying. Other unsupported managed values remain rejected. A
+whole-result copying. `Array<String>.toString()` is an inline target-Haxe
+algorithm over the same join plus two managed String concatenations. It avoids
+a duplicate runtime formatter and matches Eval for empty, singleton, Unicode,
+embedded-NUL, and aliased Arrays. Other element types remain fail-closed until
+their exact `Std.string` conversions are available. Other unsupported managed
+values remain rejected. A
 class element is admitted only through the exact traced representation: direct
 nonescaping classes remain stack-shaped C values, while every class reachable
 from the admitted `Array<Class>` graph receives stable collector storage and a
@@ -274,6 +293,16 @@ logical source order. Exact existing-slot sources are supported:
   retain the replacement before releasing the prior destination; and
 - remove destroys exactly the removed element and relocates the suffix left.
 
+An indexed write has one additional pinned-Haxe boundary. An index below the
+current length assigns an existing slot. An index exactly equal to the length
+appends one element through the same checked copy path as `push`; an index above
+the length returns `HXC_STATUS_OUT_OF_RANGE`. The append is failure-atomic: a
+failed allocation or element copy leaves the old length, sequence, and element
+ownership unchanged. The unchanged generic-target implementation of
+`Vector.toArray()` depends on this rule because it creates an empty Array and
+writes each result at the next index. No Vector-specific runtime operation is
+needed.
+
 The compiler-used `pop` operation is deliberately a move, not a copy followed
 by removal. A nonempty pop byte-relocates the last live element into separate,
 correctly aligned output storage, shortens the Array, and does not call the
@@ -304,18 +333,20 @@ callback would release the owner that the caller just received.
 use the same absent-result contract as `pop`, and aliases observe the shortened
 shared container.
 
-`values.splice(position, 1)` is admitted when its returned Array is ignored.
-Haxe normally returns a new Array containing the removed elements. Ignoring that
-result makes a smaller lowering possible: the runtime destroys the removed slot
-in place and allocates no result container. A negative position counts backward
-from the end and clamps to zero, while a position at or beyond the length is a
-successful no-op. Every alias still observes the shorter shared Array.
+`values.splice(position, length)` accepts a runtime `Int` length and preserves
+Haxe's shared-container mutation. A negative position counts backward from the
+end and clamps to zero. A position beyond the end, a nonpositive length, or an
+empty normalized range is a successful no-op. An ignored result uses the
+allocation-free discard path, which destroys the removed range and shifts the
+suffix once. The literal one-element case keeps its smaller specialized entry
+point.
 
-The literal length argument must be exactly `1`, and using the returned Array
-remains unsupported. Those neighboring forms need a complete plan for
-constructing and returning a new typed Array, including managed-element
-ownership and rollback if copying fails. The compiler rejects them before
-writing C instead of silently returning the wrong value.
+When source code uses the returned Array, the runtime first shallow-copies the
+normalized removed range into a fresh exact `Array<T>`. Only a complete copy
+may shorten the source. If allocation or an element copy fails, the partial
+result is destroyed and the source Array remains unchanged. This order gives
+managed String, Bytes, nested Array, enum, and record elements the same
+failure-atomic ownership contract as `Array.copy()`.
 
 A lifecycle copy constructs into uninitialized storage. On failure it must
 leave no live destination. Assignment operates on one live destination and is
@@ -324,23 +355,39 @@ Destruction cannot fail. Callback context outlives the array, and callbacks may
 not re-enter or mutate that array. These rules make rollback reviewable without
 requiring object, collector, reflection, or dynamic-value machinery.
 
-`values.resize(0)` now clears an admitted managed Array in place, so every
-alias observes length zero. The argument must be the literal integer `0` at the
-call site. “Literal” means the zero is written directly in source, rather than
-stored in a variable or computed by another expression. That small rule proves
-at compile time that the operation can only shrink: the compiler emits an
-explicit receiver null check in HxcIR, then C calls the existing
-`hxc_array_resize` with length zero and no default element. The runtime destroys
-removed elements in reverse order, which preserves the same nested ownership
-rules used when the whole Array is released.
+`values.resize(length)` accepts a runtime `Int`. Shrinking destroys the removed
+suffix in reverse order, so every alias observes the new length and every nested
+owner is released once. Growth copy-constructs each new slot from the exact
+static Haxe default after representation selection: `0`, `0.0`, `false`, or a
+valid null carrier. If one copy fails, the runtime destroys the newly created
+suffix and restores the old logical length. It never guesses an element type or
+uses a generic box.
 
-Other lengths remain unsupported. Growing an Array must copy-construct each new
-slot from the correct Haxe default for its static element type—zero, `0.0`,
-`false`, null, or a more structured default—and undo a partly completed growth
-if copying fails. A future broader lowering must model that decision after
-representation selection. The generic runtime never guesses a type or
-manufactures a boxed default, and a variable that happens to contain zero is
-still rejected until dynamic shrink/grow semantics have that complete plan.
+An unboxed record or enum whose C representation has no null carrier still
+fails before C is written when resize could grow. That source-level Haxe default
+is `null`, which cannot be represented honestly by a non-nullable by-value C
+record. Literal `resize(0)` remains a smaller operation and works for those
+families because it can only shrink.
+
+## Live Array cursors
+
+`iterator()` and `keyValueIterator()` retain the same reference-counted Array
+container instead of copying its elements. `hasNext()` compares the cursor with
+the Array's current length. A later `push` can therefore extend an active
+iteration, while a shrink can end it earlier. This matches the pinned standard
+`ArrayIterator` behavior and keeps aliases observable.
+
+`next()` performs one checked typed element copy and advances the cursor only
+after that copy succeeds. A managed-copy failure can therefore be retried
+without skipping a value. The key/value cursor writes the current `Int` index
+and copied value into the compiler's exact closed-record layout; validation
+proves that the fields are aligned, in bounds, and do not overlap before the
+runtime writes them. The iterator and retained Array are released together.
+
+Collector-owned Array cursors remain fail-closed. Their outer Array
+storage is traced rather than reference counted, so retaining that address as a
+normal iterator anchor would use the wrong lifetime protocol. That boundary
+needs a collector-rooted cursor design before it can be admitted.
 
 Borrowed pointers returned by `hxc_array_at` and `hxc_array_at_const` remain
 valid only while the array stays alive and no mutation can relocate or shift
@@ -403,7 +450,7 @@ transfers it into a cleanup-owned local. A later statement can then return
 early without leaking the earlier Array, even when source code never reads it.
 The HxcIR validator rejects missing, duplicate, mismatched, or abandoned
 ownership before C syntax is selected. This protocol applies to
-reference-counted Arrays; `Array<Class>` uses precise collector roots and does
+reference-counted Arrays. A collector-owned Array uses precise roots and does
 not pretend to have the same retain/release lifecycle.
 
 ## Feature and capability boundary
@@ -423,7 +470,8 @@ in `hxc.runtime-plan.json`; `hxc_runtime=none` rejects those reasons before any
 artifact is written. The fixed-array/span suite continues to prove a positive
 runtime-none plan and zero `hxrt` artifacts or symbols.
 
-An admitted `Array<Class>` graph selects the larger, still exact closure:
+An admitted cyclic Array graph or `Array<Class>` graph selects the larger,
+still exact closure:
 
 ```text
 runtime-base + status + alloc + array + object + gc
@@ -431,7 +479,7 @@ runtime-base + status + alloc + array + object + gc
 
 `object` supplies immutable size/alignment/trace/finalizer descriptors. `gc`
 supplies stable allocation, exact roots, and cycle reclamation. The compiler
-emits neither feature for the direct class fixture or for an ordinary
+emits neither feature for a direct nonescaping class fixture or an acyclic
 `Array<Int>`/record/enum program. `hxc_runtime=none` rejects the traced graph
 before any plausible C project is written.
 
@@ -463,22 +511,40 @@ on growth and injects allocation failure without libc allocation dependencies.
 The fixture proves:
 
 - primitive `int32_t` growth, indexing, push, insert, assignment, removal,
-  `pop`, `shift`, resize, owner move, and overflow rejection;
+  `pop`, `shift`, arbitrary-range splice, typed resize, owner move, and overflow
+  rejection;
 - distinct primitive-copy storage, independent mutation, and the in-place copy
   used when the collector owns the destination Array container;
 - exact-slot aliasing across both relocation and suffix shifts;
+- indexed append at exactly `length`, rejection above `length`, and unchanged
+  sequence and reference counts after injected append-copy failure;
 - reference-element shallow-copy retain counts, retain-before-release
   assignment, ownership-transferring `pop` and `shift` with no lifecycle
   callbacks, and
   balanced destruction;
 - rollback after copy, insertion, and partial resize lifecycle failures,
   including an injected failure after the first copied reference;
+- live empty and nonempty iterators, mutation through shared aliases, key/value
+  record layout, retry after managed element-copy failure, and iterator
+  allocation failure;
 - unchanged logical contents after allocation failure; and
 - absence of string, object, GC, reflection, and dynamic symbol families.
 
+The cycle fixture uses `Array<Enum>` values whose active payload contains a
+record and another Array. It proves self-cycles, mutual cycles, alias mutation,
+cycle breakup, a deep chain, and pressure-triggered collection. Its independent
+native driver removes the final root, forces collection, and requires zero live
+objects. Generated trace functions switch on the enum tag and visit only the
+active payload. A matching acyclic enum/record fixture stays reference counted
+and omits the object and GC runtime features. In the reviewed Clang and GCC
+renders, the cyclic C project was 102745 bytes. The acyclic project was 49476
+bytes. These byte counts show selective packaging. They are not compile-time
+or runtime performance measurements.
+
 The ordinary-Haxe generated fixture additionally constructs empty `Array<Int>`
-and `Array<String>` values with `new Array<T>()`, mutates both, and applies `|=`
-to an indexed integer. It proves the typed creation/cleanup pair, the managed
+and `Array<String>` values with `new Array<T>()`, exercises the target-owned
+Array algorithms and both live cursor forms, mutates both, and applies `|=` to
+an indexed integer. It proves the typed creation/cleanup pair, the managed
 String element lifecycle, and the checked read/primitive-operation/write
 sequence in HxcIR. The same fixture proves both sides of an Array join: a fresh
 literal moves its owner, while a borrowed Array is retained. A
@@ -486,6 +552,18 @@ pair of sequential value switches proves that the first joined local is
 released when the second switch returns early. The same source runs under Eval
 and generated native C, while the HxcIR shape check confirms the ownership
 decision is made before CAST and printing.
+
+The narrower
+`python3 test/differential/array-runtime/run.py --to-string-only --toolchain clang`
+lane isolates `Array<String>.toString()`. It compares pinned Eval with normal
+and reversed generated projects, checks the exact Array/String runtime roots,
+runs strict C11 at O0 and O2 plus AddressSanitizer and UndefinedBehaviorSanitizer,
+and proves that a non-String element stops before artifacts.
+
+The Vector/List differential reuses the same registered runtime. It proves the
+unchanged pinned `Vector.toArray()` indexed-append path, including primitive
+and collector-managed Array carriers, while the direct runtime fixture owns the
+adversarial allocation/copy rollback and reference-count checks.
 
 A pinned Haxe Eval trace covers the common observable mutation sequence. Eval
 is a dynamic target, so the oracle pushes explicit zero values instead of using
@@ -499,10 +577,10 @@ compiles every runtime source in hosted and freestanding modes.
 
 The same registered suite also compiles an ordinary-Haxe executable through
 the production custom target. It checks managed Array HxcIR before C syntax is
-chosen, compares normal, reversed-discovery, and two requests through one warm
-Haxe compilation server byte-for-byte, checks the exact dependency-closed
-runtime feature set and source reasons, compiles the emitted project as
-warning-clean C11,
+chosen, compares normal and reversed discovery for split, package, and unity
+projects, and compares two split requests through one warm Haxe compilation
+server byte-for-byte. It checks the exact dependency-closed runtime feature set
+and source reasons, compiles the emitted project as warning-clean C11,
 runs it under sanitizers, and rejects unsupported ownership or element shapes
 without leaving output. The fixture includes empty and populated copies of
 `Array<Int>`, managed `Array<String>`, nested Arrays, and an unboxed
@@ -536,12 +614,7 @@ payload must be reclaimed. Strict native execution and sanitizers exercise
 both paths. The same source also runs under the pinned Haxe Eval oracle, while
 split, package, and unity projects compare repeated/reversed discovery bytes
 and the split project compares two requests to one warm Haxe compilation
-server. Finally, the suite invokes Caxecraft's real compile-only path and
-requires it to get past the editor-history `Array.shift` call. The current
-worktree then reaches the independently owned same-source runtime-reason
-collision in `EditorCommandReducer.removeMessage` (`haxe_c-7d0.13`). That later
-failure proves this Array operation no longer blocks the flagship without
-misrepresenting the whole game as compiled.
+server.
 
 Run the focused evidence with:
 
@@ -553,8 +626,9 @@ npm run test:native
 ```
 
 This evidence implements only the named generated-Haxe slices. Whole-reference
-reassignment, arguments that transfer ownership, managed families beyond the
-admitted Array/Bytes/class graph, most upstream methods, public export layout,
-and performance claims remain deferred to their named owners. Array returns are
+reassignment, arguments that transfer ownership, collector-owned Array
+iterators, managed families beyond the admitted Array/Bytes/class graph,
+remaining upstream methods, public export layout, and performance claims remain
+deferred to their named owners. Array returns are
 part of the implemented slice: the fixture exercises a nullable local Array
 whose owner moves to the caller.

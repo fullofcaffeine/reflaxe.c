@@ -79,6 +79,26 @@ class CaxecraftHaxeServerTests(unittest.TestCase):
         self.assertNotEqual(first_pid, int(second_cookie["pid"]))
         self.assertIsNone(process_start_identity(first_pid))
 
+    def test_lease_cleanup_survives_a_replaced_cookie(self) -> None:
+        owner = self.owner("lease-cleanup")
+        first = owner.connect()
+        self.assertIsNotNone(first.process)
+        assert first.process is not None
+
+        # Reproduce the timeout race: the first client still owns a live
+        # process, but a later lifecycle operation publishes a new cookie.
+        owner.cookie_path.unlink()
+        second = owner.connect()
+        self.assertIsNotNone(second.process)
+        assert second.process is not None
+        self.assertNotEqual(first.process.pid, second.process.pid)
+
+        self.assertTrue(owner.stop_lease(first))
+        self.assertIsNone(process_start_identity(first.process.pid))
+        self.assertIsNotNone(process_start_identity(second.process.pid))
+        current = json.loads(owner.cookie_path.read_text(encoding="utf-8"))
+        self.assertEqual(current["pid"], second.process.pid)
+
     def test_explicit_attachment_never_claims_process_ownership(self) -> None:
         owner = self.owner("attachment-host")
         automatic = owner.connect()

@@ -10,9 +10,13 @@ import caxecraft.editor.EditorObservationPlan.mergeChanges;
 import caxecraft.editor.EditorObservationPlan.sameNodeRef;
 import caxecraft.editor.EditorPolicy.defaults as defaultEditorSettings;
 import caxecraft.editor.EditorPolicy.validate as validateEditorSettings;
+import caxecraft.editor.EditorPresentation.project as projectPresentation;
+import caxecraft.editor.EditorPresentation.projectDetails as projectPresentationDetails;
 import caxecraft.editor.EditorScenarioSnapshot.EditorScenarioImage;
 import caxecraft.editor.EditorScenarioSnapshot.EditorScenarioImageResult;
+import caxecraft.editor.EditorScenarioSnapshot.EditorScenarioParseState;
 import caxecraft.editor.EditorScenarioSnapshot.capture as captureScenario;
+import caxecraft.editor.EditorScenarioSnapshot.captureReducerOwnedEdit;
 import caxecraft.editor.EditorScenarioSnapshot.restore as restoreScenario;
 import caxecraft.editor.EditorTypes.EditorCommand;
 import caxecraft.editor.EditorTypes.EditorCommandFamily;
@@ -32,14 +36,18 @@ import caxecraft.editor.EditorTypes.EditorSelectionRequest;
 import caxecraft.editor.EditorTypes.EditorSelectionResult;
 import caxecraft.editor.EditorTypes.EditorSettings;
 import caxecraft.editor.EditorTypes.EditorTestPlayResult;
+import caxecraft.editor.EditorTypes.EditorTerrainChange;
 import caxecraft.editor.EditorTypes.EditorValidationObservation;
 import caxecraft.editor.EditorTypes.EditorValidationResult;
 import caxecraft.scenario.Scenario;
+import caxecraft.scenario.ScenarioDiagnostic;
+import caxecraft.scenario.ScenarioCodecModel.ParsedScenario;
 import caxecraft.scenario.ScenarioCodecModel.ScenarioReadResult;
 import caxecraft.scenario.ScenarioContentRegistry;
 import caxecraft.scenario.ScenarioGeometry.VoxelBounds;
 import caxecraft.scenario.ScenarioValidator;
 import caxecraft.editor.EditorWorldGrid.containsBounds as containsWorldBounds;
+import caxecraft.editor.EditorWorldGrid.paletteCodeAt as worldPaletteCodeAt;
 import caxecraft.editor.EditorWorldGrid.volume as voxelVolume;
 import haxe.io.Bytes;
 
@@ -54,8 +62,14 @@ private enum EditorSessionPlayState {
 
 /** One isolated reducer pass before a preview or transaction publishes state. */
 private enum EditorStageResult {
-	StageReady(after:EditorScenarioImage, families:Array<EditorCommandFamily>, changes:Array<EditorChangeId>);
+	StageReady(after:EditorScenarioImage, families:Array<EditorCommandFamily>, changes:Array<EditorChangeId>, terrain:EditorTerrainChange);
 	StageRejected(error:EditorError);
+}
+
+/** Direction-correct terrain footprints stored with one history entry. */
+private typedef EditorTerrainHistoryPair = {
+	final undo:EditorTerrainChange;
+	final redo:EditorTerrainChange;
 }
 
 /** Validation result for a workspace target against the current draft. */
@@ -64,32 +78,68 @@ private enum EditorSelectionValidation {
 	WorkspaceSelectionRejected(error:EditorError);
 }
 
+/** One exact semantic result after resolving deferred parser metadata. */
+private enum EditorImageValidation {
+	ImagePlayable(scenario:Scenario);
+	ImageInvalid(diagnostics:Array<ScenarioDiagnostic>);
+	ImageUnreadable(error:EditorError);
+}
+
+/** One recent private draft image that Undo or Redo can restore without parsing. */
+private typedef EditorCachedHistoryImage = {
+	final stateIdentity:Int;
+	final image:EditorScenarioImage;
+}
+
 /**
 	Renderer-independent editing, validation, history, and test-play state.
 
-	The mutable draft is never exposed directly. Public snapshots are deep
-	CAXEMAP round trips, so UI code cannot accidentally change history or test
-	play by holding an old array reference.
+	The mutable draft is never exposed directly. Public scenario snapshots parse
+	a private copy of the canonical CAXEMAP bytes, so UI code cannot accidentally
+	change history or test play by holding an old array reference. The session retains the latest
+	canonical image: owned bytes plus its private typed scenario. Opened and
+	restored images also retain exact parser coordinates. A preview or commit
+	reuses that image as its unchanged `before` value and creates one new image
+	for the proposed `after` value. Voxel reducers retain no caller-owned records,
+	so their image writes canonical bytes immediately and reconstructs parser
+	coordinates only when validation needs them. Every reducer detaches mutable
+	command payloads before publication, so visual commands use this same path.
+	Visual queries derive fresh presentation arrays from the retained typed value,
+	so an accepted edit does not cause another CAXEMAP parse on the drawing path.
 **/
 final class EditorSession {
+	/** Keep the common edit/undo/redo window responsive without retaining every typed draft. */
+	static inline final HISTORY_IMAGE_CACHE_ENTRIES:Int = 8;
+
 	final registry:ScenarioContentRegistry;
 	final settings:EditorSettings;
 	final history:EditorHistory;
-	var draft:Scenario;
+	final initialSource:Bytes;
+
+	/** The canonical bytes, typed scenario, and available parser metadata. */
+	var draftImage:EditorScenarioImage;
+
 	var selection:EditorSelection;
 	var lastPlayable:Null<Scenario>;
 	var playState:Null<EditorSessionPlayState>;
 	var currentRevision:Int;
+	var currentStateIdentity:Int;
+	var nextStateIdentity:Int;
+	final historyImageCache:Array<EditorCachedHistoryImage>;
 
-	function new(image:EditorScenarioImage, registry:ScenarioContentRegistry, settings:EditorSettings) {
+	function new(image:EditorScenarioImage, registry:ScenarioContentRegistry, settings:EditorSettings, validateInitial:Bool) {
 		this.registry = registry;
 		this.settings = settings;
 		this.history = new EditorHistory(settings);
-		this.draft = image.parsed.candidate;
+		this.initialSource = image.bytes.sub(0, image.bytes.length);
+		this.draftImage = image;
 		this.selection = NoEditorSelection;
-		this.lastPlayable = validatedScenario(image);
+		this.lastPlayable = validateInitial ? validatedScenario(image) : null;
 		this.playState = null;
 		this.currentRevision = 0;
+		this.currentStateIdentity = 0;
+		this.nextStateIdentity = 0;
+		this.historyImageCache = [{stateIdentity: 0, image: image}];
 	}
 
 	/** Open even a semantically invalid draft so the editor can repair it. */
@@ -100,7 +150,7 @@ final class EditorSession {
 			return EditorOpenRejected(invalidSetting);
 		return switch captureScenario(initial) {
 			case ImageRejected(error): EditorOpenRejected(error);
-			case ImageReady(image): EditorOpened(new EditorSession(image, registry, settings));
+			case ImageReady(image): EditorOpened(new EditorSession(image, registry, settings, true));
 		}
 	}
 
@@ -118,9 +168,33 @@ final class EditorSession {
 			return EditorOpenRejected(invalidSetting);
 		return switch restoreScenario(source) {
 			case ImageRejected(error): EditorOpenRejected(error);
-			case ImageReady(image): EditorOpened(new EditorSession(image, registry, settings));
+			case ImageReady(image): EditorOpened(new EditorSession(image, registry, settings, true));
 		}
 	}
+
+	/**
+	 * Open one caller-owned parser result without decoding the same bytes again.
+	 *
+	 * The caller transfers the parsed candidate and must not retain or mutate its
+	 * arrays. This entry point does not assume semantic validity; Test Play still
+	 * runs the ordinary validator before it publishes a playable snapshot.
+	 */
+	public static function openParsed(source:Bytes, parsed:ParsedScenario, registry:ScenarioContentRegistry, ?requested:EditorSettings):EditorOpenResult {
+		final settings = requested == null ? defaultEditorSettings() : requested;
+		final invalidSetting = validateEditorSettings(settings);
+		if (invalidSetting != null)
+			return EditorOpenRejected(invalidSetting);
+		return EditorOpened(new EditorSession({
+			bytes: source.sub(0, source.length),
+			scenario: parsed.candidate,
+			parseState: ParsedScenarioImage(parsed),
+			worldGridEditable: caxecraft.editor.EditorWorldGrid.isEditable(parsed.candidate.world)
+		}, registry, settings, false));
+	}
+
+	/** True when bytes are the exact source owner from which this session opened. */
+	public function matchesInitialSource(source:Bytes):Bool
+		return source.compare(initialSource) == 0;
 
 	/**
 		Apply one command against the session's current in-process draft.
@@ -133,10 +207,7 @@ final class EditorSession {
 	public function apply(command:EditorCommand):EditorEditResult {
 		if (playState != null)
 			return EditRejected(NotEditing);
-		return switch captureScenario(draft) {
-			case ImageRejected(error): EditRejected(error);
-			case ImageReady(before): applyToImage(before, command);
-		}
+		return applyToImage(draftImage, command);
 	}
 
 	/**
@@ -154,8 +225,41 @@ final class EditorSession {
 		return switch request.mutation {
 			case Apply(command): mutationFromEdit(apply(command));
 			case ApplyBatch(commands): applyBatch(commands);
+			case ApplyText(source): applyText(source);
 			case Undo: mutationFromHistory(undo());
 			case Redo: mutationFromHistory(redo());
+		}
+	}
+
+	/**
+		Apply one complete advanced-text draft through the public scenario gates.
+
+		Parsing and semantic validation finish before history or session state can
+		change. The accepted typed scenario is then written canonically and recorded
+		as one whole-document edit. This keeps raw invalid text in its UI owner while
+		making successful text, card, Save, Test Play, and automation views identical.
+	**/
+	function applyText(source:Bytes):EditorMutationResult {
+		if (playState != null)
+			return MutationRejected(NotEditing, currentRevision);
+		return switch restoreScenario(source) {
+			case ImageRejected(error): MutationRejected(error, currentRevision);
+			case ImageReady(candidate):
+				switch validateImage(candidate) {
+					case ImageInvalid(diagnostics): MutationRejected(SnapshotRejected(diagnostics.copy()), currentRevision);
+					case ImageUnreadable(error): MutationRejected(error, currentRevision);
+					case ImagePlayable(scenario):
+						switch captureScenario(scenario) {
+							case ImageRejected(error): MutationRejected(error, currentRevision);
+							case ImageReady(after):
+								final result = accept(draftImage, after, Text, [ChangedDocument], {undo: TerrainChanged, redo: TerrainChanged});
+								switch result {
+									case EditApplied(_, _, _, _, _): lastPlayable = cloneScenario(after.scenario);
+									case EditUnchanged(_) | EditRejected(_):
+								}
+								mutationFromEdit(result);
+						}
+				}
 		}
 	}
 
@@ -197,13 +301,9 @@ final class EditorSession {
 			return PreviewRejected(EmptyTransaction, currentRevision);
 		if (request.commands.length > settings.transactionCommands)
 			return PreviewRejected(TransactionTooLarge(request.commands.length, settings.transactionCommands), currentRevision);
-		return switch captureScenario(draft) {
-			case ImageRejected(error): PreviewRejected(error, currentRevision);
-			case ImageReady(before):
-				switch stageCommands(before, request.commands) {
-					case StageRejected(error): PreviewRejected(error, currentRevision);
-					case StageReady(after, families, changes): previewStaged(before, after, families, changes);
-				}
+		return switch stageCommands(draftImage, request.commands) {
+			case StageRejected(error): PreviewRejected(error, currentRevision);
+			case StageReady(after, families, changes, _): previewStaged(draftImage, after, families, changes);
 		};
 	}
 
@@ -228,12 +328,16 @@ final class EditorSession {
 				});
 			case InspectDraft:
 				DraftObserved(currentRevision, draftSnapshot());
+			case InspectPresentation:
+				PresentationObserved(currentRevision, projectPresentation(draftImage.scenario));
+			case InspectPresentationDetails:
+				PresentationDetailsObserved(currentRevision, projectPresentationDetails(draftImage.scenario));
 			case InspectCanonicalDraft:
 				CanonicalDraftObserved(currentRevision, canonicalDraft());
 			case InspectTree:
-				TreeObserved(currentRevision, buildTree(draft));
+				TreeObserved(currentRevision, buildTree(draftImage.scenario));
 			case InspectNode(ref):
-				NodeObserved(currentRevision, findNode(draft, ref));
+				NodeObserved(currentRevision, findNode(draftImage.scenario, ref));
 			case InspectValidation:
 				ValidationObserved(currentRevision, inspectValidation());
 		}
@@ -247,19 +351,75 @@ final class EditorSession {
 		inspecting diagnostics, so this path returns fresh copied evidence only.
 	**/
 	function inspectValidation():EditorValidationObservation {
-		return switch captureScenario(draft) {
-			case ImageRejected(error): DraftUnreadable(error);
-			case ImageReady(image):
-				switch ScenarioValidator.validate(image.parsed, registry) {
-					case ReadError(diagnostics): DraftInvalid(diagnostics.copy());
-					case ReadOk(_): DraftPlayable(image.bytes.sub(0, image.bytes.length));
+		final image = draftImage;
+		return switch validateImage(image) {
+			case ImageInvalid(diagnostics): DraftInvalid(diagnostics.copy());
+			case ImagePlayable(_): DraftPlayable(image.bytes.sub(0, image.bytes.length));
+			case ImageUnreadable(error): DraftUnreadable(error);
+		}
+	}
+
+	/**
+	 * Resolve exact parser coordinates only when a semantic check needs them.
+	 *
+	 * Ordinary opened and restored images already own this metadata. A trusted
+	 * voxel edit owns canonical bytes and a private typed scenario, so its click
+	 * path can defer this full read until Validate, Save, or Test Play.
+	 */
+	function validateImage(image:EditorScenarioImage):EditorImageValidation {
+		return switch image.parseState {
+			case ParsedScenarioImage(parsed): validateParsedImage(parsed);
+			case DeferredScenarioParse:
+				switch restoreScenario(image.bytes) {
+					case ImageRejected(error): ImageUnreadable(error);
+					case ImageReady(restored):
+						switch restored.parseState {
+							case ParsedScenarioImage(parsed): validateParsedImage(parsed);
+							case DeferredScenarioParse: throw "restored editor bytes retained deferred parser metadata";
+						}
 				}
+		}
+	}
+
+	/** Convert the public validator result into the editor's exact three states. */
+	function validateParsedImage(parsed:ParsedScenario):EditorImageValidation {
+		return switch ScenarioValidator.validate(parsed, registry) {
+			case ReadError(diagnostics): ImageInvalid(diagnostics);
+			case ReadOk(scenario): ImagePlayable(scenario);
 		}
 	}
 
 	/** Current revision for an in-process caller preparing its next mutation. */
 	public inline function revision():Int
 		return currentRevision;
+
+	/**
+		Return the stable identity of the current canonical history state.
+
+		Undo and Redo restore the identity recorded with their bytes. A new edit
+		always receives a fresh identity, even after the redo branch is discarded.
+		Save owners can therefore test dirty state without serializing every frame.
+	**/
+	public inline function stateIdentity():Int
+		return currentStateIdentity;
+
+	/** Return the retained typed-image count for the focused bounded-cache probe. */
+	@:noCompletion
+	public inline function historyImageCacheCount():Int
+		return historyImageCache.length;
+
+	/** Return distinct canonical byte owners retained by focused history probes. */
+	@:noCompletion
+	public inline function historyByteBufferCount():Int
+		return history.byteBufferCount();
+
+	/** True when the current visual edit has postponed parser-coordinate recovery. */
+	@:noCompletion
+	public function draftDefersParserMetadata():Bool
+		return switch draftImage.parseState {
+			case DeferredScenarioParse: true;
+			case ParsedScenarioImage(_): false;
+		};
 
 	/**
 		Stage a bounded command list and commit it as one reversible edit.
@@ -276,18 +436,14 @@ final class EditorSession {
 			return MutationRejected(EmptyTransaction, currentRevision);
 		if (commands.length > settings.transactionCommands)
 			return MutationRejected(TransactionTooLarge(commands.length, settings.transactionCommands), currentRevision);
-		return switch captureScenario(draft) {
-			case ImageRejected(error): MutationRejected(error, currentRevision);
-			case ImageReady(before):
-				switch stageCommands(before, commands) {
-					case StageRejected(error): MutationRejected(error, currentRevision);
-					case StageReady(after, families, changes):
-						switch accept(before, after, Transaction, changes) {
-							case EditApplied(_, committedChanges, undoDepth, redoDepth):
-								MutationApplied(families.copy(), committedChanges, currentRevision, undoDepth, redoDepth);
-							case EditUnchanged(_): MutationUnchanged(families.copy(), currentRevision);
-							case EditRejected(error): MutationRejected(error, currentRevision);
-						}
+		return switch stageCommands(draftImage, commands) {
+			case StageRejected(error): MutationRejected(error, currentRevision);
+			case StageReady(after, families, changes, terrain):
+				switch accept(draftImage, after, Transaction, changes, {undo: terrain, redo: terrain}) {
+					case EditApplied(_, committedChanges, committedTerrain, undoDepth, redoDepth):
+						MutationApplied(families.copy(), committedChanges, committedTerrain, currentRevision, undoDepth, redoDepth);
+					case EditUnchanged(_): MutationUnchanged(families.copy(), currentRevision);
+					case EditRejected(error): MutationRejected(error, currentRevision);
 				}
 		}
 	}
@@ -297,6 +453,7 @@ final class EditorSession {
 		var staged = before;
 		final families:Array<EditorCommandFamily> = [];
 		final changes:Array<EditorChangeId> = [];
+		var terrain = TerrainUnchanged;
 		for (command in commands) {
 			switch command {
 				case RestoreLastPlayable:
@@ -308,22 +465,28 @@ final class EditorSession {
 							staged = image;
 							families.push(Recovery);
 							mergeChanges(changes, [ChangedDocument]);
+							terrain = TerrainChanged;
 					}
 				case _:
-					switch reduceCommand(staged.parsed.candidate, command, settings) {
+					switch reduceCommand(staged.scenario, command, {settings: settings, worldGridEditable: staged.worldGridEditable}) {
 						case ReductionRejected(error): return StageRejected(error);
 						case ReductionReady(reduction):
-							switch captureScenario(reduction.scenario) {
+							switch captureReduction(reduction.scenario, staged.worldGridEditable) {
 								case ImageRejected(error): return StageRejected(error);
 								case ImageReady(image):
 									staged = image;
 									families.push(reduction.family);
 									mergeChanges(changes, changesFor(command));
+									switch terrainChangeForCommand(command) {
+										case TerrainUnchanged:
+										case TerrainVoxelChanged(_, _) | TerrainChanged:
+											terrain = TerrainChanged;
+									}
 							}
 					}
 			}
 		}
-		return StageReady(staged, families.copy(), changes.copy());
+		return StageReady(staged, families.copy(), changes.copy(), terrain);
 	}
 
 	/** Match the commit gate without recording or publishing the candidate. */
@@ -341,8 +504,8 @@ final class EditorSession {
 
 	function mutationFromEdit(result:EditorEditResult):EditorMutationResult {
 		return switch result {
-			case EditApplied(family, changes, undoDepth, redoDepth):
-				MutationApplied([family], changes, currentRevision, undoDepth, redoDepth);
+			case EditApplied(family, changes, terrain, undoDepth, redoDepth):
+				MutationApplied([family], changes, terrain, currentRevision, undoDepth, redoDepth);
 			case EditUnchanged(family):
 				MutationUnchanged([family], currentRevision);
 			case EditRejected(error):
@@ -352,11 +515,50 @@ final class EditorSession {
 
 	function mutationFromHistory(result:EditorHistoryResult):EditorMutationResult {
 		return switch result {
-			case HistoryApplied(family, changes, undoDepth, redoDepth):
-				MutationApplied([family], changes, currentRevision, undoDepth, redoDepth);
+			case HistoryApplied(family, changes, terrain, undoDepth, redoDepth):
+				MutationApplied([family], changes, terrain, currentRevision, undoDepth, redoDepth);
 			case HistoryRejected(error):
 				MutationRejected(error, currentRevision);
 		}
+	}
+
+	/** Return a broad batch footprint when one command can affect terrain. */
+	function terrainChangeForCommand(command:EditorCommand):EditorTerrainChange {
+		return switch command {
+			case ResizeWorld(_) | SetPaletteEntry(_, _) | PaintVoxel(_, _) | EraseVoxel(_) | PaintVoxels(_, _) | EraseVoxels(_) | FillBounds(_, _) |
+				RestoreLastPlayable:
+				TerrainChanged;
+			case SetTitle(_) | SetEnvironment(_) | PutFluid(_) | RemoveFluid(_) | StampPrefab(_, _, _, _) | PutObject(_) | MoveObjectBy(_, _) |
+				RotateObjectBy(_, _) | ResizeTriggerTo(_, _) | RenameObject(_, _) | RemoveObject(_) | PutDialogue(_) | RemoveDialogue(_) | PutObjective(_) |
+				RemoveObjective(_) | PutRule(_) | RemoveRule(_) | PutFlowVariable(_) | PutFlowSequence(_) | SetDefaultLocale(_) | PutLocale(_) |
+				RemoveLocale(_) | PutMessage(_, _) | RemoveMessage(_, _):
+				TerrainUnchanged;
+		};
+	}
+
+	/** Capture the exact values that a single command writes and restores. */
+	function terrainHistoryForCommand(before:Scenario, command:EditorCommand):Null<EditorTerrainHistoryPair> {
+		return switch command {
+			case PaintVoxel(point, paletteCode):
+				final previous = worldPaletteCodeAt(before.world, point);
+				if (previous == null) null; else {
+					undo: TerrainVoxelChanged(point, previous),
+					redo: TerrainVoxelChanged(point, paletteCode)
+				};
+			case EraseVoxel(point):
+				final previous = worldPaletteCodeAt(before.world, point);
+				if (previous == null) null; else {
+					undo: TerrainVoxelChanged(point, previous),
+					redo: TerrainVoxelChanged(point, 0)
+				};
+			case ResizeWorld(_) | SetPaletteEntry(_, _) | PaintVoxels(_, _) | EraseVoxels(_) | FillBounds(_, _) | RestoreLastPlayable:
+				{undo: TerrainChanged, redo: TerrainChanged};
+			case SetTitle(_) | SetEnvironment(_) | PutFluid(_) | RemoveFluid(_) | StampPrefab(_, _, _, _) | PutObject(_) | MoveObjectBy(_, _) |
+				RotateObjectBy(_, _) | ResizeTriggerTo(_, _) | RenameObject(_, _) | RemoveObject(_) | PutDialogue(_) | RemoveDialogue(_) | PutObjective(_) |
+				RemoveObjective(_) | PutRule(_) | RemoveRule(_) | PutFlowVariable(_) | PutFlowSequence(_) | SetDefaultLocale(_) | PutLocale(_) |
+				RemoveLocale(_) | PutMessage(_, _) | RemoveMessage(_, _):
+				{undo: TerrainUnchanged, redo: TerrainUnchanged};
+		};
 	}
 
 	function applyToImage(before:EditorScenarioImage, command:EditorCommand):EditorEditResult {
@@ -365,16 +567,30 @@ final class EditorSession {
 				return restorePlayable(before);
 			case _:
 		}
-		return switch reduceCommand(before.parsed.candidate, command, settings) {
+		return switch reduceCommand(before.scenario, command, {settings: settings, worldGridEditable: before.worldGridEditable}) {
 			case ReductionRejected(error): EditRejected(error);
 			case ReductionReady(reduction):
-				switch captureScenario(reduction.scenario) {
+				final terrainHistory = terrainHistoryForCommand(before.scenario, command);
+				if (terrainHistory == null)
+					return EditRejected(DraftWorldIsNotEditable);
+				switch captureReduction(reduction.scenario, before.worldGridEditable) {
 					case ImageRejected(error): EditRejected(error);
 					case ImageReady(after):
-						accept(before, after, reduction.family, changesFor(command));
+						accept(before, after, reduction.family, changesFor(command), terrainHistory);
 				}
 		}
 	}
+
+	/**
+	 * Snapshot one reducer result with the narrowest safe ownership boundary.
+	 *
+	 * Each reducer either builds values from immutable scalars or copies every
+	 * mutable command payload that enters the draft. Values shared from the prior
+	 * image remain private and immutable. The writer can therefore publish bytes
+	 * now and recover exact parser coordinates only for validation.
+	 */
+	function captureReduction(scenario:Scenario, worldGridEditable:Bool):EditorScenarioImageResult
+		return captureReducerOwnedEdit(scenario, worldGridEditable);
 
 	/**
 		Restore the state before the newest history entry.
@@ -391,15 +607,16 @@ final class EditorSession {
 		final entry = history.takeUndo();
 		if (entry == null)
 			return HistoryRejected(NothingToUndo);
-		return switch restoreScenario(entry.before) {
+		return switch restoreHistoryImage(entry.beforeStateIdentity, entry.before) {
 			case ImageRejected(error):
 				history.takeRedo();
 				HistoryRejected(error);
 			case ImageReady(image):
-				draft = image.parsed.candidate;
-				selection = selectionForScenario(selection, draft);
+				draftImage = image;
+				selection = selectionForScenario(selection, draftImage.scenario);
+				currentStateIdentity = entry.beforeStateIdentity;
 				advanceRevision();
-				HistoryApplied(entry.family, entry.changes.copy(), history.undoDepth(), history.redoDepth());
+				HistoryApplied(entry.family, entry.changes.copy(), entry.undoTerrain, history.undoDepth(), history.redoDepth());
 		}
 	}
 
@@ -417,29 +634,28 @@ final class EditorSession {
 		final entry = history.takeRedo();
 		if (entry == null)
 			return HistoryRejected(NothingToRedo);
-		return switch restoreScenario(entry.after) {
+		return switch restoreHistoryImage(entry.afterStateIdentity, entry.after) {
 			case ImageRejected(error):
 				history.takeUndo();
 				HistoryRejected(error);
 			case ImageReady(image):
-				draft = image.parsed.candidate;
-				selection = selectionForScenario(selection, draft);
+				draftImage = image;
+				selection = selectionForScenario(selection, draftImage.scenario);
+				currentStateIdentity = entry.afterStateIdentity;
 				advanceRevision();
-				HistoryApplied(entry.family, entry.changes.copy(), history.undoDepth(), history.redoDepth());
+				HistoryApplied(entry.family, entry.changes.copy(), entry.redoTerrain, history.undoDepth(), history.redoDepth());
 		}
 	}
 
 	/** Validate the draft and update the separate last-known-playable snapshot. */
 	public function validate():EditorValidationResult {
-		return switch captureScenario(draft) {
-			case ImageRejected(error): ValidationBlocked(error);
-			case ImageReady(image):
-				switch ScenarioValidator.validate(image.parsed, registry) {
-					case ReadError(diagnostics): ValidationFailed(diagnostics);
-					case ReadOk(scenario):
-						lastPlayable = cloneScenario(scenario);
-						ValidationPassed(image.bytes.sub(0, image.bytes.length));
-				}
+		final image = draftImage;
+		return switch validateImage(image) {
+			case ImageInvalid(diagnostics): ValidationFailed(diagnostics);
+			case ImageUnreadable(error): ValidationBlocked(error);
+			case ImagePlayable(scenario):
+				lastPlayable = cloneScenario(scenario);
+				ValidationPassed(image.bytes.sub(0, image.bytes.length));
 		}
 	}
 
@@ -456,7 +672,7 @@ final class EditorSession {
 					if (snapshot == null)
 						TestPlayBlocked(NoPlayableScenario);
 					else {
-						playState = LocalCaxeFlowTest(new EditorTestPlay(snapshot));
+						playState = LocalCaxeFlowTest(new EditorTestPlay(snapshot, registry));
 						TestPlayStarted;
 					}
 				}
@@ -519,10 +735,10 @@ final class EditorSession {
 	}
 
 	public function draftSnapshot():Scenario {
-		final snapshot = cloneScenario(draft);
-		if (snapshot == null)
-			throw "editor draft became unreadable";
-		return snapshot;
+		return switch restoreScenario(draftImage.bytes) {
+			case ImageReady(image): image.scenario;
+			case ImageRejected(_): throw "editor draft became unreadable";
+		}
 	}
 
 	public function lastPlayableSnapshot():Null<Scenario>
@@ -534,10 +750,7 @@ final class EditorSession {
 		a playable or persistable map.
 	**/
 	public function canonicalDraft():Bytes {
-		return switch captureScenario(draft) {
-			case ImageReady(image): image.bytes.sub(0, image.bytes.length);
-			case ImageRejected(_): throw "editor draft became unreadable";
-		}
+		return draftImage.bytes.sub(0, draftImage.bytes.length);
 	}
 
 	/** Return a copy of the workspace target shared by every editor view. */
@@ -569,11 +782,12 @@ final class EditorSession {
 			return EditRejected(NoPlayableScenario);
 		return switch captureScenario(lastPlayable) {
 			case ImageRejected(error): EditRejected(error);
-			case ImageReady(after): accept(before, after, Recovery, [ChangedDocument]);
+			case ImageReady(after): accept(before, after, Recovery, [ChangedDocument], {undo: TerrainChanged, redo: TerrainChanged});
 		}
 	}
 
-	function accept(before:EditorScenarioImage, after:EditorScenarioImage, family:EditorCommandFamily, changes:Array<EditorChangeId>):EditorEditResult {
+	function accept(before:EditorScenarioImage, after:EditorScenarioImage, family:EditorCommandFamily, changes:Array<EditorChangeId>,
+			terrain:EditorTerrainHistoryPair):EditorEditResult {
 		if (before.bytes.compare(after.bytes) == 0)
 			return EditUnchanged(family);
 		if (currentRevision == 2147483647)
@@ -584,15 +798,54 @@ final class EditorSession {
 		final entry:EditorHistoryEntry = {
 			family: family,
 			changes: changes.copy(),
-			before: before.bytes.sub(0, before.bytes.length),
-			after: after.bytes.sub(0, after.bytes.length),
+			undoTerrain: terrain.undo,
+			redoTerrain: terrain.redo,
+			beforeStateIdentity: currentStateIdentity,
+			afterStateIdentity: nextStateIdentity + 1,
+			// Images are private and immutable after capture. Sharing their byte
+			// owners avoids copying two complete documents for every interaction.
+			before: before.bytes,
+			after: after.bytes,
 			byteCost: byteCost
 		};
 		history.record(entry);
-		draft = after.parsed.candidate;
-		selection = selectionForScenario(selection, draft);
+		rememberHistoryImage(currentStateIdentity, before);
+		rememberHistoryImage(nextStateIdentity + 1, after);
+		draftImage = after;
+		selection = selectionForScenario(selection, draftImage.scenario);
+		nextStateIdentity++;
+		currentStateIdentity = nextStateIdentity;
 		advanceRevision();
-		return EditApplied(family, changes.copy(), history.undoDepth(), history.redoDepth());
+		return EditApplied(family, changes.copy(), terrain.redo, history.undoDepth(), history.redoDepth());
+	}
+
+	/**
+		Restore a recent state directly and parse only when walking deeper history.
+
+		Every cached image is private and immutable after publication. The history
+		entry still owns canonical bytes, so eviction changes latency only and cannot
+		change Undo or Redo behavior.
+	**/
+	function restoreHistoryImage(stateIdentity:Int, bytes:Bytes):EditorScenarioImageResult {
+		for (cached in historyImageCache)
+			if (cached.stateIdentity == stateIdentity)
+				return ImageReady(cached.image);
+		return switch restoreScenario(bytes) {
+			case ImageRejected(error): ImageRejected(error);
+			case ImageReady(image):
+				rememberHistoryImage(stateIdentity, image);
+				ImageReady(image);
+		}
+	}
+
+	/** Retain a fixed-size recent-state window without changing history limits. */
+	function rememberHistoryImage(stateIdentity:Int, image:EditorScenarioImage):Void {
+		for (cached in historyImageCache)
+			if (cached.stateIdentity == stateIdentity)
+				return;
+		historyImageCache.push({stateIdentity: stateIdentity, image: image});
+		if (historyImageCache.length > HISTORY_IMAGE_CACHE_ENTRIES)
+			historyImageCache.shift();
 	}
 
 	/**
@@ -607,9 +860,9 @@ final class EditorSession {
 	}
 
 	function validatedScenario(image:EditorScenarioImage):Null<Scenario> {
-		return switch ScenarioValidator.validate(image.parsed, registry) {
-			case ReadError(_): null;
-			case ReadOk(scenario): cloneScenario(scenario);
+		return switch validateImage(image) {
+			case ImagePlayable(scenario): cloneScenario(scenario);
+			case ImageInvalid(_) | ImageUnreadable(_): null;
 		}
 	}
 
@@ -617,12 +870,13 @@ final class EditorSession {
 		if (scenario == null)
 			return null;
 		return switch captureScenario(scenario) {
-			case ImageReady(image): image.parsed.candidate;
+			case ImageReady(image): image.scenario;
 			case ImageRejected(_): null;
 		}
 	}
 
 	function validateSelection(value:EditorSelection):EditorSelectionValidation {
+		final draft = draftImage.scenario;
 		return switch value {
 			case NoEditorSelection: WorkspaceSelectionReady(NoEditorSelection);
 			case VoxelSelection(bounds):

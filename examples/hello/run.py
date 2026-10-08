@@ -17,6 +17,11 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from scripts.test.bounded_process import run as run_bounded_process  # noqa: E402
+
 CASE = Path(__file__).resolve().parent
 BUILD_HXML = CASE / "build.hxml"
 ORACLE_HXML = CASE / "oracle.hxml"
@@ -110,7 +115,7 @@ def compile_target(
         "--custom-target",
         f"c={output}",
     ]
-    return subprocess.run(
+    return run_bounded_process(
         command,
         cwd=caller_cwd,
         env=base_environment(locale),
@@ -156,7 +161,7 @@ def text_list(value: object, label: str) -> list[str]:
 
 def validate_hxcir(hxcir: str) -> None:
     required = (
-        "hxcir schema=24",
+        "hxcir schema=27",
         'string-utf8(bytes=14,value="Hello from hxc")',
         'runtime(feature="io",operation="sys-println-literal")',
         "failure(kind=native-status,target=abort,arguments=[],cleanup=[])",
@@ -432,7 +437,7 @@ def validate_expected_baseline(values: dict[str, object]) -> None:
 
 
 def run_eval_oracle() -> None:
-    result = subprocess.run(
+    result = run_bounded_process(
         [
             development_tool("haxe"),
             "--cwd",
@@ -453,7 +458,7 @@ def run_eval_oracle() -> None:
 
 
 def compiler_identity(executable: str) -> tuple[str, str]:
-    result = subprocess.run(
+    result = run_bounded_process(
         [executable, "--version"],
         check=False,
         capture_output=True,
@@ -557,7 +562,7 @@ def compile_command(
         "-o",
         str(executable),
     ]
-    result = subprocess.run(
+    result = run_bounded_process(
         command,
         cwd=ROOT,
         check=False,
@@ -573,7 +578,7 @@ def compile_command(
 
 
 def run_executable(executable: Path, label: str) -> None:
-    result = subprocess.run(
+    result = run_bounded_process(
         [str(executable)],
         cwd=executable.parent,
         check=False,

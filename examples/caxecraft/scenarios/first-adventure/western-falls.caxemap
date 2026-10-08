@@ -2031,6 +2031,91 @@ fluid water.falls-pool caxecraft:water volume 5 3 19 10 2 5
 fluid water.flooded-grotto caxecraft:water volume 11 3 24 3 2 4
 fluid water.flooded-grotto-source caxecraft:water source 12 5 25
 fluid water.waterfall-source caxecraft:water source 8 10 17
+object boundary.east.root-north
+  tag boundary
+  tag vegetation
+  placement stateful caxecraft:boundary-root caxecraft:waiting 62400 6000 10500 90
+end object
+object boundary.east.thicket-north
+  tag boundary
+  tag vegetation
+  placement stateful caxecraft:boundary-thicket caxecraft:waiting 62500 11000 3500 90
+end object
+object boundary.east.thicket-south
+  tag boundary
+  tag vegetation
+  placement stateful caxecraft:boundary-thicket caxecraft:waiting 62500 5000 28500 90
+end object
+object boundary.north.boulder-mid
+  tag boundary
+  tag landscape
+  placement stateful caxecraft:boundary-boulder caxecraft:waiting 24000 9000 1400 0
+end object
+object boundary.north.root-east
+  tag boundary
+  tag vegetation
+  placement stateful caxecraft:boundary-root caxecraft:waiting 59000 5000 1600 0
+end object
+object boundary.north.root-west
+  tag boundary
+  tag vegetation
+  placement stateful caxecraft:boundary-root caxecraft:waiting 12500 10000 1600 0
+end object
+object boundary.north.thicket-east
+  tag boundary
+  tag vegetation
+  placement stateful caxecraft:boundary-thicket caxecraft:waiting 50000 5000 1500 0
+end object
+object boundary.north.thicket-west
+  tag boundary
+  tag vegetation
+  placement stateful caxecraft:boundary-thicket caxecraft:waiting 4500 10000 1500 0
+end object
+object boundary.south.boulder-east
+  tag boundary
+  tag landscape
+  placement stateful caxecraft:boundary-boulder caxecraft:waiting 46500 5000 30600 0
+end object
+object boundary.south.root-mid
+  tag boundary
+  tag vegetation
+  placement stateful caxecraft:boundary-root caxecraft:waiting 33000 5000 30400 0
+end object
+object boundary.south.root-west
+  tag boundary
+  tag vegetation
+  placement stateful caxecraft:boundary-root caxecraft:waiting 4000 5000 30400 0
+end object
+object boundary.south.thicket-east
+  tag boundary
+  tag vegetation
+  placement stateful caxecraft:boundary-thicket caxecraft:waiting 57500 5000 30500 0
+end object
+object boundary.south.thicket-mid
+  tag boundary
+  tag vegetation
+  placement stateful caxecraft:boundary-thicket caxecraft:waiting 25000 5000 30500 0
+end object
+object boundary.west.boulder-north
+  tag boundary
+  tag landscape
+  placement stateful caxecraft:boundary-boulder caxecraft:waiting 1400 10000 3500 90
+end object
+object boundary.west.root-north
+  tag boundary
+  tag vegetation
+  placement stateful caxecraft:boundary-root caxecraft:waiting 1600 11000 14500 90
+end object
+object boundary.west.thicket-mid
+  tag boundary
+  tag vegetation
+  placement stateful caxecraft:boundary-thicket caxecraft:waiting 1500 11000 9000 90
+end object
+object boundary.west.thicket-south
+  tag boundary
+  tag vegetation
+  placement stateful caxecraft:boundary-thicket caxecraft:waiting 1500 5000 30000 90
+end object
 object enemy.mossling
   tag enemy
   placement entity caxecraft:mossling 50500 5000 25500 180

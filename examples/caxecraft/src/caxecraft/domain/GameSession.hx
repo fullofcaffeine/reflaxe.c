@@ -16,6 +16,9 @@ import caxecraft.domain.Character.reviveAt as reviveCharacterAt;
 import caxecraft.domain.Character.stepWithCollisions as advanceCharacterState;
 import caxecraft.domain.Character.withVitals as withCharacterVitals;
 import caxecraft.domain.CharacterPhysics.collisionBox as characterCollisionBox;
+import caxecraft.domain.PlayerCamera.PlayerCameraMode;
+import caxecraft.domain.PlayerCamera.PlayerCameraView;
+import caxecraft.domain.PlayerCamera.resolvePlayerCamera;
 import caxecraft.domain.PlayerAgent.bind as bindPlayerAgent;
 import caxecraft.domain.WaterCellCodec.isSolidCode as isSolidStorageCode;
 import caxecraft.gameplay.AuthoredItemSlots;
@@ -23,6 +26,7 @@ import caxecraft.gameplay.Inventory;
 import caxecraft.gameplay.InventoryState;
 import caxecraft.gameplay.ItemKind;
 import caxecraft.gameplay.Mining.attempt as attemptMining;
+import caxecraft.gameplay.Mining.itemForCollectableBlock;
 import caxecraft.gameplay.MiningOutcome;
 import caxecraft.gameplay.MiningResult;
 import caxecraft.gameplay.Recovery.applyInventory as applyRecoveryInventory;
@@ -30,10 +34,20 @@ import caxecraft.gameplay.Recovery.applyVitals as applyRecoveryVitals;
 import caxecraft.gameplay.Recovery.decide as decideRecovery;
 import caxecraft.gameplay.RecoveryDecision;
 import caxecraft.scenario.CaxeFlow.FlowEvent;
+import caxecraft.scenario.CaxeFlow.FlowEventContext;
+import caxecraft.scenario.CaxeFlow.FlowEventOccurrence;
+import caxecraft.scenario.CaxeFlow.FlowEventPosition;
 import caxecraft.scenario.CaxeFlowExecutor;
+import caxecraft.domain.GameSessionFlowSnapshot.GameSessionFlowSnapshot;
+import caxecraft.domain.GameSessionFlowSnapshot.TriggerActorSnapshot;
+import caxecraft.domain.GameSessionFlowSnapshot.TriggerMembershipSnapshot;
+import caxecraft.scenario.CaxeFlowEventRegistry.flowEventOccurrence;
+import caxecraft.scenario.CaxeFlowEventRegistry.externalFlowEventCapacity as availableExternalFlowEvents;
 import caxecraft.scenario.CaxeFlowRuntime.FlowTickResult;
+import caxecraft.scenario.CaxeFlowRuntime.FlowPosition;
 import caxecraft.scenario.ContentId;
 import caxecraft.scenario.Scenario;
+import caxecraft.scenario.ScenarioContentRegistry;
 import caxecraft.scenario.ScenarioId;
 import caxecraft.scenario.ScenarioLimits;
 import caxecraft.domain.Vitals.isDefeated as characterVitalsDefeated;
@@ -103,6 +117,25 @@ typedef CharacterDamageResult = {
 	final damageApplied:Int;
 	final defeated:Bool;
 	final resolved:Bool;
+}
+
+/** Closed provenance for damage that authored rules are allowed to observe. */
+enum CharacterDamageCause {
+	/** The locally controlled actor committed a hit with this validated item. */
+	LocalPlayerItem(itemType:ContentId);
+
+	/** One authored actor committed damage without an inventory item. */
+	AuthoredActor(actor:ScenarioId);
+
+	/** Terrain, fluid, a trap, or another actor-less mechanic committed damage. */
+	Environment;
+}
+
+/** Named input for one authoritative damage transaction. */
+typedef CharacterDamageCommand = {
+	final target:EntityId;
+	final amount:Int;
+	final cause:CharacterDamageCause;
 }
 
 /**
@@ -207,6 +240,12 @@ final class GameSession {
 	/** Validated authored rules sharing this session's fixed simulation clock. */
 	var flowExecutor:Null<CaxeFlowExecutor> = null;
 
+	/** Known block storage bytes for the session-owned Flow content index. */
+	var flowBlockStorageCodes:Array<Int> = [];
+
+	/** Stable block IDs paired with `flowBlockStorageCodes` in byte order. */
+	var flowBlockContentIds:Array<ContentId> = [];
+
 	/** Runtime actor identities paired with their stable authored identities. */
 	var authoredActorEntities:Array<EntityId> = [];
 
@@ -247,7 +286,10 @@ final class GameSession {
 	var activeLocalPlayerCollision:Array<DynamicCollisionBox> = [];
 
 	/** Semantic events waiting for the next successfully committed fixed tick. */
-	var pendingFlowEvents:Array<FlowEvent> = [];
+	var pendingFlowEvents:Array<FlowEventOccurrence> = [];
+
+	/** Stable CAXEMAP identity of the locally controlled player spawn. */
+	var localPlayerAuthoredId:Null<ScenarioId> = null;
 
 	/** Stable authored identities for trigger zones in deterministic map order. */
 	var triggerZoneIds:Array<ScenarioId> = [];
@@ -255,8 +297,20 @@ final class GameSession {
 	/** Integer x/y/z origin and width/height/depth for each half-open zone. */
 	var triggerZoneBounds:Array<Int> = [];
 
-	/** Last membership reported to CaxeFlow, as one zero/outside or one/inside flag. */
+	/** Stable runtime identities observed for zone crossings, local player first. */
+	var triggerActorEntities:Array<EntityId> = [];
+
+	/** Stable CAXEMAP identities paired with `triggerActorEntities`. */
+	var triggerActorIds:Array<ScenarioId> = [];
+
+	/** Last membership per zone/actor pair, in zone-major deterministic order. */
 	var triggerZoneInside:Array<Int> = [];
+
+	/** Previous integer-milliblock position per trigger actor. */
+	var triggerActorPrevious:Array<Int> = [];
+
+	/** One zero/uninitialized or one/initialized flag per trigger actor. */
+	var triggerActorPreviousValid:Array<Int> = [];
 
 	/** Deterministic water work state, shared by loading and fixed simulation. */
 	final water:WaterSimulation = new WaterSimulation();
@@ -304,10 +358,10 @@ final class GameSession {
 		construction defect rather than recoverable content input.
 	**/
 	@:allow(caxecraft.content.RuntimeLevelLoader)
-	private function installValidatedScenarioFlow(scenario:Scenario, actorEntities:Array<EntityId>, actorIds:Array<ScenarioId>,
-			itemContentIds:Array<ContentId>, objectIds:Array<ScenarioId>, objectPositionsMilli:Array<Int>, objectRadiiMilli:Array<Int>,
-			objectBoundsMilli:Array<Int>, objectStateStarts:Array<Int>, objectStateCounts:Array<Int>, objectCollisionStates:Array<ContentId>,
-			objectCollisionSolid:Array<Int>, zoneIds:Array<ScenarioId>, zoneBounds:Array<Int>):Void {
+	private function installValidatedScenarioFlow(scenario:Scenario, registry:ScenarioContentRegistry, playerId:ScenarioId, actorEntities:Array<EntityId>,
+			actorIds:Array<ScenarioId>, itemContentIds:Array<ContentId>, objectIds:Array<ScenarioId>, objectPositionsMilli:Array<Int>,
+			objectRadiiMilli:Array<Int>, objectBoundsMilli:Array<Int>, objectStateStarts:Array<Int>, objectStateCounts:Array<Int>,
+			objectCollisionStates:Array<ContentId>, objectCollisionSolid:Array<Int>, zoneIds:Array<ScenarioId>, zoneBounds:Array<Int>):Void {
 		if (flowExecutor != null)
 			throw "CaxeFlow is already installed for this GameSession";
 		if (actorEntities.length != actorIds.length || actorEntities.length != actorControllers.length)
@@ -348,6 +402,17 @@ final class GameSession {
 		for (solid in objectCollisionSolid)
 			if (solid != 0 && solid != 1)
 				throw "CaxeFlow stateful-object collision flag is invalid";
+		flowBlockStorageCodes.resize(0);
+		flowBlockContentIds.resize(0);
+		for (code in 0...256) {
+			final blockType = registry.blockContentIdForStorageCode(code);
+			if (blockType != null) {
+				if (registry.blockStorageCode(blockType) != code)
+					throw "CaxeFlow block content index is not reversible";
+				flowBlockStorageCodes.push(code);
+				flowBlockContentIds.push(blockType);
+			}
+		}
 		if (zoneBounds.length != zoneIds.length * 6)
 			throw "CaxeFlow trigger-zone bindings do not match this GameSession";
 		for (zoneIndex in 0...zoneIds.length) {
@@ -357,6 +422,7 @@ final class GameSession {
 		}
 		authoredActorEntities = actorEntities.copy();
 		authoredActorIds = actorIds.copy();
+		localPlayerAuthoredId = playerId;
 		authoredItemContentIds = itemContentIds.copy();
 		statefulObjectIds = objectIds.copy();
 		statefulObjectPositionsMilli = objectPositionsMilli.copy();
@@ -368,10 +434,27 @@ final class GameSession {
 		statefulObjectCollisionSolid = objectCollisionSolid.copy();
 		triggerZoneIds = zoneIds.copy();
 		triggerZoneBounds = zoneBounds.copy();
+		triggerActorEntities.resize(0);
+		triggerActorIds.resize(0);
+		triggerActorEntities.push(localPlayer.characterId);
+		triggerActorIds.push(playerId);
+		for (index in 0...actorEntities.length) {
+			triggerActorEntities.push(actorEntities[index]);
+			triggerActorIds.push(actorIds[index]);
+		}
 		triggerZoneInside.resize(0);
-		for (_ in triggerZoneIds)
+		for (_ in 0...triggerZoneIds.length * triggerActorIds.length)
 			triggerZoneInside.push(0);
-		flowExecutor = new CaxeFlowExecutor(scenario);
+		triggerActorPrevious.resize(0);
+		triggerActorPreviousValid.resize(0);
+		for (_ in triggerActorIds) {
+			triggerActorPrevious.push(0);
+			triggerActorPrevious.push(0);
+			triggerActorPrevious.push(0);
+			triggerActorPreviousValid.push(0);
+		}
+		flowExecutor = new CaxeFlowExecutor(scenario, registry);
+		pendingFlowEvents.push(flowEventOccurrence(FlowEvent.LevelEntered(scenario.id)));
 		refreshStatefulCollision();
 	}
 
@@ -382,11 +465,115 @@ final class GameSession {
 		fact actually happened. A bounded false result leaves the queue unchanged, so
 		the caller can stop instead of silently dropping campaign progression.
 	**/
-	public function queueFlowEvent(event:FlowEvent):Bool {
-		if (flowExecutor == null || pendingFlowEvents.length >= ScenarioLimits.MAX_EVENTS_PER_TICK)
+	public function queueFlowEvent(event:FlowEventOccurrence):Bool {
+		final executor = flowExecutor;
+		if (executor == null
+			|| executor.fault() != null
+			|| pendingFlowEvents.length >= externalFlowEventCapacity()
+			|| !executor.acceptsRuntimeEvent(event))
 			return false;
 		pendingFlowEvents.push(event);
 		return true;
+	}
+
+	/**
+		Capture executor and spatial trigger state for the wider save-game owner.
+
+		Character bodies and world cells are intentionally outside this value. The
+		game-session persistence layer owns those facts and must restore them before
+		advancing the first tick.
+	**/
+	public function caxeFlowSnapshot():Null<GameSessionFlowSnapshot> {
+		final executor = flowExecutor;
+		if (executor == null)
+			return null;
+		final actors:Array<TriggerActorSnapshot> = [];
+		for (actorIndex in 0...triggerActorIds.length) {
+			if (triggerActorPreviousValid[actorIndex] == 0)
+				actors.push({id: triggerActorIds[actorIndex], previous: null});
+			else
+				actors.push({id: triggerActorIds[actorIndex], previous: readTriggerActorPosition(actorIndex)});
+		}
+		final memberships:Array<TriggerMembershipSnapshot> = [];
+		for (zoneIndex in 0...triggerZoneIds.length)
+			for (actorIndex in 0...triggerActorIds.length) {
+				final index = zoneIndex * triggerActorIds.length + actorIndex;
+				memberships.push({
+					zone: triggerZoneIds[zoneIndex],
+					actor: triggerActorIds[actorIndex],
+					inside: triggerZoneInside[index] != 0
+				});
+			}
+		return {
+			executor: executor.snapshot(),
+			pendingEvents: pendingFlowEvents.copy(),
+			actors: actors,
+			memberships: memberships
+		};
+	}
+
+	/**
+		Restore one validated Flow snapshot without inventing spatial transitions.
+
+		Stable actor and zone IDs must exactly match this freshly loaded session. The
+		executor restores last through its atomic candidate path; false leaves all
+		game-session spatial arrays and queued events unchanged.
+	**/
+	public function restoreCaxeFlowSnapshot(snapshot:GameSessionFlowSnapshot):Bool {
+		final executor = flowExecutor;
+		if (executor == null
+			|| snapshot.pendingEvents.length > externalFlowEventCapacity()
+			|| snapshot.actors.length != triggerActorIds.length
+			|| snapshot.memberships.length != triggerZoneIds.length * triggerActorIds.length)
+			return false;
+		for (actorIndex in 0...snapshot.actors.length)
+			if (snapshot.actors[actorIndex].id.text() != triggerActorIds[actorIndex].text())
+				return false;
+		for (index in 0...snapshot.memberships.length) {
+			final zoneIndex = Std.int(index / triggerActorIds.length);
+			final actorIndex = index - zoneIndex * triggerActorIds.length;
+			final value = snapshot.memberships[index];
+			if (value.zone.text() != triggerZoneIds[zoneIndex].text() || value.actor.text() != triggerActorIds[actorIndex].text())
+				return false;
+		}
+		for (event in snapshot.pendingEvents)
+			if (!executor.acceptsRuntimeEvent(event))
+				return false;
+		if (!executor.restore(snapshot.executor))
+			return false;
+		final restoredPrevious:Array<Int> = [];
+		final restoredPreviousValid:Array<Int> = [];
+		for (actor in snapshot.actors) {
+			final previous = actor.previous;
+			if (previous == null) {
+				restoredPrevious.push(0);
+				restoredPrevious.push(0);
+				restoredPrevious.push(0);
+				restoredPreviousValid.push(0);
+			} else {
+				restoredPrevious.push(previous.xMilli);
+				restoredPrevious.push(previous.yMilli);
+				restoredPrevious.push(previous.zMilli);
+				restoredPreviousValid.push(1);
+			}
+		}
+		final restoredInside:Array<Int> = [for (membership in snapshot.memberships) membership.inside ? 1 : 0];
+		pendingFlowEvents = snapshot.pendingEvents.copy();
+		triggerActorPrevious = restoredPrevious;
+		triggerActorPreviousValid = restoredPreviousValid;
+		triggerZoneInside = restoredInside;
+		refreshStatefulCollision();
+		return true;
+	}
+
+	/**
+		Reserve the spatial worst case before engine adapters queue other events.
+
+		Validated scenarios always retain at least one slot for a non-spatial event.
+		This makes every committed movement segment observable on its exact tick.
+	**/
+	function externalFlowEventCapacity():Int {
+		return availableExternalFlowEvents(triggerZoneIds.length, triggerActorIds.length);
 	}
 
 	/**
@@ -402,7 +589,7 @@ final class GameSession {
 			return false;
 		for (index in 0...authoredActorEntities.length)
 			if (authoredActorEntities[index] == id)
-				return queueFlowEvent(FlowEvent.Interact(authoredActorIds[index]));
+				return queueLocalActorEvent(FlowEvent.Interact(authoredActorIds[index]));
 		return false;
 	}
 
@@ -414,7 +601,84 @@ final class GameSession {
 		queues the same typed `Interact` event used by other authored rules.
 	**/
 	public function interactWithStatefulObject(id:ScenarioId):Bool
-		return statefulObjectInteractionAvailable(id) && queueFlowEvent(FlowEvent.Interact(id));
+		return statefulObjectInteractionAvailable(id) && queueLocalActorEvent(FlowEvent.Interact(id));
+
+	/** Queue one player-owned event only after validated gameplay commits it. */
+	function queueLocalActorEvent(source:FlowEvent):Bool {
+		final actor = localPlayerAuthoredId;
+		return actor != null && queueFlowEvent(flowEventOccurrence(source, ActorEventContext(actor)));
+	}
+
+	/**
+		Validate one event batch before its matching gameplay transaction commits.
+
+		A batch is all-or-nothing. This matters when one block lies in overlapping
+		zones or one sword hit emits both use-item and entity-defeated events.
+	**/
+	function flowEventsCanCommit(events:Array<FlowEventOccurrence>):Bool {
+		if (events.length == 0)
+			return true;
+		final executor = flowExecutor;
+		if (executor == null || executor.fault() != null || pendingFlowEvents.length + events.length > externalFlowEventCapacity())
+			return false;
+		for (event in events)
+			if (!executor.acceptsRuntimeEvent(event))
+				return false;
+		return true;
+	}
+
+	/** Append one already validated batch after its gameplay transaction commits. */
+	function commitFlowEvents(events:Array<FlowEventOccurrence>):Void
+		for (event in events)
+			pendingFlowEvents.push(event);
+
+	/** Build one actor-owned event, or reject a missing local authored identity. */
+	function localActorOccurrence(source:FlowEvent):Null<FlowEventOccurrence> {
+		if (flowExecutor == null)
+			return null;
+		final actor = localPlayerAuthoredId;
+		return actor == null ? null : flowEventOccurrence(source, ActorEventContext(actor));
+	}
+
+	/**
+		Build deterministic block-change events for every containing trigger zone.
+
+		Only player-authoritative mine, remove, and place commands call this adapter.
+		Water settling and content loading are system state changes, not player facts.
+	**/
+	function blockChangedOccurrences(coord:BlockCoord, kind:BlockKind):Null<Array<FlowEventOccurrence>> {
+		if (flowExecutor == null)
+			return [];
+		final actor = localPlayerAuthoredId;
+		if (actor == null)
+			return null;
+		final blockType = flowBlockContentId(World.kindCode(kind));
+		if (blockType == null)
+			return null;
+		final events:Array<FlowEventOccurrence> = [];
+		for (zoneIndex in 0...triggerZoneIds.length)
+			if (triggerZoneContainsBlock(zoneIndex, coord))
+				events.push(flowEventOccurrence(FlowEvent.BlockChanged(triggerZoneIds[zoneIndex], blockType), ActorEventContext(actor)));
+		return events;
+	}
+
+	/** Resolve one compact world byte through the index copied during level load. */
+	function flowBlockContentId(code:Int):Null<ContentId> {
+		for (index in 0...flowBlockStorageCodes.length)
+			if (flowBlockStorageCodes[index] == code)
+				return flowBlockContentIds[index];
+		return null;
+	}
+
+	/** Build a validated local item-use occurrence when Flow is installed. */
+	function itemUseOccurrences(itemType:Null<ContentId>):Null<Array<FlowEventOccurrence>> {
+		if (flowExecutor == null)
+			return [];
+		if (itemType == null)
+			return null;
+		final occurrence = localActorOccurrence(FlowEvent.UseItem(itemType));
+		return occurrence == null ? null : [occurrence];
+	}
 
 	/** True when one active generic object is within its content-defined range. */
 	public function statefulObjectInteractionAvailable(id:ScenarioId):Bool {
@@ -453,6 +717,15 @@ final class GameSession {
 	/** Number of solid authored boxes active for the current committed flow state. */
 	public inline function activeStatefulCollisionCount():Int
 		return activeStatefulCollision.length;
+
+	/**
+	 * Resolve a presentation camera against the current committed collision set.
+	 *
+	 * This read cannot mutate simulation or replace the gameplay interaction ray.
+	 * Stateful doors and mechanisms use the same active boxes as movement.
+	 */
+	public function playerCamera(mode:PlayerCameraMode, body:CharacterBody, lookX:Float, lookY:Float, lookZ:Float):PlayerCameraView
+		return resolvePlayerCamera(worldView(), activeStatefulCollision, mode, body, lookX, lookY, lookZ);
 
 	/**
 		Install the one locally controlled character and bind human input to its ID.
@@ -701,26 +974,43 @@ final class GameSession {
 		for players and non-player actors without exposing `EntityStore` or forcing
 		the application to maintain a second health value.
 	**/
-	public function damageCharacter(id:EntityId, amount:Int):CharacterDamageResult {
-		final original = readCharacter(id);
-		if (!isValidCharacter(original) || amount <= 0)
+	public function damageCharacter(command:CharacterDamageCommand):CharacterDamageResult {
+		final original = readCharacter(command.target);
+		if (!isValidCharacter(original) || command.amount <= 0)
 			return {
 				character: original,
 				damageApplied: 0,
 				defeated: false,
 				resolved: false
 			};
-		final replacement = applyCharacterDamage(original, amount);
+		final replacement = applyCharacterDamage(original, command.amount);
 		final newlyDefeated = !characterVitalsDefeated(original.vitals) && characterVitalsDefeated(replacement.vitals);
-		final defeatedAuthoredId = newlyDefeated ? authoredEnemyId(id) : null;
-		if (defeatedAuthoredId != null && pendingFlowEvents.length >= ScenarioLimits.MAX_EVENTS_PER_TICK)
+		final defeatedAuthoredId = newlyDefeated ? authoredEnemyId(command.target) : null;
+		final stagedEvents:Array<FlowEventOccurrence> = [];
+		if (flowExecutor != null) {
+			final causeActor = switch command.cause {
+				case LocalPlayerItem(itemType):
+					final use = localActorOccurrence(FlowEvent.UseItem(itemType));
+					if (use == null)
+						return rejectedCharacterDamage(original);
+					stagedEvents.push(use);
+					localPlayerAuthoredId;
+				case AuthoredActor(actor): actor;
+				case Environment: null;
+			};
+			if (defeatedAuthoredId != null) {
+				final context = causeActor == null ? NoEventContext : ActorEventContext(causeActor);
+				stagedEvents.push(flowEventOccurrence(FlowEvent.EntityDefeated(defeatedAuthoredId), context));
+			}
+		}
+		if (!flowEventsCanCommit(stagedEvents))
 			return {
 				character: original,
 				damageApplied: 0,
 				defeated: false,
 				resolved: false
 			};
-		final resolved = entities.replace(id, replacement);
+		final resolved = entities.replace(command.target, replacement);
 		if (!resolved)
 			return {
 				character: original,
@@ -728,8 +1018,7 @@ final class GameSession {
 				defeated: false,
 				resolved: false
 			};
-		if (defeatedAuthoredId != null)
-			pendingFlowEvents.push(FlowEvent.EntityDefeated(defeatedAuthoredId));
+		commitFlowEvents(stagedEvents);
 		return {
 			character: replacement,
 			damageApplied: original.vitals.health - replacement.vitals.health,
@@ -737,6 +1026,15 @@ final class GameSession {
 			resolved: true
 		};
 	}
+
+	/** Return one unchanged failed damage result without duplicating its shape. */
+	function rejectedCharacterDamage(original:Character):CharacterDamageResult
+		return {
+			character: original,
+			damageApplied: 0,
+			defeated: false,
+			resolved: false
+		};
 
 	/** True when one living actor's content-selected phase admits a melee hit. */
 	public function characterAcceptsMeleeDamage(id:EntityId):Bool {
@@ -769,7 +1067,7 @@ final class GameSession {
 		only after that commit succeeds. This prevents consuming berries while leaving
 		health unchanged.
 	**/
-	public function useSelectedRecovery(inventory:InventoryState):LocalRecoveryResult {
+	public function useSelectedRecovery(inventory:InventoryState, ?itemType:ContentId):LocalRecoveryResult {
 		final original = readLocalPlayer();
 		if (!isValidCharacter(original)) {
 			return {
@@ -790,7 +1088,17 @@ final class GameSession {
 		}
 		final nextInventory = applyRecoveryInventory(decision, inventory);
 		final nextCharacter = withCharacterVitals(original, applyRecoveryVitals(decision, original.vitals));
+		final stagedEvents = itemUseOccurrences(itemType);
+		if (stagedEvents == null || !flowEventsCanCommit(stagedEvents))
+			return {
+				decision: decision,
+				inventory: inventory,
+				character: original,
+				resolved: false
+			};
 		final committed = commitLocalCharacter(original, nextCharacter);
+		if (committed.resolved)
+			commitFlowEvents(stagedEvents);
 		return {
 			decision: decision,
 			inventory: committed.resolved ? nextInventory : inventory,
@@ -1041,13 +1349,19 @@ final class GameSession {
 	function authoredItemCollectionEventAvailable(index:Int):Bool {
 		if (flowExecutor == null)
 			return true;
-		return index >= 0 && index < authoredItemContentIds.length && pendingFlowEvents.length < ScenarioLimits.MAX_EVENTS_PER_TICK;
+		if (index < 0 || index >= authoredItemContentIds.length)
+			return false;
+		final occurrence = localActorOccurrence(FlowEvent.ItemCollected(authoredItemContentIds[index]));
+		return occurrence != null && flowEventsCanCommit([occurrence]);
 	}
 
 	/** Queue the validated item identity after its matching transaction commits. */
 	function queueAuthoredItemCollected(index:Int):Void {
-		if (flowExecutor != null)
-			pendingFlowEvents.push(FlowEvent.ItemCollected(authoredItemContentIds[index]));
+		if (flowExecutor != null) {
+			final occurrence = localActorOccurrence(FlowEvent.ItemCollected(authoredItemContentIds[index]));
+			if (occurrence != null)
+				commitFlowEvents([occurrence]);
+		}
 	}
 
 	/**
@@ -1063,9 +1377,18 @@ final class GameSession {
 		#else
 		var cells:WorldCells = worldStorage;
 		#end
+		final item = itemForCollectableBlock(World.query(cells, coord));
+		final stagedEvents:Array<FlowEventOccurrence> = if (item != null && Inventory.acceptedAmount(inventory, item, 1) == 1) {
+			final candidate = blockChangedOccurrences(coord, BlockKind.Air);
+			if (candidate == null || !flowEventsCanCommit(candidate))
+				return {inventory: inventory, outcome: MiningOutcome.FlowEventUnavailable};
+			candidate;
+		} else [];
 		final result = attemptMining(cells, coord, inventory);
-		if (result.outcome == MiningOutcome.Collected)
+		if (result.outcome == MiningOutcome.Collected) {
 			water.terrainChanged(coord);
+			commitFlowEvents(stagedEvents);
+		}
 		return result;
 	}
 
@@ -1081,20 +1404,36 @@ final class GameSession {
 		#else
 		var cells:WorldCells = worldStorage;
 		#end
-		if (!World.remove(cells, coord))
+		final stagedEvents = blockChangedOccurrences(coord, BlockKind.Air);
+		if (stagedEvents == null || !flowEventsCanCommit(stagedEvents) || !World.remove(cells, coord))
 			return false;
 		water.terrainChanged(coord);
+		commitFlowEvents(stagedEvents);
 		return true;
 	}
 
-	/** Place one validated block and schedule nearby water recomputation. */
-	public function placeTerrain(coord:BlockCoord, kind:BlockKind):Bool {
+	/** Place one validated block and atomically publish its optional item use. */
+	public function placeTerrain(coord:BlockCoord, kind:BlockKind, ?usedItem:ContentId):Bool {
 		#if c
 		var cells:WorldCells = worldStorage.span();
 		#else
 		var cells:WorldCells = worldStorage;
 		#end
-		return water.placeTerrain(cells, coord, kind);
+		final changed = blockChangedOccurrences(coord, kind);
+		if (changed == null)
+			return false;
+		final stagedEvents = changed;
+		if (usedItem != null) {
+			final used = itemUseOccurrences(usedItem);
+			if (used == null)
+				return false;
+			for (event in used)
+				stagedEvents.push(event);
+		}
+		if (!flowEventsCanCommit(stagedEvents) || !water.placeTerrain(cells, coord, kind))
+			return false;
+		commitFlowEvents(stagedEvents);
+		return true;
 	}
 
 	/** Stable whole-world summary for save checks and cross-target test evidence. */
@@ -1147,8 +1486,8 @@ final class GameSession {
 		if (committed) {
 			final executor = flowExecutor;
 			if (executor != null) {
-				queueTriggerZoneTransitions(characterResult.character);
-				flowResult = executor.runTick({events: pendingFlowEvents, positions: []});
+				queueTriggerZoneTransitions();
+				flowResult = executor.runTick({events: pendingFlowEvents, positions: currentFlowPositions(executor)});
 				pendingFlowEvents.resize(0);
 				refreshStatefulCollision();
 			}
@@ -1165,32 +1504,197 @@ final class GameSession {
 	}
 
 	/**
-		Queue each trigger-zone boundary crossing once after movement commits.
+		Queue trigger-zone crossings after every committed movement step.
 
-		A character's body origin is the stable observation point. Bounds use the
-		CAXEMAP half-open voxel rule, so touching an excluded maximum edge counts as
-		leaving. If the bounded event queue is full, the stored membership does not
-		advance; the next committed tick retries the same transition.
+		Zones are visited in map order and actors in stable load order, with the local
+		player first. A character's body origin is sampled in integer milliblocks.
+		The first inside sample emits an enter event, while a fast outside-to-outside
+		segment emits one atomic enter/leave pair marked as swept. Disabled zones clear
+		membership silently, so re-enabling a zone around an actor produces a fresh
+		enter. If the bounded queue cannot accept a complete transition, observation
+		state does not advance and the next committed tick retries it.
 	**/
-	function queueTriggerZoneTransitions(character:Character):Void {
+	function queueTriggerZoneTransitions():Void {
+		final executor = flowExecutor;
+		if (executor == null)
+			return;
+		final actorCount = triggerActorIds.length;
+		final currentPositions:Array<FlowEventPosition> = [];
+		final currentValid:Array<Int> = [];
+		for (actorIndex in 0...actorCount) {
+			final character = entities.read(triggerActorEntities[actorIndex]);
+			currentValid.push(isValidCharacter(character)
+				&& !characterVitalsDefeated(character.vitals)
+				&& executor.objectActive(triggerActorIds[actorIndex]) ? 1 : 0);
+			currentPositions.push(flowEventPosition(character));
+		}
+		final stagedEvents:Array<FlowEventOccurrence> = [];
+		final nextInside = triggerZoneInside.copy();
+		final nextPrevious = triggerActorPrevious.copy();
+		final nextPreviousValid = triggerActorPreviousValid.copy();
 		for (zoneIndex in 0...triggerZoneIds.length) {
-			final offset = zoneIndex * 6;
-			final minimumX:Float = triggerZoneBounds[offset];
-			final minimumY:Float = triggerZoneBounds[offset + 1];
-			final minimumZ:Float = triggerZoneBounds[offset + 2];
-			final inside = character.body.x >= minimumX
-				&& character.body.x < minimumX + triggerZoneBounds[offset + 3]
-				&& character.body.y >= minimumY
-				&& character.body.y < minimumY + triggerZoneBounds[offset + 4]
-				&& character.body.z >= minimumZ
-				&& character.body.z < minimumZ + triggerZoneBounds[offset + 5];
-			final wasInside = triggerZoneInside[zoneIndex] != 0;
-			if (inside != wasInside) {
-				final event = inside ? FlowEvent.EnterZone(triggerZoneIds[zoneIndex]) : FlowEvent.LeaveZone(triggerZoneIds[zoneIndex]);
-				if (queueFlowEvent(event))
-					triggerZoneInside[zoneIndex] = inside ? 1 : 0;
+			final zone = triggerZoneIds[zoneIndex];
+			final active = executor.objectActive(zone);
+			for (actorIndex in 0...actorCount) {
+				final membershipIndex = zoneIndex * actorCount + actorIndex;
+				if (currentValid[actorIndex] == 0) {
+					nextInside[membershipIndex] = 0;
+					nextPreviousValid[actorIndex] = 0;
+					continue;
+				}
+				final current = currentPositions[actorIndex];
+				if (!active) {
+					nextInside[membershipIndex] = 0;
+					writeTriggerActorPosition(nextPrevious, actorIndex, current);
+					nextPreviousValid[actorIndex] = 1;
+					continue;
+				}
+
+				final inside = triggerZoneContains(zoneIndex, current);
+				final wasInside = triggerZoneInside[membershipIndex] != 0;
+				final hadPrevious = triggerActorPreviousValid[actorIndex] != 0;
+				final previous = hadPrevious ? readTriggerActorPosition(actorIndex) : current;
+				var eventCount = 0;
+				var swept = false;
+				if (inside != wasInside)
+					eventCount = 1;
+				else if (hadPrevious && !inside && !wasInside && triggerZoneSegmentCrosses(zoneIndex, previous, current)) {
+					eventCount = 2;
+					swept = true;
+				}
+				final context = SpatialEventContext(triggerActorIds[actorIndex], previous, current, swept);
+				if (eventCount == 2) {
+					stagedEvents.push(flowEventOccurrence(FlowEvent.EnterZone(zone), context));
+					stagedEvents.push(flowEventOccurrence(FlowEvent.LeaveZone(zone), context));
+				} else if (eventCount == 1) {
+					final source = inside ? FlowEvent.EnterZone(zone) : FlowEvent.LeaveZone(zone);
+					stagedEvents.push(flowEventOccurrence(source, context));
+				}
+				nextInside[membershipIndex] = inside ? 1 : 0;
+				writeTriggerActorPosition(nextPrevious, actorIndex, current);
+				nextPreviousValid[actorIndex] = 1;
 			}
 		}
+		if (pendingFlowEvents.length + stagedEvents.length > ScenarioLimits.MAX_EVENTS_PER_TICK)
+			return;
+		for (event in stagedEvents)
+			pendingFlowEvents.push(event);
+		triggerZoneInside = nextInside;
+		triggerActorPrevious = nextPrevious;
+		triggerActorPreviousValid = nextPreviousValid;
+	}
+
+	/** Publish current active actor positions for `NearObject` predicates. */
+	function currentFlowPositions(executor:CaxeFlowExecutor):Array<FlowPosition> {
+		final result:Array<FlowPosition> = [];
+		for (actorIndex in 0...triggerActorIds.length) {
+			final character = entities.read(triggerActorEntities[actorIndex]);
+			if (isValidCharacter(character)
+				&& !characterVitalsDefeated(character.vitals)
+				&& executor.objectActive(triggerActorIds[actorIndex])) {
+				final position = flowEventPosition(character);
+				result.push({
+					objectId: triggerActorIds[actorIndex],
+					xMilli: position.xMilli,
+					yMilli: position.yMilli,
+					zMilli: position.zMilli
+				});
+			}
+		}
+		return result;
+	}
+
+	/** Convert one committed body origin to the event model's exact unit. */
+	static function flowEventPosition(character:Character):FlowEventPosition
+		return {
+			xMilli: Std.int(character.body.x * 1000.0),
+			yMilli: Std.int(character.body.y * 1000.0),
+			zMilli: Std.int(character.body.z * 1000.0)
+		};
+
+	/** Read one previously committed actor sample from compact parallel storage. */
+	function readTriggerActorPosition(actorIndex:Int):FlowEventPosition {
+		final offset = actorIndex * 3;
+		return {
+			xMilli: triggerActorPrevious[offset],
+			yMilli: triggerActorPrevious[offset + 1],
+			zMilli: triggerActorPrevious[offset + 2]
+		};
+	}
+
+	/** Commit one actor sample only after all corresponding events fit. */
+	static function writeTriggerActorPosition(storage:Array<Int>, actorIndex:Int, value:FlowEventPosition):Void {
+		final offset = actorIndex * 3;
+		storage[offset] = value.xMilli;
+		storage[offset + 1] = value.yMilli;
+		storage[offset + 2] = value.zMilli;
+	}
+
+	/** Test one point against CAXEMAP's inclusive-minimum, exclusive-maximum box. */
+	function triggerZoneContains(zoneIndex:Int, value:FlowEventPosition):Bool {
+		final offset = zoneIndex * 6;
+		final minimumX = triggerZoneBounds[offset] * 1000;
+		final minimumY = triggerZoneBounds[offset + 1] * 1000;
+		final minimumZ = triggerZoneBounds[offset + 2] * 1000;
+		return value.xMilli >= minimumX
+			&& value.xMilli < minimumX + triggerZoneBounds[offset + 3] * 1000
+			&& value.yMilli >= minimumY
+			&& value.yMilli < minimumY + triggerZoneBounds[offset + 4] * 1000
+			&& value.zMilli >= minimumZ
+			&& value.zMilli < minimumZ + triggerZoneBounds[offset + 5] * 1000;
+	}
+
+	/** True when one voxel coordinate lies inside a zone's half-open bounds. */
+	function triggerZoneContainsBlock(zoneIndex:Int, coord:BlockCoord):Bool {
+		final offset = zoneIndex * 6;
+		return coord.x >= triggerZoneBounds[offset]
+			&& coord.x < triggerZoneBounds[offset] + triggerZoneBounds[offset + 3]
+			&& coord.y >= triggerZoneBounds[offset + 1]
+			&& coord.y < triggerZoneBounds[offset + 1] + triggerZoneBounds[offset + 4]
+			&& coord.z >= triggerZoneBounds[offset + 2]
+			&& coord.z < triggerZoneBounds[offset + 2] + triggerZoneBounds[offset + 5];
+	}
+
+	/**
+		Test whether a movement segment spends positive distance inside one zone.
+
+		The slab interval uses the same half-open box as point membership. A segment
+		that only touches an edge has equal entry and exit times and is rejected.
+	**/
+	function triggerZoneSegmentCrosses(zoneIndex:Int, previous:FlowEventPosition, current:FlowEventPosition):Bool {
+		final offset = zoneIndex * 6;
+		var enter = 0.0;
+		var leave = 1.0;
+		final x = intersectTriggerAxis(previous.xMilli, current.xMilli, triggerZoneBounds[offset] * 1000,
+			(triggerZoneBounds[offset] + triggerZoneBounds[offset + 3]) * 1000, enter, leave);
+		if (x == null)
+			return false;
+		enter = x.enter;
+		leave = x.leave;
+		final y = intersectTriggerAxis(previous.yMilli, current.yMilli, triggerZoneBounds[offset + 1] * 1000,
+			(triggerZoneBounds[offset + 1] + triggerZoneBounds[offset + 4]) * 1000, enter, leave);
+		if (y == null)
+			return false;
+		enter = y.enter;
+		leave = y.leave;
+		final z = intersectTriggerAxis(previous.zMilli, current.zMilli, triggerZoneBounds[offset + 2] * 1000,
+			(triggerZoneBounds[offset + 2] + triggerZoneBounds[offset + 5]) * 1000, enter, leave);
+		return z != null && z.enter < z.leave;
+	}
+
+	/** Narrow one segment interval against one half-open axis range. */
+	static function intersectTriggerAxis(start:Int, finish:Int, minimum:Int, maximum:Int, enter:Float,
+			leave:Float):Null<{final enter:Float; final leave:Float;}> {
+		final delta = finish - start;
+		if (delta == 0)
+			return start < minimum || start >= maximum ? null : {enter: enter, leave: leave};
+		final first = (minimum - start) / delta;
+		final second = (maximum - start) / delta;
+		final axisEnter = first < second ? first : second;
+		final axisLeave = first < second ? second : first;
+		final narrowedEnter = axisEnter > enter ? axisEnter : enter;
+		final narrowedLeave = axisLeave < leave ? axisLeave : leave;
+		return narrowedEnter < narrowedLeave ? {enter: narrowedEnter, leave: narrowedLeave} : null;
 	}
 
 	/**

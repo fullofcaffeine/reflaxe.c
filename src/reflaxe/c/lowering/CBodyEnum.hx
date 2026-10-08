@@ -47,8 +47,11 @@ class CPreparedBodyEnumPayload {
 		this.request = request;
 	}
 
-	public function storageType():HxcIRTypeRef
-		return indirect ? IRTPointer(valueType.irType, false) : valueType.irType;
+	public function storageType():HxcIRTypeRef {
+		final nested = valueType.enumValue();
+		return indirect ? IRTPointer(nested != null && nested.collectorNode() ? IRTInstance(nested.nodeInstanceId()) : valueType.irType,
+			false) : valueType.irType;
+	}
 }
 
 /** One constructor in source discriminant order. */
@@ -102,7 +105,8 @@ class CPreparedBodyEnumInstance {
 	/** Cached canonical view, invalidated if later lowering discovers a new use. */
 	var canonicalReasonOrder:Null<Array<HxcSourceSpan>> = null;
 
-	var distinctReasonCount:Int = 0;
+	/** Append order lets function replay collect new ranges without copying history. */
+	final reasonInsertions:Array<HxcSourceSpan> = [];
 
 	public final valueTagRequest:CSymbolRequest;
 	public final discriminantTagRequest:CSymbolRequest;
@@ -110,6 +114,10 @@ class CPreparedBodyEnumInstance {
 	public final tagMemberRequest:Null<CSymbolRequest>;
 	public final payloadMemberRequest:Null<CSymbolRequest>;
 	public final cases:Array<CPreparedBodyEnumCase> = [];
+
+	/** True after every constructor payload has a prepared ownership shape. */
+	public var complete:Bool = false;
+
 	public var recursive:Bool = false;
 	public var scopedLifetime:Bool = false;
 
@@ -136,10 +144,9 @@ class CPreparedBodyEnumInstance {
 	/**
 		True when copying this value requires typed ownership work.
 
-		Managed payloads retain or deep-copy their owned state. Recursive payloads
-		use owned heap nodes and must be deep-copied. Keeping the combined fact
-		separate from `managedPayload` preserves the distinction between ordinary
-		active payload ownership and recursive enum storage.
+		Managed payloads retain or deep-copy their owned state. Uncollected recursive
+		nodes also require deep copies. Collector-owned nodes instead share immutable
+		storage; only their independently owned direct payloads need lifecycle work.
 	**/
 	public var managedLifetime:Bool = false;
 
@@ -148,6 +155,12 @@ class CPreparedBodyEnumInstance {
 	public var retainParameterRequest:Null<CSymbolRequest> = null;
 	public var destroyParameterRequest:Null<CSymbolRequest> = null;
 	public var retainStatusRequest:Null<CSymbolRequest> = null;
+
+	/** Descriptor identity for collector-owned indirect storage, separate from value layout. */
+	public var nodeDescriptorRequest:Null<CSymbolRequest> = null;
+
+	/** Callback that visits only the active constructor's exact collector pointers. */
+	public var nodeTraceRequest:Null<CSymbolRequest> = null;
 
 	public function new(shapeKey:String, digest:String, haxePath:String, displayName:String, ownerModule:String, source:HxcSourceSpan,
 			representation:CBodyEnumRepresentation, typeParameterNames:Array<String>, typeArguments:Array<CGenericTypeArgument>,
@@ -178,13 +191,25 @@ class CPreparedBodyEnumInstance {
 		if (reasonsByDisplay.exists(display))
 			return;
 		reasonsByDisplay.set(display, reason);
-		distinctReasonCount++;
+		reasonInsertions.push(reason);
 		canonicalReasonOrder = null;
 	}
 
 	/** Returns how many distinct source locations required this enum shape. */
 	public inline function reasonCount():Int {
-		return distinctReasonCount;
+		return reasonInsertions.length;
+	}
+
+	/**
+		Copy only ranges added after a request-local append position.
+
+		Duplicate ranges do not advance the position. Consumers must sort this
+		discovery-order slice before exposing it in a canonical report or cache key.
+	**/
+	public function reasonsSince(position:Int):Array<HxcSourceSpan> {
+		if (position < 0 || position > reasonInsertions.length)
+			throw new CBodyEmissionError("enum provenance position is outside its request-local history");
+		return reasonInsertions.slice(position);
 	}
 
 	/**
@@ -229,6 +254,25 @@ class CPreparedBodyEnumInstance {
 			declarationId: declarationId,
 			arguments: arguments.map(argument -> argument.irType),
 			representation: representation == CBERNativeEnum ? IRRDirect : IRRTagged,
+			source: source
+		};
+	}
+
+	/** Recursive links share immutable collector nodes when their payload reaches GC. */
+	public function collectorNode():Bool
+		return recursive && collectorPayload;
+
+	/** Keep node allocation identity separate from the enum's ordinary by-value identity. */
+	public function nodeInstanceId():String
+		return instanceId + ".node";
+
+	/** The node has the same finite payload layout, with collector-owned storage. */
+	public function nodeInstance():HxcIRTypeInstance {
+		return {
+			id: nodeInstanceId(),
+			declarationId: declarationId,
+			arguments: arguments.map(argument -> argument.irType),
+			representation: IRRManaged("gc"),
 			source: source
 		};
 	}
@@ -291,9 +335,16 @@ class CLoweredBodyEnum {
 	public final destroyParameterName:Null<CIdentifier>;
 	public final retainStatusName:Null<CIdentifier>;
 
+	/** Finalized descriptor used for recursive node allocation and exact tracing. */
+	public final nodeDescriptorName:Null<CIdentifier>;
+
+	/** Finalized trace callback; independent payload cleanup reuses the enum destructor. */
+	public final nodeTraceName:Null<CIdentifier>;
+
 	public function new(prepared:CPreparedBodyEnumInstance, valueTag:CIdentifier, discriminantTag:CIdentifier, payloadUnionTag:Null<CIdentifier>,
 			tagMember:Null<CIdentifier>, payloadMember:Null<CIdentifier>, cases:Array<CLoweredBodyEnumCase>, retainName:Null<CIdentifier>,
-			destroyName:Null<CIdentifier>, retainParameterName:Null<CIdentifier>, destroyParameterName:Null<CIdentifier>, retainStatusName:Null<CIdentifier>) {
+			destroyName:Null<CIdentifier>, retainParameterName:Null<CIdentifier>, destroyParameterName:Null<CIdentifier>, retainStatusName:Null<CIdentifier>,
+			?nodeDescriptorName:CIdentifier, ?nodeTraceName:CIdentifier) {
 		this.prepared = prepared;
 		this.valueTag = valueTag;
 		this.discriminantTag = discriminantTag;
@@ -306,6 +357,8 @@ class CLoweredBodyEnum {
 		this.retainParameterName = retainParameterName;
 		this.destroyParameterName = destroyParameterName;
 		this.retainStatusName = retainStatusName;
+		this.nodeDescriptorName = nodeDescriptorName;
+		this.nodeTraceName = nodeTraceName;
 	}
 
 	public function tagCase(name:String):Null<CLoweredBodyEnumCase> {
@@ -347,11 +400,23 @@ class CBodyEnumRegistry {
 		return count;
 	}
 
-	/** Copy current generic-enum provenance by stable instance identity. */
-	public function reasonSnapshot():Map<String, Array<HxcSourceSpan>> {
-		final result:Map<String, Array<HxcSourceSpan>> = [];
+	/** Remember append positions without copying or sorting existing source ranges. */
+	public function reasonCheckpoint():Map<String, Int> {
+		final result:Map<String, Int> = [];
 		for (value in byShape)
-			result.set(value.instanceId, value.canonicalReasons());
+			result.set(value.instanceId, value.reasonCount());
+		return result;
+	}
+
+	/** Collect new ranges, including all ranges of enum instances discovered later. */
+	public function reasonsSince(checkpoint:Map<String, Int>):Map<String, Array<HxcSourceSpan>> {
+		final result:Map<String, Array<HxcSourceSpan>> = [];
+		for (value in byShape) {
+			final position = checkpoint.get(value.instanceId);
+			final added = value.reasonsSince(position == null ? 0 : position);
+			if (added.length > 0)
+				result.set(value.instanceId, added);
+		}
 		return result;
 	}
 
@@ -393,8 +458,6 @@ class CBodyEnumRegistry {
 		final reason = HaxeSourceSpan.fromPosition(position, ownerSourcePath);
 		final existing = byShape.get(shapeKey);
 		if (existing != null) {
-			if (existing.recursive && existing.collectorPayload)
-				return rejected(fail, position, '$node:recursive-enum-with-collector-payload:${existing.haxePath}');
 			existing.addReason(reason);
 			return existing;
 		}
@@ -494,6 +557,7 @@ class CBodyEnumRegistry {
 			}
 			prepared.cases.push(tagCase);
 		}
+		prepared.complete = true;
 		/*
 		 * A complete inner enum can immediately tell an enclosing record that it
 		 * owns a direct managed payload. Waiting for the outermost enum to finish
@@ -512,8 +576,6 @@ class CBodyEnumRegistry {
 		preparationDepth--;
 		if (preparationDepth == 0) {
 			recomputeRecursion();
-			if (prepared.recursive && prepared.collectorPayload)
-				return rejected(fail, position, '$node:recursive-enum-with-collector-payload:$path');
 		}
 		return prepared;
 	}
@@ -542,7 +604,7 @@ class CBodyEnumRegistry {
 		switch valueType.kind {
 			case CBVKStaticString(_) | CBVKManagedString(_) | CBVKArray(_) | CBVKBytes(_) | CBVKOwnedClass(_) | CBVKClass(_, _):
 				return;
-			case CBVKIntMap(_) | CBVKStringMap(_):
+			case CBVKIterator(_) | CBVKIntMap(_) | CBVKStringMap(_) | CBVKTypedMap(_):
 				rejected(fail, position, '$node:reference-policy-not-admitted:${valueType.cSpelling}');
 			case CBVKInterface(_):
 				rejected(fail, position, '$node:reference-policy-not-admitted:${valueType.cSpelling}');
@@ -552,8 +614,8 @@ class CBodyEnumRegistry {
 				rejected(fail, position, '$node:call-scoped-immutable-c-string-escape');
 			case CBVKCStringBufferRef:
 				rejected(fail, position, '$node:call-scoped-mutable-c-string-buffer-escape');
-			case CBVKPrimitive(_) | CBVKFixedArray(_, _, _) | CBVKSpan(_, _) | CBVKImport(_) | CBVKAggregate(_) | CBVKEnum(_) | CBVKOptional(_) |
-				CBVKFunction(_, _) | CBVKClosureCapturePointer(_) | CBVKNativeRef(_) | CBVKClosureContext | CBVKStackClosure(_, _, _):
+			case CBVKDynamic | CBVKPrimitive(_) | CBVKFixedArray(_, _, _) | CBVKSpan(_, _) | CBVKImport(_) | CBVKAggregate(_) | CBVKEnum(_) |
+				CBVKOptional(_) | CBVKFunction(_, _) | CBVKClosureCapturePointer(_) | CBVKNativeRef(_) | CBVKClosureContext | CBVKStackClosure(_, _, _):
 				rejectDirectReference(sourceType, position, fail, node);
 		}
 	}
@@ -595,13 +657,19 @@ class CBodyEnumRegistry {
 				identifierOrNull(symbols, prepared.payloadUnionRequest), identifierOrNull(symbols, prepared.tagMemberRequest),
 				identifierOrNull(symbols, prepared.payloadMemberRequest), cases, identifierOrNull(symbols, prepared.retainRequest),
 				identifierOrNull(symbols, prepared.destroyRequest), identifierOrNull(symbols, prepared.retainParameterRequest),
-				identifierOrNull(symbols, prepared.destroyParameterRequest), identifierOrNull(symbols, prepared.retainStatusRequest));
+				identifierOrNull(symbols, prepared.destroyParameterRequest), identifierOrNull(symbols, prepared.retainStatusRequest),
+				identifierOrNull(symbols, prepared.nodeDescriptorRequest), identifierOrNull(symbols, prepared.nodeTraceRequest));
 		});
 	}
 
-	function recomputeRecursion():Void {
+	/** Recompute recursive, ownership, and exact-tracing facts after type promotion. */
+	public function recomputePreparedFacts():Bool {
+		var changed = false;
 		for (value in byShape) {
+			final previousRecursive = value.recursive;
 			value.recursive = hasRecursiveEdge(value);
+			if (value.recursive != previousRecursive)
+				changed = true;
 			for (tagCase in value.cases) {
 				for (payload in tagCase.payload) {
 					payload.indirect = switch payload.valueType.enumValue() {
@@ -614,23 +682,34 @@ class CBodyEnumRegistry {
 		for (value in byShape)
 			value.scopedLifetime = requiresScopedLifetime(value, []);
 		for (value in byShape) {
+			final previousManagedPayload = value.managedPayload;
+			final previousCollectorPayload = value.collectorPayload;
+			final previousManagedLifetime = value.managedLifetime;
 			value.managedPayload = requiresManagedPayloadLifecycle(value, []);
 			value.collectorPayload = requiresCollectorPayload(value, []);
-			value.managedLifetime = value.managedPayload || value.recursive;
+			value.managedLifetime = value.managedPayload || (value.recursive && !value.collectorPayload);
+			if (value.collectorNode())
+				registerCollectorNode(value);
+			if (value.managedPayload != previousManagedPayload
+				|| value.collectorPayload != previousCollectorPayload
+				|| value.managedLifetime != previousManagedLifetime)
+				changed = true;
 			if (value.managedLifetime)
 				registerManagedLifecycle(value);
 		}
+		return changed;
 	}
 
-	/** Whether a direct finite payload shape contains a tracing-GC reference. */
+	function recomputeRecursion():Void
+		recomputePreparedFacts();
+
+	/** Follow the finite type graph, including recursive edges, to find collector references. */
 	function requiresCollectorPayload(value:CPreparedBodyEnumInstance, visited:Map<String, Bool>):Bool {
 		if (visited.exists(value.instanceId))
 			return false;
 		visited.set(value.instanceId, true);
 		for (tagCase in value.cases)
 			for (payload in tagCase.payload) {
-				if (payload.indirect)
-					continue;
 				if (valueTypeContainsCollectorReference(payload.valueType, visited))
 					return true;
 			}
@@ -680,6 +759,19 @@ class CBodyEnumRegistry {
 			}
 		}
 		return false;
+	}
+
+	/** Register descriptor names before symbol finalization; no new runtime ABI is needed. */
+	function registerCollectorNode(value:CPreparedBodyEnumInstance):Void {
+		if (value.nodeDescriptorRequest != null)
+			return;
+		final root = ["compiler", "haxe-enum", value.digest, "node"];
+		value.nodeDescriptorRequest = new CSymbolRequest(CSKTypeDescriptor, root.concat(["descriptor"]), CNSOrdinary("translation-unit"), CSVInternal, null,
+			[], [], 0, ["enum", value.digest.substr(0, 8), "node_descriptor"]);
+		value.nodeTraceRequest = new CSymbolRequest(CSKMethod, root.concat(["trace"]), CNSOrdinary("translation-unit"), CSVInternal, null, [], [], 1,
+			["enum", value.digest.substr(0, 8), "node_trace"]);
+		context.symbols.register(value.nodeDescriptorRequest);
+		context.symbols.register(value.nodeTraceRequest);
 	}
 
 	function registerManagedLifecycle(value:CPreparedBodyEnumInstance):Void {

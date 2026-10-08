@@ -27,6 +27,13 @@ enum abstract EditorFocusTarget(Int) {
 	var KeepEditing = 13;
 	var LeaveWithoutSaving = 14;
 	var CatalogObjectTool = 15;
+	var Environment = 16;
+	var Save = 17;
+	var PreviousLayer = 18;
+	var NextLayer = 19;
+	var TriggerZoneTool = 20;
+	var CameraMode = 21;
+	var Text = 22;
 }
 
 /**
@@ -57,18 +64,25 @@ function moveFocus(current:EditorFocusTarget, direction:EditorFocusMove):EditorF
 	return switch direction {
 		case Forward:
 			switch current {
-				case Back: WorldName;
+				case Back: Save;
+				case Save: WorldName;
 				case WorldName: Undo;
 				case Undo: Redo;
 				case Redo: Build;
 				case Build: Plan;
-				case Plan: Play;
+				case Plan: Text;
+				case Text: CameraMode;
+				case CameraMode: PreviousLayer;
+				case PreviousLayer: NextLayer;
+				case NextLayer: Environment;
+				case Environment: Play;
 				case Play: SelectTool;
 				case SelectTool: GroundTool;
 				case GroundTool: EraseTool;
 				case EraseTool: CheckpointTool;
 				case CheckpointTool: CatalogObjectTool;
-				case CatalogObjectTool: MoreDetails;
+				case CatalogObjectTool: TriggerZoneTool;
+				case TriggerZoneTool: MoreDetails;
 				case MoreDetails: WorldList;
 				case WorldList: Back;
 				case KeepEditing: LeaveWithoutSaving;
@@ -77,18 +91,25 @@ function moveFocus(current:EditorFocusTarget, direction:EditorFocusMove):EditorF
 		case Backward:
 			switch current {
 				case Back: WorldList;
-				case WorldName: Back;
+				case Save: Back;
+				case WorldName: Save;
 				case Undo: WorldName;
 				case Redo: Undo;
 				case Build: Redo;
 				case Plan: Build;
-				case Play: Plan;
+				case Play: Environment;
+				case Environment: NextLayer;
+				case NextLayer: PreviousLayer;
+				case PreviousLayer: CameraMode;
+				case CameraMode: Text;
+				case Text: Plan;
 				case SelectTool: Play;
 				case GroundTool: SelectTool;
 				case EraseTool: GroundTool;
 				case CheckpointTool: EraseTool;
 				case CatalogObjectTool: CheckpointTool;
-				case MoreDetails: CatalogObjectTool;
+				case MoreDetails: TriggerZoneTool;
+				case TriggerZoneTool: CatalogObjectTool;
 				case WorldList: MoreDetails;
 				case KeepEditing: LeaveWithoutSaving;
 				case LeaveWithoutSaving: KeepEditing;

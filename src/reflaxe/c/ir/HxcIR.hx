@@ -3,8 +3,114 @@ package reflaxe.c.ir;
 /** A complete target-owned semantic program, before any C syntax is chosen. */
 typedef HxcIRProgram = {
 	final schemaVersion:Int;
+	final dynamicPlan:HxcIRDynamicPlan;
 	final dispatch:HxcIRDispatchPlan;
 	final modules:Array<HxcIRModule>;
+}
+
+/**
+	The complete closed-world Dynamic surface selected for one program.
+
+	Types describe the exact source values that may enter Dynamic. Members and
+	call shapes describe only reachable operations, while operations give each
+	instruction one stable semantic contract. Empty arrays mean that typed code
+	does not need a Dynamic carrier or its runtime support.
+**/
+typedef HxcIRDynamicPlan = {
+	final types:Array<HxcIRDynamicType>;
+	final members:Array<HxcIRDynamicMember>;
+	final callShapes:Array<HxcIRDynamicCallShape>;
+	final operations:Array<HxcIRDynamicOperation>;
+}
+
+/** The source-language family represented by one exact Dynamic adapter. */
+enum HxcIRDynamicCategory {
+	IRDCNull;
+	IRDCBool;
+	IRDCInt;
+	IRDCFloat;
+	IRDCString;
+	IRDCArray;
+	IRDCObject;
+	IRDCEnum;
+	IRDCFunction;
+	IRDCTypeValue;
+}
+
+/**
+	How one Dynamic payload is stored without C pointer punning or union UB.
+
+	Inline forms use matching scalar union members. Managed references contain
+	an exact collector base pointer. Managed wrappers point to generated typed
+	owners for values such as String, Array, enum, function, and anonymous object.
+	Static tokens identify immutable program-owned type values.
+**/
+enum HxcIRDynamicStorage {
+	IRDSInlineNull;
+	IRDSInlineBool;
+	IRDSInlineInt32;
+	IRDSInlineFloat64;
+	IRDSManagedReference;
+	IRDSManagedWrapper;
+	IRDSStaticToken;
+}
+
+/** One reachable source type and the program-local tag assigned to its adapter. */
+typedef HxcIRDynamicType = {
+	final id:String;
+	final typeId:Int;
+	final ?sourceType:HxcIRTypeRef;
+	final category:HxcIRDynamicCategory;
+	final storage:HxcIRDynamicStorage;
+	final source:HxcSourceSpan;
+}
+
+/** The exact typed value carried by a dynamic field adapter. */
+enum HxcIRDynamicMemberKind {
+	IRDMField(valueTypeId:String, mutable:Bool);
+	IRDMMethod(callShapeIds:Array<String>);
+}
+
+/** One reachable member, addressed at runtime by a program-local numeric token. */
+typedef HxcIRDynamicMember = {
+	final id:String;
+	final ownerTypeId:String;
+	final token:Int;
+	final sourceName:String;
+	final kind:HxcIRDynamicMemberKind;
+	final source:HxcSourceSpan;
+}
+
+/**
+	One exact callable signature expressed through Dynamic adapter type IDs.
+
+	An absent result type means the source call returns Void; the Dynamic call
+	still produces the canonical null value so every call instruction has one
+	uniform result shape.
+**/
+typedef HxcIRDynamicCallShape = {
+	final id:String;
+	final parameterTypeIds:Array<String>;
+	final ?resultTypeId:String;
+	final source:HxcSourceSpan;
+}
+
+/** The operation family selected by one reachable Dynamic source expression. */
+enum HxcIRDynamicOperationKind {
+	IRDOKBox(typeId:String);
+	IRDOKUnbox(typeId:String);
+	IRDOKGet(memberId:String);
+	IRDOKSet(memberId:String);
+	IRDOKCall(callableTypeId:String, callShapeId:String);
+	IRDOKInvoke(memberId:String, callShapeId:String);
+	IRDOKEqual(leftTypeId:String, rightTypeId:String);
+}
+
+/** One stable operation record referenced by Dynamic instructions. */
+typedef HxcIRDynamicOperation = {
+	final id:String;
+	final kind:HxcIRDynamicOperationKind;
+	final source:HxcSourceSpan;
 }
 
 /** Reachability-selected virtual-dispatch facts; empty arrays mean no object header. */
@@ -354,6 +460,10 @@ enum HxcIRFunctionFailureConvention {
 enum HxcIRFailureTarget {
 	IRFTBlock(blockId:String);
 	IRFTPropagate;
+
+	/** Transfer one genuine Dynamic payload to the active contained frame. */
+	IRFTUnwind;
+
 	IRFTAbort;
 }
 
@@ -454,6 +564,18 @@ enum HxcIRInstructionKind {
 	IRIOUnary(operationId:String, valueId:String, implementation:HxcIRImplementation);
 	IRIOBinary(operationId:String, leftValueId:String, rightValueId:String, implementation:HxcIRImplementation);
 	IRIOConvert(valueId:String, kind:HxcIRConversionKind, targetType:HxcIRTypeRef, implementation:HxcIRImplementation, failure:Null<HxcIRFailureEdge>);
+
+	/**
+		Run one plan-owned Dynamic operation with explicit operands and failure.
+
+		The nested operation keeps each Dynamic family exhaustive while giving
+		generic instruction walkers one conservative effect boundary.
+	**/
+	IRIODynamic(operation:HxcIRDynamicInstruction);
+
+	/** Operate on compiler-owned contained exception frames and cleanup records. */
+	IRIOException(operation:HxcIRExceptionInstruction);
+
 	IRIOCall(call:HxcIRCall);
 	IRIOConstructAggregate(instanceId:String, fields:Array<HxcIRNamedValue>);
 
@@ -543,6 +665,36 @@ enum HxcIRInstructionKind {
 	IRIOLifetime(place:HxcIRPlace, from:HxcIRInitializationState, to:HxcIRInitializationState, reason:String);
 }
 
+/** Runtime operations whose ordering remains explicit in HxcIR. */
+enum HxcIRExceptionInstruction {
+	IREFramePush(regionId:String);
+	IREFrameSetJmp(regionId:String);
+	IREFramePayload(regionId:String);
+	IREFramePop(regionId:String);
+	IRECleanupPush(cleanupId:String);
+	IRECleanupRun(cleanupId:String);
+	IRECleanupDiscard(cleanupId:String);
+}
+
+/**
+	Dedicated Dynamic operations after source evaluation order is explicit.
+
+	Boxing and equality are infallible. Casts, member access, assignment, and
+	calls require an explicit result-error edge; this prevents C lowering from
+	inventing exception behavior or silently returning a sentinel value.
+**/
+enum HxcIRDynamicInstruction {
+	IRDBox(valueId:String, operationId:String);
+	IRDBoxNull(operationId:String);
+	IRDBoxTypeToken(operationId:String);
+	IRDUnbox(valueId:String, operationId:String, failure:HxcIRFailureEdge);
+	IRDGet(receiverValueId:String, operationId:String, failure:HxcIRFailureEdge);
+	IRDSet(receiverValueId:String, valueId:String, operationId:String, failure:HxcIRFailureEdge);
+	IRDCall(callableValueId:String, arguments:Array<String>, operationId:String, failure:HxcIRFailureEdge);
+	IRDInvoke(receiverValueId:String, arguments:Array<String>, operationId:String, failure:HxcIRFailureEdge);
+	IRDEqual(leftValueId:String, rightValueId:String, operationId:String);
+}
+
 typedef HxcIRInstruction = {
 	final id:String;
 	final result:Null<HxcIRResult>;
@@ -626,6 +778,9 @@ enum HxcIRManagedRootProjection {
 
 	/** Select a tagged optional's payload, but only while it is present. */
 	IRMRPNullablePayload;
+
+	/** Select the exact managed base held by a Dynamic value's active tag. */
+	IRMRPDynamicPayload;
 }
 
 /**
@@ -646,6 +801,30 @@ typedef HxcIRManagedRoot = {
 	final id:String;
 	final valueId:String;
 	final projections:Array<HxcIRManagedRootProjection>;
+	final source:HxcSourceSpan;
+}
+
+/** The selected source-exception strategy for one generated function. */
+enum HxcIRExceptionStrategy {
+	IRESClosedResult;
+	IRESContainedRuntime;
+}
+
+/** One lexical contained-runtime frame and its caught Dynamic value. */
+typedef HxcIRExceptionRegion = {
+	final id:String;
+	final frameStorageId:String;
+	final payloadValueId:String;
+	final source:HxcSourceSpan;
+}
+
+/** One cleanup action registered for non-local transfer through this function. */
+typedef HxcIRExceptionCleanup = {
+	final id:String;
+	final storageId:String;
+	final actionId:String;
+	final place:HxcIRPlace;
+	final implementation:HxcIRImplementation;
 	final source:HxcSourceSpan;
 }
 
@@ -670,6 +849,15 @@ typedef HxcIRFunction = {
 	/** Direct-record parameters whose interface fields remain caller-owned. */
 	final ?borrowedAggregateParameterIds:Array<String>;
 
+	/**
+		Non-null pointers that lend one exact mutable record for this direct call.
+
+		The caller keeps the record owner and storage. The callee can read or
+		change fields through the pointer, but it cannot store, return, capture,
+		or otherwise keep the pointer after the call.
+	**/
+	final ?mutableAggregateBorrowParameterIds:Array<String>;
+
 	/** Automatic pointer locals that only rename caller- or parent-owned class storage. */
 	final borrowedClassLocalIds:Array<String>;
 
@@ -686,6 +874,9 @@ typedef HxcIRFunction = {
 	/** Automatic direct-record locals whose interface fields remain caller-owned. */
 	final ?borrowedAggregateLocalIds:Array<String>;
 
+	/** Automatic pointer locals that only stage one mutable-record borrow. */
+	final ?mutableAggregateBorrowLocalIds:Array<String>;
+
 	/**
 		Exact managed parameters and instruction results kept alive until return.
 
@@ -695,6 +886,15 @@ typedef HxcIRFunction = {
 	**/
 	final ?managedRoots:Array<HxcIRManagedRoot>;
 
+	/** Present only when source try/throw lowering selected an exception strategy. */
+	final ?exceptionStrategy:HxcIRExceptionStrategy;
+
+	/** Lexical frames used by the contained runtime strategy. */
+	final ?exceptionRegions:Array<HxcIRExceptionRegion>;
+
+	/** Automatic cleanup records paired with existing semantic cleanup actions. */
+	final ?exceptionCleanups:Array<HxcIRExceptionCleanup>;
+
 	final locals:Array<HxcIRLocal>;
 	final returnType:HxcIRTypeRef;
 
@@ -702,7 +902,7 @@ typedef HxcIRFunction = {
 		How this function may lend a read-only span across its return boundary.
 
 		The optional field preserves compatibility with older hand-built HxcIR
-		fixtures. Compiler-produced schema-23 functions always supply either the
+		fixtures. Compiler-produced schema-27 functions always supply either the
 		closed receiver-field contract or `null`.
 	**/
 	final ?borrowedSpanReturn:HxcIRBorrowedSpanReturn;

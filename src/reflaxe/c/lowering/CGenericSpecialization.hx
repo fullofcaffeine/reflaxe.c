@@ -16,6 +16,9 @@ enum abstract CGenericArgumentRepresentation(String) to String {
 	var DirectPrimitive = "direct-primitive";
 	var DirectEnum = "direct-enum";
 
+	/** Closed nominal Haxe class identity; body planning decides its lifetime. */
+	var ManagedClass = "managed-class";
+
 	/** Runtime-sized `Array<T>` whose closed element identity remains structural. */
 	var ManagedArray = "managed-array";
 
@@ -69,28 +72,44 @@ class CGenericFunctionSpecialization {
 	public final displayName:String;
 	public final typeParameters:Array<TypeParameter>;
 	public final arguments:Array<CGenericTypeArgument>;
+	public final ownerTypeParameters:Array<TypeParameter>;
+	public final ownerArguments:Array<CGenericTypeArgument>;
+	public final methodTypeParameters:Array<TypeParameter>;
+	public final methodArguments:Array<CGenericTypeArgument>;
 	public final reasons:Array<CGenericSpecializationReason> = [];
 
 	/** Membership index that avoids rescanning the sorted public provenance. */
 	final reasonKeys:Map<String, Bool> = [];
 
-	public function new(baseFunctionId:String, fieldName:String, typeParameters:Array<TypeParameter>, arguments:Array<CGenericTypeArgument>,
-			initialReason:CGenericSpecializationReason) {
-		if (typeParameters.length == 0 || typeParameters.length != arguments.length) {
+	public function new(baseFunctionId:String, fieldName:String, ownerTypeParameters:Array<TypeParameter>, ownerArguments:Array<CGenericTypeArgument>,
+			methodTypeParameters:Array<TypeParameter>, methodArguments:Array<CGenericTypeArgument>, initialReason:CGenericSpecializationReason,
+			instancePrefix:String = "function.specialization") {
+		if (ownerTypeParameters.length != ownerArguments.length
+			|| methodTypeParameters.length != methodArguments.length
+			|| ownerTypeParameters.length + methodTypeParameters.length == 0) {
 			throw new CBodyEmissionError('generic specialization `$baseFunctionId` has an invalid closed argument set');
 		}
 		this.baseFunctionId = baseFunctionId;
-		this.typeParameters = typeParameters.copy();
-		this.arguments = arguments.copy();
-		this.key = CGenericTypeCanonicalizer.functionKey(baseFunctionId, arguments);
+		this.ownerTypeParameters = ownerTypeParameters.copy();
+		this.ownerArguments = ownerArguments.copy();
+		this.methodTypeParameters = methodTypeParameters.copy();
+		this.methodArguments = methodArguments.copy();
+		this.typeParameters = ownerTypeParameters.concat(methodTypeParameters);
+		this.arguments = ownerArguments.concat(methodArguments);
+		this.key = CGenericTypeCanonicalizer.functionKey(baseFunctionId, this.arguments);
 		this.digest = Sha256.encode(key);
-		this.instanceId = 'function.specialization.$digest';
-		this.displayName = fieldName + "<" + arguments.map(argument -> argument.displayName).join(", ") + ">";
+		this.instanceId = '$instancePrefix.$digest';
+		this.displayName = fieldName + "<" + this.arguments.map(argument -> argument.displayName).join(", ") + ">";
 		addReason(initialReason);
 	}
 
-	public function apply(type:Type):Type
-		return TypeTools.applyTypeParameters(type, typeParameters, arguments.map(argument -> argument.type));
+	/** Apply the declaring owner first, then the method's own type parameters. */
+	public function apply(type:Type):Type {
+		final ownerClosed = ownerTypeParameters.length == 0 ? type : TypeTools.applyTypeParameters(type, ownerTypeParameters,
+			ownerArguments.map(argument -> argument.type));
+		return methodTypeParameters.length == 0 ? ownerClosed : TypeTools.applyTypeParameters(ownerClosed, methodTypeParameters,
+			methodArguments.map(argument -> argument.type));
+	}
 
 	public function addReason(reason:CGenericSpecializationReason):Void {
 		final key = reason.key();
@@ -162,7 +181,14 @@ class CGenericTypeCanonicalizer {
 								rejected(fail, position, '$node:String-type-argument-count:${parameters.length}');
 							new CGenericTypeArgument(TInst(reference, []), CGenericSpecializationContract.stringArgumentKey(), "String", ImmutableString);
 						} else if (path != "Array") {
-							rejected(fail, position, '$node:class-type-argument:$path');
+							if (definition.isExtern || definition.isInterface || definition.meta.has(":c.layout"))
+								rejected(fail, position, '$node:class-type-argument-not-managed:$path');
+							final arguments = parameters.map(parameter -> normalizeType(parameter, depth + 1, activeAnonymous, position, fail,
+								'$node:class-argument', allowTransparentRecordFieldAbstract));
+							final normalizedType:Type = TInst(reference, arguments.map(argument -> argument.type));
+							final displayName = arguments.length == 0 ? path : path + "<" + arguments.map(argument -> argument.displayName).join(", ") + ">";
+							new CGenericTypeArgument(normalizedType,
+								CGenericSpecializationContract.classArgumentKey(path, arguments.map(argument -> argument.key)), displayName, ManagedClass);
 						} else {
 							if (parameters.length != 1)
 								rejected(fail, position, '$node:Array-type-argument-count:${parameters.length}');
@@ -461,6 +487,14 @@ class CGenericCallResolver {
 					still emits the explicit nullable injection required by HxcIR and C.
 				**/
 				match(leftValue, right, parameters, bindings, caller, profile, position, fail, '$node:nullable-value');
+			case [_, TAbstract(rightReference, rightParameters)] if (!rightReference.get().meta.has(":coreType")):
+				final definition = rightReference.get();
+				final carrier = TypeTools.applyTypeParameters(definition.type, definition.params, rightParameters);
+				match(left, carrier, parameters, bindings, caller, profile, position, fail, '$node:transparent-abstract-carrier');
+			case [TAbstract(leftReference, leftParameters), _] if (!leftReference.get().meta.has(":coreType")):
+				final definition = leftReference.get();
+				final carrier = TypeTools.applyTypeParameters(definition.type, definition.params, leftParameters);
+				match(carrier, right, parameters, bindings, caller, profile, position, fail, '$node:transparent-abstract-carrier');
 			case [TInst(leftReference, leftParameters), TInst(rightReference, rightParameters)]:
 				matchNominal(basePath(leftReference.get()), basePath(rightReference.get()), leftParameters, rightParameters, parameters, bindings, caller,
 					profile, position, fail, node);

@@ -1,9 +1,13 @@
 # HxcIR semantic contract
 
 `HxcIR` is the target-owned semantic layer between normalized Haxe input and
-the structural C AST. Its schema is internal to the compiler: schema version 23
+the structural C AST. Its schema is internal to the compiler: schema version 27
 is deterministic and validation-backed, but it is not a public file format or
 ABI promise.
+
+Increment the schema when a serialized constructor, field, or traversal rule
+changes. A new validated operation ID does not change that structure. Its
+semantic contract and focused fixtures own compatibility instead.
 
 C is deceptively close to Haxe syntactically, but semantically quite distant.
 HxcIR makes those differences explicit before selecting C syntax. This is why
@@ -113,7 +117,9 @@ printer repair. Capturing closures and managed or recursive constructor
 payload adapters remain explicit unsupported boundaries.
 Schema version 18 adds an explicitly uninitialized local carrier for
 conditional results that are complete unmanaged values, such as a closed Haxe
-record, an unmanaged tagged enum, or a header-owned C struct. This is not a
+record, an unmanaged tagged enum, a header-owned C struct, or one exact bare
+function pointer. A closure carrier is a separate nominal representation and
+is not admitted by the function-pointer case. This is not a
 general permission to read uninitialized storage. The validator requires an
 automatic direct-value local, rejects managed or recursive representations, and
 walks every `if` branch or `switch` arm plus nested joins to prove that every
@@ -306,6 +312,57 @@ or independently testable decision, the default is to keep the analysis at the
 typed-AST boundary. Conversely, if removing an HxcIR operation would recreate
 several loosely synchronized side tables or force the C emitter to infer Haxe
 meaning, the explicit semantic form is earning its cost.
+
+### Linear construction and freeze boundary
+
+HxcIR has one linear ownership path:
+
+```text
+typed Haxe -> raw HxcIR builder -> root/null-check mutation -> validation
+           -> ValidatedHxcIRProgram -> analysis and C emission
+```
+
+Only builders, pre-validation mutation passes, the validator, and malformed
+validation fixtures receive the raw `HxcIRProgram` record. Successful
+validation returns `ValidatedHxcIRProgram`. This nominal wrapper is the proof
+that all semantic checks passed. It borrows the completed graph without copying
+it, and every returned array is read-only by contract. The lowering pipeline
+must not mutate the raw graph after it creates this wrapper. Production dumps,
+runtime planning, helper selection, failure-symbol selection, and C generation
+accept the wrapper, so a schema-number check cannot impersonate validation.
+Validation also checks that each fixed-width integer constant fits its declared
+signed or unsigned carrier. This check applies at global initializers,
+instruction results, and switch cases, and compares decimal text without
+depending on the host compiler's integer width.
+
+`HxcIRTraversal` owns deterministic structural recursion through a validated
+program. It visits structural children in authored order and treats string IDs
+as references, not child nodes. Visitors can observe selected typed node
+families, but cannot suppress recursion by ignoring a parent. Every switch over
+a closed HxcIR enum in the walker lists all constructors without a catch-all,
+so a new constructor fails compilation until its child policy is explicit.
+The pre-validation control-flow analyzer shares the walker's exhaustive
+instruction-failure projection because null-check coalescing still needs those
+edges before the graph freezes. It does not gain general raw traversal access.
+
+The traversal also owns an independent schema-27 sentinel. A schema change must
+update both validator and traversal constants and exercise each affected child
+family before the focused HxcIR fixture can compile and run.
+
+Before admitting a new node or field, answer these questions:
+
+- Is it a structurally owned child or a semantic reference to another owner?
+- Which typed visitor callback must observe it?
+- Does the traversal coverage fixture reach its constructor and child family?
+- Which validator rule proves its references, types, ownership, and failure
+  behavior before the freeze boundary?
+- Which focused snapshot and generated/native path prove deterministic,
+  byte-identical output?
+
+An optional child also needs a sentinel fixture because adding an optional
+record field does not make old fixture construction fail. A general pass
+manager, shared analysis cache, and CAST traversal remain deferred: this
+boundary centralizes HxcIR ownership without creating those unrelated systems.
 
 ## Sibling Reflaxe architectures
 
@@ -706,10 +763,16 @@ constructor lowering](constructor-lowering.md).
 A root-level guard may return before that storage is initialized. The return
 edge captures the cleanup actions that exist at that source point, so it cannot
 name the later object. Construction registers its action before subsequent
-statements, and later return or failure edges include it. This permits ordinary
-validation-first Haxe without pretending that a branch-local object has
-function lifetime; nested branch, loop, and switch construction remains
-fail-closed until those body exits can carry class-destruction actions.
+statements, and later return or failure edges include it.
+
+A statement `if` arm may also own nonescaping local objects. The arm emits
+their field releases and destruction in reverse construction order before it
+returns or reaches the join. The sibling arm restores the cleanup depth that
+existed before the branch, so it cannot destroy storage that it never
+initialized. A branch-owned automatic reference cannot be assigned to
+longer-lived storage. Construction in loops, switches, catches, and conditional
+arms nested beneath those unproved scopes remains fail-closed until those
+control-flow families have an equivalent executable lifetime proof.
 
 For E3.T06, the whole-program dispatch plan contains only reachable hierarchy
 slots and tables for constructed concrete dynamic classes. The hierarchy root
@@ -779,7 +842,15 @@ runtime slice to make validation pass.
 Ordinary resizable `Array<T>` is an explicit managed representation, not a C
 pointer guessed by the printer. Its runtime calls name the operation—create,
 length, checked copy, or push—and retain the concrete element type. When
-checked indexing copies an element that owns Bytes fields, HxcIR gives the copy
+`T` is one exact non-capturing function signature, the specialization stores
+that C function pointer directly. Its signature remains visible in HxcIR,
+`sizeof`, `_Alignof`, indexed results, and sort adapters. Relocation is trivial
+because the pointer has no captured environment or cleanup owner. A capturing
+function remains a distinct closure carrier and cannot enter this storage
+without a separately proved environment lifetime.
+
+For a managed element, checked indexing can copy a value that owns Bytes
+fields. HxcIR gives the copy
 a compiler-owned local, exposes only a short-lived borrow to the enclosing
 expression, and attaches the matching program-local typed destroy cleanup.
 Validation proves that the element type encoded by that cleanup matches the
@@ -903,10 +974,11 @@ zero-initialized local arrays, zero-initialized inline arrays owned by a
 nonescaping class object, exact-width mutable/const views from either place,
 checked/static/loop bounds policies, ordinary-Haxe three-dimensional indexing,
 direct guarded iteration, storage-budget negatives, and strict generated-C
-execution. The arithmetic
-suite adds source-backed operation/helper decisions, `Std.int`, boundary
-execution, and eligible UBSan. All select no runtime files or public C ABI and
-compile/run as strict C11 with available GCC and Clang at `-O0` and `-O2`.
+execution. The arithmetic suite adds source-backed operation/helper decisions,
+`Std.int`, the validated `haxe.i32.divide.positive-constant` compound
+operation, boundary execution, and eligible UBSan. All select no runtime files
+or public C ABI and compile/run as strict C11 with available GCC and Clang at
+`-O0` and `-O2`.
 The aggregate-lowering suite adds source-backed named construction, direct
 record instances, explicit copies and field addresses, dependency-first private
 structs, and exact C/C++17 layout agreement under both required compiler

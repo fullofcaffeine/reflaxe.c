@@ -234,6 +234,48 @@ hxc_status hxc_string_substring(
   return hxc_string_slice(source, (size_t)start, (size_t)(end - start), out_slice);
 }
 
+hxc_status hxc_string_substr(
+  hxc_string source,
+  int32_t position,
+  bool has_length,
+  int32_t requested_length,
+  hxc_string *out_slice
+) {
+  size_t scalar_length;
+  int64_t start;
+  int64_t length;
+  hxc_status status;
+  if (out_slice == NULL) {
+    return HXC_STATUS_INVALID_ARGUMENT;
+  }
+  status = hxc_string_scalar_length(source, &scalar_length);
+  if (status != HXC_STATUS_OK) {
+    return status;
+  }
+  if (scalar_length > (size_t)INT32_MAX) {
+    return HXC_STATUS_SIZE_OVERFLOW;
+  }
+  start = position < 0
+    ? (int64_t)scalar_length + (int64_t)position
+    : (int64_t)position;
+  if (start < 0) {
+    start = 0;
+  } else if ((uint64_t)start > (uint64_t)scalar_length) {
+    start = (int64_t)scalar_length;
+  }
+  length = has_length
+    ? (int64_t)requested_length
+    : (int64_t)scalar_length - start;
+  if (length < 0) {
+    length = 0;
+  } else if (
+    (uint64_t)length > (uint64_t)scalar_length - (uint64_t)start
+  ) {
+    length = (int64_t)scalar_length - start;
+  }
+  return hxc_string_slice(source, (size_t)start, (size_t)length, out_slice);
+}
+
 hxc_status hxc_string_index_of(
   hxc_string source,
   hxc_string needle,

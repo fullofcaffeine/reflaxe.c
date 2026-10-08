@@ -44,8 +44,8 @@ The checked-in runtime is deliberately incomplete. Generated Haxe can select
 the hosted literal-output closure plus bounded ordinary-Haxe Array,
 `Map<Int, Bool>`, `Map<String, V>`, `haxe.io.Bytes`, scalar String inspection,
 and owned String construction/lifetime closures. Collections select
-allocator-backed storage transitively; StringMap and Bytes also select the
-literal carrier used by their admitted String inputs. `String.length`,
+allocator-backed storage transitively. StringMap also selects Iterator.
+StringMap and Bytes select the literal carrier for admitted String inputs. `String.length`,
 `charAt`, `charCodeAt`, and `substring` use the allocation-free scalar slice.
 `String.fromCharCode`, concatenation, and copies that outlive their source
 select the reference-counted String owner. The compiler may
@@ -243,9 +243,24 @@ failure and cleanup edges until a validated result/status or contained-unwinding
 strategy is selected, as required by
 [ADR 0006](adr/0006-explicit-failure-edges-and-contained-unwinding.md).
 
+### Stress and failure evidence
+
+Run `npm run test:runtime-stress` for the bounded cross-feature native stress
+lane. One fixed seed and limit exercise String growth, Array growth, a deep
+cyclic collector graph, repeated exception cleanup, and malformed inputs. The
+runner sweeps each observed allocator callback attempt. Every failed attempt
+must leave no live block or partially published owner.
+
+The runner prints the compiler identity, runtime ABI, selected feature set,
+seed, limit, and phase when a check fails. It compares strict C11 `O0`, `O2`,
+AddressSanitizer, and UndefinedBehaviorSanitizer reports. LeakSanitizer also
+runs when the platform compiler provides it. The current runtime has no thread
+feature, so this lane reports operating-system thread stress as not applicable;
+E5.T11 owns that future synchronization evidence.
+
 ### ABI and versioning
 
-The runtime ABI is internal and versioned, currently 0.16.0. Generated
+The runtime ABI is internal and versioned, currently 0.19.0. Generated
 runtime-using C emits a structural C11 `_Static_assert` for the required major.
 Minor and patch changes within the same major are compatible by current policy;
 a major mismatch fails native compilation. Runtime-free output contains no
@@ -308,6 +323,78 @@ The header stores no last-error state, allocates nothing, and has no source file
 Native-seed-only symbolic name lookup used by smoke diagnostics. Generated code
 branches on typed statuses directly and does not select this convenience helper.
 
+<!-- hxrt-feature:dynamic -->
+### `dynamic`
+
+Private tagged carrier for values whose source semantics require `Dynamic`.
+Null, `Bool`, `Int`, and `Float` stay inline. Every managed payload is a
+non-owning pointer to either its exact collector allocation base or a generated
+wrapper whose fields retain their precise C types. A function pointer therefore
+stays in a typed wrapper field; it never passes through `void *` or an integer.
+
+Constructors and readers validate both the immutable type descriptor and the
+active payload tag before inspecting a union member. Invalid tags, mismatched
+descriptor categories, null managed payloads, and wrong readers return
+`HXC_STATUS_INVALID_ARGUMENT` without changing the caller's output. The scalar
+carrier closure is exactly `runtime-base + status + dynamic`; it allocates
+nothing and does not select object descriptors or collection.
+
+The bounded E4.T07 source slice lowers exact `Dynamic` operations through
+schema-27 HxcIR and generated per-type adapters. Each surviving box, cast,
+field, call, and equality operation adds a source-positioned `dynamic` reason
+to the full `hxc.runtime-plan.json` report. `auto` and `minimal` select the same
+justified package. `none` reports every blocker and leaves no output.
+
+The compiler keeps neighboring typed code outside this carrier. It can also
+remove an exact `Dynamic` round trip when no Dynamic behavior is observable.
+For example, the differential fixture restores one `Array<Int>` immediately,
+so HxcIR keeps its direct values and records no false boxing reason.
+
+The admitted slice covers exact primitives, managed String, null, one mutable
+record, one concrete class, one fieldless enum, non-capturing functions, and
+opaque type values. Managed globals, computed names, bound methods, open
+generics, Dynamic map keys, payload-enum equality, and unresolved polymorphic
+identities still fail before C emission.
+
+<!-- hxrt-feature:exception -->
+### `exception`
+
+Compiler-selectable same-thread frames for a throw/catch region that cannot use
+ordinary result or status control flow without changing Haxe behavior. The
+generated function owns each `setjmp` call. The runtime owns the active frame
+chain, a non-owning `hxc_value` payload, reverse cleanup callbacks, and the
+final `longjmp` to an active frame on the same thread.
+
+The frame's payload carrier and presence flag are volatile because the runtime
+changes them after `setjmp` and the generated handler reads them after
+`longjmp`. Generated root and state slots follow the same rule; ordinary
+automatic locals are never assumed to retain a changed value across the jump.
+
+A frame can publish the managed object hidden in its payload to a
+compiler-supplied root slot. Taking the payload transfers that slot to the
+handler's ordinary generated root frame before the exception frame is popped.
+Throwing callees register their collector root frames as reverse-order exception
+cleanups, so a non-local transfer cannot leave an automatic root frame linked.
+A raise without an active frame, a managed
+payload without a root slot, stale cleanup state, or a failing cleanup returns
+a status to the generated fail-stop boundary instead of making an unchecked
+transfer.
+
+The frame and jump token remain private runtime types. Generated export and
+callback wrappers must catch and translate before control returns to foreign C;
+non-local transfer never crosses a public ABI, foreign frame, signal handler,
+or thread boundary. The default metal `minimal` policy rejects this feature.
+Closed exact-type regions keep explicit HxcIR failure edges and direct C labels,
+so they remain valid under `hxc_runtime=none`.
+
+The current generated runtime path accepts one catch-all `Dynamic` handler per
+region. It transports scalar values and exact managed references across direct
+generated calls. Runtime-owned Array, Bytes, String, map, iterator, and collector
+root owners have standardized unwind callbacks. A region that would need a
+program-local record, enum, or optional destructor still fails before C emission.
+Other runtime-typed catch lists remain unsupported. Generated exports, callback
+trampolines, signals, and cross-thread transfer are also outside this slice.
+
 <!-- hxrt-feature:alloc -->
 ### `alloc`
 
@@ -323,15 +410,18 @@ select it transitively; arbitrary generated allocation remains unsupported. See
 Compiler-selectable resizable unboxed array storage built on `alloc`. The first
 ordinary-Haxe slice adds shared identity, local retain/release ownership,
 literals, length, checked indexing, push, ownership-transferring `pop` and
-`shift`, shallow copy, in-place sort, and source-order iteration for admitted
-elements. Generated
+`shift`, signed-index `insert`, arbitrary-range splice, typed resize, shallow
+copy, in-place sort, and source-order iteration for admitted elements. Generated
 Bytes elements and closed records containing Bytes use typed program-local
 copy/assign/destroy callbacks; they remain unboxed and do not select reflection
 or a collector. `pop` moves the last live element and `shift` moves the first
 one into the caller's nullable result without invoking those callbacks.
-`shift` then relocates the remaining suffix left while keeping its order. The
-native layer additionally proves
-alias-safe insert/resize paths that generated Haxe does not yet expose. Fixed
+`shift` then relocates the remaining suffix left while keeping its order.
+Splice copies the complete returned range before mutating the source, and resize
+uses the compiler-supplied exact static default for growth. `insert` clamps
+negative and oversized positions exactly as Haxe specifies, and a failed
+growth or managed-element copy leaves every
+alias unchanged. Fixed
 arrays and spans stay direct and runtime-free. See
 [array runtime](array-runtime.md).
 
@@ -362,20 +452,32 @@ as one closed family before the generic `haxe.IMap` interface can erase the
 exact key and value types.
 
 The generated representation is a private `struct hxc_int_bool_map_ref *`.
-Keys remain signed 32-bit Haxe `Int` values, Bool values remain native C
-`bool`, and a separate occupied flag distinguishes “stored false” from
-“missing key.” Assigning the map to a new local retains the same mutable table,
-so changes through either alias are visible through the other. Construction,
-`set(Int, Bool)`, and `exists(Int)` are the complete current method set.
-`get`, removal, iteration, and other value types still stop with a
-source-positioned IntMap diagnostic; the compiler does not guess nullable,
-iterator, or ownership semantics for them.
+Keys remain signed 32-bit Haxe `Int` values, and Bool values remain native C
+`bool`. A separate occupied flag distinguishes a stored false value from a
+missing key. `get(Int)` returns a tagged `Null<Bool>` for the same reason.
 
-The table uses open addressing: it hashes a key to a slot and checks later
-slots after a collision. Capacity is always a power of two and the table keeps
-an empty slot, which guarantees that lookup terminates. Growth allocates and
-rehashes replacement storage before publishing it. If allocation fails, every
-existing key and every alias still observes the old valid table.
+Assigning the map to a new local retains the same mutable table. Changes
+through either alias are visible through the other. The admitted Bool
+specialization supports construction, `set`, `exists`, `get`, `remove`,
+`clear`, `copy`, `iterator`, `keys`, `keyValueIterator`, and `toString`. A copy
+has its own table: later changes do not affect the source.
+
+Each iterator captures the current entries before it returns. Value, key, and
+key/value iterators use the same table order and keep one shared cursor across
+aliases. Later map changes do not change that snapshot. This is a safe,
+documented haxe.c rule for mutation during iteration; code that requires
+another target's live-mutation details is not portable Haxe. `toString` uses
+the Eval punctuation and scalar spellings. Multi-entry order follows the map's
+iteration order and is not a sorted-map promise.
+
+The table compares keys as exact signed 32-bit values and hashes their bit
+patterns with a fixed 32-bit avalanche mixer. The table uses open addressing:
+it hashes a key to a slot and checks later
+slots after a collision. A removed slot keeps a tombstone marker, so later keys
+in the same collision chain remain reachable. Capacity is always a power of
+two, and the table keeps an empty slot. Thus, each lookup terminates. Growth
+builds replacement storage before it publishes that storage. If allocation
+fails, each alias still observes the old valid table.
 
 This runtime slice is selected only for a mutable, run-time-sized map whose
 shared identity is observable. A compiler-known immutable lookup can remain
@@ -384,6 +486,106 @@ program-local bitset or table. The independent C fixture forces allocation
 failure at the private ABI; the ordinary-Haxe fixture separately compares Eval
 with generated strict C, so the runtime and compiler are not merely checking
 matching assumptions.
+
+<!-- hxrt-feature:typed-map -->
+### `typed-map`
+
+Compiler-selectable table mechanics for exact ObjectMap and EnumValueMap
+specializations. The runtime owns checked open addressing, collision chains,
+tombstones, growth, copying, and failure-atomic replacement. Generated C owns
+each key's Haxe equality and hash rules. It also owns the exact key and value
+size, alignment, copy, destroy, and trace rules. Keys and values stay unboxed.
+
+The compiler allocates each ordinary map as one collector object. The table
+traces only occupied keys and values that contain collector references. A copy
+has a new outer table. Aliases to the original map still share one table.
+
+Insertion and replacement prepare every fallible copy before publication. If a
+copy or allocation fails, the old entry remains visible. When equal keys have
+different stored representations, a successful replacement publishes both the
+new key and the new value. It then destroys the old pair exactly once.
+
+Value, key, and key/value iterators copy the current entries into independent
+snapshots. The iterator registers exact roots for collector references inside
+those snapshots. Later map mutation cannot change the snapshot, and the source
+map can become unreachable without invalidating it.
+
+The runtime is private infrastructure. A program selects it only through an
+admitted typed map family. Generated application C does not use a universal
+boxed map, dynamic comparison, reflection, or a generic pointer key contract.
+
+<!-- hxrt-feature:object-map -->
+### `object-map`
+
+Compiler-selectable `haxe.ds.ObjectMap<K, V>` support for admitted class keys.
+Two keys are equal only when they are the same Haxe object. Equal fields do not
+make distinct objects equal. The private hash uses that stable identity, and
+collision resolution always confirms equality before it accepts a match.
+
+The current value slice admits `Bool`, `Int`, and collector-managed class
+references. It supports construction, `set`, `exists`, `get`, `remove`,
+`clear`, `copy`, `iterator`, `keys`, and `keyValueIterator`. Exact tracing keeps
+live class keys and values reachable without boxing them.
+
+Interface keys, `Dynamic` keys, and other open or erased key shapes fail with a
+source-positioned diagnostic. Other value families remain unsupported until
+they have complete copy, failure, and trace contracts.
+
+<!-- hxrt-feature:enum-value-map -->
+### `enum-value-map`
+
+Compiler-selectable `haxe.ds.EnumValueMap<K, V>` support for finite admitted
+enum keys. Equality first compares the active constructor. It then compares
+active `Bool` and `Int` payloads by value, nested enum payloads recursively,
+and class payloads by object identity. The hash follows the same active path.
+
+The current value slice admits `Bool`, `Int`, and collector-managed class
+references. It supports construction, `set`, `exists`, `get`, `remove`,
+`clear`, `copy`, `iterator`, and `keys`. Standard-library forwarding may build
+a key/value traversal from those admitted operations without changing map
+equality.
+
+Float payloads, recursive enums, interfaces, `Dynamic`, and other open key
+shapes fail before C emission. The diagnostic names the first unsupported key
+path. This bounded rule prevents plausible C from silently using the wrong
+equality.
+
+<!-- hxrt-feature:iterator -->
+### `iterator`
+
+Compiler-selectable storage for an exact standard Haxe `Iterator<T>` value. It
+depends on `array` because standard Array cursors retain and read their live
+source container. Each iterator owns one cursor that all aliases share. Thus, a
+call through one alias advances the position that every alias sees.
+
+Map iterators own a snapshot that keeps each `T` value unboxed. The compiler
+supplies its exact size, alignment, copy operation, and destroy operation.
+`next()` moves one snapshot element owner to the caller. Final release destroys
+only the elements that the program did not consume.
+
+The producer fills the complete snapshot before the runtime publishes the
+iterator. If a fill operation fails, the runtime destroys the completed prefix.
+It also frees the unpublished storage. The caller still owns the producer
+anchor after this error.
+
+Collector-backed typed maps add exact snapshot roots during construction. The
+iterator keeps the root-table registration, not a pointer to the temporary
+trace callback context. Final release unregisters those roots after it destroys
+all remaining snapshot elements.
+
+An iterator can keep a producer anchor alive. StringMap iterators use this
+anchor for the map's value callback policy. Array iterators instead retain the
+same reference-counted Array and read its current length on every `hasNext()`.
+Their `next()` copies the current element and advances only after success.
+Therefore, a later Array push can extend an active iteration and a shrink can
+end it earlier. A key/value Array cursor writes the current `Int` index and
+copied value into one compiler-validated pair layout. The final iterator release
+drops either anchor after all element work finishes.
+
+The current compiler recognizes the exact standard `Iterator<T>` typedef. It
+supports `hasNext()` and `next()` across locals, aliases, calls, and returns.
+Unrelated records with methods of the same names do not receive this runtime
+representation.
 
 <!-- hxrt-feature:string-map -->
 ### `string-map`
@@ -396,20 +598,28 @@ proven `sizeof(V)` and `_Alignof(V)`; it is not a `Dynamic` map and does not box
 every value behind a separately allocated pointer.
 
 The currently generated value families are `Bool`, Haxe `Int`, payload-free
-Haxe enums, and finite closed records. The first three have no owned children,
-so the compiler uses the original size-and-alignment constructor and the
-runtime copies their bytes directly. Their types are still exact: `Int` is the
-validated signed `int32_t` mapping, and each fieldless Haxe enum remains its own
-nominal native C enum rather than becoming a generic integer.
+Haxe enums, Haxe `String`, and finite closed records. The compiler preserves
+the exact nominal type of a String-backed abstract. It does not unwrap that
+value to a generic string or integer slot.
+
+Bool, Int, and payload-free enums have no owned children. The compiler uses
+the original size-and-alignment constructor, and the runtime copies their bytes
+directly. Their types are still exact: `Int` is the validated signed `int32_t`
+mapping, and each fieldless Haxe enum remains its own nominal native C enum.
+
+A runtime-backed String is reference-counted. The compiler therefore gives its
+map specialization an exact copy/assign/destroy callback trio. The callbacks
+retain before publication and release the replaced or removed owner exactly
+once. A literal-backed String remains allocation-free through the same typed
+slot contract.
 
 A record may contain other admitted direct values, including nested Arrays,
 Bytes, tagged optionals, and finite enums, as long as none of them needs
 collector tracing. If the record owns a reference-counted child, the compiler
-generates one type-specific copy/assign/destroy callback trio and creates the
-map with `hxc_string_map_ref_create_with_ops`. These callbacks retain a new
-owner before publishing it, roll back earlier retains if a later retain fails,
-and release owned fields in reverse order. The runtime knows only when to call
-the policy; the program-local generated functions know the exact record type.
+also generates one type-specific callback trio and creates the map with
+`hxc_string_map_ref_create_with_ops`. These callbacks roll back earlier retains
+if a later retain fails, and release owned fields in reverse order. The runtime
+knows when to call the policy. The generated functions know the exact type.
 
 Keeping `hxc_string_map_ref_create(allocator, size, alignment, out_map)` is an
 intentional compatibility decision. Previously generated trivial maps continue
@@ -424,11 +634,13 @@ an already-owning local is not admitted yet. An explicit
 `Null<Map<String, V>>` uses the same pointer carrier: `NULL` is absence, map
 identity equality compares pointers, and retain/release treat `NULL` as a
 successful no-op so ordinary cleanup needs no special branch. Operations that
-need a table still reject `NULL`. `get` returns a tagged nullable value so an
-absent key is distinct from every valid stored value, including `false`. A
-present managed record result owns its copied nested values until the generated
-optional cleanup releases them. Empty keys are valid String values and are
-stored without inventing a sentinel key.
+need a table still reject `NULL`. Most `get` operations return a tagged nullable
+value, so an absent key is distinct from every valid stored value, including
+`false`. A managed String result instead uses its exact nullable String carrier:
+`NULL` means missing, and a present result owns one retained String reference.
+Discarding either result still performs the required cleanup. A present managed
+record result owns its copied nested values until optional cleanup releases
+them. Empty keys are valid String values and do not need a sentinel.
 
 Growth and insertion are checked and failure-atomic: an allocation or value-copy
 failure does not publish a partial entry, and a failed replacement preserves the
@@ -436,16 +648,82 @@ old value. Rehashing relocates the table's existing bytes without logically
 copying or destroying their owners; it is the same ownership move a
 handwritten C table performs when replacing its slot block.
 
+String keys compare their canonical UTF-8 bytes and use fixed FNV-1a hashing
+over those bytes. Hashing and equality therefore agree for empty, ASCII, and
+multibyte keys without depending on a C locale or process-specific seed.
+
+`copy` creates a new table with the same allocator and value policy. Keys and
+direct scalar values are copied into that table. Managed values use their exact
+copy callback, so a shallow Haxe copy retains nested owners such as Strings or
+Arrays without sharing the outer map. The result is published only after every
+entry succeeds. If allocation or a value callback fails, the runtime destroys
+the partial copy and leaves the source unchanged.
+
+`iterator()`, `keys()`, and `keyValueIterator()` create typed snapshots at call
+time. Iterator aliases share one cursor, but later map changes do not change
+the snapshot. Key snapshots copy each UTF-8 key into an independent managed
+String. Pair snapshots own both that key and the exact value copy. Thus, a
+yielded key or pair remains valid after the iterator and source map are gone.
+The snapshot retains the source map as its value-policy anchor. This keeps
+nested Strings, Arrays, and other admitted owned values valid after the source
+map local ends.
+
+Primitive Bool and Int maps also support `toString()` with Eval-compatible
+punctuation and scalar spelling. Entry order is the same order observed by the
+three iterator producers; it is intentionally not a sorted-map contract.
+Other admitted managed value families still receive a precise formatting
+diagnostic until their ordinary `Std.string` operation is available.
+
 Tagged payload enums remain unsupported as top-level map values because their
-active union member needs a typed ownership policy; Float and unrelated
-reference families remain outside this intentionally bounded specialization.
+active union member needs a typed ownership policy. Float, class values,
+abstracts with unsupported underlying storage, and unrelated reference families
+remain outside this intentionally bounded specialization.
 
 The Haxe fixture proves language semantics through generated C. The separate
 handwritten-C native fixture injects allocator and callback failures directly,
 so code generation and hxrt cannot accidentally validate the same bug
-together. Other key/value specializations, iteration, collector-traced values,
-and owner-replacing map assignment remain explicitly unsupported until they
-receive complete typed lifetime contracts.
+together. Records with collector-managed children use the separate
+`gc-string-map` representation below. Other unsupported value families and
+owner-replacing assignments still require their own typed lifetime contracts.
+
+<!-- hxrt-feature:gc-string-map -->
+### `gc-string-map`
+
+A StringMap can store a record whose children need garbage collection. For
+example, a record can combine a recursive enum containing an Array with a
+Bytes buffer. The map keeps the enum graph alive, while its value callbacks
+retain and release the Bytes buffer.
+
+The compiler selects one representation from the complete Haxe source types.
+This decision precedes recursive layout preparation, so function signatures
+and local variables use the same carrier. Scalar maps and records without
+collector-managed children keep the smaller `string-map` representation.
+
+Collected maps reuse `hxc_typed_map_ref`, its descriptor, and its existing
+failure-atomic table operations. Generated Haxe-to-C callbacks supply UTF-8 key
+hashing and equality, exact value tracing, and copy and destroy operations.
+Keys and record values remain unboxed. An alias shares table identity;
+`copy()` creates independent membership while preserving shared child values.
+The feature selects the owned String runtime for key copies, even when all
+source keys are literals.
+
+Value and pair snapshots register their exact collector children as roots.
+Their generated lifetime callbacks also own copied Strings, Bytes, and other
+reference-counted fields. Snapshot cleanup releases remaining values and
+unregisters those roots. The existing bounded map snapshot contract still
+applies; this does not claim unrestricted mutation-during-iteration parity
+with every Haxe target.
+
+Run the focused contract with:
+
+```sh
+python3 test/differential/string-map/run.py --collector-record-only --toolchain clang
+```
+
+It checks Eval expectations,
+generated C at O0/O2, sanitizers, collection under pressure, reclamation, and
+the compiler's abort policy when map allocation fails. Full Caxecraft
+integration remains tracked by `haxe_c-3zuz` until its application gate passes.
 
 <!-- hxrt-feature:bytes -->
 ### `bytes`
@@ -526,15 +804,26 @@ See [string runtime](string-runtime.md) and
 
 Compiler-selectable owned UTF-8 construction, reference-counted aliases,
 builders, lossy decoding, locale-independent signed 32-bit decimal formatting,
-and explicit CString conversion above `string-scalar`. The integer formatter
+and explicit CString conversion above `string-scalar`. A direct native call can
+borrow already terminated text or receive one temporary terminated copy for an
+interior view; generated code disposes that copy as soon as the call returns.
+The integer formatter
 is selected by the `from-int` HxcIR root used for `Std.string(Int)` and integer
 interpolation; it preserves the existing allocator, failure-atomic output, and
 owned String lifetime contracts. Literal emission, `Std.string(Bool)`,
 `Std.string(String)`, and allocation-free scalar operations do not select it.
-The String-to-String case reuses its input carrier and existing ownership plan;
-it is a compiler identity operation, not an `hxrt` call. See
+`Std.string` with a String input reuses the input carrier and its ownership
+plan. This operation is an identity, not an `hxrt` call. See
 [string runtime](string-runtime.md) and
 [ADR 0004](adr/0004-utf8-scalar-string-contract.md).
+
+### `string-lower-case`
+
+Compiler-selectable, locale-independent `String.toLowerCase()` conversion. It
+depends on `string`, publishes a fresh managed String, and keeps its generated
+Haxe Eval mapping table out of programs that do not convert case. It preserves
+embedded NUL and changes only one scalar into one scalar. See
+[lowercase conversion](string-runtime.md#lowercase-conversion).
 
 <!-- hxrt-feature:string-float -->
 ### `string-float`
@@ -607,7 +896,9 @@ them.
 | `include/hxrt/allocator.h`, `src/allocator.c` | Dependency-only allocator callbacks, owner lifecycle, checked arithmetic, and aligned hosted implementation; selected transitively by managed collections. |
 | `include/hxrt/array.h`, `src/array.c` | Compiler-selectable resizable typed storage, shared Array identity, and element lifecycle. |
 | `include/hxrt/int_map.h`, `src/int_map.c` | Compiler-selectable Int-keyed shared `Map<Int, Bool>` storage with exact unboxed keys, values, and membership. |
+| `include/hxrt/iterator.h`, `src/iterator.c` | Compiler-selectable typed map snapshots and live Array cursors with one position shared by all standard Haxe Iterator aliases. |
 | `include/hxrt/string_map.h`, `src/string_map.c` | Compiler-selectable String-keyed shared map storage with copied keys and exact unboxed values. |
+| `include/hxrt/typed_map.h`, `src/typed_map.c` | Compiler-selectable exact-layout storage shared by ObjectMap identity and EnumValueMap recursive-value specializations. |
 | `include/hxrt/bytes.h`, `src/bytes.c` | Compiler-selectable fixed-length mutable byte storage, shared identity, checked ranges, and overlap-safe copying. |
 | `include/hxrt/bytes_string.h`, `src/bytes_string.c` | Compiler-selectable checked UTF-8 decoding from mutable Bytes into a separately owned String. |
 | `include/hxrt/gc.h`, `src/gc.c` | Compiler-selectable precise non-moving collector, exact roots/pins, pressure policy, and observable reports. |

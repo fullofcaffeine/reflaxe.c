@@ -1,4 +1,4 @@
-hxcir schema=24
+hxcir schema=27
 dispatch
   layout "itable.layout.CounterView" root="instance.interface.2930f20fd8651d0973dc4eca05b9816cb3060a9477306e517f4e3bc8f5e36afc" slots=["interface-slot.CounterView.doubled","interface-slot.CounterView.read"] @"CounterView.hx":6:1-8:2
   layout "itable.layout.ReadableView" root="instance.interface.af1267a3848fffdcced950c680bb0feb780a1916fade8461036dc64c3b24443f" slots=["interface-slot.ReadableView.read"] @"ReadableView.hx":2:1-4:2
@@ -25,7 +25,7 @@ module "AlternateCounter" @"AlternateCounter.hx":9:7-21:2
     class-layout base=none header=none
     field "base" type=i32 mutable=true @"AlternateCounter.hx":10:2-10:15
   instance "instance.class.f170ae38c39850785f44a8b3f46c577aaf62775f462c81e7ceb746fff748fa70" declaration="type.class.f170ae38c39850785f44a8b3f46c577aaf62775f462c81e7ceb746fff748fa70" arguments=[] representation=direct @"AlternateCounter.hx":9:7-21:2
-  function "constructor.AlternateCounter" name="AlternateCounter.new" returns=void failure=infallible entry="entry" @"AlternateCounter.hx":12:32-14:3
+  function "constructor.AlternateCounter" name="AlternateCounter.new" returns=void failure=infallible exception-strategy=none entry="entry" @"AlternateCounter.hx":12:32-14:3
     parameter "parameter.self" type=pointer(nonnull,instance("instance.class.f170ae38c39850785f44a8b3f46c577aaf62775f462c81e7ceb746fff748fa70")) ownership=owned-or-value @"AlternateCounter.hx":12:32-14:3
     parameter "parameter.0" type=i32 ownership=owned-or-value @"AlternateCounter.hx":12:32-14:3
     block "entry" @"AlternateCounter.hx":13:3-13:19
@@ -33,7 +33,7 @@ module "AlternateCounter" @"AlternateCounter.hx":9:7-21:2
       terminator return value=none cleanup=[] @"AlternateCounter.hx":13:3-13:19
     end block "entry"
   end function "constructor.AlternateCounter"
-  function "method.AlternateCounter.doubled" name="AlternateCounter.doubled" returns=i32 failure=infallible entry="entry" @"AlternateCounter.hx":20:3-20:18
+  function "method.AlternateCounter.doubled" name="AlternateCounter.doubled" returns=i32 failure=infallible exception-strategy=none entry="entry" @"AlternateCounter.hx":20:3-20:18
     parameter "parameter.self" type=pointer(nullable,instance("instance.class.f170ae38c39850785f44a8b3f46c577aaf62775f462c81e7ceb746fff748fa70")) ownership=borrowed-class @"AlternateCounter.hx":20:3-20:18
     block "entry" @"AlternateCounter.hx":20:3-20:18
       instruction "instruction.0.class-field-null-check" result=- null-check value="parameter.self" policy=checked-abort(profile="portable",build="debug") @"AlternateCounter.hx":20:10-20:14
@@ -43,7 +43,7 @@ module "AlternateCounter" @"AlternateCounter.hx":9:7-21:2
       terminator return value="value.2" cleanup=[] @"AlternateCounter.hx":20:3-20:18
     end block "entry"
   end function "method.AlternateCounter.doubled"
-  function "method.AlternateCounter.read" name="AlternateCounter.read" returns=i32 failure=infallible entry="entry" @"AlternateCounter.hx":17:3-17:22
+  function "method.AlternateCounter.read" name="AlternateCounter.read" returns=i32 failure=infallible exception-strategy=none entry="entry" @"AlternateCounter.hx":17:3-17:22
     parameter "parameter.self" type=pointer(nullable,instance("instance.class.f170ae38c39850785f44a8b3f46c577aaf62775f462c81e7ceb746fff748fa70")) ownership=borrowed-class @"AlternateCounter.hx":17:3-17:22
     parameter "parameter.0" type=i32 ownership=owned-or-value @"AlternateCounter.hx":17:3-17:22
     block "entry" @"AlternateCounter.hx":17:3-17:22
@@ -59,7 +59,7 @@ module "Counter" @"Counter.hx":2:7-17:2
     class-layout base=none header=none
     field "base" type=i32 mutable=true @"Counter.hx":3:2-3:15
   instance "instance.class.e888477ae6b335d3e298cdf3d314d6ee439bbf3ad2634e5e6227184490d1f2c8" declaration="type.class.e888477ae6b335d3e298cdf3d314d6ee439bbf3ad2634e5e6227184490d1f2c8" arguments=[] representation=direct @"Counter.hx":2:7-17:2
-  function "constructor.Counter" name="Counter.new" returns=void failure=infallible entry="entry" @"Counter.hx":5:32-7:3
+  function "constructor.Counter" name="Counter.new" returns=void failure=infallible exception-strategy=none entry="entry" @"Counter.hx":5:32-7:3
     parameter "parameter.self" type=pointer(nonnull,instance("instance.class.e888477ae6b335d3e298cdf3d314d6ee439bbf3ad2634e5e6227184490d1f2c8")) ownership=owned-or-value @"Counter.hx":5:32-7:3
     parameter "parameter.0" type=i32 ownership=owned-or-value @"Counter.hx":5:32-7:3
     block "entry" @"Counter.hx":6:3-6:19
@@ -67,7 +67,7 @@ module "Counter" @"Counter.hx":2:7-17:2
       terminator return value=none cleanup=[] @"Counter.hx":6:3-6:19
     end block "entry"
   end function "constructor.Counter"
-  function "method.Counter.doubled" name="Counter.doubled" returns=i32 failure=infallible entry="entry" @"Counter.hx":13:3-13:18
+  function "method.Counter.doubled" name="Counter.doubled" returns=i32 failure=infallible exception-strategy=none entry="entry" @"Counter.hx":13:3-13:18
     parameter "parameter.self" type=pointer(nullable,instance("instance.class.e888477ae6b335d3e298cdf3d314d6ee439bbf3ad2634e5e6227184490d1f2c8")) ownership=borrowed-class @"Counter.hx":13:3-13:18
     block "entry" @"Counter.hx":13:3-13:18
       instruction "instruction.0.class-field-null-check" result=- null-check value="parameter.self" policy=checked-abort(profile="portable",build="debug") @"Counter.hx":13:10-13:14
@@ -77,7 +77,7 @@ module "Counter" @"Counter.hx":2:7-17:2
       terminator return value="value.2" cleanup=[] @"Counter.hx":13:3-13:18
     end block "entry"
   end function "method.Counter.doubled"
-  function "method.Counter.read" name="Counter.read" returns=i32 failure=infallible entry="entry" @"Counter.hx":10:3-10:22
+  function "method.Counter.read" name="Counter.read" returns=i32 failure=infallible exception-strategy=none entry="entry" @"Counter.hx":10:3-10:22
     parameter "parameter.self" type=pointer(nullable,instance("instance.class.e888477ae6b335d3e298cdf3d314d6ee439bbf3ad2634e5e6227184490d1f2c8")) ownership=borrowed-class @"Counter.hx":10:3-10:22
     parameter "parameter.0" type=i32 ownership=owned-or-value @"Counter.hx":10:3-10:22
     block "entry" @"Counter.hx":10:3-10:22
@@ -87,7 +87,7 @@ module "Counter" @"Counter.hx":2:7-17:2
       terminator return value="value.1" cleanup=[] @"Counter.hx":10:3-10:22
     end block "entry"
   end function "method.Counter.read"
-  function "method.Counter.resetValue" name="Counter.resetValue" returns=i32 failure=infallible entry="entry" @"Counter.hx":16:3-16:11
+  function "method.Counter.resetValue" name="Counter.resetValue" returns=i32 failure=infallible exception-strategy=none entry="entry" @"Counter.hx":16:3-16:11
     parameter "parameter.self" type=pointer(nullable,instance("instance.class.e888477ae6b335d3e298cdf3d314d6ee439bbf3ad2634e5e6227184490d1f2c8")) ownership=borrowed-class @"Counter.hx":16:3-16:11
     block "entry" @"Counter.hx":16:3-16:11
       instruction "instruction.0.constant" result="value.0":i32 constant value=int(0) @"Counter.hx":16:10-16:11
@@ -100,7 +100,7 @@ module "CounterView" @"CounterView.hx":6:1-8:2
   instance "instance.interface.2930f20fd8651d0973dc4eca05b9816cb3060a9477306e517f4e3bc8f5e36afc" declaration="type.interface.2930f20fd8651d0973dc4eca05b9816cb3060a9477306e517f4e3bc8f5e36afc" arguments=[] representation=direct @"CounterView.hx":6:1-8:2
 end module "CounterView"
 module "Main" @"Main.hx":13:3-25:3
-  function "function.Main.inspect" name="Main.inspect" returns=i32 failure=infallible entry="entry" @"Main.hx":13:3-13:26
+  function "function.Main.inspect" name="Main.inspect" returns=i32 failure=infallible exception-strategy=none entry="entry" @"Main.hx":13:3-13:26
     parameter "parameter.0" type=instance("instance.interface.af1267a3848fffdcced950c680bb0feb780a1916fade8461036dc64c3b24443f") ownership=borrowed-interface @"Main.hx":13:3-13:26
     block "entry" @"Main.hx":13:3-13:26
       instruction "instruction.0.constant" result="value.0":i32 constant value=int(2) @"Main.hx":13:24-13:25
@@ -108,7 +108,7 @@ module "Main" @"Main.hx":13:3-25:3
       terminator return value="value.1" cleanup=[] @"Main.hx":13:3-13:26
     end block "entry"
   end function "function.Main.inspect"
-  function "function.Main.main" name="Main.main" returns=void failure=infallible entry="entry" @"Main.hx":15:30-25:3
+  function "function.Main.main" name="Main.main" returns=void failure=infallible exception-strategy=none entry="entry" @"Main.hx":15:30-25:3
     local "local.0" type=pointer(nullable,instance("instance.class.e888477ae6b335d3e298cdf3d314d6ee439bbf3ad2634e5e6227184490d1f2c8")) ownership=borrowed-class storage=automatic state=uninitialized @"Main.hx":16:3-16:34
     local "local.1" type=instance("instance.class.e888477ae6b335d3e298cdf3d314d6ee439bbf3ad2634e5e6227184490d1f2c8") ownership=owned-or-value storage=automatic state=uninitialized @"Main.hx":16:3-16:34
     local "local.10" type=bool ownership=owned-or-value storage=automatic state=uninitialized @"Main.hx":23:10-23:136

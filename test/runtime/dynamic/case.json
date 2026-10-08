@@ -1,0 +1,44 @@
+{
+  "schemaVersion": 1,
+  "id": "dynamic-runtime",
+  "role": "fixture",
+  "type": "runtime",
+  "status": "active",
+  "requirements": [
+    "HXC-SEM-017",
+    "HXC-SEM-023",
+    "HXC-RT-008"
+  ],
+  "sources": [
+    "docs/hxrt.md",
+    "docs/research/dynamic-value-oracle-disposition-2026-08-26.md",
+    "runtime/hxrt/include/hxrt/dynamic.h",
+    "runtime/hxrt/src/dynamic.c",
+    "runtime/hxrt/test/dynamic_contract.c",
+    "runtime/hxrt/test/dynamic_header_cpp.cpp",
+    "test/runtime/dynamic/run.py"
+  ],
+  "runner": {
+    "command": [
+      "python3",
+      "run.py"
+    ],
+    "workingDirectory": "test/runtime/dynamic",
+    "timeoutSeconds": 60,
+    "network": false
+  },
+  "expected": {
+    "exitCode": 0,
+    "stdout": {
+      "mode": "regex",
+      "value": "dynamic-runtime: OK: tagged scalars, exact managed wrappers, invalid-tag rejection, freestanding C11, C\\+\\+17, and ASan/UBSan passed \\(.+\\)$"
+    },
+    "artifacts": [
+      {
+        "path": "runtime/hxrt/include/hxrt/dynamic.h",
+        "format": "header",
+        "comparison": "layout"
+      }
+    ]
+  }
+}

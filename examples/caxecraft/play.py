@@ -26,10 +26,15 @@ from pathlib import Path, PurePosixPath
 ROOT = Path(__file__).resolve().parents[2]
 CASE = Path(__file__).resolve().parent
 PROVISION_DIR = ROOT / "scripts/raylib"
+CAXECRAFT_NATIVE_INCLUDE = CASE / "native/include"
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(PROVISION_DIR))
 import provision  # type: ignore  # noqa: E402
+from compiler_progress import (  # noqa: E402
+    compiler_process_detail,
+    compiler_timeout_suffix,
+)
 from dev_build_state import (  # noqa: E402
     BuildStateFailure,
     ExternalFile,
@@ -41,6 +46,7 @@ from dev_build_state import (  # noqa: E402
     output_snapshot,
     request_snapshot,
     sha256_file,
+    validate_request_reuse,
     validate_reuse,
 )
 from dev_haxe_server import (  # noqa: E402
@@ -99,6 +105,10 @@ SANITIZER_FLAGS = (
 )
 PLATFORM_NAMES = {"Darwin": "macos", "Linux": "linux", "Windows": "windows"}
 RAYLIB_CONFIGURATIONS = ("desktop", "memory-software")
+# Compiler-owned typed math helpers may request the platform math library.
+# Keep this allow-list narrow so authored or generated metadata cannot silently
+# expand the native link surface beyond reviewed system dependencies.
+ADMITTED_GENERATED_SYSTEM_LIBRARIES = frozenset({"m"})
 EXPECTED = CASE / "expected"
 # Snapshots review generated structure, not whichever desktop runs the updater.
 # Native build/play still selects the real host below, and the Raylib CI matrix
@@ -182,9 +192,13 @@ EXPECTED_PLAY_RUNTIME_FEATURES = (
     "bytes-string",
     "object",
     "gc",
+    "iterator",
+    "typed-map",
+    "gc-string-map",
     "int-map",
     "io",
     "string-float",
+    "string-lower-case",
     "string-map",
     "string-split",
 )
@@ -193,6 +207,7 @@ RUNTIME_CONTENT_ENTRY_KINDS = frozenset(
 )
 RUNTIME_ASSET_ENTRY_KINDS = frozenset(("asset", "asset-manifest"))
 RUNTIME_GRID_ASSET_KINDS = frozenset(("icon-atlas", "sprite-atlas", "tile-atlas"))
+RUNTIME_PACKAGE_FILES = ("caxecraft.package.json",)
 RUNTIME_LAUNCHER_FILES = ("pilots/active.piloscript",)
 
 
@@ -306,8 +321,8 @@ MOSSLING_ENTITY_COLORS = {
     (147, 128, 100),
 }
 PILOT_TELEMETRY_MAGIC = 0x43585054
-PILOT_TELEMETRY_VERSION = 11
-PILOT_TELEMETRY_WORDS = 48
+PILOT_TELEMETRY_VERSION = 12
+PILOT_TELEMETRY_WORDS = 50
 PILOT_TELEMETRY_COLORS = tuple(
     (
         8 + nibble * 16,
@@ -491,7 +506,7 @@ def stage_runtime_assets(destination: Path) -> None:
 
     stage_root = destination / "assets"
     selected: list[dict[str, object]] = []
-    expected_files = {RUNTIME_ASSET_REPORT}
+    expected_files = {"manifest.json", RUNTIME_ASSET_REPORT}
     for asset_id in selected_ids:
         asset = by_id.get(asset_id)
         if asset is None:
@@ -570,6 +585,12 @@ def stage_runtime_assets(destination: Path) -> None:
         )
         shutil.copyfile(source_root.joinpath(*relative.parts), target)
 
+    prepare_stage_destination(
+        stage_root,
+        PurePosixPath("manifest.json"),
+        "Caxecraft asset manifest",
+    ).write_bytes((source_root / "manifest.json").read_bytes())
+
     report = {
         "schemaVersion": 1,
         "packId": manifest.get("packId"),
@@ -594,9 +615,10 @@ def stage_content_catalogs(
 ) -> None:
     """Publish the exact authored content tree consumed beside the executable.
 
-    Native play reads the staged CaxeMap after process startup. The base content
-    manifest and UI catalog use the same bounded ownership rule. Their current
-    bytes are runtime inputs and are deliberately absent from the compile key.
+    Native play reads the staged CaxeMap after process startup. The outer
+    package manifest, base content manifest, and UI catalog use the same bounded
+    ownership rule. Their current bytes are runtime inputs and are deliberately
+    absent from the compile key.
     """
 
     runtime_files = runtime_content_files(source_root)
@@ -663,8 +685,8 @@ def runtime_content_files(source_root: Path = CASE) -> tuple[str, ...]:
     if not isinstance(document, dict) or not isinstance(document.get("entries"), list):
         raise PlayFailure("Caxecraft package manifest entries must be an array")
 
-    selected: list[str] = []
-    seen: set[str] = set()
+    selected = list(RUNTIME_PACKAGE_FILES)
+    seen = set(RUNTIME_PACKAGE_FILES)
     for index, entry in enumerate(document["entries"]):
         if not isinstance(entry, dict):
             raise PlayFailure(f"Caxecraft package manifest entry {index} must be an object")
@@ -721,10 +743,21 @@ def run(
             text=True,
             timeout=timeout,
         )
-    except (OSError, subprocess.TimeoutExpired) as error:
+    except subprocess.TimeoutExpired as error:
+        suffix = compiler_timeout_suffix(
+            error.stdout,
+            error.stderr,
+            missing_status=(
+                "no haxe.c phase marker; request remained in Haxe frontend or server startup"
+                if label == "Caxecraft Haxe-to-C compile"
+                else None
+            ),
+        )
+        raise PlayFailure(f"{label} could not run: {error}{suffix}") from error
+    except OSError as error:
         raise PlayFailure(f"{label} could not run: {error}") from error
     if result.returncode != 0:
-        detail = "\n".join(value.strip() for value in (result.stdout, result.stderr) if value.strip())
+        detail = compiler_process_detail(result.stdout, result.stderr)
         suffix = f"\n{detail}" if detail else ""
         raise PlayFailure(f"{label} failed with exit {result.returncode}{suffix}")
     return result
@@ -1247,9 +1280,14 @@ def build_pilot_report(
                 f"stops={signed[46]}, fixedTicks={signed[47]}, "
                 f"restoredHotbar={signed[28]})"
             )
+        if not 1 <= signed[48] <= 3 or signed[49] != 0:
+            raise PlayFailure(
+                "editor-shell pilot rebuilt broad terrain after one voxel edit "
+                f"(dirtyChunks={signed[48]}, fullRefreshFallbacks={signed[49]})"
+            )
     elif editor_visible:
         raise PlayFailure(f"pilot {pilot!r} unexpectedly finished on the editor screen")
-    elif any(signed[index] != 0 for index in range(42, 48)):
+    elif any(signed[index] != 0 for index in range(42, 50)):
         raise PlayFailure("non-editor pilot unexpectedly reported editor Test Play lifecycle state")
     if pilot == "aquatic-gear" and not (
         aquatic_gear_equipped and submersion_observed and water_exit_observed and sand_mined_observed
@@ -1332,6 +1370,8 @@ def build_pilot_report(
             "rebuiltTerrainChunks": signed[33],
             "totalRebuiltTerrainChunks": signed[34],
             "terrainCacheValid": signed[35] == 1,
+            "editorTerrainPatchDirtyChunks": signed[48],
+            "editorTerrainPatchFallbacks": signed[49],
             "implementation": renderer,
         },
         "gameplay": {
@@ -1413,17 +1453,16 @@ def validate_presented_screenshot(
 
 
 def validate_editor_screenshot(path: Path, *, platform_name: str) -> tuple[int, int]:
-    """Prove the native editor drew its controls and active 3D world.
+    """Prove captured Build drew its compact controls and active 3D world.
 
     This is a structural framebuffer check, not a pixel golden. It admits small
     driver and font-rendering differences while still rejecting a blank frame,
     a gameplay frame, a flat placeholder canvas, or an editor missing one of
-    its main working regions. The pilot paints and selects one real air cell.
+    its direct-editing regions. The pilot paints and selects one real air cell.
     Broad color counts prove that the perspective view contains sky, authored
     terrain, and its selection outline without prescribing map geometry. The
-    focused sidebar subregion proves the scene controls are presented. The
-    exact yellow focus-ring color proves that device-neutral focus reached the
-    native toolbar; exact edit semantics remain owned by faster tests.
+    compact top regions prove that help and the current tool remain visible
+    after the desktop controls hide. Faster tests own exact edit semantics.
     """
     width, height, pixels = decode_rgba_png(path, "editor")
     logical_width, logical_height = 1280, 720
@@ -1450,34 +1489,30 @@ def validate_editor_screenshot(path: Path, *, platform_name: str) -> tuple[int, 
                     changed += 1
         return changed, len(colors)
 
-    toolbar = region_evidence(32, 52, 672, 94)
-    canvas = region_evidence(32, 104, 1018, 650)
-    sidebar = region_evidence(1018, 104, 1248, 650)
-    world_name = region_evidence(126, 58, 386, 96)
-    status = region_evidence(32, 660, 1248, 700)
-    minimum_changed = (
-        2_000 * scale * scale,
-        25_000 * scale * scale,
-        8_000 * scale * scale,
-        8_000 * scale * scale,
-        2_000 * scale * scale,
+    help_strip = region_evidence(26, 26, 1254, 48)
+    hotbar = region_evidence(190, 620, 1090, 672)
+    canvas = region_evidence(16, 16, 1264, 704)
+    evidence = (
+        ("help-strip", help_strip, 2_000 * scale * scale, 2),
+        ("hotbar", hotbar, 15_000 * scale * scale, 5),
+        ("canvas", canvas, 100_000 * scale * scale, 3),
     )
-    evidence = (toolbar, canvas, sidebar, world_name, status)
-    labels = ("toolbar", "canvas", "sidebar", "world-name", "status")
     failures = [
         f"{label}=changed:{changed},colors:{colors}"
-        for label, (changed, colors), threshold in zip(labels, evidence, minimum_changed)
-        if changed < threshold or colors < 3
+        for label, (changed, colors), threshold, minimum_colors in evidence
+        if changed < threshold or colors < minimum_colors
     ]
     canvas_colors = {
-        "sky": ((126, 190, 201), 50_000),
+        # Orbit frames the selected actor closely, so terrain owns most of the
+        # viewport. This still requires a broad, exact sky region.
+        "sky": ((126, 190, 201), 20_000),
         "selection-outline": ((255, 132, 47), 20),
     }
     for label, (expected, minimum) in canvas_colors.items():
         matching = 0
-        for row in range(104 * scale, 650 * scale):
+        for row in range(16 * scale, 704 * scale):
             row_at = row * width * 4
-            for column in range(32 * scale, 1018 * scale):
+            for column in range(16 * scale, 1264 * scale):
                 at = row_at + column * 4
                 if tuple(pixels[at : at + 3]) == expected:
                     matching += 1
@@ -1485,45 +1520,315 @@ def validate_editor_screenshot(path: Path, *, platform_name: str) -> tuple[int, 
             failures.append(
                 f"3d-{label}=pixels:{matching},minimum:{minimum * scale * scale}"
             )
-    terrain_colors = {
-        (132, 157, 167),
-        (108, 164, 103),
-        (180, 153, 102),
-        (102, 159, 174),
-        (172, 174, 187),
-        (176, 119, 91),
-    }
+    # Build now borrows the ordinary terrain atlases. Broad green/warm pixels
+    # prove that authored terrain is visible, while quantized color variety
+    # distinguishes textured faces from the former flat overview rectangles.
     terrain_pixels = 0
-    for row in range(104 * scale, 650 * scale):
+    terrain_color_buckets: set[int] = set()
+    for row in range(16 * scale, 704 * scale):
         row_at = row * width * 4
-        for column in range(32 * scale, 1018 * scale):
+        for column in range(16 * scale, 1264 * scale):
             at = row_at + column * 4
-            if tuple(pixels[at : at + 3]) in terrain_colors:
+            red, green, blue = pixels[at : at + 3]
+            green_terrain = green > red * 0.9 and green > blue * 1.2 and green > 50
+            warm_terrain = red > 80 and green > 60 and red > blue * 1.4 and green > blue * 1.2
+            if green_terrain or warm_terrain:
                 terrain_pixels += 1
+                terrain_color_buckets.add(
+                    (red >> 4) << 8 | (green >> 4) << 4 | (blue >> 4)
+                )
     minimum_terrain_pixels = 5_000 * scale * scale
-    if terrain_pixels < minimum_terrain_pixels:
+    minimum_terrain_buckets = 24
+    if (
+        terrain_pixels < minimum_terrain_pixels
+        or len(terrain_color_buckets) < minimum_terrain_buckets
+    ):
         failures.append(
-            f"3d-authored-terrain=pixels:{terrain_pixels},minimum:{minimum_terrain_pixels}"
+            "3d-atlas-terrain="
+            f"pixels:{terrain_pixels},minimum:{minimum_terrain_pixels},"
+            f"colorBuckets:{len(terrain_color_buckets)},minimumBuckets:{minimum_terrain_buckets}"
         )
-    focus_pixels = 0
-    # The child-first shell keeps the primary action at the far right. Check
-    # the complete toolbar so layout changes do not turn this into a stale
-    # coordinate test while still proving that keyboard focus is visible.
-    for row in range(48 * scale, 102 * scale):
+    # The deterministic editor pilot selects one shipped actor, then Orbit keeps
+    # that actor near the viewport center. Its atlas cell contributes compact
+    # red-dominant pixels. Exclude the exact orange selection-wire color so an
+    # empty gizmo cannot imitate authored art.
+    actor_pixels = 0
+    for row in range(260 * scale, 460 * scale):
         row_at = row * width * 4
-        for column in range(32 * scale, 1248 * scale):
+        for column in range(540 * scale, 740 * scale):
             at = row_at + column * 4
-            if tuple(pixels[at : at + 3]) == (255, 216, 92):
-                focus_pixels += 1
-    minimum_focus_pixels = 150 * scale * scale
-    if focus_pixels < minimum_focus_pixels:
+            red, green, blue = pixels[at : at + 3]
+            if (
+                (red, green, blue) != (255, 132, 47)
+                and red > 60
+                and red > green * 1.25
+                and red > blue * 1.2
+            ):
+                actor_pixels += 1
+    minimum_actor_pixels = 40 * scale * scale
+    if actor_pixels < minimum_actor_pixels:
         failures.append(
-            f"primary-action-focus-ring=pixels:{focus_pixels},minimum:{minimum_focus_pixels}"
+            f"3d-authored-object-art=pixels:{actor_pixels},minimum:{minimum_actor_pixels}"
+        )
+    # Trigger volumes stay precise wire overlays in Build. A broad magenta
+    # surface here means one volume obscures the world as opaque geometry.
+    opaque_volume_pixels = 0
+    for row in range(152 * scale, 541 * scale):
+        row_at = row * width * 4
+        for column in range(44 * scale, 974 * scale):
+            at = row_at + column * 4
+            red, green, blue = pixels[at : at + 3]
+            if red > 160 and blue > 180 and red > green * 1.3 and blue > green * 1.4:
+                opaque_volume_pixels += 1
+    maximum_volume_pixels = 2_000 * scale * scale
+    if opaque_volume_pixels > maximum_volume_pixels:
+        failures.append(
+            f"3d-opaque-trigger-volume=pixels:{opaque_volume_pixels},maximum:{maximum_volume_pixels}"
+        )
+    tool_outline_pixels = 0
+    # The exact selection color around one hotbar slot proves that captured
+    # Build still identifies the tool that owns direct input.
+    for row in range(620 * scale, 672 * scale):
+        row_at = row * width * 4
+        for column in range(190 * scale, 1090 * scale):
+            at = row_at + column * 4
+            if tuple(pixels[at : at + 3]) == (255, 132, 47):
+                tool_outline_pixels += 1
+    minimum_tool_outline_pixels = 80 * scale * scale
+    if tool_outline_pixels < minimum_tool_outline_pixels:
+        failures.append(
+            "captured-tool-outline="
+            f"pixels:{tool_outline_pixels},minimum:{minimum_tool_outline_pixels}"
         )
     if failures:
         raise PlayFailure(
             "Caxecraft editor framebuffer is blank or missing a working region "
             f"({'; '.join(failures)})"
+        )
+    return width, height
+
+
+def validate_editor_environment_screenshot(path: Path, *, platform_name: str) -> tuple[int, int]:
+    """Prove the native editor presented its complete modal over the workspace.
+
+    Exact environment changes are owned by the renderer-independent editor
+    probe. This broad framebuffer check proves that the native route presents
+    a substantial, varied two-column panel and a visible device focus ring.
+    """
+    width, height, pixels = decode_rgba_png(path, "editor environment")
+    logical_width, logical_height = 1280, 720
+    expected_dimensions = {(logical_width, logical_height)}
+    if platform_name == "macos":
+        expected_dimensions.add((logical_width * 2, logical_height * 2))
+    if (width, height) not in expected_dimensions:
+        raise PlayFailure(
+            "Caxecraft editor environment screenshot must match its logical "
+            f"1280x720 window at an admitted pixel scale, found {width}x{height}"
+        )
+    scale = width // logical_width
+    panel_changed = 0
+    panel_colors: set[int] = set()
+    focus_pixels = 0
+    for row in range(100 * scale, 660 * scale):
+        row_at = row * width * 4
+        for column in range(230 * scale, 1050 * scale):
+            at = row_at + column * 4
+            red, green, blue = pixels[at : at + 3]
+            panel_colors.add((red >> 4) << 8 | (green >> 4) << 4 | (blue >> 4))
+            if abs(red - 12) + abs(green - 28) + abs(blue - 36) > 24:
+                panel_changed += 1
+            if (red, green, blue) == (255, 132, 47):
+                focus_pixels += 1
+    minimum_changed = 80_000 * scale * scale
+    minimum_focus = 100 * scale * scale
+    if panel_changed < minimum_changed or len(panel_colors) < 8 or focus_pixels < minimum_focus:
+        raise PlayFailure(
+            "Caxecraft editor environment panel is blank, incomplete, or missing focus "
+            f"(changed:{panel_changed}, colors:{len(panel_colors)}, focus:{focus_pixels})"
+        )
+    return width, height
+
+
+def validate_editor_asset_browser_screenshot(path: Path, *, platform_name: str) -> tuple[int, int]:
+    """Prove the searched asset browser is visible, focused, and icon-backed."""
+
+    width, height, pixels = decode_rgba_png(path, "editor asset browser")
+    logical_width, logical_height = 1280, 720
+    expected_dimensions = {(logical_width, logical_height)}
+    if platform_name == "macos":
+        expected_dimensions.add((logical_width * 2, logical_height * 2))
+    if (width, height) not in expected_dimensions:
+        raise PlayFailure(
+            "Caxecraft editor asset-browser screenshot must match its logical "
+            f"1280x720 window at an admitted pixel scale, found {width}x{height}"
+        )
+    scale = width // logical_width
+    panel_changed = 0
+    panel_colors: set[int] = set()
+    thumbnail_colors: dict[int, int] = {}
+    focus_pixels = 0
+    for row in range(50 * scale, 670 * scale):
+        row_at = row * width * 4
+        for column in range(200 * scale, 1080 * scale):
+            at = row_at + column * 4
+            red, green, blue = pixels[at : at + 3]
+            panel_colors.add((red >> 4) << 8 | (green >> 4) << 4 | (blue >> 4))
+            if abs(red - 12) + abs(green - 28) + abs(blue - 36) > 24:
+                panel_changed += 1
+            # Inspect the first result's thumbnail, away from text and focus borders.
+            # Atlas art owns its palette; a flat category mark is not texture evidence.
+            if 204 * scale <= row < 238 * scale and 236 * scale <= column < 270 * scale:
+                color = red << 16 | green << 8 | blue
+                thumbnail_colors[color] = thumbnail_colors.get(color, 0) + 1
+            if (red, green, blue) == (255, 132, 47):
+                focus_pixels += 1
+    minimum_changed = 150_000 * scale * scale
+    thumbnail_detail_pixels = sum(thumbnail_colors.values()) - max(thumbnail_colors.values(), default=0)
+    minimum_icon = 400 * scale * scale
+    minimum_focus = 100 * scale * scale
+    if (
+        panel_changed < minimum_changed
+        or len(panel_colors) < 8
+        or len(thumbnail_colors) < 8
+        or thumbnail_detail_pixels < minimum_icon
+        or focus_pixels < minimum_focus
+    ):
+        raise PlayFailure(
+            "Caxecraft editor asset browser is blank, unfocused, or missing its textured thumbnail "
+            f"(changed:{panel_changed}, colors:{len(panel_colors)}, "
+            f"icon-detail:{thumbnail_detail_pixels}, icon-colors:{len(thumbnail_colors)}, focus:{focus_pixels})"
+        )
+    return width, height
+
+
+def validate_editor_text_screenshot(path: Path, *, platform_name: str) -> tuple[int, int]:
+    """Prove native Text kept complete invalid source visible for repair.
+
+    Renderer-independent probes own exact source edits and atomic rejection.
+    This broad visual check requires a substantial source panel, many readable
+    row marks, CaxeFlow syntax families, and the stable invalid-state color. It
+    does not inspect localized glyph shapes or duplicate parser expectations.
+    """
+
+    width, height, pixels = decode_rgba_png(path, "editor Text workspace")
+    logical_width, logical_height = 1280, 720
+    expected_dimensions = {(logical_width, logical_height)}
+    if platform_name == "macos":
+        expected_dimensions.add((logical_width * 2, logical_height * 2))
+    if (width, height) not in expected_dimensions:
+        raise PlayFailure(
+            "Caxecraft editor Text screenshot must match its logical "
+            f"1280x720 window at an admitted pixel scale, found {width}x{height}"
+        )
+    scale = width // logical_width
+    panel_changed = 0
+    panel_colors: set[int] = set()
+    row_mark_pixels = 0
+    rule_pixels = 0
+    condition_pixels = 0
+    action_pixels = 0
+    invalid_pixels = 0
+    for row in range(24 * scale, 696 * scale):
+        row_at = row * width * 4
+        for column in range(24 * scale, 1256 * scale):
+            at = row_at + column * 4
+            red, green, blue = pixels[at : at + 3]
+            panel_colors.add((red >> 4) << 8 | (green >> 4) << 4 | (blue >> 4))
+            if abs(red - 12) + abs(green - 28) + abs(blue - 36) > 24:
+                panel_changed += 1
+            if (red, green, blue) == (100, 143, 151):
+                row_mark_pixels += 1
+            elif (red, green, blue) == (210, 105, 230):
+                rule_pixels += 1
+            elif (red, green, blue) == (84, 191, 205):
+                condition_pixels += 1
+            elif (red, green, blue) == (111, 174, 91):
+                action_pixels += 1
+            elif (red, green, blue) in ((255, 154, 112), (255, 190, 132)):
+                invalid_pixels += 1
+    minimum_changed = 180_000 * scale * scale
+    minimum_rows = 80 * scale * scale
+    minimum_syntax = 12 * scale * scale
+    minimum_invalid = 30 * scale * scale
+    if (
+        panel_changed < minimum_changed
+        or len(panel_colors) < 10
+        or row_mark_pixels < minimum_rows
+        or rule_pixels < minimum_syntax
+        or condition_pixels < minimum_syntax
+        or action_pixels < minimum_syntax
+        or invalid_pixels < minimum_invalid
+    ):
+        raise PlayFailure(
+            "Caxecraft Text workspace is blank, incomplete, or missing repair evidence "
+            f"(changed:{panel_changed}, colors:{len(panel_colors)}, rows:{row_mark_pixels}, "
+            f"rules:{rule_pixels}, conditions:{condition_pixels}, actions:{action_pixels}, "
+            f"invalid:{invalid_pixels})"
+        )
+    return width, height
+
+
+def validate_editor_flow_screenshot(path: Path, *, platform_name: str) -> tuple[int, int]:
+    """Prove the native editor presented a usable CaxeFlow card library.
+
+    Renderer-independent probes own exact card values and edits. This visual
+    check instead requires the large modal, both readable columns, and the
+    stable green action-family stripe on many separate rows. It deliberately
+    ignores localized glyph pixels and exact card wording.
+    """
+    width, height, pixels = decode_rgba_png(path, "editor CaxeFlow cards")
+    logical_width, logical_height = 1280, 720
+    expected_dimensions = {(logical_width, logical_height)}
+    if platform_name == "macos":
+        expected_dimensions.add((logical_width * 2, logical_height * 2))
+    if (width, height) not in expected_dimensions:
+        raise PlayFailure(
+            "Caxecraft editor CaxeFlow screenshot must match its logical "
+            f"1280x720 window at an admitted pixel scale, found {width}x{height}"
+        )
+    scale = width // logical_width
+    panel_changed = 0
+    panel_colors: set[int] = set()
+    label_evidence = 0
+    help_evidence = 0
+    stripe_rows = 0
+    for logical_row in range(19):
+        stripe_pixels = 0
+        row_top = 94 + logical_row * 29
+        for row in range(row_top * scale, (row_top + 21) * scale):
+            row_at = row * width * 4
+            for column in range(125 * scale, 129 * scale):
+                at = row_at + column * 4
+                if tuple(pixels[at : at + 3]) == (111, 174, 91):
+                    stripe_pixels += 1
+        if stripe_pixels >= 60 * scale * scale:
+            stripe_rows += 1
+    for row in range(40 * scale, 680 * scale):
+        row_at = row * width * 4
+        for column in range(110 * scale, 1170 * scale):
+            at = row_at + column * 4
+            red, green, blue = pixels[at : at + 3]
+            panel_colors.add((red >> 4) << 8 | (green >> 4) << 4 | (blue >> 4))
+            if abs(red - 12) + abs(green - 28) + abs(blue - 36) > 24:
+                panel_changed += 1
+            bright = red + green + blue > 300
+            if bright and 132 * scale <= column < 575 * scale:
+                label_evidence += 1
+            if bright and 590 * scale <= column < 1148 * scale:
+                help_evidence += 1
+    minimum_changed = 120_000 * scale * scale
+    minimum_column_evidence = 1_000 * scale * scale
+    if (
+        panel_changed < minimum_changed
+        or len(panel_colors) < 8
+        or stripe_rows < 12
+        or label_evidence < minimum_column_evidence
+        or help_evidence < minimum_column_evidence
+    ):
+        raise PlayFailure(
+            "Caxecraft CaxeFlow card library is blank, incomplete, or missing usable rows "
+            f"(changed:{panel_changed}, colors:{len(panel_colors)}, stripes:{stripe_rows}, "
+            f"labels:{label_evidence}, help:{help_evidence})"
         )
     return width, height
 
@@ -1977,6 +2282,7 @@ def compile_haxe(
     benchmark_renderer: bool = False,
     server_lease: HaxeServerLease | None = None,
     server_owner: OwnedHaxeServer | None = None,
+    haxe_timeout_seconds: int = 120,
 ) -> dict[str, object]:
     if raylib_configuration not in RAYLIB_CONFIGURATIONS:
         raise PlayFailure(f"unknown Raylib configuration {raylib_configuration!r}")
@@ -1996,6 +2302,8 @@ def compile_haxe(
         ),
         "-D",
         f"hxc_runtime_report={runtime_report}",
+        "-D",
+        "reflaxe_c_phase_progress",
     ]
     for define in hosted_content_haxe_defines(platform_name):
         arguments.extend(["-D", define])
@@ -2012,6 +2320,10 @@ def compile_haxe(
             ["-D", "caxecraft_pilot", "-D", pilot_metadata(pilot).haxe_define]
         )
     arguments.extend(["--custom-target", f"c={generated}"])
+    print(
+        "caxecraft: Haxe-to-C compile started; current stage: Haxe frontend or server startup",
+        flush=True,
+    )
     if server_lease is None:
         run(
             [
@@ -2021,7 +2333,7 @@ def compile_haxe(
                 *arguments,
             ],
             cwd=ROOT,
-            timeout=120,
+            timeout=haxe_timeout_seconds,
             label="Caxecraft Haxe-to-C compile",
         )
     else:
@@ -2043,9 +2355,18 @@ def compile_haxe(
                     check=False,
                     capture_output=True,
                     text=True,
-                    timeout=120,
+                    timeout=haxe_timeout_seconds,
                 )
-            except (OSError, subprocess.TimeoutExpired) as error:
+            except subprocess.TimeoutExpired as error:
+                suffix = compiler_timeout_suffix(
+                    error.stdout,
+                    error.stderr,
+                    missing_status="no haxe.c phase marker; request remained in Haxe frontend or server startup",
+                )
+                raise PlayFailure(
+                    f"Caxecraft Haxe-to-C server request could not run: {error}{suffix}"
+                ) from error
+            except OSError as error:
                 raise PlayFailure(
                     f"Caxecraft Haxe-to-C server request could not run: {error}"
                 ) from error
@@ -2065,11 +2386,7 @@ def compile_haxe(
             )
             result = request(server_lease)
         if result.returncode != 0:
-            detail = "\n".join(
-                value.strip()
-                for value in (result.stdout, result.stderr)
-                if value.strip()
-            )
+            detail = compiler_process_detail(result.stdout, result.stderr)
             suffix = f"\n{detail}" if detail else ""
             raise PlayFailure(
                 "Caxecraft Haxe-to-C compile failed with exit "
@@ -2544,8 +2861,8 @@ def validate_generated_playable(
     # in-process input provider. Requiring GetMouseDelta there would reject the
     # exact dead-code removal that makes the two providers a clean compile-time
     # choice. Normal playable builds must still prove the real input path.
-    if pilot is None and "GetMouseDelta(" not in app:
-        raise PlayFailure("generated Caxecraft app omitted direct Raylib call GetMouseDelta(")
+    if pilot is None and "GetMouseDelta(" not in combined:
+        raise PlayFailure("generated Caxecraft output omitted direct Raylib call GetMouseDelta(")
     if pilot == "resize-layout" and "SetWindowSize(" not in app:
         raise PlayFailure("generated Caxecraft resize pilot omitted direct Raylib call SetWindowSize(")
     if pilot == "secondary-locale" and "UiCatalog_nextLocale(" not in app:
@@ -2640,9 +2957,10 @@ def validate_generated_playable(
     # conversation panel adds one checked legacy-entity portrait path and one
     # manifest-owned runtime-atlas portrait path. Runtime loops still reuse
     # those fixed sites; campaign rows and dialogue lines add no texture owner.
-    if draw_texture_count != 11:
+    # The editor's atlas preview adds one shared site for its object icons.
+    if draw_texture_count != 12:
         raise PlayFailure(
-            f"generated Caxecraft sources contain {draw_texture_count} direct DrawTexturePro call sites; expected 11"
+            f"generated Caxecraft sources contain {draw_texture_count} direct DrawTexturePro call sites; expected 12"
         )
     billboard_count = combined.count("DrawBillboardRec(")
     # Actors and entity-backed stateful objects share one explicit 4x5 entity
@@ -2889,6 +3207,7 @@ def provision_raygui(
         "schemaVersion": 1,
         "authority": source_authority,
         "rayguiSourceTreeSha256": raygui_provision.PINNED_TREE[0],
+        "rayguiProvisionerSha256": raygui_provision.sha256_file(ROOT / "scripts/raygui/provision.py"),
         "raylibHeaderSha256": raygui_provision.sha256_file(raylib_header),
         "compiler": cc,
         "compilerVersion": tool_version(cc),
@@ -3047,11 +3366,13 @@ def compile_native(
         ],
         IncludeRoot("raylib-include", include_directory),
         IncludeRoot("raygui-include", raygui_include_directory),
+        IncludeRoot("caxecraft-native-include", CAXECRAFT_NATIVE_INCLUDE),
     ]
     dependency_roots = [
         DependencyRoot("generated-project", generated),
         DependencyRoot("raylib-include", include_directory),
         DependencyRoot("raygui-include", raygui_include_directory),
+        DependencyRoot("caxecraft-native-include", CAXECRAFT_NATIVE_INCLUDE),
     ]
     native_cache = NativeCache(
         cache_root,
@@ -3073,11 +3394,24 @@ def compile_native(
     libraries, frameworks = provision.link_facts(lock, platform_name, raylib_configuration)
     manifest_libraries = owned_fact_names(build.get("libraries"), "generated Caxecraft libraries")
     manifest_frameworks = owned_fact_names(build.get("frameworks"), "generated Caxecraft frameworks")
-    expected_libraries = list(libraries)
-    if "raygui" not in expected_libraries:
-        expected_libraries.append("raygui")
-    if len(manifest_libraries) != len(expected_libraries) or set(manifest_libraries) != set(expected_libraries):
-        raise PlayFailure("generated Caxecraft libraries differ from the pinned Raylib + Raygui link plan")
+    pinned_libraries = list(libraries)
+    if "raygui" not in pinned_libraries:
+        pinned_libraries.append("raygui")
+    generated_system_libraries = [
+        name for name in manifest_libraries if name not in pinned_libraries
+    ]
+    if (
+        len(manifest_libraries) != len(set(manifest_libraries))
+        or not set(pinned_libraries).issubset(manifest_libraries)
+        or not set(generated_system_libraries).issubset(
+            ADMITTED_GENERATED_SYSTEM_LIBRARIES
+        )
+    ):
+        raise PlayFailure(
+            "generated Caxecraft libraries differ from the pinned Raylib + "
+            "Raygui and admitted compiler-owned system link plan"
+        )
+    expected_libraries = [*pinned_libraries, *generated_system_libraries]
     if len(manifest_frameworks) != len(frameworks) or set(manifest_frameworks) != set(frameworks):
         raise PlayFailure("generated Caxecraft frameworks differ from the pinned Raylib link plan")
     # Static-link order is significant: generated code needs raygui, and the
@@ -3110,6 +3444,28 @@ def compile_native(
     )
 
 
+def pilot_timeout_seconds(pilot: str) -> int:
+    """Return the bounded process budget for one graphical pilot run.
+
+    Most focused pilots finish within 15 seconds. The secondary-locale pilot
+    took 26.34 and 26.37 seconds in consecutive direct runs on the reference
+    Mac, with no useful warm-run reduction, so it shares the 35-second budget
+    used by the similarly sized runtime-content journey.
+    """
+
+    if pilot == "editor-shell":
+        # This pilot draws both the editor and the real game, including full-map
+        # frames that need more time in the reference memory/software renderer.
+        return 90
+    if pilot == "secondary-locale":
+        return 35
+    if pilot_metadata(pilot).execution == "runtime-content":
+        # The representative Adventure journey measures about 27 seconds after
+        # adding blocking dialogue.
+        return 35
+    return 15
+
+
 def run_pilot_sample(
     *,
     executable: Path,
@@ -3139,23 +3495,20 @@ def run_pilot_sample(
             executable.parent / "caxecraft-pilot-runtime-level-selection.png",
         )
     elif pilot == "editor-shell":
-        supporting_screenshots = (executable.parent / "caxecraft-pilot-editor-play.png",)
+        supporting_screenshots = (
+            executable.parent / "caxecraft-pilot-editor-terrain-prompt.png",
+            executable.parent / "caxecraft-pilot-editor-play.png",
+            executable.parent / "caxecraft-pilot-editor-text.png",
+            executable.parent / "caxecraft-pilot-editor-assets.png",
+            executable.parent / "caxecraft-pilot-editor-environment.png",
+        )
     else:
         supporting_screenshots = ()
     state_screenshot = executable.parent / "caxecraft-pilot-state.png"
     for stale in (screenshot, state_screenshot, *supporting_screenshots):
         if stale.exists():
             stale.unlink()
-    # The editor pilot draws both the editor and the real game. The reference
-    # Mac can need more time for these full-map frames than for a short probe.
-    if pilot == "editor-shell":
-        timeout_seconds = 90
-    elif pilot_metadata(pilot).execution == "runtime-content":
-        # The representative Adventure journey measures about 27 seconds in
-        # the pinned memory/software renderer after adding blocking dialogue.
-        timeout_seconds = 35
-    else:
-        timeout_seconds = 15
+    timeout_seconds = pilot_timeout_seconds(pilot)
     process = run([str(executable)], cwd=executable.parent, timeout=timeout_seconds, label=label)
     observations: list[dict[str, object]] = []
     observation_prefix = "CAXECRAFT_AGENT_OBSERVATION="
@@ -3217,6 +3570,14 @@ def run_pilot_sample(
                 expected_entities=False,
                 expected_open_sky=False,
             )
+        elif supporting_screenshot.name == "caxecraft-pilot-editor-environment.png":
+            validate_editor_environment_screenshot(supporting_screenshot, platform_name=platform_name)
+        elif supporting_screenshot.name == "caxecraft-pilot-editor-assets.png":
+            validate_editor_asset_browser_screenshot(supporting_screenshot, platform_name=platform_name)
+        elif supporting_screenshot.name == "caxecraft-pilot-editor-text.png":
+            validate_editor_text_screenshot(supporting_screenshot, platform_name=platform_name)
+        elif supporting_screenshot.name == "caxecraft-pilot-editor-terrain-prompt.png":
+            validate_editor_screenshot(supporting_screenshot, platform_name=platform_name)
         else:
             validate_smoke_screenshot(supporting_screenshot, platform_name=platform_name)
         supporting_hashes[supporting_screenshot.name] = hashlib.sha256(
@@ -3231,7 +3592,7 @@ def run_pilot_sample(
             expected_logical_size=(960, 540),
         )
     elif pilot == "editor-shell":
-        width, height = validate_editor_screenshot(screenshot, platform_name=platform_name)
+        width, height = validate_editor_flow_screenshot(screenshot, platform_name=platform_name)
     else:
         width, height = validate_presented_screenshot(
             screenshot,
@@ -3627,6 +3988,12 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
         help="existing host:port accepted only with --haxe-server attach",
     )
     parser.add_argument(
+        "--haxe-timeout-seconds",
+        type=int,
+        default=120,
+        help="bounded Haxe-to-C timeout for unusually slow hosts (default: 120)",
+    )
+    parser.add_argument(
         "--stop-haxe-server",
         action="store_true",
         help="stop only the exact auto-owned server recorded for this worktree",
@@ -3651,8 +4018,29 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
+def stop_owned_server_after_failure(
+    owner: OwnedHaxeServer | None, lease: HaxeServerLease | None
+) -> bool:
+    """Stop one exact worktree-owned server without hiding the original error."""
+
+    if owner is None:
+        return False
+    try:
+        if lease is not None and lease.owned:
+            return owner.stop_lease(lease)
+        return owner.stop()
+    except (OSError, HaxeServerFailure) as error:
+        print(
+            f"caxecraft: WARNING: could not stop the owned Haxe server: {error}",
+            file=sys.stderr,
+        )
+        return False
+
+
 def main(argv: list[str]) -> int:
     variant_lock: VariantLock | None = None
+    server_owner: OwnedHaxeServer | None = None
+    server_lease: HaxeServerLease | None = None
     try:
         args = parse_args(argv)
         if args.cold:
@@ -3672,6 +4060,8 @@ def main(argv: list[str]) -> int:
             os.environ["HAXE_NO_SERVER"] = "1"
         if args.native_jobs < 1 or args.native_jobs > 32:
             raise PlayFailure("--native-jobs must be between 1 and 32")
+        if args.haxe_timeout_seconds < 1 or args.haxe_timeout_seconds > 600:
+            raise PlayFailure("--haxe-timeout-seconds must be between 1 and 600")
         if args.validate_only and not args.content_feedback:
             raise PlayFailure("--validate-only is available only with --content-feedback")
         if args.agent_session and (args.content_feedback or args.smoke or args.pilot is not None):
@@ -3795,6 +4185,7 @@ def main(argv: list[str]) -> int:
         generated = output_root / "generated"
         executable = output_root / "bin" / ("caxecraft.exe" if platform_name == "windows" else "caxecraft")
         requested_snapshot: dict[str, object] | None = None
+        build_only_request_matches = False
         reusable_profile = not args.sanitizers
         if reusable_profile and not args.compile_only:
             snapshot_started = time.monotonic()
@@ -3848,6 +4239,17 @@ def main(argv: list[str]) -> int:
                     print(f"caxecraft: unchanged build miss: {miss_reason}")
         if args.build_only:
             generated = current_generation(output_root).generated
+            if requested_snapshot is not None:
+                request_decision = validate_request_reuse(
+                    state_path=output_root / PLAY_BUILD_STATE,
+                    current_request=requested_snapshot,
+                )
+                build_only_request_matches = request_decision.hit
+                if not request_decision.hit:
+                    print(
+                        "caxecraft: build-only will not publish reusable state: "
+                        + request_decision.reason
+                    )
             manifest = validate_compiled_haxe(
                 generated,
                 layout=args.layout,
@@ -3857,8 +4259,6 @@ def main(argv: list[str]) -> int:
             )
             print(f"caxecraft: reusing validated {args.layout} C project at {generated}")
         else:
-            server_lease: HaxeServerLease | None = None
-            server_owner: OwnedHaxeServer | None = None
             if args.haxe_server != "off":
                 installation = pinned_haxe_installation()
                 verify_pinned_haxe(installation)
@@ -3893,6 +4293,7 @@ def main(argv: list[str]) -> int:
                     benchmark_renderer=args.benchmark_renderer,
                     server_lease=server_lease,
                     server_owner=server_owner,
+                    haxe_timeout_seconds=args.haxe_timeout_seconds,
                 )
                 generation = finalize_transaction(output_root, transaction)
                 generation = publish_pointer(output_root, generation)
@@ -3980,7 +4381,10 @@ def main(argv: list[str]) -> int:
         stage_runtime_assets(executable.parent)
         stage_content_catalogs(executable.parent, runtime_pilot=args.piloscript)
         print(f"caxecraft: built native executable at {executable}")
-        if requested_snapshot is not None:
+        can_publish_reusable_state = requested_snapshot is not None and (
+            not args.build_only or build_only_request_matches
+        )
+        if can_publish_reusable_state and requested_snapshot is not None:
             final_snapshot = play_request_snapshot(
                 args,
                 platform_name=platform_name,
@@ -4007,6 +4411,10 @@ def main(argv: list[str]) -> int:
             except BuildStateFailure as error:
                 raise PlayFailure(str(error)) from error
             print(f"caxecraft: published unchanged-build state at {output_root / PLAY_BUILD_STATE}")
+        elif requested_snapshot is not None and args.build_only:
+            print(
+                "caxecraft: build-only kept the prior reusable state because its build request did not match"
+            )
         if args.build_only and selected_pilot is None:
             return 0
         if args.agent_session:
@@ -4021,6 +4429,11 @@ def main(argv: list[str]) -> int:
             height = 0
             repetitions = 7 if args.benchmark_renderer else 2
             for repeat in range(repetitions):
+                # Native editor Save intentionally changes the staged package. Restore the
+                # reviewed source package before each repeat so determinism compares two
+                # independent creator journeys instead of replaying edits on prior output.
+                if selected_pilot == "editor-shell":
+                    stage_content_catalogs(executable.parent, runtime_pilot=args.piloscript)
                 report, width, height, screenshot_hash, sample_supporting_hashes = run_pilot_sample(
                     executable=executable,
                     pilot=selected_pilot,
@@ -4099,6 +4512,11 @@ def main(argv: list[str]) -> int:
             return 0
         print("caxecraft: launching; press Q to quit")
         return subprocess.run([str(executable)], cwd=executable.parent, check=False).returncode
+    except KeyboardInterrupt:
+        stopped = stop_owned_server_after_failure(server_owner, server_lease)
+        suffix = "; stopped the owned Haxe server" if stopped else ""
+        print(f"caxecraft: interrupted{suffix}", file=sys.stderr)
+        return 130
     except (
         OSError,
         UnicodeError,
@@ -4109,6 +4527,7 @@ def main(argv: list[str]) -> int:
         provision.ProvisionFailure,
         PlayFailure,
     ) as error:
+        stop_owned_server_after_failure(server_owner, server_lease)
         print(f"caxecraft: ERROR: {error}", file=sys.stderr)
         return 1
     finally:

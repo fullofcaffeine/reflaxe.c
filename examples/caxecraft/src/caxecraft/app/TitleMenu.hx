@@ -4,6 +4,9 @@ package caxecraft.app;
 import caxecraft.localization.RuntimeUiCatalog;
 import caxecraft.localization.UiTypes.LocaleCursor;
 import caxecraft.localization.UiTypes.UiMessage;
+import caxecraft.input.ControlPrompts.ControlPromptDevice;
+import caxecraft.input.ControlPrompts.controlsMessage;
+import caxecraft.input.ControlPrompts.menuInstructionsMessage;
 import raylib.Color;
 import raylib.Raylib;
 import raylib.Texture2D;
@@ -32,7 +35,7 @@ final class TitleMenu {
 
 	/** Draw the title controls and the runtime-selected Adventure summary. */
 	public static inline function draw(title:Texture2D, titleReady:Bool, wordmark:Texture2D, wordmarkReady:Bool, selected:GameMode, locale:LocaleCursor,
-			catalog:RuntimeUiCatalog, adventureTagline:String):Void {
+			catalog:RuntimeUiCatalog, adventureTagline:String, promptDevice:ControlPromptDevice):Void {
 		final width = Raylib.GetScreenWidth();
 		final height = Raylib.GetScreenHeight();
 		if (titleReady)
@@ -52,7 +55,8 @@ final class TitleMenu {
 		drawButton(firstTop, selected == GameMode.Creative, UiMessage.MenuCreative, locale, width, catalog);
 		drawButton(firstTop + BUTTON_HEIGHT + BUTTON_GAP, selected == GameMode.Adventure, UiMessage.MenuAdventure, locale, width, catalog);
 		drawButton(firstTop + (BUTTON_HEIGHT + BUTTON_GAP) * 2, false, UiMessage.MenuEditor, locale, width, catalog);
-		drawUiText(catalog, locale, UiMessage.MenuInstructions, Std.int(width / 2) - 285, height - 58, 16, Color.rgba(229, 241, 235));
+		drawUiText(catalog, locale, menuInstructionsMessage(promptDevice), Std.int(width / 2) - 330, height - 58, 16, Color.rgba(229, 241, 235));
+		drawUiText(catalog, locale, controlsMessage(promptDevice), 18, height - 30, 13, Color.rgba(142, 210, 205));
 		if (selected == GameMode.Adventure && adventureTagline.length > 0)
 			Raylib.DrawTextString(adventureTagline, Std.int(width / 2) - 230, firstTop - 36, 17, Color.rgba(255, 205, 91));
 	}

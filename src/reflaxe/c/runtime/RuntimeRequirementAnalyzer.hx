@@ -2,7 +2,10 @@ package reflaxe.c.runtime;
 
 import reflaxe.c.CDiagnostic.CDiagnosticId;
 import reflaxe.c.ir.HxcIR;
-import reflaxe.c.ir.HxcIRValidator;
+import reflaxe.c.ir.HxcIRTraversal.HxcIRTraversalSite;
+import reflaxe.c.ir.HxcIRTraversal.HxcIRTraversalVisitor;
+import reflaxe.c.ir.HxcIRTraversal.walkHxcIR;
+import reflaxe.c.ir.HxcIRValidator.ValidatedHxcIRProgram;
 import reflaxe.c.ir.HxcSourceSpan;
 import reflaxe.c.runtime.RuntimeFeatureModel.RuntimeFeatureId;
 import reflaxe.c.runtime.RuntimeFeatureModel.RuntimeReachabilityEvidence;
@@ -57,6 +60,38 @@ private class RuntimeCandidateEntry {
 	}
 }
 
+/** Retain runtime-bearing nodes while the shared traversal owns recursion. */
+private class RuntimeReachabilityVisitor extends HxcIRTraversalVisitor {
+	public final instructions:Array<HxcIRInstruction> = [];
+	public final terminators:Array<HxcIRTerminator> = [];
+	public final cleanupActions:Array<HxcIRCleanupAction> = [];
+	public final managedRoots:Array<HxcIRManagedRoot> = [];
+	public var functionCount(default, null) = 0;
+	public var blockCount(default, null) = 0;
+
+	public function new() {
+		super();
+	}
+
+	override public function onFunction(fn:HxcIRFunction, site:HxcIRTraversalSite):Void
+		functionCount++;
+
+	override public function onBlock(block:HxcIRBlock, site:HxcIRTraversalSite):Void
+		blockCount++;
+
+	override public function onInstruction(instruction:HxcIRInstruction, site:HxcIRTraversalSite):Void
+		instructions.push(instruction);
+
+	override public function onTerminator(terminator:HxcIRTerminator, site:HxcIRTraversalSite):Void
+		terminators.push(terminator);
+
+	override public function onCleanupAction(action:HxcIRCleanupAction, site:HxcIRTraversalSite):Void
+		cleanupActions.push(action);
+
+	override public function onManagedRoot(root:HxcIRManagedRoot, site:HxcIRTraversalSite):Void
+		managedRoots.push(root);
+}
+
 /**
  * Proves that source-level runtime reasons describe work that survived in HxcIR.
  *
@@ -77,19 +112,18 @@ class RuntimeRequirementAnalyzer {
 
 	public function new() {}
 
-	public function analyze(program:HxcIRProgram, input:Array<RuntimeRequirementCandidate>):RuntimeRequirementAnalysis {
-		if (program.schemaVersion != HxcIRValidator.SCHEMA_VERSION) {
-			internal('runtime requirement analysis needs validated schema-${HxcIRValidator.SCHEMA_VERSION} HxcIR; found `${program.schemaVersion}`');
-		}
+	public function analyze(program:ValidatedHxcIRProgram, input:Array<RuntimeRequirementCandidate>):RuntimeRequirementAnalysis {
 		final observations:Array<RuntimeIntentObservation> = [];
 		var typeInstanceCount = 0;
-		var functionCount = 0;
-		var blockCount = 0;
-		var instructionCount = 0;
-		var cleanupActionCount = 0;
+		// Stored declaration carriers are deliberately scoped: instruction result
+		// types do not by themselves select a runtime representation. The shared
+		// traversal below owns all executable, failure, cleanup, and root recursion.
 		for (module in program.modules) {
+			final referenceDeclarations:Map<String, Bool> = [];
 			for (declaration in module.types) {
 				switch declaration.kind {
+					case IRTKReference:
+						referenceDeclarations.set(declaration.id, true);
 					case IRTKAggregate(fields):
 						for (field in fields)
 							collectDeclarationType(field.type, field.source, observations);
@@ -113,29 +147,41 @@ class RuntimeRequirementAnalyzer {
 				switch instance.representation {
 					case IRRManaged(featureId):
 						observations.push(new RuntimeIntentObservation(featureId, "managed-type-representation", instance.source));
+						if (featureId == "gc") {
+							// Exact container arguments remain stored carriers even though the
+							// collector, rather than a collection-specific counter, owns them.
+							if (referenceDeclarations.exists(instance.declarationId))
+								for (argument in instance.arguments)
+									collectDeclarationType(argument, instance.source, observations);
+						}
+						if (featureId == "string-map") {
+							if (instance.arguments.length != 2 || instance.arguments[0] != IRTString)
+								internal('validated managed StringMap `${instance.id}` lost its exact [String, value] arguments');
+							collectDeclarationType(instance.arguments[1], instance.source, observations);
+						}
+						if (featureId == "iterator") {
+							if (instance.arguments.length != 1)
+								internal('validated managed Iterator `${instance.id}` lost its exact element argument');
+							collectDeclarationType(instance.arguments[0], instance.source, observations);
+						}
 					case _:
 				}
 			}
-			functionCount += module.functions.length;
-			for (fn in module.functions) {
-				if (fn.managedRoots != null)
-					for (root in fn.managedRoots)
-						observations.push(new RuntimeIntentObservation("gc", "root-frame", root.source));
-				blockCount += fn.blocks.length;
-				for (block in fn.blocks) {
-					instructionCount += block.instructions.length;
-					for (instruction in block.instructions) {
-						collectInstruction(instruction, observations);
-					}
-				}
-				for (region in fn.cleanupRegions) {
-					cleanupActionCount += region.actions.length;
-					for (action in region.actions) {
-						collectCleanup(action, observations);
-					}
-				}
-			}
 		}
+		final reachability = new RuntimeReachabilityVisitor();
+		walkHxcIR(program, reachability);
+		for (root in reachability.managedRoots)
+			observations.push(new RuntimeIntentObservation("gc", "root-frame", root.source));
+		for (instruction in reachability.instructions)
+			collectInstruction(instruction, program.dynamicPlan, observations);
+		for (terminator in reachability.terminators)
+			switch terminator.kind {
+				case IRTThrow(_, {target: IRFTUnwind}):
+					observations.push(new RuntimeIntentObservation("exception", "general-exception-region", terminator.source));
+				case _:
+			}
+		for (action in reachability.cleanupActions)
+			collectCleanup(action, observations);
 
 		final candidates = canonicalCandidates(input);
 		final uniqueObservations = canonicalObservations(observations);
@@ -174,8 +220,8 @@ class RuntimeRequirementAnalyzer {
 			}
 		}
 		return new RuntimeRequirementAnalysis(reasons,
-			new RuntimeReachabilityEvidence(program.modules.length, typeInstanceCount, functionCount, blockCount, instructionCount, cleanupActionCount,
-				observations.length));
+			new RuntimeReachabilityEvidence(program.modules.length, typeInstanceCount, reachability.functionCount, reachability.blockCount,
+				reachability.instructions.length, reachability.cleanupActions.length, observations.length));
 	}
 
 	/**
@@ -202,7 +248,7 @@ class RuntimeRequirementAnalyzer {
 		}
 	}
 
-	static function collectInstruction(instruction:HxcIRInstruction, observations:Array<RuntimeIntentObservation>):Void {
+	static function collectInstruction(instruction:HxcIRInstruction, dynamicPlan:HxcIRDynamicPlan, observations:Array<RuntimeIntentObservation>):Void {
 		switch instruction.kind {
 			case IRIOConstant(IRCString(_, _)):
 				// The value itself is direct data, but generated C needs the selected
@@ -238,8 +284,84 @@ class RuntimeRequirementAnalyzer {
 				collectImplementation(implementation, "cleanup-release", instruction.source, observations);
 			case IRIOTrace(_, implementation):
 				collectImplementation(implementation, "trace", instruction.source, observations);
+			case IRIODynamic(operation):
+				observations.push(new RuntimeIntentObservation("dynamic", dynamicOperationName(operation), instruction.source));
+				if (dynamicOperationAllocatesWrapper(operation, dynamicPlan))
+					observations.push(new RuntimeIntentObservation("gc", "allocation", instruction.source));
+			case IRIOException(IREFramePush(_)):
+				observations.push(new RuntimeIntentObservation("exception", "general-exception-region", instruction.source));
+			case IRIOException(_):
 			case _:
 		}
+	}
+
+	/** Name one dedicated Dynamic instruction using the typed source reason vocabulary. */
+	static function dynamicOperationName(operation:HxcIRDynamicInstruction):String
+		return switch operation {
+			case IRDBox(_, _): "box";
+			case IRDBoxNull(_): "box-null";
+			case IRDBoxTypeToken(_): "box-type-token";
+			case IRDUnbox(_, _, _): "unbox";
+			case IRDGet(_, _, _): "get";
+			case IRDSet(_, _, _, _): "set";
+			case IRDCall(_, _, _, _): "call";
+			case IRDInvoke(_, _, _, _): "invoke";
+			case IRDEqual(_, _, _): "equal";
+		};
+
+	/** Prove whether C emission must allocate an exact managed wrapper. */
+	static function dynamicOperationAllocatesWrapper(instruction:HxcIRDynamicInstruction, plan:HxcIRDynamicPlan):Bool {
+		final operationId = switch instruction {
+			case IRDBox(_, id) | IRDBoxNull(id) | IRDBoxTypeToken(id) | IRDUnbox(_, id, _) | IRDGet(_, id, _) | IRDSet(_, _, id, _) | IRDCall(_, _, id, _) |
+				IRDInvoke(_, _, id, _) | IRDEqual(_, _, id): id;
+		};
+		final operation = dynamicOperation(plan, operationId);
+		final allocatedTypeId:Null<String> = switch [instruction, operation.kind] {
+			case [IRDBox(_, _), IRDOKBox(typeId)]: typeId;
+			case [IRDGet(_, _, _), IRDOKGet(memberId)]:
+				final member = dynamicMember(plan, memberId);
+				switch member.kind {
+					case IRDMField(typeId, _): typeId;
+					case IRDMMethod(_): internal('validated Dynamic get operation `$operationId` names a method member');
+				}
+			case [IRDCall(_, _, _, _), IRDOKCall(_, shapeId)] | [IRDInvoke(_, _, _, _), IRDOKInvoke(_, shapeId)]:
+				dynamicCallShape(plan, shapeId).resultTypeId;
+			case [IRDBoxNull(_), IRDOKBox(_)] | [IRDBoxTypeToken(_), IRDOKBox(_)] | [IRDUnbox(_, _, _), IRDOKUnbox(_)] | [IRDSet(_, _, _, _), IRDOKSet(_)] |
+				[IRDEqual(_, _, _), IRDOKEqual(_, _)]: null;
+			case _:
+				internal('validated Dynamic instruction `${dynamicOperationName(instruction)}` and operation `$operationId` disagree');
+		};
+		if (allocatedTypeId == null)
+			return false;
+		return dynamicType(plan, allocatedTypeId).storage == IRDSManagedWrapper;
+	}
+
+	static function dynamicOperation(plan:HxcIRDynamicPlan, id:String):HxcIRDynamicOperation {
+		for (operation in plan.operations)
+			if (operation.id == id)
+				return operation;
+		return internal('validated Dynamic instruction names unknown operation `$id`');
+	}
+
+	static function dynamicType(plan:HxcIRDynamicPlan, id:String):HxcIRDynamicType {
+		for (type in plan.types)
+			if (type.id == id)
+				return type;
+		return internal('validated Dynamic operation names unknown type `$id`');
+	}
+
+	static function dynamicMember(plan:HxcIRDynamicPlan, id:String):HxcIRDynamicMember {
+		for (member in plan.members)
+			if (member.id == id)
+				return member;
+		return internal('validated Dynamic operation names unknown member `$id`');
+	}
+
+	static function dynamicCallShape(plan:HxcIRDynamicPlan, id:String):HxcIRDynamicCallShape {
+		for (shape in plan.callShapes)
+			if (shape.id == id)
+				return shape;
+		return internal('validated Dynamic operation names unknown call shape `$id`');
 	}
 
 	static function collectCleanup(action:HxcIRCleanupAction, observations:Array<RuntimeIntentObservation>):Void {
