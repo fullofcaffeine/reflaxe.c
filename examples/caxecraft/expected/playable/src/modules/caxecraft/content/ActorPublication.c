@@ -2,7 +2,8 @@
 
 struct hxc_caxecraft_content_ActorPublicationResult hxc_caxecraft_content_ActorPublication_publishActorPlans(struct hxc_caxecraft_domain_GameSession *hxc_l_session, struct hxc_array_ref *hxc_l_plans)
 {
-  const void *hxc_l_gc_roots[1] = { (const void *)hxc_l_session };
+  const void *volatile hxc_l_gc_roots[1] = { NULL };
+  hxc_l_gc_roots[0] = (const void *)hxc_l_session;
   struct hxc_gc_root_frame hxc_l_gc_frame = HXC_GC_ROOT_FRAME_INITIALIZER;
   if (hxc_gc_root_frame_push(&hxc_program_gc_thread, hxc_l_gc_roots, 1, &hxc_l_gc_frame) != HXC_STATUS_OK)
   {

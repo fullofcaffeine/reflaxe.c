@@ -439,7 +439,7 @@
             "source": {
               "path": "caxecraft/domain/CaxecraftTrace.hx",
               "startLine": 82,
-              "startColumn": 46,
+              "startColumn": 2,
               "endLine": 108,
               "endColumn": 3
             }
@@ -447,7 +447,7 @@
           "source": {
             "path": "caxecraft/domain/CaxecraftTrace.hx",
             "startLine": 82,
-            "startColumn": 46,
+            "startColumn": 2,
             "endLine": 108,
             "endColumn": 3
           },
@@ -474,7 +474,7 @@
             "source": {
               "path": "caxecraft/domain/CaxecraftTrace.hx",
               "startLine": 40,
-              "startColumn": 41,
+              "startColumn": 2,
               "endLine": 56,
               "endColumn": 3
             }
@@ -482,7 +482,7 @@
           "source": {
             "path": "caxecraft/domain/CaxecraftTrace.hx",
             "startLine": 40,
-            "startColumn": 41,
+            "startColumn": 2,
             "endLine": 56,
             "endColumn": 3
           },
@@ -509,7 +509,7 @@
             "source": {
               "path": "caxecraft/domain/CaxecraftTrace.hx",
               "startLine": 167,
-              "startColumn": 58,
+              "startColumn": 2,
               "endLine": 177,
               "endColumn": 3
             }
@@ -517,7 +517,7 @@
           "source": {
             "path": "caxecraft/domain/CaxecraftTrace.hx",
             "startLine": 167,
-            "startColumn": 58,
+            "startColumn": 2,
             "endLine": 177,
             "endColumn": 3
           },
@@ -544,7 +544,7 @@
             "source": {
               "path": "caxecraft/domain/CaxecraftTrace.hx",
               "startLine": 179,
-              "startColumn": 54,
+              "startColumn": 2,
               "endLine": 181,
               "endColumn": 3
             }
@@ -552,7 +552,7 @@
           "source": {
             "path": "caxecraft/domain/CaxecraftTrace.hx",
             "startLine": 179,
-            "startColumn": 54,
+            "startColumn": 2,
             "endLine": 181,
             "endColumn": 3
           },
@@ -579,7 +579,7 @@
             "source": {
               "path": "caxecraft/domain/CaxecraftTrace.hx",
               "startLine": 111,
-              "startColumn": 53,
+              "startColumn": 2,
               "endLine": 152,
               "endColumn": 3
             }
@@ -587,7 +587,7 @@
           "source": {
             "path": "caxecraft/domain/CaxecraftTrace.hx",
             "startLine": 111,
-            "startColumn": 53,
+            "startColumn": 2,
             "endLine": 152,
             "endColumn": 3
           },
@@ -614,7 +614,7 @@
             "source": {
               "path": "caxecraft/domain/CaxecraftTrace.hx",
               "startLine": 58,
-              "startColumn": 40,
+              "startColumn": 2,
               "endLine": 80,
               "endColumn": 3
             }
@@ -622,7 +622,7 @@
           "source": {
             "path": "caxecraft/domain/CaxecraftTrace.hx",
             "startLine": 58,
-            "startColumn": 40,
+            "startColumn": 2,
             "endLine": 80,
             "endColumn": 3
           },
@@ -649,7 +649,7 @@
             "source": {
               "path": "caxecraft/domain/CaxecraftTrace.hx",
               "startLine": 154,
-              "startColumn": 40,
+              "startColumn": 2,
               "endLine": 165,
               "endColumn": 3
             }
@@ -657,7 +657,7 @@
           "source": {
             "path": "caxecraft/domain/CaxecraftTrace.hx",
             "startLine": 154,
-            "startColumn": 40,
+            "startColumn": 2,
             "endLine": 165,
             "endColumn": 3
           },
@@ -684,7 +684,7 @@
             "source": {
               "path": "caxecraft/domain/CaxecraftTrace.hx",
               "startLine": 27,
-              "startColumn": 44,
+              "startColumn": 2,
               "endLine": 38,
               "endColumn": 3
             }
@@ -692,7 +692,7 @@
           "source": {
             "path": "caxecraft/domain/CaxecraftTrace.hx",
             "startLine": 27,
-            "startColumn": 44,
+            "startColumn": 2,
             "endLine": 38,
             "endColumn": 3
           },
@@ -719,7 +719,7 @@
             "source": {
               "path": "caxecraft/domain/VoxelRaycast.hx",
               "startLine": 84,
-              "startColumn": 41,
+              "startColumn": 2,
               "endLine": 86,
               "endColumn": 3
             }
@@ -727,7 +727,7 @@
           "source": {
             "path": "caxecraft/domain/VoxelRaycast.hx",
             "startLine": 84,
-            "startColumn": 41,
+            "startColumn": 2,
             "endLine": 86,
             "endColumn": 3
           },
@@ -754,7 +754,7 @@
             "source": {
               "path": "caxecraft/domain/VoxelRaycast.hx",
               "startLine": 79,
-              "startColumn": 46,
+              "startColumn": 2,
               "endLine": 82,
               "endColumn": 3
             }
@@ -762,7 +762,7 @@
           "source": {
             "path": "caxecraft/domain/VoxelRaycast.hx",
             "startLine": 79,
-            "startColumn": 46,
+            "startColumn": 2,
             "endLine": 82,
             "endColumn": 3
           },
@@ -788,16 +788,16 @@
             "modulePath": "caxecraft.domain.VoxelRaycast",
             "source": {
               "path": "caxecraft/domain/VoxelRaycast.hx",
-              "startLine": 89,
-              "startColumn": 28,
+              "startLine": 88,
+              "startColumn": 2,
               "endLine": 104,
               "endColumn": 3
             }
           },
           "source": {
             "path": "caxecraft/domain/VoxelRaycast.hx",
-            "startLine": 89,
-            "startColumn": 28,
+            "startLine": 88,
+            "startColumn": 2,
             "endLine": 104,
             "endColumn": 3
           },
@@ -824,7 +824,7 @@
             "source": {
               "path": "caxecraft/domain/VoxelRaycast.hx",
               "startLine": 106,
-              "startColumn": 108,
+              "startColumn": 2,
               "endLine": 121,
               "endColumn": 3
             }
@@ -832,7 +832,7 @@
           "source": {
             "path": "caxecraft/domain/VoxelRaycast.hx",
             "startLine": 106,
-            "startColumn": 108,
+            "startColumn": 2,
             "endLine": 121,
             "endColumn": 3
           },
@@ -858,16 +858,16 @@
             "modulePath": "caxecraft.domain.VoxelRaycast",
             "source": {
               "path": "caxecraft/domain/VoxelRaycast.hx",
-              "startLine": 10,
-              "startColumn": 38,
+              "startLine": 9,
+              "startColumn": 2,
               "endLine": 77,
               "endColumn": 3
             }
           },
           "source": {
             "path": "caxecraft/domain/VoxelRaycast.hx",
-            "startLine": 10,
-            "startColumn": 38,
+            "startLine": 9,
+            "startColumn": 2,
             "endLine": 77,
             "endColumn": 3
           },
@@ -894,7 +894,7 @@
             "source": {
               "path": "caxecraft/domain/World.hx",
               "startLine": 33,
-              "startColumn": 57,
+              "startColumn": 2,
               "endLine": 35,
               "endColumn": 3
             }
@@ -902,7 +902,7 @@
           "source": {
             "path": "caxecraft/domain/World.hx",
             "startLine": 33,
-            "startColumn": 57,
+            "startColumn": 2,
             "endLine": 35,
             "endColumn": 3
           },
@@ -929,7 +929,7 @@
             "source": {
               "path": "caxecraft/domain/World.hx",
               "startLine": 29,
-              "startColumn": 63,
+              "startColumn": 2,
               "endLine": 31,
               "endColumn": 3
             }
@@ -937,7 +937,7 @@
           "source": {
             "path": "caxecraft/domain/World.hx",
             "startLine": 29,
-            "startColumn": 63,
+            "startColumn": 2,
             "endLine": 31,
             "endColumn": 3
           },
@@ -964,7 +964,7 @@
             "source": {
               "path": "caxecraft/domain/World.hx",
               "startLine": 152,
-              "startColumn": 67,
+              "startColumn": 2,
               "endLine": 181,
               "endColumn": 3
             }
@@ -972,7 +972,7 @@
           "source": {
             "path": "caxecraft/domain/World.hx",
             "startLine": 152,
-            "startColumn": 67,
+            "startColumn": 2,
             "endLine": 181,
             "endColumn": 3
           },
@@ -999,7 +999,7 @@
             "source": {
               "path": "caxecraft/domain/World.hx",
               "startLine": 44,
-              "startColumn": 55,
+              "startColumn": 2,
               "endLine": 48,
               "endColumn": 3
             }
@@ -1007,7 +1007,7 @@
           "source": {
             "path": "caxecraft/domain/World.hx",
             "startLine": 44,
-            "startColumn": 55,
+            "startColumn": 2,
             "endLine": 48,
             "endColumn": 3
           },
@@ -1034,7 +1034,7 @@
             "source": {
               "path": "caxecraft/domain/World.hx",
               "startLine": 87,
-              "startColumn": 58,
+              "startColumn": 2,
               "endLine": 92,
               "endColumn": 3
             }
@@ -1042,7 +1042,7 @@
           "source": {
             "path": "caxecraft/domain/World.hx",
             "startLine": 87,
-            "startColumn": 58,
+            "startColumn": 2,
             "endLine": 92,
             "endColumn": 3
           },
@@ -1069,7 +1069,7 @@
             "source": {
               "path": "caxecraft/domain/World.hx",
               "startLine": 80,
-              "startColumn": 54,
+              "startColumn": 2,
               "endLine": 85,
               "endColumn": 3
             }
@@ -1077,7 +1077,7 @@
           "source": {
             "path": "caxecraft/domain/World.hx",
             "startLine": 80,
-            "startColumn": 54,
+            "startColumn": 2,
             "endLine": 85,
             "endColumn": 3
           },
@@ -1104,7 +1104,7 @@
             "source": {
               "path": "caxecraft/domain/World.hx",
               "startLine": 50,
-              "startColumn": 54,
+              "startColumn": 2,
               "endLine": 63,
               "endColumn": 3
             }
@@ -1112,7 +1112,7 @@
           "source": {
             "path": "caxecraft/domain/World.hx",
             "startLine": 50,
-            "startColumn": 54,
+            "startColumn": 2,
             "endLine": 63,
             "endColumn": 3
           },
@@ -1139,7 +1139,7 @@
             "source": {
               "path": "caxecraft/domain/World.hx",
               "startLine": 65,
-              "startColumn": 58,
+              "startColumn": 2,
               "endLine": 78,
               "endColumn": 3
             }
@@ -1147,7 +1147,7 @@
           "source": {
             "path": "caxecraft/domain/World.hx",
             "startLine": 65,
-            "startColumn": 58,
+            "startColumn": 2,
             "endLine": 78,
             "endColumn": 3
           },
@@ -1174,7 +1174,7 @@
             "source": {
               "path": "caxecraft/domain/World.hx",
               "startLine": 142,
-              "startColumn": 88,
+              "startColumn": 2,
               "endLine": 149,
               "endColumn": 3
             }
@@ -1182,7 +1182,7 @@
           "source": {
             "path": "caxecraft/domain/World.hx",
             "startLine": 142,
-            "startColumn": 88,
+            "startColumn": 2,
             "endLine": 149,
             "endColumn": 3
           },
@@ -1209,7 +1209,7 @@
             "source": {
               "path": "caxecraft/domain/World.hx",
               "startLine": 107,
-              "startColumn": 77,
+              "startColumn": 2,
               "endLine": 112,
               "endColumn": 3
             }
@@ -1217,7 +1217,7 @@
           "source": {
             "path": "caxecraft/domain/World.hx",
             "startLine": 107,
-            "startColumn": 77,
+            "startColumn": 2,
             "endLine": 112,
             "endColumn": 3
           },
@@ -1244,7 +1244,7 @@
             "source": {
               "path": "caxecraft/domain/World.hx",
               "startLine": 133,
-              "startColumn": 73,
+              "startColumn": 2,
               "endLine": 139,
               "endColumn": 3
             }
@@ -1252,7 +1252,7 @@
           "source": {
             "path": "caxecraft/domain/World.hx",
             "startLine": 133,
-            "startColumn": 73,
+            "startColumn": 2,
             "endLine": 139,
             "endColumn": 3
           },
@@ -1279,7 +1279,7 @@
             "source": {
               "path": "caxecraft/domain/World.hx",
               "startLine": 115,
-              "startColumn": 90,
+              "startColumn": 2,
               "endLine": 121,
               "endColumn": 3
             }
@@ -1287,7 +1287,7 @@
           "source": {
             "path": "caxecraft/domain/World.hx",
             "startLine": 115,
-            "startColumn": 90,
+            "startColumn": 2,
             "endLine": 121,
             "endColumn": 3
           },
@@ -1314,7 +1314,7 @@
             "source": {
               "path": "caxecraft/domain/World.hx",
               "startLine": 215,
-              "startColumn": 57,
+              "startColumn": 2,
               "endLine": 223,
               "endColumn": 3
             }
@@ -1322,7 +1322,7 @@
           "source": {
             "path": "caxecraft/domain/World.hx",
             "startLine": 215,
-            "startColumn": 57,
+            "startColumn": 2,
             "endLine": 223,
             "endColumn": 3
           },
@@ -1349,7 +1349,7 @@
             "source": {
               "path": "caxecraft/domain/World.hx",
               "startLine": 225,
-              "startColumn": 59,
+              "startColumn": 2,
               "endLine": 229,
               "endColumn": 3
             }
@@ -1357,7 +1357,7 @@
           "source": {
             "path": "caxecraft/domain/World.hx",
             "startLine": 225,
-            "startColumn": 59,
+            "startColumn": 2,
             "endLine": 229,
             "endColumn": 3
           },
@@ -1384,7 +1384,7 @@
             "source": {
               "path": "caxecraft/domain/WorldStorage.hx",
               "startLine": 23,
-              "startColumn": 67,
+              "startColumn": 2,
               "endLine": 29,
               "endColumn": 3
             }
@@ -1392,7 +1392,7 @@
           "source": {
             "path": "caxecraft/domain/WorldStorage.hx",
             "startLine": 23,
-            "startColumn": 67,
+            "startColumn": 2,
             "endLine": 29,
             "endColumn": 3
           },
@@ -1419,7 +1419,7 @@
             "source": {
               "path": "caxecraft/domain/WorldStorage.hx",
               "startLine": 31,
-              "startColumn": 79,
+              "startColumn": 2,
               "endLine": 37,
               "endColumn": 3
             }
@@ -1427,7 +1427,7 @@
           "source": {
             "path": "caxecraft/domain/WorldStorage.hx",
             "startLine": 31,
-            "startColumn": 79,
+            "startColumn": 2,
             "endLine": 37,
             "endColumn": 3
           },
@@ -1453,17 +1453,17 @@
             "modulePath": "caxecraft.domain._CharacterPhysics.CharacterPhysics_Fields_",
             "source": {
               "path": "caxecraft/domain/CharacterPhysics.hx",
-              "startLine": 366,
-              "startColumn": 41,
-              "endLine": 368,
+              "startLine": 378,
+              "startColumn": 9,
+              "endLine": 380,
               "endColumn": 2
             }
           },
           "source": {
             "path": "caxecraft/domain/CharacterPhysics.hx",
-            "startLine": 366,
-            "startColumn": 41,
-            "endLine": 368,
+            "startLine": 378,
+            "startColumn": 9,
+            "endLine": 380,
             "endColumn": 2
           },
           "startLine": 1250,
@@ -1489,7 +1489,7 @@
             "source": {
               "path": "caxecraft/domain/CharacterPhysics.hx",
               "startLine": 68,
-              "startColumn": 56,
+              "startColumn": 1,
               "endLine": 78,
               "endColumn": 2
             }
@@ -1497,7 +1497,7 @@
           "source": {
             "path": "caxecraft/domain/CharacterPhysics.hx",
             "startLine": 68,
-            "startColumn": 56,
+            "startColumn": 1,
             "endLine": 78,
             "endColumn": 2
           },
@@ -1523,17 +1523,17 @@
             "modulePath": "caxecraft.domain._CharacterPhysics.CharacterPhysics_Fields_",
             "source": {
               "path": "caxecraft/domain/CharacterPhysics.hx",
-              "startLine": 90,
-              "startColumn": 65,
-              "endLine": 111,
+              "startLine": 102,
+              "startColumn": 1,
+              "endLine": 123,
               "endColumn": 2
             }
           },
           "source": {
             "path": "caxecraft/domain/CharacterPhysics.hx",
-            "startLine": 90,
-            "startColumn": 65,
-            "endLine": 111,
+            "startLine": 102,
+            "startColumn": 1,
+            "endLine": 123,
             "endColumn": 2
           },
           "startLine": 1264,
@@ -1558,17 +1558,17 @@
             "modulePath": "caxecraft.domain._CharacterPhysics.CharacterPhysics_Fields_",
             "source": {
               "path": "caxecraft/domain/CharacterPhysics.hx",
-              "startLine": 361,
-              "startColumn": 46,
-              "endLine": 364,
+              "startLine": 373,
+              "startColumn": 9,
+              "endLine": 376,
               "endColumn": 2
             }
           },
           "source": {
             "path": "caxecraft/domain/CharacterPhysics.hx",
-            "startLine": 361,
-            "startColumn": 46,
-            "endLine": 364,
+            "startLine": 373,
+            "startColumn": 9,
+            "endLine": 376,
             "endColumn": 2
           },
           "startLine": 1300,
@@ -1594,7 +1594,7 @@
             "source": {
               "path": "caxecraft/domain/CharacterPhysics.hx",
               "startLine": 81,
-              "startColumn": 63,
+              "startColumn": 1,
               "endLine": 87,
               "endColumn": 2
             }
@@ -1602,7 +1602,7 @@
           "source": {
             "path": "caxecraft/domain/CharacterPhysics.hx",
             "startLine": 81,
-            "startColumn": 63,
+            "startColumn": 1,
             "endLine": 87,
             "endColumn": 2
           },
@@ -1628,17 +1628,17 @@
             "modulePath": "caxecraft.domain._CharacterPhysics.CharacterPhysics_Fields_",
             "source": {
               "path": "caxecraft/domain/CharacterPhysics.hx",
-              "startLine": 260,
-              "startColumn": 103,
-              "endLine": 299,
+              "startLine": 272,
+              "startColumn": 9,
+              "endLine": 311,
               "endColumn": 2
             }
           },
           "source": {
             "path": "caxecraft/domain/CharacterPhysics.hx",
-            "startLine": 260,
-            "startColumn": 103,
-            "endLine": 299,
+            "startLine": 272,
+            "startColumn": 9,
+            "endLine": 311,
             "endColumn": 2
           },
           "startLine": 1315,
@@ -1663,17 +1663,17 @@
             "modulePath": "caxecraft.domain._CharacterPhysics.CharacterPhysics_Fields_",
             "source": {
               "path": "caxecraft/domain/CharacterPhysics.hx",
-              "startLine": 301,
-              "startColumn": 76,
-              "endLine": 324,
+              "startLine": 313,
+              "startColumn": 9,
+              "endLine": 336,
               "endColumn": 2
             }
           },
           "source": {
             "path": "caxecraft/domain/CharacterPhysics.hx",
-            "startLine": 301,
-            "startColumn": 76,
-            "endLine": 324,
+            "startLine": 313,
+            "startColumn": 9,
+            "endLine": 336,
             "endColumn": 2
           },
           "startLine": 1406,
@@ -1698,17 +1698,17 @@
             "modulePath": "caxecraft.domain._CharacterPhysics.CharacterPhysics_Fields_",
             "source": {
               "path": "caxecraft/domain/CharacterPhysics.hx",
-              "startLine": 114,
-              "startColumn": 75,
-              "endLine": 130,
+              "startLine": 126,
+              "startColumn": 1,
+              "endLine": 142,
               "endColumn": 2
             }
           },
           "source": {
             "path": "caxecraft/domain/CharacterPhysics.hx",
-            "startLine": 114,
-            "startColumn": 75,
-            "endLine": 130,
+            "startLine": 126,
+            "startColumn": 1,
+            "endLine": 142,
             "endColumn": 2
           },
           "startLine": 1473,
@@ -1733,17 +1733,17 @@
             "modulePath": "caxecraft.domain._CharacterPhysics.CharacterPhysics_Fields_",
             "source": {
               "path": "caxecraft/domain/CharacterPhysics.hx",
-              "startLine": 161,
-              "startColumn": 138,
-              "endLine": 187,
+              "startLine": 173,
+              "startColumn": 1,
+              "endLine": 199,
               "endColumn": 2
             }
           },
           "source": {
             "path": "caxecraft/domain/CharacterPhysics.hx",
-            "startLine": 161,
-            "startColumn": 138,
-            "endLine": 187,
+            "startLine": 173,
+            "startColumn": 1,
+            "endLine": 199,
             "endColumn": 2
           },
           "startLine": 1499,
@@ -1768,17 +1768,17 @@
             "modulePath": "caxecraft.domain._CharacterPhysics.CharacterPhysics_Fields_",
             "source": {
               "path": "caxecraft/domain/CharacterPhysics.hx",
-              "startLine": 133,
-              "startColumn": 89,
-              "endLine": 141,
+              "startLine": 145,
+              "startColumn": 1,
+              "endLine": 153,
               "endColumn": 2
             }
           },
           "source": {
             "path": "caxecraft/domain/CharacterPhysics.hx",
-            "startLine": 133,
-            "startColumn": 89,
-            "endLine": 141,
+            "startLine": 145,
+            "startColumn": 1,
+            "endLine": 153,
             "endColumn": 2
           },
           "startLine": 1554,
@@ -1804,7 +1804,7 @@
             "source": {
               "path": "caxecraft/domain/WorldRead.hx",
               "startLine": 25,
-              "startColumn": 60,
+              "startColumn": 1,
               "endLine": 30,
               "endColumn": 2
             }
@@ -1812,7 +1812,7 @@
           "source": {
             "path": "caxecraft/domain/WorldRead.hx",
             "startLine": 25,
-            "startColumn": 60,
+            "startColumn": 1,
             "endLine": 30,
             "endColumn": 2
           },
@@ -1839,7 +1839,7 @@
             "source": {
               "path": "caxecraft/domain/WorldRead.hx",
               "startLine": 16,
-              "startColumn": 55,
+              "startColumn": 1,
               "endLine": 22,
               "endColumn": 2
             }
@@ -1847,7 +1847,7 @@
           "source": {
             "path": "caxecraft/domain/WorldRead.hx",
             "startLine": 16,
-            "startColumn": 55,
+            "startColumn": 1,
             "endLine": 22,
             "endColumn": 2
           },
@@ -1874,7 +1874,7 @@
             "source": {
               "path": "caxecraft/qa/DomainProbe.hx",
               "startLine": 204,
-              "startColumn": 47,
+              "startColumn": 2,
               "endLine": 210,
               "endColumn": 3
             }
@@ -1882,7 +1882,7 @@
           "source": {
             "path": "caxecraft/qa/DomainProbe.hx",
             "startLine": 204,
-            "startColumn": 47,
+            "startColumn": 2,
             "endLine": 210,
             "endColumn": 3
           },
@@ -1909,7 +1909,7 @@
             "source": {
               "path": "caxecraft/qa/DomainProbe.hx",
               "startLine": 31,
-              "startColumn": 37,
+              "startColumn": 2,
               "endLine": 50,
               "endColumn": 3
             }
@@ -1917,7 +1917,7 @@
           "source": {
             "path": "caxecraft/qa/DomainProbe.hx",
             "startLine": 31,
-            "startColumn": 37,
+            "startColumn": 2,
             "endLine": 50,
             "endColumn": 3
           },
@@ -1944,7 +1944,7 @@
             "source": {
               "path": "caxecraft/qa/DomainProbe.hx",
               "startLine": 212,
-              "startColumn": 53,
+              "startColumn": 2,
               "endLine": 215,
               "endColumn": 3
             }
@@ -1952,7 +1952,7 @@
           "source": {
             "path": "caxecraft/qa/DomainProbe.hx",
             "startLine": 212,
-            "startColumn": 53,
+            "startColumn": 2,
             "endLine": 215,
             "endColumn": 3
           },
@@ -1979,7 +1979,7 @@
             "source": {
               "path": "caxecraft/qa/DomainProbe.hx",
               "startLine": 53,
-              "startColumn": 41,
+              "startColumn": 2,
               "endLine": 202,
               "endColumn": 3
             }
@@ -1987,7 +1987,7 @@
           "source": {
             "path": "caxecraft/qa/DomainProbe.hx",
             "startLine": 53,
-            "startColumn": 41,
+            "startColumn": 2,
             "endLine": 202,
             "endColumn": 3
           },

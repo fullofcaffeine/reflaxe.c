@@ -195,7 +195,7 @@ int32_t hxc_caxecraft_app_TerrainChunkCache_invalidate(struct hxc_caxecraft_app_
     hxc_l_changed = 1;
   }
   int32_t hxc_l_chunkX = hxc_i32_modulo_zero_safe(hxc_l_owner, 8);
-  int32_t hxc_l_chunkZ = hxc_f64_to_i32_saturating(hxc_f64_divide_zero_safe((double)hxc_l_owner, (double)8));
+  int32_t hxc_l_chunkZ = hxc_l_owner / 8;
   int32_t hxc_l_localX = hxc_i32_modulo_zero_safe(hxc_l_coord.hxc_x, 8);
   int32_t hxc_l_localZ = hxc_i32_modulo_zero_safe(hxc_l_coord.hxc_z, 8);
   int32_t hxc_l_tmp_load_result_n9 = hxc_l_localX;

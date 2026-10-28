@@ -104,7 +104,7 @@ void hxc_caxecraft_app_HudDigits_drawNumber(int32_t hxc_l_value, int32_t hxc_l_x
     int32_t hxc_l_digit = hxc_i32_modulo_zero_safe(hxc_l_remaining, 10);
     int32_t hxc_l_tmp_load_result_n2 = hxc_l_digit;
     hxc_caxecraft_app_HudDigits_drawDigit(hxc_l_tmp_load_result_n2, hxc_i32_add_wrapping(hxc_l_x, hxc_i32_multiply_wrapping(hxc_l_index, 11)), hxc_l_y, hxc_l_color);
-    hxc_l_remaining = hxc_f64_to_i32_saturating(hxc_f64_divide_zero_safe((double)hxc_l_remaining, (double)10));
+    hxc_l_remaining = hxc_l_remaining / 10;
     hxc_l_index = hxc_i32_subtract_wrapping(hxc_l_index, 1);
   }
   return;
