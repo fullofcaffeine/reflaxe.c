@@ -86,7 +86,7 @@ function selfCheck():Int {
 		|| !focusLoss.clearQueuedJump
 		|| !focusLoss.resetSimulationClock
 		|| !focusLoss.resetMotion)
-		throw new haxe.Exception("focus loss did not request one complete pause boundary");
+		return 32; // focus loss did not request one complete pause boundary
 	final recapturedFrame = advancePlayScreenFrame({
 		screen: AppScreen.Paused,
 		focused: true,
@@ -97,7 +97,7 @@ function selfCheck():Int {
 	if (recapturedFrame.screen != playing
 		|| recapturedFrame.pointer != AppPointerDirective.CapturePointer
 		|| !recapturedFrame.recapturedThisFrame)
-		throw new haxe.Exception("capture did not restore ordinary play");
+		return 33; // capture did not restore ordinary play
 	if (initialScreen(false) != AppScreen.Playing)
 		return 8;
 	final editor = openEditor(title);
@@ -141,7 +141,7 @@ function selfCheck():Int {
 		pointerPressed: true
 	});
 	if (editorFromPointer.screen != editorFromTitle.screen)
-		throw new haxe.Exception("pointer and semantic editor commands diverged");
+		return 34; // pointer and semantic editor commands diverged
 	final unavailableAdventure = advanceTitleMenuFrame({
 		state: titleMenuState(title, GameMode.Adventure),
 		campaignAvailable: false,
@@ -151,7 +151,7 @@ function selfCheck():Int {
 		pointerPressed: false
 	});
 	if (unavailableAdventure.screen != title || unavailableAdventure.mode != GameMode.Adventure)
-		throw new haxe.Exception("an unavailable campaign escaped the title screen");
+		return 35; // an unavailable campaign escaped the title screen
 	final campaignFrame = advanceCampaignMenuFrame({
 		selectedLevelIndex: 0,
 		levelCount: 3,
@@ -163,7 +163,7 @@ function selfCheck():Int {
 		pointerPressed: true
 	});
 	if (campaignFrame.selectedLevelIndex != 1 || !campaignFrame.launchRequested || campaignFrame.backRequested)
-		throw new haxe.Exception("campaign menu frame did not preserve selection and launch precedence");
+		return 36; // campaign menu frame did not preserve selection and launch precedence
 	if (editorFromTitle.screen != AppScreen.Editor || editorFromTitle.mode != GameMode.Creative)
 		return 20;
 	final loading = beginLoading(playing);

@@ -456,12 +456,8 @@ CASES = {
         forbidden_source_markers=("goto ",),
         output_line_count=1,
         success_line="0",
-        expected_runtime_features=(
-            "runtime-base",
-            "status",
-            "alloc",
-            "array",
-        ),
+        # The C build selects `hxc_runtime=none`, so the honest closure is empty.
+        expected_runtime_features=(),
     ),
     "aquatics": HaxeCTestCase(
         case_id="aquatics",
