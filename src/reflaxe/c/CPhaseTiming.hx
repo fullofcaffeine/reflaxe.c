@@ -544,6 +544,18 @@ class CPhaseTiming {
 			timer.stop();
 	}
 
+	/** Enter one progress-only nested phase without enabling the full profiler. */
+	public static function startProgressDetail(name:String):Void {
+		if (progressActive)
+			emitProgress("phase-started", name);
+	}
+
+	/** Leave the matching progress-only nested phase after its work completes. */
+	public static function stopProgressDetail(name:String):Void {
+		if (progressActive)
+			emitProgress("phase-completed", name);
+	}
+
 	public static function startDetail(id:CDetailTimingId, ?subject:String):Null<CDetailTimer> {
 		return active == null ? null : new CDetailTimer(id, subject);
 	}

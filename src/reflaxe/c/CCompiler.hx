@@ -166,15 +166,20 @@ class CCompiler {
 			CPhaseTiming.stop(configurationTimer);
 			final analysisTimer = CPhaseTiming.start(CPWholeProgramAnalysis);
 			final entryFunctionId = CBodyLowering.functionId(input.declarationPath, input.fieldName);
+			CPhaseTiming.startProgressDetail("static initialization analysis");
 			final staticInitialization = new CStaticInitializationPlanner().plan(program, entryFunctionId);
+			CPhaseTiming.stopProgressDetail("static initialization analysis");
 			context.setStaticInitialization(staticInitialization.snapshot);
+			CPhaseTiming.startProgressDetail("reachable function graph analysis");
 			final graph = new CStaticFunctionGraphCollector(context).collect(input, program, staticInitialization.initializerInputs);
+			CPhaseTiming.stopProgressDetail("reachable function graph analysis");
 			final entryRequest = new CSymbolRequest(CSKStaticInitializer, ["compiler", "executable-entry-point", graph.entryFunctionId],
 				CNSOrdinary("translation-unit"), CSVInternal, "main");
 			final initializationRequest:Null<CSymbolRequest> = staticInitialization.executionFunctionIds.length == 0 ? null : new CSymbolRequest(CSKStaticInitializer,
 				["compiler", "static-initialization", "hosted-executable", graph.entryFunctionId], CNSOrdinary("translation-unit"),
 				CSVInternal, null, [], [], null, input.readableDeclarationPath == null ? null : [input.readableDeclarationPath, "static-initialization"]);
 			final layoutPlanner = new CProjectLayoutPlanner();
+			CPhaseTiming.startProgressDetail("header guard layout analysis");
 			final guardLayout = layoutPlanner.plan(configuration.projectLayout,
 				projectModulePaths(program, graph.functions, graph.globals, graph.constructors, staticInitialization.initializerInputs));
 			final headerGuardRequests:Map<String, CSymbolRequest> = [];
@@ -187,6 +192,7 @@ class CCompiler {
 			if (initializationRequest != null) {
 				context.symbols.register(initializationRequest);
 			}
+			CPhaseTiming.stopProgressDetail("header guard layout analysis");
 			CPhaseTiming.stop(analysisTimer);
 			final loweringTimer = CPhaseTiming.start(CPSemanticLowering);
 			final captureHxcIRDump = Context.defined(STATIC_INITIALIZATION_REPORT_DEFINE)

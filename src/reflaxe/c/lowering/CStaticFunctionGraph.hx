@@ -6,6 +6,7 @@ import haxe.macro.Type;
 import haxe.macro.TypeTools;
 import haxe.macro.TypedExprTools;
 import reflaxe.c.CompilationContext;
+import reflaxe.c.CPhaseTiming;
 import reflaxe.c.frontend.TypedProgramInput;
 import reflaxe.c.ir.HxcIRDiagnostic;
 import reflaxe.c.lowering.CBodyLowering.CBodyFunctionInput;
@@ -68,9 +69,13 @@ class CStaticFunctionGraphCollector {
 	}
 
 	public function collect(entry:CBodyFunctionInput, program:TypedProgramInput, ?initializers:Array<CBodyInitializerInput>):CStaticFunctionGraph {
+		CPhaseTiming.startProgressDetail("dispatch catalog analysis");
 		dispatchCatalog = new CBodyDispatchCatalog(context, program);
+		CPhaseTiming.stopProgressDetail("dispatch catalog analysis");
+		CPhaseTiming.startProgressDetail("reachable input indexing");
 		final available = staticFunctionInputs(program);
 		final availableConstructors = constructorInputs(program);
+		CPhaseTiming.stopProgressDetail("reachable input indexing");
 		final byId:Map<String, CBodyFunctionInput> = [];
 		final pending:Array<CBodyFunctionInput> = [];
 		final constructorsById:Map<String, CBodyConstructorInput> = [];
@@ -83,6 +88,7 @@ class CStaticFunctionGraphCollector {
 		available.set(CBodyLowering.functionId(entry.declarationPath, entry.fieldName), entry);
 		var functionIndex = 0;
 		var constructorIndex = 0;
+		CPhaseTiming.startProgressDetail("reachable graph traversal");
 		drainPending(available, availableConstructors, byId, pending, constructorsById, pendingConstructors, constructorDependencies, functionIndex,
 			constructorIndex);
 		functionIndex = pending.length;
@@ -117,13 +123,17 @@ class CStaticFunctionGraphCollector {
 				}
 			}
 		}
+		CPhaseTiming.stopProgressDetail("reachable graph traversal");
+		CPhaseTiming.startProgressDetail("reachable graph finalization");
 		final functions = [for (fn in byId) fn];
 		functions.sort(compareInputs);
 		final specializations = [for (specialization in specializationsByKey) specialization];
 		specializations.sort((left, right) -> CGenericTypeCanonicalizer.compareUtf8(left.key, right.key));
 		final constructors = finalizeConstructors(constructorsById, constructorDependencies);
-		return new CStaticFunctionGraph(CBodyLowering.functionInputId(entry), functions, staticGlobalInputs(program), constructors, specializations,
+		final result = new CStaticFunctionGraph(CBodyLowering.functionInputId(entry), functions, staticGlobalInputs(program), constructors, specializations,
 			requireDispatchCatalog().finish());
+		CPhaseTiming.stopProgressDetail("reachable graph finalization");
+		return result;
 	}
 
 	function collectExpression(expression:TypedExpr, caller:CBodyFunctionInput, currentConstructor:Null<CBodyConstructorInput>,
