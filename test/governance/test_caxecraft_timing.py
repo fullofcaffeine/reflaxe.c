@@ -369,6 +369,7 @@ class CaxecraftTimingTests(unittest.TestCase):
                         "addedArrays": 1,
                         "addedIntMaps": 0,
                         "addedStringMaps": 0,
+                        "addedTypedMaps": 0,
                         "addedBytes": 0,
                         "addedOptionals": 0,
                         "addedImportTypes": 1,

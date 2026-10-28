@@ -407,6 +407,7 @@ class CompilerProfileFunctionBuildWork:
     added_arrays: int
     added_int_maps: int
     added_string_maps: int
+    added_typed_maps: int
     added_bytes: int
     added_optionals: int
     added_import_types: int
@@ -437,6 +438,7 @@ class CompilerProfileFunctionBuildWork:
             "addedArrays": self.added_arrays,
             "addedIntMaps": self.added_int_maps,
             "addedStringMaps": self.added_string_maps,
+            "addedTypedMaps": self.added_typed_maps,
             "addedBytes": self.added_bytes,
             "addedOptionals": self.added_optionals,
             "addedImportTypes": self.added_import_types,
@@ -708,6 +710,7 @@ FUNCTION_BUILD_WORK_FIELDS = frozenset(
         "addedArrays",
         "addedIntMaps",
         "addedStringMaps",
+        "addedTypedMaps",
         "addedBytes",
         "addedOptionals",
         "addedImportTypes",
@@ -1273,6 +1276,9 @@ def parse_profile_records(
                         ),
                         added_string_maps=profile_integer(
                             function_build_value, "addedStringMaps", minimum=0
+                        ),
+                        added_typed_maps=profile_integer(
+                            function_build_value, "addedTypedMaps", minimum=0
                         ),
                         added_bytes=profile_integer(
                             function_build_value, "addedBytes", minimum=0
