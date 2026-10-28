@@ -10,6 +10,9 @@ import reflaxe.c.TargetPlatform;
 import reflaxe.c.ast.CAST.CTranslationUnit;
 import reflaxe.c.ast.CASTPrinter;
 import haxe.Timer;
+import haxe.atomic.AtomicBool;
+import haxe.atomic.AtomicInt;
+import haxe.atomic.AtomicObject;
 
 /** Exercises target-context implementations while the HXML includes every owned module. */
 class AllSourcesProbe {
@@ -36,6 +39,14 @@ class AllSourcesProbe {
 		final timerTypeProbe:Null<Timer> = null;
 		if (timerTypeProbe != null) {
 			throw "the target-owned Timer override must remain type-visible";
+		}
+		// The haxe.atomic overrides are parsed only when referenced; keep them in
+		// the exhaustive graph without constructing atomic storage under Eval.
+		final atomicBoolProbe:Null<AtomicBool> = null;
+		final atomicIntProbe:Null<AtomicInt> = null;
+		final atomicObjectProbe:Null<AtomicObject<String>> = null;
+		if (atomicBoolProbe != null || atomicIntProbe != null || atomicObjectProbe != null) {
+			throw "the target-owned haxe.atomic overrides must remain type-visible";
 		}
 
 		final context = new CompilationContext(CProfile.Portable);

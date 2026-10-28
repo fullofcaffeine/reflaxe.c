@@ -4544,6 +4544,7 @@ private class FunctionBuilder {
 	final initializedManagedDirectFields:Map<String, Bool> = [];
 	final initializedFinalImportFields:Map<String, Bool> = [];
 	final initializedFinalPrimitiveFields:Map<String, Bool> = [];
+	final initializedAtomicFields:Map<String, Bool> = [];
 	final initializedDirectAggregateFields:Map<String, Bool> = [];
 	final initializedUnmanagedEnumFields:Map<String, Bool> = [];
 	final initializedManagedArrayFields:Map<String, Bool> = [];
@@ -6021,6 +6022,9 @@ private class FunctionBuilder {
 				// The enclosing object was structurally zero-initialized before its
 				// constructor call. The exact source field initializer is therefore
 				// already satisfied without an illegal C whole-array assignment.
+			case TBinop(OpAssign, left, right) if (lowerAtomicFieldInitializer(left, right)):
+				// Atomic storage has identity and cannot be assigned by value. Its first
+				// constructor write becomes C11 atomic initialization at the field address.
 			case TBinop(OpAssign, left, right) if (lowerRetainedInterfaceFieldInitializer(left, right)):
 				// The interface value copies a concrete object pointer and its exact
 				// table into the newly allocated owner. The owner's trace callback
@@ -6235,6 +6239,37 @@ private class FunctionBuilder {
 		if (length != fixed.length)
 			unsupported(right, ("TField(" + access.name + ":fixed-array-length-mismatch:planned=" + fixed.length + ",constructor=" + length + ")"));
 		initializedOwnedFixedArrayFields.set(access.name, true);
+		return true;
+	}
+
+	/** Initialize one embedded `c.Atomic<T>` field exactly once in its constructor. */
+	function lowerAtomicFieldInitializer(left:TypedExpr, right:TypedExpr):Bool {
+		switch prepared.role {
+			case PBRConstructor(_):
+			case _:
+				return false;
+		}
+		final fieldName = switch unwrapExpression(left).expr {
+			case TField(receiver, FInstance(_, _, fieldReference)):
+				switch unwrapExpression(receiver).expr {
+					case TConst(TThis): fieldReference.get().name;
+					case _: return false;
+				}
+			case _: return false;
+		};
+		if (initializedAtomicFields.exists(fieldName))
+			return false;
+		final initializer = switch unwrapExpression(right).expr {
+			case TCall(callee, [value]) if (isAbstractMethod(callee, "c.Atomic", "_hx_new")): value;
+			case _: return false;
+		};
+		final target = lowerPlace(left);
+		final element = target.mapping.atomicElement();
+		if (element == null)
+			return false;
+		final value = coerce(lowerValue(initializer, element), element, initializer.pos, 'TField($fieldName:atomic-initializer)');
+		appendInstruction(null, IRIOAtomic(IRAInitialize(target.place, value.id)), sourceSpan(left.pos), "initialize-atomic-field");
+		initializedAtomicFields.set(fieldName, true);
 		return true;
 	}
 
@@ -9251,6 +9286,8 @@ private class FunctionBuilder {
 						// construction as an implicit assignment; genuinely dynamic casts
 						// still reach `coerce`'s fail-closed runtime-proof diagnostic.
 						coerce(lowerValue(inner), target, expression.pos, "TCast(interface)");
+					case CBVKAtomic(_):
+						unsupported(expression, "TCast(c.Atomic:non-copyable-storage)");
 					case CBVKDynamic | CBVKStaticString(_) | CBVKManagedString(_) | CBVKSpan(_, _) | CBVKCString | CBVKCStringRef | CBVKImport(_) |
 						CBVKAggregate(_) | CBVKEnum(_) | CBVKClass(_, _) | CBVKArray(_) | CBVKIterator(_) | CBVKIntMap(_) | CBVKStringMap(_) |
 						CBVKTypedMap(_) | CBVKBytes(_) | CBVKOptional(_) | CBVKFunction(_, _) | CBVKClosureCapturePointer(_) | CBVKNativeRef(_) |
@@ -13178,6 +13215,14 @@ private class FunctionBuilder {
 				final global = globalRegistry.require(classReference, fieldReference, expression, rejectGlobal);
 				{place: IRPGlobal(global.ir.id), mapping: CBodyValueType.primitive(global.mapping), mutable: global.ir.mutable};
 			case TParenthesis(inner) | TMeta(_, inner): lowerPlace(inner);
+			case TCast(inner, _):
+				// Abstract implementations (for example haxe.atomic wrappers) cast
+				// `this` to its own carrier. Only a cast that keeps the exact C
+				// carrier names the same storage; a type-changing cast would let a
+				// store write a value of the wrong C type.
+				final place = lowerPlace(inner);
+				final castMapping = bodyValueType(expression.t, expression.pos, "place(TCast:target-type)");
+				typeKey(castMapping.irType) == typeKey(place.mapping.irType) ? place : unsupported(expression, "place(TCast:type-changing)");
 			case _: unsupported(expression, ("place(" + (nodeName(expression)) + ")"));
 		};
 	}
@@ -13292,6 +13337,9 @@ private class FunctionBuilder {
 		if (isAbstractMethod(call.callee, "c.StructInit", "zero")) {
 			return lowerImportedStructZero(expression, call.arguments);
 		}
+		final atomicMethod = atomicMethodName(call.callee);
+		if (atomicMethod != null)
+			return lowerAtomicCall(expression, atomicMethod, call.arguments);
 		if (isAbstractMethod(call.callee, "c.Ref", "to"))
 			return unsupported(expression, "TCall(c.Ref.to:requires-direct-import-argument)");
 		if (isAbstractMethod(call.callee, "c.CStringBufferRef", "to"))
@@ -14380,7 +14428,9 @@ private class FunctionBuilder {
 		if (owner == null)
 			return;
 		for (field in owner.fields)
-			if (field.type.arrayValue() != null && !initializedManagedArrayFields.exists(field.name))
+			if (field.type.atomicElement() != null && !initializedAtomicFields.exists(field.name))
+				unsupportedAt(position, ("TConstructor(uninitialized-atomic-field:" + owner.haxePath + "." + field.name + ")"));
+			else if (field.type.arrayValue() != null && !initializedManagedArrayFields.exists(field.name))
 				unsupportedAt(position, ("TConstructor(uninitialized-managed-Array-field:" + owner.haxePath + "." + field.name + ")"));
 			else if (field.type.stringMapValue() != null && !initializedManagedStringMapFields.exists(field.name))
 				unsupportedAt(position, ("TConstructor(uninitialized-managed-StringMap-field:" + owner.haxePath + "." + field.name + ")"));
@@ -17981,8 +18031,8 @@ private class FunctionBuilder {
 			case CBVKOptional(_) | CBVKFunction(_, _) | CBVKStackClosure(_, _, _):
 				profileCallableOptionalTypeClassifications++;
 				profileCallableOptionalTypeCpuSeconds += cpuSeconds;
-			case CBVKDynamic | CBVKPrimitive(_) | CBVKFixedArray(_, _, _) | CBVKSpan(_, _) | CBVKCString | CBVKCStringRef | CBVKClosureCapturePointer(_) |
-				CBVKNativeRef(_) | CBVKCStringBufferRef | CBVKClosureContext:
+			case CBVKAtomic(_) | CBVKDynamic | CBVKPrimitive(_) | CBVKFixedArray(_, _, _) | CBVKSpan(_, _) | CBVKCString | CBVKCStringRef |
+				CBVKClosureCapturePointer(_) | CBVKNativeRef(_) | CBVKCStringBufferRef | CBVKClosureContext:
 				profileOtherTypeClassifications++;
 				profileOtherTypeCpuSeconds += cpuSeconds;
 		}
@@ -18138,6 +18188,90 @@ private class FunctionBuilder {
 		};
 	}
 
+	/** Return the exact `c.Atomic` method named by one abstract implementation call. */
+	static function atomicMethodName(callee:TypedExpr):Null<String> {
+		return switch unwrapExpression(callee).expr {
+			case TField(_, FStatic(classReference, fieldReference)):
+				switch classReference.get().kind {
+					case KAbstractImpl(abstractReference): final owner = abstractReference.get(); owner.pack.length == 1 && owner.pack[0] == "c" && owner.name == "Atomic" ? fieldReference.get()
+							.name : null;
+					case _: null;
+				}
+			case _: null;
+		};
+	}
+
+	/** Lower one address-based C11 atomic operation into typed semantic IR. */
+	function lowerAtomicCall(expression:TypedExpr, method:String, arguments:Array<TypedExpr>):LoweredValue {
+		if (method == "_hx_new")
+			return unsupported(expression, "TCall(c.Atomic.new:requires-owner-field-initializer)");
+		if (arguments.length == 0)
+			return unsupported(expression, 'TCall(c.Atomic.$method:missing-receiver)');
+		final receiver = lowerPlace(arguments[0]);
+		final element = receiver.mapping.atomicElement();
+		if (element == null)
+			return unsupported(arguments[0], 'TCall(c.Atomic.$method:receiver-not-atomic)');
+		final resultMapping = bodyValueType(expression.t, expression.pos, 'TCall(c.Atomic.$method:result-type)');
+		if (typeKey(resultMapping.irType) != typeKey(element.irType))
+			return unsupported(expression, 'TCall(c.Atomic.$method:result-type=${resultMapping.cSpelling},expected=${element.cSpelling})');
+		final values:Array<String> = [];
+		var successOrder = IRMO_SequentiallyConsistent;
+		var failureOrder = IRMO_SequentiallyConsistent;
+		final expectedCount = switch method {
+			case "load": 2;
+			case "store" | "exchange" | "fetchAdd" | "fetchSub" | "fetchAnd" | "fetchOr" | "fetchXor": 3;
+			case "compareExchange": 5;
+			case _: return unsupported(expression, 'TCall(c.Atomic.$method:not-admitted)');
+		};
+		if (arguments.length != expectedCount)
+			return unsupported(expression, 'TCall(c.Atomic.$method:argument-count=${arguments.length},expected=$expectedCount)');
+		if (method != "load") {
+			final value = coerce(lowerValue(arguments[1], element), element, arguments[1].pos, 'TCall(c.Atomic.$method:value)');
+			values.push(value.id);
+		}
+		if (method == "compareExchange") {
+			final replacement = coerce(lowerValue(arguments[2], element), element, arguments[2].pos, "TCall(c.Atomic.compareExchange:replacement)");
+			values.push(replacement.id);
+			successOrder = requireAtomicMemoryOrder(arguments[3], "compareExchange-success");
+			failureOrder = requireAtomicMemoryOrder(arguments[4], "compareExchange-failure");
+		} else {
+			successOrder = requireAtomicMemoryOrder(arguments[expectedCount - 1], method);
+		}
+		final result:HxcIRResult = {id: nextValueId(), type: element.irType};
+		final operation:HxcIRAtomicInstruction = switch method {
+			case "load": IRALoad(receiver.place, successOrder);
+			case "store": IRAStore(receiver.place, values[0], successOrder);
+			case "exchange": IRAExchange(receiver.place, values[0], successOrder);
+			case "compareExchange": IRACompareExchange(receiver.place, values[0], values[1], successOrder, failureOrder);
+			case "fetchAdd": IRAFetchAdd(receiver.place, values[0], successOrder);
+			case "fetchSub": IRAFetchSub(receiver.place, values[0], successOrder);
+			case "fetchAnd": IRAFetchAnd(receiver.place, values[0], successOrder);
+			case "fetchOr": IRAFetchOr(receiver.place, values[0], successOrder);
+			case "fetchXor": IRAFetchXor(receiver.place, values[0], successOrder);
+			case _: return unsupported(expression, 'TCall(c.Atomic.$method:not-admitted)');
+		};
+		appendInstruction(result, IRIOAtomic(operation), sourceSpan(expression.pos), 'c11-atomic-$method');
+		registerValueTemporary(result.id, 'c11-atomic-$method-result');
+		return {id: result.id, type: result.type, mapping: element};
+	}
+
+	/** Parse the closed `c.MemoryOrder` value before C token selection. */
+	function requireAtomicMemoryOrder(expression:TypedExpr, role:String):HxcIRMemoryOrder {
+		final value = switch unwrapExpression(expression).expr {
+			case TConst(TString(text)): text;
+			case _: return unsupported(expression, 'TCall(c.Atomic:$role:memory-order-must-be-constant)');
+		};
+		return switch value {
+			case "relaxed": IRMO_Relaxed;
+			case "consume": IRMO_Consume;
+			case "acquire": IRMO_Acquire;
+			case "release": IRMO_Release;
+			case "acq_rel": IRMO_AcquireRelease;
+			case "seq_cst": IRMO_SequentiallyConsistent;
+			case _: unsupported(expression, 'TCall(c.Atomic:$role:unknown-memory-order=$value)');
+		};
+	}
+
 	static function fieldAccessName(access:FieldAccess):String {
 		return switch access {
 			case FInstance(_, _, field) | FStatic(_, field) | FAnon(field) | FClosure(_, field): field.get().name;
@@ -18152,6 +18286,7 @@ private class FunctionBuilder {
 			case IRTInt(width, signed): ("" + (signed ? "i" : "u") + width);
 			case IRTAbiInteger(kind): 'abi:$kind';
 			case IRTFloat(width): 'f$width';
+			case IRTAtomic(element): 'atomic<${typeKey(element)}>';
 			case IRTString: "string-utf8";
 			case IRTManagedString: "managed-string-utf8";
 			case IRTCString: "cstring-borrowed-literal";

@@ -1387,6 +1387,7 @@ class CBodyDispatchPreparer {
 			case IRTInt(width, signed): '${signed ? "i" : "u"}$width';
 			case IRTAbiInteger(kind): 'abi:${Std.string(kind)}';
 			case IRTFloat(width): 'f$width';
+			case IRTAtomic(element): 'atomic<${typeKey(element)}>';
 			case IRTString: "string";
 			case IRTManagedString: "managed-string";
 			case IRTCString: "cstring-borrowed-literal";

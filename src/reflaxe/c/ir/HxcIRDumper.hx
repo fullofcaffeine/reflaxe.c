@@ -244,6 +244,7 @@ class HxcIRDumper {
 			case IRIOConvert(valueId, kind, targetType, selected, failure):
 				'convert value=${quote(valueId)} kind=${conversion(kind)} target=${typeRef(targetType)} implementation=${implementation(selected)} failure=${failure == null ? "none" : failureEdge(failure)}';
 			case IRIODynamic(operation): dynamicInstruction(operation);
+			case IRIOAtomic(operation): atomicInstruction(operation);
 			case IRIOException(operation): exceptionInstruction(operation);
 			case IRIOCall(call): renderCall(call);
 			case IRIOConstructAggregate(instanceId, fields):
@@ -292,6 +293,38 @@ class HxcIRDumper {
 			case IRIOLifetime(place, from, to, reason):
 				'lifetime place=${renderPlace(place)} transition=${state(from)}->${state(to)} reason=${quote(reason)}';
 		}
+	}
+
+	function atomicInstruction(operation:HxcIRAtomicInstruction):String {
+		function order(value:HxcIRMemoryOrder):String
+			return switch value {
+				case IRMO_Relaxed: "relaxed";
+				case IRMO_Consume: "consume";
+				case IRMO_Acquire: "acquire";
+				case IRMO_Release: "release";
+				case IRMO_AcquireRelease: "acquire-release";
+				case IRMO_SequentiallyConsistent: "sequentially-consistent";
+			};
+		return switch operation {
+			case IRAInitialize(place, valueId): 'atomic-initialize place=${renderPlace(place)} value=${quote(valueId)}';
+			case IRALoad(place, memoryOrder): 'atomic-load place=${renderPlace(place)} order=${order(memoryOrder)}';
+			case IRAStore(place, valueId, memoryOrder):
+				'atomic-store place=${renderPlace(place)} value=${quote(valueId)} order=${order(memoryOrder)}';
+			case IRAExchange(place, valueId, memoryOrder):
+				'atomic-exchange place=${renderPlace(place)} value=${quote(valueId)} order=${order(memoryOrder)}';
+			case IRACompareExchange(place, expectedValueId, replacementValueId, success, failure):
+				'atomic-compare-exchange place=${renderPlace(place)} expected=${quote(expectedValueId)} replacement=${quote(replacementValueId)} success=${order(success)} failure=${order(failure)}';
+			case IRAFetchAdd(place, valueId, memoryOrder):
+				'atomic-fetch-add place=${renderPlace(place)} value=${quote(valueId)} order=${order(memoryOrder)}';
+			case IRAFetchSub(place, valueId, memoryOrder):
+				'atomic-fetch-sub place=${renderPlace(place)} value=${quote(valueId)} order=${order(memoryOrder)}';
+			case IRAFetchAnd(place, valueId, memoryOrder):
+				'atomic-fetch-and place=${renderPlace(place)} value=${quote(valueId)} order=${order(memoryOrder)}';
+			case IRAFetchOr(place, valueId, memoryOrder):
+				'atomic-fetch-or place=${renderPlace(place)} value=${quote(valueId)} order=${order(memoryOrder)}';
+			case IRAFetchXor(place, valueId, memoryOrder):
+				'atomic-fetch-xor place=${renderPlace(place)} value=${quote(valueId)} order=${order(memoryOrder)}';
+		};
 	}
 
 	function exceptionInstruction(operation:HxcIRExceptionInstruction):String
@@ -484,6 +517,7 @@ class HxcIRDumper {
 			case IRTInt(width, signed): '${signed ? "i" : "u"}$width';
 			case IRTAbiInteger(kind): 'abi-int(${abiIntegerKind(kind)})';
 			case IRTFloat(width): 'f$width';
+			case IRTAtomic(element): 'atomic(${typeRef(element)})';
 			case IRTString: "string-utf8";
 			case IRTManagedString: "managed-string-utf8";
 			case IRTCString: "cstring-borrowed-literal";

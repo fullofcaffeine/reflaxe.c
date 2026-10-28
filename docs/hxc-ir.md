@@ -891,6 +891,42 @@ address is a collector-managed base or merely an ordinary pointer. `CAST` owns
 the safe declarator and calls; it does not rediscover liveness or repair a
 missing root.
 
+## Atomic storage and operations
+
+An atomic value is shared storage that several threads may read and write
+without a data race, such as the counter inside `haxe.atomic.AtomicInt`.
+HxcIR models it as storage, not as an ordinary value, because copying an atomic
+object would silently create a second, unshared counter.
+
+- `IRTAtomic(element)` is a C11 `_Atomic` location that holds an `element`
+  value. It may appear only in addressable storage, such as a class field. The
+  validator rejects it as an ordinary copied SSA value: "atomic storage is
+  non-copyable; use a typed atomic operation".
+- `IRIOAtomic` carries one `HxcIRAtomicInstruction` on that place: initialize,
+  load, store, exchange, compare-exchange, or fetch-add/sub/and/or/xor. Every
+  operation except initialization names a `HxcIRMemoryOrder`, a closed copy of
+  the C11 memory orders. Compare-exchange keeps separate success and failure
+  orders and returns the previously observed value, not C's success flag.
+- Atomic operations lower to direct C11 `<stdatomic.h>` calls. They select no
+  `hxrt` feature; the runtime plan does not list them.
+
+Atomics and threads are off by default. A build opts in explicitly:
+`-D hxc_atomic_backend=c11` enables atomic storage, and
+`-D hxc_thread_backend=posix` (hosted environment only, and only together with
+the C11 atomic backend) enables the POSIX thread runtime slices. Only these
+validated selections make the compiler advertise `target.atomics` or
+`target.threaded`. The selection is an explicit opt-in, not a toolchain probe.
+`test/atomic_lowering/run.py` and `test/bootstrap/run.py` hold its evidence.
+Public `Thread` creation and the complete `sys.thread` surface remain
+unsupported; Beads issue `haxe_c-r9i` owns them, blocked on escaping closures
+(`haxe_c-ckk`).
+
+A Haxe abstract that wraps an atomic, such as `AtomicInt`, casts `this` to its
+own carrier before an operation. Place lowering looks through such a cast only
+when the cast keeps exactly the same C carrier. A type-changing cast is rejected
+as `place(TCast:type-changing)`, so a store can never write a value of the
+wrong C type.
+
 ## Unsupported typed AST nodes
 
 The body frontend calls

@@ -189,7 +189,7 @@ private class CFloat32UseVisitor extends HxcIRTraversalVisitor {
 		switch type {
 			case IRTFloat(32):
 				found = true;
-			case IRTBool | IRTInt(_, _) | IRTAbiInteger(_) | IRTFloat(_) | IRTString | IRTManagedString | IRTCString | IRTCallScopedCString |
+			case IRTBool | IRTInt(_, _) | IRTAbiInteger(_) | IRTFloat(_) | IRTAtomic(_) | IRTString | IRTManagedString | IRTCString | IRTCallScopedCString |
 				IRTMutableCStringBuffer | IRTVoid | IRTInstance(_) | IRTPointer(_, _) | IRTNullable(_, _) | IRTFunction(_, _) | IRTFixedArray(_, _, _) |
 				IRTSpan(_, _) | IRTDynamic:
 		}
@@ -1190,7 +1190,7 @@ class CStaticFunctionProjectEmitter {
 				final planId = emitter.optionalPlanId(type);
 				if (dependencies.indexOf(planId) == -1)
 					dependencies.push(planId);
-			case IRTFixedArray(element, _, _):
+			case IRTAtomic(element) | IRTFixedArray(element, _, _):
 				addDefinitionTypeDependencies(element, dependencies, emitter);
 			case IRTPointer(pointee, _) | IRTNullable(pointee, IRNPointer) | IRTSpan(pointee, _):
 				addDeclarationHeaderDependencies(pointee, dependencies, emitter);
@@ -1250,7 +1250,7 @@ class CStaticFunctionProjectEmitter {
 				final planId = emitter.optionalPlanId(type);
 				if (dependencies.indexOf(planId) == -1)
 					dependencies.push(planId);
-			case IRTFixedArray(value, _, _):
+			case IRTAtomic(value) | IRTFixedArray(value, _, _):
 				addDeclarationHeaderDependencies(value, dependencies, emitter);
 			case IRTFunction(parameters, result):
 				for (parameter in parameters)

@@ -90,6 +90,9 @@ enum CBodyValueKind {
 
 	CBVKPrimitive(mapping:CPrimitiveTypeMapping);
 
+	/** One embedded, non-copyable C11 atomic location. */
+	CBVKAtomic(element:CBodyValueType);
+
 	/**
 		An immutable Haxe String view whose bytes have program-long storage.
 
@@ -177,6 +180,9 @@ class CBodyValueType {
 			case CBVKPrimitive(mapping):
 				this.irType = mapping.irType;
 				this.cSpelling = mapping.cSpelling;
+			case CBVKAtomic(element):
+				this.irType = IRTAtomic(element.irType);
+				this.cSpelling = 'c11-atomic<${element.cSpelling}>';
 			case CBVKStaticString(sourceIdentity):
 				this.irType = IRTString;
 				this.cSpelling = 'static-haxe-string-view:$sourceIdentity';
@@ -257,6 +263,10 @@ class CBodyValueType {
 
 	public static function primitive(mapping:CPrimitiveTypeMapping):CBodyValueType
 		return new CBodyValueType(CBVKPrimitive(mapping));
+
+	/** Preserve the exact element type inside one non-copyable atomic location. */
+	public static function atomic(element:CBodyValueType):CBodyValueType
+		return new CBodyValueType(CBVKAtomic(element));
 
 	/** Select the private carrier without changing any ordinary typed value. */
 	public static function dynamicValue():CBodyValueType
@@ -342,10 +352,18 @@ class CBodyValueType {
 	public function primitiveMapping():Null<CPrimitiveTypeMapping> {
 		return switch kind {
 			case CBVKPrimitive(mapping): mapping;
-			case CBVKDynamic | CBVKStaticString(_) | CBVKManagedString(_) | CBVKFixedArray(_, _, _) | CBVKSpan(_, _) | CBVKCString | CBVKImport(_) |
-				CBVKAggregate(_) | CBVKEnum(_) | CBVKOwnedClass(_) | CBVKClass(_, _) | CBVKInterface(_) | CBVKArray(_) | CBVKIterator(_) | CBVKIntMap(_) |
-				CBVKStringMap(_) | CBVKTypedMap(_) | CBVKBytes(_) | CBVKOptional(_) | CBVKFunction(_, _) | CBVKClosureCapturePointer(_) | CBVKNativeRef(_) |
-				CBVKCStringRef | CBVKCStringBufferRef | CBVKClosureContext | CBVKStackClosure(_, _, _): null;
+			case CBVKDynamic | CBVKAtomic(_) | CBVKStaticString(_) | CBVKManagedString(_) | CBVKFixedArray(_, _, _) | CBVKSpan(_, _) | CBVKCString |
+				CBVKImport(_) | CBVKAggregate(_) | CBVKEnum(_) | CBVKOwnedClass(_) | CBVKClass(_, _) | CBVKInterface(_) | CBVKArray(_) | CBVKIterator(_) |
+				CBVKIntMap(_) | CBVKStringMap(_) | CBVKTypedMap(_) | CBVKBytes(_) | CBVKOptional(_) | CBVKFunction(_, _) | CBVKClosureCapturePointer(_) |
+				CBVKNativeRef(_) | CBVKCStringRef | CBVKCStringBufferRef | CBVKClosureContext | CBVKStackClosure(_, _, _): null;
+		};
+	}
+
+	/** Return the value stored by this atomic location, or null for other types. */
+	public function atomicElement():Null<CBodyValueType> {
+		return switch kind {
+			case CBVKAtomic(element): element;
+			case _: null;
 		};
 	}
 
@@ -403,9 +421,9 @@ class CBodyValueType {
 
 	public function aggregateValue():Null<CPreparedBodyAggregate> {
 		return switch kind {
-			case CBVKDynamic | CBVKPrimitive(_) | CBVKStaticString(_) | CBVKManagedString(_) | CBVKFixedArray(_, _, _) | CBVKSpan(_, _) | CBVKCString |
-				CBVKImport(_) | CBVKOwnedClass(_) | CBVKInterface(_) | CBVKArray(_) | CBVKIterator(_) | CBVKIntMap(_) | CBVKStringMap(_) | CBVKTypedMap(_) |
-				CBVKBytes(_) | CBVKOptional(_) | CBVKFunction(_, _) | CBVKClosureCapturePointer(_) | CBVKNativeRef(_) | CBVKCStringRef |
+			case CBVKDynamic | CBVKPrimitive(_) | CBVKAtomic(_) | CBVKStaticString(_) | CBVKManagedString(_) | CBVKFixedArray(_, _, _) | CBVKSpan(_, _) |
+				CBVKCString | CBVKImport(_) | CBVKOwnedClass(_) | CBVKInterface(_) | CBVKArray(_) | CBVKIterator(_) | CBVKIntMap(_) | CBVKStringMap(_) |
+				CBVKTypedMap(_) | CBVKBytes(_) | CBVKOptional(_) | CBVKFunction(_, _) | CBVKClosureCapturePointer(_) | CBVKNativeRef(_) | CBVKCStringRef |
 				CBVKCStringBufferRef | CBVKClosureContext | CBVKStackClosure(_, _, _): null;
 			case CBVKAggregate(aggregate): aggregate;
 			case CBVKEnum(_) | CBVKClass(_, _): null;
@@ -414,20 +432,20 @@ class CBodyValueType {
 
 	public function enumValue():Null<CPreparedBodyEnumInstance> {
 		return switch kind {
-			case CBVKDynamic | CBVKPrimitive(_) | CBVKStaticString(_) | CBVKManagedString(_) | CBVKFixedArray(_, _, _) | CBVKSpan(_, _) | CBVKCString |
-				CBVKImport(_) | CBVKAggregate(_) | CBVKOwnedClass(_) | CBVKClass(_, _) | CBVKInterface(_) | CBVKArray(_) | CBVKIterator(_) | CBVKIntMap(_) |
-				CBVKStringMap(_) | CBVKTypedMap(_) | CBVKBytes(_) | CBVKOptional(_) | CBVKFunction(_, _) | CBVKClosureCapturePointer(_) | CBVKNativeRef(_) |
-				CBVKCStringRef | CBVKCStringBufferRef | CBVKClosureContext | CBVKStackClosure(_, _, _): null;
+			case CBVKDynamic | CBVKPrimitive(_) | CBVKAtomic(_) | CBVKStaticString(_) | CBVKManagedString(_) | CBVKFixedArray(_, _, _) | CBVKSpan(_, _) |
+				CBVKCString | CBVKImport(_) | CBVKAggregate(_) | CBVKOwnedClass(_) | CBVKClass(_, _) | CBVKInterface(_) | CBVKArray(_) | CBVKIterator(_) |
+				CBVKIntMap(_) | CBVKStringMap(_) | CBVKTypedMap(_) | CBVKBytes(_) | CBVKOptional(_) | CBVKFunction(_, _) | CBVKClosureCapturePointer(_) |
+				CBVKNativeRef(_) | CBVKCStringRef | CBVKCStringBufferRef | CBVKClosureContext | CBVKStackClosure(_, _, _): null;
 			case CBVKEnum(value): value;
 		};
 	}
 
 	public function classValue():Null<CPreparedBodyClass> {
 		return switch kind {
-			case CBVKDynamic | CBVKPrimitive(_) | CBVKStaticString(_) | CBVKManagedString(_) | CBVKFixedArray(_, _, _) | CBVKSpan(_, _) | CBVKCString |
-				CBVKImport(_) | CBVKAggregate(_) | CBVKEnum(_) | CBVKInterface(_) | CBVKArray(_) | CBVKIterator(_) | CBVKIntMap(_) | CBVKStringMap(_) |
-				CBVKTypedMap(_) | CBVKBytes(_) | CBVKOptional(_) | CBVKFunction(_, _) | CBVKClosureCapturePointer(_) | CBVKNativeRef(_) | CBVKCStringRef |
-				CBVKCStringBufferRef | CBVKClosureContext | CBVKStackClosure(_, _, _): null;
+			case CBVKDynamic | CBVKPrimitive(_) | CBVKAtomic(_) | CBVKStaticString(_) | CBVKManagedString(_) | CBVKFixedArray(_, _, _) | CBVKSpan(_, _) |
+				CBVKCString | CBVKImport(_) | CBVKAggregate(_) | CBVKEnum(_) | CBVKInterface(_) | CBVKArray(_) | CBVKIterator(_) | CBVKIntMap(_) |
+				CBVKStringMap(_) | CBVKTypedMap(_) | CBVKBytes(_) | CBVKOptional(_) | CBVKFunction(_, _) | CBVKClosureCapturePointer(_) | CBVKNativeRef(_) |
+				CBVKCStringRef | CBVKCStringBufferRef | CBVKClosureContext | CBVKStackClosure(_, _, _): null;
 			case CBVKOwnedClass(value) | CBVKClass(value, _): value;
 		};
 	}
@@ -514,10 +532,10 @@ class CBodyValueType {
 		return switch kind {
 			case CBVKOwnedClass(_): false;
 			case CBVKClass(_, nullable): nullable;
-			case CBVKDynamic | CBVKPrimitive(_) | CBVKStaticString(_) | CBVKManagedString(_) | CBVKFixedArray(_, _, _) | CBVKSpan(_, _) | CBVKCString |
-				CBVKImport(_) | CBVKAggregate(_) | CBVKEnum(_) | CBVKInterface(_) | CBVKArray(_) | CBVKIterator(_) | CBVKIntMap(_) | CBVKStringMap(_) |
-				CBVKTypedMap(_) | CBVKBytes(_) | CBVKOptional(_) | CBVKFunction(_, _) | CBVKClosureCapturePointer(_) | CBVKNativeRef(_) | CBVKCStringRef |
-				CBVKCStringBufferRef | CBVKClosureContext | CBVKStackClosure(_, _, _): null;
+			case CBVKDynamic | CBVKPrimitive(_) | CBVKAtomic(_) | CBVKStaticString(_) | CBVKManagedString(_) | CBVKFixedArray(_, _, _) | CBVKSpan(_, _) |
+				CBVKCString | CBVKImport(_) | CBVKAggregate(_) | CBVKEnum(_) | CBVKInterface(_) | CBVKArray(_) | CBVKIterator(_) | CBVKIntMap(_) |
+				CBVKStringMap(_) | CBVKTypedMap(_) | CBVKBytes(_) | CBVKOptional(_) | CBVKFunction(_, _) | CBVKClosureCapturePointer(_) | CBVKNativeRef(_) |
+				CBVKCStringRef | CBVKCStringBufferRef | CBVKClosureContext | CBVKStackClosure(_, _, _): null;
 		};
 	}
 
@@ -533,6 +551,7 @@ class CBodyValueType {
 	public function containsCollectorManagedReference():Bool {
 		return switch kind {
 			case CBVKDynamic: true;
+			case CBVKAtomic(element): element.containsCollectorManagedReference();
 			case CBVKClass(value, _): value.managedByCollector;
 			case CBVKAggregate(value):
 				var found = false;
@@ -564,6 +583,7 @@ class CBodyValueType {
 	public function containsInterfaceReference():Bool {
 		return switch kind {
 			case CBVKDynamic: false;
+			case CBVKAtomic(element): element.containsInterfaceReference();
 			case CBVKInterface(_): true;
 			case CBVKAggregate(value):
 				var found = false;
@@ -848,6 +868,9 @@ class CBodyAggregateRegistry {
 
 	public function valueType(type:Type, position:Position, ownerModule:String, sourcePath:String, fail:(Position, String) -> Void,
 			node:String):CBodyValueType {
+		final atomic = atomicValueType(type, position, ownerModule, sourcePath, fail, node);
+		if (atomic != null)
+			return atomic;
 		final knownNominal = cachedExactNominalValueType(type);
 		if (knownNominal != null)
 			return knownNominal;
@@ -944,6 +967,30 @@ class CBodyAggregateRegistry {
 				anonymousValueType(reference, aliasOwner, position, ownerModule, sourcePath, fail, node);
 			case _:
 				CBodyValueType.primitive(admittedPrimitive(resolved, position, fail, node));
+		};
+	}
+
+	/**
+		Recognize only the exact compiler-owned `c.Atomic<T>` metal type.
+
+		The recursive element classification retains the natural Haxe type. Later
+		validation admits only C11-compatible scalar or managed-reference elements.
+	**/
+	function atomicValueType(type:Type, position:Position, ownerModule:String, sourcePath:String, fail:(Position, String) -> Void,
+			node:String):Null<CBodyValueType> {
+		return switch type {
+			case TAbstract(reference, parameters):
+				final definition = reference.get();
+				if (definition.pack.length == 1 && definition.pack[0] == "c" && definition.name == "Atomic" && parameters.length == 1) {
+					final element = valueType(parameters[0], position, ownerModule, sourcePath, fail, '$node.atomic-element');
+					if (element.atomicElement() != null || element.irType == IRTVoid)
+						return rejected(fail, position, '$node:atomic-element-not-a-value:${element.cSpelling}');
+					CBodyValueType.atomic(element);
+				} else {
+					null;
+				}
+			case _:
+				null;
 		};
 	}
 

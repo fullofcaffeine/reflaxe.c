@@ -254,13 +254,12 @@ must leave no live block or partially published owner.
 The runner prints the compiler identity, runtime ABI, selected feature set,
 seed, limit, and phase when a check fails. It compares strict C11 `O0`, `O2`,
 AddressSanitizer, and UndefinedBehaviorSanitizer reports. LeakSanitizer also
-runs when the platform compiler provides it. The current runtime has no thread
-feature, so this lane reports operating-system thread stress as not applicable;
-E5.T11 owns that future synchronization evidence.
+runs when the platform compiler provides it. ThreadSanitizer evidence for the
+separate POSIX synchronization slice runs in its focused thread contract.
 
 ### ABI and versioning
 
-The runtime ABI is internal and versioned, currently 0.19.0. Generated
+The runtime ABI is internal and versioned, currently 0.20.0. Generated
 runtime-using C emits a structural C11 `_Static_assert` for the required major.
 Minor and patch changes within the same major are compatible by current policy;
 a major mismatch fails native compilation. Runtime-free output contains no
@@ -272,18 +271,19 @@ structs must not cross public application exports.
 
 ### Threads and collection
 
-No checked-in feature provides threads, atomics, or thread-local error state.
-The selected `gc` slice implements the precise non-moving single-thread
+The optional `thread` slice provides POSIX mutexes, condition variables,
+counting semaphores, and thread-local keys. C11 atomics are direct generated C
+and do not select this slice. The selected `gc` slice implements the precise non-moving single-thread
 collector from [ADR 0005](adr/0005-precise-nonmoving-collector.md), including
 explicit root chains and exact pins instead of arbitrary foreign/interior
 pointer rooting. It can trace several registered execution-context chains, but
-it supplies no synchronization; E5.T11 owns real thread coordination and the
-stop-the-world handshake. Current records contain no hidden global mutable
-runtime state.
+collector synchronization and a stop-the-world handshake remain separate work.
 
 ### Environments and external dependencies
 
-The generated `io` root is hosted-only. Its source has a defensive freestanding
+The generated `io` and `thread` roots are hosted-only. The `thread` root also
+requires the explicit POSIX platform backend and carries its own `pthread`
+link requirement. The `io` source has a defensive freestanding
 branch that returns `HXC_STATUS_IO_ERROR`, but the planner rejects selecting it
 for a freestanding compiler program. The native allocator seed supports a
 caller-supplied allocator in freestanding evidence; its hosted default uses the
@@ -858,6 +858,26 @@ pull in neither allocation nor full strings; runtime-String programs select
 their separate String dependencies according to the expression that produced
 the value.
 
+<!-- hxrt-feature:thread -->
+### `thread`
+
+Compiler-selectable hosted POSIX synchronization. It owns recursive mutexes,
+condition variables with an internal mutex, counting semaphore waits, bounded
+timeouts, and isolated native thread-local keys. Every operation reports a
+closed `hxc_status`; callers must dispose objects only after all users stop.
+Selecting this feature adds `pthread`, while C11 atomic-only programs remain
+runtime-free and have no pthread symbols.
+
+<!-- hxrt-feature:thread-gc -->
+### `thread-gc`
+
+Compiler-selectable stop-the-world coordination for programs that combine
+POSIX threads with collector-owned values. Each managed thread registers one
+exact root chain and reaches generated safepoints. Collection and allocation
+park every peer before the unchanged precise collector reads roots. This slice
+depends on both `gc` and `thread`; neither standalone slice gains the other's
+linkage or state.
+
 <!-- hxrt-feature:object -->
 ### `object`
 
@@ -902,6 +922,8 @@ them.
 | `include/hxrt/bytes.h`, `src/bytes.c` | Compiler-selectable fixed-length mutable byte storage, shared identity, checked ranges, and overlap-safe copying. |
 | `include/hxrt/bytes_string.h`, `src/bytes_string.c` | Compiler-selectable checked UTF-8 decoding from mutable Bytes into a separately owned String. |
 | `include/hxrt/gc.h`, `src/gc.c` | Compiler-selectable precise non-moving collector, exact roots/pins, pressure policy, and observable reports. |
+| `include/hxrt/thread.h`, `src/thread.c` | Compiler-selectable hosted POSIX mutex, condition, semaphore, and TLS adapter. |
+| `include/hxrt/thread_gc.h`, `src/thread_gc.c` | Compiler-selectable stop-the-world composition for managed POSIX threads. |
 | `include/hxrt/object.h`, `src/object.c` | Compiler-selectable immutable managed-payload descriptors and exact trace/finalizer dispatch; no allocation or collection. |
 | `include/hxrt/string_literal.h` | Compiler-selectable dependency-only direct literal layout. |
 | `include/hxrt/string_scalar.h`, `include/hxrt/string_decode.h`, `src/string_scalar.c` | Compiler-selectable allocation-free UTF-8 scalar inspection, including ordinary Haxe `String.charAt`; the decoder header is an internal implementation shared with the broader String seed. |

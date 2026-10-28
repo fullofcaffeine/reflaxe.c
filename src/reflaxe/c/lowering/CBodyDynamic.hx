@@ -472,6 +472,7 @@ class CBodyDynamicRegistry {
 			case IRTInt(width, signed): 'int:$width:${signed ? "signed" : "unsigned"}';
 			case IRTAbiInteger(kind): 'abi-int:$kind';
 			case IRTFloat(width): 'float:$width';
+			case IRTAtomic(element): 'atomic<${exactTypeKey(element)}>';
 			case IRTString: "string-utf8";
 			case IRTManagedString: "managed-string-utf8";
 			case IRTCString: "cstring";

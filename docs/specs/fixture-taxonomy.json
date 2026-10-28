@@ -196,6 +196,7 @@
         "project-layout",
         "gc-runtime",
         "runtime-stress",
+        "thread-runtime",
         "runtime-feature-graph",
         "array-runtime",
         "string-map",
@@ -253,6 +254,7 @@
         "string-map",
         "bytes-runtime",
         "gc-runtime",
+        "thread-runtime",
         "string-runtime",
         "date-time"
       ]
@@ -1028,7 +1030,25 @@
         "each injected failure leaves no live allocation, release underflow, partial publication, or stale exception cleanup",
         "malformed UTF-8 and invalid collector descriptors fail before allocation",
         "strict C11 O0/O2 and address/undefined sanitizer reports are identical under every available identified compiler; leak sanitizer runs where the platform toolchain provides it",
-        "every failure names compiler identity, runtime ABI, selected feature set, seed, limit, and phase; operating-system thread stress remains explicitly inapplicable until the runtime has a thread feature"
+        "every failure names compiler identity, runtime ABI, selected feature set, seed, limit, and phase; synchronization and data-race evidence belongs to the focused thread-runtime suite"
+      ]
+    },
+    {
+      "id": "thread-runtime",
+      "directory": "test/thread_runtime",
+      "runner": [
+        "python3",
+        "test/thread_runtime/run.py"
+      ],
+      "types": [
+        "runtime",
+        "abi"
+      ],
+      "status": "active",
+      "assertions": [
+        "recursive mutexes, condition wakeups, counting semaphore nonblocking, timed, and blocking waits, and native TLS isolation pass across real POSIX threads",
+        "strict C11 O0 and O2 pass for every available identified compiler family",
+        "ThreadSanitizer runs and remains clean when a compile-and-run probe proves the platform lane is available"
       ]
     },
     {

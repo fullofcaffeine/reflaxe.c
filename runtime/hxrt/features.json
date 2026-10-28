@@ -36,11 +36,6 @@
       "ownerTask": "E5.T10"
     },
     {
-      "id": "thread",
-      "summary": "Threads, synchronization, thread roots, TLS, and atomics.",
-      "ownerTask": "E5.T11"
-    },
-    {
       "id": "unicode",
       "summary": "Unicode scalar algorithms not feasible as direct or local specialized C.",
       "ownerTask": "E5.T02"
@@ -689,7 +684,7 @@
       ],
       "artifacts": [
         {
-          "sourceSha256": "93e3f6e8e02534c389d57855f207013e60ade8136ac0c595821c27df22d97410",
+          "sourceSha256": "dfb187c47d51e8d5b8bd9ca873e8eaace54dd9b9446ec91f0c41c24ce99eba2d",
           "kind": "runtime-header",
           "outputPath": "runtime/include/hxrt/gc.h",
           "sourcePath": "runtime/hxrt/include/hxrt/gc.h"
@@ -1127,7 +1122,7 @@
       "symbols": [],
       "artifacts": [
         {
-          "sourceSha256": "7d4f67124bf94b76bfc24d5db973426f48f3f9f37daeae975fd4948f5b1dea25",
+          "sourceSha256": "4ae5831a9d2ec013f312b363a620bfddf50a2138867fdb12afd9afbf308a2a1d",
           "kind": "runtime-header",
           "outputPath": "runtime/include/hxrt/base.h",
           "sourcePath": "runtime/hxrt/include/hxrt/base.h"
@@ -1747,6 +1742,134 @@
         "referencePath": "docs/hxrt.md",
         "selectionRoots": [
           {
+            "description": "A reachable sys.thread synchronization or TLS operation requires the selected POSIX adapter.",
+            "id": "synchronization-operation",
+            "kind": "hxc-ir-operation"
+          }
+        ],
+        "runtimeRationale": "POSIX object lifetime, native error mapping, wakeup loops, timeout conversion, and TLS key isolation require one hosted adapter shared with collector coordination.",
+        "evidence": [
+          "runtime/hxrt/test/thread_contract.c",
+          "test/runtime/runtime-feature-graph/run.py"
+        ],
+        "directAlternative": "C11 atomics remain direct generated C and do not select pthreads or this runtime feature.",
+        "contract": "Owns recursive mutexes, condition variables with an internal mutex, counting waits, bounded timeouts, and isolated native TLS keys through checked status boundaries.",
+        "programLocalAlternative": "A closed single-thread program omits synchronization rather than simulating it with local mutable state."
+      },
+      "dependencies": [
+        "status"
+      ],
+      "id": "thread",
+      "availability": "compiler-selectable",
+      "symbols": [
+        "hxc_condition_acquire",
+        "hxc_condition_broadcast",
+        "hxc_condition_dispose",
+        "hxc_condition_init",
+        "hxc_condition_release",
+        "hxc_condition_signal",
+        "hxc_condition_try_acquire",
+        "hxc_condition_wait",
+        "hxc_mutex_acquire",
+        "hxc_mutex_dispose",
+        "hxc_mutex_init",
+        "hxc_mutex_release",
+        "hxc_mutex_try_acquire",
+        "hxc_semaphore_acquire",
+        "hxc_semaphore_dispose",
+        "hxc_semaphore_init",
+        "hxc_semaphore_release",
+        "hxc_semaphore_try_acquire",
+        "hxc_tls_key_dispose",
+        "hxc_tls_key_get",
+        "hxc_tls_key_init",
+        "hxc_tls_key_set"
+      ],
+      "artifacts": [
+        {
+          "sourceSha256": "7372d59f1aa8578873539a102461abba3bb2ba730c5e9155a593ba223557e29e",
+          "kind": "runtime-header",
+          "outputPath": "runtime/include/hxrt/thread.h",
+          "sourcePath": "runtime/hxrt/include/hxrt/thread.h"
+        },
+        {
+          "sourceSha256": "ee99ff5df639a65c247a5b59663f92d4741a46bf2114fd5d453d7495eb9987f1",
+          "kind": "runtime-source",
+          "outputPath": "runtime/src/thread.c",
+          "sourcePath": "runtime/hxrt/src/thread.c"
+        }
+      ],
+      "libraries": [
+        "pthread"
+      ],
+      "minimalAllowed": true,
+      "summary": "Hosted POSIX synchronization, counting semaphores, and thread-local keys.",
+      "defines": [],
+      "environments": [
+        "hosted"
+      ]
+    },
+    {
+      "documentation": {
+        "referencePath": "docs/hxrt.md",
+        "selectionRoots": [
+          {
+            "description": "A managed program that combines operating-system threads with collector-owned values requires coordinated roots and safepoints.",
+            "id": "managed-thread-coordination",
+            "kind": "hxc-ir-operation"
+          }
+        ],
+        "runtimeRationale": "The adapter composes the separately tested collector and POSIX primitives without adding pthread state to either standalone slice.",
+        "evidence": [
+          "runtime/hxrt/test/thread_gc_contract.c",
+          "test/thread_runtime/run.py"
+        ],
+        "directAlternative": "Single-thread collector programs use the gc slice directly, while unmanaged synchronization uses only thread.",
+        "contract": "Parks every other registered managed thread before exact root tracing, collection, or pressure allocation.",
+        "programLocalAlternative": "A program-local lock cannot safely define collector registration, root visibility, and stop-the-world ordering independently."
+      },
+      "dependencies": [
+        "gc",
+        "thread"
+      ],
+      "id": "thread-gc",
+      "availability": "compiler-selectable",
+      "symbols": [
+        "hxc_gc_thread_allocate",
+        "hxc_gc_thread_collect",
+        "hxc_gc_thread_coordinator_dispose",
+        "hxc_gc_thread_coordinator_init",
+        "hxc_gc_thread_safepoint",
+        "hxc_gc_thread_token_register",
+        "hxc_gc_thread_token_unregister"
+      ],
+      "artifacts": [
+        {
+          "sourceSha256": "a68a0c2f780b726d10d65a1f8ff427842aafee615e0337a28ad900c94d793ec5",
+          "kind": "runtime-header",
+          "outputPath": "runtime/include/hxrt/thread_gc.h",
+          "sourcePath": "runtime/hxrt/include/hxrt/thread_gc.h"
+        },
+        {
+          "sourceSha256": "91ee43900cd58ef1f322ae2eb7d999903d1748167b03f28c4e77a5bb7680051d",
+          "kind": "runtime-source",
+          "outputPath": "runtime/src/thread_gc.c",
+          "sourcePath": "runtime/hxrt/src/thread_gc.c"
+        }
+      ],
+      "libraries": [],
+      "minimalAllowed": true,
+      "summary": "Stop-the-world coordination between POSIX threads and the exact collector.",
+      "defines": [],
+      "environments": [
+        "hosted"
+      ]
+    },
+    {
+      "documentation": {
+        "referencePath": "docs/hxrt.md",
+        "selectionRoots": [
+          {
             "description": "Selected by ObjectMap or EnumValueMap after the compiler has chosen an exact key policy and unboxed value layout.",
             "id": "dependency-only",
             "kind": "transitive-dependency"
@@ -1841,6 +1964,8 @@
     "string-map",
     "string-scalar",
     "string-split",
+    "thread",
+    "thread-gc",
     "typed-map"
   ],
   "algorithm": "hxc-runtime-feature-graph-v3",
@@ -1864,6 +1989,7 @@
         "hxc_byte_view",
         "hxc_bytes_ref",
         "hxc_call_cstring",
+        "hxc_condition",
         "hxc_dynamic_type",
         "hxc_exception_cleanup",
         "hxc_exception_frame",
@@ -1876,17 +2002,22 @@
         "hxc_gc_root_table",
         "hxc_gc_stats",
         "hxc_gc_thread",
+        "hxc_gc_thread_coordinator",
+        "hxc_gc_thread_token",
         "hxc_int_bool_map_ref",
         "hxc_iterator_element_ops",
         "hxc_iterator_ref",
         "hxc_iterator_root_ops",
+        "hxc_mutex",
         "hxc_object_header",
         "hxc_owned_cstring",
         "hxc_owned_string",
+        "hxc_semaphore",
         "hxc_string",
         "hxc_string_buffer",
         "hxc_string_map_ref",
         "hxc_string_map_value_ops",
+        "hxc_tls_key",
         "hxc_type_descriptor",
         "hxc_typed_map_key_ops",
         "hxc_typed_map_ref",
@@ -1899,7 +2030,7 @@
     "releaseProvenance": {
       "runtimeCStandard": "c11",
       "sourceHashAlgorithm": "sha256",
-      "sourceSetSha256": "a84eea04e577138a027c93608f6bc0054e289ba2f774d8a90b31506b71dfb9ca",
+      "sourceSetSha256": "769ab7cf3b5c66e9130592d5864a559303e7b90614eacb555dc7b66fb5659ab0",
       "publicHeaderCppStandard": "c++17"
     },
     "generatedCodeCompatibility": "same-major",

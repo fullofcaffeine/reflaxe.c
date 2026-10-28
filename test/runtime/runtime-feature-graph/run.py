@@ -41,6 +41,8 @@ DYNAMIC_CONSUMER = ROOT / "runtime/hxrt/test/dynamic_contract.c"
 EXCEPTION_CONSUMER = ROOT / "runtime/hxrt/test/exception_contract.c"
 OBJECT_CONSUMER = CASE / "object_consumer.c"
 GC_CONSUMER = ROOT / "runtime/hxrt/test/gc_contract.c"
+THREAD_CONSUMER = ROOT / "runtime/hxrt/test/thread_contract.c"
+THREAD_GC_CONSUMER = ROOT / "runtime/hxrt/test/thread_gc_contract.c"
 STRING_CONSUMER = CASE / "string_consumer.c"
 STRING_LOWER_CASE_CONSUMER = CASE / "string_lower_case_consumer.c"
 STRING_SCALAR_CONSUMER = CASE / "string_scalar_consumer.c"
@@ -214,6 +216,8 @@ def validate_catalog(catalog: dict[str, object]) -> None:
         "string-map",
         "string-scalar",
         "string-split",
+        "thread",
+        "thread-gc",
         "typed-map",
     ]:
         raise RuntimeFeatureFailure("catalog compiler-selectable feature inventory drifted")
@@ -281,6 +285,8 @@ def validate_catalog(catalog: dict[str, object]) -> None:
         "string-scalar",
         "string",
         "io",
+        "thread",
+        "thread-gc",
     }:
         raise RuntimeFeatureFailure(f"selective feature set drifted: {sorted(features)!r}")
     expected_dependencies = {
@@ -312,6 +318,8 @@ def validate_catalog(catalog: dict[str, object]) -> None:
         "string-scalar": ["status", "string-literal"],
         "string": ["alloc", "string-scalar"],
         "io": ["status", "string-literal"],
+        "thread": ["status"],
+        "thread-gc": ["gc", "thread"],
     }
     expected_availability = {
         "runtime-base": "compiler-selectable",
@@ -342,6 +350,8 @@ def validate_catalog(catalog: dict[str, object]) -> None:
         "string-scalar": "compiler-selectable",
         "string": "compiler-selectable",
         "io": "compiler-selectable",
+        "thread": "compiler-selectable",
+        "thread-gc": "compiler-selectable",
     }
     source_records: list[tuple[str, str]] = []
     registered_sources: set[str] = set()
@@ -475,10 +485,10 @@ def validate_catalog(catalog: dict[str, object]) -> None:
         str(record(value, "reserved feature").get("id"))
         for value in records(catalog.get("reservedFeatures"), "reserved features")
     }
-    for required in ("reflection", "thread"):
+    for required in ("reflection",):
         if required not in reserved:
             raise RuntimeFeatureFailure(f"catalog omitted reserved independent feature {required}")
-    if "dynamic" in reserved or "exception" in reserved or "io" in reserved:
+    if "dynamic" in reserved or "exception" in reserved or "io" in reserved or "thread" in reserved:
         raise RuntimeFeatureFailure("a compiler-selectable feature remains reserved")
     serialized = json.dumps(catalog, sort_keys=True, ensure_ascii=False)
     if str(ROOT) in serialized or "/Users/" in serialized or "\\" in serialized:
@@ -587,6 +597,8 @@ def validate_plans(plans: dict[str, object]) -> None:
     exception = record(plans.get("exception"), "exception plan")
     object_plan = record(plans.get("object"), "object plan")
     gc_plan = record(plans.get("gc"), "gc plan")
+    thread = record(plans.get("thread"), "thread plan")
+    thread_gc = record(plans.get("threadGc"), "thread-gc plan")
     string_scalar = record(plans.get("stringScalar"), "string scalar plan")
     string = record(plans.get("string"), "string plan")
     minimal = record(plans.get("minimalString"), "minimal string plan")
@@ -680,6 +692,16 @@ def validate_plans(plans: dict[str, object]) -> None:
         raise RuntimeFeatureFailure("object descriptor closure is incomplete or nondeterministic")
     if gc_plan.get("features") != ["runtime-base", "status", "alloc", "object", "gc"]:
         raise RuntimeFeatureFailure("collector closure is incomplete or nondeterministic")
+    if thread.get("features") != ["runtime-base", "status", "thread"]:
+        raise RuntimeFeatureFailure("thread closure is incomplete or nondeterministic")
+    if thread.get("libraries") != ["pthread"]:
+        raise RuntimeFeatureFailure("thread plan omitted its isolated pthread linkage")
+    if thread_gc.get("features") != [
+        "runtime-base", "status", "alloc", "object", "gc", "thread", "thread-gc",
+    ]:
+        raise RuntimeFeatureFailure("thread-gc closure is incomplete or nondeterministic")
+    if thread_gc.get("libraries") != ["pthread"]:
+        raise RuntimeFeatureFailure("thread-gc plan omitted transitive pthread linkage")
     if string_scalar.get("features") != [
         "runtime-base",
         "status",
@@ -711,6 +733,8 @@ def validate_plans(plans: dict[str, object]) -> None:
     validate_selected_reasons(exception, "exception")
     validate_selected_reasons(object_plan, "object")
     validate_selected_reasons(gc_plan, "gc")
+    validate_selected_reasons(thread, "thread")
+    validate_selected_reasons(thread_gc, "thread-gc")
     validate_selected_reasons(string_scalar, "string scalar")
     validate_selected_reasons(string, "string")
     validate_selected_reasons(minimal, "minimal string")
@@ -783,6 +807,10 @@ def validate_plans(plans: dict[str, object]) -> None:
         raise RuntimeFeatureFailure("object build plan omitted its selected source")
     if "runtime/src/gc.c" not in text_list(gc_plan.get("artifacts"), "gc artifacts"):
         raise RuntimeFeatureFailure("collector build plan omitted its selected source")
+    if "runtime/src/thread.c" not in text_list(thread.get("artifacts"), "thread artifacts"):
+        raise RuntimeFeatureFailure("thread build plan omitted its selected source")
+    if "runtime/src/thread_gc.c" not in text_list(thread_gc.get("artifacts"), "thread-gc artifacts"):
+        raise RuntimeFeatureFailure("thread-gc build plan omitted its selected source")
     if "hxc_array_resize" not in text_list(array.get("symbols"), "array symbols"):
         raise RuntimeFeatureFailure("array build plan omitted its selected symbol")
     if "hxc_string_copy" not in text_list(string.get("symbols"), "string symbols"):
@@ -884,11 +912,13 @@ def validate_package(package: dict[str, object], plans: dict[str, object]) -> No
         "exception",
         "object",
         "gc",
+        "thread",
+        "threadGc",
         "stringScalar",
         "string",
         "io",
     ):
-        plan_key = "compilerIo" if name == "io" else name
+        plan_key = "compilerIo" if name == "io" else "threadGc" if name == "threadGc" else name
         plan = record(plans.get(plan_key), f"{name} plan")
         expected_paths = text_list(plan.get("artifacts"), f"{name} plan artifacts")
         values = records(package.get(name), f"{name} package")
@@ -1100,11 +1130,13 @@ def package_from_snapshots(
         "exception",
         "object",
         "gc",
+        "thread",
+        "threadGc",
         "stringScalar",
         "string",
         "io",
     ):
-        plan_key = "compilerIo" if name == "io" else name
+        plan_key = "compilerIo" if name == "io" else "threadGc" if name == "threadGc" else name
         plan = record(plans.get(plan_key), f"{name} plan")
         files: list[dict[str, object]] = []
         for artifact in selected_artifacts_from_snapshot(catalog, plan, name):
@@ -1140,7 +1172,15 @@ def materialize_package(root: Path, values: list[object]) -> tuple[Path, ...]:
     return tuple(sorted(sources))
 
 
-def run_native_case(toolchain: Toolchain, name: str, package: list[object], consumer: Path, expected: str, build: Path) -> None:
+def run_native_case(
+    toolchain: Toolchain,
+    name: str,
+    package: list[object],
+    consumer: Path,
+    expected: str,
+    build: Path,
+    link_flags: tuple[str, ...] = (),
+) -> None:
     package_root = build / name
     sources = materialize_package(package_root, package)
     executable = package_root / f"{name}-consumer"
@@ -1150,6 +1190,7 @@ def run_native_case(toolchain: Toolchain, name: str, package: list[object], cons
         f"-I{package_root / 'runtime/include'}",
         *(str(source) for source in sources),
         str(consumer),
+        *link_flags,
         "-o",
         str(executable),
     ]
@@ -1206,6 +1247,8 @@ def run_native(package: dict[str, object], toolchains: list[Toolchain]) -> None:
     exception_package = records(package.get("exception"), "exception package")
     object_package = records(package.get("object"), "object package")
     gc_package = records(package.get("gc"), "gc package")
+    thread = records(package.get("thread"), "thread package")
+    thread_gc = records(package.get("threadGc"), "thread-gc package")
     string_scalar = records(package.get("stringScalar"), "string scalar package")
     string = records(package.get("string"), "string package")
     string_lower_case = records(package.get("stringLowerCase"), "String lower case package")
@@ -1246,6 +1289,8 @@ def run_native(package: dict[str, object], toolchains: list[Toolchain]) -> None:
                 "gc-contract: OK allocations=265 collections=137 reclaimed=265 pause_ticks=980\n",
                 family_root,
             )
+            run_native_case(toolchain, "thread", thread, THREAD_CONSUMER, "", family_root, ("-pthread",))
+            run_native_case(toolchain, "thread-gc", thread_gc, THREAD_GC_CONSUMER, "", family_root, ("-pthread",))
             run_native_case(
                 toolchain,
                 "string-scalar",

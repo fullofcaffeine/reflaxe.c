@@ -605,6 +605,7 @@ class CPrimitiveContract {
 			case IRTFunction(parameters, result): 'function(${parameters.map(typeRef).join(",")})->${typeRef(result)}';
 			case IRTFixedArray(element, length, witnessId): 'fixed-array:$length:$witnessId<${typeRef(element)}>';
 			case IRTSpan(element, mutable): 'span:${mutable ? "mutable" : "const"}<${typeRef(element)}>';
+			case IRTAtomic(element): 'atomic<${typeRef(element)}>';
 			case IRTDynamic: "dynamic";
 		}
 	}

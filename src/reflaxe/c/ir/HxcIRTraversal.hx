@@ -373,6 +373,8 @@ function walkInstruction(instruction:HxcIRInstruction, site:HxcIRTraversalSite, 
 			walkImplementation(implementation, site, visitor);
 		case IRIODynamic(operation):
 			walkDynamicInstruction(operation);
+		case IRIOAtomic(operation):
+			walkAtomicInstruction(operation, site, visitor);
 		case IRIOException(operation):
 			walkExceptionInstruction(operation);
 		case IRIOCall(call):
@@ -417,13 +419,21 @@ function instructionFailureEdge(kind:HxcIRInstructionKind):Null<HxcIRFailureEdge
 				case IRDBox(_, _) | IRDBoxNull(_) | IRDBoxTypeToken(_) | IRDEqual(_, _, _): null;
 			};
 		case IRIOSequence(_) | IRIOConstant(_) | IRIOFunctionReference(_) | IRIOLoad(_) | IRIOStore(_, _) | IRIOAddress(_) | IRIOBorrowClassField(_) |
-			IRIOUnary(_, _, _) | IRIOBinary(_, _, _, _) | IRIOException(_) | IRIOConstructAggregate(_, _) | IRIOZeroAggregate(_) |
+			IRIOAtomic(_) | IRIOUnary(_, _, _) | IRIOBinary(_, _, _, _) | IRIOException(_) | IRIOConstructAggregate(_, _) | IRIOZeroAggregate(_) |
 			IRIOConstructInterface(_, _, _) | IRIOUpcastInterface(_, _, _, _) | IRIOProject(_, _) | IRIOConstructTag(_, _, _) | IRIOMatchTag(_, _) |
 			IRIOProjectTag(_, _, _, _) | IRIODeallocate(_, _) | IRIORetain(_, _) | IRIORelease(_, _) | IRIOTrace(_, _) | IRIODeclareUninitialized(_) |
 			IRIODeclareManagedCarrier(_, _) | IRIOAcquireManagedCarrier(_, _, _) | IRIOMoveManagedCarrier(_) | IRIODefaultInitialize(_, _, _) |
 			IRIOInitialize(_, _, _, _) | IRIOInitializeFixedArray(_, _, _, _) | IRIOZeroInitializeFixedArray(_, _, _) | IRIOInitializeSpan(_, _, _, _) |
 			IRIOBorrowSpan(_) | IRIOBindVirtualTable(_, _) | IRIOBoundsCheck(_, _, _) | IRIONullCheck(_, _) | IRIOLifetime(_, _, _, _): null;
 	};
+}
+
+function walkAtomicInstruction(operation:HxcIRAtomicInstruction, site:HxcIRTraversalSite, visitor:HxcIRTraversalVisitor):Void {
+	final place = switch operation {
+		case IRAInitialize(value, _) | IRALoad(value, _) | IRAStore(value, _, _) | IRAExchange(value, _, _) | IRACompareExchange(value, _, _, _, _) |
+			IRAFetchAdd(value, _, _) | IRAFetchSub(value, _, _) | IRAFetchAnd(value, _, _) | IRAFetchOr(value, _, _) | IRAFetchXor(value, _, _): value;
+	};
+	walkPlace(place, site, visitor);
 }
 
 function walkConversionKind(kind:HxcIRConversionKind):Void {
@@ -570,7 +580,7 @@ function walkTypeRef(type:HxcIRTypeRef, site:HxcIRTraversalSite, visitor:HxcIRTr
 	switch type {
 		case IRTBool | IRTInt(_, _) | IRTAbiInteger(_) | IRTFloat(_) | IRTString | IRTManagedString | IRTCString | IRTCallScopedCString |
 			IRTMutableCStringBuffer | IRTVoid | IRTInstance(_) | IRTDynamic:
-		case IRTPointer(pointee, _) | IRTNullable(pointee, _) | IRTFixedArray(pointee, _, _) | IRTSpan(pointee, _):
+		case IRTAtomic(pointee) | IRTPointer(pointee, _) | IRTNullable(pointee, _) | IRTFixedArray(pointee, _, _) | IRTSpan(pointee, _):
 			walkTypeRef(pointee, site, visitor);
 		case IRTFunction(parameters, result):
 			for (parameter in parameters)

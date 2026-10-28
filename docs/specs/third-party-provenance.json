@@ -267,6 +267,42 @@
 		  ]
 		},
         {
+          "path": "std/c/_std/haxe/atomic/AtomicBool.hx",
+          "sha256": "882a55993e713a2ac225f38fb8528083764943e7b15500797e367170b6acb8e9",
+          "classification": "upstream-derived",
+          "upstreamComponent": "haxe-standard-library",
+          "upstreamPath": "std/haxe/atomic/AtomicBool.hx",
+          "upstreamRevision": "2c1e544e0a2c7524ef4c8e103f1b0580362ea538",
+          "licenseExpression": "MIT",
+          "noticeFiles": [
+            "LICENSES/HAXE-STDLIB-MIT.txt"
+          ]
+        },
+        {
+          "path": "std/c/_std/haxe/atomic/AtomicInt.hx",
+          "sha256": "38167683bb020b3795fa10b54e90aeb1020f718fb05689739789db31d7345ab4",
+          "classification": "upstream-derived",
+          "upstreamComponent": "haxe-standard-library",
+          "upstreamPath": "std/haxe/atomic/AtomicInt.hx",
+          "upstreamRevision": "2c1e544e0a2c7524ef4c8e103f1b0580362ea538",
+          "licenseExpression": "MIT",
+          "noticeFiles": [
+            "LICENSES/HAXE-STDLIB-MIT.txt"
+          ]
+        },
+        {
+          "path": "std/c/_std/haxe/atomic/AtomicObject.hx",
+          "sha256": "18ace1d033a45f4269d6bd58fd8dd5c2609e5dd96dbd2de40c3278b4fa77c771",
+          "classification": "upstream-derived",
+          "upstreamComponent": "haxe-standard-library",
+          "upstreamPath": "std/haxe/atomic/AtomicObject.hx",
+          "upstreamRevision": "2c1e544e0a2c7524ef4c8e103f1b0580362ea538",
+          "licenseExpression": "MIT",
+          "noticeFiles": [
+            "LICENSES/HAXE-STDLIB-MIT.txt"
+          ]
+        },
+        {
           "path": "std/c/_std/haxe/ds/EnumValueMap.hx",
           "sha256": "6b9675d4f53bef6f829a903fc46a9ed6f921aef00b0e048a949781f83d4e7061",
           "classification": "upstream-derived",

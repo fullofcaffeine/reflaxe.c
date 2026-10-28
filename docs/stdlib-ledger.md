@@ -36,14 +36,13 @@ are likewise excluded while the portable `haxe.Http` and `sys` contracts remain
 included. These exclusions and every discovered top-level std root are part of
 the checked snapshot, so a Haxe upgrade cannot silently change the boundary.
 
-The normal inventory runs on the real `CustomTarget(c)` carrier. C correctly
-does not advertise `target.threaded` or `target.atomics` yet, and upstream
-atomic/thread modules deliberately reject such a target. A second, test-only
-custom target exposes those two facts solely while reading the 16 pinned common
-declaration modules. It has no generator or target override tree. Rows from that
-probe are marked `capability-gated`; this is not C typing, execution evidence,
-or permission to expose either C target capability. E5.T11 still owns the C
-adapter, memory-model, collector-root, and race evidence.
+The normal inventory runs on the real `CustomTarget(c)` carrier. Atomics and
+threads remain disabled by default. An explicit C11 backend now admits the
+target-owned atomic wrappers, and an explicit hosted POSIX backend admits the
+native synchronization and collector-coordination foundation. Public
+`sys.thread.Thread` creation remains blocked on the separately owned escaping
+closure capability, so capability-gated ledger rows are not yet broad stdlib
+parity claims.
 
 At this snapshot the ledger contains 183 source modules and 2,311 public API
 records. Twenty-two rows are `conformant`, including the typed
