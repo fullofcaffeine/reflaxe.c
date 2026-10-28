@@ -15,6 +15,8 @@ import caxecraft.editor.EditorFlowDefinitions.flowSequenceIsReferenced;
 import caxecraft.editor.EditorFlowDefinitions.flowVariableIsReferenced;
 import caxecraft.editor.EditorFlowSequenceSignature.EditorFlowSignatureResult;
 import caxecraft.editor.EditorFlowSequenceSignature.editFlowSequenceSignature;
+import caxecraft.editor.EditorFlowIdentityRename.renameFlowSequence;
+import caxecraft.editor.EditorFlowIdentityRename.renameFlowVariable;
 import caxecraft.scenario.CaxeFlow.FlowRule;
 import caxecraft.scenario.CaxeFlow.FlowSequence;
 import caxecraft.scenario.CaxeFlow.FlowVariable;
@@ -138,10 +140,14 @@ function apply(scenario:Scenario, command:EditorCommand, context:EditorReduction
 			ready(withFlowDefinitions(scenario, putFlowVariable(scenario.flow.variables, variable), scenario.flow.sequences), Rule);
 		case RemoveFlowVariable(id):
 			removeFlowVariableFromScenario(scenario, id);
+		case RenameFlowVariable(before, after):
+			renameFlowVariableInScenario(scenario, before, after);
 		case PutFlowSequence(sequence):
 			ready(withFlowDefinitions(scenario, scenario.flow.variables, putFlowSequence(scenario.flow.sequences, sequence)), Rule);
 		case RemoveFlowSequence(id):
 			removeFlowSequenceFromScenario(scenario, id);
+		case RenameFlowSequence(before, after):
+			renameFlowSequenceInScenario(scenario, before, after);
 		case EditFlowSequenceParameter(sequence, edit):
 			switch editFlowSequenceSignature(scenario, sequence, edit) {
 				case FlowSignatureUpdated(variables, sequences, rules): ready(withFlow(scenario, variables, sequences, rules), Rule);
@@ -501,6 +507,30 @@ private function removeFlowSequenceFromScenario(scenario:Scenario, id:ScenarioId
 	return ready(withFlowDefinitions(scenario, scenario.flow.variables, removeFlowSequence(scenario.flow.sequences, id)), Rule);
 }
 
+/** Rename a variable only when its canonical identity remains unambiguous. */
+private function renameFlowVariableInScenario(scenario:Scenario, before:ScenarioId, after:ScenarioId):EditorReductionResult {
+	if (!hasFlowVariable(scenario, before))
+		return ReductionRejected(MissingFlowVariable(before));
+	if (!isValidScenarioIdText(after.text()))
+		return ReductionRejected(InvalidFlowDefinitionName(after));
+	if (!same(before, after) && (hasFlowVariable(scenario, after) || hasFlowParameter(scenario, after)))
+		return ReductionRejected(DuplicateFlowDefinition(after));
+	final renamed = renameFlowVariable(scenario, before, after);
+	return ready(withFlow(scenario, renamed.variables, renamed.sequences, renamed.rules), Rule);
+}
+
+/** Rename a sequence together with every local scope, call, and schedule. */
+private function renameFlowSequenceInScenario(scenario:Scenario, before:ScenarioId, after:ScenarioId):EditorReductionResult {
+	if (!hasFlowSequence(scenario, before))
+		return ReductionRejected(MissingFlowSequence(before));
+	if (!isValidScenarioIdText(after.text()))
+		return ReductionRejected(InvalidFlowDefinitionName(after));
+	if (!same(before, after) && hasFlowSequence(scenario, after))
+		return ReductionRejected(DuplicateFlowDefinition(after));
+	final renamed = renameFlowSequence(scenario, before, after);
+	return ready(withFlow(scenario, renamed.variables, renamed.sequences, renamed.rules), Rule);
+}
+
 private function paint(scenario:Scenario, points:Array<VoxelPoint>, paletteCode:Int, maximumCells:Int):EditorReductionResult {
 	if (points.length > maximumCells)
 		return ReductionRejected(VoxelEditTooLarge(points.length, maximumCells));
@@ -581,6 +611,15 @@ private function hasFlowVariable(scenario:Scenario, id:ScenarioId):Bool {
 	for (value in scenario.flow.variables)
 		if (same(value.id, id))
 			return true;
+	return false;
+}
+
+/** True when any reusable sequence already owns this parameter identity. */
+private function hasFlowParameter(scenario:Scenario, id:ScenarioId):Bool {
+	for (sequence in scenario.flow.sequences)
+		for (parameter in sequence.parameters)
+			if (same(parameter.id, id))
+				return true;
 	return false;
 }
 

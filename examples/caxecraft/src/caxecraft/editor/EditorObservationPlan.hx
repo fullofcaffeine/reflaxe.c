@@ -38,8 +38,10 @@ function changesFor(command:EditorCommand):Array<EditorChangeId> {
 		case RemoveRule(id): [ChangedRule(id)];
 		case PutFlowVariable(variable): [ChangedVariable(variable.id)];
 		case RemoveFlowVariable(id): [ChangedVariable(id)];
+		case RenameFlowVariable(_, _): [ChangedDocument];
 		case PutFlowSequence(sequence): [ChangedSequence(sequence.id)];
 		case RemoveFlowSequence(id): [ChangedSequence(id)];
+		case RenameFlowSequence(_, _): [ChangedDocument];
 		case EditFlowSequenceParameter(sequence, _): [ChangedSequence(sequence)];
 		case SetDefaultLocale(_): [ChangedLocalization];
 		case PutLocale(locale): [ChangedLocale(locale.id)];

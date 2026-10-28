@@ -109,6 +109,7 @@ import caxecraft.app.CaxecraftFlowCardPanel.flowDocumentPanelActionAt;
 import caxecraft.app.CaxecraftFlowCardPanel.flowDocumentPanelChoiceCount;
 import caxecraft.app.CaxecraftFlowCardPanel.flowDocumentPanelOpen;
 import caxecraft.app.CaxecraftFlowDefinitionPanel.CaxecraftFlowDefinitionPanelAction;
+import caxecraft.app.CaxecraftFlowDefinitionPanel.CaxecraftFlowDefinitionRenameTarget;
 import caxecraft.app.CaxecraftFlowDefinitionPanel.CaxecraftFlowDefinitionRow;
 import caxecraft.app.CaxecraftFlowDefinitionPanel.drawFlowDefinitionPanel;
 import caxecraft.app.CaxecraftFlowDefinitionPanel.flowDefinitionActionAt;
@@ -315,6 +316,8 @@ final class CaxecraftEditorScreen {
 	var flowDocumentSelection:Int;
 	var flowDefinitionsOpen:Bool;
 	var flowDefinitionSelection:Int;
+	final flowDefinitionName:Null<GuiTextBoxState>;
+	var flowDefinitionRenameTarget:CaxecraftFlowDefinitionRenameTarget;
 	final flowContentChoices:EditorFlowContentChoices;
 	var camera:Null<EditorCameraState>;
 	var selection:Null<VoxelBounds>;
@@ -431,6 +434,8 @@ final class CaxecraftEditorScreen {
 		flowDocumentSelection = 0;
 		flowDefinitionsOpen = false;
 		flowDefinitionSelection = 0;
+		flowDefinitionName = GuiTextBoxState.create(96);
+		flowDefinitionRenameTarget = NoFlowDefinitionRename;
 		flowContentChoices = editorFlowContentChoices(contentRegistry);
 		camera = null;
 		selection = null;
@@ -612,8 +617,8 @@ final class CaxecraftEditorScreen {
 				if (wheel != 0.0)
 					flowDefinitionSelection = movePaletteSelection(flowDefinitionSelection, flowDefinitionRows(draft, flowContentChoices.states).length,
 						wheel > 0.0 ? -1 : 1);
-				applyFlowDefinitionPanelAction(drawFlowDefinitionPanel(uiCatalog, locale, draft, flowContentChoices.states, flowDefinitionSelection, width,
-					height));
+				applyFlowDefinitionPanelAction(drawFlowDefinitionPanel(uiCatalog, locale, draft, flowContentChoices.states, flowDefinitionSelection,
+					flowDefinitionRenameTarget, flowDefinitionName, width, height));
 			}
 			return StayInEditor;
 		}
@@ -1781,12 +1786,69 @@ final class CaxecraftEditorScreen {
 			case KeepFlowDefinitionPanel:
 			case CloseFlowDefinitionPanel:
 				flowDefinitionsOpen = false;
+				cancelFlowDefinitionRename();
 				focusedControl = EditorFocusTarget.Advanced;
 			case ApplyFlowDefinition(command):
 				commitFlowDefinition(command);
 			case OpenFlowSequenceAction(sequence, actionIndex, insert):
 				openFlowCardPanel(insert ? InsertSequenceDoFlowCardPanel(sequence, actionIndex) : SequenceDoFlowCardPanel(sequence, actionIndex));
+			case BeginFlowDefinitionRename(target):
+				beginFlowDefinitionRename(target);
+			case CommitFlowDefinitionRename(target, value):
+				commitFlowDefinitionRename(target, value);
+			case CancelFlowDefinitionRename:
+				cancelFlowDefinitionRename();
 		}
+	}
+
+	/** Start one temporary identity field from the accepted declaration ID. */
+	function beginFlowDefinitionRename(target:CaxecraftFlowDefinitionRenameTarget):Void {
+		final name = flowDefinitionName;
+		if (name == null)
+			return;
+		final value = switch target {
+			case NoFlowDefinitionRename: return;
+			case VariableDefinitionRename(id) | SequenceDefinitionRename(id): id.text();
+			case ParameterDefinitionRename(_, _, id): id.text();
+		};
+		if (!name.replace(value))
+			return;
+		name.setEditing(true);
+		flowDefinitionRenameTarget = target;
+	}
+
+	/** Commit one stable-ID rename through the matching canonical command. */
+	function commitFlowDefinitionRename(target:CaxecraftFlowDefinitionRenameTarget, value:String):Void {
+		final after = new ScenarioId(value);
+		final command:Null<EditorCommand> = switch target {
+			case NoFlowDefinitionRename: null;
+			case VariableDefinitionRename(before): RenameFlowVariable(before, after);
+			case SequenceDefinitionRename(before): RenameFlowSequence(before, after);
+			case ParameterDefinitionRename(sequenceId, parameterIndex, before):
+				final sequence = currentFlowSequence(sequenceId);
+				if (sequence == null
+					|| parameterIndex < 0
+					|| parameterIndex >= sequence.parameters.length
+					|| sequence.parameters[parameterIndex].id.text() != before.text()) null; else EditFlowSequenceParameter(sequenceId,
+					ReplaceFlowParameter(parameterIndex, {
+						id: after,
+						initial: sequence.parameters[parameterIndex].initial
+					}));
+		};
+		if (command == null) {
+			notice = Invalid;
+			return;
+		}
+		if (commitFlowDefinition(command))
+			cancelFlowDefinitionRename();
+	}
+
+	/** Discard only temporary text; the canonical Flow document is unchanged. */
+	function cancelFlowDefinitionRename():Void {
+		final name = flowDefinitionName;
+		if (name != null)
+			name.setEditing(false);
+		flowDefinitionRenameTarget = NoFlowDefinitionRename;
 	}
 
 	/** Commit one variable or sequence edit through canonical history. */
@@ -1815,6 +1877,7 @@ final class CaxecraftEditorScreen {
 	function openFlowDefinitions():Void {
 		flowDefinitionsOpen = true;
 		flowDefinitionSelection = 0;
+		cancelFlowDefinitionRename();
 		assetBrowserOpen = false;
 		textWorkspaceOpen = false;
 		focusedControl = EditorFocusTarget.Advanced;
@@ -2264,18 +2327,29 @@ final class CaxecraftEditorScreen {
 		if (flowDefinitionsOpen) {
 			final draft = currentDraftScenario();
 			final count = draft == null ? 0 : flowDefinitionRows(draft, flowContentChoices.states).length;
-			switch command {
-				case Up | Left:
-					flowDefinitionSelection = movePaletteSelection(flowDefinitionSelection, count, -1);
-				case Down | Right:
-					flowDefinitionSelection = movePaletteSelection(flowDefinitionSelection, count, 1);
-				case Confirm:
-					if (draft != null)
-						applyFlowDefinitionPanelAction(flowDefinitionActionAt(draft, flowContentChoices.states, flowDefinitionSelection));
-				case Cancel:
-					flowDefinitionsOpen = false;
-					focusedControl = EditorFocusTarget.Advanced;
-				case None:
+			switch flowDefinitionRenameTarget {
+				case NoFlowDefinitionRename:
+					switch command {
+						case Up | Left:
+							flowDefinitionSelection = movePaletteSelection(flowDefinitionSelection, count, -1);
+						case Down | Right:
+							flowDefinitionSelection = movePaletteSelection(flowDefinitionSelection, count, 1);
+						case Confirm:
+							if (draft != null) applyFlowDefinitionPanelAction(flowDefinitionActionAt(draft, flowContentChoices.states,
+								flowDefinitionSelection));
+						case Cancel:
+							flowDefinitionsOpen = false;
+							focusedControl = EditorFocusTarget.Advanced;
+						case None:
+					}
+				case target:
+					switch command {
+						case Confirm:
+							final name = flowDefinitionName;
+							if (name != null) commitFlowDefinitionRename(target, name.text());
+						case Cancel: cancelFlowDefinitionRename();
+						case Up | Down | Left | Right | None:
+					}
 			}
 			return StayInEditor;
 		}
@@ -4923,6 +4997,65 @@ final class CaxecraftEditorScreen {
 		flowCardSelection = sequenceAction;
 		applyNavigation(NavigationCommand.Confirm);
 		if (flowCardLibraryOpen() || !flowDefinitionsOpen)
+			return false;
+		final variableRenameDraft = currentDraftScenario();
+		if (variableRenameDraft == null)
+			return false;
+		final variableRenameRows = flowDefinitionRows(variableRenameDraft, flowContentChoices.states);
+		var variableRenameRow = -1;
+		for (index in 0...variableRenameRows.length)
+			switch variableRenameRows[index] {
+				case VariableDefinitionRow(_, variable) if (variable.id.text() == supportCounter.text()):
+					variableRenameRow = index;
+				case _:
+			}
+		if (variableRenameRow < 0)
+			return false;
+		flowDefinitionSelection = variableRenameRow;
+		applyNavigation(NavigationCommand.Confirm);
+		final definitionName = flowDefinitionName;
+		final renamedCounter = new ScenarioId(supportCounter.text() + ".renamed");
+		if (definitionName == null || !definitionName.replace(renamedCounter.text()))
+			return false;
+		applyNavigation(NavigationCommand.Confirm);
+		switch flowDefinitionRenameTarget {
+			case NoFlowDefinitionRename:
+			case _:
+				return false;
+		}
+		final sequenceRenameDraft = currentDraftScenario();
+		if (sequenceRenameDraft == null)
+			return false;
+		var foundRenamedVariable = false;
+		for (variable in sequenceRenameDraft.flow.variables)
+			if (variable.id.text() == renamedCounter.text())
+				foundRenamedVariable = true;
+		if (!foundRenamedVariable)
+			return false;
+		final sequenceRenameRows = flowDefinitionRows(sequenceRenameDraft, flowContentChoices.states);
+		var sequenceRenameRow = -1;
+		for (index in 0...sequenceRenameRows.length)
+			switch sequenceRenameRows[index] {
+				case SequenceDefinitionRow(_, sequence) if (sequence.id.text() == supportSequence.text()):
+					sequenceRenameRow = index;
+				case _:
+			}
+		if (sequenceRenameRow < 0)
+			return false;
+		flowDefinitionSelection = sequenceRenameRow;
+		applyNavigation(NavigationCommand.Confirm);
+		final renamedSequence = new ScenarioId(supportSequence.text() + ".renamed");
+		if (definitionName == null || !definitionName.replace(renamedSequence.text()))
+			return false;
+		applyNavigation(NavigationCommand.Confirm);
+		final renamedDefinitionDraft = currentDraftScenario();
+		if (renamedDefinitionDraft == null)
+			return false;
+		var foundRenamedSequence = false;
+		for (sequence in renamedDefinitionDraft.flow.sequences)
+			if (sequence.id.text() == renamedSequence.text())
+				foundRenamedSequence = true;
+		if (!foundRenamedSequence)
 			return false;
 		flowDefinitionsOpen = false;
 		openFlowCardPanel(DoFlowCardPanel(zone.id, connected, 3));

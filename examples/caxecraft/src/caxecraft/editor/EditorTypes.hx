@@ -85,8 +85,10 @@ enum EditorCommand {
 	RemoveRule(id:ScenarioId);
 	PutFlowVariable(variable:FlowVariable);
 	RemoveFlowVariable(id:ScenarioId);
+	RenameFlowVariable(before:ScenarioId, after:ScenarioId);
 	PutFlowSequence(sequence:FlowSequence);
 	RemoveFlowSequence(id:ScenarioId);
+	RenameFlowSequence(before:ScenarioId, after:ScenarioId);
 	EditFlowSequenceParameter(sequence:ScenarioId, edit:EditorFlowParameterEdit);
 	SetDefaultLocale(locale:LocaleId);
 	PutLocale(locale:ScenarioLocaleCatalog);
@@ -288,6 +290,8 @@ enum EditorError {
 	MissingRule(id:ScenarioId);
 	MissingFlowVariable(id:ScenarioId);
 	MissingFlowSequence(id:ScenarioId);
+	InvalidFlowDefinitionName(id:ScenarioId);
+	DuplicateFlowDefinition(id:ScenarioId);
 
 	/** A visual delete would leave at least one typed Flow reference unresolved. */
 	FlowDefinitionInUse(id:ScenarioId);

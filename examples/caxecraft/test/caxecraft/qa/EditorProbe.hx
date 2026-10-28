@@ -3986,8 +3986,131 @@ final class EditorProbe {
 		}
 		expectApplied(supportSession.apply(RemoveRule(id("rule.signature"))), Rule, "remove visual signature caller");
 
+		final renameVariableRule = id("rule.rename.variable");
+		expectApplied(supportSession.apply(PutRule({
+			id: renameVariableRule,
+			priority: 0,
+			repeat: Once,
+			event: StateChanged(id("counter.cards")),
+			predicate: CounterCompare(id("counter.cards"), GreaterOrEqual, 0),
+			actions: [
+				ChooseSeeded(id("counter.cards"), [
+					{
+						weight: 1,
+						actions: [SetCounter(id("counter.cards"), 4)]
+					}
+				])
+			]
+		})), Rule, "add variable-rename references");
+		final variableBeforeRenameBytes = supportSession.canonicalDraft();
+		expectApplied(supportSession.apply(RenameFlowVariable(id("counter.cards"), id("counter.renamed"))), Rule, "rename visual Flow variable");
+		final variableAfterRenameBytes = supportSession.canonicalDraft();
+		var renamedVariableRule:Null<FlowRule> = null;
+		var renamedVariableDraft = switch supportSession.query(InspectDraft) {
+			case DraftObserved(_, draft): draft;
+			case other: throw 'renamed variable draft query failed: $other';
+		};
+		require(renamedVariableDraft.flow.variables[0].id.text() == "counter.renamed", "variable rename left its declaration stale");
+		for (rule in renamedVariableDraft.flow.rules)
+			if (rule.id.text() == renameVariableRule.text())
+				renamedVariableRule = rule;
+		if (renamedVariableRule == null)
+			throw "variable rename lost its owning rule";
+		switch renamedVariableRule.event {
+			case StateChanged(variable):
+				require(variable.text() == "counter.renamed", "variable rename left its event stale");
+			case _:
+				throw "variable rename changed its event shape";
+		}
+		switch renamedVariableRule.predicate {
+			case CounterCompare(variable, GreaterOrEqual, 0):
+				require(variable.text() == "counter.renamed", "variable rename left its predicate stale");
+			case _:
+				throw "variable rename changed its predicate shape";
+		}
+		switch renamedVariableRule.actions[0] {
+			case ChooseSeeded(seed, [{weight: 1, actions: [SetCounter(variable, 4)]}]):
+				require(seed.text() == "counter.renamed" && variable.text() == "counter.renamed", "variable rename left a nested action reference stale");
+			case _:
+				throw "variable rename changed its nested action shape";
+		}
+		expectHistory(supportSession.undo(), Rule, "undo visual Flow variable rename");
+		require(supportSession.canonicalDraft().compare(variableBeforeRenameBytes) == 0, "variable rename undo did not restore exact bytes");
+		expectHistory(supportSession.redo(), Rule, "redo visual Flow variable rename");
+		require(supportSession.canonicalDraft().compare(variableAfterRenameBytes) == 0, "variable rename redo did not restore exact bytes");
+		switch supportSession.apply(RenameFlowVariable(id("counter.renamed"), id("Invalid.Name"))) {
+			case EditRejected(InvalidFlowDefinitionName(value)):
+				require(value.text() == "Invalid.Name", "invalid variable rename reported the wrong identity");
+			case other:
+				throw 'visual variable rename admitted an invalid identity: $other';
+		}
+		expectApplied(supportSession.apply(PutFlowVariable({id: id("counter.other"), scope: Map, initial: Counter(0)})), Rule, "add variable rename collision");
+		switch supportSession.apply(RenameFlowVariable(id("counter.renamed"), id("counter.other"))) {
+			case EditRejected(DuplicateFlowDefinition(value)):
+				require(value.text() == "counter.other", "duplicate variable rename reported the wrong identity");
+			case other:
+				throw 'visual variable rename admitted a duplicate identity: $other';
+		}
+		expectApplied(supportSession.apply(RemoveFlowVariable(id("counter.other"))), Rule, "remove variable rename collision");
+		expectApplied(supportSession.apply(RenameFlowVariable(id("counter.renamed"), id("counter.cards"))), Rule, "restore visual Flow variable ID");
+		expectApplied(supportSession.apply(RemoveRule(renameVariableRule)), Rule, "remove variable-rename references");
+
 		expectApplied(supportSession.apply(PutFlowVariable({id: id("counter.cards"), scope: Local(id("sequence.cards")), initial: Counter(0)})), Rule,
 			"make flow variable sequence-local");
+		expectApplied(supportSession.apply(PutFlowSequence({
+			id: id("sequence.caller"),
+			parameters: [],
+			actions: [Schedule(id("timer.rename"), 2, id("sequence.cards"), [])]
+		})), Rule, "add sequence-rename caller");
+		expectApplied(supportSession.apply(PutRule({
+			id: id("rule.rename.sequence"),
+			priority: 0,
+			repeat: Once,
+			event: StateChanged(id("counter.cards")),
+			predicate: Always,
+			actions: [CallSequence(id("sequence.cards"), [])]
+		})), Rule, "add sequence-rename rule caller");
+		expectApplied(supportSession.apply(RenameFlowSequence(id("sequence.cards"), id("sequence.renamed"))), Rule, "rename visual Flow sequence");
+		final renamedSequenceDraft = switch supportSession.query(InspectDraft) {
+			case DraftObserved(_, draft): draft;
+			case other: throw 'renamed sequence draft query failed: $other';
+		};
+		switch renamedSequenceDraft.flow.variables[0].scope {
+			case Local(sequence):
+				require(sequence.text() == "sequence.renamed", "sequence rename left a local scope stale");
+			case _:
+				throw "sequence rename changed its local variable scope";
+		}
+		var sawRenamedDeclaration = false;
+		var sawRenamedSchedule = false;
+		for (sequence in renamedSequenceDraft.flow.sequences) {
+			if (sequence.id.text() == "sequence.renamed")
+				sawRenamedDeclaration = true;
+			if (sequence.id.text() == "sequence.caller")
+				switch sequence.actions[0] {
+					case Schedule(_, 2, target, []):
+						sawRenamedSchedule = target.text() == "sequence.renamed";
+					case _:
+				}
+		}
+		require(sawRenamedDeclaration && sawRenamedSchedule, "sequence rename left its declaration or schedule stale");
+		for (rule in renamedSequenceDraft.flow.rules)
+			if (rule.id.text() == "rule.rename.sequence")
+				switch rule.actions[0] {
+					case CallSequence(target, []):
+						require(target.text() == "sequence.renamed", "sequence rename left a rule caller stale");
+					case _:
+						throw "sequence rename changed its rule caller shape";
+				}
+		switch supportSession.apply(RenameFlowSequence(id("sequence.renamed"), id("sequence.caller"))) {
+			case EditRejected(DuplicateFlowDefinition(value)):
+				require(value.text() == "sequence.caller", "duplicate sequence rename reported the wrong identity");
+			case other:
+				throw 'visual sequence rename admitted a duplicate identity: $other';
+		}
+		expectApplied(supportSession.apply(RenameFlowSequence(id("sequence.renamed"), id("sequence.cards"))), Rule, "restore visual Flow sequence ID");
+		expectApplied(supportSession.apply(RemoveRule(id("rule.rename.sequence"))), Rule, "remove sequence-rename rule caller");
+		expectApplied(supportSession.apply(RemoveFlowSequence(id("sequence.caller"))), Rule, "remove sequence-rename caller");
 		switch supportSession.apply(RemoveFlowSequence(id("sequence.cards"))) {
 			case EditRejected(FlowDefinitionInUse(id)):
 				require(id.text() == "sequence.cards", "referenced sequence deletion named the wrong declaration");

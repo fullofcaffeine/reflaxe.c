@@ -1585,6 +1585,20 @@
       }
     },
     {
+      "id": "editor.flow.apply",
+      "text": {
+        "en": "APPLY",
+        "es-MX": "APLICAR"
+      }
+    },
+    {
+      "id": "editor.flow.cancel",
+      "text": {
+        "en": "CANCEL",
+        "es-MX": "CANCELAR"
+      }
+    },
+    {
       "id": "editor.flow.connect-object",
       "text": {
         "en": "CONNECT TO OBJECT",
@@ -1659,6 +1673,13 @@
       "text": {
         "en": "PRIORITY {0}",
         "es-MX": "PRIORIDAD {0}"
+      }
+    },
+    {
+      "id": "editor.flow.rename",
+      "text": {
+        "en": "RENAME",
+        "es-MX": "CAMBIAR NOMBRE"
       }
     },
     {
