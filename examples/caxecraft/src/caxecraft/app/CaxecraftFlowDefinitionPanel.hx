@@ -5,16 +5,21 @@ import caxecraft.editor.EditorFlowAuthoring.EditorFlowSequenceAuthoringResult;
 import caxecraft.editor.EditorFlowAuthoring.EditorFlowSequenceEdit;
 import caxecraft.editor.EditorFlowAuthoring.editFlowSequence;
 import caxecraft.editor.EditorFlowDefinitions.EditorFlowVariableEdit;
+import caxecraft.editor.EditorFlowDefinitions.editFlowParameter;
 import caxecraft.editor.EditorFlowDefinitions.editFlowVariable;
 import caxecraft.editor.EditorFlowDefinitions.flowVariableIsReferenced;
+import caxecraft.editor.EditorFlowDefinitions.flowParameterIsReferenced;
 import caxecraft.editor.EditorFlowDefinitions.nextFlowSequence;
+import caxecraft.editor.EditorFlowDefinitions.nextFlowParameter;
 import caxecraft.editor.EditorFlowDefinitions.nextFlowVariable;
+import caxecraft.editor.EditorFlowSequenceSignature.EditorFlowParameterEdit;
 import caxecraft.editor.EditorFlowProjection.EditorFlowUiMessage;
 import caxecraft.editor.EditorFlowProjection.actionFlowCardText;
 import caxecraft.editor.EditorTypes.EditorCommand;
 import caxecraft.localization.RuntimeUiCatalog;
 import caxecraft.localization.UiTypes.LocaleCursor;
 import caxecraft.scenario.CaxeFlow.FlowAction;
+import caxecraft.scenario.CaxeFlow.FlowParameter;
 import caxecraft.scenario.CaxeFlow.FlowScope;
 import caxecraft.scenario.CaxeFlow.FlowSequence;
 import caxecraft.scenario.CaxeFlow.FlowValue;
@@ -45,6 +50,9 @@ enum CaxecraftFlowDefinitionRow {
 	AddSequenceDefinitionRow;
 	VariableDefinitionRow(index:Int, variable:FlowVariable);
 	SequenceDefinitionRow(index:Int, sequence:FlowSequence);
+	AddSequenceParameterRow(sequenceIndex:Int, sequence:FlowSequence);
+	AddSequenceActionRow(sequenceIndex:Int, sequence:FlowSequence);
+	SequenceParameterDefinitionRow(sequenceIndex:Int, parameterIndex:Int, sequence:FlowSequence, parameter:FlowParameter);
 	SequenceActionDefinitionRow(sequenceIndex:Int, actionIndex:Int, sequence:FlowSequence, action:FlowAction);
 }
 
@@ -67,6 +75,10 @@ function flowDefinitionRows(draft:Scenario, states:Array<ContentId>):Array<Caxec
 	for (sequenceIndex in 0...draft.flow.sequences.length) {
 		final sequence = draft.flow.sequences[sequenceIndex];
 		result.push(SequenceDefinitionRow(sequenceIndex, sequence));
+		result.push(AddSequenceParameterRow(sequenceIndex, sequence));
+		result.push(AddSequenceActionRow(sequenceIndex, sequence));
+		for (parameterIndex in 0...sequence.parameters.length)
+			result.push(SequenceParameterDefinitionRow(sequenceIndex, parameterIndex, sequence, sequence.parameters[parameterIndex]));
 		for (actionIndex in 0...sequence.actions.length)
 			result.push(SequenceActionDefinitionRow(sequenceIndex, actionIndex, sequence, sequence.actions[actionIndex]));
 	}
@@ -85,7 +97,14 @@ function flowDefinitionActionAt(draft:Scenario, states:Array<ContentId>, selecti
 		case AddSequenceDefinitionRow: ApplyFlowDefinition(PutFlowSequence(nextFlowSequence(draft.flow.sequences)));
 		case VariableDefinitionRow(_, variable):
 			ApplyFlowDefinition(PutFlowVariable(editFlowVariable(variable, NextVariableValue, draft.flow.sequences, states)));
-		case SequenceDefinitionRow(_, sequence): OpenFlowSequenceAction(sequence.id, sequence.actions.length, true);
+		case SequenceDefinitionRow(_, _): KeepFlowDefinitionPanel;
+		case AddSequenceParameterRow(_, sequence):
+			ApplyFlowDefinition(EditFlowSequenceParameter(sequence.id,
+				InsertFlowParameter(sequence.parameters.length, nextFlowParameter(sequence, draft.flow.variables))));
+		case AddSequenceActionRow(_, sequence): OpenFlowSequenceAction(sequence.id, sequence.actions.length, true);
+		case SequenceParameterDefinitionRow(_, parameterIndex, sequence, parameter):
+			ApplyFlowDefinition(EditFlowSequenceParameter(sequence.id,
+				ReplaceFlowParameter(parameterIndex, editFlowParameter(parameter, NextVariableValue, states))));
 		case SequenceActionDefinitionRow(_, actionIndex, sequence, _): OpenFlowSequenceAction(sequence.id, actionIndex, false);
 	};
 }
@@ -139,6 +158,14 @@ private function drawDefinitionRow(catalog:RuntimeUiCatalog, locale:LocaleCursor
 			drawVariableRow(catalog, locale, draft, states, variable, left, top, width);
 		case SequenceDefinitionRow(_, sequence):
 			drawSequenceRow(catalog, locale, sequence, left, top, width);
+		case AddSequenceParameterRow(_, sequence):
+			addButton(catalog, locale, left, top, width, EditorFlowUiMessage.AddParameterMessage,
+				EditFlowSequenceParameter(sequence.id, InsertFlowParameter(sequence.parameters.length, nextFlowParameter(sequence, draft.flow.variables))));
+		case AddSequenceActionRow(_, sequence):
+			Raygui.ButtonString(Rectangle.fromFloat(left, top, width, 28), catalog.format(locale, EditorFlowUiMessage.AddActionMessage.messageId(), []))
+				.has(GuiResult.Pressed) ? OpenFlowSequenceAction(sequence.id, sequence.actions.length, true) : KeepFlowDefinitionPanel;
+		case SequenceParameterDefinitionRow(_, parameterIndex, sequence, parameter):
+			drawSequenceParameterRow(states, sequence, parameterIndex, parameter, left, top, width);
 		case SequenceActionDefinitionRow(_, actionIndex, sequence, action):
 			drawSequenceActionRow(catalog, locale, sequence, actionIndex, action, left, top, width);
 	};
@@ -174,12 +201,28 @@ private function drawSequenceRow(catalog:RuntimeUiCatalog, locale:LocaleCursor, 
 		left
 		+ 4, top
 		+ 8, 13, CaxecraftPalette.hudText());
-	if (Raygui.ButtonString(Rectangle.fromFloat(left + width - 150, top + 2, 104, 25),
-		catalog.format(locale, EditorFlowUiMessage.AddActionMessage.messageId(), []))
-		.has(GuiResult.Pressed))
-		return OpenFlowSequenceAction(sequence.id, sequence.actions.length, true);
 	if (Raygui.ButtonString(Rectangle.fromFloat(left + width - 42, top + 2, 42, 25), "X").has(GuiResult.Pressed))
 		return ApplyFlowDefinition(RemoveFlowSequence(sequence.id));
+	return KeepFlowDefinitionPanel;
+}
+
+private function drawSequenceParameterRow(states:Array<ContentId>, sequence:FlowSequence, parameterIndex:Int, parameter:FlowParameter, left:Int, top:Int,
+		width:Int):CaxecraftFlowDefinitionPanelAction {
+	Raylib.DrawTextString('  ${parameterIndex + 1}. ${parameter.id.text()}  ·  ${valueText(parameter.initial)}', left + 4, top + 8, 13,
+		CaxecraftPalette.hudText());
+	final controls = left + width - 144;
+	if (!flowParameterIsReferenced(sequence, parameter.id)
+		&& Raygui.ButtonString(Rectangle.fromFloat(controls, top + 2, 30, 25), "◇").has(GuiResult.Pressed))
+		return ApplyFlowDefinition(EditFlowSequenceParameter(sequence.id,
+			ReplaceFlowParameter(parameterIndex, editFlowParameter(parameter, NextVariableKind, states))));
+	if (Raygui.ButtonString(Rectangle.fromFloat(controls + 34, top + 2, 30, 25), "-").has(GuiResult.Pressed))
+		return ApplyFlowDefinition(EditFlowSequenceParameter(sequence.id,
+			ReplaceFlowParameter(parameterIndex, editFlowParameter(parameter, PreviousVariableValue, states))));
+	if (Raygui.ButtonString(Rectangle.fromFloat(controls + 68, top + 2, 30, 25), "+").has(GuiResult.Pressed))
+		return ApplyFlowDefinition(EditFlowSequenceParameter(sequence.id,
+			ReplaceFlowParameter(parameterIndex, editFlowParameter(parameter, NextVariableValue, states))));
+	if (Raygui.ButtonString(Rectangle.fromFloat(controls + 102, top + 2, 42, 25), "X").has(GuiResult.Pressed))
+		return ApplyFlowDefinition(EditFlowSequenceParameter(sequence.id, RemoveFlowParameter(parameterIndex)));
 	return KeepFlowDefinitionPanel;
 }
 

@@ -4900,7 +4900,7 @@ final class CaxecraftEditorScreen {
 		var sequenceRow = -1;
 		for (index in 0...definitionRows.length)
 			switch definitionRows[index] {
-				case SequenceDefinitionRow(_, sequence) if (sequence.id.text() == supportSequence.text()):
+				case AddSequenceActionRow(_, sequence) if (sequence.id.text() == supportSequence.text()):
 					sequenceRow = index;
 				case _:
 			}

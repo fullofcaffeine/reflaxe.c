@@ -1,6 +1,7 @@
 package caxecraft.editor;
 
 import caxecraft.scenario.CaxeFlow.FlowScope;
+import caxecraft.scenario.CaxeFlow.FlowParameter;
 import caxecraft.scenario.CaxeFlow.FlowSequence;
 import caxecraft.scenario.CaxeFlow.FlowValue;
 import caxecraft.scenario.CaxeFlow.FlowVariable;
@@ -73,6 +74,18 @@ function editFlowVariable(variable:FlowVariable, edit:EditorFlowVariableEdit, se
 	};
 }
 
+/** Edit a parameter's typed default without giving it a false persistent scope. */
+function editFlowParameter(parameter:FlowParameter, edit:EditorFlowVariableEdit, states:Array<ContentId>):FlowParameter
+	return {
+		id: parameter.id,
+		initial: switch edit {
+			case NextVariableKind: nextKind(parameter.initial, states);
+			case PreviousVariableValue: stepValue(parameter.initial, -1, states);
+			case NextVariableValue: stepValue(parameter.initial, 1, states);
+			case NextVariableScope: parameter.initial;
+		}
+	};
+
 /** True when deleting one global variable would leave any typed Flow use behind. */
 function flowVariableIsReferenced(scenario:Scenario, expected:ScenarioId):Bool {
 	for (rule in scenario.flow.rules)
@@ -85,6 +98,10 @@ function flowVariableIsReferenced(scenario:Scenario, expected:ScenarioId):Bool {
 			return true;
 	return false;
 }
+
+/** True when one sequence body reads or writes its declared parameter. */
+function flowParameterIsReferenced(sequence:FlowSequence, expected:ScenarioId):Bool
+	return actionsReferenceVariable(sequence.actions, expected);
 
 /** True when deleting one sequence would break a local scope, call, or schedule. */
 function flowSequenceIsReferenced(scenario:Scenario, expected:ScenarioId):Bool {

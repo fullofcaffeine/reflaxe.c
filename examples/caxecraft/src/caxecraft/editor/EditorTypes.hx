@@ -1,6 +1,7 @@
 package caxecraft.editor;
 
 import caxecraft.editor.EditorSession;
+import caxecraft.editor.EditorFlowSequenceSignature.EditorFlowParameterEdit;
 import caxecraft.editor.EditorPresentation.EditorPresentationSnapshot;
 import caxecraft.editor.EditorPresentation.EditorPresentationDetails;
 import caxecraft.scenario.CaxeFlow.FlowRule;
@@ -86,6 +87,7 @@ enum EditorCommand {
 	RemoveFlowVariable(id:ScenarioId);
 	PutFlowSequence(sequence:FlowSequence);
 	RemoveFlowSequence(id:ScenarioId);
+	EditFlowSequenceParameter(sequence:ScenarioId, edit:EditorFlowParameterEdit);
 	SetDefaultLocale(locale:LocaleId);
 	PutLocale(locale:ScenarioLocaleCatalog);
 	RemoveLocale(locale:LocaleId);
@@ -289,6 +291,10 @@ enum EditorError {
 
 	/** A visual delete would leave at least one typed Flow reference unresolved. */
 	FlowDefinitionInUse(id:ScenarioId);
+
+	InvalidFlowSequenceParameter(sequence:ScenarioId, index:Int);
+	DuplicateFlowParameter(id:ScenarioId);
+	FlowParameterInUse(id:ScenarioId);
 
 	MissingLocale(id:LocaleId);
 	MissingMessage(locale:LocaleId, message:MessageId);
