@@ -185,6 +185,15 @@ private typedef CBodyNormalJoinCandidate = {
 	final totalDistance:Int;
 }
 
+/** One successful join proof retained only by its immutable function analysis. */
+private typedef CBodyNormalJoinCertificate = {
+	final candidate:String;
+	final starts:Array<String>;
+	final allowed:Map<String, Bool>;
+	final escapeTargets:Map<String, Bool>;
+	final iterationBypassTargets:Map<String, Bool>;
+}
+
 private class CBodyNaturalLoop {
 	public final headerBlockId:String;
 	public final nodes:Map<String, Bool> = [];
@@ -256,7 +265,7 @@ class CBodyControlFlowPlanner {
 		CPhaseTiming.stopDetail(constructionTimer);
 		final validationTimer = CPhaseTiming.startDetail(CDTBodyControlFlowValidation, fn.id);
 		#end
-		new CBodyControlFlowPlanValidator(fn, analysis).requireValid(result);
+		new CBodyControlFlowPlanValidator(fn, analysis, true).requireValid(result);
 		#if (macro || reflaxe_runtime)
 		CPhaseTiming.stopDetail(validationTimer);
 		#end
@@ -354,7 +363,7 @@ class CBodyControlFlowPlanVerifier {
 	public function requireValid(fn:HxcIRFunction, plan:CBodyControlFlowPlan):Void {
 		final analysis = new CBodyControlFlowAnalysis(fn);
 		analysis.requireAdmittedGraph();
-		new CBodyControlFlowPlanValidator(fn, analysis).requireValid(plan);
+		new CBodyControlFlowPlanValidator(fn, analysis, false).requireValid(plan);
 	}
 }
 
@@ -986,14 +995,16 @@ private class CBodyControlFlowBuilder {
 private class CBodyControlFlowPlanValidator {
 	final fn:HxcIRFunction;
 	final analysis:CBodyControlFlowAnalysis;
+	final reuseBuilderProofs:Bool;
 	final counts:Map<String, Int> = [];
 	final deferredBreakTargets:Map<String, Bool> = [];
 	final usedDeferredBreakTargets:Map<String, Bool> = [];
 	final sharedAbruptTargets:Map<String, Bool> = [];
 
-	public function new(fn:HxcIRFunction, analysis:CBodyControlFlowAnalysis) {
+	public function new(fn:HxcIRFunction, analysis:CBodyControlFlowAnalysis, reuseBuilderProofs:Bool) {
 		this.fn = fn;
 		this.analysis = analysis;
+		this.reuseBuilderProofs = reuseBuilderProofs;
 	}
 
 	public function requireValid(plan:CBodyControlFlowPlan):Void {
@@ -1270,9 +1281,21 @@ private class CBodyControlFlowPlanValidator {
 	/** Recheck the exact ordinary-join or enclosing-iteration-boundary proof. */
 	function isNormalOrBoundaryJoin(candidate:String, starts:Array<String>, loop:Null<CBodyLoopContext>):Bool {
 		final escapes = escapeTargets(loop);
+		// The planner's analysis has already absorbed each proven acyclic loop
+		// escape into this exact loop set. Reusing that set lets its validator find
+		// the construction certificate. A public verifier starts from an external
+		// plan and a fresh analysis, so it deliberately retains the broader proof.
+		final allowed = if (!reuseBuilderProofs || loop == null) {
+			analysis.reachable;
+		} else {
+			final naturalLoop = analysis.loopsByHeader.get(loop.headerBlockId);
+			if (naturalLoop == null)
+				return fail('normal-join validation in `${fn.id}` lost loop `${loop.headerBlockId}`');
+			naturalLoop.nodes;
+		};
 		return loop != null
-			&& candidate == loop.iterationBoundaryBlockId ? analysis.isBoundaryJoin(candidate, starts, analysis.reachable,
-				escapes) : analysis.isNormalJoin(candidate, starts, analysis.reachable, escapes, iterationBypassTargets(loop));
+			&& candidate == loop.iterationBoundaryBlockId ? analysis.isBoundaryJoin(candidate, starts, allowed,
+				escapes) : analysis.isNormalJoin(candidate, starts, allowed, escapes, iterationBypassTargets(loop));
 	}
 
 	function requireRegionEntry(region:CBodyControlFlowRegion, expectedBlockId:String, ownerBlockId:String, fallthroughTarget:Null<String>):Void {
@@ -1441,6 +1464,11 @@ private class CBodyControlFlowAnalysis {
 	// map records null results too, so "no post-dominator" is computed once.
 	final immediatePostDominatorByBlock:Map<String, String> = [];
 	final immediatePostDominatorComputed:Map<String, Bool> = [];
+	// Plan construction and its structural validator share this immutable
+	// analysis. A successful proof remains valid when validation removes the
+	// builder's already-planned exclusions. The public verifier creates a fresh
+	// analysis, so it still proves an externally supplied plan independently.
+	final normalJoinCertificates:Array<CBodyNormalJoinCertificate> = [];
 	// Normal-join candidates are checked one at a time. Generation stamps reuse
 	// dense block-indexed scratch storage without clearing the whole function for
 	// every candidate. A predecessor rule is initialized only after one of its
@@ -1808,6 +1836,8 @@ private class CBodyControlFlowAnalysis {
 	public function isNormalJoin(candidate:String, starts:Array<String>, allowed:Map<String, Bool>, escapeTargets:Map<String, Bool>,
 			iterationBypassTargets:Map<String, Bool>):Bool {
 		final unavailable:Map<String, Bool> = [];
+		if (hasNormalJoinCertificate(candidate, starts, allowed, escapeTargets, iterationBypassTargets, unavailable))
+			return true;
 		return isNormalJoinWithAvailability(candidate, starts, allowed, escapeTargets, iterationBypassTargets, unavailable,
 			distancesForStarts(starts, allowed, escapeTargets), null);
 	}
@@ -1835,6 +1865,8 @@ private class CBodyControlFlowAnalysis {
 			if (target != candidate)
 				remainingEscapes.set(target, true);
 		final noIterationBypasses:Map<String, Bool> = [];
+		if (hasNormalJoinCertificate(candidate, starts, allowed, remainingEscapes, noIterationBypasses, unavailable))
+			return true;
 		return isNormalJoinWithAvailability(candidate, starts, allowed, remainingEscapes, noIterationBypasses, unavailable,
 			distancesForStarts(starts, allowed, remainingEscapes), null);
 	}
@@ -1842,6 +1874,8 @@ private class CBodyControlFlowAnalysis {
 	function isNormalJoinWithAvailability(candidate:String, starts:Array<String>, allowed:Map<String, Bool>, escapeTargets:Map<String, Bool>,
 			iterationBypassTargets:Map<String, Bool>, unavailable:Map<String, Bool>, distances:Array<Map<String, Int>>,
 			abruptCompletion:Null<Void->Map<String, Bool>>):Bool {
+		if (hasNormalJoinCertificate(candidate, starts, allowed, escapeTargets, iterationBypassTargets, unavailable))
+			return true;
 		normalJoinCandidateProofs++;
 		if (!allowed.exists(candidate) || escapeTargets.exists(candidate))
 			return false;
@@ -1875,7 +1909,59 @@ private class CBodyControlFlowAnalysis {
 		if (!completionIncludesStarts(candidate, starts, allowed, escapeTargets, continuation))
 			return false;
 		final disjoint = prefixesAreDisjoint(candidate, starts, allowed, escapeTargets, unavailable, continuation);
+		if (disjoint)
+			normalJoinCertificates.push({
+				candidate: candidate,
+				starts: starts.copy(),
+				allowed: allowed.copy(),
+				escapeTargets: escapeTargets.copy(),
+				iterationBypassTargets: iterationBypassTargets.copy()
+			});
 		return disjoint;
+	}
+
+	/**
+		Reuse only a positive proof whose graph boundaries are exactly the same.
+
+		The builder can exclude blocks it already owns. Removing those exclusions
+		cannot invalidate a proof that the arm prefixes are disjoint, so validation's
+		empty unavailable set may consume the certificate. A later builder query with
+		its own exclusions must run the proof again.
+	**/
+	function hasNormalJoinCertificate(candidate:String, starts:Array<String>, allowed:Map<String, Bool>, escapeTargets:Map<String, Bool>,
+			iterationBypassTargets:Map<String, Bool>, unavailable:Map<String, Bool>):Bool {
+		if (unavailable.keys().hasNext())
+			return false;
+		for (certificate in normalJoinCertificates)
+			if (certificate.candidate == candidate
+				&& sameOrderedIds(certificate.starts, starts)
+				&& sameIdSet(certificate.allowed, allowed)
+				&& sameIdSet(certificate.escapeTargets, escapeTargets)
+				&& sameIdSet(certificate.iterationBypassTargets, iterationBypassTargets))
+				return true;
+		return false;
+	}
+
+	static function sameOrderedIds(left:Array<String>, right:Array<String>):Bool {
+		if (left.length != right.length)
+			return false;
+		for (index in 0...left.length)
+			if (left[index] != right[index])
+				return false;
+		return true;
+	}
+
+	static function sameIdSet(left:Map<String, Bool>, right:Map<String, Bool>):Bool {
+		var leftCount = 0;
+		for (id in left.keys()) {
+			if (!right.exists(id))
+				return false;
+			leftCount++;
+		}
+		var rightCount = 0;
+		for (_ in right.keys())
+			rightCount++;
+		return leftCount == rightCount;
 	}
 
 	function completionIncludesStarts(candidate:String, starts:Array<String>, allowed:Map<String, Bool>, escapeTargets:Map<String, Bool>,

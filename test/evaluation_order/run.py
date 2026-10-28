@@ -1368,7 +1368,7 @@ def check_production(selected: str | None = None) -> None:
         carrier_name = c_name_with_source_prefix(
             symbols, "EvaluationFixture.run.selectedBySwitch#"
         )
-        carrier_declaration = f"uint32_t {carrier_name} = 0;"
+        carrier_declaration = f"uint32_t {carrier_name} = {{ 0 }};"
         declaration_index = production_source.find(carrier_declaration)
         switch_index = production_source.find("switch (", declaration_index)
         if (
