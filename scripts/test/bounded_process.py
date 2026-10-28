@@ -20,6 +20,8 @@ import subprocess
 from collections.abc import Sequence
 from typing import Any
 
+from scripts.test.compiler_progress import compiler_timeout_suffix
+
 
 TIMEOUT_SCALE_ENV = "HXC_TEST_TIMEOUT_SCALE"
 TIMEOUT_SCALE_PATTERN = re.compile(r"(?:[1-9]|[12][0-9]|30)")
@@ -36,12 +38,17 @@ class ProcessTreeTimeout(subprocess.TimeoutExpired):
         phase: str,
         output: str | bytes | None,
         stderr: str | bytes | None,
+        detail_suffix: str = "",
     ) -> None:
         super().__init__(command, timeout, output=output, stderr=stderr)
         self.phase = phase
+        self.detail_suffix = detail_suffix
 
     def __str__(self) -> str:
-        return f"{self.phase} timed out after {self.timeout} seconds: {self.cmd!r}"
+        return (
+            f"{self.phase} timed out after {self.timeout} seconds: {self.cmd!r}"
+            f"{self.detail_suffix}"
+        )
 
 
 def effective_timeout(timeout: float) -> float:
@@ -102,9 +109,15 @@ def run(
     input: str | bytes | None = None,
     capture_output: bool = False,
     check: bool = False,
+    compiler_progress: bool = False,
     **popen_arguments: Any,
 ) -> subprocess.CompletedProcess[Any]:
-    """Run one command and stop its complete process group after ``timeout``."""
+    """Run one command and stop its complete process group after ``timeout``.
+
+    A caller that requests haxe.c's lightweight progress define can set
+    ``compiler_progress``. Timeout text then names the last active compiler
+    phase, or states that the request never left the Haxe frontend.
+    """
 
     deadline = effective_timeout(timeout)
 
@@ -135,12 +148,24 @@ def run(
         except subprocess.TimeoutExpired:
             _terminate_process_tree(process)
             stdout, stderr = process.communicate()
+            detail_suffix = (
+                compiler_timeout_suffix(
+                    stdout,
+                    stderr,
+                    missing_status=(
+                        "no haxe.c phase marker; request remained in Haxe frontend or server startup"
+                    ),
+                )
+                if compiler_progress
+                else ""
+            )
             raise ProcessTreeTimeout(
                 command,
                 deadline,
                 phase=phase,
                 output=stdout,
                 stderr=stderr,
+                detail_suffix=detail_suffix,
             ) from None
 
         return_code = process.poll()

@@ -53,7 +53,7 @@ class CaxecraftCompilerProgressTests(unittest.TestCase):
         with mock.patch.object(sys, "path", [str(CASE), *sys.path]):
             cls.progress = load_module(
                 "caxecraft_compiler_progress_subject",
-                CASE / "compiler_progress.py",
+                ROOT / "scripts/test/compiler_progress.py",
             )
             cls.play = load_module(
                 "caxecraft_compiler_progress_play_subject",

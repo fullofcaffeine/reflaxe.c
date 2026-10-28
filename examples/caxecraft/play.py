@@ -31,7 +31,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(PROVISION_DIR))
 import provision  # type: ignore  # noqa: E402
-from compiler_progress import (  # noqa: E402
+from scripts.test.compiler_progress import (  # noqa: E402
     compiler_process_detail,
     compiler_timeout_suffix,
 )
