@@ -798,7 +798,7 @@ class RuntimeFeatureCatalog {
 			case "date_time.h": "07086c9185ea03a13dc6bf39d02f00f99b7cbd8151ba0bdf90d7e457c07880d4";
 			case "dynamic.h": "6acbca9069ce4670988e682c5c214a32968fadee892ea4490d0844674c2e24b2";
 			case "exception.h": "630008640e511d979dec4291dffec66c202706bec4bb020616ace2ce0dcf2235";
-			case "gc.h": "d99575a5bad765d45822a1d6221f7bc1b620d59dd6111e0c8ec8a2d45db36159";
+			case "gc.h": "93e3f6e8e02534c389d57855f207013e60ade8136ac0c595821c27df22d97410";
 			case "io.h": "4b92f03451dc4d04ea74c857ca3ce54d52fbe80d31f155b93781ee2fab946589";
 			case "int_map.h": "11213ebbb4fccb5620a4e949ec4a0852a512c7be8d1f5750d987f56aca71cd7f";
 			case "iterator.h": "10ec767355e93a45e214b4774435a46496dd2c601f285412bc072af7904a3e51";
@@ -830,7 +830,7 @@ class RuntimeFeatureCatalog {
 			case "date_time.c": "546e3f244d3187993254aca85dd4acfd64bd3c259b1531d736c950ce9de51b24";
 			case "dynamic.c": "804371b7eb2bfa6dbcb6598ff729754b312a2ba7b24a94a615915c30dee68503";
 			case "exception.c": "e6660d0b55b56be3cd436af8f0c16a7668b70f7e82031687a5a149e029c12741";
-			case "gc.c": "a79c93c94db215b3bc303ea4c761de627637d0eb881faeeaf10c07f9bed4c502";
+			case "gc.c": "e15fbba1f99b7f951be64ffe5c54579218e06931d668692364872d56dfbeb64e";
 			case "io.c": "898b3f351b60a91f25fd1ffdfe8d832e95a5a6a738ffe226ac33581f1fcb5b0f";
 			case "int_map.c": "1b9a0cf4a376e2c2afe7cb79457f50557d50274e8187239e9e4ae80a5a8108cf";
 			case "iterator.c": "a4f3da3f7e3a3fb5ad2f24497b00d77eae1b11c600167b8f5553b656623dba6b";

@@ -689,13 +689,13 @@
       ],
       "artifacts": [
         {
-          "sourceSha256": "d99575a5bad765d45822a1d6221f7bc1b620d59dd6111e0c8ec8a2d45db36159",
+          "sourceSha256": "93e3f6e8e02534c389d57855f207013e60ade8136ac0c595821c27df22d97410",
           "kind": "runtime-header",
           "outputPath": "runtime/include/hxrt/gc.h",
           "sourcePath": "runtime/hxrt/include/hxrt/gc.h"
         },
         {
-          "sourceSha256": "a79c93c94db215b3bc303ea4c761de627637d0eb881faeeaf10c07f9bed4c502",
+          "sourceSha256": "e15fbba1f99b7f951be64ffe5c54579218e06931d668692364872d56dfbeb64e",
           "kind": "runtime-source",
           "outputPath": "runtime/src/gc.c",
           "sourcePath": "runtime/hxrt/src/gc.c"
@@ -1870,6 +1870,7 @@
         "hxc_gc",
         "hxc_gc_allocation",
         "hxc_gc_config",
+        "hxc_gc_exact_index_entry",
         "hxc_gc_pin",
         "hxc_gc_root_frame",
         "hxc_gc_root_table",
@@ -1898,7 +1899,7 @@
     "releaseProvenance": {
       "runtimeCStandard": "c11",
       "sourceHashAlgorithm": "sha256",
-      "sourceSetSha256": "b6719b74e134a92ef91fd3cdb1159f0bd52a94304b93441a80b4b124a7e7c46a",
+      "sourceSetSha256": "a84eea04e577138a027c93608f6bc0054e289ba2f774d8a90b31506b71dfb9ca",
       "publicHeaderCppStandard": "c++17"
     },
     "generatedCodeCompatibility": "same-major",

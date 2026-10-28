@@ -38,10 +38,10 @@ private typedef GeneratedRootProject = {
 /**
 	Emits a tiny structural-C program fragment for the exact-root native test.
 
-	This fixture deliberately starts from hand-built, typed HxcIR. The semantic
-	validator owns root/type correctness elsewhere; this probe isolates the next
-	boundary and proves that `CBodyEmitter` turns the plan into balanced stack-root
-	operations on both a normal return and an early status-propagation return.
+	The native fragment starts from an already-planned, typed root function and
+	isolates `CBodyEmitter`. The project-layout fragment uses root-free functions
+	and crosses the same validated-program boundary as production lowering. The
+	two parts separately prove balanced root operations and collector lifecycle.
 **/
 class GeneratedRootFrameProbe {
 	#if macro

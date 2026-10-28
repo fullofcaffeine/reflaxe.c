@@ -7,6 +7,7 @@ import argparse
 import concurrent.futures
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -29,6 +30,7 @@ SOURCES = (
 )
 CONTRACT = ROOT / "runtime/hxrt/test/gc_contract.c"
 FREESTANDING = ROOT / "runtime/hxrt/test/gc_freestanding.c"
+SCALING = ROOT / "runtime/hxrt/test/gc_scaling.c"
 CPP_HEADER = ROOT / "runtime/hxrt/test/gc_header_cpp.cpp"
 GENERATED_ROOT_HARNESS = ROOT / "runtime/hxrt/test/generated_root_frame_harness.c"
 GENERATED_ROOT_HXML = ROOT / "test/runtime/gc/generated_root_frame.hxml"
@@ -354,7 +356,7 @@ def compile_and_run(
     result = run([str(executable)])
     require_success(result, f"{toolchain.family} {suffix} collector run")
     if result.stderr or result.stdout.strip() != (
-        "gc-contract: OK allocations=265 collections=137 reclaimed=265 pause_ticks=973"
+        "gc-contract: OK allocations=265 collections=137 reclaimed=265 pause_ticks=980"
     ):
         raise GcTestFailure(
             f"{toolchain.family} {suffix} collector report drifted\n"
@@ -414,6 +416,53 @@ def freestanding_lane(toolchain: Toolchain, build: Path) -> None:
         )
 
 
+def scaling_lane(toolchain: Toolchain, build: Path) -> None:
+    """Prove exact tracing uses bounded hash probes, while reporting raw timing."""
+    executable = build / "gc-scaling"
+    require_success(
+        run(
+            [
+                toolchain.cc,
+                *C_FLAGS,
+                "-O2",
+                f"-I{INCLUDE}",
+                *(str(path) for path in (*SOURCES, SCALING)),
+                "-o",
+                str(executable),
+            ]
+        ),
+        f"{toolchain.family} collector scaling build",
+    )
+    result = run([str(executable)])
+    require_success(result, f"{toolchain.family} collector scaling run")
+    if result.stderr:
+        raise GcTestFailure(f"{toolchain.family} collector scaling wrote stderr:\n{result.stderr}")
+    pattern = re.compile(
+        r"^gc-scaling: objects=(\d+) repetitions=(\d+) clock_ticks=(\d+) "
+        r"index_bytes=(\d+) lookups=(\d+) probes=(\d+) fallbacks=(\d+)$"
+    )
+    expected = ((256, 200), (1024, 50), (4096, 5))
+    lines = result.stdout.splitlines()
+    if len(lines) != len(expected):
+        raise GcTestFailure(f"{toolchain.family} collector scaling report count drifted")
+    for line, (expected_objects, expected_repetitions) in zip(lines, expected, strict=True):
+        match = pattern.fullmatch(line)
+        if match is None:
+            raise GcTestFailure(f"{toolchain.family} collector scaling report drifted: {line!r}")
+        objects, repetitions, _ticks, index_bytes, lookups, probes, fallbacks = (
+            int(value) for value in match.groups()
+        )
+        expected_lookups = repetitions * (objects + 1)
+        if (
+            (objects, repetitions) != (expected_objects, expected_repetitions)
+            or index_bytes == 0
+            or lookups != expected_lookups
+            or not (lookups <= probes <= lookups * 8)
+            or fallbacks != 0
+        ):
+            raise GcTestFailure(f"{toolchain.family} collector scaling bounds failed: {line}")
+
+
 def cpp_lane(toolchain: Toolchain, build: Path) -> None:
     executable = build / "gc-header-cpp"
     result = run(
@@ -452,13 +501,14 @@ def main() -> int:
             compile_and_run(toolchain, build, optimization="O2", sanitizer=False)
             compile_and_run(toolchain, build, optimization="O1", sanitizer=True)
             freestanding_lane(toolchain, build)
+            scaling_lane(toolchain, build)
             cpp_lane(toolchain, build)
             generated_root_frame_lane(toolchain, build, generated_root_source)
             generated_project_lane(toolchain, build, first_projects)
     families = ", ".join(toolchain.family for toolchain in toolchains)
     print(
         "gc-runtime: OK: precise cycles, exact stack/global/thread roots, pins, "
-        "pressure, reports, generated root lifetimes, freestanding allocation, "
+        "pressure, indexed scaling, reports, generated root lifetimes, freestanding allocation, "
         f"C++17, and sanitizers passed ({families})"
     )
     return 0

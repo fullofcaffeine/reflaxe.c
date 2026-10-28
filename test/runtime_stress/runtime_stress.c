@@ -42,6 +42,13 @@ typedef struct stress_allocator_state {
   uint32_t site_mask;
   bool injected_failure;
   bool release_underflow;
+  /*
+   * Collector-reported exact-index fallbacks. The exact-base index is an
+   * optional lookup accelerator: when its allocation fails, collection
+   * deliberately continues with linear lookup (docs/gc-runtime.md). This is
+   * the only injected failure the fault sweep accepts as a success.
+   */
+  uint64_t gc_index_fallbacks;
 } stress_allocator_state;
 
 typedef hxc_status (*stress_case_fn)(stress_allocator_state *state);
@@ -180,6 +187,7 @@ static bool stress_allocator_init(
   state->site_mask = 0u;
   state->injected_failure = false;
   state->release_underflow = false;
+  state->gc_index_fallbacks = UINT64_C(0);
   out_allocator->context = state;
   out_allocator->allocate = stress_allocate;
   out_allocator->reallocate = stress_reallocate;
@@ -353,6 +361,9 @@ static hxc_status stress_gc_build(
     if (status == HXC_STATUS_OK && stats.current_object_count != 0u) {
       status = HXC_STATUS_INTERNAL_ERROR;
     }
+    if (status == HXC_STATUS_OK) {
+      state->gc_index_fallbacks = stats.exact_index_fallback_count;
+    }
   }
   {
     const hxc_status dispose_status = hxc_gc_dispose(&gc);
@@ -388,11 +399,20 @@ static bool stress_fault_sweep(
   HXC_STRESS_CHECK(!baseline.release_underflow);
   HXC_STRESS_CHECK(baseline.attempt_count > 0u);
   HXC_STRESS_CHECK((baseline.site_mask & required_sites) == required_sites);
+  HXC_STRESS_CHECK(baseline.gc_index_fallbacks == UINT64_C(0));
   *out_attempts = baseline.attempt_count;
   for (fail_at = 0u; fail_at < baseline.attempt_count; fail_at++) {
     stress_allocator_state injected;
     injected.fail_at = fail_at;
     status = run_case(&injected);
+    if (status == HXC_STATUS_OK) {
+      /* Only the collector's documented, counted index fallback may absorb it. */
+      HXC_STRESS_CHECK(injected.gc_index_fallbacks == UINT64_C(1));
+      HXC_STRESS_CHECK(injected.injected_failure);
+      HXC_STRESS_CHECK(injected.live_blocks == 0u);
+      HXC_STRESS_CHECK(!injected.release_underflow);
+      continue;
+    }
     HXC_STRESS_CHECK(status == HXC_STATUS_OUT_OF_MEMORY);
     HXC_STRESS_CHECK(injected.injected_failure);
     HXC_STRESS_CHECK(injected.live_blocks == 0u);
@@ -485,7 +505,9 @@ static bool stress_deep_cycle(void) {
   HXC_STRESS_CHECK(status == HXC_STATUS_OK);
   HXC_STRESS_CHECK(state.live_blocks == 0u);
   HXC_STRESS_CHECK(!state.release_underflow);
-  HXC_STRESS_CHECK(state.attempt_count == (size_t)HXC_STRESS_LIMIT);
+  /* One allocation per node plus the collector's single exact-base index. */
+  HXC_STRESS_CHECK(state.attempt_count == (size_t)HXC_STRESS_LIMIT + 1u);
+  HXC_STRESS_CHECK(state.gc_index_fallbacks == UINT64_C(0));
   return true;
 }
 

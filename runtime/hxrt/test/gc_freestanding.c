@@ -14,6 +14,7 @@ typedef struct gc_arena {
   unsigned char storage[4096];
   size_t used;
   size_t release_count;
+  bool fail_next_allocation;
 } gc_arena;
 
 typedef struct gc_pair {
@@ -34,6 +35,10 @@ static hxc_status gc_arena_allocate(
   size_t end;
   if (out_memory == NULL || padding > SIZE_MAX - arena->used) {
     return HXC_STATUS_INVALID_ARGUMENT;
+  }
+  if (arena->fail_next_allocation) {
+    arena->fail_next_allocation = false;
+    return HXC_STATUS_OUT_OF_MEMORY;
   }
   end = arena->used + padding;
   if (size > sizeof(arena->storage) - end) {
@@ -85,7 +90,7 @@ static hxc_status gc_pair_allocate(hxc_gc *gc, gc_pair **out_pair) {
 }
 
 int main(void) {
-  gc_arena arena = { { 0u }, 0u, 0u };
+  gc_arena arena = { { 0u }, 0u, 0u, false };
   hxc_allocator allocator;
   hxc_gc gc = HXC_GC_INITIALIZER;
   hxc_gc_config config;
@@ -94,6 +99,7 @@ int main(void) {
   const void *volatile roots[1] = { NULL };
   gc_pair *left = NULL;
   gc_pair *right = NULL;
+  hxc_gc_stats stats = HXC_GC_STATS_INITIALIZER;
 
   allocator.context = &arena;
   allocator.allocate = gc_arena_allocate;
@@ -111,12 +117,27 @@ int main(void) {
   HXC_CHECK(gc_pair_allocate(&gc, &right) == HXC_STATUS_OK);
   left->other = right;
   right->other = left;
+  arena.fail_next_allocation = true;
+  HXC_CHECK(hxc_gc_collect(&gc) == HXC_STATUS_OK);
+  HXC_CHECK(hxc_gc_get_stats(&gc, &stats) == HXC_STATUS_OK);
+  HXC_CHECK(stats.current_object_count == 2u);
+  HXC_CHECK(stats.exact_index_build_count == UINT64_C(0));
+  HXC_CHECK(stats.exact_index_fallback_count == UINT64_C(1));
+  HXC_CHECK(hxc_gc_collect(&gc) == HXC_STATUS_OK);
+  HXC_CHECK(hxc_gc_get_stats(&gc, &stats) == HXC_STATUS_OK);
+  HXC_CHECK(stats.current_object_count == 2u);
+  HXC_CHECK(stats.exact_index_build_count == UINT64_C(1));
+  HXC_CHECK(stats.exact_index_bytes > 0u);
   roots[0] = NULL;
   HXC_CHECK(hxc_gc_collect(&gc) == HXC_STATUS_OK);
   HXC_CHECK(arena.release_count == 2u);
+  roots[0] = left;
+  HXC_CHECK(hxc_gc_collect(&gc) == HXC_STATUS_INVALID_ARGUMENT);
+  roots[0] = NULL;
   HXC_CHECK(hxc_gc_root_frame_pop(&frame) == HXC_STATUS_OK);
   HXC_CHECK(hxc_gc_thread_unregister(&thread) == HXC_STATUS_OK);
   HXC_CHECK(hxc_gc_dispose(&gc) == HXC_STATUS_OK);
+  HXC_CHECK(arena.release_count == 3u);
   (void)puts("gc-freestanding: OK");
   return 0;
 }

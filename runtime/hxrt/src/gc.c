@@ -20,11 +20,18 @@ struct hxc_gc_allocation {
   bool finalized;
 };
 
+struct hxc_gc_exact_index_entry {
+  const void *payload;
+  hxc_gc_allocation *allocation;
+  uint64_t generation;
+};
+
 typedef struct hxc_gc_mark_context {
   hxc_gc *gc;
   hxc_gc_allocation *pending;
   hxc_status status;
   hxc_status unknown_pointer_status;
+  bool use_exact_index;
 } hxc_gc_mark_context;
 
 static bool hxc_gc_is_empty(const hxc_gc *gc) {
@@ -34,6 +41,9 @@ static bool hxc_gc_is_empty(const hxc_gc *gc) {
     && gc->allocator.reallocate == NULL
     && gc->allocator.release == NULL
     && gc->allocations == NULL
+    && gc->exact_index == NULL
+    && gc->exact_index_capacity == 0u
+    && gc->exact_index_generation == UINT64_C(0)
     && gc->threads == NULL
     && gc->global_roots == NULL
     && gc->clock_now == NULL
@@ -89,6 +99,152 @@ static const void *hxc_gc_payload_const(const hxc_gc_allocation *allocation) {
   return (const unsigned char *)allocation + allocation->payload_offset;
 }
 
+static size_t hxc_gc_exact_index_hash(const void *payload) {
+  size_t hash = (size_t)(uintptr_t)payload;
+  hash ^= hash >> 4u;
+  hash *= (size_t)UINT32_C(2654435761);
+  hash ^= hash >> 16u;
+  return hash;
+}
+
+static hxc_gc_allocation *hxc_gc_find_indexed_allocation(
+  hxc_gc *gc,
+  const void *object
+) {
+  size_t slot;
+  const size_t mask = gc->exact_index_capacity - 1u;
+  gc->stats.exact_lookup_count = hxc_gc_u64_increment(
+    gc->stats.exact_lookup_count
+  );
+  /*
+   * An empty heap prepares the index without reserving a table. No payload
+   * can match, so a foreign root is rejected without touching storage.
+   */
+  if (gc->exact_index_capacity == 0u || gc->exact_index == NULL) {
+    return NULL;
+  }
+  slot = hxc_gc_exact_index_hash(object) & mask;
+  for (;;) {
+    const hxc_gc_exact_index_entry *entry = &gc->exact_index[slot];
+    gc->stats.exact_probe_count = hxc_gc_u64_increment(
+      gc->stats.exact_probe_count
+    );
+    if (entry->generation != gc->exact_index_generation) {
+      return NULL;
+    }
+    if (entry->payload == object) {
+      return entry->allocation;
+    }
+    slot = (slot + 1u) & mask;
+  }
+}
+
+static bool hxc_gc_prepare_exact_index(hxc_gc *gc) {
+  hxc_gc_allocation *allocation;
+  hxc_gc_exact_index_entry *entries = gc->exact_index;
+  size_t object_count = 0u;
+  size_t required_capacity = 8u;
+  size_t bytes = 0u;
+  size_t old_bytes = gc->stats.exact_index_bytes;
+
+  for (
+    allocation = gc->allocations;
+    allocation != NULL;
+    allocation = allocation->next
+  ) {
+    if (object_count == SIZE_MAX) {
+      return false;
+    }
+    object_count++;
+  }
+  if (object_count > SIZE_MAX / 2u) {
+    return false;
+  }
+  while (required_capacity < object_count * 2u) {
+    if (required_capacity > SIZE_MAX / 2u) {
+      return false;
+    }
+    required_capacity *= 2u;
+  }
+  if (object_count == 0u && gc->exact_index_capacity == 0u) {
+    gc->stats.exact_index_build_count = hxc_gc_u64_increment(
+      gc->stats.exact_index_build_count
+    );
+    return true;
+  }
+  if (required_capacity > gc->exact_index_capacity) {
+    void *memory = NULL;
+    if (
+      hxc_size_mul(required_capacity, sizeof(hxc_gc_exact_index_entry), &bytes)
+        != HXC_STATUS_OK
+      || hxc_alloc(
+        &gc->allocator,
+        bytes,
+        HXC_ALIGNOF(hxc_gc_exact_index_entry),
+        &memory
+      ) != HXC_STATUS_OK
+    ) {
+      return false;
+    }
+    entries = (hxc_gc_exact_index_entry *)memory;
+    hxc_gc_zero_bytes(entries, bytes);
+    if (
+      hxc_free(
+        &gc->allocator,
+        gc->exact_index,
+        old_bytes,
+        HXC_ALIGNOF(hxc_gc_exact_index_entry)
+      ) != HXC_STATUS_OK
+    ) {
+      (void)hxc_free(
+        &gc->allocator,
+        entries,
+        bytes,
+        HXC_ALIGNOF(hxc_gc_exact_index_entry)
+      );
+      return false;
+    }
+    gc->exact_index = entries;
+    gc->exact_index_capacity = required_capacity;
+    gc->stats.exact_index_bytes = bytes;
+    gc->stats.peak_exact_index_bytes = bytes > gc->stats.peak_exact_index_bytes
+      ? bytes
+      : gc->stats.peak_exact_index_bytes;
+    gc->stats.internal_overhead_bytes = hxc_gc_size_add_saturating(
+      hxc_gc_size_sub_exact(gc->stats.internal_overhead_bytes, old_bytes),
+      bytes
+    );
+  }
+
+  /* A generation change invalidates old slots without scanning peak capacity. */
+  if (gc->exact_index_generation == UINT64_MAX) {
+    hxc_gc_zero_bytes(entries, gc->stats.exact_index_bytes);
+    gc->exact_index_generation = UINT64_C(1);
+  } else {
+    gc->exact_index_generation++;
+  }
+
+  for (
+    allocation = gc->allocations;
+    allocation != NULL;
+    allocation = allocation->next
+  ) {
+    const void *payload = hxc_gc_payload_const(allocation);
+    const size_t mask = gc->exact_index_capacity - 1u;
+    size_t slot = hxc_gc_exact_index_hash(payload) & mask;
+    while (entries[slot].generation == gc->exact_index_generation) {
+      slot = (slot + 1u) & mask;
+    }
+    entries[slot].payload = payload;
+    entries[slot].allocation = allocation;
+    entries[slot].generation = gc->exact_index_generation;
+  }
+  gc->stats.exact_index_build_count = hxc_gc_u64_increment(
+    gc->stats.exact_index_build_count
+  );
+  return true;
+}
+
 static hxc_gc_allocation *hxc_gc_find_allocation(
   hxc_gc *gc,
   const void *object
@@ -134,7 +290,9 @@ static void hxc_gc_mark_exact(
   if (context->status != HXC_STATUS_OK || object == NULL) {
     return;
   }
-  allocation = hxc_gc_find_allocation(context->gc, object);
+  allocation = context->use_exact_index
+    ? hxc_gc_find_indexed_allocation(context->gc, object)
+    : hxc_gc_find_allocation(context->gc, object);
   if (allocation == NULL) {
     context->status = context->unknown_pointer_status;
     return;
@@ -375,6 +533,16 @@ hxc_status hxc_gc_dispose(hxc_gc *gc) {
       result = HXC_STATUS_INTERNAL_ERROR;
     }
   }
+  if (
+    hxc_free(
+      &gc->allocator,
+      gc->exact_index,
+      gc->stats.exact_index_bytes,
+      HXC_ALIGNOF(hxc_gc_exact_index_entry)
+    ) != HXC_STATUS_OK
+  ) {
+    result = HXC_STATUS_INTERNAL_ERROR;
+  }
   hxc_gc_clear(gc);
   return result;
 }
@@ -488,6 +656,12 @@ hxc_status hxc_gc_collect(hxc_gc *gc) {
   }
   gc->collecting = true;
   hxc_gc_clear_marks(gc);
+  context.use_exact_index = hxc_gc_prepare_exact_index(gc);
+  if (!context.use_exact_index) {
+    gc->stats.exact_index_fallback_count = hxc_gc_u64_increment(
+      gc->stats.exact_index_fallback_count
+    );
+  }
   context.gc = gc;
   context.pending = NULL;
   context.status = HXC_STATUS_OK;

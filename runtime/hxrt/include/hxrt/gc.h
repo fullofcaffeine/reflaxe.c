@@ -29,6 +29,7 @@ typedef struct hxc_gc_root_frame hxc_gc_root_frame;
 typedef struct hxc_gc_root_table hxc_gc_root_table;
 typedef struct hxc_gc_pin hxc_gc_pin;
 typedef struct hxc_gc_allocation hxc_gc_allocation;
+typedef struct hxc_gc_exact_index_entry hxc_gc_exact_index_entry;
 
 /**
  * Return one monotonically increasing application-defined tick value.
@@ -65,6 +66,12 @@ typedef struct hxc_gc_stats {
   size_t peak_live_payload_bytes;
   size_t reclaimed_payload_bytes;
   size_t internal_overhead_bytes;
+  uint64_t exact_index_build_count;
+  uint64_t exact_index_fallback_count;
+  uint64_t exact_lookup_count;
+  uint64_t exact_probe_count;
+  size_t exact_index_bytes;
+  size_t peak_exact_index_bytes;
 } hxc_gc_stats;
 
 /**
@@ -127,6 +134,9 @@ struct hxc_gc_pin {
 struct hxc_gc {
   hxc_allocator allocator;
   hxc_gc_allocation *allocations;
+  hxc_gc_exact_index_entry *exact_index;
+  size_t exact_index_capacity;
+  uint64_t exact_index_generation;
   hxc_gc_thread *threads;
   hxc_gc_root_table *global_roots;
   hxc_gc_clock_fn clock_now;
@@ -147,9 +157,10 @@ struct hxc_gc {
 #define HXC_GC_PIN_INITIALIZER \
   { HXC_GC_ROOT_TABLE_INITIALIZER, NULL, false }
 #define HXC_GC_STATS_INITIALIZER \
-  { 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u }
+  { 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, \
+    0u, 0u, 0u, 0u, 0u, 0u }
 #define HXC_GC_INITIALIZER \
-  { { NULL, NULL, NULL, NULL }, NULL, NULL, NULL, NULL, NULL, 0u, 0u, \
+  { { NULL, NULL, NULL, NULL }, NULL, NULL, 0u, 0u, NULL, NULL, NULL, NULL, 0u, 0u, \
     HXC_GC_STATS_INITIALIZER, false, false }
 
 /** Initialize an empty collector. The output must equal HXC_GC_INITIALIZER. */
