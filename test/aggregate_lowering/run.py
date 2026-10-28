@@ -1997,6 +1997,8 @@ def check_managed_optional(*, requested_toolchain: str) -> None:
 
     with tempfile.TemporaryDirectory(prefix="hxc-managed-optional-") as temporary:
         root = Path(temporary)
+        # RecursiveChoice reaches itself through an Array, so its nodes are
+        # collector-traced; that is what selects object and gc here.
         expected_features = [
             "runtime-base",
             "status",
@@ -2004,6 +2006,8 @@ def check_managed_optional(*, requested_toolchain: str) -> None:
             "array",
             "string-literal",
             "bytes",
+            "object",
+            "gc",
             "string-scalar",
             "string",
         ]
@@ -2118,18 +2122,25 @@ def check_managed_optional(*, requested_toolchain: str) -> None:
                         f"record identity: {sorted(record_ids)!r}"
                     )
                 record_id = next(iter(record_ids))
+                # RecursiveChoice reaches itself through an Array, so the
+                # collector traces its nodes: the record keeps the enum pointer
+                # without a retain, and exact roots cover the field's payload.
                 for marker in (
                     "direct-optional-null-check",
                     "direct-optional-unwrap",
-                    "retain-record-enum-field",
                     f'construct-aggregate instance="{record_id}"',
                     f"target=nullable(tagged,instance(\"{record_id}\"))",
+                    f'path="field({record_id},value)/tag(',
                 ):
                     if marker not in parsed_choice:
                         raise AggregateLoweringFailure(
                             "contextually typed optional record HxcIR omitted "
                             f"{marker!r}"
                         )
+                if "retain-record-enum-field" in parsed_choice:
+                    raise AggregateLoweringFailure(
+                        "collector-traced record enum field gained a reference-count retain"
+                    )
                 nested_optional = named_function_section(
                     hxcir, "Main", "nestedOptionalSum"
                 )

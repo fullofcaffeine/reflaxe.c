@@ -1353,6 +1353,10 @@ class CBodyAggregateRegistry {
 			lifetimeChanged = recomputeAggregateManagedLifetimes();
 			if (enumRegistry.recomputePreparedFacts())
 				lifetimeChanged = true;
+			// `Null<T>` follows T: a record or enum that the collector now traces no
+			// longer needs retain/destroy through its optional wrapper either.
+			if (optionalRegistry.recomputeManagedLifetimes())
+				lifetimeChanged = true;
 		}
 		arrayRegistry.completeElementLifetimes();
 		for (map in typedMapRegistry.canonicalMaps()) {
