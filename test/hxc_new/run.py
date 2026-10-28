@@ -51,6 +51,7 @@ def run_command(
     environment["LC_ALL"] = "C"
     result = run_bounded_process(
         command,
+        phase=label,
         cwd=cwd,
         env=environment,
         check=False,

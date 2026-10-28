@@ -1683,7 +1683,7 @@ def validate() -> list[str]:
         errors.append("pre-commit must run the declaration planning golden test")
     if "test/symbol_registry/run.py" not in pre_commit:
         errors.append("pre-commit must run the deterministic symbol registry test")
-    if "test:local-gate -- --hook test:project-emitter" not in pre_commit:
+    if "run_local_gate --hook test:project-emitter" not in pre_commit:
         errors.append("pre-commit must run the deterministic project emitter test")
     if "npm run test:build-adapters:local" not in pre_commit:
         errors.append("pre-commit must run native build-adapter execution")
@@ -1709,7 +1709,7 @@ def validate() -> list[str]:
         errors.append("pre-commit must run the generated hello product example")
     if "examples/caxecraft/run.py" not in pre_commit:
         errors.append("pre-commit must run the generated Caxecraft domain example")
-    if "test:local-gate -- --hook test:hxc-ir" not in pre_commit:
+    if "run_local_gate --hook test:hxc-ir" not in pre_commit:
         errors.append("pre-commit must run the HxcIR semantic golden test")
     if "test/primitive_semantics/run.py" not in pre_commit:
         errors.append("pre-commit must run the typed primitive semantic test")
@@ -1769,7 +1769,7 @@ def validate() -> list[str]:
         "Running conservative local smoke; focused owners remain task evidence"
         not in pre_commit
         or 'select_pre_commit_route.py" --smoke-owners' not in pre_commit
-        or 'test:local-gate -- --hook "$owner_script"' not in pre_commit
+        or 'run_local_gate --hook "$owner_script"' not in pre_commit
         or 'npm run "$owner_script"' not in pre_commit
         or "npm run test:governance" not in pre_commit
         or "complete cold coverage remains required in CI" not in pre_commit

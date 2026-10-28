@@ -336,7 +336,7 @@ class HxcBindgenDriver {
 		if (start < 0)
 			return [];
 		final values:Array<String> = [];
-		final token = new StringBuf();
+		var token = new StringBuf();
 		var index = start + marker.length;
 		var hasToken = false;
 		while (index < text.length) {
@@ -355,7 +355,7 @@ class HxcBindgenDriver {
 			if (code == 0x20 || code == 0x09 || code == 0x0A || code == 0x0D) {
 				if (hasToken) {
 					values.push(token.toString());
-					token.clear();
+					token = new StringBuf();
 					hasToken = false;
 				}
 				index++;

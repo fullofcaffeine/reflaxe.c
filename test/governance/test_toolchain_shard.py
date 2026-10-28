@@ -1057,13 +1057,23 @@ class ToolchainShardTests(unittest.TestCase):
 
     def test_arbitrary_inherited_environment_drift_invalidates_evidence(self) -> None:
         baseline = self.runner.environment_digest(
-            {"PATH": "/tools", "PYTHONOPTIMIZE": "0", "HXC_TEST_JOBS": "1"}
+            {
+                "PATH": "/tools",
+                "PYTHONOPTIMIZE": "0",
+                "HXC_TEST_JOBS": "1",
+                "HXC_TEST_TIMEOUT_SCALE": "1",
+            }
         )
         changed_semantics = self.runner.environment_digest(
             {"PATH": "/tools", "PYTHONOPTIMIZE": "1", "HXC_TEST_JOBS": "1"}
         )
         changed_scheduling_only = self.runner.environment_digest(
-            {"PATH": "/tools", "PYTHONOPTIMIZE": "0", "HXC_TEST_JOBS": "4"}
+            {
+                "PATH": "/tools",
+                "PYTHONOPTIMIZE": "0",
+                "HXC_TEST_JOBS": "4",
+                "HXC_TEST_TIMEOUT_SCALE": "30",
+            }
         )
         self.assertNotEqual(baseline, changed_semantics)
         self.assertEqual(baseline, changed_scheduling_only)
@@ -1865,7 +1875,13 @@ class ToolchainShardTests(unittest.TestCase):
         )
         self.assertIn('select_pre_commit_route.py" --smoke-owners', hook)
         self.assertIn(
-            'npm run --silent test:local-gate -- --hook "$owner_script"',
+            'run_local_gate --hook "$owner_script"',
+            hook,
+        )
+        self.assertIn('HXC_LOCAL_TIMEOUT_SCALE="${HXC_TEST_TIMEOUT_SCALE:-}"', hook)
+        self.assertIn("unset HXC_TEST_TIMEOUT_SCALE", hook)
+        self.assertIn(
+            'HXC_TEST_TIMEOUT_SCALE="$HXC_LOCAL_TIMEOUT_SCALE" npm run --silent test:local-gate',
             hook,
         )
         self.assertIn('npm run "$owner_script"', hook)
@@ -1880,7 +1896,7 @@ class ToolchainShardTests(unittest.TestCase):
         ):
             with self.subTest(reusable_owner=reusable_owner):
                 self.assertIn(
-                    f"test:local-gate -- --hook {reusable_owner}",
+                    f"run_local_gate --hook {reusable_owner}",
                     hook,
                 )
         self.assertIn('python3 "$ROOT_DIR/examples/hello/run.py"', hook)
