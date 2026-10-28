@@ -1253,6 +1253,10 @@ def render_native_text_projects(
     )
     if "hxc_string_borrow_cstring(" not in sources or ".data" not in sources:
         raise StringRuntimeFailure("native text generated C bypassed the checked hxrt borrow")
+    # The borrow retains `&owner`; the `CStringRef.to("")` literal must not
+    # become a compound literal scoped to the status-check `if`.
+    if "hxc_string_borrow_cstring(&(" in sources:
+        raise StringRuntimeFailure("native text generated C retained a compound-literal String owner")
     private_hxcir = extract_hxcir(private_rendered)
     if (
         'runtime(feature="string",operation="borrow-cstring")'
@@ -1320,11 +1324,17 @@ def validate_call_cstring_project(prepared_hxcir: str, automatic: Path) -> None:
         path.read_text(encoding="utf-8")
         for path in sorted((automatic / "src").rglob("*.c"))
     )
-    if prepared_sources.count("hxc_string_prepare_call_cstring(") != 4:
+    if prepared_sources.count("hxc_string_prepare_call_cstring(") != 5:
         raise StringRuntimeFailure(
             "borrow-or-copy generated C did not prepare each native argument once"
         )
-    if prepared_sources.count("hxc_call_cstring_dispose(") != 4:
+    # The prepared value retains `&owner` until disposal; a compound-literal
+    # owner inside the status-check `if` would die before that read.
+    if "hxc_string_prepare_call_cstring(&(" in prepared_sources:
+        raise StringRuntimeFailure(
+            "borrow-or-copy generated C retained a compound-literal String owner"
+        )
+    if prepared_sources.count("hxc_call_cstring_dispose(") != 5:
         raise StringRuntimeFailure(
             "borrow-or-copy generated C did not dispose each prepared argument once"
         )
@@ -1474,7 +1484,7 @@ def compile_generated_and_run(
             f"stderr={compiled.stderr!r}"
         )
     environment = os.environ.copy()
-    if toolchain.family == "clang" and "-fsanitize=address,undefined" in flags:
+    if "-fsanitize=address,undefined" in flags:
         environment["ASAN_OPTIONS"] = "detect_leaks=0"
         environment["UBSAN_OPTIONS"] = "halt_on_error=1"
     executed = run_bounded_process(
@@ -1680,17 +1690,17 @@ def run_call_cstring_native(
             expect_runtime_rejection=True,
             expected_stdout="",
         )
-        if toolchain.family == "clang":
-            executable = build / "success-sanitized"
-            compile_generated_and_run(
-                toolchain,
-                automatic,
-                executable,
-                SANITIZER_FLAGS,
-                extra_sources=(TEXT_OBSERVER_SOURCE,),
-                extra_include_roots=(TEXT_OBSERVER_INCLUDE,),
-                expected_stdout="",
-            )
+        # Both families: GCC reports compound-literal stack-use-after-scope that
+        # Clang's AddressSanitizer did not detect for retained String owners.
+        compile_generated_and_run(
+            toolchain,
+            automatic,
+            build / "success-sanitized",
+            SANITIZER_FLAGS,
+            extra_sources=(TEXT_OBSERVER_SOURCE,),
+            extra_include_roots=(TEXT_OBSERVER_INCLUDE,),
+            expected_stdout="",
+        )
 
 
 def parse_args(argv: Iterable[str]) -> argparse.Namespace:

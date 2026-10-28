@@ -632,7 +632,7 @@
       "kind": "runtime-plan"
     },
     {
-      "sha256": "6a1122f421144bfd2a19bce49834e513e5a546d56665291735297b3ec06d7218",
+      "sha256": "3ab695e0dd9582c8b0912772f1aa87b4ed33852cb1e377daccd8eec0ac612e73",
       "path": "hxc.specializations.json",
       "kind": "specialization-report"
     },
@@ -642,7 +642,7 @@
       "kind": "stdlib-report"
     },
     {
-      "sha256": "4a442b8a198fd1a5c66211c070af7033dd106f152dfb2760d96b831a90c06116",
+      "sha256": "396b5f904b91fdeb4bf582b1a2a84bc47697fb1a6aeacdef6c52632fb54b6f50",
       "path": "hxc.symbols.json",
       "kind": "symbol-table"
     },
@@ -1997,7 +1997,7 @@
       "kind": "source"
     },
     {
-      "sha256": "3965f33695a1d0af8557d38d4b66a2d89cef8e3060176c650c2d4cb8cebc1b69",
+      "sha256": "579284e158813a77c3611b6036b4a41fc748a5505b8711ebb74e21815c3fbaae",
       "path": "src/modules/caxecraft/app/CaxecraftApp.c",
       "kind": "source"
     },
@@ -2007,7 +2007,7 @@
       "kind": "source"
     },
     {
-      "sha256": "cc8637d4e14b436259def26afcc04972787ffc6ec0f96e3b1cce54976aecb7f1",
+      "sha256": "f0bfa5d5daf740a526da323d0812e81ce98435a24d2213ccefc2a3c07ffdb7a5",
       "path": "src/modules/caxecraft/app/CaxecraftEditorScreen.c",
       "kind": "source"
     },

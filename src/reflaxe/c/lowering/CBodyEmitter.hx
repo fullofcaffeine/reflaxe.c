@@ -8495,6 +8495,8 @@ class CBodyEmitter {
 				attributes: []
 			}));
 			final owner = requireValue(values, call.arguments[0], fn.id);
+			if (!retainableCStringOwner(owner))
+				return fail(("String C borrow `" + instruction.id + "` in `" + fn.id + "` would retain a non-addressable owner past its statement"));
 			addLineDirective(statements, instruction.source, lineDirectives);
 			emitStatusAbort(statements,
 				ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNStringBorrowCString)),
@@ -8518,6 +8520,12 @@ class CBodyEmitter {
 				attributes: []
 			}));
 			final owner = requireValue(values, call.arguments[0], fn.id);
+			if (!retainableCStringOwner(owner))
+				return fail(("String C preparation `"
+					+ instruction.id
+					+ "` in `"
+					+ fn.id
+					+ "` would retain a non-addressable owner past its statement"));
 			addLineDirective(statements, instruction.source, lineDirectives);
 			emitStatusAbort(statements, ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNStringPrepareCallCString)), [
 				EUnary(AddressOf, owner),
@@ -8558,6 +8566,31 @@ class CBodyEmitter {
 		if (!referencedValues.exists(result.id))
 			statements.push(SExpr(ECast(new CType(TVoid), DName(null), EIdentifier(temporary))));
 	}
+
+	/**
+		Report whether a String owner may be retained by a call-scoped C text value.
+
+		The prepared or borrowed C text keeps `&owner` until its disposal after the
+		native call. The status check wraps the runtime call in an `if`, and a C11
+		`if` statement is its own block, so a compound literal written there dies
+		before that disposal. Lowering gives constant owners named storage first;
+		this check keeps any future regression an internal error instead of
+		undefined behavior in generated C.
+
+		The rule is an allowlist of C lvalue shapes that name existing storage:
+		a variable, a member of such storage, or storage reached through a pointer.
+		Everything else (compound literals, casts, members of temporaries, calls)
+		is rejected, so a new value shape must be proven durable before it can be
+		retained here.
+	**/
+	static function retainableCStringOwner(owner:CExpr):Bool
+		return switch owner {
+			case EIdentifier(_): true;
+			case EParen(value): retainableCStringOwner(value);
+			case EMember(target, _, false): retainableCStringOwner(target);
+			case EMember(_, _, true) | EUnary(Dereference, _) | EIndex(_, _): true;
+			case _: false;
+		};
 
 	/**
 		Pass one element by address without wrapping an aggregate inside itself.

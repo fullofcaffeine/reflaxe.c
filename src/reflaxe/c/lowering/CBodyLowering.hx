@@ -13989,6 +13989,7 @@ private class FunctionBuilder {
 	/** Prepare one already-evaluated String immediately before its native consumer. */
 	function prepareCStringArgument(owner:LoweredValue, expected:CBodyValueType, position:Position, target:CPreparedImportFunction,
 			argumentIndex:Int):LoweredValue {
+		owner = addressableCStringOwner(owner, position, "cstring-arg");
 		final source = sourceSpan(position);
 		final result:HxcIRResult = {id: nextValueId(), type: expected.irType};
 		appendInstruction(result, IRIOCall({
@@ -14001,6 +14002,38 @@ private class FunctionBuilder {
 		runtimeRequirements.push(new CBodyRuntimeRequirement("string", "prepare-cstring",
 			("call-scoped immutable C text prepared for `" + target.haxePath + "` argument " + argumentIndex), source, position));
 		return {id: result.id, type: result.type, mapping: expected};
+	}
+
+	/**
+		Give a constant String owner named storage before a call-scoped C text borrow.
+
+		`prepare-cstring` and `borrow-cstring` keep a pointer to their owner String
+		until the native call finishes and the borrow is disposed. A String
+		constant normally prints as a C compound literal, but a compound literal
+		written inside the status check `if (prepare(&(hxc_string){...}) != OK)`
+		lives only for that `if` statement. The later dispose would then read a
+		dead object: undefined behavior that AddressSanitizer reports as
+		stack-use-after-scope.
+
+		Copying the constant into a flow local first gives the owner the lifetime
+		of the enclosing block, which contains the native call and its disposal.
+		Values that already come from a named local, parameter, field, or load are
+		addressable storage and pass through unchanged. The copy is a plain
+		descriptor move: a static literal has no allocation to retain or release.
+	**/
+	function addressableCStringOwner(owner:LoweredValue, position:Position, role:String):LoweredValue {
+		if (!definedByConstantInCurrentBlock(owner.id))
+			return owner;
+		final localId = createFlowLocal(owner.mapping, owner.id, sourceSpan(position), role + "-constant-owner");
+		return loadPlace({place: IRPLocal(localId), mapping: owner.mapping, mutable: false}, position, role + "-constant-owner-borrow");
+	}
+
+	/** Report whether one value is the result of a constant instruction already appended to the current block. */
+	function definedByConstantInCurrentBlock(valueId:String):Bool {
+		for (instruction in currentBlock.instructions)
+			if (instruction.result != null && instruction.result.id == valueId)
+				return instruction.kind.match(IRIOConstant(_));
+		return false;
 	}
 
 	/** Dispose optional C-string copies in reverse argument order after the native call. */
@@ -14043,6 +14076,7 @@ private class FunctionBuilder {
 			return invalidAbi(ownerExpression, ("Imported C function `" + target.haxePath + "` argument " + argumentIndex + " requires a Haxe String owner."));
 		var owner = coerce(lowerValue(ownerExpression, ownerMapping), ownerMapping, ownerExpression.pos, "TCall(c.CStringRef.to:owner)");
 		owner = stabilizeFreshManagedString(owner, ownerExpression.pos, "cstring-ref-owner");
+		owner = addressableCStringOwner(owner, ownerExpression.pos, "cstring-ref");
 		final source = sourceSpan(expression.pos);
 		final result:HxcIRResult = {id: nextValueId(), type: expected.irType};
 		appendInstruction(result, IRIOCall({
