@@ -26,7 +26,7 @@ LOWERING_DIAGNOSTIC_ID = "HXC1001"
 LOWERING_DETAIL = (
     "Unsupported typed Haxe node `TField(static:SIDECAR_PATHS:reference-Array-non-null)`"
 )
-LOWERING_SOURCE = "CProjectEmitter.hx:282: lines 282-297"
+LOWERING_SOURCE = "CProjectEmitter.hx:285: lines 285-300"
 MACRO_BRANCH_MARKERS = (
     "Typing macro reflaxe.c.CompilerBootstrap.Start",
     "Typing macro reflaxe.c.BuildDetection.isCBuild",

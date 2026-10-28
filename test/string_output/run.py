@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import difflib
+import hashlib
 import json
 import os
 import shutil
@@ -278,6 +279,8 @@ def validate_stdlib_report(report: dict[str, object]) -> None:
 
 
 def validate_manifest(manifest: dict[str, object]) -> None:
+    if manifest.get("schemaVersion") != 2:
+        raise StringOutputFailure("generated manifest omitted provenance schema 2")
     build = manifest.get("build")
     if not isinstance(build, dict):
         raise StringOutputFailure("generated manifest omitted its build plan")
@@ -293,6 +296,31 @@ def validate_manifest(manifest: dict[str, object]) -> None:
         raise StringOutputFailure("generated build plan runtime header closure drifted")
     if build.get("publicHeaders") != []:
         raise StringOutputFailure("primitive runtime-using output unexpectedly exposed a public header")
+    artifacts = manifest.get("artifacts")
+    if not isinstance(artifacts, list):
+        raise StringOutputFailure("generated manifest omitted addressed artifacts")
+    by_path = {
+        entry.get("path"): entry
+        for entry in artifacts
+        if isinstance(entry, dict) and isinstance(entry.get("path"), str)
+    }
+    program = by_path.get("src/program.c")
+    if not isinstance(program, dict) or program.get("provenance") != {"production": "compiled-program"}:
+        raise StringOutputFailure("generated program source omitted compiled-program provenance")
+    for output_path in EXPECTED_RUNTIME_ARTIFACTS:
+        tail = output_path.removeprefix("runtime/")
+        source_path = "runtime/hxrt/" + tail
+        artifact = by_path.get(output_path)
+        provenance = artifact.get("provenance") if isinstance(artifact, dict) else None
+        expected = {
+            "production": "repository-copy",
+            "sourcePath": source_path,
+            "sourceSha256": hashlib.sha256((ROOT / source_path).read_bytes()).hexdigest(),
+        }
+        if provenance != expected:
+            raise StringOutputFailure(
+                f"runtime artifact {output_path!r} has {provenance!r}; expected {expected!r}"
+            )
 
 
 def validate_public_abi_boundary(abi: dict[str, object]) -> None:

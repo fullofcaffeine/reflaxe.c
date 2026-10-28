@@ -466,6 +466,13 @@ class RuntimeFeatureGraphGolden {
 	}
 
 	static function packageRecords(files:Array<GeneratedFile>):Array<RuntimePackageFileRecord> {
+		for (file in files) {
+			if (file.provenance.production != reflaxe.c.emit.GeneratedFile.GeneratedFileProduction.RepositoryCopy
+				|| file.provenance.sourcePath == null
+				|| file.provenance.sourceSha256 != file.contentSha256) {
+				throw 'runtime package artifact `${file.relativePath}` lost its exact repository provenance';
+			}
+		}
 		return files.map(file -> {
 			path: file.relativePath,
 			kind: file.kind,

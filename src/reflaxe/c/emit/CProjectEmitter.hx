@@ -18,6 +18,7 @@ import reflaxe.c.emit.CBuildPlan.CBuildPlanBuilder;
 import reflaxe.c.emit.CBuildPlan.CBuildPlanSnapshot;
 import reflaxe.c.emit.CBuildPlan.CBuildStandard;
 import reflaxe.c.emit.GeneratedFile.GeneratedFileKind;
+import reflaxe.c.emit.GeneratedFile.GeneratedFileProvenance;
 import reflaxe.c.lowering.CDispatchReport.CDispatchReportBuilder;
 import reflaxe.c.lowering.CDispatchReport.CDispatchReportSnapshot;
 import reflaxe.c.lowering.CGenericSpecializationReport.CGenericSpecializationReportSnapshot;
@@ -134,6 +135,7 @@ private typedef AddressedArtifact = {
 	final path:String;
 	final kind:GeneratedFileKind;
 	final sha256:String;
+	final provenance:GeneratedFileProvenance;
 }
 
 private typedef ProjectConfigurationRecord = {
@@ -278,6 +280,7 @@ private typedef RuntimePlanSummary = {
 /** Pure schema-1 project emitter. Filesystem ownership is handled separately. */
 class CProjectEmitter {
 	public static inline final SCHEMA_VERSION = 1;
+	public static inline final MANIFEST_SCHEMA_VERSION = 2;
 
 	static final SIDECAR_PATHS = [
 		"hxc.abi.json",
@@ -420,10 +423,11 @@ class CProjectEmitter {
 		final addressedArtifacts:Array<AddressedArtifact> = files.map(file -> {
 			path: file.relativePath,
 			kind: file.kind,
-			sha256: file.contentSha256
+			sha256: file.contentSha256,
+			provenance: file.provenance
 		});
 		final manifest:CompilerManifestRecord = {
-			schemaVersion: SCHEMA_VERSION,
+			schemaVersion: MANIFEST_SCHEMA_VERSION,
 			generator: "reflaxe.c",
 			projectName: plan.projectName,
 			compilationStatus: plan.compilationStatus,

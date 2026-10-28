@@ -52,7 +52,7 @@ class HxcInspectManifest {
 		manifestPath = FileSystem.fullPath(requestedManifestPath);
 		rootPath = FileSystem.fullPath(haxe.io.Path.directory(manifestPath));
 		manifest = parseJson(File.getContent(manifestPath), "hxc.manifest.json");
-		requireNumber(requireField(manifest, "schemaVersion"), "schemaVersion", "1");
+		requireNumber(requireField(manifest, "schemaVersion"), "schemaVersion", "2");
 		artifacts = loadArtifacts(requireField(manifest, "artifacts"));
 	}
 
@@ -149,6 +149,7 @@ class HxcInspectManifest {
 				malformed('artifact path `$path` is unsafe or duplicated');
 			if (!~/^[0-9a-f]{64}$/.match(expected))
 				malformed('artifact `$path` has an invalid SHA-256 address');
+			validateProvenance(record, path, kind, expected);
 			final requested = haxe.io.Path.join([rootPath, path]);
 			if (!FileSystem.exists(requested) || FileSystem.isDirectory(requested))
 				fail('manifest artifact `$path` is missing', "Rebuild before inspecting this output.");
@@ -163,6 +164,36 @@ class HxcInspectManifest {
 			loaded.push(new HxcInspectedArtifact(path, kind, expected, bytes));
 		}
 		return loaded;
+	}
+
+	/** Reject a manifest when its construction facts contradict the artifact role. */
+	function validateProvenance(record:HxcJsonNode, path:String, kind:String, artifactSha256:String):Void {
+		final provenance = requireField(record, "provenance");
+		final production = requireString(requireField(provenance, "production"), "artifact provenance production");
+		final sourcePathNode = objectField(provenance, "sourcePath");
+		final sourceSha256Node = objectField(provenance, "sourceSha256");
+		switch kind {
+			case "public-header" | "private-header" | "source":
+				if (production != "compiled-program" || sourcePathNode != null || sourceSha256Node != null)
+					malformed('artifact `$path` has provenance that contradicts its compiled-program role');
+			case "runtime-header" | "runtime-source":
+				final sourcePath = sourcePathNode == null ? malformed('runtime artifact `$path` omitted its repository source path') : requireString(sourcePathNode,
+					"runtime artifact source path");
+				final sourceSha256 = sourceSha256Node == null ? malformed('runtime artifact `$path` omitted its repository source SHA-256') : requireString(sourceSha256Node,
+					"runtime artifact source SHA-256");
+				if (production != "repository-copy"
+					|| !isNormalizedRelativePath(sourcePath)
+					|| !StringTools.startsWith(sourcePath, "runtime/hxrt/")
+					|| sourceSha256 != artifactSha256) {
+					malformed('runtime artifact `$path` has provenance that contradicts its exact repository copy');
+				}
+			case "compiler-manifest" | "runtime-plan" | "abi-manifest" | "symbol-table" | "stdlib-report" | "specialization-report" | "dispatch-report" |
+				"initialization-plan" | "typed-inventory" | "hxcir" | "c-ast" | "declaration-report" | "cmake-adapter" | "meson-adapter":
+				if (production != "compiler-sidecar" || sourcePathNode != null || sourceSha256Node != null)
+					malformed('artifact `$path` has provenance that contradicts its compiler-sidecar role');
+			case _:
+				malformed('artifact `$path` has unknown kind `$kind`');
+		}
 	}
 
 	function artifactJson(kind:String):HxcJsonNode {

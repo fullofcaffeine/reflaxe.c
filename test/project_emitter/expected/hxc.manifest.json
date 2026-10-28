@@ -73,61 +73,94 @@
     "pkgConfigPackages": [],
     "warningPolicy": "strict"
   },
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "compilationStatus": "structural-fixture-no-haxe-lowering",
   "generator": "reflaxe.c",
   "artifacts": [
     {
+      "provenance": {
+        "production": "compiler-sidecar"
+      },
       "sha256": "253191cab4978bfd48dc4f8153d9af7707b02490062375a15e82c072b5faba69",
       "path": "cmake/CMakeLists.txt",
       "kind": "cmake-adapter"
     },
     {
+      "provenance": {
+        "production": "compiler-sidecar"
+      },
       "sha256": "fa47ca7dc21884d5a936d0d67dcac41143571c731c683ddf30ed37f333610838",
       "path": "hxc.abi.json",
       "kind": "abi-manifest"
     },
     {
+      "provenance": {
+        "production": "compiler-sidecar"
+      },
       "sha256": "0057c9f340a5beb6a8944577904c8e70983694dc6ec7dea17b905f38f4ab6155",
       "path": "hxc.runtime-plan.json",
       "kind": "runtime-plan"
     },
     {
+      "provenance": {
+        "production": "compiler-sidecar"
+      },
       "sha256": "ab9bf46f0e34d824591a6be8a4758db6661e677ab4016d2132c15a60d54b33bd",
       "path": "hxc.stdlib-report.json",
       "kind": "stdlib-report"
     },
     {
+      "provenance": {
+        "production": "compiler-sidecar"
+      },
       "sha256": "f02d8dff68467f04696b3a2a649231cbe50752f061ce1f26454e6e1ed07afe94",
       "path": "hxc.symbols.json",
       "kind": "symbol-table"
     },
     {
+      "provenance": {
+        "production": "compiled-program"
+      },
       "sha256": "3a73ab2337de2a45ed6cd7c83239e1997deff3f0114fdf8caea51687353670a8",
       "path": "include/hxc/detail/emitter_fixture_internal.h",
       "kind": "private-header"
     },
     {
+      "provenance": {
+        "production": "compiled-program"
+      },
       "sha256": "9e5fdad04603cad49ffbfbb87b0575dd185e009593e63e6c9855f3c3ba05428a",
       "path": "include/hxc/emitter_fixture.h",
       "kind": "public-header"
     },
     {
+      "provenance": {
+        "production": "compiled-program"
+      },
       "sha256": "828248baf11361244c2a258f3235dd0a0e83513faa4a1431e0be1aaffa595774",
       "path": "include/hxc/removed_module.h",
       "kind": "public-header"
     },
     {
+      "provenance": {
+        "production": "compiler-sidecar"
+      },
       "sha256": "53feae7eb677cda5adc90552e7001b33ac02560929bb7056d24078a1f60d00ce",
       "path": "meson.build",
       "kind": "meson-adapter"
     },
     {
+      "provenance": {
+        "production": "compiled-program"
+      },
       "sha256": "370a16c462196e73ba82b48d6000a0a26fef2da35ce667337c4308c7def3ee16",
       "path": "src/emitter_fixture.c",
       "kind": "source"
     },
     {
+      "provenance": {
+        "production": "compiled-program"
+      },
       "sha256": "e13c00d472133dd42b4e9949cb234c57dfcb627a52bf8f7cf12c0ea5c3801fe2",
       "path": "src/hxc_boot.c",
       "kind": "source"
