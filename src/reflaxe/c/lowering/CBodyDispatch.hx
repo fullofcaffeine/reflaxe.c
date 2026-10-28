@@ -179,6 +179,21 @@ class CBodyDispatchCatalog {
 	final slotsByMethodId:Map<String, CBodyVirtualSlotInput> = [];
 	final calls:Array<CBodyDispatchCallInput> = [];
 
+	/**
+		Changes whenever `selectedImplementations` could return a different answer.
+
+		That selection reads only `constructedClasses`, `slotsById`, and
+		`methodsById`, and each of them only ever gains new keys. Every new key
+		bumps this version, so an unchanged version means the previous selection is
+		still exactly right. Lowering asks for the selection after every
+		constructor and virtual call; recomputing it each time re-checked every
+		constructed class against every slot.
+	**/
+	var dispatchInputVersion = 0;
+
+	var selectedVersion = -1;
+	var selectedResult:Array<CBodyFunctionInput> = [];
+
 	public function new(context:CompilationContext, program:TypedProgramInput) {
 		this.context = context;
 		indexProgram(program);
@@ -199,8 +214,10 @@ class CBodyDispatchCatalog {
 				constructedClosedClasses.set(key, {reference: reference, arguments: arguments});
 			return [];
 		}
-		if (!constructedClasses.exists(path))
+		if (!constructedClasses.exists(path)) {
 			constructedClasses.set(path, reference);
+			dispatchInputVersion++;
+		}
 		return selectedImplementations();
 	}
 
@@ -435,6 +452,7 @@ class CBodyDispatchCatalog {
 						if (methodsById.exists(id))
 							throw new CBodyEmissionError('instance-method discovery received duplicate typed input `$id`');
 						methodsById.set(id, input);
+						dispatchInputVersion++;
 					case FMethod(MethDynamic) | FMethod(MethMacro) | FVar(_, _):
 				}
 			}
@@ -450,6 +468,7 @@ class CBodyDispatchCatalog {
 			final hierarchy = hierarchyRoot(rootMethod.owner);
 			slot = new CBodyVirtualSlotInput(id, layoutId(hierarchy), hierarchy, rootMethod.owner, rootMethod.field, sourcePath(rootMethod.owner));
 			slotsById.set(id, slot);
+			dispatchInputVersion++;
 		}
 		slotsByMethodId.set(CBodyLowering.methodId(ownerPath, rootMethod.field.name), slot);
 		return slot;
@@ -470,12 +489,16 @@ class CBodyDispatchCatalog {
 			slot = new CBodyVirtualSlotInput(id, interfaceLayoutId(interfaceReference), interfaceReference, interfaceReference, field,
 				sourcePath(interfaceReference));
 			slotsById.set(id, slot);
+			dispatchInputVersion++;
 		}
 		slotsByMethodId.set(CBodyLowering.methodId(interfacePath, field.name), slot);
 		return slot;
 	}
 
 	function selectedImplementations():Array<CBodyFunctionInput> {
+		// Same inputs give the same selection and the same idempotent slot updates.
+		if (selectedVersion == dispatchInputVersion)
+			return selectedResult.copy();
 		final result:Map<String, CBodyFunctionInput> = [];
 		for (classReference in constructedClasses) {
 			for (slot in slotsById) {
@@ -493,7 +516,9 @@ class CBodyDispatchCatalog {
 		}
 		final values = [for (value in result) value];
 		values.sort((left, right) -> compareUtf8(CBodyLowering.functionInputId(left), CBodyLowering.functionInputId(right)));
-		return values;
+		selectedVersion = dispatchInputVersion;
+		selectedResult = values;
+		return values.copy();
 	}
 
 	function effectiveMethod(classReference:Ref<ClassType>, slot:CBodyVirtualSlotInput):Null<CBodyFunctionInput> {
