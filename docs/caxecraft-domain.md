@@ -249,8 +249,9 @@ collision, level loading, and water all share the world, while only the water
 scheduler understands its private queue. Per-call borrowing keeps mutation
 visible at the API boundary and cannot leave a dangling pointer when a session
 ends. Haxe.c still rejects arbitrary stored span fields; the future design
-research for cases that genuinely need a retained view is tracked by
-`haxe_c-53k.7`, not assumed by this game.
+research found no current product need for one. The
+[retained C view research](retained-c-views.md) records one bounded future
+candidate without changing this game design.
 
 Current limits are deliberate and executable:
 
