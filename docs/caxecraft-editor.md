@@ -540,12 +540,14 @@ icon-and-sentence cards, templates, and world picking. **Advanced visual** mode
 now reveals nested predicates, rule priority, repeat/cooldown timing, and exact
 weighted-branch weights while preserving those cards. Event-context predicates,
 variable and sequence references, and scheduled sequence timing use the same
-registry-backed card sentences and typed pickers. Complete visual declaration
-editing for variables and sequence bodies remains planned. **Text** mode edits
-the exact bounded CaxeMap/CaxeFlow source. It provides line editing, syntax colors,
-canonical formatting, source-positioned diagnostics, shared-registry
-completion, and jump-to-world references. It is useful for experienced
-creators and automation agents.
+registry-backed card sentences and typed pickers. The Advanced declaration view
+can add, edit, rename, and safely remove typed variables and reusable sequences.
+It can also edit sequence actions and parameter signatures. Reference-aware
+checks reject a rename or removal that would leave invalid logic. **Text** mode
+edits the exact bounded CaxeMap/CaxeFlow source. It provides line editing, syntax
+colors, canonical formatting, source-positioned diagnostics, shared-registry
+completion, and jump-to-world references. It is useful for experienced creators
+and automation agents.
 
 Moving between views must parse and validate the same model. Text mode cannot
 call a mechanic unavailable to cards, and the visual views cannot flatten or
@@ -561,7 +563,7 @@ fades, choices, and persistent CaxeFlow changes. Normal and skip previews must
 reach the same required persistent state and restore camera and controls. The
 remaining visual depth is tracked under `haxe_c-xge.19.6` and cinematic
 authoring under `haxe_c-xge.20.3`. The current native trigger-card slice does not
-yet provide the complete advanced visual tree or cinematic timeline.
+yet provide the polished child-facing field forms or cinematic timeline.
 
 ## Executable evidence
 
