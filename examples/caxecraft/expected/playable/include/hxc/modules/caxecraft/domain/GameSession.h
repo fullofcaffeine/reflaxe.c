@@ -7,6 +7,7 @@
 #include "hxc/modules/caxecraft/domain/EntityStore.h"
 #include "hxc/modules/caxecraft/domain/Immersion.h"
 #include "hxc/modules/caxecraft/domain/PlayerAgent.h"
+#include "hxc/modules/caxecraft/domain/SessionStorageBase.h"
 #include "hxc/modules/caxecraft/domain/WaterSimulation.h"
 #include "hxc/modules/caxecraft/domain/WaterTickResult.h"
 #include "hxc/modules/caxecraft/gameplay/InventoryState.h"
@@ -14,6 +15,7 @@
 #include "hxc/modules/caxecraft/scenario/CaxeFlowRuntime.h"
 
 struct hxc_caxecraft_domain_GameSession {
+  struct hxc_caxecraft_domain_SessionStorageBase hxc_base;
   struct hxc_caxecraft_domain_EntityStore hxc_entities;
   struct hxc_array_ref *hxc_actorControllers;
   struct hxc_array_ref *hxc_actorControllerEvents;
@@ -45,8 +47,6 @@ struct hxc_caxecraft_domain_GameSession {
   struct hxc_array_ref *hxc_triggerActorPrevious;
   struct hxc_array_ref *hxc_triggerActorPreviousValid;
   struct hxc_caxecraft_domain_WaterSimulation hxc_water;
-  uint8_t hxc_worldStorage[32768];
-  int32_t hxc_authoredItemStorage[256];
 };
 
 struct hxc_caxecraft_domain_LocalCharacterCommandResult {

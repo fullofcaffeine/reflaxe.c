@@ -2,10 +2,10 @@
 
 void hxc_compiler_constructor_caxecraft_domain_GameSession(struct hxc_caxecraft_domain_GameSession *hxc_l_self)
 {
-  const void *volatile hxc_l_gc_roots[2] = { NULL, NULL };
+  const void *volatile hxc_l_gc_roots[3] = { NULL, NULL, NULL };
   hxc_l_gc_roots[0] = (const void *)hxc_l_self;
   struct hxc_gc_root_frame hxc_l_gc_frame = HXC_GC_ROOT_FRAME_INITIALIZER;
-  if (hxc_gc_root_frame_push(&hxc_program_gc_thread, hxc_l_gc_roots, 2, &hxc_l_gc_frame) != HXC_STATUS_OK)
+  if (hxc_gc_root_frame_push(&hxc_program_gc_thread, hxc_l_gc_roots, 3, &hxc_l_gc_frame) != HXC_STATUS_OK)
   {
     abort();
   }
@@ -172,6 +172,8 @@ void hxc_compiler_constructor_caxecraft_domain_GameSession(struct hxc_caxecraft_
   (*hxc_l_self).hxc_actorControllers = hxc_l_tmp_array_create_result_n26;
   struct hxc_caxecraft_domain_EntityStore *hxc_l_tmp_owned_class_field_address_n27 = &(*hxc_l_self).hxc_entities;
   hxc_compiler_constructor_caxecraft_domain_EntityStore(hxc_l_tmp_owned_class_field_address_n27);
+  hxc_l_gc_roots[2] = (const void *)&hxc_l_self->hxc_base;
+  hxc_compiler_constructor_caxecraft_domain_SessionStorageBase(&hxc_l_self->hxc_base);
   struct hxc_caxecraft_domain_PlayerAgent hxc_l_tmp_call_result_n28 = hxc_caxecraft_domain_PlayerAgent_bind(0);
   (*hxc_l_self).hxc_localPlayer = hxc_l_tmp_call_result_n28;
   struct hxc_caxecraft_domain_WaterSimulation *hxc_l_tmp_owned_class_field_address_n29 = &(*hxc_l_self).hxc_water;
@@ -310,7 +312,7 @@ bool hxc_caxecraft_domain_GameSession_activateAuthoredItemDuringLoad(struct hxc_
     {
       abort();
     }
-    (*hxc_l_self).hxc_authoredItemStorage[(size_t)hxc_l_index] = 1;
+    (*hxc_l_self).hxc_base.hxc_authoredItemStorage[(size_t)hxc_l_index] = 1;
     if (hxc_gc_root_frame_pop(&hxc_l_gc_frame) != HXC_STATUS_OK)
     {
       abort();
@@ -757,7 +759,7 @@ bool hxc_caxecraft_domain_GameSession_authoredItemIsActive(struct hxc_caxecraft_
     {
       abort();
     }
-    int32_t hxc_l_tmp_collection_index_load_result_n1 = (*hxc_l_self).hxc_authoredItemStorage[(size_t)hxc_l_index];
+    int32_t hxc_l_tmp_collection_index_load_result_n1 = (*hxc_l_self).hxc_base.hxc_authoredItemStorage[(size_t)hxc_l_index];
     if (hxc_gc_root_frame_pop(&hxc_l_gc_frame) != HXC_STATUS_OK)
     {
       abort();
@@ -789,7 +791,7 @@ const int32_t *hxc_caxecraft_domain_GameSession_authoredItemsView(struct hxc_cax
     abort();
   }
   *hxc_l_returned_span_length = 256;
-  return (*hxc_l_self).hxc_authoredItemStorage;
+  return (*hxc_l_self).hxc_base.hxc_authoredItemStorage;
 }
 
 bool hxc_caxecraft_domain_GameSession_bindLocalPlayer(struct hxc_caxecraft_domain_GameSession *hxc_l_self, struct hxc_caxecraft_domain_Character hxc_l_character)
@@ -1168,7 +1170,7 @@ struct hxc_caxecraft_domain_AuthoredAquaticEquipmentResult hxc_caxecraft_domain_
     {
       abort();
     }
-    (*hxc_l_self).hxc_authoredItemStorage[(size_t)hxc_l_index] = 0;
+    (*hxc_l_self).hxc_base.hxc_authoredItemStorage[(size_t)hxc_l_index] = 0;
     hxc_caxecraft_domain_GameSession_queueAuthoredItemCollected(hxc_l_self, hxc_l_index);
   }
   struct hxc_caxecraft_domain_Character hxc_l_tmp_record_field_load_result_n18 = hxc_l_committed.hxc_character;
@@ -1243,7 +1245,7 @@ struct hxc_caxecraft_domain_AuthoredInventoryItemResult hxc_caxecraft_domain_Gam
     {
       abort();
     }
-    (*hxc_l_self).hxc_authoredItemStorage[(size_t)hxc_l_index] = 0;
+    (*hxc_l_self).hxc_base.hxc_authoredItemStorage[(size_t)hxc_l_index] = 0;
     hxc_caxecraft_domain_GameSession_queueAuthoredItemCollected(hxc_l_self, hxc_l_index);
     if (hxc_gc_root_frame_pop(&hxc_l_gc_frame) != HXC_STATUS_OK)
     {
@@ -3287,7 +3289,7 @@ struct hxc_caxecraft_gameplay_MiningResult hxc_caxecraft_domain_GameSession_mine
   {
     abort();
   }
-  uint8_t *hxc_l_cells = (*hxc_l_self).hxc_worldStorage;
+  uint8_t *hxc_l_cells = (*hxc_l_self).hxc_base.hxc_worldStorage;
   size_t hxc_l_tmp_length_n3 = 32768;
   enum hxc_caxecraft_domain_BlockKind hxc_l_tmp_call_result_n0 = hxc_caxecraft_domain_World_query(hxc_l_cells, hxc_l_tmp_length_n3, hxc_l_coord);
   struct hxc_optional_caxecraft_gameplay_ItemKind hxc_l_tmp_call_result_n1 = hxc_caxecraft_gameplay_Mining_itemForCollectableBlock(hxc_l_tmp_call_result_n0);
@@ -3392,7 +3394,7 @@ bool hxc_caxecraft_domain_GameSession_placeInitialWaterVolume(struct hxc_caxecra
   {
     abort();
   }
-  uint8_t *hxc_l_cells = (*hxc_l_self).hxc_worldStorage;
+  uint8_t *hxc_l_cells = (*hxc_l_self).hxc_base.hxc_worldStorage;
   size_t hxc_l_tmp_length_n5 = 32768;
   struct hxc_caxecraft_domain_WaterSimulation *hxc_l_tmp_owned_class_field_address_n0 = &(*hxc_l_self).hxc_water;
   if (hxc_l_tmp_owned_class_field_address_n0 == NULL)
@@ -3424,7 +3426,7 @@ bool hxc_caxecraft_domain_GameSession_placeTerrain(struct hxc_caxecraft_domain_G
   {
     abort();
   }
-  uint8_t *hxc_l_cells = (*hxc_l_self).hxc_worldStorage;
+  uint8_t *hxc_l_cells = (*hxc_l_self).hxc_base.hxc_worldStorage;
   size_t hxc_l_tmp_length_n4 = 32768;
   struct hxc_array_ref *hxc_l_tmp_instance_call_result_n0 = hxc_caxecraft_domain_GameSession_blockChangedOccurrences(hxc_l_self, hxc_l_coord, hxc_l_kind);
   struct hxc_array_ref *hxc_l_changed = hxc_l_tmp_instance_call_result_n0;
@@ -3573,7 +3575,7 @@ bool hxc_caxecraft_domain_GameSession_placeWaterSource(struct hxc_caxecraft_doma
   {
     abort();
   }
-  uint8_t *hxc_l_cells = (*hxc_l_self).hxc_worldStorage;
+  uint8_t *hxc_l_cells = (*hxc_l_self).hxc_base.hxc_worldStorage;
   size_t hxc_l_tmp_length_n2 = 32768;
   struct hxc_caxecraft_domain_WaterSimulation *hxc_l_tmp_owned_class_field_address_n0 = &(*hxc_l_self).hxc_water;
   if (hxc_l_tmp_owned_class_field_address_n0 == NULL)
@@ -5034,7 +5036,7 @@ bool hxc_caxecraft_domain_GameSession_removeTerrain(struct hxc_caxecraft_domain_
   {
     abort();
   }
-  uint8_t *hxc_l_cells = (*hxc_l_self).hxc_worldStorage;
+  uint8_t *hxc_l_cells = (*hxc_l_self).hxc_base.hxc_worldStorage;
   size_t hxc_l_tmp_length_n2 = 32768;
   struct hxc_array_ref *hxc_l_tmp_instance_call_result_n1 = hxc_caxecraft_domain_GameSession_blockChangedOccurrences(hxc_l_self, hxc_l_coord, hxc_caxecraft_domain_BlockKind_Air);
   struct hxc_array_ref *hxc_l_stagedEvents = hxc_l_tmp_instance_call_result_n1;
@@ -5907,7 +5909,7 @@ struct hxc_caxecraft_domain_CharacterCommandStepResult hxc_caxecraft_domain_Game
   {
     abort();
   }
-  const uint8_t *hxc_l_readCells = (*hxc_l_self).hxc_worldStorage;
+  const uint8_t *hxc_l_readCells = (*hxc_l_self).hxc_base.hxc_worldStorage;
   size_t hxc_l_tmp_length_n4 = 32768;
   struct hxc_caxecraft_domain_EntityStore *hxc_l_tmp_owned_class_field_address_n0 = &(*hxc_l_self).hxc_entities;
   if (hxc_l_tmp_owned_class_field_address_n0 == NULL)
@@ -6029,9 +6031,9 @@ struct hxc_caxecraft_domain_GameTickResult hxc_caxecraft_domain_GameSession_tick
   {
     abort();
   }
-  uint8_t *hxc_l_cells = (*hxc_l_self).hxc_worldStorage;
+  uint8_t *hxc_l_cells = (*hxc_l_self).hxc_base.hxc_worldStorage;
   size_t hxc_l_tmp_length_n2 = 32768;
-  const uint8_t *hxc_l_readCells = (*hxc_l_self).hxc_worldStorage;
+  const uint8_t *hxc_l_readCells = (*hxc_l_self).hxc_base.hxc_worldStorage;
   size_t hxc_l_tmp_length_n3 = 32768;
   struct hxc_caxecraft_domain_PlayerAgent hxc_l_tmp_class_field_load_result_n0 = (*hxc_l_self).hxc_localPlayer;
   int32_t hxc_l_characterId = hxc_l_tmp_class_field_load_result_n0.hxc_characterId;
@@ -6637,7 +6639,7 @@ const uint8_t *hxc_caxecraft_domain_GameSession_worldView(struct hxc_caxecraft_d
     abort();
   }
   *hxc_l_returned_span_length = 32768;
-  return (*hxc_l_self).hxc_worldStorage;
+  return (*hxc_l_self).hxc_base.hxc_worldStorage;
 }
 
 int32_t hxc_caxecraft_domain_GameSession_writeTerrainRunDuringLoad(struct hxc_caxecraft_domain_GameSession *hxc_l_self, int32_t hxc_l_startIndex, int32_t hxc_l_storageCode, int32_t hxc_l_count)
@@ -6688,7 +6690,7 @@ int32_t hxc_caxecraft_domain_GameSession_writeTerrainRunDuringLoad(struct hxc_ca
   {
     abort();
   }
-  uint8_t *hxc_l_cells = (*hxc_l_self).hxc_worldStorage;
+  uint8_t *hxc_l_cells = (*hxc_l_self).hxc_base.hxc_worldStorage;
   size_t hxc_l_tmp_length_n9 = 32768;
   int32_t hxc_l_end = hxc_i32_add_wrapping(hxc_l_startIndex, hxc_l_count);
   int32_t hxc_l_index = hxc_l_startIndex;

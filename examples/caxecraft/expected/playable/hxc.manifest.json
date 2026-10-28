@@ -108,10 +108,12 @@
       "src/modules/caxecraft/domain/GameSession.c",
       "src/modules/caxecraft/domain/PlayerAgent.c",
       "src/modules/caxecraft/domain/PlayerCamera.c",
+      "src/modules/caxecraft/domain/SessionStorageBase.c",
       "src/modules/caxecraft/domain/Vitals.c",
       "src/modules/caxecraft/domain/VoxelRaycast.c",
       "src/modules/caxecraft/domain/WaterCellCodec.c",
       "src/modules/caxecraft/domain/WaterSimulation.c",
+      "src/modules/caxecraft/domain/WaterStorageBase.c",
       "src/modules/caxecraft/domain/World.c",
       "src/modules/caxecraft/domain/WorldRead.c",
       "src/modules/caxecraft/domain/WorldStorage.c",
@@ -300,6 +302,7 @@
       "include/hxc/modules/caxecraft/domain/PlayerAgent.h",
       "include/hxc/modules/caxecraft/domain/PlayerCamera.h",
       "include/hxc/modules/caxecraft/domain/RaycastHit.h",
+      "include/hxc/modules/caxecraft/domain/SessionStorageBase.h",
       "include/hxc/modules/caxecraft/domain/StepInput.h",
       "include/hxc/modules/caxecraft/domain/Vitals.h",
       "include/hxc/modules/caxecraft/domain/VitalsState.h",
@@ -307,6 +310,7 @@
       "include/hxc/modules/caxecraft/domain/WaterCellCodec.h",
       "include/hxc/modules/caxecraft/domain/WaterCellState.h",
       "include/hxc/modules/caxecraft/domain/WaterSimulation.h",
+      "include/hxc/modules/caxecraft/domain/WaterStorageBase.h",
       "include/hxc/modules/caxecraft/domain/WaterTickResult.h",
       "include/hxc/modules/caxecraft/domain/World.h",
       "include/hxc/modules/caxecraft/domain/WorldRead.h",
@@ -607,7 +611,7 @@
   "generator": "reflaxe.c",
   "artifacts": [
     {
-      "sha256": "2311749e05f91f63f96f9edba39b605fbf66d5a2e52f8b8e7b3f3ef9395d1b61",
+      "sha256": "d3e2ce787f920728308d549ce94e117b5ee59441eccd56ba265700143a16e5b2",
       "path": "cmake/CMakeLists.txt",
       "kind": "cmake-adapter"
     },
@@ -617,7 +621,7 @@
       "kind": "abi-manifest"
     },
     {
-      "sha256": "07488cec60c6d822a8ed77ed1da838db59bbb1ebb256c0c422b3f6c071f1b8fa",
+      "sha256": "3edd182e38c858506b3b06433475c9c4abdbd09bf50a175dde739ee4bc0b5f2a",
       "path": "hxc.dispatch.json",
       "kind": "dispatch-report"
     },
@@ -627,12 +631,12 @@
       "kind": "initialization-plan"
     },
     {
-      "sha256": "ab2e9c268dd0ad3318f805431a0f165577044adbe1b3476414382f31fb71fd6a",
+      "sha256": "8feae65503f7eb813e9d69e8b3c7b03f93f836556adee36fa2dc48213201c7d3",
       "path": "hxc.runtime-plan.json",
       "kind": "runtime-plan"
     },
     {
-      "sha256": "3ab695e0dd9582c8b0912772f1aa87b4ed33852cb1e377daccd8eec0ac612e73",
+      "sha256": "5f563afb3cd426646d3f8597afb84ddc4bc25d18542ae97cf7aa877eea165eba",
       "path": "hxc.specializations.json",
       "kind": "specialization-report"
     },
@@ -642,12 +646,12 @@
       "kind": "stdlib-report"
     },
     {
-      "sha256": "396b5f904b91fdeb4bf582b1a2a84bc47697fb1a6aeacdef6c52632fb54b6f50",
+      "sha256": "7c0cd899540d56bb13168a531abde7dfed7f5524be063d806b9681c27b19c769",
       "path": "hxc.symbols.json",
       "kind": "symbol-table"
     },
     {
-      "sha256": "4975931d935c932c14e438ae32f367b28a8eb64026a4cbd5743bada73c0989f3",
+      "sha256": "afcae063a30fc054d142c227ec6996c1294ed130c396bb5c942b536f06b3d812",
       "path": "include/hxc/detail/program_types.h",
       "kind": "private-header"
     },
@@ -1152,7 +1156,7 @@
       "kind": "private-header"
     },
     {
-      "sha256": "14124b79bee785e7ab845fe30629fd456fc368e907f83e6affbcce8e2ef5b59f",
+      "sha256": "8f933c34c46d0879dd09785a081b7c669591bde60eb831093598a285582d3509",
       "path": "include/hxc/modules/caxecraft/domain/GameSession.h",
       "kind": "private-header"
     },
@@ -1179,6 +1183,11 @@
     {
       "sha256": "9576a77399cb020b710cff0b51a1b08f5bf97fc446c5bcfd726172fd7defff1d",
       "path": "include/hxc/modules/caxecraft/domain/RaycastHit.h",
+      "kind": "private-header"
+    },
+    {
+      "sha256": "c06d5cc115dc8d213b21ed602467a6c3c48a80a03b56bc04fddfc6fbeea239fd",
+      "path": "include/hxc/modules/caxecraft/domain/SessionStorageBase.h",
       "kind": "private-header"
     },
     {
@@ -1212,8 +1221,13 @@
       "kind": "private-header"
     },
     {
-      "sha256": "2334ba55942db14c7bd0eeaae9014466c8ad83b87daa5e063994a676e643e297",
+      "sha256": "26fe6dcfa505d07c9f3ac1fbcbfc81257510a1fb621e676d985b0713fe10c4fe",
       "path": "include/hxc/modules/caxecraft/domain/WaterSimulation.h",
+      "kind": "private-header"
+    },
+    {
+      "sha256": "34895cffd92bac9f2a4726f7d5ab723203bd7f1cda791618a2f39d7ad8048c1d",
+      "path": "include/hxc/modules/caxecraft/domain/WaterStorageBase.h",
       "kind": "private-header"
     },
     {
@@ -1747,12 +1761,12 @@
       "kind": "private-header"
     },
     {
-      "sha256": "2421089fa38ba391fe9b97d3774ab0bfc3cbc8c3a761f6dead055f2a8daa4fc9",
+      "sha256": "550a201f4c393b96f3291bf45af09f4269de0820528fff16ae2ec258498a9f80",
       "path": "include/hxc/program.h",
       "kind": "private-header"
     },
     {
-      "sha256": "d603e11f8bcb8cd282de25068f6ac2bf1b30503bfb955a9b1230a1d36bdb9b8f",
+      "sha256": "99e64e18d1e1fc81ffc5ac1bfd1b14d0cd32e2de8cb8b038c0738aca382ad490",
       "path": "meson.build",
       "kind": "meson-adapter"
     },
@@ -1957,7 +1971,7 @@
       "kind": "source"
     },
     {
-      "sha256": "df463b2a7034e6fa09696f8c76490139839db20bdd4733ecc8ff4cbcf66cf22d",
+      "sha256": "51e36049b32a24eedb27edea441255bd63f1a01a2d3343381e359852e5c7f4f2",
       "path": "src/hxc/support.c",
       "kind": "source"
     },
@@ -2337,7 +2351,7 @@
       "kind": "source"
     },
     {
-      "sha256": "1c0a915537ed2beaeb8b5f42e40cfeaeebcc3d0b286171d120fed0a82205a085",
+      "sha256": "0e53ab522f4ee7752b3bd82df9ff59172841ef59329fcf8a5af428c051dbae64",
       "path": "src/modules/caxecraft/domain/GameSession.c",
       "kind": "source"
     },
@@ -2349,6 +2363,11 @@
     {
       "sha256": "550c6e9cef70c5a5b37ca962b205e7c069abe9533b46b6a8c76b3faad24b97d7",
       "path": "src/modules/caxecraft/domain/PlayerCamera.c",
+      "kind": "source"
+    },
+    {
+      "sha256": "14ac082d1d215fa6b1e61e4fa7a408f49eccbd56d66f0933f6e59b554923180a",
+      "path": "src/modules/caxecraft/domain/SessionStorageBase.c",
       "kind": "source"
     },
     {
@@ -2367,8 +2386,13 @@
       "kind": "source"
     },
     {
-      "sha256": "10c00a2a78b4737c8cc8259a0a98c8736283da9d0ce943eb0966069747abbcff",
+      "sha256": "73fdf0759f34ae6a959cdedfa5159509c8cec74fc16958bac77698478bcd866d",
       "path": "src/modules/caxecraft/domain/WaterSimulation.c",
+      "kind": "source"
+    },
+    {
+      "sha256": "4c453a8ea6667c2e31c0a7c29acd82fe1a33d6f57bfc589e1bc4e7fd6ea607b2",
+      "path": "src/modules/caxecraft/domain/WaterStorageBase.c",
       "kind": "source"
     },
     {

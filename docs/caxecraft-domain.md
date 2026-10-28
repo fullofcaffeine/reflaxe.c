@@ -33,36 +33,99 @@ path-bearing `c_output` transport. Manually supplying `-D c` does not activate
 or validate the custom target and is not a supported shortcut. The activation
 contract is documented in [configuration](configuration.md#target-activation-and-native-tuple).
 
-### Exact current conditional inventory
+### Current target adapters
 
-| Location | C branch | Non-C branch | Why the difference is admitted |
+Target adapters own a value shape or a platform operation that differs by
+target. Ordinary game modules call typed operations on these adapters.
+
+| Adapter group | C representation | Portable representation | Owned difference |
 | --- | --- | --- | --- |
-| `WorldCells.hx` | `Span<UInt8>` | `Array<Int>` | C needs compact fixed native storage; the oracle needs an ordinary Haxe carrier. |
-| `WorldStorage.hx` | exact `UInt8` widening and explicit narrowing | direct `Int` array access | C ABI-width conversions must remain explicit without infecting algorithms. |
-| `CaxecraftTrace.hx` | fixed `CArray<UInt8, WorldVolume>` backing | freshly filled Haxe array | Each trace needs owned test storage, but all operations after construction stay shared. |
-| `DomainProbe.hx` | fixed storage and no Haxe `Sys` output | Haxe array and printed oracle lines | The C slice is runtime-free, so an independent fixture C consumer prints returned values. |
-| `WaterPendingCells.hx` | mutable `Span<UInt8>` queue marks | ordinary `Array<Int>` marks | The bounded scheduler needs one compact mark per world cell without changing its algorithm. |
-| `WaterPendingStorage.hx` | exact byte widening/narrowing | direct `Int` access | Only the storage adapter knows how the selected mark carrier is read and written. |
-| `WaterProbe.hx` | two fixed `CArray` buffers and retained scalar functions | two Haxe arrays and printed oracle lines | World and pending storage differ; every flow, leak, and repair rule after setup is shared. |
-| `AquaticsProbe.hx` | two fixed `CArray` buffers and retained scalar functions | two Haxe arrays and printed oracle lines | Test storage and output plumbing differ; immersion, movement, breath, and capabilities are the same Haxe on both paths. |
+| `WorldCells`, `WorldView`, `AuthoredItemView`, `WaterPendingCells` | typed `Span` or `ConstSpan` | an abstract over `Array<Int>` | borrowed view types |
+| `SessionStorageBase`, `WaterStorageBase` | embedded fixed `CArray` values | initialized `Array<Int>` values | storage construction and lifetime |
+| `WorldStorage`, `WorldViewStorage`, `WaterPendingStorage` | exact byte conversion | direct `Int` access | carrier reads and writes |
+| `LocalizationText` | `CString` | `String` | presentation text carrier |
+| `CaxecraftTrace` and the QA probes | fixed C test storage | portable test storage and output | test evidence only |
 
-The complete `caxecraft.app` source set is also guarded by `#if c`. That is a
-different kind of seam: the whole window/input/render adapter exists only for
-the C application because it speaks directly to Raylib's C ABI. Shared world,
-ray, edit, and physics algorithms do not import that adapter. A future browser
-or Rust presentation should supply its own narrow application adapter rather
-than putting `#if c` tests inside gameplay or frame-by-frame control flow.
+The complete `caxecraft.app` source set is a C adapter. It owns the Raylib
+window, input, rendering, audio, resources, and native lifetime.
 
-The import guards are part of the same boundary: non-C compilation never sees
-the C-only carrier imports. The repeated storage setup in the trace is visible
-on purpose; it makes the representational difference reviewable rather than
-hiding it in an untyped factory or runtime service.
+Raylib declarations stay behind the verified C target. A non-C build cannot
+type these declarations and cannot claim a portable Raylib ABI.
 
-No `#if c` appears in `World`, `VoxelRaycast`, or `CharacterPhysics`. Bounds,
-terrain, edits, material rules, DDA traversal, collision, and fixed-step state
-updates are one ordinary Haxe implementation. That placement is the central
-architectural rule: select carriers and platform services at a narrow edge,
-then pass typed data into shared algorithms.
+`GameSession`, `WaterSimulation`, and `WorldRead` now contain no target branch.
+The same rule applies to ordinary scenario and localization modules.
+
+### Adapter architecture decision
+
+A build selects target code through one composition root and target-specific
+source roots. Each source root can provide the same Haxe module name.
+
+The shared caller imports that module without a target branch:
+
+```text
+test/cross_target_adapter/
+  shared/caxecraft/adapterprobe/AdapterRules.hx
+  c/caxecraft/adapterprobe/sourceroot/AdapterPort.hx
+  portable/caxecraft/adapterprobe/sourceroot/AdapterPort.hx
+```
+
+The C HXML adds `shared` and `c` to its class path. The portable HXML adds
+`shared` and `portable`. Only one `AdapterPort` is visible in each build.
+
+The production HXML files still share one `src` root. Therefore,
+`SessionStorageBase` and `WaterStorageBase` contain the current small
+representation conditionals. A later source-set split can provide those same
+module names per target without changing `GameSession` or `WaterSimulation`.
+
+The executable probe compares three bounded designs from the same shared rule:
+
+| Design | Generated C evidence | Decision |
+| --- | --- | --- |
+| Target-specific source roots | direct function and byte conversion with no runtime feature | Default for target-owned services and storage |
+| Shared structural interface | stack object, interface table, indirect call, no heap, and no `hxrt` | Use only when runtime replacement is a real requirement |
+| Narrow `#if c` conversion | direct byte conversion with no runtime branch | Keep for a small closed alias or exact conversion |
+| Inherited carrier base | embedded fixed array, checked span, direct field access, no heap, and no `hxrt` | Current owner seam until production source roots split |
+
+Source roots preserve direct C calls and keep target imports out of shared
+source. They also let each target own its resource and cleanup rules.
+
+Structural interfaces give editors one shared contract. However, the current
+C output uses an interface table and an indirect call. This cost is unnecessary
+for fixed storage and per-frame services that the build selects once.
+
+A conditional alias keeps one small representation boundary easy to find.
+Large conditional bodies hide two implementations in one file and make drift
+more likely. Therefore, an alias cannot own game rules or platform side effects.
+
+Haxe dead-code elimination removes adapters that the selected composition root
+does not reach. The custom target still activates C and the public `c` define.
+Another Reflaxe compiler can use its own source root without consuming HxcIR.
+
+A package must publish the shared source and each named target root. An IDE
+must load the same class path as the selected build. This prevents duplicate
+module diagnostics and gives completion for the active adapter only.
+
+### Incremental migration
+
+The old `GameSession` repeated target branches at each world operation. The old
+`WaterSimulation` also selected its pending buffer inside the algorithm.
+
+`SessionStorageBase` now selects the session carriers. `WaterStorageBase`
+selects the scheduler marks. `GameSession` and `WaterSimulation` inherit these
+fields, own their lifetime, and retain all game decisions.
+
+The base grants `GameSession` access only to `worldStorage` and
+`authoredItemStorage`. It grants `WaterSimulation` access only to the two mark
+operations. These friend grants keep mutable carriers private from all other
+modules. Generated C embeds each base as a direct prefix with fixed arrays.
+
+Use these gates for each later migration:
+
+1. Move only target representation or side effects into the adapter.
+2. Keep one shared Haxe behavior probe for C and a non-C target.
+3. Inspect generated C for direct calls, explicit storage, and runtime features.
+4. Keep the C Raylib declarations fail-closed behind C target activation.
+5. Add a source audit that rejects target branches and foreign types in ordinary modules.
 
 ### What the non-C branch proves—and does not prove
 
@@ -95,10 +158,9 @@ proceed in these stages:
    window/rendering, and native-resource/build ownership separate. Raylib owns
    the first C presentation adapter; another target may choose a genuinely
    native library or browser API.
-3. **Add target carriers at the edge.** A JavaScript experiment may prefer a
-   typed array; Rust may prefer its backend's array/slice representation. Use
-   separate small adapter modules or target-specific source roots when that is
-   clearer than adding more branches to shared files.
+3. **Add target carriers at the edge.** A JavaScript experiment can prefer a
+   typed array. Rust can prefer its backend array or slice. Use target-specific
+   source roots for platform services and storage owners.
 4. **Run semantic differential traces before sharing APIs.** Compare world,
    ray, edit, movement, and collision state independently of pixels. Report
    integer, float, iteration, and failure differences rather than normalizing
@@ -111,20 +173,19 @@ proceed in these stages:
    contract into shared code. Until then, duplication at a narrow target edge
    is safer than a speculative framework.
 
-The preferred end state is mostly conditional-free shared domain source plus a
-small set of explicit adapter modules. A target conditional is still reasonable
-for a closed compile-time type alias or exact conversion that cannot be chosen
-at runtime. It should be replaced or isolated further when branches begin to
-contain algorithms, acquire target-specific side effects, multiply beyond a
-small closed set, or require different ownership/lifetime rules.
+The preferred end state has conditional-free shared domain source and a small
+set of explicit adapters. A target conditional remains valid for a closed type
+alias or exact conversion.
+
+Move the code to a target source root when a branch contains an algorithm or
+owns side effects. Also move it when the branch grows or changes resource lifetime.
 
 ### Guardrails for future changes
 
 - A target branch may choose representation, conversion, test plumbing, or a
   platform adapter; it must not silently change gameplay rules.
 - Every new `#if c` site needs a documented reason and differential evidence.
-  Prefer adding an operation to the existing adapter over branching at each
-  call site.
+  Add an operation to an existing adapter instead of branching at each call site.
 - C-only imports and `c.*` ABI types stay inside the selected branch or a
   C-specific adapter module. They must not become fake portable types.
 - The fallback must not be described as allocation- or performance-equivalent:
@@ -134,6 +195,14 @@ small closed set, or require different ownership/lifetime rules.
 - HxcIR remains the C compiler's semantic lowering contract. Portable game
   semantics live in Haxe source and tests, so another backend need not consume
   HxcIR to reuse the domain.
+
+Run `npm run test:caxecraft-cross-target-adapter` for the executable boundary
+proof. The command compiles the shared probe with Eval, JavaScript, and haxe.c.
+It also runs strict native C and audits ordinary source modules.
+
+The [Eval-assisted loop experiment](research/caxecraft-eval-assisted-loop.md)
+keeps this boundary honest. Eval remains a fast rule probe, while reloadable
+content and the persistent native game provide creator-facing frame feedback.
 
 ## Boundary and representation
 
@@ -147,7 +216,7 @@ alone maps those cases to stable codes 0 through 4. The C carrier stores each
 code in one `UInt8`; exact widening and explicit modulo narrowing go through
 `c.IntConvert`. This gives the 64 x 16 x 32 world a 32 KiB cell payload.
 
-`WorldCells` is the only target-shaped seam:
+`WorldCells` is the central borrowed world seam:
 
 | Build | Carrier | Purpose |
 | --- | --- | --- |

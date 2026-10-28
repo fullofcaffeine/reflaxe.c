@@ -51,11 +51,6 @@ import caxecraft.scenario.ScenarioContentRegistry;
 import caxecraft.scenario.ScenarioId;
 import caxecraft.scenario.ScenarioLimits;
 import caxecraft.domain.Vitals.isDefeated as characterVitalsDefeated;
-#if c
-import c.CArray;
-import c.ConstSpan;
-import c.UInt8;
-#end
 
 /**
 	All controller-neutral input required for one exact simulation tick.
@@ -221,7 +216,7 @@ typedef AuthoredInventoryItemResult = {
 	item mutations remain session commands, so the application cannot bypass water
 	scheduling or retain a mutable storage view.
 **/
-final class GameSession {
+final class GameSession extends SessionStorageBase {
 	/** All live character state, owned for exactly this session's lifetime. */
 	final entities:EntityStore = new EntityStore();
 
@@ -315,36 +310,10 @@ final class GameSession {
 	/** Deterministic water work state, shared by loading and fixed simulation. */
 	final water:WaterSimulation = new WaterSimulation();
 
-	#if c
-	/** Compact voxel storage embedded directly in the generated C session struct. */
-	final worldStorage:CArray<UInt8, WorldVolume> = CArray.zero(World.VOLUME);
-
-	/** Loaded authored-item activity flags, bounded by the engine capacity. */
-	final authoredItemStorage:CArray<Int, AuthoredItemSlots> = CArray.zero(AuthoredItemSlots.CAPACITY);
-	#else
-
-	/** Eval's behavior-oracle carrier for the same fixed world semantics. */
-	final worldStorage:Array<Int> = [];
-
-	/** Eval's behavior-oracle carrier for authored-item activity flags. */
-	final authoredItemStorage:Array<Int> = [];
-	#end
-
 	/** Construct zeroed storage before validated level content populates it. */
 	public function new() {
+		super();
 		localPlayer = bindPlayerAgent(EntityId.invalid());
-		#if !c
-		var worldIndex = 0;
-		while (worldIndex < World.VOLUME) {
-			worldStorage.push(0);
-			worldIndex++;
-		}
-		var itemIndex = 0;
-		while (itemIndex < AuthoredItemSlots.CAPACITY) {
-			authoredItemStorage.push(0);
-			itemIndex++;
-		}
-		#end
 		water.resetPending();
 	}
 
@@ -913,11 +882,7 @@ final class GameSession {
 		intent without creating player- and NPC-specific physics.
 	**/
 	public function stepCharacter(id:EntityId, intent:CharacterIntent, damagePolicy:CharacterDamagePolicy):CharacterCommandStepResult {
-		#if c
-		var readCells:WorldView = worldStorage.constSpan();
-		#else
-		var readCells:WorldView = WorldView.borrow(worldStorage);
-		#end
+		final readCells:WorldView = worldStorage.constSpan();
 		return stepStoredCharacter(readCells, entities.read(id), intent, damagePolicy);
 	}
 
@@ -1136,31 +1101,26 @@ final class GameSession {
 	/**
 		Lend the owned voxel bytes to one direct read-only consumer.
 
-		The C result is the address and length of `worldStorage`, not a copied world.
+		The C result is the address and length of the adapter-owned world, not a copy.
 		Haxe.c ties that borrow to this exact session receiver and rejects storing,
 		re-returning, or otherwise letting it outlive the call that consumes it.
 		Eval returns the same session-owned array, whose public type is still used
 		only by read operations in `WorldRead`.
 	**/
 	public function worldView():WorldView {
-		#if c
 		return worldStorage.constSpan();
-		#else
-		return WorldView.borrow(worldStorage);
-		#end
 	}
 
-	#if c
 	/**
-		Lend authored-item activity flags to the native renderer for one call.
+		Lend authored-item activity flags to presentation for one call.
 
-		The renderer receives `const int *` plus length in generated C. Gameplay
+		The C renderer receives `const int *` plus length. Gameplay
 		changes a flag only through `collectAuthoredAquaticEquipment`, so drawing
 		cannot accidentally collect or restore an item.
 	**/
-	public function authoredItemsView():ConstSpan<Int>
+	public function authoredItemsView():AuthoredItemView {
 		return authoredItemStorage.constSpan();
-	#end
+	}
 
 	/** Number of water cells waiting for deterministic fixed-tick work. */
 	public inline function pendingWaterWork():Int
@@ -1173,11 +1133,7 @@ final class GameSession {
 		clears deterministic water scheduling so no work from an older level survives.
 	**/
 	public function resetEmptyWorld():Void {
-		#if c
-		var cells:WorldCells = worldStorage.span();
-		#else
-		var cells:WorldCells = worldStorage;
-		#end
+		final cells:WorldCells = worldStorage.span();
 		var index = 0;
 		while (index < World.VOLUME) {
 			WorldStorage.writeCode(cells, index, 0);
@@ -1188,21 +1144,13 @@ final class GameSession {
 
 	/** Write one already validated terrain cell while a level is being assembled. */
 	public function replaceTerrainDuringLoad(coord:BlockCoord, kind:BlockKind):Bool {
-		#if c
-		var cells:WorldCells = worldStorage.span();
-		#else
-		var cells:WorldCells = worldStorage;
-		#end
+		final cells:WorldCells = worldStorage.span();
 		return World.replace(cells, coord, kind);
 	}
 
 	/** Add one permanent water source while assembling or editing a level. */
 	public function placeWaterSource(coord:BlockCoord):Bool {
-		#if c
-		var cells:WorldCells = worldStorage.span();
-		#else
-		var cells:WorldCells = worldStorage;
-		#end
+		final cells:WorldCells = worldStorage.span();
 		return water.placeSource(cells, coord);
 	}
 
@@ -1223,11 +1171,7 @@ final class GameSession {
 			|| startIndex > World.VOLUME - count
 			|| (storageCode != 0 && !isSolidStorageCode(storageCode)))
 			return -1;
-		#if c
-		var cells:WorldCells = worldStorage.span();
-		#else
-		var cells:WorldCells = worldStorage;
-		#end
+		final cells:WorldCells = worldStorage.span();
 		final end = startIndex + count;
 		var index = startIndex;
 		while (index < end) {
@@ -1239,11 +1183,7 @@ final class GameSession {
 
 	/** Add one checked, non-source water box while assembling a candidate level. */
 	public function placeInitialWaterVolume(origin:BlockCoord, width:Int, height:Int, depth:Int):Bool {
-		#if c
-		var cells:WorldCells = worldStorage.span();
-		#else
-		var cells:WorldCells = worldStorage;
-		#end
+		final cells:WorldCells = worldStorage.span();
 		return water.placeInitialVolume(cells, origin, width, height, depth);
 	}
 
@@ -1372,11 +1312,7 @@ final class GameSession {
 		inventory leaves both world bytes and fluid work unchanged.
 	**/
 	public function mineTerrain(coord:BlockCoord, inventory:InventoryState):MiningResult {
-		#if c
-		var cells:WorldCells = worldStorage.span();
-		#else
-		var cells:WorldCells = worldStorage;
-		#end
+		final cells:WorldCells = worldStorage.span();
 		final item = itemForCollectableBlock(World.query(cells, coord));
 		final stagedEvents:Array<FlowEventOccurrence> = if (item != null && Inventory.acceptedAmount(inventory, item, 1) == 1) {
 			final candidate = blockChangedOccurrences(coord, BlockKind.Air);
@@ -1399,11 +1335,7 @@ final class GameSession {
 		a matching item contract. Water is notified only after a successful edit.
 	**/
 	public function removeTerrain(coord:BlockCoord):Bool {
-		#if c
-		var cells:WorldCells = worldStorage.span();
-		#else
-		var cells:WorldCells = worldStorage;
-		#end
+		final cells:WorldCells = worldStorage.span();
 		final stagedEvents = blockChangedOccurrences(coord, BlockKind.Air);
 		if (stagedEvents == null || !flowEventsCanCommit(stagedEvents) || !World.remove(cells, coord))
 			return false;
@@ -1414,11 +1346,7 @@ final class GameSession {
 
 	/** Place one validated block and atomically publish its optional item use. */
 	public function placeTerrain(coord:BlockCoord, kind:BlockKind, ?usedItem:ContentId):Bool {
-		#if c
-		var cells:WorldCells = worldStorage.span();
-		#else
-		var cells:WorldCells = worldStorage;
-		#end
+		final cells:WorldCells = worldStorage.span();
 		final changed = blockChangedOccurrences(coord, kind);
 		if (changed == null)
 			return false;
@@ -1438,11 +1366,7 @@ final class GameSession {
 
 	/** Stable whole-world summary for save checks and cross-target test evidence. */
 	public function worldStateHash():Int {
-		#if c
-		var cells:WorldCells = worldStorage.span();
-		#else
-		var cells:WorldCells = worldStorage;
-		#end
+		final cells:WorldCells = worldStorage.span();
 		return World.stateHash(cells);
 	}
 
@@ -1455,13 +1379,8 @@ final class GameSession {
 		is committed before the caller can render it.
 	**/
 	public function tick(input:GameTickInput):GameTickResult {
-		#if c
-		var cells:WorldCells = worldStorage.span();
-		var readCells:WorldView = worldStorage.constSpan();
-		#else
-		var cells:WorldCells = worldStorage;
-		var readCells:WorldView = WorldView.borrow(worldStorage);
-		#end
+		final cells:WorldCells = worldStorage.span();
+		final readCells:WorldView = worldStorage.constSpan();
 		final characterId = localPlayer.characterId;
 		final original = entities.read(characterId);
 		if (!isValidCharacter(original)) {

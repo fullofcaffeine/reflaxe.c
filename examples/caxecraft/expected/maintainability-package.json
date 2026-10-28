@@ -1984,17 +1984,17 @@
             "modulePath": "caxecraft.domain._WorldRead.WorldRead_Fields_",
             "source": {
               "path": "caxecraft/domain/WorldRead.hx",
-              "startLine": 25,
+              "startLine": 19,
               "startColumn": 1,
-              "endLine": 30,
+              "endLine": 24,
               "endColumn": 2
             }
           },
           "source": {
             "path": "caxecraft/domain/WorldRead.hx",
-            "startLine": 25,
+            "startLine": 19,
             "startColumn": 1,
-            "endLine": 30,
+            "endLine": 24,
             "endColumn": 2
           },
           "startLine": 1447,
@@ -2019,17 +2019,17 @@
             "modulePath": "caxecraft.domain._WorldRead.WorldRead_Fields_",
             "source": {
               "path": "caxecraft/domain/WorldRead.hx",
-              "startLine": 16,
+              "startLine": 14,
               "startColumn": 1,
-              "endLine": 22,
+              "endLine": 16,
               "endColumn": 2
             }
           },
           "source": {
             "path": "caxecraft/domain/WorldRead.hx",
-            "startLine": 16,
+            "startLine": 14,
             "startColumn": 1,
-            "endLine": 22,
+            "endLine": 16,
             "endColumn": 2
           },
           "startLine": 1464,
