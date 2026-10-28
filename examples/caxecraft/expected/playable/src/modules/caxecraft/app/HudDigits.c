@@ -2,7 +2,7 @@
 
 void hxc_caxecraft_app_HudDigits_drawDigit(int32_t hxc_l_digit, int32_t hxc_l_x, int32_t hxc_l_y, struct Color hxc_l_color)
 {
-  int32_t hxc_l_mask = 0;
+  int32_t hxc_l_mask = { 0 };
   switch (hxc_l_digit) {
     case 0:
       {

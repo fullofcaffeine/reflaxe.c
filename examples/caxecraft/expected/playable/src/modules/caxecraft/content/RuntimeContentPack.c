@@ -9747,7 +9747,7 @@ struct hxc_caxecraft_content_RuntimePresentation *hxc_caxecraft_content_RuntimeC
   hxc_string hxc_l_modelPath = { 0 };
   hxc_string hxc_l_tmp_instance_call_argument_1_owner_n70 = { 0 };
   struct hxc_caxecraft_content_RuntimeSchemaErrorKind hxc_l_tmp_instance_call_argument_1_owner_n72 = { 0 };
-  bool hxc_l_hasModel = false;
+  bool hxc_l_hasModel = { 0 };
   if (hxc_l_node == NULL)
   {
     abort();
@@ -10048,7 +10048,7 @@ struct hxc_caxecraft_content_RuntimePresentation *hxc_caxecraft_content_RuntimeC
       abort();
     }
     hxc_l_modelPathPrefix = hxc_l_tmp_string_concat_result_n65;
-    bool hxc_l_hasFrames = false;
+    bool hxc_l_hasFrames = { 0 };
     struct hxc_caxecraft_content_ContentJsonNode *hxc_l_tmp_load_result_n66 = hxc_l_modelNode;
     hxc_l_gc_roots[31] = (const void *)hxc_l_tmp_load_result_n66;
     if (hxc_l_tmp_load_result_n66 == NULL)
@@ -12521,7 +12521,7 @@ bool hxc_caxecraft_content_RuntimeContentPack_validVoxelModelPath(hxc_string hxc
   {
     abort();
   }
-  bool hxc_l_accepted = false;
+  bool hxc_l_accepted = { 0 };
   struct hxc_caxecraft_content_ContentPackagePathResult hxc_l_tmp_call_result_n0 = hxc_caxecraft_content_ContentPackagePath_parse(hxc_l_path);
   hxc_l_gc_roots[0] = hxc_l_tmp_call_result_n0.hxc_tag == hxc_caxecraft_content_ContentPackagePathResult_PathAccepted ? (const void *)hxc_l_tmp_call_result_n0.hxc_payload.hxc_PathAccepted.hxc_path : NULL;
   switch (hxc_l_tmp_call_result_n0.hxc_tag) {
