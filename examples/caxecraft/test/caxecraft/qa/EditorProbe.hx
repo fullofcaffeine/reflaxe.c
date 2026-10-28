@@ -47,15 +47,23 @@ import caxecraft.editor.EditorFlowAuthoring.EditorFlowAuthoringResult;
 import caxecraft.editor.EditorFlowAuthoring.EditorFlowAuthoringError;
 import caxecraft.editor.EditorFlowAuthoring.EditorFlowCardAddress;
 import caxecraft.editor.EditorFlowAuthoring.EditorFlowCardEdit;
+import caxecraft.editor.EditorFlowAuthoring.EditorFlowSequenceAuthoringResult;
+import caxecraft.editor.EditorFlowAuthoring.EditorFlowSequenceEdit;
 import caxecraft.editor.EditorFlowAuthoring.applyFlowDocumentPick;
 import caxecraft.editor.EditorFlowAuthoring.applyFlowWorldPick;
 import caxecraft.editor.EditorFlowAuthoring.connectZone;
 import caxecraft.editor.EditorFlowAuthoring.editFlowCard;
+import caxecraft.editor.EditorFlowAuthoring.editFlowSequence;
 import caxecraft.editor.EditorFlowAuthoring.isWorldPickableFlowRole;
 import caxecraft.editor.EditorFlowAuthoring.nextZoneConnectionRuleId;
 import caxecraft.editor.EditorFlowAuthoring.nextFlowRepeatPolicy;
 import caxecraft.editor.EditorFlowAuthoring.stepFlowPriority;
 import caxecraft.editor.EditorFlowAuthoring.worldPickFor;
+import caxecraft.editor.EditorFlowDefinitions.EditorFlowVariableEdit;
+import caxecraft.editor.EditorFlowDefinitions.editFlowVariable;
+import caxecraft.editor.EditorFlowDefinitions.nextFlowParameter;
+import caxecraft.editor.EditorFlowDefinitions.nextFlowSequence;
+import caxecraft.editor.EditorFlowDefinitions.nextFlowVariable;
 import caxecraft.editor.EditorFlowCardLibrary.EditorFlowActionChoice;
 import caxecraft.editor.EditorFlowCardLibrary.EditorFlowContentChoices;
 import caxecraft.editor.EditorFlowCardLibrary.EditorFlowEventChoice;
@@ -2030,6 +2038,7 @@ final class EditorProbe {
 			EditorFocusTarget.Build,
 			EditorFocusTarget.Plan,
 			EditorFocusTarget.Text,
+			EditorFocusTarget.Advanced,
 			EditorFocusTarget.CameraMode,
 			EditorFocusTarget.PreviousLayer,
 			EditorFocusTarget.NextLayer,
@@ -2059,6 +2068,7 @@ final class EditorProbe {
 			EditorFocusTarget.NextLayer,
 			EditorFocusTarget.PreviousLayer,
 			EditorFocusTarget.CameraMode,
+			EditorFocusTarget.Advanced,
 			EditorFocusTarget.Text,
 			EditorFocusTarget.Plan,
 			EditorFocusTarget.Build,
@@ -3834,6 +3844,97 @@ final class EditorProbe {
 		require(supportSession.canonicalDraft().compare(supportBefore) == 0, "flow-definition undo did not restore exact bytes");
 		expectHistory(supportSession.redo(), Transaction, "redo flow-definition transaction");
 		require(supportSession.canonicalDraft().compare(supportAfter) == 0, "flow-definition redo did not restore exact bytes");
+
+		final supportDraft = switch supportSession.query(InspectDraft) {
+			case DraftObserved(_, draft): draft;
+			case other: throw 'flow-definition draft query failed: $other';
+		};
+		final generatedFlag = nextFlowVariable(Flag(false), supportDraft.flow.variables);
+		require(generatedFlag.id.text() == "editor.variable.flag.n1" && generatedFlag.scope == Map,
+			"visual variable creation did not use a collision-free map-scoped identity");
+		final generatedFlagAgain = nextFlowVariable(Flag(false), supportDraft.flow.variables.concat([generatedFlag]));
+		require(generatedFlagAgain.id.text() == "editor.variable.flag.n2", "visual variable creation replaced an existing generated identity");
+		final generatedSequence = nextFlowSequence(supportDraft.flow.sequences);
+		require(generatedSequence.id.text() == "editor.sequence.n1"
+			&& generatedSequence.parameters.length == 0
+			&& generatedSequence.actions.length == 0,
+			"visual sequence creation did not start with one empty canonical declaration");
+		final stateChoices = [content("caxecraft:idle"), content("caxecraft:active")];
+		final kindCounter = editFlowVariable(generatedFlag, NextVariableKind, supportDraft.flow.sequences, stateChoices);
+		switch kindCounter.initial {
+			case Counter(0):
+			case _:
+				throw "visual variable kind did not advance from flag to counter";
+		}
+		final kindState = editFlowVariable(kindCounter, NextVariableKind, supportDraft.flow.sequences, stateChoices);
+		switch kindState.initial {
+			case State(value):
+				require(value.text() == "caxecraft:idle", "visual state variable did not use the shared registry order");
+			case _:
+				throw "visual variable kind did not advance from counter to state";
+		}
+		final nextState = editFlowVariable(kindState, NextVariableValue, supportDraft.flow.sequences, stateChoices);
+		switch nextState.initial {
+			case State(value):
+				require(value.text() == "caxecraft:active", "visual state value did not advance through shared registry IDs");
+			case _:
+				throw "visual state value changed its kind";
+		}
+		final localVariable = editFlowVariable(editFlowVariable(editFlowVariable(generatedFlag, NextVariableScope, supportDraft.flow.sequences, stateChoices),
+			NextVariableScope, supportDraft.flow.sequences, stateChoices),
+			NextVariableScope, supportDraft.flow.sequences, stateChoices);
+		switch localVariable.scope {
+			case Local(sequence):
+				require(sequence.text() == "sequence.cards", "visual local scope did not choose the canonical sequence");
+			case _:
+				throw "visual variable scope did not reach a local sequence";
+		}
+		final parameter = nextFlowParameter(generatedSequence, supportDraft.flow.variables);
+		require(parameter.id.text() == "editor.parameter.n1", "visual sequence parameter did not use a collision-free identity");
+		final sequenceWithParameter = switch editFlowSequence(generatedSequence, InsertSequenceParameter(0, parameter)) {
+			case FlowSequenceAuthored(value): value;
+			case _: throw "visual sequence did not add a typed parameter";
+		};
+		final sequenceWithAction = switch editFlowSequence(sequenceWithParameter, InsertSequenceDo(0, SetFlag(parameter.id, true))) {
+			case FlowSequenceAuthored(value): value;
+			case _: throw "visual sequence did not add an ordered action";
+		};
+		require(sequenceWithAction.parameters.length == 1
+			&& sequenceWithAction.actions.length == 1, "visual sequence authoring lost its parameter or action");
+		final selfSafeChoices = actionCardChoices(supportDraft, id("sequence.cards"), {
+			blocks: [STONE],
+			items: [],
+			states: stateChoices,
+			effects: [],
+			signals: []
+		}, false, id("sequence.cards"));
+		for (choice in selfSafeChoices)
+			switch choice {
+				case ReadyActionChoice(descriptor, _) if (descriptor.id.text() == "schedule" || descriptor.id.text() == "call"):
+					throw "visual sequence palette admitted an immediate self-reference";
+				case _:
+			}
+
+		expectApplied(supportSession.apply(PutFlowVariable({id: id("counter.cards"), scope: Local(id("sequence.cards")), initial: Counter(0)})), Rule,
+			"make flow variable sequence-local");
+		switch supportSession.apply(RemoveFlowSequence(id("sequence.cards"))) {
+			case EditRejected(FlowDefinitionInUse(id)):
+				require(id.text() == "sequence.cards", "referenced sequence deletion named the wrong declaration");
+			case other:
+				throw 'visual sequence deletion did not fail closed while referenced: $other';
+		}
+		switch supportSession.mutate({
+			baseRevision: supportSession.revision(),
+			mutation: ApplyBatch([
+				RemoveFlowVariable(id("counter.cards")),
+				RemoveFlowSequence(id("sequence.cards"))
+			])
+		}) {
+			case MutationApplied([Rule, Rule], changes, TerrainUnchanged, _, _, _):
+				require(changes.length == 2, "atomic flow-definition deletion lost one semantic identity");
+			case other:
+				throw 'unreferenced flow definitions did not delete atomically: $other';
+		}
 
 		final scenario = flowCardLibraryScenario();
 		final contentChoices:EditorFlowContentChoices = {

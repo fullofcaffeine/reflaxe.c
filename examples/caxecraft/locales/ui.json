@@ -1529,6 +1529,55 @@
       }
     },
     {
+      "id": "editor.flow.actions",
+      "text": {
+        "en": "ACTIONS",
+        "es-MX": "ACCIONES"
+      }
+    },
+    {
+      "id": "editor.flow.add-action",
+      "text": {
+        "en": "ADD ACTION",
+        "es-MX": "AGREGAR ACCIÓN"
+      }
+    },
+    {
+      "id": "editor.flow.add-counter",
+      "text": {
+        "en": "ADD NUMBER",
+        "es-MX": "AGREGAR NÚMERO"
+      }
+    },
+    {
+      "id": "editor.flow.add-flag",
+      "text": {
+        "en": "ADD YES / NO",
+        "es-MX": "AGREGAR SÍ / NO"
+      }
+    },
+    {
+      "id": "editor.flow.add-parameter",
+      "text": {
+        "en": "ADD INPUT",
+        "es-MX": "AGREGAR ENTRADA"
+      }
+    },
+    {
+      "id": "editor.flow.add-sequence",
+      "text": {
+        "en": "ADD ACTION GROUP",
+        "es-MX": "AGREGAR GRUPO DE ACCIONES"
+      }
+    },
+    {
+      "id": "editor.flow.add-state",
+      "text": {
+        "en": "ADD STATE",
+        "es-MX": "AGREGAR ESTADO"
+      }
+    },
+    {
       "id": "editor.flow.card-library",
       "text": {
         "en": "CHOOSE A WHEN, IF, OR DO CARD",
@@ -1540,6 +1589,20 @@
       "text": {
         "en": "CONNECT TO OBJECT",
         "es-MX": "CONECTAR A OBJETO"
+      }
+    },
+    {
+      "id": "editor.flow.definitions",
+      "text": {
+        "en": "FLOW VARIABLES & ACTION GROUPS",
+        "es-MX": "VARIABLES Y GRUPOS DE ACCIONES"
+      }
+    },
+    {
+      "id": "editor.flow.delete-definition",
+      "text": {
+        "en": "DELETE",
+        "es-MX": "ELIMINAR"
       }
     },
     {
@@ -1634,6 +1697,48 @@
       }
     },
     {
+      "id": "editor.flow.parameters",
+      "text": {
+        "en": "INPUTS",
+        "es-MX": "ENTRADAS"
+      }
+    },
+    {
+      "id": "editor.flow.scope-local",
+      "text": {
+        "en": "ONLY IN {0}",
+        "es-MX": "SOLO EN {0}"
+      }
+    },
+    {
+      "id": "editor.flow.scope-map",
+      "text": {
+        "en": "THIS MAP",
+        "es-MX": "ESTE MAPA"
+      }
+    },
+    {
+      "id": "editor.flow.scope-player",
+      "text": {
+        "en": "EACH PLAYER",
+        "es-MX": "CADA JUGADOR"
+      }
+    },
+    {
+      "id": "editor.flow.scope-quest",
+      "text": {
+        "en": "THIS QUEST",
+        "es-MX": "ESTA MISIÓN"
+      }
+    },
+    {
+      "id": "editor.flow.sequences",
+      "text": {
+        "en": "ACTION GROUPS",
+        "es-MX": "GRUPOS DE ACCIONES"
+      }
+    },
+    {
       "id": "editor.flow.toggle-enter-leave",
       "text": {
         "en": "ENTER / LEAVE",
@@ -1652,6 +1757,13 @@
       "text": {
         "en": "NEEDS MORE MAP CONTENT",
         "es-MX": "NECESITA MÁS CONTENIDO DEL MAPA"
+      }
+    },
+    {
+      "id": "editor.flow.variables",
+      "text": {
+        "en": "VARIABLES",
+        "es-MX": "VARIABLES"
       }
     },
     {

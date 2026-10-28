@@ -26,6 +26,7 @@ enum abstract UiMessage(String) {
 	var DebugFrame = "debug_frame";
 	var DebugTick = "debug_tick";
 	var DebugVisible = "debug_visible";
+	var EditorAdvanced = "editor_advanced";
 	var EditorBack = "editor_back";
 	var EditorAssetBrowser = "editor_asset_browser";
 	var EditorAssetCategoryEnemy = "editor_asset_category_enemy";
