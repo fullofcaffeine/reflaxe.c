@@ -6662,6 +6662,12 @@ private class FunctionBuilder {
 	 * Preparation proves the shared requirement through `managedLifetime ==
 	 * false`, so construction can store either representation directly.
 	 *
+	 * A `Null<E>` field over such an enum is the same kind of value: a tagged
+	 * optional with a presence flag and an unmanaged payload, copied by value.
+	 * For example `public final screenshot:Null<PilotScreenshot>` set from an
+	 * optional constructor argument. Only that exact shape is admitted; other
+	 * unmanaged optionals keep their existing diagnostics.
+	 *
 	 * This owner accepts only the first `this.field = value` in the constructor.
 	 * Normal assignment still rejects later writes to the final field. Managed
 	 * or recursive enums deliberately do not enter this path: their active
@@ -6690,8 +6696,9 @@ private class FunctionBuilder {
 			throw new CBodyEmissionError(("constructor `" + prepared.irId + "` lost its self parameter while initializing enum field `" + fieldName + "`"));
 		final owner = self.mapping.classValue();
 		final field = owner == null ? null : owner.field(fieldName);
-		final enumValue = field == null ? null : field.type.enumValue();
-		if (field == null || field.mutable || enumValue == null || enumValue.managedLifetime)
+		final optional = field == null ? null : field.type.optionalValue();
+		final enumValue = field == null ? null : optional == null ? field.type.enumValue() : optional.payload.enumValue();
+		if (field == null || field.mutable || enumValue == null || enumValue.managedLifetime || optional != null && optional.managedLifetime)
 			return false;
 		final value = coerce(lowerValue(right, field.type), field.type, right.pos, 'TField($fieldName:direct-enum-initializer)');
 		appendInstruction(null, IRIOStore(IRPField(IRPDereference(self.id), fieldName), value.id), sourceSpan(left.pos), "initialize-unmanaged-enum-field");

@@ -4373,6 +4373,15 @@ def check_final_primitive_only(*, requested_toolchain: str) -> None:
             ),
             "final-primitive constructor",
         )
+        # A final Null<enum> field from an optional argument is one by-value store.
+        ordered(
+            function_section(hxcir, "constructor.ShotCheckpoint"),
+            (
+                'store place=field(dereference("parameter.self"),"index")',
+                'store place=field(dereference("parameter.self"),"shot")',
+            ),
+            "final nullable-enum constructor",
+        )
         sources = "\n".join(
             path.read_text(encoding="utf-8")
             for path in sorted((normal / "src").rglob("*.c"))
