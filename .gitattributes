@@ -3,3 +3,8 @@ examples/caxecraft/src/caxecraft/pilot/PilotCatalog.hx text eol=lf
 
 # Runtime provenance hashes describe the exact checked-in bytes on every host.
 runtime/hxrt/** text eol=lf
+
+# The compiler copies this notice into generated projects and checks its
+# reviewed SHA-256 (decision haxe_c-od2.5), so its bytes must not change on
+# Windows checkouts.
+LICENSES/HAXE-C-OUTPUT-SUPPORT-MIT.txt text eol=lf
