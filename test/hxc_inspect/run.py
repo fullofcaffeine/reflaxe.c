@@ -120,7 +120,7 @@ def machine_report(root: Path, report: str, *options: str) -> tuple[dict[str, ob
     result = invoke(root, report, "--json", *options)
     require(result.returncode == 0 and result.stderr == "", f"{report} JSON inspection failed: {result.stderr}")
     envelope = json.loads(result.stdout)
-    require(envelope.get("schemaVersion") == 1 and envelope.get("command") == "inspect", "CLI envelope drifted")
+    require(envelope.get("schemaVersion") == 2 and envelope.get("command") == "inspect", "CLI envelope drifted")
     payload_text = envelope.get("stdout")
     require(isinstance(payload_text, str) and payload_text.endswith("\n"), "inspect payload framing drifted")
     payload = json.loads(payload_text)

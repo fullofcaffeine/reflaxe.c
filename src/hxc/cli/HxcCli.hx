@@ -1,5 +1,9 @@
 package hxc.cli;
 
+import hxc.cli.HxcCliDiagnostic.HxcCliDiagnosticCommand;
+import hxc.cli.HxcCliDiagnostic.HxcCliDiagnosticPhase;
+import reflaxe.c.CDiagnostic.CDiagnosticSeverity;
+
 /**
 	Parse global CLI syntax and route one command to its typed owner.
 
@@ -8,7 +12,7 @@ package hxc.cli;
 	executors so later tasks extend one router instead of replacing it.
 **/
 class HxcCli {
-	public static inline final CLI_PROTOCOL_VERSION = 1;
+	public static inline final CLI_PROTOCOL_VERSION = 2;
 
 	final executor:HxcCliExecutor;
 
@@ -20,7 +24,7 @@ class HxcCli {
 	public function route(arguments:Array<String>):HxcCliResponse {
 		final parsed = parseGlobalJson(arguments);
 		if (parsed.duplicate) {
-			return usage(parsed.json, "hxc", "HXC-CLI-0003", "`--json` may appear only once", "Remove the duplicate option.");
+			return usage(parsed.json, "hxc", arguments, "HXC-CLI-0003", "`--json` may appear only once", "Remove the duplicate option.");
 		}
 		final values = parsed.arguments;
 		if (values.length == 0) {
@@ -30,20 +34,21 @@ class HxcCli {
 		final first = values[0];
 		if (first == "--help" || first == "-h") {
 			return values.length == 1 ? success(parsed.json, "help",
-				helpText()) : usage(parsed.json, "help", "HXC-CLI-0002", 'unknown help option `${values[1]}`', "Run `hxc help` without extra options.");
+				helpText()) : usage(parsed.json, "help", values.slice(1), "HXC-CLI-0002", 'unknown help option `${values[1]}`',
+					"Run `hxc help` without extra options.");
 		}
 		if (first == "--version") {
 			return values.length == 1 ? success(parsed.json, "version",
-				versionText()) : usage(parsed.json, "version", "HXC-CLI-0002", 'unknown version option `${values[1]}`',
+				versionText()) : usage(parsed.json, "version", values.slice(1), "HXC-CLI-0002", 'unknown version option `${values[1]}`',
 					"Run `hxc version` without extra options.");
 		}
 		if (StringTools.startsWith(first, "-")) {
-			return usage(parsed.json, "hxc", "HXC-CLI-0002", 'unknown global option `$first`', "Use `hxc help` to list admitted options.");
+			return usage(parsed.json, "hxc", arguments, "HXC-CLI-0002", 'unknown global option `$first`', "Use `hxc help` to list admitted options.");
 		}
 
 		final command = HxcCliCommand.parse(first);
 		if (command == null) {
-			return usage(parsed.json, first, "HXC-CLI-0001", 'unknown command `$first`', "Use `hxc help` to list commands.");
+			return usage(parsed.json, first, values.slice(1), "HXC-CLI-0001", 'unknown command `$first`', "Use `hxc help` to list commands.");
 		}
 		final commandArguments = values.slice(1);
 		if (command == HxcCliCommand.Help) {
@@ -51,7 +56,7 @@ class HxcCli {
 		}
 		if (command == HxcCliCommand.Version) {
 			return commandArguments.length == 0 ? success(parsed.json, command,
-				versionText()) : usage(parsed.json, command, "HXC-CLI-0002", 'unknown version option `${commandArguments[0]}`',
+				versionText()) : usage(parsed.json, command, commandArguments, "HXC-CLI-0002", 'unknown version option `${commandArguments[0]}`',
 					"Run `hxc version` without extra options.");
 		}
 		if (commandArguments.length == 1 && (commandArguments[0] == "--help" || commandArguments[0] == "-h")) {
@@ -62,12 +67,12 @@ class HxcCli {
 			if (argument == "--") {
 				forwards = true;
 			} else if (!forwards && StringTools.startsWith(argument, "--experimental-")) {
-				return usage(parsed.json, command, "HXC-CLI-0002", 'experimental option `$argument` is not available',
+				return usage(parsed.json, command, commandArguments, "HXC-CLI-0002", 'experimental option `$argument` is not available',
 					"Remove the option or use a build that explicitly documents it.");
 			}
 		}
 		if (!executor.isAvailable(command)) {
-			return unavailable(parsed.json, command);
+			return unavailable(parsed.json, command, commandArguments);
 		}
 
 		final execution = executor.execute(new HxcCliRequest(command, commandArguments, parsed.json));
@@ -80,25 +85,36 @@ class HxcCli {
 			return success(json, "help", helpText());
 		}
 		if (arguments.length > 1 || StringTools.startsWith(arguments[0], "-")) {
-			return usage(json, "help", "HXC-CLI-0002", "help accepts at most one command name", "Run `hxc help <command>`.");
+			return usage(json, "help", arguments, "HXC-CLI-0002", "help accepts at most one command name", "Run `hxc help <command>`.");
 		}
 		final command = HxcCliCommand.parse(arguments[0]);
-		return command == null ? usage(json, "help", "HXC-CLI-0001", 'unknown command `${arguments[0]}`',
+		return command == null ? usage(json, "help", arguments, "HXC-CLI-0001", 'unknown command `${arguments[0]}`',
 			"Use `hxc help` to list commands.") : success(json, command, commandHelp(command));
 	}
 
 	function success(json:Bool, command:String, stdout:String):HxcCliResponse
 		return new HxcCliResponse(json, command, HxcCliExitCategory.Success, 0, stdout, "");
 
-	function usage(json:Bool, command:String, code:String, message:String, remediation:String):HxcCliResponse
+	function usage(json:Bool, command:String, arguments:Array<String>, code:String, message:String, remediation:String):HxcCliResponse
 		return new HxcCliResponse(json, command, HxcCliExitCategory.Usage, HxcCliExitCategory.Usage.code(), "", "", null, null,
-			[new HxcCliDiagnostic(code, message, remediation)]);
+			[diagnostic(command, arguments, code, message, remediation)]);
 
-	function unavailable(json:Bool, command:HxcCliCommand):HxcCliResponse
+	function unavailable(json:Bool, command:HxcCliCommand, arguments:Array<String>):HxcCliResponse
 		return new HxcCliResponse(json, command, HxcCliExitCategory.Unavailable, HxcCliExitCategory.Unavailable.code(), "", "", null, null, [
-			new HxcCliDiagnostic("HXC-CLI-0004", 'command `$command` is recognized but not implemented in this build',
+			diagnostic(command, arguments, "HXC-CLI-0004", 'command `$command` is recognized but not implemented in this build',
 				"Use `hxc help` to inspect the current surface and check the owning roadmap task.")
 		]);
+
+	/** Build one standalone router event with exact parsed command context. */
+	function diagnostic(command:String, arguments:Array<String>, id:String, message:String, remediation:String):HxcCliDiagnostic
+		return new HxcCliDiagnostic({
+			id: id,
+			severity: CDiagnosticSeverity.Error,
+			phase: HxcCliDiagnosticPhase.Cli,
+			message: message,
+			remediation: remediation,
+			commandContext: new HxcCliDiagnosticCommand(command, arguments)
+		});
 
 	function versionText():String
 		return 'hxc ${HxcBuildInfo.version()} (CLI schema $CLI_PROTOCOL_VERSION)\n';

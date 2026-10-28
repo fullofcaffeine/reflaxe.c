@@ -4,6 +4,8 @@ import haxe.Exception;
 import haxe.io.Path;
 import hxc.cli.HxcCliCommand;
 import hxc.cli.HxcCliDiagnostic;
+import hxc.cli.HxcCliDiagnostic.HxcCliDiagnosticCommand;
+import hxc.cli.HxcCliDiagnostic.HxcCliDiagnosticPhase;
 import hxc.cli.HxcCliExecution;
 import hxc.cli.HxcCliExecutor;
 import hxc.cli.HxcCliExitCategory;
@@ -11,6 +13,7 @@ import hxc.cli.HxcCliRequest;
 import hxc.config.HxcProjectConfig;
 import sys.FileSystem;
 import sys.io.File;
+import reflaxe.c.CDiagnostic.CDiagnosticSeverity;
 
 /**
 	Create one deterministic starter project without surprising overwrites.
@@ -78,9 +81,9 @@ class HxcNewExecutor implements HxcCliExecutor {
 			final options = parse(request.arguments);
 			return create(options);
 		} catch (failure:HxcNewFailure) {
-			return failed(failure.category, failure.code, failure.message, failure.remediation);
+			return failed(request, failure.category, failure.code, failure.message, failure.remediation);
 		} catch (failure:Exception) {
-			return failed(HxcCliExitCategory.Internal, "HXC-CLI-0299", "project creation failed unexpectedly",
+			return failed(request, HxcCliExitCategory.Internal, "HXC-CLI-0299", "project creation failed unexpectedly",
 				"Check filesystem access and retry. If the failure repeats, report the command and diagnostic.");
 		}
 	}
@@ -298,8 +301,17 @@ class HxcNewExecutor implements HxcCliExecutor {
 	static function conflict<T>(message:String, remediation:String):T
 		throw new HxcNewFailure(HxcCliExitCategory.Command, "HXC-CLI-0202", message, remediation);
 
-	static function failed(category:HxcCliExitCategory, code:String, message:String, remediation:String):HxcCliExecution
-		return new HxcCliExecution(category, category.code(), "", "", null, null, [new HxcCliDiagnostic(code, message, remediation)]);
+	static function failed(request:HxcCliRequest, category:HxcCliExitCategory, code:String, message:String, remediation:String):HxcCliExecution
+		return new HxcCliExecution(category, category.code(), "", "", null, null, [
+			new HxcCliDiagnostic({
+				id: code,
+				severity: CDiagnosticSeverity.Error,
+				phase: HxcCliDiagnosticPhase.Cli,
+				message: message,
+				remediation: remediation,
+				commandContext: new HxcCliDiagnosticCommand(request.command, request.arguments)
+			})
+		]);
 }
 
 /** Parsed and validated request used after command-line input is no longer raw. */

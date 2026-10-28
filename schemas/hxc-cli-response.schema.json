@@ -16,7 +16,7 @@
     "diagnostics"
   ],
   "properties": {
-    "schemaVersion": { "const": 1 },
+    "schemaVersion": { "const": 2 },
     "command": { "type": "string", "minLength": 1 },
     "status": { "enum": ["ok", "error"] },
     "exitCategory": {
@@ -28,16 +28,7 @@
     "signal": { "type": ["string", "null"] },
     "diagnostics": {
       "type": "array",
-      "items": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": ["code", "message", "remediation"],
-        "properties": {
-          "code": { "type": "string", "pattern": "^HXC-CLI-[0-9]{4}$" },
-          "message": { "type": "string", "minLength": 1 },
-          "remediation": { "type": "string", "minLength": 1 }
-        }
-      }
+      "items": { "$ref": "hxc-diagnostic-event.schema.json" }
     }
   }
 }

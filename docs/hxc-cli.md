@@ -156,11 +156,28 @@ HXC-CLI-0001: unknown command `wat` Remediation: Use `hxc help` to list commands
 ```
 
 Add `--json` before the forwarded-argument separator to make stdout contain
-exactly one schema-1 JSON object and one line terminator. Human logs and
+exactly one schema-2 JSON response and one line terminator. Human logs and
 diagnostics still go to stderr. Child stdout, stderr, exit code, and signal are
-also fields in the JSON object, so an agent does not lose native process facts.
-The authoritative schema is
+also fields in the JSON response, so an agent does not lose native process
+facts. The authoritative schema is
 [`schemas/hxc-cli-response.schema.json`](../schemas/hxc-cli-response.schema.json).
+
+The response's ordered `diagnostics` array is the event stream. Each schema-1
+event has a stable ID, severity, phase, optional source range, notes, related
+locations, remediation, and the exact command arguments. An attachment keeps
+compiler or native-tool text unchanged, including line breaks and a trailing
+newline. Attachments are data inside the single JSON response; they never add a
+second value to stdout. See
+[`schemas/hxc-diagnostic-event.schema.json`](../schemas/hxc-diagnostic-event.schema.json).
+
+The response and event schemas have independent integer versions. A change to
+required fields, field meaning, allowed values, or closed object shape increases
+the version of the affected schema. Consumers must reject an unknown version;
+one response never mixes event versions. Response schema 1 carried only a
+diagnostic code, message, and remediation. Response schema 2 replaces that
+shape with schema-1 events, and the current CLI does not emit the old shape.
+Because command arguments and attached tool text are exact, a caller must treat
+machine output as potentially sensitive data.
 
 Stable exit categories are:
 
