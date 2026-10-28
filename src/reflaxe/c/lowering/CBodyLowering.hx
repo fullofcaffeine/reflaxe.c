@@ -463,6 +463,7 @@ class CBodyLowering {
 		// The profiler enables these request-local clocks explicitly. They describe
 		// semantic boundaries rather than helper calls, so reports survive refactors.
 		final hxcIRConstructionTimer = CPhaseTiming.start(CPHxcIRConstruction);
+		CPhaseTiming.startProgressDetail(Std.string(CDTHxcIRFunctionPreparation));
 		final functionPreparationTimer = CPhaseTiming.startDetail(CDTHxcIRFunctionPreparation);
 		final inputs = inputFunctions.copy();
 		inputs.sort(compareInputs);
@@ -556,9 +557,11 @@ class CBodyLowering {
 			builders.push(new FunctionBuilder(context, fn, preparedById, constructorSignaturesById, globalRegistry, aggregateRegistry, dynamicRegistry,
 				enumConstructorAdapters, functionLiterals, preparedDispatch));
 		CPhaseTiming.stopDetail(functionPreparationTimer);
+		CPhaseTiming.stopProgressDetail(Std.string(CDTHxcIRFunctionPreparation));
 		// Representation is a whole-program decision. Discover local typed containers
 		// first so an earlier function cannot choose stack storage merely because a
 		// later body is the first place that retains the same class in an Array or map.
+		CPhaseTiming.startProgressDetail(Std.string(CDTHxcIRRepresentationPlanning));
 		final representationTimer = CPhaseTiming.startDetail(CDTHxcIRRepresentationPlanning);
 		for (builder in builders)
 			builder.discoverDynamicSemantics();
@@ -613,12 +616,21 @@ class CBodyLowering {
 			dynamicRegistry.plan());
 		CBodyFunctionReplayCache.settleProgramRevision(functionReplayProgramRevision(sharedProgram, preparedById, constructorSignaturesById));
 		CPhaseTiming.stopDetail(representationTimer);
+		CPhaseTiming.stopProgressDetail(Std.string(CDTHxcIRRepresentationPlanning));
 		final settledFunctionBuildContributions = functionContributionSnapshot(aggregateRegistry, dynamicRegistry, enumConstructorAdapters, functionLiterals);
+		CPhaseTiming.startProgressDetail(Std.string(CDTHxcIRFunctionConstruction));
 		final functionConstructionTimer = CPhaseTiming.startDetail(CDTHxcIRFunctionConstruction);
 		final built:Array<BuiltBodyFunction> = [];
 		for (builder in builders) {
+			#if reflaxe_c_phase_progress_functions
+			final functionProgress = '${Std.string(CDTHxcIRFunctionBuild)}: ${builder.profileId()}';
+			CPhaseTiming.startProgressDetail(functionProgress);
+			#end
 			if (!CPhaseTiming.collectsWork()) {
 				built.push(builder.buildWithReplay().result);
+				#if reflaxe_c_phase_progress_functions
+				CPhaseTiming.stopProgressDetail(functionProgress);
+				#end
 				continue;
 			}
 			final before = functionContributionSnapshot(aggregateRegistry, dynamicRegistry, enumConstructorAdapters, functionLiterals);
@@ -635,6 +647,9 @@ class CBodyLowering {
 			});
 			CPhaseTiming.stopDetail(functionTimer);
 			built.push(result);
+			#if reflaxe_c_phase_progress_functions
+			CPhaseTiming.stopProgressDetail(functionProgress);
+			#end
 		}
 		for (adapter in functionLiterals.builtStaticAdapters())
 			built.push(adapter);
@@ -649,18 +664,25 @@ class CBodyLowering {
 		requireSettledFunctionBuildContributions(settledFunctionBuildContributions,
 			functionContributionSnapshot(aggregateRegistry, dynamicRegistry, enumConstructorAdapters, functionLiterals));
 		CPhaseTiming.stopDetail(functionConstructionTimer);
+		CPhaseTiming.stopProgressDetail(Std.string(CDTHxcIRFunctionConstruction));
 		final retainedIterators = hasRuntimeFeature(built, "iterator") ? preparedIterators : [];
+		CPhaseTiming.startProgressDetail(Std.string(CDTHxcIRProgramAssembly));
 		final programAssemblyTimer = CPhaseTiming.startDetail(CDTHxcIRProgramAssembly);
 		final program = buildProgram(built, preparedGlobals, preparedAggregates, preparedEnums, preparedClasses, preparedInterfaces, preparedArrays,
 			retainedIterators, preparedIntMaps, preparedStringMaps, preparedTypedMaps, preparedBytes, preparedImports, preparedDispatch,
 			dynamicRegistry.plan());
 		CPhaseTiming.stopDetail(programAssemblyTimer);
+		CPhaseTiming.stopProgressDetail(Std.string(CDTHxcIRProgramAssembly));
+		CPhaseTiming.startProgressDetail(Std.string(CDTHxcIRManagedRootPlanning));
 		final managedRootTimer = CPhaseTiming.startDetail(CDTHxcIRManagedRootPlanning);
 		new HxcIRManagedRootPlanner().run(program);
 		CPhaseTiming.stopDetail(managedRootTimer);
+		CPhaseTiming.stopProgressDetail(Std.string(CDTHxcIRManagedRootPlanning));
+		CPhaseTiming.startProgressDetail(Std.string(CDTHxcIRNullCheckCoalescing));
 		final nullCheckTimer = CPhaseTiming.startDetail(CDTHxcIRNullCheckCoalescing);
 		new CBodyNullCheckCoalescing().run(program);
 		CPhaseTiming.stopDetail(nullCheckTimer);
+		CPhaseTiming.stopProgressDetail(Std.string(CDTHxcIRNullCheckCoalescing));
 		recordProgramCounters(program);
 		CPhaseTiming.setCounter(CPCounterHxcIRNamedRecordCacheHits, aggregateRegistry.namedRecordHits());
 		CPhaseTiming.setCounter(CPCounterHxcIRNamedRecordCacheMisses, aggregateRegistry.namedRecordMisses());

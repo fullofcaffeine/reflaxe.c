@@ -3,6 +3,7 @@ package;
 #if macro
 import haxe.macro.Expr;
 import reflaxe.c.CPhaseTiming;
+import reflaxe.c.CPhaseTiming.CDetailTimingId;
 import reflaxe.c.CPhaseTiming.CPhaseTimingId;
 
 /**
@@ -19,6 +20,8 @@ class CompilerPhaseProgressProbe {
 		CPhaseTiming.stop(capture);
 		final target = CPhaseTiming.start(CPTargetPipeline);
 		CPhaseTiming.describeRequest("portable", "debug");
+		CPhaseTiming.startProgressDetail(Std.string(CDTHxcIRFunctionConstruction));
+		CPhaseTiming.stopProgressDetail(Std.string(CDTHxcIRFunctionConstruction));
 		final configuration = CPhaseTiming.start(CPConfigurationAndContracts);
 		CPhaseTiming.stop(configuration);
 		CPhaseTiming.stop(target);
