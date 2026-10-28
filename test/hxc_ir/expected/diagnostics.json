@@ -50,6 +50,9 @@
   "uncheckedVirtualCall": [
     "HXC9000 error [profile=portable] test/hxc_ir/fixtures/IRCoverage.hx:21:1-21:2 [module:coverage.IR.function:fn.coverage.block:entry.instruction:28:c03.virtual] Invalid HxcIR: virtual call receiver `value.receiver` requires a preceding dominating null check Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
   ],
+  "nullableBytesCleanupLifecycleMismatch": [
+    "HXC9000 error [profile=portable] test/negative/NullableBytesCleanupLifecycleMismatch.hx:2:1-2:2 [module:invalid.NullableBytesCleanupLifecycleMismatch.function:fn.invalid.nullable-bytes-cleanup.cleanup:cleanup.optional-bytes.action:0:release-optional-bytes] Invalid HxcIR: managed Bytes optional destroy requires the bytes lifecycle plan Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
+  ],
   "unknownVirtualImplementation": [
     "HXC9000 error [profile=portable] test/hxc_ir/fixtures/IRCoverage.hx:8:1-8:2 [dispatch.table:vtable.coverage.Object.entry:0:slot.render] Invalid HxcIR: virtual table refers to unknown implementation `fn.missing` Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
   ],
@@ -71,19 +74,11 @@
   "managedAggregateCarrierLifecycleMismatch": [
     "HXC9000 error [profile=portable] test/negative/ManagedAggregateCarrier.hx:2:1-2:2 [module:invalid.ManagedAggregateCarrierLifecycle.function:fn.coverage.managed-record-carrier.block:entry.instruction:0:record.declare] Invalid HxcIR: managed record carrier and destroy plan differ Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
   ],
-  "managedBytesCarrierLifecycleMismatch": [
-    "HXC9000 error [profile=portable] test/negative/ManagedBytesCarrierLifecycleMismatch.hx:2:1-2:2 [module:invalid.ManagedBytesCarrierLifecycleMismatch.function:fn.coverage.bytes-carrier.block:entry.instruction:0:bytes.declare] Invalid HxcIR: managed Bytes carrier destroy requires the bytes runtime lifecycle Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C.",
-    "HXC9000 error [profile=portable] test/negative/ManagedBytesCarrierLifecycleMismatch.hx:3:1-3:2 [module:invalid.ManagedBytesCarrierLifecycleMismatch.function:fn.coverage.bytes-carrier.block:true.instruction:0:bytes.acquire-true] Invalid HxcIR: managed Bytes carrier retain requires the bytes runtime lifecycle Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C.",
-    "HXC9000 error [profile=portable] test/negative/ManagedBytesCarrierLifecycleMismatch.hx:4:1-4:2 [module:invalid.ManagedBytesCarrierLifecycleMismatch.function:fn.coverage.bytes-carrier.block:false.instruction:0:bytes.acquire-false] Invalid HxcIR: managed Bytes carrier retain requires the bytes runtime lifecycle Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
-  ],
-  "nullableBytesCleanupLifecycleMismatch": [
-    "HXC9000 error [profile=portable] test/negative/NullableBytesCleanupLifecycleMismatch.hx:2:1-2:2 [module:invalid.NullableBytesCleanupLifecycleMismatch.function:fn.invalid.nullable-bytes-cleanup.cleanup:cleanup.optional-bytes.action:0:release-optional-bytes] Invalid HxcIR: managed Bytes optional destroy requires the bytes lifecycle plan Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
-  ],
   "zeroFixedArrayNonAutomatic": [
     "HXC9000 error [profile=portable] test/negative/ZeroFixedArrayNonAutomatic.hx:2:1-2:2 [module:invalid.ZeroFixedArrayNonAutomatic.function:invalid.ZeroFixedArrayNonAutomatic.main.block:entry.instruction:0:bad.zero-initialize] Invalid HxcIR: zero-initialized fixed-array storage must be an automatic local Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
   ],
   "uninitializedCarrierReadBeforeBranch": [
-    "HXC9000 error [profile=portable] test/negative/UninitializedCarrierReadBeforeBranch.hx:2:1-2:2 [module:invalid.UninitializedCarrierReadBeforeBranch.function:invalid.UninitializedCarrierReadBeforeBranch.main.block:entry.instruction:0:bad.declare] Invalid HxcIR: uninitialized declaration must be the last operation that mentions its carrier before the branch Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
+    "HXC9000 error [profile=portable] test/negative/UninitializedCarrierReadBeforeBranch.hx:2:1-2:2 [module:invalid.UninitializedCarrierReadBeforeBranch.function:invalid.UninitializedCarrierReadBeforeBranch.main.block:entry.instruction:0:bad.declare] Invalid HxcIR: uninitialized direct local must be assigned on every path before each read Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
   ],
   "borrowedInterfaceStore": [
     "HXC9000 error [profile=portable] test/negative/BorrowedInterfaceStore.hx:2:1-2:2 [module:coverage.IR.function:fn.coverage.block:entry.instruction:0:bad.interface-store] Invalid HxcIR: borrowed reference value `value.interface-parameter` escapes through an initializer Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
@@ -121,7 +116,7 @@
     "HXC9000 error [profile=portable] test/negative/VoidReturnWithValue.hx:3:1-3:2 [module:invalid.VoidReturnWithValue.function:invalid.VoidReturnWithValue.main.block:entry.terminator] Invalid HxcIR: void function return carries a value Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
   ],
   "uninitializedCarrierRead": [
-    "HXC9000 error [profile=portable] test/negative/UninitializedCarrierRead.hx:2:1-2:2 [module:invalid.UninitializedCarrierRead.function:invalid.UninitializedCarrierRead.main.block:entry.instruction:0:bad.declare] Invalid HxcIR: uninitialized conditional carrier must be assigned on every path before its first read Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
+    "HXC9000 error [profile=portable] test/negative/UninitializedCarrierRead.hx:2:1-2:2 [module:invalid.UninitializedCarrierRead.function:invalid.UninitializedCarrierRead.main.block:entry.instruction:0:bad.declare] Invalid HxcIR: uninitialized direct local must be assigned on every path before each read Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
   ],
   "invalidStringMapShape": [
     "HXC9000 error [profile=portable] test/negative/InvalidStringMapShape.hx:1:1-1:2 [module:invalid.InvalidStringMapShape.instance:instance.invalid-string-map] Invalid HxcIR: managed StringMap instance `instance.invalid-string-map` requires a reference declaration and exact [String, value] arguments Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C.",
@@ -175,7 +170,7 @@
     "HXC9000 error [profile=portable] test/hxc_ir/fixtures/IRCoverage.hx:9:1-9:2 [dispatch.table:itable.coverage.Object.entry:0:slot.measure] Invalid HxcIR: interface table refers to unknown implementation `fn.missing-interface` Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
   ],
   "uninitializedSwitchCarrierRead": [
-    "HXC9000 error [profile=portable] test/negative/UninitializedSwitchCarrierRead.hx:2:1-2:2 [module:invalid.UninitializedSwitchCarrierRead.function:invalid.UninitializedSwitchCarrierRead.main.block:entry.instruction:0:bad.declare] Invalid HxcIR: uninitialized conditional carrier must be assigned on every path before its first read Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
+    "HXC9000 error [profile=portable] test/negative/UninitializedSwitchCarrierRead.hx:2:1-2:2 [module:invalid.UninitializedSwitchCarrierRead.function:invalid.UninitializedSwitchCarrierRead.main.block:entry.instruction:0:bad.declare] Invalid HxcIR: uninitialized direct local must be assigned on every path before each read Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
   ],
   "mismatchedInterfaceTable": [
     "HXC9000 error [profile=portable] test/negative/MismatchedInterfaceTable.hx:1:1-1:2 [module:coverage.IR.function:fn.coverage.block:entry.instruction:28:c02.interface-bind] Invalid HxcIR: interface table `vtable.coverage.Object` does not implement `instance.interface` Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
@@ -289,11 +284,19 @@
   "unsupportedTypedNode": [
     "HXC1001 error [profile=portable] test/hxc_ir/fixtures/SideEffects.hx:18:1-18:2 [function app.Main.main expression] Unsupported typed Haxe node `TUnop(OpIncrement,Postfix)` while lowering function app.Main.main expression. Remediation: Use a supported construct or implement its typed IR and C AST lowering with semantic tests."
   ],
+  "managedBytesCarrierLifecycleMismatch": [
+    "HXC9000 error [profile=portable] test/negative/ManagedBytesCarrierLifecycleMismatch.hx:2:1-2:2 [module:invalid.ManagedBytesCarrierLifecycleMismatch.function:fn.coverage.bytes-carrier.block:entry.instruction:0:bytes.declare] Invalid HxcIR: managed Bytes carrier destroy requires the bytes runtime lifecycle Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C.",
+    "HXC9000 error [profile=portable] test/negative/ManagedBytesCarrierLifecycleMismatch.hx:3:1-3:2 [module:invalid.ManagedBytesCarrierLifecycleMismatch.function:fn.coverage.bytes-carrier.block:true.instruction:0:bytes.acquire-true] Invalid HxcIR: managed Bytes carrier retain requires the bytes runtime lifecycle Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C.",
+    "HXC9000 error [profile=portable] test/negative/ManagedBytesCarrierLifecycleMismatch.hx:4:1-4:2 [module:invalid.ManagedBytesCarrierLifecycleMismatch.function:fn.coverage.bytes-carrier.block:false.instruction:0:bytes.acquire-false] Invalid HxcIR: managed Bytes carrier retain requires the bytes runtime lifecycle Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
+  ],
   "absoluteSource": [
     "HXC9000 error [profile=portable] invalid/source:1:1-1:2 [module:invalid.AbsoluteSource.source] Invalid HxcIR: source path must be normalized, repository-relative UTF-8 with `/` separators; the unstable spelling was redacted Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
   ],
   "redundantDefaultTagSwitch": [
     "HXC9000 error [profile=portable] test/negative/RedundantDefaultTagSwitch.hx:3:1-3:2 [module:invalid.RedundantDefaultTagSwitch.function:invalid.RedundantDefaultTagSwitch.main.block:entry.terminator] Invalid HxcIR: exhaustive tag switch must not carry a default edge Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
+  ],
+  "uninitializedCarrierLoopReentryRead": [
+    "HXC9000 error [profile=portable] test/negative/UninitializedCarrierLoopReentryRead.hx:4:1-4:2 [module:invalid.UninitializedCarrierLoopReentryRead.function:invalid.UninitializedCarrierLoopReentryRead.main.block:loop.instruction:1:loop.declare] Invalid HxcIR: uninitialized direct local must be assigned on every path before each read Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
   ],
   "invalidArrayShiftShape": [
     "HXC9000 error [profile=portable] test/negative/InvalidArrayShiftShape.hx:2:1-2:2 [module:invalid.InvalidArrayShiftShape.function:invalid.InvalidArrayShiftShape.main.block:entry.instruction:0:bad.shift] Invalid HxcIR: Array.shift requires one managed Array and returns either a tagged optional element or the same element carrier when that carrier represents null exactly Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."

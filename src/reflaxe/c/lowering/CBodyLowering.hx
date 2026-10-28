@@ -6896,6 +6896,11 @@ private class FunctionBuilder {
 					lowerVariable(variable, null, nested.pos, true);
 					if (managedFlowCarriersByCompilerId.exists(variable.id))
 						pendingManagedCarriers.push(variable.id);
+				case TVar(variable, null) if (sequenceDefinitelyAssignsPrimitiveLocal(expressions, index + 1, endExclusive, variable, nested.pos)):
+					if (currentBlock.terminator != null) {
+						unsupported(nested, 'unreachable ${nodeName(nested)}');
+					}
+					lowerVariable(variable, null, nested.pos, false, true);
 				case _:
 					lowerStatement(nested);
 			}
@@ -6905,6 +6910,24 @@ private class FunctionBuilder {
 		if (pendingManagedCarriers.length != 0)
 			throw new CBodyEmissionError(("statement sequence ended before " + pendingManagedCarriers.length + " managed flow carrier(s) acquired an owner"));
 		statementSequenceDepth--;
+	}
+
+	/**
+	 * Admit one authored empty primitive only after source control flow proves it.
+	 *
+	 * This proof deliberately runs before HxcIR construction so an unsafe source
+	 * local keeps the stable unsupported-typed-node diagnostic. The HxcIR
+	 * validator independently repeats the same safety property over the emitted
+	 * graph before C exists.
+	 */
+	function sequenceDefinitelyAssignsPrimitiveLocal(expressions:Array<TypedExpr>, start:Int, endExclusive:Int, variable:TVar, position:Position):Bool {
+		final mapping = localStorageValueType(variable, null, position, 'TVar(${variable.name}:definite-assignment-type)');
+		if (mapping.primitiveMapping() == null)
+			return false;
+		return new CBodyDefiniteAssignment(variable.id,
+			(subject,
+					cases) -> isExhaustiveEnumAbstractSwitch(subject, cases)
+					|| isExhaustiveEnumValueSwitch(subject, cases)).proves(expressions, start, endExclusive);
 	}
 
 	/**
@@ -6971,7 +6994,7 @@ private class FunctionBuilder {
 	}
 
 	/**
-		Prove a flow carrier is assigned after compiler-hoisted prerequisite locals.
+		Prove a branch carrier is assigned after compiler-hoisted prerequisite locals.
 
 		Haxe may declare its Boolean result temporary first, then evaluate one or more
 		call results into initialized locals before emitting the exhaustive `if` that
@@ -7212,7 +7235,8 @@ private class FunctionBuilder {
 		};
 	}
 
-	function lowerVariable(variable:TVar, initializer:Null<TypedExpr>, position:Position, compilerFlowCarrier:Bool = false):Void {
+	function lowerVariable(variable:TVar, initializer:Null<TypedExpr>, position:Position, compilerFlowCarrier:Bool = false,
+			authoredDefinitelyAssignedPrimitive:Bool = false):Void {
 		if (initializer != null) {
 			final identity = mutableAggregateIdentity(initializer);
 			if (identity != null) {
@@ -7311,7 +7335,12 @@ private class FunctionBuilder {
 				|| managedBytesFlowCarrier
 				|| managedAggregateFlowCarrier
 				|| managedFlowCarrierEnum != null);
-		final directFlowCarrier = compilerFlowCarrier && conditionalDirectValue(localMapping) && !tracedDirectFlowCarrier;
+		final directFlowCarrier = compilerFlowCarrier
+			&& (conditionalDirectValue(localMapping) || localMapping.primitiveMapping() != null)
+			&& !tracedDirectFlowCarrier;
+		if (authoredDefinitelyAssignedPrimitive && localMapping.primitiveMapping() == null)
+			throw new CBodyEmissionError(("definitely assigned local `" + variable.name + "` lost its primitive representation"));
+		final uninitializedDirectLocal = directFlowCarrier || authoredDefinitelyAssignedPrimitive;
 		// A switch-pattern binding views the active payload while its enum owner
 		// remains live for the branch. Ref-counted Array and Bytes values therefore
 		// borrow that owner instead of retaining and releasing a redundant local
@@ -7321,7 +7350,7 @@ private class FunctionBuilder {
 			&& isEnumPayloadProjection(initializer)
 			&& (localMapping.arrayValue() != null || localMapping.bytesValue() != null);
 		final value:Null<LoweredValue> = switch initializer {
-			case null if (managedFlowCarrier || directFlowCarrier || tracedDirectFlowCarrier):
+			case null if (managedFlowCarrier || uninitializedDirectLocal || tracedDirectFlowCarrier):
 				// The HxcIR declaration below deliberately starts empty. Its
 				// validator proves every normal arm initializes or acquires an
 				// unmanaged carrier before the one admitted read. A traced record is
@@ -7373,8 +7402,9 @@ private class FunctionBuilder {
 		} else if (tracedDirectFlowCarrier) {
 			appendInstruction(null, IRIODefaultInitialize(IRPLocal(localId), IRISUninitialized, IRISInitialized), source,
 				"flow-carrier-traced-default-initialize");
-		} else if (directFlowCarrier) {
-			appendInstruction(null, IRIODeclareUninitialized(IRPLocal(localId)), source, "flow-carrier-direct-declare");
+		} else if (uninitializedDirectLocal) {
+			appendInstruction(null, IRIODeclareUninitialized(IRPLocal(localId)), source,
+				authoredDefinitelyAssignedPrimitive ? "definitely-assigned-primitive-declare" : "flow-carrier-direct-declare");
 		} else if (value == null) {
 			throw new CBodyEmissionError(("flow carrier `" + variable.name + "` lost its initialization strategy in `" + prepared.irId + "`"));
 		} else {

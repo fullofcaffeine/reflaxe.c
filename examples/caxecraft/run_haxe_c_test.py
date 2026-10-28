@@ -313,6 +313,26 @@ EVAL_CASES = {
 
 
 CASES = {
+    "sha256": HaxeCTestCase(
+        case_id="sha256",
+        eval_hxml="sha256.hxml",
+        c_hxml="sha256-c.hxml",
+        native_harness="test/native/sha256_harness.c",
+        generated_source="src/modules/haxe/crypto/Sha256.c",
+        required_source_markers=("Sha256_make", "Sha256_doEncode"),
+        forbidden_source_markers=("goto ", "Dynamic", "Reflect"),
+        output_line_count=3,
+        success_line="0",
+        expected_runtime_features=(
+            "runtime-base",
+            "status",
+            "alloc",
+            "array",
+            "string-literal",
+            "bytes",
+        ),
+        runs_generated_main=True,
+    ),
     "runtime-piloscript": HaxeCTestCase(
         case_id="runtime-piloscript",
         eval_hxml="runtime-piloscript.hxml",
@@ -1489,6 +1509,45 @@ def validate_oracle(test_case: HaxeCTestCase, output: str) -> None:
         raise HaxeCTestFailure(
             f"{test_case.case_id} Eval test emitted an invalid result envelope: {output!r}"
         )
+    if test_case.case_id == "sha256":
+        inputs = [
+            b"",
+            b"abc",
+            b"The quick brown fox jumps over the lazy dog",
+            *(
+                bytes((index * 131 + length * 17) & 0xFF for index in range(length))
+                for length in (
+                    1,
+                    2,
+                    3,
+                    54,
+                    55,
+                    56,
+                    57,
+                    63,
+                    64,
+                    65,
+                    119,
+                    120,
+                    121,
+                    127,
+                    128,
+                    129,
+                    1024,
+                    65537,
+                )
+            ),
+        ]
+        trace = 0
+        for input_bytes in inputs:
+            for value in hashlib.sha256(input_bytes).digest():
+                trace = ((trace * 31 + value + (1 << 31)) % (1 << 32)) - (1 << 31)
+        expected = f"0\n{trace}\n{len(inputs)}\n"
+        if output != expected:
+            raise HaxeCTestFailure(
+                "sha256 output differs from independent Python hashlib evidence: "
+                f"expected={expected!r}, actual={output!r}"
+            )
 
 
 def validate_package_zip_archive(archive: Path) -> None:

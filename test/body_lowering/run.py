@@ -33,6 +33,10 @@ REPORT_PREFIX = "HXC_BODY_LOWERING="
 FIELDS = {
     "booleanValue",
     "chooseOrThrow",
+    "definitelyAssignedAfterReturn",
+    "definitelyAssignedBranches",
+    "definitelyAssignedInteger",
+    "definitelyAssignedLoop",
     "directInteger",
     "explicitVoid",
     "floatingValue",
@@ -145,13 +149,38 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
         not isinstance(missing, str)
         or "HXC1001" not in missing
         or "unreachable TVar(value)" not in missing
-        or "test/body_lowering/fixtures/positive/BodyFixture.hx:3:" not in missing
+        or "test/body_lowering/fixtures/positive/BodyFixture.hx:39:" not in missing
         or f"[profile={profile}]" not in missing
         or str(ROOT) in missing
     ):
         raise BodyLoweringFailure(
             "unreachable control flow lost its stable HXC1001 diagnostic"
         )
+    diagnostics = report.get("definiteAssignmentDiagnostics")
+    expected_diagnostics = {
+        "unsafeEarlyReturnFallthrough",
+        "unsafeLoopOnlyAssignment",
+        "unsafePartialBranch",
+        "unsafeReadBeforeAssignment",
+    }
+    if not isinstance(diagnostics, list) or {
+        item.get("field") for item in diagnostics if isinstance(item, dict)
+    } != expected_diagnostics:
+        raise BodyLoweringFailure("definite-assignment negative inventory drifted")
+    for item in diagnostics:
+        if not isinstance(item, dict):
+            raise BodyLoweringFailure("definite-assignment diagnostic is not an object")
+        diagnostic = item.get("diagnostic")
+        if (
+            not isinstance(diagnostic, str)
+            or "HXC1001" not in diagnostic
+            or "TVar(value:uninitialized)" not in diagnostic
+            or f"[profile={profile}]" not in diagnostic
+            or str(ROOT) in diagnostic
+        ):
+            raise BodyLoweringFailure(
+                f"unsafe local {item.get('field')!r} lost its stable HXC1001 diagnostic"
+            )
 
     functions = report.get("functions")
     if not isinstance(functions, list):
@@ -200,6 +229,25 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
         raise BodyLoweringFailure("shadowed Haxe locals did not receive distinct C names")
 
     hxcir = required_text(report, "hxcir")
+    definite_assignment_markers = {
+        "definitelyAssignedAfterReturn": "flow-carrier-direct-declare",
+        "definitelyAssignedBranches": "flow-carrier-direct-declare",
+        "definitelyAssignedInteger": "definitely-assigned-primitive-declare",
+        "definitelyAssignedLoop": "definitely-assigned-primitive-declare",
+    }
+    for field, marker in definite_assignment_markers.items():
+        start = hxcir.find(f'function "function.BodyFixture.{field}"')
+        end = hxcir.find(f'end function "function.BodyFixture.{field}"')
+        section = hxcir[start:end]
+        if (
+            start == -1
+            or end == -1
+            or section.count(f'{marker}\" result=- declare-uninitialized place=local') != 1
+            or "flow-carrier-default" in section
+        ):
+            raise BodyLoweringFailure(
+                f"{field} lost its proof-backed uninitialized primitive local"
+            )
     ordered = (
         'instruction "instruction.0.constant"',
         'instruction "instruction.1.initialize"',
@@ -234,16 +282,16 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
             "uncaught throw did not evaluate its payload before the explicit fail-stop edge"
         )
     for source_marker in (
-        'BodyFixture.hx":3:3-3:22',
-        'BodyFixture.hx":6:4-6:23',
-        'BodyFixture.hx":7:4-7:16',
+        'BodyFixture.hx":39:3-39:22',
+        'BodyFixture.hx":42:4-42:23',
+        'BodyFixture.hx":43:4-43:16',
     ):
         if source_marker not in hxcir:
             raise BodyLoweringFailure(f"HxcIR lost exact source span {source_marker}")
 
     c_source = required_text(report, "cSource")
     mapped = required_text(report, "lineMappedCSource")
-    if "#line" in c_source or '#line 3 "test/body_lowering/' not in mapped:
+    if "#line" in c_source or '#line 39 "test/body_lowering/' not in mapped:
         raise BodyLoweringFailure("optional structured #line mode drifted")
     if "#include <stdint.h>" not in c_source or "#include <stdbool.h>" not in c_source:
         raise BodyLoweringFailure("primitive body C omitted its exact standard headers")
@@ -532,6 +580,10 @@ def native_harness(report: dict[str, object], *, fail: bool = False) -> str:
 int main(void)
 {{
   (void)&{names['booleanValue']};
+  (void)&{names['definitelyAssignedAfterReturn']};
+  (void)&{names['definitelyAssignedBranches']};
+  (void)&{names['definitelyAssignedInteger']};
+  (void)&{names['definitelyAssignedLoop']};
   (void)&{names['directInteger']};
   (void)&{names['explicitVoid']};
   (void)&{names['floatingValue']};
@@ -548,12 +600,18 @@ int main(void)
   {names['explicitVoid']}();
   {names['implicitVoid']}();
   if ({names['integerValue']}() != INT32_C(42)) return 1;
-  if ({names['directInteger']}() != INT32_C(23)) return 2;
-  if ({names['unsignedValue']}() != UINT32_C(29)) return 3;
-  if ({names['floatingValue']}() != 1.5) return 4;
-  if ({names['booleanValue']}() != true) return 5;
-  if ({names['chooseOrThrow']}(INT32_C(0)) != INT32_C(41)) return 6;
-  if ({names['chooseOrThrow']}(INT32_C(2)) != INT32_C(43)) return 7;
+  if ({names['definitelyAssignedInteger']}() != INT32_C(31)) return 2;
+  if ({names['definitelyAssignedBranches']}(true) != INT32_C(7)) return 3;
+  if ({names['definitelyAssignedBranches']}(false) != INT32_C(11)) return 4;
+  if ({names['definitelyAssignedAfterReturn']}(true) != INT32_C(13)) return 5;
+  if ({names['definitelyAssignedAfterReturn']}(false) != INT32_C(17)) return 6;
+  if ({names['definitelyAssignedLoop']}(INT32_C(4)) != INT32_C(4)) return 7;
+  if ({names['directInteger']}() != INT32_C(23)) return 8;
+  if ({names['unsignedValue']}() != UINT32_C(29)) return 9;
+  if ({names['floatingValue']}() != 1.5) return 10;
+  if ({names['booleanValue']}() != true) return 11;
+  if ({names['chooseOrThrow']}(INT32_C(0)) != INT32_C(41)) return 12;
+  if ({names['chooseOrThrow']}(INT32_C(2)) != INT32_C(43)) return 13;
   return 0;
 }}
 """
@@ -1077,6 +1135,16 @@ def main(arguments: Iterable[str] = ()) -> int:
             "unreachableDiagnostic": str(first["unreachableDiagnostic"]).replace(
                 "[profile=portable]", "[profile=<profile>]"
             ),
+            "definiteAssignmentDiagnostics": [
+                {
+                    **item,
+                    "diagnostic": str(item["diagnostic"]).replace(
+                        "[profile=portable]", "[profile=<profile>]"
+                    ),
+                }
+                for item in first["definiteAssignmentDiagnostics"]
+                if isinstance(item, dict)
+            ],
         }
         metal_without_profile = {
             **metal,
@@ -1084,6 +1152,16 @@ def main(arguments: Iterable[str] = ()) -> int:
             "unreachableDiagnostic": str(metal["unreachableDiagnostic"]).replace(
                 "[profile=metal]", "[profile=<profile>]"
             ),
+            "definiteAssignmentDiagnostics": [
+                {
+                    **item,
+                    "diagnostic": str(item["diagnostic"]).replace(
+                        "[profile=metal]", "[profile=<profile>]"
+                    ),
+                }
+                for item in metal["definiteAssignmentDiagnostics"]
+                if isinstance(item, dict)
+            ],
         }
         if portable_without_profile != metal_without_profile:
             raise BodyLoweringFailure("portable and metal primitive body lowering diverged")
