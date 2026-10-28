@@ -24,6 +24,8 @@ import caxecraft.app.AppScreen.showsLoading;
 import caxecraft.app.AppScreen.showsTitle;
 import caxecraft.app.AppScreen.startPlaying;
 import caxecraft.app.AppScreen.togglePause;
+import caxecraft.app.AppScreen.AppPointerDirective;
+import caxecraft.app.AppScreen.advancePlayScreenFrame;
 import caxecraft.app.GameMode;
 import caxecraft.app.CampaignMenu.CampaignMenuHit;
 import caxecraft.app.CampaignMenuFlow.advanceCampaignMenuFrame;
@@ -72,6 +74,30 @@ function selfCheck():Int {
 		return 6;
 	if (togglePause(playing) != AppScreen.Paused)
 		return 7;
+	final focusLoss = advancePlayScreenFrame({
+		screen: playing,
+		focused: false,
+		playerDefeated: false,
+		pausePressed: false,
+		capturePressed: false
+	});
+	if (focusLoss.screen != AppScreen.Paused
+		|| focusLoss.pointer != AppPointerDirective.ReleasePointer
+		|| !focusLoss.clearQueuedJump
+		|| !focusLoss.resetSimulationClock
+		|| !focusLoss.resetMotion)
+		throw new haxe.Exception("focus loss did not request one complete pause boundary");
+	final recapturedFrame = advancePlayScreenFrame({
+		screen: AppScreen.Paused,
+		focused: true,
+		playerDefeated: false,
+		pausePressed: false,
+		capturePressed: true
+	});
+	if (recapturedFrame.screen != playing
+		|| recapturedFrame.pointer != AppPointerDirective.CapturePointer
+		|| !recapturedFrame.recapturedThisFrame)
+		throw new haxe.Exception("capture did not restore ordinary play");
 	if (initialScreen(false) != AppScreen.Playing)
 		return 8;
 	final editor = openEditor(title);
