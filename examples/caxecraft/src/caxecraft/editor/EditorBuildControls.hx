@@ -27,6 +27,22 @@ enum abstract EditorBuildPointerState(Int) {
 	var Captured = 1;
 }
 
+/** One direct activation from a visible Build hotbar slot. */
+enum EditorBuildHotbarAction {
+	NoBuildHotbarAction;
+	SelectBuildHotbarTool(tool:EditorTool);
+	OpenBuildAssetBrowser;
+}
+
+/** Pixel geometry shared by Build hotbar drawing and released-pointer input. */
+typedef EditorBuildHotbarLayout = {
+	final left:Int;
+	final top:Int;
+	final slotWidth:Int;
+	final slotHeight:Int;
+	final gap:Int;
+}
+
 /** One direct terrain action, or no action when the target is not safe. */
 enum EditorBuildTerrainAction {
 	NoTerrainAction;
@@ -293,6 +309,48 @@ function toolForBuildHotbarSlot(slot:Int):Null<EditorTool> {
 		case 5: TriggerZoneTool;
 		case _: null;
 	};
+}
+
+/**
+ * Give a direct slot press the same meaning as its visible creation card.
+ *
+ * The object slot opens discovery instead of silently reusing an old choice.
+ * Wheel cycling deliberately keeps using `cycleBuildHotbarTool`, so creators
+ * can move between placement tools without an unexpected modal interruption.
+ */
+function buildHotbarAction(slot:Int):EditorBuildHotbarAction {
+	final tool = toolForBuildHotbarSlot(slot);
+	if (tool == null)
+		return NoBuildHotbarAction;
+	return tool == CatalogObjectTool ? OpenBuildAssetBrowser : SelectBuildHotbarTool(tool);
+}
+
+/** Fit the five Build slots at the bottom center of the current window. */
+function buildHotbarLayout(screenWidth:Int, screenHeight:Int, inset:Int):EditorBuildHotbarLayout {
+	final gap = 8;
+	final availableWidth = screenWidth - inset * 2 - 40;
+	final fittedWidth = Std.int((availableWidth - gap * 4) / 5);
+	final slotWidth = fittedWidth < 1 ? 1 : fittedWidth < 170 ? fittedWidth : 170;
+	final barWidth = slotWidth * 5 + gap * 4;
+	return {
+		left: Std.int((screenWidth - barWidth) / 2),
+		top: screenHeight - inset - 78,
+		slotWidth: slotWidth,
+		slotHeight: 42,
+		gap: gap
+	};
+}
+
+/** Return the visible slot under one screen point, or zero outside the cards. */
+function buildHotbarSlotAt(layout:EditorBuildHotbarLayout, x:Int, y:Int):Int {
+	if (y < layout.top || y >= layout.top + layout.slotHeight || x < layout.left)
+		return 0;
+	final stride = layout.slotWidth + layout.gap;
+	final relativeX = x - layout.left;
+	final slotIndex = Std.int(relativeX / stride);
+	if (slotIndex < 0 || slotIndex >= 5 || relativeX - slotIndex * stride >= layout.slotWidth)
+		return 0;
+	return slotIndex + 1;
 }
 
 /** Move by one visible Build hotbar slot and wrap at either end. */

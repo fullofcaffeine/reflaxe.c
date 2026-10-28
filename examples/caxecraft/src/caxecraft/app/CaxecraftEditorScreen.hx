@@ -8,7 +8,11 @@ import caxecraft.editor.EditorBuildControls.EditorBuildObjectGrab;
 import caxecraft.editor.EditorBuildControls.EditorBuildPointerState;
 import caxecraft.editor.EditorBuildControls.EditorBuildPrompt;
 import caxecraft.editor.EditorBuildControls.EditorBuildTerrainAction;
+import caxecraft.editor.EditorBuildControls.EditorBuildHotbarAction;
 import caxecraft.editor.EditorBuildControls.EditorObjectShortcutAction;
+import caxecraft.editor.EditorBuildControls.buildHotbarAction;
+import caxecraft.editor.EditorBuildControls.buildHotbarLayout;
+import caxecraft.editor.EditorBuildControls.buildHotbarSlotAt;
 import caxecraft.editor.EditorBuildControls.buildPrompt as buildPromptFor;
 import caxecraft.editor.EditorBuildControls.cycleBuildHotbarTool;
 import caxecraft.editor.EditorBuildControls.nextPointerState;
@@ -741,24 +745,25 @@ final class CaxecraftEditorScreen {
 
 	/** Show every direct Build tool in the same order as number-key input. */
 	function drawImmersiveHotbar(locale:LocaleCursor, width:Int, height:Int, inset:Int):Void {
-		final gap = 8;
-		final availableWidth = width - inset * 2 - 40;
-		final fittedWidth = Std.int((availableWidth - gap * 4) / 5);
-		final slotWidth = fittedWidth < 170 ? fittedWidth : 170;
-		final barWidth = slotWidth * 5 + gap * 4;
-		final left = Std.int((width - barWidth) / 2);
-		final top = height - inset - 78;
+		final layout = buildHotbarLayout(width, height, inset);
 		for (slot in 1...6) {
 			final tool = toolForBuildHotbarSlot(slot);
 			if (tool != null) {
-				final slotLeft = left + (slot - 1) * (slotWidth + gap);
-				Raylib.DrawRectangle(slotLeft, top, slotWidth, 42, Color.rgba(8, 20, 24));
-				Raylib.DrawRectangle(slotLeft + 6, top + 7, 28, 28, immersiveToolColor(slot));
-				Raylib.DrawTextString(Std.string(slot), slotLeft + 16, top + 13, 16, Color.rgba(10, 24, 30));
-				Raylib.DrawTextString(immersiveToolLabel(locale, tool), slotLeft + 42, top + 13, 16, CaxecraftPalette.hudText());
+				final slotLeft = layout.left + (slot - 1) * (layout.slotWidth + layout.gap);
+				final pressed = Raygui.ButtonString(Rectangle.fromFloat(slotLeft, layout.top, layout.slotWidth, layout.slotHeight), "").has(GuiResult.Pressed);
+				if (pressed && buildPointerState == EditorBuildPointerState.Released)
+					applyBuildHotbarAction(buildHotbarAction(slot));
+				Raylib.DrawRectangle(slotLeft, layout.top, layout.slotWidth, layout.slotHeight, Color.rgba(8, 20, 24));
+				Raylib.DrawRectangle(slotLeft + 6, layout.top + 7, 28, 28, immersiveToolColor(slot));
+				Raylib.DrawTextString(Std.string(slot), slotLeft + 16, layout.top + 13, 16, Color.rgba(10, 24, 30));
+				final labelTop = tool == EditorTool.CatalogObjectTool ? layout.top + 5 : layout.top + 13;
+				final labelSize = tool == EditorTool.CatalogObjectTool ? 13 : 16;
+				Raylib.DrawTextString(immersiveToolLabel(locale, tool), slotLeft + 42, labelTop, labelSize, CaxecraftPalette.hudText());
+				if (tool == EditorTool.CatalogObjectTool)
+					Raylib.DrawTextString(selectedObjectAssetLabel(locale), slotLeft + 42, layout.top + 24, 12, Color.rgba(126, 205, 209));
 				if (activeTool == tool) {
-					Raylib.DrawRectangleLines(slotLeft, top, slotWidth, 42, CaxecraftPalette.selection());
-					Raylib.DrawRectangleLines(slotLeft + 1, top + 1, slotWidth - 2, 40, CaxecraftPalette.selection());
+					Raylib.DrawRectangleLines(slotLeft, layout.top, layout.slotWidth, layout.slotHeight, CaxecraftPalette.selection());
+					Raylib.DrawRectangleLines(slotLeft + 1, layout.top + 1, layout.slotWidth - 2, layout.slotHeight - 2, CaxecraftPalette.selection());
 				}
 			}
 		}
@@ -770,7 +775,7 @@ final class CaxecraftEditorScreen {
 			case SelectTool: uiCatalog.text(locale, UiMessage.EditorSelect);
 			case PaintTool | EraseTool | FillTool: groundMaterialLabel(locale);
 			case CheckpointTool: uiCatalog.text(locale, UiMessage.EditorCheckpoint);
-			case CatalogObjectTool: selectedObjectAssetLabel(locale);
+			case CatalogObjectTool: uiCatalog.text(locale, UiMessage.EditorAssetBrowser);
 			case TriggerZoneTool: uiCatalog.text(locale, UiMessage.EditorTrigger);
 		};
 	}
@@ -2930,7 +2935,18 @@ final class CaxecraftEditorScreen {
 		}
 	}
 
-	/** Select a visible Build card from a number key or one mouse-wheel step. */
+	/** Apply one device-neutral direct Build hotbar action. */
+	function applyBuildHotbarAction(action:EditorBuildHotbarAction):Void {
+		switch action {
+			case NoBuildHotbarAction:
+			case SelectBuildHotbarTool(tool):
+				setActiveTool(tool);
+			case OpenBuildAssetBrowser:
+				openAssetBrowser();
+		}
+	}
+
+	/** Activate a numbered Build card, or cycle tools by one mouse-wheel step. */
 	function selectBuildHotbarTool(wheelDirection:Int):Void {
 		var slot = 0;
 		if (Raylib.IsKeyPressed(KeyboardKey.One))
@@ -2943,9 +2959,8 @@ final class CaxecraftEditorScreen {
 			slot = 4;
 		else if (Raylib.IsKeyPressed(KeyboardKey.Five))
 			slot = 5;
-		final tool = toolForBuildHotbarSlot(slot);
-		if (tool != null)
-			setActiveTool(tool);
+		if (slot != 0)
+			applyBuildHotbarAction(buildHotbarAction(slot));
 		else if (wheelDirection != 0)
 			setActiveTool(cycleBuildHotbarTool(activeTool, wheelDirection));
 	}
@@ -3720,8 +3735,10 @@ final class CaxecraftEditorScreen {
 		final mouseX = Std.int(mouse.x.toFloat());
 		final mouseY = Std.int(mouse.y.toFloat());
 		final inside = mouseX >= left && mouseY >= top && mouseX < left + width && mouseY < top + height;
+		final overHotbar = buildPointerState == EditorBuildPointerState.Released
+			&& buildHotbarSlotAt(buildHotbarLayout(Raylib.GetScreenWidth(), Raylib.GetScreenHeight(), 16), mouseX, mouseY) != 0;
 		final name = worldName;
-		final pointerAvailable = inside && Raylib.IsWindowFocused() && (name == null || !name.isEditing());
+		final pointerAvailable = inside && !overHotbar && Raylib.IsWindowFocused() && (name == null || !name.isEditing());
 		final leftPressed = Raylib.IsMouseButtonPressed(MouseButton.Left);
 		final rightPressed = Raylib.IsMouseButtonPressed(MouseButton.Right);
 		final capturePressed = buildPointerState == EditorBuildPointerState.Released && pointerAvailable && (leftPressed || rightPressed);
@@ -3732,7 +3749,8 @@ final class CaxecraftEditorScreen {
 			&& (name == null || !name.isEditing());
 		final wheel = cameraInputEnabled ? Raylib.GetMouseWheelMove().toFloat() : 0.0;
 		final wheelDirection = wheel > 0.0 ? -1 : wheel < 0.0 ? 1 : 0;
-		if (cameraInputEnabled)
+		final hotbarInputEnabled = Raylib.IsWindowFocused() && (name == null || !name.isEditing());
+		if (hotbarInputEnabled)
 			selectBuildHotbarTool(wheelDirection);
 		if (cameraInputEnabled && activeTool == PaintTool) {
 			final materialDirection = Raylib.IsKeyPressed(KeyboardKey.LeftBracket) ? -1 : Raylib.IsKeyPressed(KeyboardKey.RightBracket) ? 1 : 0;

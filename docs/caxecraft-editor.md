@@ -241,10 +241,12 @@ Build has one Ground card because the two mouse buttons select the terrain
 operation. The left button removes terrain. The right button places terrain.
 Plan keeps separate Ground and Erase cards for precise work.
 
-The Things to Add card opens a searchable asset browser. Press `B` from either
-editor view to open or close it. The browser lists every admitted terrain
-material, item, character, enemy, and editor mechanism. Its rows come from the
-validated content pack; translated names and help come from the UI catalog.
+The Things to Add card opens a searchable asset browser. In Build, release the
+pointer with Escape and click its visible hotbar card, or press `4` while
+looking around. Press `B` from either editor view to open or close it. The
+browser lists every admitted terrain material, item, character, enemy, and
+editor mechanism. Its rows come from the validated content pack; translated
+names and help come from the UI catalog.
 Choosing terrain selects the Ground tool and adds a normal undoable map-palette
 entry only when the map does not have that material. Choosing another row
 selects the ordinary object-placement tool.
@@ -312,7 +314,9 @@ The current controls are:
 - click inside Build to capture the pointer, then move the mouse to look;
 - press Escape once to release the pointer; press it again to cancel the
   selected tool or leave through the normal editor flow;
-- press 1 through 5 to choose the five visible Build cards;
+- press 1 through 5 to use the five visible Build cards; slot 4 opens Things to
+  Add, while mouse-wheel cycling can reuse the selected object without opening
+  the browser;
 - press B to open or close Things to Add;
 - press T to open or close the complete CAXEMAP Text workspace;
 - in Things to Add, use left/right to change category, up/down to choose a row,
