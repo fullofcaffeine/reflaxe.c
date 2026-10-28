@@ -468,25 +468,34 @@ CASES = {
         eval_hxml="aquatics.hxml",
         c_hxml="aquatics-c.hxml",
         native_harness="test/native/aquatics_harness.c",
+        runs_generated_main=True,
         generated_source="src/modules/caxecraft/domain/GameSession.c",
         required_source_markers=("GameSession_tick", "GameSession *hxc_l_self"),
         forbidden_source_markers=("goto ",),
         output_line_count=2,
         success_line="0",
+        # GameSession now runs authored CaxeFlow rules (df5e974b), so the probe's
+        # session reaches CaxeFlow's managed state, owned Strings, and collector.
         expected_runtime_features=(
             "runtime-base",
             "status",
             "alloc",
             "array",
+            "object",
+            "gc",
             "string-literal",
+            "string-scalar",
+            "string",
         ),
         required_runtime_roots=(
-            ("string-literal", "type-carrier", "runtime-representation"),
+            ("string-literal", "static-value", "direct-string-value"),
         ),
         split_source_checks=(
             GeneratedSourceCheck(
                 path="include/hxc/detail/program_types.h",
-                required_markers=("#include <hxrt/string_literal.h>",),
+                # Owned Strings bring the managed header, which supplies the literal type
+                # through hxrt/string_scalar.h, so the literal header is not included twice.
+                required_markers=("#include <hxrt/string.h>",),
                 forbidden_markers=(),
             ),
         ),
@@ -924,6 +933,9 @@ CASES = {
         forbidden_source_markers=("haxe.Json", "Dynamic", "Reflect", "goto "),
         output_line_count=6,
         success_line="0",
+        # CaxeFlowValidator and ScenarioValidationContext keep collector-reachable
+        # values in String-keyed maps (gc-string-map); iterator and typed-map arrive
+        # only as that feature's dependencies.
         expected_runtime_features=(
             "runtime-base",
             "status",
@@ -936,6 +948,9 @@ CASES = {
             "bytes-string",
             "object",
             "gc",
+            "iterator",
+            "typed-map",
+            "gc-string-map",
             "int-map",
             "string-map",
             "string-split",
