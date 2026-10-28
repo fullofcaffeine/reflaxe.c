@@ -2518,9 +2518,10 @@ Performance claims in the README require reproducible benchmark definitions and 
   `scripts/ci/check_license_policy.py --package-root <assembled-tree>` so the
   canonical license, third-party notice, provenance manifest, and retained
   upstream licenses match the reviewed repository copies.
-- Generated C/header, template, and selectively emitted/linked runtime license
-  treatment remains owned by decision `haxe_c-od2.5`; no release workflow may
-  infer an exception or grant solely from the repository license.
+- Decision `haxe_c-od2.5` assigns no project claim to purely user-derived
+  output. It assigns MIT terms to compiler sidecars and audited `hxrt` copies.
+  Third-party inputs retain separate terms. Qualified review still blocks the
+  first release.
 - Fuzzing covers untrusted binding configuration and manifest parsing.
 - Exported ABI functions validate lengths, overflows, and nullability at trust boundaries according to policy.
 - Unsafe operations are counted and reviewable.
@@ -2981,8 +2982,8 @@ are not permission to contradict an accepted record.
    licensed `GPL-3.0-only`. The current upstream inventory and fail-closed
    notice/package checks live in `THIRD_PARTY_NOTICES.md`,
    `docs/specs/third-party-provenance.json`, and
-   `scripts/ci/check_license_policy.py`. Generated-output and runtime
-   redistribution treatment remains decision `haxe_c-od2.5`.
+   `scripts/ci/check_license_policy.py`. Decision `haxe_c-od2.5` records the
+   accepted generated-output and runtime redistribution treatment.
 2. **Profiles (accepted):** `portable` default plus `metal`; no third
    “idiomatic” profile. Both use the direct-C-first pipeline in ADR 0001.
 3. **Runtime policy (accepted):** `auto|minimal|none` remains orthogonal to
@@ -5060,7 +5061,7 @@ changes must update both surfaces in one reviewed change.
 | Deterministic import tooling (`bindgen`) | `src/hxc/bindgen/**`, `schemas/hxc-bindings-lock.schema.json`, `docs/hxc-cli.md`, and `test/hxc_bindgen/**` | Experimental Clang semantic and ABI lock stage | The Haxe-owned command invokes Clang without a shell and records its version, configured headers, target, exact arguments, input hashes, semantic AST, and diagnostics. Schema 4 adds exact struct and union layouts to the primitive model. It records complete and opaque declarations, fields, bitfields, anonymous members, flexible arrays, packing, and alignment. Strict GCC and Clang probes check host facts. A Windows target capture proves target-specific layout changes. Unknown or ambiguous layouts fail before lock publication. Function mapping, raw module files, wrappers, drift workflows, callbacks, and constrained C++ shims remain later E6 work. |
 | Public C ABI and library production (`c-export`) | typed metadata vocabulary, PRD/task graph, independent native consumers | Unsupported | No `std/c/Export.hx`, Haxe export analyzer, generated public header, library packager, or generated shared-library example exists. Build stable headers/wrappers, ownership/error adapters, visibility/version maps, install metadata, ABI manifests/diffs, and independent consumers. |
 | Portable runtime and standard library (`portable-runtime-and-stdlib`) | Minimal `runtime/hxrt` seed and `stdlib-ledger.json` | Planned | Full portable Haxe semantics and standard-library parity are product requirements, not current capabilities. Ratify strings, memory, exceptions, and platform contracts before implementing selective runtime facilities and ledger-driven conformance. |
-| Governance, compatibility, and releases (`governance-release`) | `CONTRIBUTING.md`, `SECURITY.md`, `LICENSE`, `LICENSES/`, `THIRD_PARTY_NOTICES.md`, `docs/specs/third-party-provenance.json`, governance CI | Verified contributor/security policy; release implementation planned | Beads/definition-of-done workflow, private reporting, truthful no-supported-release status, generated-file/vendoring rules, and release/signing/provenance roles are checked and drift-gated. Generated-output/runtime redistribution decision `haxe_c-od2.5`, the E10 security review, automated signed reproducible artifacts, ABI/semantic policy, and release evidence still block release claims. |
+| Governance, compatibility, and releases (`governance-release`) | `CONTRIBUTING.md`, `SECURITY.md`, `LICENSE`, `LICENSES/`, `THIRD_PARTY_NOTICES.md`, `docs/specs/third-party-provenance.json`, governance CI | Verified contributor/security and generated-output policy; release implementation planned | Beads/definition-of-done workflow, private reporting, truthful no-supported-release status, generated-file/vendoring rules, generated-output terms, and release/signing/provenance roles are checked and drift-gated. Qualified rights review, the E10 security review, automated signed reproducible artifacts, ABI/semantic policy, and release evidence still block release claims. |
 
 ### 32.3 Immediate scaffold audit acceptance
 
@@ -5630,7 +5631,7 @@ analysis; evidence may justify a different accepted result.
 
 | Decision | Recommended default | Owner artifact | Planning effect |
 | --- | --- | --- | --- |
-| Repository license and upstream-derived stdlib policy | Owner selected GPL-3.0-only on 2026-07-15; the checked inventory rejects unowned vendor/runtime files and unlisted `_std` work | E0.T02 / `third-party-provenance.json` | Repository licensing and current provenance are resolved; `haxe_c-od2.5` still blocks release packaging until generated-output/runtime redistribution treatment is ratified. |
+| Repository and generated-output license policy | Repository source remains GPL-3.0-only. Decision `haxe_c-od2.5` gives MIT terms to output support and makes no project claim over purely user-derived output. | E0.T02 / `haxe_c-od2.5` / `third-party-provenance.json` | Package validation derives license conclusions from artifact origin. Qualified rights review still blocks the first release. |
 | Exact Haxe and Reflaxe baseline | Accepted M0 pin: official Haxe 5.0.0-preview.1 at `2c1e544e0a2c7524ef4c8e103f1b0580362ea538` with release-artifact hashes, Reflaxe 4.0.0-beta-compatible commit `73a983112e039daad46b37912ab238df6bf0cf53`, and Lix 17.0.2; broaden only through explicit API audit, ADR review, and CI evidence | E0.T03 / ADR 0007 / `toolchain-lock.json` | Compiler API work uses one checksum-verified framework and custom-target surface. |
 | Default C dialect | Accepted: strict ISO C11/no extensions is the normative source and public-header floor; C17 preserves it, while C23 internal syntax remains experimental and ABI-neutral | ADR 0007 / E0.T01 | AST, printer, runtime, header, and compiler gates share one floor. |
 | Target define name | Accepted semantic contract: `--custom-target c=<output>` is the production carrier; `c`/`target.name=c` is target identity; `c_output` is derived Reflaxe transport; and `reflaxe_c` is implementation-owned. The target installs `target.unicode`, never `target.utf16`, with adapter-derived capabilities. | ADR 0007 / E0.T01/E0.T03 / `haxe_c-od2.6` | Real production typing snapshots the matching platform facts and reaches the fail-closed lowering boundary; Haxe 4 Cross remains a regression negative. |

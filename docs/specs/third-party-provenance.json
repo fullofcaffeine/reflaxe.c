@@ -1,6 +1,6 @@
 {
-  "schemaVersion": 1,
-  "evidenceCheckedAt": "2026-07-22",
+  "schemaVersion": 2,
+  "evidenceCheckedAt": "2026-09-01",
   "project": {
     "name": "reflaxe.c",
     "licenseExpression": "GPL-3.0-only",
@@ -12,6 +12,36 @@
     "bundledComponentsRequireImmutableRevision": true,
     "unlistedReservedPaths": "reject",
     "generatedOutputDecision": "haxe_c-od2.5"
+  },
+  "generatedOutput": {
+    "spdxLicenseListVersion": "3.28.0",
+    "outputSupportLicenseExpression": "MIT",
+    "outputSupportLicenseFile": "LICENSES/HAXE-C-OUTPUT-SUPPORT-MIT.txt",
+    "outputSupportLicenseSha256": "a79a29d4f4b6dd706a156cecd8a06f27aaa7b3c66bdfcdfcfb42da6eacc23ca1",
+    "copyrightNotice": "Copyright (c) 2026 haxe.c contributors",
+    "compiledProgramWithoutUserAssertion": {
+      "licenseConcluded": "NOASSERTION",
+      "projectCopyrightClaim": false,
+      "meaning": "No license determination was made. This value grants no rights."
+    },
+    "compilerSidecars": {
+      "licenseConcluded": "MIT",
+      "projectCopyrightClaim": true
+    },
+    "repositoryCopies": {
+      "licenseConcluded": "MIT",
+      "projectCopyrightClaim": true,
+      "artifactCatalog": "runtime/hxrt/features.json",
+      "allowedSourceRoots": [
+        "runtime/hxrt/include/hxrt",
+        "runtime/hxrt/src"
+      ]
+    },
+    "thirdPartyInputs": "retain-declared-component-license-and-provenance",
+    "mixedOriginSource": "split-or-reject",
+    "outputSupportContributionLicense": "MIT",
+    "contributionBackRequired": false,
+    "qualifiedRightsChainReview": "required-before-release"
   },
   "release": {
     "requiredFiles": [
@@ -28,6 +58,10 @@
       {
         "path": "LICENSES/HAXE-STDLIB-MIT.txt",
         "sha256": "61c9e5c8ca48e1f6e27f66cc6fb2eb11865a08672e1c793a13cfdaa89ad1bb74"
+      },
+      {
+        "path": "LICENSES/HAXE-C-OUTPUT-SUPPORT-MIT.txt",
+        "sha256": "a79a29d4f4b6dd706a156cecd8a06f27aaa7b3c66bdfcdfcfb42da6eacc23ca1"
       },
       {
         "path": "vendor/reflaxe/LICENSE",
