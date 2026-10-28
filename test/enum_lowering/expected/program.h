@@ -123,6 +123,24 @@ struct hxc_StrictCarrierHolder {
   struct hxc_StrictCarrier hxc_value;
 };
 
+enum hxc_Option_tag_h51b3904815c1 {
+  hxc_Option_None_h506b5e6013bd = 0,
+  hxc_Option_Some_ha9454146ff01 = 1
+};
+
+struct hxc_Option_Some_payload_h6fa8fca385dc {
+  int32_t hxc_value;
+};
+
+union hxc_Option_payload_h331368fdb4fc {
+  struct hxc_Option_Some_payload_h6fa8fca385dc hxc_Some;
+};
+
+struct hxc_Option_h95f1c4a28dac {
+  enum hxc_Option_tag_h51b3904815c1 hxc_tag;
+  union hxc_Option_payload_h331368fdb4fc hxc_payload;
+};
+
 struct hxc_EnumFixture_StackClosure {
   struct hxc_Option_h95f1c4a28dac (*hxc_invoke)(void *, int32_t);
   void *hxc_context;
@@ -214,24 +232,6 @@ union hxc_Option_payload_hbc7d11cfb27e {
 struct hxc_Option_h2a07afaff02e {
   enum hxc_Option_tag_hff067ac061db hxc_tag;
   union hxc_Option_payload_hbc7d11cfb27e hxc_payload;
-};
-
-enum hxc_Option_tag_h51b3904815c1 {
-  hxc_Option_None_h506b5e6013bd = 0,
-  hxc_Option_Some_ha9454146ff01 = 1
-};
-
-struct hxc_Option_Some_payload_h6fa8fca385dc {
-  int32_t hxc_value;
-};
-
-union hxc_Option_payload_h331368fdb4fc {
-  struct hxc_Option_Some_payload_h6fa8fca385dc hxc_Some;
-};
-
-struct hxc_Option_h95f1c4a28dac {
-  enum hxc_Option_tag_h51b3904815c1 hxc_tag;
-  union hxc_Option_payload_h331368fdb4fc hxc_payload;
 };
 
 enum hxc_Mode {

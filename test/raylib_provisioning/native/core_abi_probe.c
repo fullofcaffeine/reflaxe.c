@@ -35,6 +35,9 @@ _Static_assert(offsetof(Color, g) == 1U, "Color.g offset drifted");
 _Static_assert(offsetof(Color, b) == 2U, "Color.b offset drifted");
 _Static_assert(offsetof(Color, a) == 3U, "Color.a offset drifted");
 
+_Static_assert(sizeof(Model) == 136U, "Model size drifted");
+_Static_assert(_Alignof(Model) == 8U, "Model alignment drifted");
+
 _Static_assert(sizeof(Ray) == 24U, "Ray size drifted");
 _Static_assert(_Alignof(Ray) == 4U, "Ray alignment drifted");
 _Static_assert(offsetof(Ray, position) == 0U, "Ray.position offset drifted");
@@ -284,6 +287,7 @@ hxc_check_raylib_core_signatures(void)
     void (*const hxc_signature_DrawGrid)(int, float) = &DrawGrid;
     void (*const hxc_signature_DrawLine)(int, int, int, int, Color) = &DrawLine;
     void (*const hxc_signature_DrawLine3D)(Vector3, Vector3, Color) = &DrawLine3D;
+    void (*const hxc_signature_DrawModelEx)(Model, Vector3, Vector3, float, Vector3, Color) = &DrawModelEx;
     void (*const hxc_signature_DrawPixel)(int, int, Color) = &DrawPixel;
     void (*const hxc_signature_DrawRectangle)(int, int, int, int, Color) = &DrawRectangle;
     void (*const hxc_signature_DrawRectangleLines)(int, int, int, int, Color) = &DrawRectangleLines;
@@ -317,6 +321,7 @@ hxc_check_raylib_core_signatures(void)
     bool (*const hxc_signature_IsKeyDown)(int) = &IsKeyDown;
     bool (*const hxc_signature_IsKeyPressed)(int) = &IsKeyPressed;
     bool (*const hxc_signature_IsKeyReleased)(int) = &IsKeyReleased;
+    bool (*const hxc_signature_IsModelValid)(Model) = &IsModelValid;
     bool (*const hxc_signature_IsMouseButtonDown)(int) = &IsMouseButtonDown;
     bool (*const hxc_signature_IsMouseButtonPressed)(int) = &IsMouseButtonPressed;
     bool (*const hxc_signature_IsMouseButtonReleased)(int) = &IsMouseButtonReleased;
@@ -324,6 +329,7 @@ hxc_check_raylib_core_signatures(void)
     bool (*const hxc_signature_IsWindowFocused)(void) = &IsWindowFocused;
     bool (*const hxc_signature_IsWindowReady)(void) = &IsWindowReady;
     bool (*const hxc_signature_IsWindowResized)(void) = &IsWindowResized;
+    Model (*const hxc_signature_LoadModel)(const char *) = &LoadModel;
     Texture2D (*const hxc_signature_LoadTexture)(const char *) = &LoadTexture;
     void (*const hxc_signature_SetConfigFlags)(unsigned int) = &SetConfigFlags;
     void (*const hxc_signature_SetExitKey)(int) = &SetExitKey;
@@ -332,6 +338,7 @@ hxc_check_raylib_core_signatures(void)
     void (*const hxc_signature_SetWindowMinSize)(int, int) = &SetWindowMinSize;
     void (*const hxc_signature_SetWindowSize)(int, int) = &SetWindowSize;
     void (*const hxc_signature_TakeScreenshot)(const char *) = &TakeScreenshot;
+    void (*const hxc_signature_UnloadModel)(Model) = &UnloadModel;
     void (*const hxc_signature_UnloadTexture)(Texture2D) = &UnloadTexture;
     bool (*const hxc_signature_WindowShouldClose)(void) = &WindowShouldClose;
 
@@ -352,6 +359,7 @@ hxc_check_raylib_core_signatures(void)
     (void)hxc_signature_DrawGrid;
     (void)hxc_signature_DrawLine;
     (void)hxc_signature_DrawLine3D;
+    (void)hxc_signature_DrawModelEx;
     (void)hxc_signature_DrawPixel;
     (void)hxc_signature_DrawRectangle;
     (void)hxc_signature_DrawRectangleLines;
@@ -385,6 +393,7 @@ hxc_check_raylib_core_signatures(void)
     (void)hxc_signature_IsKeyDown;
     (void)hxc_signature_IsKeyPressed;
     (void)hxc_signature_IsKeyReleased;
+    (void)hxc_signature_IsModelValid;
     (void)hxc_signature_IsMouseButtonDown;
     (void)hxc_signature_IsMouseButtonPressed;
     (void)hxc_signature_IsMouseButtonReleased;
@@ -392,6 +401,7 @@ hxc_check_raylib_core_signatures(void)
     (void)hxc_signature_IsWindowFocused;
     (void)hxc_signature_IsWindowReady;
     (void)hxc_signature_IsWindowResized;
+    (void)hxc_signature_LoadModel;
     (void)hxc_signature_LoadTexture;
     (void)hxc_signature_SetConfigFlags;
     (void)hxc_signature_SetExitKey;
@@ -400,6 +410,7 @@ hxc_check_raylib_core_signatures(void)
     (void)hxc_signature_SetWindowMinSize;
     (void)hxc_signature_SetWindowSize;
     (void)hxc_signature_TakeScreenshot;
+    (void)hxc_signature_UnloadModel;
     (void)hxc_signature_UnloadTexture;
     (void)hxc_signature_WindowShouldClose;
 }
