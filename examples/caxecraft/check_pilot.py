@@ -43,6 +43,7 @@ from run import (  # noqa: E402
 import run as domain_runner  # noqa: E402
 import play as playable  # noqa: E402
 import benchmark_renderer as renderer_benchmark  # noqa: E402
+import dev_generation  # noqa: E402
 
 FORBIDDEN_PILOT_TEXT = (
     re.compile(r"#if\b"),
@@ -421,13 +422,19 @@ def check_renderer_benchmark_contract() -> None:
         raise PilotFailure("handwritten C renderer introduced allocation or goto")
     with tempfile.TemporaryDirectory(prefix="hxc-caxecraft-renderer-contract-") as temporary:
         variant = Path(temporary)
-        (variant / "generated/src").mkdir(parents=True)
-        (variant / "generated/include").mkdir(parents=True)
-        (variant / "generated/src/program.c").write_text(
+        # Publish through the same transaction and pointer API as `caxecraft:play`
+        # so this fixture follows the benchmark's real generation layout.
+        transaction = dev_generation.begin_transaction(variant)
+        (transaction.generated / "src").mkdir()
+        (transaction.generated / "include").mkdir()
+        (transaction.generated / "src/program.c").write_text(
             "int main(void) { return 0; }\n", encoding="utf-8"
         )
-        (variant / "generated/include/program.h").write_text(
+        (transaction.generated / "include/program.h").write_text(
             "int main(void);\n", encoding="utf-8"
+        )
+        dev_generation.publish_pointer(
+            variant, dev_generation.finalize_transaction(variant, transaction)
         )
         (variant / "bin").mkdir()
         (variant / "bin/caxecraft").write_bytes(b"native-fixture")
