@@ -907,6 +907,7 @@ def check_production_boundaries() -> None:
                 f"stdout:\n{supported.stdout}\nstderr:\n{supported.stderr}"
             )
         required = {
+            "LICENSES/HAXE-C-OUTPUT-SUPPORT-MIT.txt",
             "_GeneratedFiles.json",
             "cmake/CMakeLists.txt",
             "hxc.abi.json",

@@ -51,6 +51,7 @@ STRICT_FLAGS = (
     "-Wcast-qual",
 )
 PRODUCTION_FILES = {
+    "LICENSES/HAXE-C-OUTPUT-SUPPORT-MIT.txt",
     "_GeneratedFiles.json",
     "cmake/CMakeLists.txt",
     "hxc.abi.json",

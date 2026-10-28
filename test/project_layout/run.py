@@ -38,6 +38,7 @@ PLANNER_HXML = CASE / "planner.hxml"
 NATIVE = CASE / "native"
 REPORT_PREFIX = "HXC_STATIC_INITIALIZATION="
 COMMON_FILES = {
+    "LICENSES/HAXE-C-OUTPUT-SUPPORT-MIT.txt",
     "_GeneratedFiles.json",
     "cmake/CMakeLists.txt",
     "hxc.abi.json",
