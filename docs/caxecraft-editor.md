@@ -249,7 +249,11 @@ editor mechanism. Its rows come from the validated content pack; translated
 names and help come from the UI catalog.
 Choosing terrain selects the Ground tool and adds a normal undoable map-palette
 entry only when the map does not have that material. Choosing another row
-selects the ordinary object-placement tool.
+selects the ordinary object-placement tool. In Build, either choice closes the
+browser and returns directly to captured world control, ready for the next
+explicit placement click. It does not place anything by itself, and it ignores
+the first relative mouse movement so the camera does not jump from the modal's
+cursor position. Plan keeps the pointer released for precise desktop editing.
 
 The Text button opens advanced source authoring over the same scenario. Press
 `T` from Build or Plan to open or close it. Select a numbered row, edit its

@@ -29,6 +29,7 @@ import caxecraft.editor.EditorBuildControls.objectGrabCandidate;
 import caxecraft.editor.EditorBuildControls.objectPlacementDelta;
 import caxecraft.editor.EditorBuildControls.objectShortcutAction;
 import caxecraft.editor.EditorBuildControls.pickBuildPaletteCode;
+import caxecraft.editor.EditorBuildControls.pointerStateAfterAssetChoice;
 import caxecraft.editor.EditorBuildControls.terrainAction;
 import caxecraft.editor.EditorBuildControls.toolForBuildHotbarSlot;
 import caxecraft.editor.EditorBuildControls.usesDirectTerrainControls;
@@ -2204,6 +2205,10 @@ final class EditorProbe {
 		require(!immersiveWorkspaceActive(true, false), "released Build hid the desktop editor controls");
 		checks++;
 		require(!immersiveWorkspaceActive(false, true), "Plan admitted the immersive Build workspace");
+		checks++;
+		require(pointerStateAfterAssetChoice(true) == EditorBuildPointerState.Captured, "a valid Build asset choice did not restore direct world control");
+		checks++;
+		require(pointerStateAfterAssetChoice(false) == EditorBuildPointerState.Released, "a Plan asset choice captured the desktop pointer");
 		checks++;
 		checks += expectObjectShortcut(objectShortcutAction({
 			inputAvailable: true,

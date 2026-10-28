@@ -235,6 +235,10 @@ function nextPointerState(current:EditorBuildPointerState, buildActive:Bool, win
 function immersiveWorkspaceActive(buildActive:Bool, pointerCaptured:Bool):Bool
 	return buildActive && pointerCaptured;
 
+/** Return to direct world control after a valid asset choice only in Build. */
+function pointerStateAfterAssetChoice(buildActive:Bool):EditorBuildPointerState
+	return buildActive ? Captured : Released;
+
 /**
  * Convert the two terrain mouse buttons into one exact edit.
  *

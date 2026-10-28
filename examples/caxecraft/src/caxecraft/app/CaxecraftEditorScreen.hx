@@ -30,6 +30,7 @@ import caxecraft.editor.EditorBuildControls.objectShortcutAction;
 import caxecraft.editor.EditorBuildControls.terrainAction;
 import caxecraft.editor.EditorBuildControls.cycleBuildPaletteCode;
 import caxecraft.editor.EditorBuildControls.pickBuildPaletteCode;
+import caxecraft.editor.EditorBuildControls.pointerStateAfterAssetChoice;
 import caxecraft.editor.EditorBuildControls.toolForBuildHotbarSlot;
 import caxecraft.editor.EditorBuildControls.usesDirectTerrainControls;
 import caxecraft.editor.EditorPackageSession;
@@ -330,6 +331,7 @@ final class CaxecraftEditorScreen {
 	var focusedControl:EditorFocusTarget;
 	var workspaceView:EditorWorkspaceView;
 	var buildPointerState:EditorBuildPointerState;
+	var buildCaptureFramePending:Bool;
 	var objectGrab:EditorBuildObjectGrab;
 	var editLayerY:Int;
 	var activeTool:EditorTool;
@@ -448,6 +450,7 @@ final class CaxecraftEditorScreen {
 		focusedControl = initialFocus();
 		workspaceView = BuildView;
 		buildPointerState = EditorBuildPointerState.Released;
+		buildCaptureFramePending = false;
 		objectGrab = NoObjectGrab;
 		editLayerY = 0;
 		activeTool = SelectTool;
@@ -2763,19 +2766,25 @@ final class CaxecraftEditorScreen {
 	function visibleAssetEntries():Array<EditorAssetEntry>
 		return visibleAssets;
 
-	/** Select one browser row through the existing terrain or object tool. */
+	/** Select one browser row, then return directly to world control in Build. */
 	function chooseAsset(entry:EditorAssetEntry):Void {
 		switch entry.use {
 			case PaintTerrainAsset(blockType):
 				if (selectTerrainAsset(blockType)) {
 					setActiveTool(EditorTool.PaintTool);
-					closeAssetBrowser();
+					finishAssetChoice();
 				}
 			case PlaceObjectAsset(_):
 				selectedObjectAsset = entry;
 				setActiveTool(EditorTool.CatalogObjectTool);
-				closeAssetBrowser();
+				finishAssetChoice();
 		}
+	}
+
+	/** Close discovery and restore immersive input only for the Build view. */
+	function finishAssetChoice():Void {
+		closeAssetBrowser();
+		setBuildPointerState(pointerStateAfterAssetChoice(workspaceView == BuildView));
 	}
 
 	/**
@@ -2927,9 +2936,11 @@ final class CaxecraftEditorScreen {
 		if (next == buildPointerState)
 			return;
 		buildPointerState = next;
-		if (next == EditorBuildPointerState.Captured)
+		if (next == EditorBuildPointerState.Captured) {
+			buildCaptureFramePending = true;
 			Raylib.DisableCursor();
-		else {
+		} else {
+			buildCaptureFramePending = false;
 			objectGrab = NoObjectGrab;
 			Raylib.EnableCursor();
 		}
@@ -3744,6 +3755,8 @@ final class CaxecraftEditorScreen {
 		final capturePressed = buildPointerState == EditorBuildPointerState.Released && pointerAvailable && (leftPressed || rightPressed);
 		if (capturePressed)
 			setBuildPointerState(nextPointerState(buildPointerState, true, true, true, false));
+		final captureFrame = buildPointerState == EditorBuildPointerState.Captured && buildCaptureFramePending;
+		buildCaptureFramePending = false;
 		final cameraInputEnabled = buildPointerState == EditorBuildPointerState.Captured
 			&& Raylib.IsWindowFocused()
 			&& (name == null || !name.isEditing());
@@ -3772,8 +3785,8 @@ final class CaxecraftEditorScreen {
 				forward: axis(!shortcutModified && Raylib.IsKeyDown(KeyboardKey.W), !shortcutModified && Raylib.IsKeyDown(KeyboardKey.S)),
 				right: axis(!shortcutModified && Raylib.IsKeyDown(KeyboardKey.D), !shortcutModified && Raylib.IsKeyDown(KeyboardKey.A)),
 				vertical: axis(Raylib.IsKeyDown(KeyboardKey.E), Raylib.IsKeyDown(KeyboardKey.Q)),
-				yaw: capturePressed ? 0.0 : -delta.x.toFloat() * 0.004,
-				pitch: capturePressed ? 0.0 : -delta.y.toFloat() * 0.004,
+				yaw: captureFrame ? 0.0 : -delta.x.toFloat() * 0.004,
+				pitch: captureFrame ? 0.0 : -delta.y.toFloat() * 0.004,
 				wheel: 0.0
 			}, Raylib.GetFrameTime().toFloat());
 		}
@@ -3872,14 +3885,14 @@ final class CaxecraftEditorScreen {
 			invalidatePreview();
 		else
 			updatePreview(previewPoint, previewTool);
-		if (!capturePressed && !holdingObject && flowWorldPickActive() && hoveredObject >= 0 && leftPressed) {
+		if (!captureFrame && !holdingObject && flowWorldPickActive() && hoveredObject >= 0 && leftPressed) {
 			final picked = presentationObject(objectGizmos[hoveredObject].id);
 			if (picked != null && applyFlowObjectPick(picked))
 				showBuildConfirmation();
 			current = projection;
 			if (current == null)
 				return;
-		} else if (!capturePressed && aiming && objectPreview != null && leftPressed) {
+		} else if (!captureFrame && aiming && objectPreview != null && leftPressed) {
 			final preview = objectPreview;
 			final delta = objectPlacementDelta(objectGizmos[grabbedIndex], preview.origin);
 			final id = objectGizmos[grabbedIndex].id;
@@ -3890,9 +3903,9 @@ final class CaxecraftEditorScreen {
 				if (current == null)
 					return;
 			}
-		} else if (!capturePressed && aiming && !holdingObject && hoveredObject >= 0 && leftPressed) {
+		} else if (!captureFrame && aiming && !holdingObject && hoveredObject >= 0 && leftPressed) {
 			selectObject(objectGizmos[hoveredObject].id);
-		} else if (!capturePressed && aiming && !holdingObject && hoveredObject < 0 && terrainMode && hover != null && (leftPressed || rightPressed)) {
+		} else if (!captureFrame && aiming && !holdingObject && hoveredObject < 0 && terrainMode && hover != null && (leftPressed || rightPressed)) {
 			final edited = switch terrainAction(leftPressed, rightPressed, hover) {
 				case NoTerrainAction: false;
 				case RemoveTerrain(point): applyToolAt(EditorTool.EraseTool, point);
@@ -3905,7 +3918,7 @@ final class CaxecraftEditorScreen {
 				showBuildConfirmation();
 				invalidatePreview();
 			}
-		} else if (!capturePressed && aiming && !holdingObject && (hover != null || hoveredObject >= 0) && leftPressed) {
+		} else if (!captureFrame && aiming && !holdingObject && (hover != null || hoveredObject >= 0) && leftPressed) {
 			final applied = hover != null && applyToolAt(activeTool, hover.point);
 			if (applied && activeTool != SelectTool)
 				showBuildConfirmation();
@@ -4737,7 +4750,9 @@ final class CaxecraftEditorScreen {
 		if (assetSelection < 0 || assetSelection >= visible.length)
 			return false;
 		chooseAsset(visible[assetSelection]);
-		if (assetBrowserOpen || activeRecipeFor(EditorTool.CatalogObjectTool) == null)
+		if (assetBrowserOpen
+			|| buildPointerState != EditorBuildPointerState.Captured
+			|| activeRecipeFor(EditorTool.CatalogObjectTool) == null)
 			return false;
 		var z = current.depth - 1;
 		while (z >= 0) {
