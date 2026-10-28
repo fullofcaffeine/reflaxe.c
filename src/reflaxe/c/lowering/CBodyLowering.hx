@@ -1832,6 +1832,7 @@ private typedef BodyConstructedObject = {
 	final backingLocalId:String;
 	final partialActionId:String;
 	final initializedActionId:String;
+	final fieldCleanupActionIds:Array<String>;
 	final source:HxcSourceSpan;
 }
 
@@ -4515,6 +4516,7 @@ private class FunctionBuilder {
 	final aggregateCleanupActionIdsByCompilerId:Map<Int, String> = [];
 	final optionalCleanupActionIdsByCompilerId:Map<Int, String> = [];
 	final stackConstructedCompilerIds:Map<Int, Bool> = [];
+	final stackConstructedObjectsByCompilerId:Map<Int, BodyConstructedObject> = [];
 	final managedFlowCarriersByCompilerId:Map<Int, CBodyManagedFlowCarrier> = [];
 	final movedManagedFlowCarrierIds:Map<Int, Bool> = [];
 
@@ -7691,6 +7693,7 @@ private class FunctionBuilder {
 
 		final source = sourceSpan(position);
 		final self = lowerStackConstructedObject(expression, signature, targetId, arguments, source, variable.name, constructedClass);
+		final object = constructedObjects[constructedObjects.length - 1];
 		final reference = coerce(self, localMapping, expression.pos, 'TNew(result:$targetId)');
 		locals.push({
 			id: localId,
@@ -7713,6 +7716,7 @@ private class FunctionBuilder {
 		// ordinary method calls and flow staging through the named local.
 		markBorrowedReferenceLocal(localId, localMapping);
 		stackConstructedCompilerIds.set(variable.id, true);
+		stackConstructedObjectsByCompilerId.set(variable.id, object);
 	}
 
 	/**
@@ -7852,6 +7856,7 @@ private class FunctionBuilder {
 			backingLocalId: backingLocalId,
 			partialActionId: partialActionId,
 			initializedActionId: initializedActionId,
+			fieldCleanupActionIds: fieldCleanupActionIds,
 			source: source
 		});
 		normalCleanupActionIds.push(initializedActionId);
@@ -8511,6 +8516,24 @@ private class FunctionBuilder {
 			result.push({regionId: "cleanup.construction", actionId: fieldActionIds[--index]});
 		result.push({regionId: "cleanup.construction", actionId: partialActionId});
 		return result.concat(normalCleanupSteps());
+	}
+
+	/** Clean a failed in-place reconstruction exactly once, then clean older owners. */
+	function reconstructedObjectFailureCleanup(object:BodyConstructedObject):Array<HxcIRCleanupStep> {
+		final result:Array<HxcIRCleanupStep> = [];
+		var index = normalCleanupActionIds.length;
+		while (index > 0) {
+			final actionId = normalCleanupActionIds[--index];
+			if (actionId == object.initializedActionId) {
+				// The replacement is only partially initialized on this edge. Insert
+				// its partial lifetime action where the old final action was registered
+				// so all newer argument owners still run first.
+				result.push({regionId: "cleanup.construction", actionId: object.partialActionId});
+			} else {
+				result.push({regionId: "cleanup.construction", actionId: actionId});
+			}
+		}
+		return result;
 	}
 
 	function constructionFailureTarget():HxcIRFailureTarget {
@@ -11605,6 +11628,9 @@ private class FunctionBuilder {
 				"managed-flow-carrier-acquire");
 			return value;
 		}
+		final reconstructed = lowerStackConstructedLocalReplacement(expression, left, right);
+		if (reconstructed != null)
+			return reconstructed;
 		if (newExpression(right) != null && !canRetainFreshManagedClassInField(left, right))
 			unsupported(right, "TNew(stack-construction-requires-direct-local)");
 		if (referencesStackConstructedValue(right))
@@ -11711,6 +11737,117 @@ private class FunctionBuilder {
 			case _:
 		}
 		return value;
+	}
+
+	/**
+		Replace one non-escaping direct class local in its existing backing storage.
+
+		Arguments are evaluated while the old object is still alive. The old managed
+		fields are then released, the same bytes are reset, and the exact same class
+		constructor rebuilds them. Reusing the original function-lifetime storage
+		keeps the local's pointer stable across branches and loop back edges.
+	**/
+	function lowerStackConstructedLocalReplacement(expression:TypedExpr, left:TypedExpr, right:TypedExpr):Null<LoweredValue> {
+		final construction = newExpression(right);
+		if (construction == null)
+			return null;
+		final variable = switch unwrapExpression(left).expr {
+			case TLocal(value) if (stackConstructedCompilerIds.exists(value.id)): value;
+			case _: return null;
+		};
+		final object = stackConstructedObjectsByCompilerId.get(variable.id);
+		if (object == null)
+			throw new CBodyEmissionError('stack-constructed local `${variable.name}` lost its backing object');
+		final localMapping = localTypesByCompilerId.get(variable.id);
+		if (localMapping == null)
+			throw new CBodyEmissionError('stack-constructed local `${variable.name}` lost its admitted type');
+		final constructedMapping = bodyValueType(right.t, right.pos, 'TNew(reconstructed-local:${variable.name})');
+		final constructedClass = constructedMapping.classValue();
+		final localClass = localMapping.classValue();
+		if (constructedClass == null || localClass == null || constructedClass.instanceId != localClass.instanceId)
+			return unsupported(right, 'TNew(stack-local-replacement-requires-exact-class:${variable.name})');
+		if (constructedClass.managedByCollector)
+			return null;
+		final signature = constructorSignatureForClass(constructedClass);
+		if (signature == null)
+			return unsupported(right, 'TNew(unavailable-constructor:${CBodyConstructor.id(constructedClass.haxePath)})');
+		final targetId = signature.input.id;
+		final argumentExpressions = completeDirectCallArguments(right, construction.arguments, signature.arguments, 0, targetId, "constructor-argument");
+		final arguments:Array<String> = [];
+		for (index in 0...argumentExpressions.length) {
+			final argumentExpression = argumentExpressions[index];
+			if (referencesStackConstructedValue(argumentExpression))
+				return unsupported(argumentExpression, 'TNew(stack-local-replacement-borrowed-argument:$index)');
+			var argument = coerce(lowerValue(argumentExpression, signature.arguments[index].mapping), signature.arguments[index].mapping,
+				argumentExpression.pos, 'TNew(reconstructed-argument:$index,target=$targetId)');
+			argument = stabilizeFreshManagedString(argument, argumentExpression.pos, 'reconstructed-constructor-argument-$index');
+			argument = stabilizeFreshManagedArray(argument, argumentExpression.pos, 'reconstructed-constructor-argument-$index');
+			argument = stabilizeFreshManagedBytes(argument, argumentExpression.pos, 'reconstructed-constructor-argument-$index');
+			argument = stabilizeFreshManagedAggregate(argument, argumentExpression.pos, 'reconstructed-constructor-argument-$index');
+			rejectOwnedClassBorrow(argument, argumentExpression.pos, 'TNew(reconstructed-owned-class-borrow-escape:$index)');
+			arguments.push(argument.id);
+		}
+
+		final source = sourceSpan(expression.pos);
+		var cleanupIndex = object.fieldCleanupActionIds.length;
+		while (cleanupIndex > 0) {
+			final actionId = object.fieldCleanupActionIds[--cleanupIndex];
+			final action = cleanupAction(actionId);
+			switch action.kind {
+				case IRCARelease(place, implementation):
+					appendInstruction(null, IRIORelease(place, implementation), source, "release-reconstructed-class-field");
+					switch implementation {
+						case IRIRuntime(feature):
+							runtimeRequirements.push(new CBodyRuntimeRequirement(feature, "cleanup-release",
+								'managed field cleanup before `${constructedClass.haxePath}` local reconstruction', source, expression.pos));
+						case _:
+					}
+				case _:
+					throw new CBodyEmissionError('reconstructed class field cleanup `$actionId` is not a release');
+			}
+		}
+		appendInstruction(null, IRIOLifetime(IRPLocal(object.backingLocalId), IRISInitialized, IRISDestroyed, "replaced direct class local"), source,
+			"destroy-reconstructed-class-owner");
+		appendInstruction(null,
+			IRIODefaultInitialize(IRPLocal(object.backingLocalId), IRISDestroyed, signature.input.elided ? IRISInitialized : IRISInitializing), source,
+			"class-reinitialize");
+		final virtualTable = dispatch.tableForInstance(constructedClass.instanceId);
+		if (virtualTable != null)
+			appendInstruction(null, IRIOBindVirtualTable(IRPLocal(object.backingLocalId), virtualTable.input.id), source, "class-reinitialize-virtual-table");
+		final address:HxcIRResult = {id: nextValueId(), type: signature.selfMapping.irType};
+		appendInstruction(address, IRIOAddress(IRPLocal(object.backingLocalId)), source, "reconstructed-class-address");
+		registerValueTemporary(address.id, "reconstructed-class-address");
+		if (!signature.input.elided) {
+			final target = functionsById.get(targetId);
+			if (target == null)
+				throw new CBodyEmissionError('non-elided constructor `$targetId` has no prepared function');
+			final failure:Null<HxcIRFailureEdge> = signature.input.canFail ? {
+				kind: IRFException,
+				target: constructionFailureTarget(),
+				arguments: [],
+				cleanup: reconstructedObjectFailureCleanup(object)
+			} : null;
+			appendInstruction(null, IRIOCall({
+				dispatch: IRCDDirect(targetId),
+				arguments: [address.id].concat(arguments),
+				returnType: IRTVoid,
+				failure: failure
+			}), source, "reconstructed-constructor-call");
+			appendInstruction(null, IRIOLifetime(IRPLocal(object.backingLocalId), IRISInitializing, IRISInitialized, "replacement constructor completed"),
+				source, "reconstructed-constructor-complete");
+		}
+		final replacement = coerce({id: address.id, type: address.type, mapping: signature.selfMapping}, localMapping, right.pos,
+			'TNew(reconstructed-result:$targetId)');
+		borrowedReferenceValueIds.set(replacement.id, true);
+		return replacement;
+	}
+
+	/** Find one cleanup definition by its stable action id. */
+	function cleanupAction(actionId:String):HxcIRCleanupAction {
+		for (action in constructionCleanupActions)
+			if (action.id == actionId)
+				return action;
+		throw new CBodyEmissionError('cleanup action `$actionId` is not registered in `${prepared.irId}`');
 	}
 
 	/**

@@ -54,6 +54,26 @@ the equivalent `_this` alias when it inlines a method. The compiler keeps that
 alias marked as stack-backed, so storing, throwing, or forwarding it beyond a
 proved call still fails rather than losing the original lifetime.
 
+A mutable direct local can replace its value with a fresh instance of the same
+exact class. This supports a common reset pattern:
+
+```haxe
+var token = new StringBuf();
+publish(token.toString());
+token = new StringBuf();
+```
+
+The compiler evaluates the replacement arguments while the old object is
+valid. It then releases the old managed fields and resets the same automatic
+storage. Finally, it calls the constructor with the stable object address.
+This sequence also works on a loop back edge. A failed constructor cleans the
+new partial state once and does not clean the old state twice.
+
+This rule does not permit a different concrete class or longer-lived storage.
+Assignments to fields and globals still use their separate ownership rules.
+Returning, storing, or forwarding the automatic reference still fails unless
+the receiving boundary has its own proven lifetime.
+
 A local or owned child may also be passed to a known ordinary Haxe function.
 When that concrete class has no longer-lived use anywhere in the reachable
 program, the callee receives a checked caller-owned parameter: it may read and
@@ -736,6 +756,11 @@ class and interface parameters plus a final instance method. Its generated C
 keeps left-to-right evaluation, cleans a failed partial resolver together with
 earlier arguments, and on success releases the right argument, resolver field,
 and left argument immediately after the call in reverse creation order.
+`local_reassignment` proves repeated same-class replacement in a loop. It also
+proves right-side evaluation, managed-field cleanup, stable storage, and a
+throwing replacement constructor. The focused
+`--local-reassignment-only` lane compares Eval and deterministic split output.
+It then runs strict Clang C11 at `-O0` and `-O2`, plus sanitizers.
 `factory_return` proves a validated `Null<Class>` factory, class-reference
 pass-through, and a child returned from a temporary parent across Eval,
 split/package/unity output, reversed discovery, warm compiler-server reuse,

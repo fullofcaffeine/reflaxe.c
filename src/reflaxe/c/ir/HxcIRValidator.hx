@@ -3627,9 +3627,15 @@ private class HxcIRValidationState {
 					case _:
 						add(path, "default initialization requires a direct record, tagged enum, or concrete-class place", instruction.source);
 				}
+				if (from == IRISDestroyed)
+					switch initializedType {
+						case IRTInstance(instanceId) if (isClassInstance(instanceId)):
+						case _:
+							add(path, "destroyed storage can only be reset for a concrete class", instruction.source);
+					}
 				validateTransition(from, to, '$path.transition', instruction.source);
-				if (from != IRISUninitialized || to != IRISInitializing && to != IRISInitialized) {
-					add(path, "default object initialization must begin uninitialized and end initializing or initialized", instruction.source);
+				if (from != IRISUninitialized && from != IRISDestroyed || to != IRISInitializing && to != IRISInitialized) {
+					add(path, "default object initialization must begin uninitialized or destroyed and end initializing or initialized", instruction.source);
 				}
 			case IRIOInitialize(place, valueId, from, to):
 				validatePlace(place, '$path.place', instruction.source, available, locals, nullProofs);
@@ -6523,7 +6529,7 @@ private class HxcIRValidationState {
 		final valid = switch [from, to] {
 			case [IRISUninitialized, IRISInitializing] | [IRISUninitialized, IRISInitialized] | [IRISInitializing, IRISInitialized] |
 				[IRISInitializing, IRISDestroyed] | [IRISInitialized, IRISMoved] | [IRISInitialized, IRISDestroyed] | [IRISMoved, IRISInitialized] |
-				[IRISMoved, IRISDestroyed] | [IRISDestroyed, IRISInitialized]:
+				[IRISMoved, IRISDestroyed] | [IRISDestroyed, IRISInitializing] | [IRISDestroyed, IRISInitialized]:
 				true;
 			case _:
 				false;
