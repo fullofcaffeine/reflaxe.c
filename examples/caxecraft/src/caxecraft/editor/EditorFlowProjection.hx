@@ -4,6 +4,7 @@ import caxecraft.scenario.CaxeFlow.FlowEvent;
 import caxecraft.scenario.CaxeFlow.FlowAction;
 import caxecraft.scenario.CaxeFlow.FlowComparison;
 import caxecraft.scenario.CaxeFlow.FlowPredicate;
+import caxecraft.scenario.CaxeFlow.FlowRepeatPolicy;
 import caxecraft.scenario.CaxeFlow.FlowRule;
 import caxecraft.scenario.CaxeFlowActionRegistry.FlowActionDescriptor;
 import caxecraft.scenario.CaxeFlowActionRegistry.flowActionDescriptor;
@@ -54,6 +55,12 @@ enum abstract EditorFlowUiMessage(String) {
 	var IfMessage = "editor.flow.if";
 	var PickObjectMessage = "editor.flow.pick-object";
 	var OverlapMessage = "editor.flow.overlap";
+	var PriorityMessage = "editor.flow.priority";
+	var RepeatCooldownMessage = "editor.flow.repeat-cooldown";
+	var RepeatCooldownPerActorMessage = "editor.flow.repeat-cooldown-per-actor";
+	var RepeatMessage = "editor.flow.repeat";
+	var RepeatOnceMessage = "editor.flow.repeat-once";
+	var RepeatOncePerActorMessage = "editor.flow.repeat-once-per-actor";
 	var WhenMessage = "editor.flow.when";
 	var ToggleEnterLeaveMessage = "editor.flow.toggle-enter-leave";
 	var ToggleSpawnDespawnMessage = "editor.flow.toggle-spawn-despawn";
@@ -76,6 +83,12 @@ function allEditorFlowUiMessages():Array<EditorFlowUiMessage>
 		IfMessage,
 		OverlapMessage,
 		PickObjectMessage,
+		PriorityMessage,
+		RepeatCooldownMessage,
+		RepeatCooldownPerActorMessage,
+		RepeatMessage,
+		RepeatOnceMessage,
+		RepeatOncePerActorMessage,
 		ToggleEnterLeaveMessage,
 		ToggleSpawnDespawnMessage,
 		UnavailableMessage,
@@ -116,7 +129,7 @@ enum EditorFlowCard {
 /** One lossless child row below a compound IF or weighted DO card. */
 enum EditorFlowNestedCard {
 	NestedIfFlowCard(path:Array<Int>, depth:Int, descriptor:FlowPredicateDescriptor, text:EditorFlowCardText, references:Array<EditorFlowReference>);
-	NestedDoFlowCard(parentActionIndex:Int, choiceIndex:Int, actionIndex:Int, depth:Int, descriptor:FlowActionDescriptor, text:EditorFlowCardText,
+	NestedDoFlowCard(parentActionIndex:Int, choiceIndex:Int, actionIndex:Int, weight:Int, depth:Int, descriptor:FlowActionDescriptor, text:EditorFlowCardText,
 		references:Array<EditorFlowReference>);
 }
 
@@ -124,6 +137,7 @@ enum EditorFlowNestedCard {
 typedef EditorFlowRuleProjection = {
 	final ruleId:ScenarioId;
 	final priority:Int;
+	final repeat:FlowRepeatPolicy;
 	final cards:Array<EditorFlowCard>;
 	final nestedCards:Array<EditorFlowNestedCard>;
 }
@@ -209,6 +223,7 @@ function projectFlowRules(rules:Array<FlowRule>):Array<EditorFlowRuleProjection>
 		result.push({
 			ruleId: rule.id,
 			priority: rule.priority,
+			repeat: rule.repeat,
 			cards: cards,
 			nestedCards: nestedCards
 		});
@@ -238,7 +253,7 @@ private function cardReferences(card:EditorFlowCard):Array<EditorFlowReference>
 /** Return references carried by one nested predicate or weighted action. */
 private function nestedCardReferences(card:EditorFlowNestedCard):Array<EditorFlowReference>
 	return switch card {
-		case NestedIfFlowCard(_, _, _, _, references) | NestedDoFlowCard(_, _, _, _, _, _, references): references;
+		case NestedIfFlowCard(_, _, _, _, references) | NestedDoFlowCard(_, _, _, _, _, _, _, references): references;
 	};
 
 /** Add every predicate below the root IF in deterministic depth-first order. */
@@ -272,8 +287,8 @@ private function projectNestedChoiceActions(action:FlowAction, parentActionIndex
 			for (choiceIndex in 0...choices.length)
 				for (actionIndex in 0...choices[choiceIndex].actions.length) {
 					final nested = choices[choiceIndex].actions[actionIndex];
-					result.push(NestedDoFlowCard(parentActionIndex, choiceIndex, actionIndex, 1, flowActionDescriptor(nested), actionSummary(nested),
-						collectActionFlowReferences(nested)));
+					result.push(NestedDoFlowCard(parentActionIndex, choiceIndex, actionIndex, choices[choiceIndex].weight, 1, flowActionDescriptor(nested),
+						actionSummary(nested), collectActionFlowReferences(nested)));
 				}
 		case _:
 	}

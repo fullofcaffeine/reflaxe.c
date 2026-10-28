@@ -1592,6 +1592,48 @@
       }
     },
     {
+      "id": "editor.flow.priority",
+      "text": {
+        "en": "PRIORITY {0}",
+        "es-MX": "PRIORIDAD {0}"
+      }
+    },
+    {
+      "id": "editor.flow.repeat",
+      "text": {
+        "en": "REPEAT",
+        "es-MX": "REPETIR"
+      }
+    },
+    {
+      "id": "editor.flow.repeat-cooldown",
+      "text": {
+        "en": "WAIT {0} TICKS",
+        "es-MX": "ESPERAR {0} PASOS"
+      }
+    },
+    {
+      "id": "editor.flow.repeat-cooldown-per-actor",
+      "text": {
+        "en": "WAIT {0} TICKS PER ACTOR",
+        "es-MX": "ESPERAR {0} PASOS POR ACTOR"
+      }
+    },
+    {
+      "id": "editor.flow.repeat-once",
+      "text": {
+        "en": "ONCE",
+        "es-MX": "UNA VEZ"
+      }
+    },
+    {
+      "id": "editor.flow.repeat-once-per-actor",
+      "text": {
+        "en": "ONCE PER ACTOR",
+        "es-MX": "UNA VEZ POR ACTOR"
+      }
+    },
+    {
       "id": "editor.flow.toggle-enter-leave",
       "text": {
         "en": "ENTER / LEAVE",

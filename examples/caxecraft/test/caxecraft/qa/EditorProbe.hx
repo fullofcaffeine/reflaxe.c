@@ -3942,20 +3942,27 @@ final class EditorProbe {
 
 		final nestedRule:FlowRule = {
 			id: id("rule.nested-library"),
-			priority: 0,
-			repeat: Once,
+			priority: 7,
+			repeat: Cooldown(4),
 			event: EnterZone(id("zone.library")),
 			predicate: All([Not(Always)]),
 			actions: [
 				ChooseSeeded(id("counter.library"), [
 					{
-						weight: 1,
+						weight: 3,
 						actions: [Spawn(PLAYER)]
 					}
 				])
 			]
 		};
-		final nestedProjection = projectFlowRules([nestedRule])[0].nestedCards;
+		final nestedRuleProjection = projectFlowRules([nestedRule])[0];
+		require(nestedRuleProjection.priority == 7, "advanced rule row hid canonical priority");
+		switch nestedRuleProjection.repeat {
+			case Cooldown(4):
+			case _:
+				throw "advanced rule row hid canonical repeat timing";
+		}
+		final nestedProjection = nestedRuleProjection.nestedCards;
 		require(nestedProjection.length == 3, "compound cards did not expose every nested predicate and weighted action");
 		switch nestedProjection[0] {
 			case NestedIfFlowCard(path, 1, descriptor, _, _):
@@ -3964,7 +3971,7 @@ final class EditorProbe {
 				throw "first nested row was not the NOT child";
 		}
 		switch nestedProjection[2] {
-			case NestedDoFlowCard(0, 0, 0, 1, descriptor, _, _):
+			case NestedDoFlowCard(0, 0, 0, 3, 1, descriptor, _, _):
 				require(descriptor.id.text() == "spawn", "weighted branch row lost its action descriptor");
 			case _:
 				throw "weighted action did not retain its branch and order address";
@@ -3977,7 +3984,7 @@ final class EditorProbe {
 		}
 		final nestedActionEdited = authoredRule(editFlowCard(nestedPredicateEdited, ReplaceNestedChoiceDo(0, 0, 0, Despawn(PLAYER))), "replace nested DO card");
 		switch nestedActionEdited.actions[0] {
-			case ChooseSeeded(_, [{weight: 1, actions: [Despawn(id)]}]):
+			case ChooseSeeded(_, [{weight: 3, actions: [Despawn(id)]}]):
 				require(id.text() == PLAYER.text(), "nested action edit changed its selected object");
 			case _:
 				throw "nested action edit flattened its weighted branch";

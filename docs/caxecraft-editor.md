@@ -537,9 +537,12 @@ complete child-facing card library.
 
 The same typed draft has three authoring depths. **Guided** mode uses large
 icon-and-sentence cards, templates, and world picking. **Advanced visual** mode
-will reveal nested predicates, event context, variables, branches, sequences,
-and timing while preserving those cards. **Text** mode now edits the exact
-bounded CaxeMap/CaxeFlow source. It provides line editing, syntax colors,
+now reveals nested predicates, rule priority, repeat/cooldown timing, and exact
+weighted-branch weights while preserving those cards. Event-context predicates,
+variable and sequence references, and scheduled sequence timing use the same
+registry-backed card sentences and typed pickers. Complete visual declaration
+editing for variables and sequence bodies remains planned. **Text** mode edits
+the exact bounded CaxeMap/CaxeFlow source. It provides line editing, syntax colors,
 canonical formatting, source-positioned diagnostics, shared-registry
 completion, and jump-to-world references. It is useful for experienced
 creators and automation agents.
