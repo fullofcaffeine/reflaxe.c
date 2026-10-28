@@ -22,8 +22,18 @@ class HxcSourceSpan {
 		this.endColumn = endColumn;
 	}
 
-	public function display():String
-		return '$file:$startLine:$startColumn-$endLine:$endColumn';
+	/** Formatted `display()` text, built on first use; every field it reads is final. */
+	var displayText:Null<String> = null;
+
+	/** Return `file:startLine:startColumn-endLine:endColumn`, formatting it at most once. */
+	public function display():String {
+		final known = displayText;
+		if (known != null)
+			return known;
+		final text = '$file:$startLine:$startColumn-$endLine:$endColumn';
+		displayText = text;
+		return text;
+	}
 
 	public function stableForDiagnostic():HxcSourceSpan {
 		return isNormalizedFile(file) ? this : new HxcSourceSpan("invalid/source", startLine, startColumn, endLine, endColumn);

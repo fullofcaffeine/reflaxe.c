@@ -294,6 +294,15 @@ class CBodyRuntimeRequirement {
 	public final position:Null<Position>;
 	public final kind:String;
 
+	/**
+		Semantic ordering key: feature, operation, surface, then source span.
+
+		Requirements are sorted many times while plans are built. Building this
+		text once here, from fields that never change, avoids re-concatenating
+		both sides on every comparison; the order is exactly the same.
+	**/
+	public final sortKey:String;
+
 	public function new(featureId:String, operationId:String, surface:String, source:HxcSourceSpan, position:Null<Position>,
 			kind:String = "runtime-operation") {
 		this.featureId = featureId;
@@ -302,6 +311,7 @@ class CBodyRuntimeRequirement {
 		this.source = source;
 		this.position = position;
 		this.kind = kind;
+		this.sortKey = featureId + "\x00" + operationId + "\x00" + surface + "\x00" + source.display();
 	}
 }
 
@@ -1585,11 +1595,8 @@ class CBodyLowering {
 		return identity != 0 ? identity : left.sourceOrder - right.sourceOrder;
 	}
 
-	static function compareRuntimeRequirements(left:CBodyRuntimeRequirement, right:CBodyRuntimeRequirement):Int {
-		final semantic = compareUtf8(("" + left.featureId + "\x00" + left.operationId + "\x00" + left.surface + "\x00" + (left.source.display())),
-			("" + right.featureId + "\x00" + right.operationId + "\x00" + right.surface + "\x00" + (right.source.display())));
-		return semantic;
-	}
+	static function compareRuntimeRequirements(left:CBodyRuntimeRequirement, right:CBodyRuntimeRequirement):Int
+		return compareUtf8(left.sortKey, right.sortKey);
 
 	public static function functionId(declarationPath:String, fieldName:String):String
 		return 'function.$declarationPath.$fieldName';
