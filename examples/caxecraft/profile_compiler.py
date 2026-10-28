@@ -758,6 +758,7 @@ REQUEST_FIELDS = frozenset(
     }
 )
 PROFILE_STATUSES = frozenset({"ok", "failed", "superseded"})
+MAXIMUM_DIAGNOSTIC_TIMEOUT_SECONDS = 600
 
 
 def profile_string(record: Mapping[str, object], field: str) -> str:
@@ -2329,7 +2330,11 @@ def workload_arguments(output: Path, workload: str) -> tuple[str, ...]:
 
 
 def profile(
-    runs: int, *, workload: str = "runtime-free", transport: str = "both"
+    runs: int,
+    *,
+    workload: str = "runtime-free",
+    transport: str = "both",
+    timeout_seconds: int | None = None,
 ) -> dict[str, object]:
     if runs < 1:
         raise CompilerProfileFailure("compiler profiling requires at least one run")
@@ -2337,6 +2342,13 @@ def profile(
         raise CompilerProfileFailure(f"unknown compiler workload {workload!r}")
     if transport not in PROFILE_TRANSPORTS:
         raise CompilerProfileFailure(f"unknown compiler transport {transport!r}")
+    default_timeout = 360 if workload == "playable" else 180
+    request_timeout = default_timeout if timeout_seconds is None else timeout_seconds
+    if request_timeout < 1 or request_timeout > MAXIMUM_DIAGNOSTIC_TIMEOUT_SECONDS:
+        raise CompilerProfileFailure(
+            "compiler profile timeout must be from 1 through "
+            f"{MAXIMUM_DIAGNOSTIC_TIMEOUT_SECONDS} seconds"
+        )
     installation = pinned_haxe_installation()
     verify_pinned_haxe(installation)
     clock = timer_clock(installation)
@@ -2350,8 +2362,6 @@ def profile(
         warm_output = root / "warm"
         cold_resolved = workload_arguments(cold_output, workload)
         warm_resolved = workload_arguments(warm_output, workload)
-        timeout = 360 if workload == "playable" else 180
-
         cold_samples: list[dict[str, object]] = []
         baseline: dict[str, bytes] | None = None
         if transport in ("both", "cold"):
@@ -2366,7 +2376,7 @@ def profile(
                     cold_resolved,
                     clock,
                     connection=None,
-                    timeout=timeout,
+                    timeout=request_timeout,
                 )
                 artifacts = normal_artifacts(cold_output)
                 if baseline is None:
@@ -2392,7 +2402,7 @@ def profile(
                     warm_resolved,
                     clock,
                     connection=connection,
-                    timeout=timeout,
+                    timeout=request_timeout,
                 )
                 warm_artifacts = normal_artifacts(warm_output)
                 if baseline is None:
@@ -2414,7 +2424,7 @@ def profile(
                         warm_resolved,
                         clock,
                         connection=connection,
-                        timeout=timeout,
+                        timeout=request_timeout,
                     )
                     assert_artifacts_equal(
                         baseline,
@@ -2461,6 +2471,7 @@ def profile(
                 "requestedRunsPerTransport": runs,
                 "replication": "five-or-more" if runs >= 5 else "diagnostic-only",
                 "transports": transport,
+                "requestTimeoutSeconds": request_timeout,
             },
             "workload": {
                 "name": workload,
@@ -2517,6 +2528,15 @@ def parse_args(argv: Iterable[str]) -> argparse.Namespace:
         default=None,
         help="write the path-free JSON report here",
     )
+    parser.add_argument(
+        "--timeout-seconds",
+        type=int,
+        default=None,
+        help=(
+            "override one compiler request timeout from 1 through 600 seconds "
+            "for a local correctness diagnostic; this does not change a budget"
+        ),
+    )
     return parser.parse_args(list(argv))
 
 
@@ -2536,6 +2556,7 @@ def main(argv: Iterable[str] = ()) -> int:
             args.runs,
             workload=args.workload,
             transport=args.transport,
+            timeout_seconds=args.timeout_seconds,
         )
         summaries: list[str] = []
         for name in ("cold", "warm"):

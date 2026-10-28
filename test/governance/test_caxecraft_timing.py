@@ -28,6 +28,24 @@ def load_module(name: str, path: Path):
 
 
 class CaxecraftTimingTests(unittest.TestCase):
+    def test_compiler_profile_timeout_override_is_bounded_and_explicit(self) -> None:
+        profiler = load_module(
+            "caxecraft_profile_timeout_subject",
+            ROOT / "examples/caxecraft/profile_compiler.py",
+        )
+
+        self.assertIsNone(profiler.parse_args([]).timeout_seconds)
+        self.assertEqual(
+            profiler.parse_args(["--timeout-seconds", "600"]).timeout_seconds,
+            600,
+        )
+        for timeout in (0, 601):
+            with self.assertRaisesRegex(
+                profiler.CompilerProfileFailure,
+                "timeout must be from 1 through 600",
+            ):
+                profiler.profile(1, timeout_seconds=timeout)
+
     def test_secondary_locale_pilot_has_a_measured_bounded_budget(self) -> None:
         with mock.patch.object(
             sys, "path", [str(ROOT / "examples/caxecraft"), *sys.path]
