@@ -420,6 +420,14 @@ class CaxecraftBuildStateTests(unittest.TestCase):
         ]
         self.assertNotIn("test:caxecraft-level-adapter", scripts)
 
+    def test_local_haxe_timeout_is_explicit_and_bounded_by_the_launcher(self) -> None:
+        """Keep the normal budget while allowing one declared slow-host diagnostic."""
+        self.assertEqual(parse_args([]).haxe_timeout_seconds, 120)
+        self.assertEqual(
+            parse_args(["--haxe-timeout-seconds", "600"]).haxe_timeout_seconds,
+            600,
+        )
+
     def test_playable_product_reads_pack_mechanics_and_ui_text_from_runtime_data(self) -> None:
         """Keep generated content facts out of every production Haxe module."""
         product_sources = sorted((CASE / "src").rglob("*.hx"))

@@ -144,6 +144,13 @@ The complete local commands remain available for diagnosis:
 `npm run test:toolchain` is the canonical serial reference. These are explicit
 tools, not automatic per-commit work.
 
+The Caxecraft launcher keeps its normal Haxe-to-C limit at 120 seconds. On a
+loaded developer host, one correctness-only run can declare a larger local
+limit, up to 600 seconds, with `--haxe-timeout-seconds`. This option does not
+change a test or continuous-integration budget, and a pass with it is not
+performance evidence. It only lets a developer distinguish a slow successful
+compile from a semantic failure while the recorded bottleneck is repaired.
+
 This ring model separates two different questions:
 
 - **portable Haxe semantics:** did ordinary Haxe source compile through haxe.c,
