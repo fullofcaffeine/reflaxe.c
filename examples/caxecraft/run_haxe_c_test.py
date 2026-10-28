@@ -1218,6 +1218,9 @@ CASES = {
             "bytes-string",
             "object",
             "gc",
+            "iterator",
+            "typed-map",
+            "gc-string-map",
             "int-map",
             "string-map",
             "string-split",
@@ -2129,6 +2132,42 @@ def sanitizer_supported(compiler: str, root: Path) -> bool:
     return result.returncode == 0
 
 
+# Focused Caxecraft cases link only their own generated code plus a native
+# harness, so the only library the compiler may request is the C math library.
+ADMITTED_GENERATED_SYSTEM_LIBRARIES = frozenset({"m"})
+
+
+def generated_link_arguments(generated: Path) -> list[str]:
+    """Return `-l` arguments for the libraries the generated manifest requests.
+
+    The compiler records each C library a generated program needs, such as
+    `m` when it calls `sqrt`. Some platforms (macOS) link the math library
+    implicitly and others (Linux) do not, so the link step must follow the
+    manifest instead of the host's defaults. Unknown libraries fail closed.
+    """
+
+    manifest_path = generated / "hxc.manifest.json"
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as error:
+        raise HaxeCTestFailure(f"cannot read generated manifest: {error}") from error
+    build = manifest.get("build") if isinstance(manifest, dict) else None
+    libraries = build.get("libraries") if isinstance(build, dict) else None
+    if not isinstance(libraries, list):
+        raise HaxeCTestFailure("generated manifest omitted its build library list")
+    arguments: list[str] = []
+    for index, item in enumerate(libraries):
+        name = item.get("name") if isinstance(item, dict) else None
+        if not isinstance(name, str) or name not in ADMITTED_GENERATED_SYSTEM_LIBRARIES:
+            raise HaxeCTestFailure(
+                f"generated manifest library {index} is not admitted for focused tests: {item!r}"
+            )
+        arguments.append(f"-l{name}")
+    if len(arguments) != len(set(arguments)):
+        raise HaxeCTestFailure("generated manifest lists a library twice")
+    return arguments
+
+
 def generated_sources(root: Path) -> list[Path]:
     """Return generated modules while leaving compiler-owned main to the harness."""
 
@@ -2169,6 +2208,7 @@ def compile_native(
         for argument in ("-I", str(include_root))
     ]
     define_flags = [f"-D{define}" for define in native_defines]
+    link_arguments = generated_link_arguments(generated)
     if layout == "unity":
         objects: list[Path] = []
         for index, source in enumerate(sources):
@@ -2255,6 +2295,7 @@ def compile_native(
                 *flags,
                 *(str(path) for path in objects),
                 str(harness_object),
+                *link_arguments,
                 "-o",
                 str(executable),
             ],
@@ -2297,6 +2338,7 @@ def compile_native(
             *(str(path) for path in support_sources),
             str(harness),
             *((str(generated_main_object),) if generated_main_object else ()),
+            *link_arguments,
             "-o",
             str(executable),
         ],
