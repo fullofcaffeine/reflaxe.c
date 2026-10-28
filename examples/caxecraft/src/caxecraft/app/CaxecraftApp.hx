@@ -98,7 +98,7 @@ import caxecraft.domain.EntityId;
 import caxecraft.domain.GameSession;
 import caxecraft.domain.GameSession.CharacterDamageCause;
 import caxecraft.domain.PlayerCamera.PlayerCameraMode;
-import caxecraft.domain.PlayerCamera.togglePlayerCamera;
+import caxecraft.domain.PlayerCamera.advancePlayerLookFrame;
 import caxecraft.domain.Aquatics.canMine as playerCanMine;
 import caxecraft.domain.Aquatics.input as aquaticInput;
 import caxecraft.domain.CharacterPhysics.canPlaceAt as playerCanPlaceAt;
@@ -1443,28 +1443,24 @@ final class CaxecraftApp {
 			editorTerrainPatchDirtyChunks += editorPilotFrame.terrainPatchDirtyChunks;
 			editorTerrainPatchFallbacks += editorPilotFrame.terrainPatchFallbackCount;
 			#end
-			if (captured && !conversationOwnedInput) {
-				if (cameraTogglePressed)
-					cameraMode = togglePlayerCamera(cameraMode);
-				var yawDelta = lookYaw;
-				if (yawDelta > 0.25)
-					yawDelta = 0.25;
-				if (yawDelta < -0.25)
-					yawDelta = -0.25;
-				final candidateX = lookX + yawDelta * lookZ;
-				final candidateZ = lookZ - yawDelta * lookX;
-				final lengthSquared = candidateX * candidateX + candidateZ * candidateZ;
-				final normalize = 1.5 - 0.5 * lengthSquared;
-				lookX = candidateX * normalize;
-				lookZ = candidateZ * normalize;
-				lookY += lookPitch;
-				if (lookY > 0.90)
-					lookY = 0.90;
-				if (lookY < -0.90)
-					lookY = -0.90;
-				if (jumpPressed)
-					jumpQueued = true;
-			}
+			final lookFrame = advancePlayerLookFrame({
+				mode: cameraMode,
+				lookX: lookX,
+				lookY: lookY,
+				lookZ: lookZ,
+				captured: captured,
+				blockedByConversation: conversationOwnedInput,
+				togglePressed: cameraTogglePressed,
+				yawDelta: lookYaw,
+				pitchDelta: lookPitch,
+				jumpPressed: jumpPressed,
+				jumpQueued: jumpQueued
+			});
+			cameraMode = lookFrame.mode;
+			lookX = lookFrame.lookX;
+			lookY = lookFrame.lookY;
+			lookZ = lookFrame.lookZ;
+			jumpQueued = lookFrame.jumpQueued;
 
 			if (captured
 				&& !conversationOwnedInput
