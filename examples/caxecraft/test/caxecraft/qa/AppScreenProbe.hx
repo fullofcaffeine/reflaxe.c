@@ -25,9 +25,12 @@ import caxecraft.app.AppScreen.showsTitle;
 import caxecraft.app.AppScreen.startPlaying;
 import caxecraft.app.AppScreen.togglePause;
 import caxecraft.app.GameMode;
+import caxecraft.app.CampaignMenu.CampaignMenuHit;
+import caxecraft.app.CampaignMenuFlow.advanceCampaignMenuFrame;
 import caxecraft.app.SpawnCameraHeading.headingForSpawn;
 import caxecraft.app.TitleMenuFlow.TitleMenuCommand;
 import caxecraft.app.TitleMenuFlow.allowsCampaignTravel;
+import caxecraft.app.TitleMenuFlow.advanceTitleMenuFrame;
 import caxecraft.app.TitleMenuFlow.applyTitleMenuCommand;
 import caxecraft.app.TitleMenuFlow.titleMenuState;
 
@@ -103,6 +106,38 @@ function selfCheck():Int {
 	if (lateMenuInput.screen != AppScreen.CampaignSelect || lateMenuInput.mode != GameMode.Adventure)
 		return 19;
 	final editorFromTitle = applyTitleMenuCommand(initialMenu, TitleMenuCommand.OpenEditor);
+	final editorFromPointer = advanceTitleMenuFrame({
+		state: initialMenu,
+		campaignAvailable: true,
+		cycleMode: false,
+		confirmMode: false,
+		pointerChoice: 2,
+		pointerPressed: true
+	});
+	if (editorFromPointer.screen != editorFromTitle.screen)
+		throw new haxe.Exception("pointer and semantic editor commands diverged");
+	final unavailableAdventure = advanceTitleMenuFrame({
+		state: titleMenuState(title, GameMode.Adventure),
+		campaignAvailable: false,
+		cycleMode: false,
+		confirmMode: true,
+		pointerChoice: -1,
+		pointerPressed: false
+	});
+	if (unavailableAdventure.screen != title || unavailableAdventure.mode != GameMode.Adventure)
+		throw new haxe.Exception("an unavailable campaign escaped the title screen");
+	final campaignFrame = advanceCampaignMenuFrame({
+		selectedLevelIndex: 0,
+		levelCount: 3,
+		selectionEnabled: true,
+		cycleSelection: true,
+		confirmSelection: false,
+		cancelSelection: false,
+		pointerHit: CampaignMenuHit.LaunchHit,
+		pointerPressed: true
+	});
+	if (campaignFrame.selectedLevelIndex != 1 || !campaignFrame.launchRequested || campaignFrame.backRequested)
+		throw new haxe.Exception("campaign menu frame did not preserve selection and launch precedence");
 	if (editorFromTitle.screen != AppScreen.Editor || editorFromTitle.mode != GameMode.Creative)
 		return 20;
 	final loading = beginLoading(playing);

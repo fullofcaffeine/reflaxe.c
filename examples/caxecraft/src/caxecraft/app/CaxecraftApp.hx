@@ -53,11 +53,11 @@ import caxecraft.app.AppScreen.showsTitle as screenShowsTitle;
 import caxecraft.app.AppScreen.startSelectedCampaign;
 import caxecraft.app.AppScreen.stopsEditorTestPlay;
 import caxecraft.app.AppScreen.togglePause;
-import caxecraft.app.TitleMenuFlow.TitleMenuCommand;
+import caxecraft.app.TitleMenuFlow.advanceTitleMenuFrame;
 import caxecraft.app.TitleMenuFlow.allowsCampaignTravel;
-import caxecraft.app.TitleMenuFlow.applyTitleMenuCommand;
 import caxecraft.app.TitleMenuFlow.titleMenuState;
 import caxecraft.app.CampaignMenu.CampaignMenuHit;
+import caxecraft.app.CampaignMenuFlow.advanceCampaignMenuFrame;
 import caxecraft.app.CaxecraftEditorScreen.EditorScreenAction;
 import caxecraft.app.EditorTestPlayRuntime.EditorTestPlayStartResult;
 import caxecraft.app.MotionInterpolation.advance as advanceMotion;
@@ -1079,36 +1079,33 @@ final class CaxecraftApp {
 			#end
 
 			if (screenShowsCampaignSelection(screen) && focused) {
-				var campaignLaunchRequested = menuConfirmPressed;
-				var campaignBackRequested = pausePressed;
-				#if caxecraft_devmode
-				if (menuNextPressed && campaign != null && campaign.levelCount() > 0)
-					selectedCampaignLevelIndex = (selectedCampaignLevelIndex + 1) % campaign.levelCount();
-				#end
 				#if !caxecraft_pilot
 				if (Raylib.IsKeyPressed(KeyboardKey.L))
 					locale = uiCatalog.nextLocale(locale);
 				final campaignMouse = Raylib.GetMousePosition();
 				final campaignChoice = CampaignMenu.selectionAt(campaignMouse.x.toFloat(), campaignMouse.y.toFloat(), Raylib.GetScreenWidth(),
 					Raylib.GetScreenHeight(), campaign == null ? 0 : campaign.levelCount(), selectedCampaignLevelIndex);
-				if (Raylib.IsMouseButtonPressed(MouseButton.Left))
-					switch campaignChoice {
-						case NoCampaignMenuHit:
-						case LevelHit(index):
-							#if caxecraft_devmode
-							selectedCampaignLevelIndex = index;
-							#end
-						case LaunchHit:
-							campaignLaunchRequested = true;
-						case BackHit:
-							campaignBackRequested = true;
-					}
+				final campaignPointerPressed = Raylib.IsMouseButtonPressed(MouseButton.Left);
+				#else
+				final campaignChoice = CampaignMenuHit.NoCampaignMenuHit;
+				final campaignPointerPressed = false;
 				#end
-				if (campaignBackRequested) {
+				final campaignFrame = advanceCampaignMenuFrame({
+					selectedLevelIndex: selectedCampaignLevelIndex,
+					levelCount: campaign == null ? 0 : campaign.levelCount(),
+					selectionEnabled: #if caxecraft_devmode true #else false #end,
+					cycleSelection: menuNextPressed,
+					confirmSelection: menuConfirmPressed,
+					cancelSelection: pausePressed,
+					pointerHit: campaignChoice,
+					pointerPressed: campaignPointerPressed
+				});
+				selectedCampaignLevelIndex = campaignFrame.selectedLevelIndex;
+				if (campaignFrame.backRequested) {
 					screen = closeCampaignSelection(screen);
 					accumulator = 0.0;
 					resetMotionThisFrame = true;
-				} else if (campaign != null && campaignLaunchRequested) {
+				} else if (campaign != null && campaignFrame.launchRequested) {
 					requestedCampaignLevel = campaign.levelAt(selectedCampaignLevelIndex);
 					requestedFromCampaignMenu = true;
 				}
@@ -1117,34 +1114,26 @@ final class CaxecraftApp {
 			if (screenShowsTitle(screen) && focused) {
 				final screenBeforeMenu = screen;
 				final modeBeforeMenu = selectedMode;
-				var menuState = titleMenuState(screen, selectedMode);
 				#if !caxecraft_pilot
 				if (Raylib.IsKeyPressed(KeyboardKey.L))
 					locale = uiCatalog.nextLocale(locale);
-				if (menuNextPressed)
-					menuState = applyTitleMenuCommand(menuState, TitleMenuCommand.CycleMode);
-
 				final menuMouse = Raylib.GetMousePosition();
 				final hovered = TitleMenu.selectionAt(menuMouse.x.toFloat(), menuMouse.y.toFloat(), Raylib.GetScreenWidth(), Raylib.GetScreenHeight());
-				if (hovered == 0)
-					menuState = applyTitleMenuCommand(menuState, TitleMenuCommand.SelectCreative);
-				if (hovered == 1)
-					menuState = applyTitleMenuCommand(menuState, TitleMenuCommand.SelectAdventure);
-				final clickedChoice = hovered >= 0 && Raylib.IsMouseButtonPressed(MouseButton.Left);
-				if (clickedChoice)
-					menuState = applyTitleMenuCommand(menuState, hovered == 2 ? TitleMenuCommand.OpenEditor : TitleMenuCommand.ConfirmMode);
-				else if (menuConfirmPressed)
-					menuState = applyTitleMenuCommand(menuState, TitleMenuCommand.ConfirmMode);
+				final pointerPressed = hovered >= 0 && Raylib.IsMouseButtonPressed(MouseButton.Left);
 				#else
-				if (menuNextPressed)
-					menuState = applyTitleMenuCommand(menuState, TitleMenuCommand.CycleMode);
-				if (menuConfirmPressed)
-					menuState = applyTitleMenuCommand(menuState, TitleMenuCommand.ConfirmMode);
+				final hovered = -1;
+				final pointerPressed = false;
 				#end
+				final menuState = advanceTitleMenuFrame({
+					state: titleMenuState(screen, selectedMode),
+					campaignAvailable: campaign != null,
+					cycleMode: menuNextPressed,
+					confirmMode: menuConfirmPressed,
+					pointerChoice: hovered,
+					pointerPressed: pointerPressed
+				});
 				screen = menuState.screen;
 				selectedMode = menuState.mode;
-				if (screenShowsCampaignSelection(screen) && campaign == null)
-					screen = screenBeforeMenu;
 				if (screen != screenBeforeMenu || selectedMode != modeBeforeMenu) {
 					accumulator = 0.0;
 					resetMotionThisFrame = true;

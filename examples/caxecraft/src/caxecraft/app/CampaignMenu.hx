@@ -10,6 +10,7 @@ import caxecraft.input.ControlPrompts.menuInstructionsMessage;
 import raylib.Color;
 import raylib.Raylib;
 import raylib.Texture2D;
+#end
 
 /** The one campaign-screen control under a pointer for this frame. */
 enum CampaignMenuHit {
@@ -19,6 +20,7 @@ enum CampaignMenuHit {
 	BackHit;
 }
 
+#if c
 /**
  * Presents the campaign that the active runtime package actually supplied.
  *
