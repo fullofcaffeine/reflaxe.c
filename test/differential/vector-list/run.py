@@ -334,7 +334,7 @@ def validate_generated_project(output: Path, hxcir: str) -> dict[str, object]:
         'representation=managed("array")',
         'runtime(feature="array",operation="resize-default")',
         'runtime(feature="array",operation="get-checked")',
-        'runtime(feature="array",operation="set")',
+        'runtime(feature="array",operation="set-grow")',
         'runtime(feature="array",operation="sort")',
         'managed-root "root.',
     ):
@@ -393,7 +393,7 @@ def validate_generated_project(output: Path, hxcir: str) -> dict[str, object]:
         "resize-default",
         "retain",
         "root-frame",
-        "set",
+        "set-grow",
         "sort",
         "static-value",
     }
@@ -426,7 +426,7 @@ def validate_generated_project(output: Path, hxcir: str) -> dict[str, object]:
         "hxc_haxe_ds_Vector_Vector_Impl_toArray",
         "hxc_array_ref_resize_default",
         "hxc_array_ref_get_copy",
-        "hxc_array_ref_set_copy",
+        "hxc_array_ref_set_grow_copy",
         "hxc_array_ref_sort",
         "hxc_gc_allocate",
         "HXC_TYPE_DESCRIPTOR_HAS_TRACE",
@@ -582,7 +582,7 @@ def inspect_symbols(executable: Path, family: str) -> None:
         raise VectorListFailure(f"{family} could not inspect Vector/List symbols")
     for required in (
         "hxc_array_ref_get_copy",
-        "hxc_array_ref_set_copy",
+        "hxc_array_ref_set_grow_copy",
         "hxc_array_ref_resize_default",
         "hxc_gc_allocate",
         "hxc_haxe_ds_List_add_",

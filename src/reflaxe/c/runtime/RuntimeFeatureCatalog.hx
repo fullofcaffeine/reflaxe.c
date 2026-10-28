@@ -222,9 +222,11 @@ class RuntimeFeatureCatalog {
 					"hxc_array_ref_release_slot",
 					"hxc_array_ref_retain",
 					"hxc_array_ref_set_copy",
+					"hxc_array_ref_set_grow_copy",
 					"hxc_array_ref_sort",
 					"hxc_array_insert_copy",
 					"hxc_array_set_copy",
+					"hxc_array_set_grow_copy",
 					"hxc_array_remove_at",
 					"hxc_array_pop_move",
 					"hxc_array_shift_move",
@@ -849,7 +851,7 @@ class RuntimeFeatureCatalog {
 		return switch name {
 			case "abi.h": "787d82dc867999ba8e8e6987cc6933ad6f6ab5d087b415e97042934c454ccf62";
 			case "allocator.h": "6e21c0bc498eb40bcec901914a04dd1bee33b6b21e5a27f1ac5f169a8a1cc448";
-			case "array.h": "b647fc5be70b1ddca8c0da723732cacf5d52ac43f061671ab4483ab8a677d96b";
+			case "array.h": "0c83855e04458c6f4565ac27c565b32607d55283371d9f58bc4667fa43d18b82";
 			case "array_join.h": "5829a159dab0bd3446b5bc418c2ee32ad2902c0fec6bcc04f82efeb66c294fea";
 			case "base.h": "4ae5831a9d2ec013f312b363a620bfddf50a2138867fdb12afd9afbf308a2a1d";
 			case "bytes.h": "dc9f59ab163486e2fc06f988cd931065eda3f480dfadae6917ee08ab60e9a4f5";
@@ -884,7 +886,7 @@ class RuntimeFeatureCatalog {
 		return switch name {
 			case "abi.c": "3300a4498a7ca20f771b1334d7be8f2c908d2bb067ea8f2fe3c059300e680b32";
 			case "allocator.c": "13385273c7c3d4a15785caa3095dd82d97bda8a026ebd9b6d54e2f531eb3b10e";
-			case "array.c": "c5fec3dcf78ed27dcd38219efec8289dd38a23eeef352785396bde64fa99c98a";
+			case "array.c": "0ab7e5cb0654cc0969974a2719de7fa032e81497b4e7de66bcf3f4e7a3299c57";
 			case "array_join.c": "b158708b62c7e407f9da21c24a1b3306d4b41baa6b63f2d8019f631a98008fde";
 			case "bytes.c": "10a4c6c17d1cedc31562fef6708fd54351e094ec4be631848d6348bb82ced46c";
 			case "bytes_string.c": "0ee9604f1b4ae78baeeaf7cac8b2a35b5634f115c958a7575230c790e8aa6ca6";

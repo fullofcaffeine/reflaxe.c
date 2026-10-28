@@ -11792,14 +11792,15 @@ private class FunctionBuilder {
 			return unsupported(expression, "TArray(set:assignment-result-mismatch)");
 		final result:HxcIRResult = {id: nextValueId(), type: resultMapping.irType};
 		final source = sourceSpan(expression.pos);
+		final operation = arrayHasExactResizeDefault(array.element) ? "set-grow" : "set";
 		appendInstruction(result, IRIOCall({
-			dispatch: IRCDRuntime("array", "set"),
+			dispatch: IRCDRuntime("array", operation),
 			arguments: [stableReceiver.id, stableIndex.id, element.id],
 			returnType: result.type,
 			failure: managedArrayFailure()
 		}), source, "array-set");
 		registerValueTemporary(result.id, "array-set-result");
-		runtimeRequirements.push(new CBodyRuntimeRequirement("array", "set", "ordinary Haxe Array indexed assignment", source, expression.pos));
+		runtimeRequirements.push(new CBodyRuntimeRequirement("array", operation, "ordinary Haxe Array indexed assignment", source, expression.pos));
 		return {id: result.id, type: result.type, mapping: resultMapping};
 	}
 

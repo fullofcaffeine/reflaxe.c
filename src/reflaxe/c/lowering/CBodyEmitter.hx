@@ -8216,6 +8216,27 @@ class CBodyEmitter {
 				if (!referencedValues.exists(result.id))
 					statements.push(SExpr(ECast(new CType(TVoid), DName(null), requireValue(values, result.id, fn.id))));
 				return;
+			case "set-grow":
+				if (call.arguments.length != 3)
+					return fail('Array set-grow `${instruction.id}` in `${fn.id}` lost its three arguments');
+				final receiverType = valueType(fn, call.arguments[0]);
+				if (receiverType == null)
+					return fail('Array set-grow `${instruction.id}` in `${fn.id}` lost its receiver type');
+				final instanceId = requireArrayInstanceId(receiverType, instruction.id, fn.id);
+				final elementType = requireArrayElementType(instanceId);
+				requireArrayPlan(instanceId);
+				final arguments = call.arguments.map(valueId -> requireValue(values, valueId, fn.id));
+				final elementDeclaration = typedDeclarator(elementType, DName(null));
+				arguments[2] = arrayElementPointer(arguments[2], elementType, elementDeclaration);
+				arguments.push(EUnary(AddressOf,
+					ECompoundLiteral(elementDeclaration.type, elementDeclaration.declarator,
+						IList([{designators: [], value: IExpr(EInt(CIntegerLiteral.decimal("0")))}]))));
+				emitStatusAbort(statements, ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNArraySetGrowCopy)), arguments), boundsAbortName,
+					instruction.id, fn.id);
+				values.set(result.id, requireValue(values, call.arguments[2], fn.id));
+				if (!referencedValues.exists(result.id))
+					statements.push(SExpr(ECast(new CType(TVoid), DName(null), requireValue(values, result.id, fn.id))));
+				return;
 			case _:
 				fail(("managed Array call `" + instruction.id + "` in `" + fn.id + "` names unsupported operation `" + operation + "`"));
 		}

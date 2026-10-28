@@ -196,6 +196,7 @@
         "hxc_array_ref_resize_default",
         "hxc_array_ref_retain",
         "hxc_array_ref_set_copy",
+        "hxc_array_ref_set_grow_copy",
         "hxc_array_ref_shift_move",
         "hxc_array_ref_sort",
         "hxc_array_ref_splice_copy",
@@ -206,17 +207,18 @@
         "hxc_array_reserve",
         "hxc_array_resize",
         "hxc_array_set_copy",
+        "hxc_array_set_grow_copy",
         "hxc_array_shift_move"
       ],
       "artifacts": [
         {
-          "sourceSha256": "b647fc5be70b1ddca8c0da723732cacf5d52ac43f061671ab4483ab8a677d96b",
+          "sourceSha256": "0c83855e04458c6f4565ac27c565b32607d55283371d9f58bc4667fa43d18b82",
           "kind": "runtime-header",
           "outputPath": "runtime/include/hxrt/array.h",
           "sourcePath": "runtime/hxrt/include/hxrt/array.h"
         },
         {
-          "sourceSha256": "c5fec3dcf78ed27dcd38219efec8289dd38a23eeef352785396bde64fa99c98a",
+          "sourceSha256": "0ab7e5cb0654cc0969974a2719de7fa032e81497b4e7de66bcf3f4e7a3299c57",
           "kind": "runtime-source",
           "outputPath": "runtime/src/array.c",
           "sourcePath": "runtime/hxrt/src/array.c"
@@ -2030,7 +2032,7 @@
     "releaseProvenance": {
       "runtimeCStandard": "c11",
       "sourceHashAlgorithm": "sha256",
-      "sourceSetSha256": "769ab7cf3b5c66e9130592d5864a559303e7b90614eacb555dc7b66fb5659ab0",
+      "sourceSetSha256": "54a139dc24467d071714016e960e8b96e75ef00116187b154fa581c40e6f1ef4",
       "publicHeaderCppStandard": "c++17"
     },
     "generatedCodeCompatibility": "same-major",

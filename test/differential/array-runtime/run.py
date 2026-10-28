@@ -332,6 +332,7 @@ def validate_generated_hxcir(hxcir: str) -> None:
         'runtime(feature="array",operation="resize-zero")',
         'runtime(feature="array",operation="resize-default")',
         'runtime(feature="array",operation="set")',
+        'runtime(feature="array",operation="set-grow")',
         'runtime(feature="array",operation="sort")',
         'representation=managed("iterator")',
         'runtime(feature="iterator",operation="create-array-values")',
@@ -429,6 +430,12 @@ def validate_generated_hxcir(hxcir: str) -> None:
     )
     constructed_strings = hxcir_function(
         hxcir, "function.Main.constructedStringArrayLength"
+    )
+    sparse_integers = hxcir_function(
+        hxcir, "function.Main.sparseIntegerAssignmentTrace"
+    )
+    sparse_strings = hxcir_function(
+        hxcir, "function.Main.sparseStringAssignmentTrace"
     )
     history_pop = hxcir_function(hxcir, "method.History.takeNewest")
     choose_array = hxcir_function(hxcir, "function.Main.chooseArray")
@@ -602,6 +609,18 @@ def validate_generated_hxcir(hxcir: str) -> None:
             raise ArrayRuntimeFailure(
                 f"prefix/postfix Array<Int> updates expected {expected} {marker} instructions"
             )
+    if sparse_integers.count('operation="set-grow"') != 2:
+        raise ArrayRuntimeFailure(
+            "sparse Array<Int> assignment did not select two growth-capable writes"
+        )
+    if (
+        sparse_strings.count('operation="set-grow"') != 1
+        or 'release place=local("local.0") implementation=runtime("array")'
+        not in sparse_strings
+    ):
+        raise ArrayRuntimeFailure(
+            "sparse Array<String> assignment lost growth or managed owner cleanup"
+        )
     if (
         'implementation=runtime("string")' not in constructed_strings
         or 'runtime(feature="array",operation="push")' not in constructed_strings
@@ -965,6 +984,7 @@ def validate_generated_project(output: Path) -> None:
         "resize-zero",
         "resize-default",
         "set",
+        "set-grow",
         "shift",
         "sort",
         "splice-one-copy",
@@ -1218,7 +1238,7 @@ def render_managed_class_pair(root: Path) -> Path:
         'allocate type=instance("instance.class.',
         'implementation=runtime("gc")',
         'runtime(feature="array",operation="copy")',
-        'runtime(feature="array",operation="set")',
+        'runtime(feature="array",operation="set-grow")',
         'haxe.array-reference.equal',
         'haxe.array-reference.not-equal',
         'managed-root "root.',
@@ -1258,7 +1278,7 @@ def render_managed_class_pair(root: Path) -> Path:
         "hxc_gc_allocate",
         "hxc_array_ref_copy_in_place",
         "hxc_array_ref_init_in_place",
-        "hxc_array_ref_set_copy",
+        "hxc_array_ref_set_grow_copy",
         "HXC_TYPE_DESCRIPTOR_HAS_TRACE",
         "HXC_TYPE_DESCRIPTOR_HAS_FINALIZER",
         "hxc_array_ref_dispose_in_place",
@@ -1987,8 +2007,10 @@ def inspect_symbols(executable: Path, family: str) -> None:
         "hxc_array_ref_splice_discard",
         "hxc_array_ref_splice_copy",
         "hxc_array_ref_resize_default",
+        "hxc_array_ref_set_grow_copy",
         "hxc_array_resize",
         "hxc_array_remove_at",
+        "hxc_array_set_grow_copy",
     ):
         if required not in symbols:
             raise ArrayRuntimeFailure(

@@ -597,6 +597,99 @@ static int hxc_test_primitive_array(
   return 0;
 }
 
+/** Prove sparse indexed assignment defaults, alias safety, and rollback. */
+static int hxc_test_sparse_set(
+  hxc_test_arena *arena,
+  const hxc_allocator *allocator
+) {
+  static const int32_t sparse_values[] = {7, 5, 0, 0, 9};
+  static const int sparse_references[] = {1, 0, 0, 2, 0, 1};
+  hxc_array primitive = HXC_ARRAY_INITIALIZER;
+  hxc_array managed = HXC_ARRAY_INITIALIZER;
+  hxc_array failed = HXC_ARRAY_INITIALIZER;
+  hxc_test_lifecycle lifecycle = {0};
+  hxc_test_object first = {1, 1u};
+  hxc_test_object second = {2, 1u};
+  hxc_test_object *first_value = &first;
+  hxc_test_object *second_value = &second;
+  hxc_test_object *null_value = NULL;
+  hxc_array_element_ops managed_elements = hxc_test_ref_ops(&lifecycle);
+  const void *borrowed_first = NULL;
+  int32_t zero = 0;
+  int32_t five = 5;
+  int32_t seven = 7;
+  int32_t nine = 9;
+
+  HXC_TEST_CHECK(
+    hxc_array_init(allocator, hxc_test_i32_ops(), &primitive) == HXC_STATUS_OK
+  );
+  HXC_TEST_CHECK(hxc_array_push_copy(&primitive, &seven) == HXC_STATUS_OK);
+  HXC_TEST_CHECK(
+    hxc_array_set_grow_copy(&primitive, 4, &nine, &zero) == HXC_STATUS_OK
+  );
+  HXC_TEST_CHECK(
+    hxc_array_set_grow_copy(&primitive, 1, &five, &zero) == HXC_STATUS_OK
+  );
+  HXC_TEST_CHECK(
+    hxc_array_set_grow_copy(&primitive, -1, &nine, &zero)
+      == HXC_STATUS_INVALID_ARGUMENT
+  );
+  HXC_TEST_CHECK(hxc_test_expect_i32(&primitive, sparse_values, 5u) == 0);
+
+  HXC_TEST_CHECK(
+    hxc_array_init(allocator, hxc_test_i32_ops(), &failed) == HXC_STATUS_OK
+  );
+  arena->force_failure = true;
+  HXC_TEST_CHECK(
+    hxc_array_set_grow_copy(&failed, 4, &nine, &zero)
+      == HXC_STATUS_OUT_OF_MEMORY
+  );
+  arena->force_failure = false;
+  HXC_TEST_CHECK(failed.length == 0u);
+
+  HXC_TEST_CHECK(
+    hxc_array_init(allocator, managed_elements, &managed) == HXC_STATUS_OK
+  );
+  HXC_TEST_CHECK(hxc_array_push_copy(&managed, &first_value) == HXC_STATUS_OK);
+  HXC_TEST_CHECK(
+    hxc_array_set_grow_copy(&managed, 3, &second_value, &null_value)
+      == HXC_STATUS_OK
+  );
+  HXC_TEST_CHECK(
+    hxc_array_at_const(&managed, 0u, &borrowed_first) == HXC_STATUS_OK
+  );
+  HXC_TEST_CHECK(
+    hxc_array_set_grow_copy(&managed, 5, borrowed_first, &null_value)
+      == HXC_STATUS_OK
+  );
+  HXC_TEST_CHECK(
+    hxc_test_expect_refs(&managed, sparse_references, 6u) == 0
+  );
+  HXC_TEST_CHECK(first.references == 3u && second.references == 2u);
+
+  lifecycle.copy_failure_armed = true;
+  lifecycle.copies_before_failure = 2u;
+  HXC_TEST_CHECK(
+    hxc_array_set_grow_copy(&managed, 8, &second_value, &null_value)
+      == HXC_STATUS_OUT_OF_MEMORY
+  );
+  lifecycle.copy_failure_armed = false;
+  HXC_TEST_CHECK(
+    hxc_test_expect_refs(&managed, sparse_references, 6u) == 0
+  );
+  HXC_TEST_CHECK(first.references == 3u && second.references == 2u);
+
+  HXC_TEST_CHECK(hxc_array_dispose(&managed) == HXC_STATUS_OK);
+  HXC_TEST_CHECK(hxc_array_dispose(&failed) == HXC_STATUS_OK);
+  HXC_TEST_CHECK(hxc_array_dispose(&primitive) == HXC_STATUS_OK);
+  HXC_TEST_CHECK(first.references == 1u && second.references == 1u);
+  hxc_test_drop(&lifecycle, &first);
+  hxc_test_drop(&lifecycle, &second);
+  HXC_TEST_CHECK(first.references == 0u && second.references == 0u);
+  HXC_TEST_CHECK(!lifecycle.invalid_release && !arena->invalid_release);
+  return 0;
+}
+
 /**
  * Prove Array.sort mutation, aliasing, custom order, and ownership behavior.
  *
@@ -1635,6 +1728,7 @@ int main(void) {
   HXC_TEST_CHECK(hxc_test_invalid_contract(&allocator) == 0);
   HXC_TEST_CHECK(hxc_test_reference_array(&arena, &allocator) == 0);
   HXC_TEST_CHECK(hxc_test_primitive_array(&arena, &allocator, &values) == 0);
+  HXC_TEST_CHECK(hxc_test_sparse_set(&arena, &allocator) == 0);
   HXC_TEST_CHECK(hxc_array_is_valid(&values));
   HXC_TEST_CHECK(!arena.invalid_release);
 
