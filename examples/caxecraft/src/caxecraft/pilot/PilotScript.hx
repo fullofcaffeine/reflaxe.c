@@ -1,5 +1,6 @@
 package caxecraft.pilot;
 
+import caxecraft.pilot.PilotCheckpoint.PilotScreenshot;
 import caxecraft.domain.Vitals.MAX_HEALTH;
 import caxecraft.gameplay.Recovery.BERRY_HEALTH;
 import caxecraft.gameplay.Inventory;
@@ -235,27 +236,27 @@ final class PilotScript {
 	public static function checkpoint(name:PilotScriptName, frameNumber:Int):Null<PilotCheckpoint> {
 		return switch name {
 			case LaunchSmoke:
-				frameNumber == 1 ? new PilotCheckpoint("launch.frame-1", CaptureScreenshot) : null;
+				frameNumber == 1 ? new PilotCheckpoint("launch.frame-1", CaptureScreenshot, PilotScreenshot.Launch) : null;
 			case MoveJumpEdit:
 				moveJumpCheckpoint(frameNumber);
 			case PauseRecapture:
 				pauseCheckpoint(frameNumber);
 			case CombatDrop:
-				frameNumber == 38 ? new PilotCheckpoint("combat-drop.frame", CaptureScreenshot) : null;
+				frameNumber == 38 ? new PilotCheckpoint("combat-drop.frame", CaptureScreenshot, PilotScreenshot.Combat) : null;
 			case RecoveryUse:
-				frameNumber == 2 ? new PilotCheckpoint("recovery-use.frame", CaptureScreenshot) : null;
+				frameNumber == 2 ? new PilotCheckpoint("recovery-use.frame", CaptureScreenshot, PilotScreenshot.Recovery) : null;
 			case FullInventoryMining:
-				frameNumber == 5 ? new PilotCheckpoint("full-inventory-mining.frame", CaptureScreenshot) : null;
+				frameNumber == 5 ? new PilotCheckpoint("full-inventory-mining.frame", CaptureScreenshot, PilotScreenshot.FullInventoryMining) : null;
 			case ResizeLayout:
-				frameNumber == 3 ? new PilotCheckpoint("resize-layout.frame", CaptureScreenshot) : null;
+				frameNumber == 3 ? new PilotCheckpoint("resize-layout.frame", CaptureScreenshot, PilotScreenshot.Resize) : null;
 			case AquaticGear:
-				frameNumber == 146 ? new PilotCheckpoint("aquatic-gear.frame", CaptureScreenshot) : null;
+				frameNumber == 146 ? new PilotCheckpoint("aquatic-gear.frame", CaptureScreenshot, PilotScreenshot.AquaticGear) : null;
 			case SmoothMotion:
-				frameNumber == 10 ? new PilotCheckpoint("smooth-motion.frame", CaptureScreenshot) : null;
+				frameNumber == 10 ? new PilotCheckpoint("smooth-motion.frame", CaptureScreenshot, PilotScreenshot.SmoothMotion) : null;
 			case EditorShell:
-				frameNumber == 10 ? new PilotCheckpoint("editor-shell.return", CaptureScreenshot) : null;
+				editorCheckpoint(frameNumber);
 			case CampaignTravel:
-				frameNumber == 3 ? new PilotCheckpoint("campaign-travel.frame", CaptureScreenshot) : null;
+				frameNumber == 3 ? new PilotCheckpoint("campaign-travel.frame", CaptureScreenshot, PilotScreenshot.CampaignTravel) : null;
 			case _: null;
 		};
 	}
@@ -378,7 +379,7 @@ final class PilotScript {
 	static function moveJumpCheckpoint(frameNumber:Int):Null<PilotCheckpoint> {
 		return switch frameNumber {
 			case 10: new PilotCheckpoint("move-jump-edit.state", ObserveState);
-			case 12: new PilotCheckpoint("move-jump-edit.frame", CaptureScreenshot);
+			case 12: new PilotCheckpoint("move-jump-edit.frame", CaptureScreenshot, PilotScreenshot.Movement);
 			case _: null;
 		};
 	}
@@ -386,7 +387,20 @@ final class PilotScript {
 	static function pauseCheckpoint(frameNumber:Int):Null<PilotCheckpoint> {
 		return switch frameNumber {
 			case 2: new PilotCheckpoint("pause-recapture.paused", ObserveState);
-			case 4: new PilotCheckpoint("pause-recapture.captured", ObserveState);
+			case 4: new PilotCheckpoint("pause-recapture.captured", ObserveState, PilotScreenshot.Pause);
+			case _: null;
+		};
+	}
+
+	/** Keep every editor review image on the same checkpoint timeline as input. */
+	static function editorCheckpoint(frameNumber:Int):Null<PilotCheckpoint> {
+		return switch frameNumber {
+			case 0: new PilotCheckpoint("editor-shell.terrain-prompt", CaptureScreenshot, PilotScreenshot.EditorTerrainPrompt);
+			case 5: new PilotCheckpoint("editor-shell.test-play", CaptureScreenshot, PilotScreenshot.EditorTestPlay);
+			case 7: new PilotCheckpoint("editor-shell.text", CaptureScreenshot, PilotScreenshot.EditorText);
+			case 8: new PilotCheckpoint("editor-shell.assets", CaptureScreenshot, PilotScreenshot.EditorAssets);
+			case 9: new PilotCheckpoint("editor-shell.environment", CaptureScreenshot, PilotScreenshot.EditorEnvironment);
+			case 10: new PilotCheckpoint("editor-shell.return", CaptureScreenshot, PilotScreenshot.EditorReturn);
 			case _: null;
 		};
 	}

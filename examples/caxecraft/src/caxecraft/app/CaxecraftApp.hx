@@ -158,6 +158,9 @@ import caxecraft.app.RaylibGameInput.sampleGameInput;
 import caxecraft.app.RaylibNavigationInput.samplePrimaryGamepad;
 #if caxecraft_pilot
 import caxecraft.app.PilotTelemetry.drawPilotTelemetry;
+import caxecraft.pilot.PilotCapturePlan.pilotScreenshotAt;
+import caxecraft.pilot.PilotCapturePlan.pilotScreenshotIsReview;
+import caxecraft.pilot.PilotCheckpoint.PilotScreenshot;
 import raylib.Rlgl;
 #end
 import caxecraft.pilot.GameInputFrame;
@@ -2026,20 +2029,8 @@ final class CaxecraftApp {
 					activeLevel.publicationCount(), firstEditorTestPlayGeneration, lastEditorTestPlayGeneration, renderedEditorTestPlayGeneration,
 					editorTestPlayStarts, editorTestPlayStops, editorTestPlayTicks, editorTerrainPatchDirtyChunks, editorTerrainPatchFallbacks);
 			#end
-			var capturePilotFrame = pilotComplete;
-			if ((pilotName == PilotScriptName.LaunchSmoke && frameCount == 1)
-				|| (pilotName == PilotScriptName.MoveJumpEdit && frameCount == 12)
-				|| (pilotName == PilotScriptName.PauseRecapture && frameCount == 4)
-				|| (pilotName == PilotScriptName.CombatDrop && frameCount == 38)
-				|| (pilotName == PilotScriptName.RecoveryUse && frameCount == 2)
-				|| (pilotName == PilotScriptName.FullInventoryMining && frameCount == 5)
-				|| (pilotName == PilotScriptName.ResizeLayout && frameCount == 3)
-				|| (pilotName == PilotScriptName.AquaticGear && frameCount == 146)
-				|| (pilotName == PilotScriptName.SmoothMotion && frameCount == 10)
-				|| (pilotName == PilotScriptName.EditorShell
-					&& (frameCount == 0 || frameCount == 5 || frameCount == 7 || frameCount == 8 || frameCount == 9))
-				|| (pilotName == PilotScriptName.CampaignTravel && frameCount == 3))
-				capturePilotFrame = true;
+			final compiledPilotScreenshot = pilotScreenshotAt(pilotName, frameCount);
+			var capturePilotFrame = pilotComplete || compiledPilotScreenshot != null;
 			#if caxecraft_pilot_runtime
 			final runtimeCheckpoint = runtimePilot.checkpointAt(activeRuntimePilotFrame);
 			final agentResponseReady = agentSession && !agentWaiting && runtimePilot.complete(activeRuntimePilotFrame + 1);
@@ -2053,43 +2044,11 @@ final class CaxecraftApp {
 			// the previous frame on a double-buffered desktop window.
 			if (capturePilotFrame)
 				Rlgl.FlushBatch();
-			if (pilotName == PilotScriptName.LaunchSmoke && frameCount == 1) {
-				#if caxecraft_pilot_secondary_locale
-				reviewScreenshotObserved = capturePilotScreenshot("caxecraft-secondary-locale.png");
-				#else
-				reviewScreenshotObserved = capturePilotScreenshot("caxecraft-smoke.png");
-				#end
+			if (compiledPilotScreenshot != null) {
+				final observed = captureCompiledPilotScreenshot(compiledPilotScreenshot);
+				if (pilotScreenshotIsReview(compiledPilotScreenshot))
+					reviewScreenshotObserved = observed;
 			}
-			if (pilotName == PilotScriptName.MoveJumpEdit && frameCount == 12)
-				reviewScreenshotObserved = capturePilotScreenshot("caxecraft-pilot-move.png");
-			if (pilotName == PilotScriptName.PauseRecapture && frameCount == 4)
-				reviewScreenshotObserved = capturePilotScreenshot("caxecraft-pilot-pause.png");
-			if (pilotName == PilotScriptName.CombatDrop && frameCount == 38)
-				reviewScreenshotObserved = capturePilotScreenshot("caxecraft-pilot-combat.png");
-			if (pilotName == PilotScriptName.RecoveryUse && frameCount == 2)
-				reviewScreenshotObserved = capturePilotScreenshot("caxecraft-pilot-recovery.png");
-			if (pilotName == PilotScriptName.FullInventoryMining && frameCount == 5)
-				reviewScreenshotObserved = capturePilotScreenshot("caxecraft-pilot-full-mining.png");
-			if (pilotName == PilotScriptName.ResizeLayout && frameCount == 3)
-				reviewScreenshotObserved = capturePilotScreenshot("caxecraft-pilot-resize.png");
-			if (pilotName == PilotScriptName.AquaticGear && frameCount == 146)
-				reviewScreenshotObserved = capturePilotScreenshot("caxecraft-pilot-aquatic-gear.png");
-			if (pilotName == PilotScriptName.SmoothMotion && frameCount == 10)
-				reviewScreenshotObserved = capturePilotScreenshot("caxecraft-pilot-smooth-motion.png");
-			if (pilotName == PilotScriptName.EditorShell && frameCount == 5)
-				capturePilotScreenshot("caxecraft-pilot-editor-play.png");
-			if (pilotName == PilotScriptName.EditorShell && frameCount == 0)
-				capturePilotScreenshot("caxecraft-pilot-editor-terrain-prompt.png");
-			if (pilotName == PilotScriptName.EditorShell && frameCount == 7)
-				capturePilotScreenshot("caxecraft-pilot-editor-text.png");
-			if (pilotName == PilotScriptName.EditorShell && frameCount == 8)
-				capturePilotScreenshot("caxecraft-pilot-editor-assets.png");
-			if (pilotName == PilotScriptName.EditorShell && frameCount == 9)
-				reviewScreenshotObserved = capturePilotScreenshot("caxecraft-pilot-editor-environment.png");
-			if (pilotName == PilotScriptName.EditorShell && frameCount == 10)
-				capturePilotScreenshot("caxecraft-pilot-editor.png");
-			if (pilotName == PilotScriptName.CampaignTravel && frameCount == 3)
-				reviewScreenshotObserved = capturePilotScreenshot("caxecraft-pilot-campaign-travel.png");
 			#if caxecraft_pilot_runtime
 			if ((runtimeCheckpoint != null || agentResponseReady) && runtimePilotFrameAccepted) {
 				final observationScreenshot = agentResponseReady ? "caxecraft-agent-session.png" : runtimeCheckpointScreenshot(runtimeCheckpoint.label);
@@ -2457,6 +2416,33 @@ final class CaxecraftApp {
 	static inline function capturePilotScreenshot(fileName:c.CString):Bool {
 		Raylib.TakeScreenshot(fileName);
 		return Raylib.FileExists(fileName);
+	}
+
+	/** Execute one target-neutral compiled-pilot capture at the native edge. */
+	static function captureCompiledPilotScreenshot(screenshot:PilotScreenshot):Bool {
+		return switch screenshot {
+			case Launch:
+				#if caxecraft_pilot_secondary_locale
+				capturePilotScreenshot("caxecraft-secondary-locale.png");
+				#else
+				capturePilotScreenshot("caxecraft-smoke.png");
+				#end
+			case Movement: capturePilotScreenshot("caxecraft-pilot-move.png");
+			case Pause: capturePilotScreenshot("caxecraft-pilot-pause.png");
+			case Combat: capturePilotScreenshot("caxecraft-pilot-combat.png");
+			case Recovery: capturePilotScreenshot("caxecraft-pilot-recovery.png");
+			case FullInventoryMining: capturePilotScreenshot("caxecraft-pilot-full-mining.png");
+			case Resize: capturePilotScreenshot("caxecraft-pilot-resize.png");
+			case AquaticGear: capturePilotScreenshot("caxecraft-pilot-aquatic-gear.png");
+			case SmoothMotion: capturePilotScreenshot("caxecraft-pilot-smooth-motion.png");
+			case EditorTerrainPrompt: capturePilotScreenshot("caxecraft-pilot-editor-terrain-prompt.png");
+			case EditorTestPlay: capturePilotScreenshot("caxecraft-pilot-editor-play.png");
+			case EditorText: capturePilotScreenshot("caxecraft-pilot-editor-text.png");
+			case EditorAssets: capturePilotScreenshot("caxecraft-pilot-editor-assets.png");
+			case EditorEnvironment: capturePilotScreenshot("caxecraft-pilot-editor-environment.png");
+			case EditorReturn: capturePilotScreenshot("caxecraft-pilot-editor.png");
+			case CampaignTravel: capturePilotScreenshot("caxecraft-pilot-campaign-travel.png");
+		};
 	}
 	#end
 
