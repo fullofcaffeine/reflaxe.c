@@ -557,6 +557,14 @@ class CBodyDispatchCatalog {
 
 	public static function declaringClass(owner:Ref<ClassType>, fieldReference:Ref<ClassField>):Ref<ClassType> {
 		final target = fieldReference.get();
+		// The receiver class, field name, and declaration position identify one
+		// field, including overload variants, so the answer is stable for the
+		// whole request; see `CClassHierarchyMemo`.
+		final key = classPath(owner.get()) + "\x00" + target.name + "\x00" + Std.string(target.pos);
+		return CClassHierarchyMemo.declaringClass(key, () -> findDeclaringClass(owner, target));
+	}
+
+	static function findDeclaringClass(owner:Ref<ClassType>, target:ClassField):Ref<ClassType> {
 		final interfaceOwner = declaringInterface(owner, target, []);
 		if (interfaceOwner != null)
 			return interfaceOwner;
@@ -659,8 +667,11 @@ class CBodyDispatchCatalog {
 		return false;
 	}
 
-	static function implementsInterface(candidate:Ref<ClassType>, target:Ref<ClassType>):Bool
-		return implementsInterfacePath(candidate, classPath(target.get()), []);
+	static function implementsInterface(candidate:Ref<ClassType>, target:Ref<ClassType>):Bool {
+		final targetPath = classPath(target.get());
+		return CClassHierarchyMemo.implementsInterface(classPath(candidate.get()) + "\x00" + targetPath,
+			() -> implementsInterfacePath(candidate, targetPath, []));
+	}
 
 	static function implementsInterfacePath(candidate:Ref<ClassType>, targetPath:String, visited:Map<String, Bool>):Bool {
 		final candidatePath = classPath(candidate.get());

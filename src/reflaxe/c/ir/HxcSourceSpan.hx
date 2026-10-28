@@ -29,7 +29,28 @@ class HxcSourceSpan {
 		return isNormalizedFile(file) ? this : new HxcSourceSpan("invalid/source", startLine, startColumn, endLine, endColumn);
 	}
 
+	/**
+		Remembered answers for `isNormalizedFile`, keyed by the exact path text.
+
+		Every HxcIR instruction carries a source span, so lowering and validation
+		ask about the same few dozen file paths hundreds of thousands of times. The
+		answer depends only on the string, so remembering it cannot go stale across
+		compiler-server requests, and the map holds at most one entry per distinct
+		source path the compiler has seen.
+	**/
+	static final normalizedFileAnswers:Map<String, Bool> = [];
+
+	/** Whether `value` is a repository-relative `/`-separated path with no unsafe parts. */
 	public static function isNormalizedFile(value:String):Bool {
+		final known = normalizedFileAnswers.get(value);
+		if (known != null)
+			return known;
+		final answer = computeIsNormalizedFile(value);
+		normalizedFileAnswers.set(value, answer);
+		return answer;
+	}
+
+	static function computeIsNormalizedFile(value:String):Bool {
 		if (value == "" || StringTools.startsWith(value, "/") || StringTools.startsWith(value, "~") || value.indexOf("\\") != -1
 			|| value.indexOf("\x00") != -1 || ~/^[A-Za-z]:/.match(value)) {
 			return false;
