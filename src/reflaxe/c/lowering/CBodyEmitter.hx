@@ -704,8 +704,10 @@ class CBodyEmitter {
 		final cleanupLocals = cleanupReferencedLocalIds(fn);
 		final sharedAbruptLocals = sharedAbruptInitializedLocalIds(fn, plan);
 		final candidates:Array<String> = [];
+		// A shared abrupt tail is entered by an edge, so it is never the entry
+		// block; its locals need no separate "outside entry" proof.
 		for (local in fn.locals)
-			if (initializedOutsideEntry.exists(local.id) && (cleanupLocals.exists(local.id) || sharedAbruptLocals.exists(local.id)))
+			if (sharedAbruptLocals.exists(local.id) || initializedOutsideEntry.exists(local.id) && cleanupLocals.exists(local.id))
 				candidates.push(local.id);
 		candidates.sort(compareUtf8);
 		for (localId in candidates) {
@@ -734,15 +736,24 @@ class CBodyEmitter {
 	**/
 	static function sharedAbruptInitializedLocalIds(fn:HxcIRFunction, plan:CBodyControlFlowPlan):Map<String, Bool> {
 		final sharedTargets:Map<String, Bool> = [];
+		// How many times structured C prints each abrupt tail: once per shared
+		// completion plus once where a region emits the block itself.
+		final renderCounts:Map<String, Int> = [];
+		function countRender(blockId:String):Void {
+			final previous = renderCounts.get(blockId);
+			renderCounts.set(blockId, previous == null ? 1 : previous + 1);
+		}
 		function visitRegion(region:CBodyControlFlowRegion):Void {
 			switch region.completion {
 				case CFCSharedAbrupt(_, targetBlockId):
 					sharedTargets.set(targetBlockId, true);
+					countRender(targetBlockId);
 				case _:
 			}
 			for (node in region.nodes)
 				switch node {
-					case CFNBlock(_):
+					case CFNBlock(blockId):
+						countRender(blockId);
 					case CFNIf(_, _, whenTrue, whenFalse, _):
 						visitRegion(whenTrue);
 						visitRegion(whenFalse);
@@ -776,6 +787,12 @@ class CBodyEmitter {
 					for (instruction in block.instructions)
 						switch instruction.kind {
 							case IRIOInitialize(IRPLocal(localId), _, IRISUninitialized, IRISInitialized):
+								result.set(localId, true);
+							// Declaration-only carriers, such as the owner that keeps a
+							// borrowed `substr` view alive, are repeated with the tail too.
+							// A tail printed only once keeps its ordinary local declaration.
+							case IRIODeclareUninitialized(IRPLocal(localId)) | IRIODeclareManagedCarrier(IRPLocal(localId), _)
+								if (renderCounts.get(block.id) != null && renderCounts.get(block.id) > 1):
 								result.set(localId, true);
 							case _:
 						}
@@ -1326,11 +1343,11 @@ class CBodyEmitter {
 					emitEnumProjection(statements, state.values, state.referencedValues, instruction, valueId, tagName, payloadIndex, fn,
 						state.temporaryNames, state.boundsAbortName, state.lineDirectives);
 				case IRIODeclareUninitialized(IRPLocal(localId)):
-					emitUninitializedDeclaration(statements, state.declared, state.referencedLocals, instruction, localId, fn, state.localNames,
-						state.lineDirectives);
+					emitUninitializedDeclaration(statements, state.declared, state.referencedLocals, state.hoistedLocals, instruction, localId, fn,
+						state.localNames, state.lineDirectives);
 				case IRIODeclareManagedCarrier(IRPLocal(localId), _):
-					emitUninitializedDeclaration(statements, state.declared, state.referencedLocals, instruction, localId, fn, state.localNames,
-						state.lineDirectives);
+					emitUninitializedDeclaration(statements, state.declared, state.referencedLocals, state.hoistedLocals, instruction, localId, fn,
+						state.localNames, state.lineDirectives);
 				case IRIOAcquireManagedCarrier(place, valueId, acquisition):
 					emitManagedCarrierAcquisition(statements, state.values, instruction, place, valueId, acquisition, fn, state.localNames, state.globalNames,
 						state.spanLengthNames, state.boundsAbortName, state.lineDirectives);
@@ -3020,13 +3037,25 @@ class CBodyEmitter {
 	 * supplies the actual Haxe value before the join.
 	 */
 	function emitUninitializedDeclaration(statements:Array<CStmt>, declared:Map<String, Bool>, referencedLocals:Map<String, Bool>,
-			instruction:HxcIRInstruction, localId:String, fn:HxcIRFunction, localNames:Map<String, CIdentifier>, lineDirectives:Bool):Void {
-		if (instruction.result != null || declared.exists(localId)) {
+			hoistedLocals:Map<String, Bool>, instruction:HxcIRInstruction, localId:String, fn:HxcIRFunction, localNames:Map<String, CIdentifier>,
+			lineDirectives:Bool):Void {
+		if (instruction.result != null || declared.exists(localId) && !hoistedLocals.exists(localId)) {
 			fail(("uninitialized declaration `" + instruction.id + "` in `" + fn.id + "` has invalid declaration state"));
 		}
 		final local = requireLocal(fn, localId);
-		final declaration = typedDeclarator(local.type, DName(requireLocalName(localNames, localId, fn.id)));
+		final localName = requireLocalName(localNames, localId, fn.id);
+		final declaration = typedDeclarator(local.type, DName(localName));
 		addLineDirective(statements, instruction.source, lineDirectives);
+		if (hoistedLocals.exists(localId)) {
+			// A repeated abrupt tail already owns one function-level declaration;
+			// each rendered copy restores the same inert zero state in place.
+			// Use the abstract declarator so pointer-shaped carriers keep their `*`.
+			final abstractDeclaration = typedDeclarator(local.type, DName(null));
+			statements.push(SExpr(EBinary(Assign, EIdentifier(localName),
+				ECompoundLiteral(abstractDeclaration.type, abstractDeclaration.declarator,
+					IList([{designators: [], value: IExpr(EInt(CIntegerLiteral.decimal("0")))}])))));
+			return;
+		}
 		statements.push(SDecl({
 			storage: [],
 			alignments: [],

@@ -551,7 +551,29 @@ final class Main {
 			&& findLast("A\x00🙂\x00", "\x00") == 3
 			&& findLast("ée\u0301é", "e\u0301") == 1
 			&& findLast("ée\u0301é", "é") == 3
-			&& findLast("caxecraft:grass", ":") == 9;
+			&& findLast("caxecraft:grass", ":") == 9
+			&& completeLastToken("say hel", {
+				replacement: "hello"
+			}) == "say hello"
+			&& completeLastToken("hel", {replacement: "hello"}) == "hello";
+	}
+
+	static inline function isTokenDelimiter(code:Int):Bool
+		return code == 32 || code == 9;
+
+	/**
+		Replace the last token with a completion after a scanning loop.
+
+		The loop's exits merge into one return tail that structured C repeats on
+		each incoming path. The borrowed `substr` view needs an owner declared in
+		that tail, so each repeated copy must reuse one function-level declaration
+		instead of declaring the owner twice (formerly an internal HXC9000).
+	**/
+	static function completeLastToken(line:String, completion:TokenCompletion):String {
+		var start = line.length;
+		while (start > 0 && !isTokenDelimiter(line.charCodeAt(start - 1)))
+			start--;
+		return line.substr(0, start) + completion.replacement;
 	}
 
 	/** Publish one deterministic literal result for Eval/native comparison. */
@@ -572,6 +594,11 @@ final class Main {
 enum TextChoice {
 	Text(value:String);
 	Empty;
+}
+
+/** One editor-style completion whose replacement text joins a borrowed view. */
+typedef TokenCompletion = {
+	final replacement:String;
 }
 
 /** Names the four ownership shapes selected by the enum-subject switch. */
