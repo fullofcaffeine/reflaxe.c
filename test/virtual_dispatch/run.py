@@ -31,6 +31,7 @@ EXPECTED = CASE / "expected"
 SCHEMA = ROOT / "docs/specs/dispatch-report.schema.json"
 REPORT_PREFIX = "HXC_VIRTUAL_DISPATCH="
 PRODUCTION_FILES = {
+    "LICENSES/HAXE-C-OUTPUT-SUPPORT-MIT.txt",
     "_GeneratedFiles.json",
     "cmake/CMakeLists.txt",
     "hxc.abi.json",

@@ -29,6 +29,7 @@ EXPECTED = Path(__file__).with_name("expected")
 REPORT_PREFIX = "HXC_ENUM_LOWERING="
 STATIC_REPORT_PREFIX = "HXC_STATIC_INITIALIZATION="
 COMMON_PRODUCTION_FILES = {
+    "LICENSES/HAXE-C-OUTPUT-SUPPORT-MIT.txt",
     "_GeneratedFiles.json",
     "cmake/CMakeLists.txt",
     "hxc.abi.json",

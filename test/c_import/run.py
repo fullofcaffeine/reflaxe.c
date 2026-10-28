@@ -23,6 +23,7 @@ NATIVE = ROOT / "test/native/pointlib"
 ABI_PROBE = CASE / "native/abi_probe.c"
 EXPECTED = CASE / "expected"
 PRODUCTION_FILES = {
+    "LICENSES/HAXE-C-OUTPUT-SUPPORT-MIT.txt",
     "cmake/CMakeLists.txt",
     "hxc.abi.json",
     "hxc.initialization-plan.json",

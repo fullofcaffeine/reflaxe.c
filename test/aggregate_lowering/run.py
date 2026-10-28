@@ -28,6 +28,7 @@ EXPECTED = Path(__file__).with_name("expected")
 REPORT_PREFIX = "HXC_AGGREGATE_LOWERING="
 CONSTRUCTOR_REPORT_PREFIX = "HXC_CONSTRUCTOR_LOWERING="
 COMMON_PRODUCTION_FILES = {
+    "LICENSES/HAXE-C-OUTPUT-SUPPORT-MIT.txt",
     "_GeneratedFiles.json",
     "cmake/CMakeLists.txt",
     "hxc.abi.json",

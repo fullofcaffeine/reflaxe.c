@@ -30,6 +30,7 @@ STATIC_REPORT_PREFIX = "HXC_STATIC_INITIALIZATION="
 BORROWED_CHILD = FIXTURES / "borrowed_child"
 BORROWED_CHILD_ESCAPE = FIXTURES / "borrowed_child_escape"
 PRODUCTION_FILES = {
+    "LICENSES/HAXE-C-OUTPUT-SUPPORT-MIT.txt",
     "_GeneratedFiles.json",
     "cmake/CMakeLists.txt",
     "hxc.abi.json",

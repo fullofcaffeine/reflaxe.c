@@ -414,7 +414,8 @@ def json_value(path: Path) -> object:
 
 
 def snapshot_format(relative: str) -> str:
-    if relative in {CMAKE_ADAPTER, MESON_ADAPTER}:
+    # The generated-output license notice is reviewed plain text.
+    if relative in {CMAKE_ADAPTER, MESON_ADAPTER, "LICENSES/HAXE-C-OUTPUT-SUPPORT-MIT.txt"}:
         return "text"
     suffix = Path(relative).suffix
     if suffix == ".json":
