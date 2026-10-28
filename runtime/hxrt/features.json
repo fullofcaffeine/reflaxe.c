@@ -363,6 +363,11 @@
             "description": "A reachable ordinary Bytes.getString or Bytes.toString interprets run-time binary storage as UTF-8.",
             "id": "get-string-utf8",
             "kind": "hxc-ir-operation"
+          },
+          {
+            "description": "A reachable ordinary Bytes.toHex encodes run-time binary storage as lowercase hexadecimal text.",
+            "id": "to-hex",
+            "kind": "hxc-ir-operation"
           }
         ],
         "runtimeRationale": "General Bytes and String values have separate owners. This composition validates the selected bytes, copies them once, and publishes a String whose lifetime no longer depends on later buffer mutation.",
@@ -370,9 +375,9 @@
           "test/differential/bytes-runtime/run.py",
           "test/runtime/runtime-feature-graph/run.py"
         ],
-        "directAlternative": "Compiler-known immutable valid UTF-8 bytes may become a direct literal-backed String when mutation and identity are unobservable.",
-        "contract": "Copies one checked Bytes range into a fresh immutable String only after the range is valid UTF-8.",
-        "programLocalAlternative": "A closed fixed-capacity buffer may use a program-local checked decoder when that preserves bounds, malformed-input failure, and String ownership."
+        "directAlternative": "Compiler-known immutable bytes may become direct literal-backed text when mutation and identity are unobservable.",
+        "contract": "Copies one checked Bytes range or lowercase hexadecimal encoding into a fresh immutable String.",
+        "programLocalAlternative": "A closed fixed-capacity buffer may use a program-local decoder or hexadecimal encoder when that preserves bounds, exact text, and String ownership."
       },
       "dependencies": [
         "bytes",
@@ -381,17 +386,18 @@
       "id": "bytes-string",
       "availability": "compiler-selectable",
       "symbols": [
-        "hxc_bytes_ref_get_string_utf8"
+        "hxc_bytes_ref_get_string_utf8",
+        "hxc_bytes_ref_to_hex"
       ],
       "artifacts": [
         {
-          "sourceSha256": "9d944e38a748696628076b0c5fd56339668e48953a220d51c8da1630fbdf9c40",
+          "sourceSha256": "7e51a3fd0924ebee6ab1f9c2778c2162061f4d8b946721ae08ec072243f5e0d2",
           "kind": "runtime-header",
           "outputPath": "runtime/include/hxrt/bytes_string.h",
           "sourcePath": "runtime/hxrt/include/hxrt/bytes_string.h"
         },
         {
-          "sourceSha256": "0ee9604f1b4ae78baeeaf7cac8b2a35b5634f115c958a7575230c790e8aa6ca6",
+          "sourceSha256": "21e54e678dfbd41d215499314b330dde189374d132c3e13360adc3a9fa23019b",
           "kind": "runtime-source",
           "outputPath": "runtime/src/bytes_string.c",
           "sourcePath": "runtime/hxrt/src/bytes_string.c"
@@ -399,7 +405,7 @@
       ],
       "libraries": [],
       "minimalAllowed": true,
-      "summary": "Checked UTF-8 decoding from mutable Bytes into an independently owned Haxe String.",
+      "summary": "Checked text conversion from mutable Bytes into an independently owned Haxe String.",
       "defines": [],
       "environments": [
         "freestanding",
@@ -2032,7 +2038,7 @@
     "releaseProvenance": {
       "runtimeCStandard": "c11",
       "sourceHashAlgorithm": "sha256",
-      "sourceSetSha256": "54a139dc24467d071714016e960e8b96e75ef00116187b154fa581c40e6f1ef4",
+      "sourceSetSha256": "13f736e3b2a49418e7a92d8e9821faf9e3352bd35de983822727ee54c6057cfd",
       "publicHeaderCppStandard": "c++17"
     },
     "generatedCodeCompatibility": "same-major",

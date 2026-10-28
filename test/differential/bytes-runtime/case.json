@@ -60,7 +60,7 @@
     "exitCode": 0,
     "stdout": {
       "mode": "regex",
-      "value": "bytes-runtime: OK: .*Eval plus generated ordinary-Haxe Bytes; C11 O0/O2 and C\\+\\+17 header consumers, aliasing, overlap, bounds, call-scoped mutable C text, allocation rollback, ownership, sanitizers, and selective symbols passed$"
+      "value": "bytes-runtime: OK: .*Eval plus generated ordinary-Haxe Bytes; C11 O0/O2 and C\\+\\+17 header consumers, aliasing, overlap, bounds, checked UTF-8 snapshots, lowercase hexadecimal encoding, call-scoped mutable C text, allocation rollback, ownership, sanitizers, and selective symbols passed$"
     },
     "oracle": "test/differential/bytes-runtime/generated/oracle.hxml",
     "artifacts": [

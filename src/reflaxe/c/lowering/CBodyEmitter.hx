@@ -3934,7 +3934,7 @@ class CBodyEmitter {
 						addUnique(headers, "hxrt/string_float.h");
 					case IRIOCall({dispatch: IRCDRuntime("array-join", "join")}):
 						addUnique(headers, "hxrt/array_join.h");
-					case IRIOCall({dispatch: IRCDRuntime("bytes-string", "get-string-utf8")}):
+					case IRIOCall({dispatch: IRCDRuntime("bytes-string", "get-string-utf8" | "to-hex")}):
 						addUnique(headers, "hxrt/bytes_string.h");
 					case IRIOBinary("haxe.string.equal" | "haxe.string.equal.left-non-null" | "haxe.string.equal.right-non-null" | "haxe.string.equal.non-null" | "haxe.string.not-equal" | "haxe.string.not-equal.left-non-null" | "haxe.string.not-equal.right-non-null" | "haxe.string.not-equal.non-null",
 						_, _, IRIStatic):
@@ -7009,7 +7009,7 @@ class CBodyEmitter {
 			case IRCDRuntime("array-join", "join"):
 				emitArrayJoinCall(statements, values, referencedValues, instruction, call, temporaryNames, lineDirectives, boundsAbortName, fn);
 				return false;
-			case IRCDRuntime("bytes-string", "get-string-utf8"):
+			case IRCDRuntime("bytes-string", "get-string-utf8" | "to-hex"):
 				emitBytesStringCall(statements, values, referencedValues, instruction, call, temporaryNames, lineDirectives, boundsAbortName, fn);
 				return false;
 			case IRCDRuntime("string-scalar", "char-at"):
@@ -8370,17 +8370,22 @@ class CBodyEmitter {
 	}
 
 	/**
-	 * Emit one checked Bytes-range-to-String ownership transfer.
+	 * Emit one checked Bytes-to-String ownership transfer.
 	 *
-	 * HxcIR carries the byte owner plus exact byte bounds. This projection adds
-	 * the selected allocator and output address required by hxrt; the runtime
-	 * publishes a fresh String only after bounds and UTF-8 validation succeed.
+	 * HxcIR carries the byte owner and, for decoding, exact byte bounds. This
+	 * projection adds the selected allocator and output address required by hxrt;
+	 * the runtime publishes a fresh String only after conversion succeeds.
 	 */
 	function emitBytesStringCall(statements:Array<CStmt>, values:Map<String, CExpr>, referencedValues:Map<String, Bool>, instruction:HxcIRInstruction,
 			call:HxcIRCall, temporaryNames:Map<String, CIdentifier>, lineDirectives:Bool, boundsAbortName:Null<CIdentifier>, fn:HxcIRFunction):Void {
 		final result = requireResult(instruction, fn.id);
-		if (call.arguments.length != 3 || result.type != IRTManagedString || call.returnType != IRTManagedString)
-			return fail(("Bytes.getString call `" + instruction.id + "` in `" + fn.id + "` lost its Bytes/Int/Int -> managed String signature"));
+		final operation = switch call.dispatch {
+			case IRCDRuntime("bytes-string", value): value;
+			case _: return fail(("Bytes text call `" + instruction.id + "` in `" + fn.id + "` lost its runtime dispatch"));
+		};
+		final expectedArguments = operation == "to-hex" ? 1 : 3;
+		if (call.arguments.length != expectedArguments || result.type != IRTManagedString || call.returnType != IRTManagedString)
+			return fail(("Bytes text call `" + instruction.id + "` in `" + fn.id + "` lost its validated managed String signature"));
 		final temporary = temporaryNames.get(result.id);
 		if (temporary == null)
 			return fail(("Bytes.getString call `" + instruction.id + "` in `" + fn.id + "` has no finalized result temporary"));
@@ -8394,13 +8399,11 @@ class CBodyEmitter {
 			attributes: []
 		}));
 		addLineDirective(statements, instruction.source, lineDirectives);
-		emitStatusAbort(statements, ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNBytesGetStringUtf8)), [
-			requireValue(values, call.arguments[0], fn.id),
-			requireValue(values, call.arguments[1], fn.id),
-			requireValue(values, call.arguments[2], fn.id),
-			ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNDefaultAllocator)), []),
-			EUnary(AddressOf, EIdentifier(temporary))
-		]), boundsAbortName, instruction.id, fn.id);
+		final runtimeName = operation == "to-hex" ? CBRNBytesToHex : CBRNBytesGetStringUtf8;
+		final arguments = call.arguments.map(valueId -> requireValue(values, valueId, fn.id));
+		arguments.push(ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNDefaultAllocator)), []));
+		arguments.push(EUnary(AddressOf, EIdentifier(temporary)));
+		emitStatusAbort(statements, ECall(EIdentifier(CBodyRuntimeNames.identifier(runtimeName)), arguments), boundsAbortName, instruction.id, fn.id);
 		values.set(result.id, EIdentifier(temporary));
 		if (!referencedValues.exists(result.id))
 			statements.push(SExpr(ECast(new CType(TVoid), DName(null), EIdentifier(temporary))));

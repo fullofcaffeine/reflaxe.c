@@ -264,7 +264,8 @@
         ],
         "availability": "compiler-selectable",
         "symbols": [
-          "hxc_bytes_ref_get_string_utf8"
+          "hxc_bytes_ref_get_string_utf8",
+          "hxc_bytes_ref_to_hex"
         ],
         "artifacts": [
           "runtime/include/hxrt/bytes_string.h",
@@ -487,6 +488,7 @@
       "hxc_bytes_ref_retain",
       "hxc_bytes_ref_set",
       "hxc_bytes_ref_sub",
+      "hxc_bytes_ref_to_hex",
       "hxc_call_cstring_dispose",
       "hxc_default_allocator",
       "hxc_free",

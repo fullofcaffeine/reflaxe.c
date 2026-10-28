@@ -168,6 +168,7 @@ enum CBodyRuntimeName {
 	CBRNBytesCompare;
 	CBRNBytesBorrowMutableCString;
 	CBRNBytesGetStringUtf8;
+	CBRNBytesToHex;
 	CBRNBytesRetain;
 	CBRNBytesRelease;
 	CBRNBytesReleaseSlot;
@@ -380,6 +381,7 @@ class CBodyRuntimeNames {
 			case CBRNBytesCompare: "hxc_bytes_ref_compare";
 			case CBRNBytesBorrowMutableCString: "hxc_bytes_ref_borrow_mutable_cstring";
 			case CBRNBytesGetStringUtf8: "hxc_bytes_ref_get_string_utf8";
+			case CBRNBytesToHex: "hxc_bytes_ref_to_hex";
 			case CBRNBytesRetain: "hxc_bytes_ref_retain";
 			case CBRNBytesRelease: "hxc_bytes_ref_release";
 			case CBRNBytesReleaseSlot: "hxc_bytes_ref_release_slot";
