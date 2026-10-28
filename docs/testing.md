@@ -546,11 +546,13 @@ Generated private layout assertions compile under strict C11; independent C
 and C++17 consumers verify tags, size, alignment, offsets, construction, and
 recursive layout at O0/O2 under GCC/G++ and Clang/Clang++. Unmanaged enum
 programs remain runtime-free. The managed fixture also selects fresh and
-borrowed collector-bearing enum values through one zero-initialized,
-tag-aware-rooted conditional carrier. It proves dependency-closed runtime
-selection, normal/reversed/cold/warm-server determinism, unity/split/package
-execution, and AddressSanitizer plus UndefinedBehaviorSanitizer. See
-[Haxe enum lowering](enum-lowering.md).
+borrowed collector-bearing enum values through zero-initialized,
+tag-aware-rooted carriers. It covers a direct conditional and a
+value-producing switch whose early return makes Haxe expose a separate result
+local. It proves dependency-closed runtime selection,
+normal/reversed/cold/warm-server determinism, unity/split/package execution,
+and AddressSanitizer plus UndefinedBehaviorSanitizer. See [Haxe enum
+lowering](enum-lowering.md).
 
 `test/generic_specialization` is the focused E3.T03
 positive/negative/snapshot/runtime suite. A real typed program shares

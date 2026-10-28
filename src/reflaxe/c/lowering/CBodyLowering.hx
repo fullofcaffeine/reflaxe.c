@@ -7355,9 +7355,9 @@ private class FunctionBuilder {
 			case null if (managedFlowCarrier || uninitializedDirectLocal || tracedDirectFlowCarrier):
 				// The HxcIR declaration below deliberately starts empty. Its
 				// validator proves every normal arm initializes or acquires an
-				// unmanaged carrier before the one admitted read. A traced record is
-				// instead zero-initialized below so an intervening collection cannot
-				// observe indeterminate pointer fields.
+				// unmanaged carrier before the one admitted read. A traced direct value
+				// is instead zero-initialized below so an intervening collection cannot
+				// observe inactive enum payloads or indeterminate pointer fields.
 				null;
 			case null if (compilerFlowCarrier):
 				// Reflaxe can expose a value-producing if/switch as a temporary followed

@@ -1948,6 +1948,7 @@ def check_managed_class_payload(*, requested_toolchain: str) -> None:
     with tempfile.TemporaryDirectory(prefix="hxc-enum-managed-class-") as temporary:
         root = Path(temporary)
         outputs: dict[str, Path] = {}
+        hxcir = ""
         for name, layout, reverse in (
             ("unity", "unity", False),
             ("repeat", "unity", False),
@@ -1957,9 +1958,19 @@ def check_managed_class_payload(*, requested_toolchain: str) -> None:
         ):
             output = root / name
             result = custom_target(
-                fixture, output, main="Main", layout=layout, reverse=reverse
+                fixture,
+                output,
+                main="Main",
+                layout=layout,
+                reverse=reverse,
+                report=name == "unity",
             )
-            require_compile_success(result, f"{name} managed-class enum compile")
+            if name == "unity":
+                hxcir = extract_static_hxcir(
+                    result, "unity managed-class enum compile"
+                )
+            else:
+                require_compile_success(result, f"{name} managed-class enum compile")
             outputs[name] = output
         if generated_tree(outputs["unity"]) != generated_tree(outputs["repeat"]):
             raise EnumLoweringFailure(
@@ -2016,12 +2027,23 @@ def check_managed_class_payload(*, requested_toolchain: str) -> None:
             raise EnumLoweringFailure(
                 "managed-class enum lost its exact collector/runtime plan"
             )
+        switch_section = main_function_section(hxcir, "chooseEventBySwitch")
+        if (
+            "flow-carrier-traced-default-initialize" not in switch_section
+            or "default-initialize" not in switch_section
+            or "declare-uninitialized" in switch_section
+        ):
+            raise EnumLoweringFailure(
+                "collector-bearing switch carrier lost its trace-safe HxcIR initialization"
+            )
         generated_c = b"\n".join(
             path.read_bytes() for path in sorted(outputs["unity"].rglob("*.c"))
         )
         for marker in (
             b"hxc_SessionEvent",
+            b"hxc_Main_chooseEventBySwitch",
             b"hxc_l_tmp_conditional_traced_result",
+            b"hxc_l_selected.hxc_tag == hxc_SessionEvent_Opened",
             b"hxc_gc_root_frame_push",
             b"hxc_SessionEvent_Opened",
             b"hxc_array_",
@@ -2037,6 +2059,13 @@ def check_managed_class_payload(*, requested_toolchain: str) -> None:
         ) is None:
             raise EnumLoweringFailure(
                 "managed-class enum conditional omitted its trace-safe zero initializer"
+            )
+        if re.search(
+            rb"struct hxc_SessionEvent hxc_l_selected(?:_[A-Za-z0-9_]+)? = \{ 0 \};",
+            generated_c,
+        ) is None:
+            raise EnumLoweringFailure(
+                "managed-class enum switch omitted its trace-safe zero initializer"
             )
 
         def project(output: Path, label: str) -> CFixtureProject:

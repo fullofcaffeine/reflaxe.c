@@ -146,13 +146,15 @@ to every embedded collector pointer. Generated function root frames publish
 that pointer only while the matching enum tag and optional-presence guards are
 true, so inactive union storage is never read.
 
-The same rule makes a conditional result safe. Before either arm runs, haxe.c
-declares the joined enum as `{ 0 }`, which selects no active managed payload.
-Either arm can allocate and trigger collection without exposing uninitialized
-tag or union bytes. After the chosen enum is assigned, the root frame follows
-its real tag and visits only the selected class pointer. Unlike the
-reference-counted conditional above, this join performs no retain or release:
-the local is a precise collector root, not a second owner.
+The same rule makes a conditional result safe. It applies both to a direct
+conditional expression and to the local that Haxe creates for a value-producing
+switch with an early return. Before any arm runs, haxe.c declares the joined
+enum as `{ 0 }`, which selects no active managed payload. Either arm can
+allocate and trigger collection without exposing uninitialized tag or union
+bytes. After the chosen enum is assigned, the root frame follows its real tag
+and visits only the selected class pointer. Unlike the reference-counted
+conditional above, this join performs no retain or release: the local is a
+precise collector root, not a second owner.
 
 An `Array<EnumWithClass>` remains a shared Array, but its object descriptor
 walks each live element, switches on the tag, and visits the active class
