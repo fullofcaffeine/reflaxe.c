@@ -117,6 +117,7 @@ DETAIL_PHASES = (
     "artifact unit canonicalization",
     "artifact sidecar construction",
     "artifact symbol-report serialization",
+    "artifact JSON text serialization",
     "artifact initialization-report serialization",
     "artifact runtime-report projection",
     "artifact runtime-report serialization",
@@ -2272,6 +2273,8 @@ def workload_arguments(output: Path, workload: str) -> tuple[str, ...]:
         arguments = [
             hxml,
             "-D",
+            "hxc_runtime_diagnostics=off",
+            "-D",
             "caxecraft_posix_hosted",
             *(("-D", "caxecraft_posix_darwin") if sys.platform == "darwin" else ()),
             "-D",
@@ -2485,7 +2488,9 @@ def profile(
                     "none" if workload == "runtime-free" else "auto"
                 ),
                 "symbolReportDetail": (
-                    "full" if workload == "runtime-free" else "summary"
+                    "summary"
+                    if workload in ("playable", "editor-shell")
+                    else "full"
                 ),
                 "runtimeReportDetail": (
                     "summary"

@@ -96,6 +96,7 @@ enum abstract CDetailTimingId(String) to String {
 	var CDTArtifactUnitCanonicalization = "artifact unit canonicalization";
 	var CDTArtifactSidecarConstruction = "artifact sidecar construction";
 	var CDTArtifactSymbolReportSerialization = "artifact symbol-report serialization";
+	var CDTArtifactJsonSerialization = "artifact JSON text serialization";
 	var CDTArtifactInitializationReportSerialization = "artifact initialization-report serialization";
 	var CDTArtifactRuntimeReportProjection = "artifact runtime-report projection";
 	var CDTArtifactRuntimeReportSerialization = "artifact runtime-report serialization";

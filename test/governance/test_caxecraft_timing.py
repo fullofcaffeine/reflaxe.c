@@ -830,6 +830,8 @@ class CaxecraftTimingTests(unittest.TestCase):
             (
                 "runtime-level-loader-c.hxml",
                 "-D",
+                "hxc_runtime_diagnostics=off",
+                "-D",
                 "caxecraft_posix_hosted",
                 "-D",
                 "caxecraft_posix_darwin",

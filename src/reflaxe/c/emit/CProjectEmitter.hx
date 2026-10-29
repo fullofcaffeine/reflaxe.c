@@ -1482,8 +1482,21 @@ class CProjectEmitter {
 		return values;
 	}
 
-	function jsonFile<T>(path:String, kind:GeneratedFileKind, value:T):GeneratedFile
-		return new GeneratedFile(path, Json.stringify(value, null, "  ") + "\n", kind);
+	function jsonFile<T>(path:String, kind:GeneratedFileKind, value:T):GeneratedFile {
+		#if (macro || reflaxe_runtime)
+		final jsonTimer = CPhaseTiming.startDetail(CDTArtifactJsonSerialization);
+		#end
+		final contents = Json.stringify(value, null, "  ") + "\n";
+		#if (macro || reflaxe_runtime)
+		CPhaseTiming.stopDetail(jsonTimer);
+		final fileTimer = CPhaseTiming.startDetail(CDTCGeneratedFileConstruction);
+		#end
+		final file = new GeneratedFile(path, contents, kind);
+		#if (macro || reflaxe_runtime)
+		CPhaseTiming.stopDetail(fileTimer);
+		#end
+		return file;
+	}
 
 	static function symbolReportDetail(plan:CProjectEmissionPlan):CProjectSymbolReportDetail
 		return plan.symbolReportDetail == null ? CProjectSymbolReportDetail.Full : plan.symbolReportDetail;
