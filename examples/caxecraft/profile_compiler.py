@@ -2305,19 +2305,16 @@ def workload_arguments(output: Path, workload: str) -> tuple[str, ...]:
                 else "raylib_configuration_memory"
             ),
         ]
+        # Ordinary play also loads content through the hosted platform adapter.
+        # Omitting these defines profiles a different, smaller program.
+        arguments.extend(
+            ["-D", "hxc_runtime_report=summary", "-D", "reflaxe_c_phase_progress"]
+        )
+        if platform_name in ("macos", "linux"):
+            arguments.extend(["-D", "caxecraft_posix_hosted"])
+        if platform_name == "macos":
+            arguments.extend(["-D", "caxecraft_posix_darwin"])
         if workload == "editor-shell":
-            arguments.extend(
-                [
-                    "-D",
-                    "hxc_runtime_report=summary",
-                    "-D",
-                    "reflaxe_c_phase_progress",
-                ]
-            )
-            if platform_name in ("macos", "linux"):
-                arguments.extend(["-D", "caxecraft_posix_hosted"])
-            if platform_name == "macos":
-                arguments.extend(["-D", "caxecraft_posix_darwin"])
             arguments.extend(
                 ["-D", "caxecraft_pilot", "-D", "caxecraft_pilot_editor_shell"]
             )

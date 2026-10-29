@@ -698,6 +698,41 @@ class CaxecraftTimingTests(unittest.TestCase):
             lock["haxe"]["sourceRevision"],
         )
 
+    def test_compiler_profile_matches_ordinary_play_on_each_platform(self) -> None:
+        profiler = load_module(
+            "caxecraft_playable_profile_subject",
+            ROOT / "examples/caxecraft/profile_compiler.py",
+        )
+        play = load_module(
+            "caxecraft_playable_arguments_subject",
+            ROOT / "examples/caxecraft/play.py",
+        )
+        output = Path("generated-playable-profile")
+        for host, target in (("darwin", "macos"), ("linux", "linux"), ("win32", "windows")):
+            with (
+                self.subTest(platform=target),
+                mock.patch.object(profiler.sys, "platform", host),
+                mock.patch.object(
+                    profiler, "resolve_haxe_arguments",
+                    side_effect=lambda arguments, *, locale: tuple(arguments),
+                ),
+                mock.patch.object(play, "run") as run_process,
+                mock.patch.object(play, "validate_compiled_haxe", return_value={}),
+                mock.patch.object(play, "validate_content_platform_output"),
+                mock.patch("builtins.print"),
+            ):
+                arguments = list(profiler.workload_arguments(output, "playable"))
+                play.compile_haxe(
+                    output, layout="split", platform_name=target,
+                    raylib_configuration="desktop",
+                )
+                # Timing instrumentation is the only permitted difference from
+                # the ordinary build, including its real content adapter.
+                timing_define = arguments.index("reflaxe_c_phase_timing")
+                del arguments[timing_define - 1 : timing_define + 1]
+                arguments.remove("--times")
+                self.assertEqual(tuple(arguments), tuple(run_process.call_args.args[0][3:]))
+
     def test_compiler_profile_can_match_the_editor_shell_request(self) -> None:
         profiler = load_module(
             "caxecraft_editor_profile_subject",

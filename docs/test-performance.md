@@ -1279,6 +1279,15 @@ compilation, native linking, Raylib, and game execution. Native compile/run
 timing belongs to the separate Caxecraft differential lane, so a slow target
 compiler pass is not confused with native-toolchain work.
 
+The `playable` workload uses the ordinary desktop launcher's compiler request
+for the current platform, plus timing instrumentation. On macOS and Linux this
+includes the hosted package reader; macOS also selects its ABI declarations.
+The argument comparison in `test_caxecraft_timing.py` checks this agreement on
+macOS, Linux, and Windows. Earlier `playable` profiles omitted those hosted
+defines and measured a different content implementation. Do not use those
+results as the baseline for a hosted game build. Issue `haxe_c-xty2` owns the
+corrected measurements and the remaining compile-budget failures.
+
 The runtime-level-loader workload uses the exact HXML from its focused
 generated-C test. Use it to compare one cold request with one warm request:
 
