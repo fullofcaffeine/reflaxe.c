@@ -8,6 +8,7 @@ import caxecraft.pilot.RuntimePilotScript.RuntimePilotObservation;
 import caxecraft.pilot.RuntimePilotScript.RuntimePilotReadResult;
 import caxecraft.pilot.RuntimePilotScript.RuntimePilotRunResult;
 import haxe.io.Bytes;
+import caxecraft.qa.AgentWorldObservationChecks.checkAgentWorldObservations;
 
 /**
  * Proves the generic parser and observer for reloadable content journeys.
@@ -31,6 +32,7 @@ final class RuntimePilotScriptProbe {
 
 	/** Check parsing, bounds, generic observations, and located rejection. */
 	static function runChecks():Int {
+		checkAgentWorldObservations();
 		final source = Bytes.ofString("PILOSCRIPT 1\n" + "name synthetic-journey\n" + "frames 8\n" + "action 0 menu-next\n" + "action 1 menu-confirm\n"
 			+ "hold 2 4 forward\n" + "checkpoint 1 capture title-selection\n" + "expect 1 screen campaign\n" + "expect 1 level synthetic-level\n"
 			+ "expect 1 objective objective.synthetic\n" + "expect 1 dialogue dialogue.synthetic\n" + "expect 1 journal journal.synthetic\n"

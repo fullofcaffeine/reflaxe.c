@@ -3638,31 +3638,60 @@ def publish_agent_request(path: Path, source: str) -> bytes:
     return payload
 
 
+@dataclass
+class AgentResponseState:
+    """Keep unread pipe bytes and observation order for one live game process."""
+
+    pending: bytes = b""
+    sequence: int = 0
+
+
+def read_agent_line(
+    process: subprocess.Popen[bytes],
+    selector: selectors.BaseSelector,
+    state: AgentResponseState,
+    deadline: float,
+) -> str:
+    """Read a bounded UTF-8 line without hiding read-ahead bytes from select."""
+
+    maximum_line_bytes = 1024 * 1024
+    while True:
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            raise PlayFailure("the live Caxecraft agent request timed out")
+        newline = state.pending.find(b"\n")
+        if newline > maximum_line_bytes or (newline < 0 and len(state.pending) > maximum_line_bytes):
+            raise PlayFailure("the live Caxecraft process exceeded the observation line limit")
+        if newline >= 0:
+            line = state.pending[:newline]
+            state.pending = state.pending[newline + 1 :]
+            return line.decode("utf-8").rstrip("\r")
+        if not selector.select(remaining):
+            raise PlayFailure("the live Caxecraft agent request timed out")
+        if process.stdout is None:
+            raise PlayFailure("the live Caxecraft process lost its output pipe")
+        chunk = os.read(process.stdout.fileno(), 65536)
+        if not chunk:
+            raise PlayFailure(
+                f"the live Caxecraft process exited before its response (status {process.poll()})"
+            )
+        state.pending += chunk
+
+
 def read_agent_response(
-    process: subprocess.Popen[str],
+    process: subprocess.Popen[bytes],
     selector: selectors.BaseSelector,
     *,
     timeout_seconds: float,
+    state: AgentResponseState,
 ) -> dict[str, object]:
-    """Wait for one flushed Haxe response while retaining a bounded host timeout."""
+    """Consume ordered checkpoints until one explicitly final batch response."""
 
     observation_prefix = "CAXECRAFT_AGENT_OBSERVATION="
     error_prefix = "CAXECRAFT_AGENT_ERROR="
     deadline = time.monotonic() + timeout_seconds
     while True:
-        remaining = deadline - time.monotonic()
-        if remaining <= 0:
-            raise PlayFailure("the live Caxecraft agent request timed out")
-        events = selector.select(remaining)
-        if not events:
-            raise PlayFailure("the live Caxecraft agent request timed out")
-        if process.stdout is None:
-            raise PlayFailure("the live Caxecraft process lost its output pipe")
-        line = process.stdout.readline()
-        if line == "":
-            status = process.poll()
-            raise PlayFailure(f"the live Caxecraft process exited before its response (status {status})")
-        text = line.rstrip("\r\n")
+        text = read_agent_line(process, selector, state, deadline)
         if text.startswith(error_prefix):
             return {"schemaVersion": 1, "type": "error", "message": text[len(error_prefix) :]}
         if not text.startswith(observation_prefix):
@@ -3671,9 +3700,29 @@ def read_agent_response(
             observation = json.loads(text[len(observation_prefix) :])
         except json.JSONDecodeError as error:
             raise PlayFailure(f"the live Caxecraft process emitted invalid observation JSON: {error}") from error
-        if not isinstance(observation, dict) or observation.get("schemaVersion") != 1:
+        if (not isinstance(observation, dict)
+                or type(observation.get("schemaVersion")) is not int
+                or observation.get("schemaVersion") != 1):
             raise PlayFailure("the live Caxecraft process emitted an unknown observation schema")
-        return observation
+        terminal = observation.get("terminal")
+        sequence = observation.get("sequence")
+        if type(terminal) is not bool:
+            raise PlayFailure("the live Caxecraft observation omitted its Boolean terminal marker")
+        if type(sequence) is not int or sequence <= state.sequence:
+            raise PlayFailure("the live Caxecraft observations are not strictly ordered")
+        screenshot = observation.get("screenshot")
+        allowed_screenshots = (
+            ("none", "caxecraft-agent-session.png") if terminal else
+            ("none", "caxecraft-pilot-runtime-title-selection.png",
+             "caxecraft-pilot-runtime-campaign-selection.png",
+             "caxecraft-pilot-runtime-level-selection.png",
+             "caxecraft-pilot-runtime-final.png")
+        )
+        if screenshot not in allowed_screenshots:
+            raise PlayFailure("the live Caxecraft observation named an unknown screenshot")
+        state.sequence = sequence
+        if terminal:
+            return observation
 
 
 def prepare_agent_session_screenshot(
@@ -3718,23 +3767,21 @@ def run_agent_session(
         stdin=subprocess.DEVNULL,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
-        text=True,
-        encoding="utf-8",
-        errors="strict",
-        bufsize=1,
+        bufsize=0,
     )
     selector = selectors.DefaultSelector()
     if process.stdout is None:
         process.terminate()
         raise PlayFailure("the live Caxecraft process did not expose standard output")
     selector.register(process.stdout, selectors.EVENT_READ)
+    responses = AgentResponseState()
     last_payload = active_request.read_bytes()
     recorded_requests = 0
     try:
         # The first observation includes native window, renderer, texture, and
         # voxel-model setup. Keep later action batches strict, but allow this
         # one-time startup to complete on a representative developer machine.
-        initial = read_agent_response(process, selector, timeout_seconds=30.0)
+        initial = read_agent_response(process, selector, timeout_seconds=30.0, state=responses)
         prepare_agent_session_screenshot(executable, initial, raylib_configuration)
         print("CAXECRAFT_AGENT_RESPONSE=" + json.dumps(initial, ensure_ascii=False, separators=(",", ":")), flush=True)
         for input_line in sys.stdin:
@@ -3756,7 +3803,7 @@ def run_agent_session(
                 print("CAXECRAFT_AGENT_RESPONSE=" + json.dumps(response, separators=(",", ":")), flush=True)
                 continue
             last_payload = publish_agent_request(active_request, envelope["piloscript"])
-            response = read_agent_response(process, selector, timeout_seconds=15.0)
+            response = read_agent_response(process, selector, timeout_seconds=15.0, state=responses)
             prepare_agent_session_screenshot(executable, response, raylib_configuration)
             print("CAXECRAFT_AGENT_RESPONSE=" + json.dumps(response, ensure_ascii=False, separators=(",", ":")), flush=True)
             if record_directory is not None and response.get("type") != "error":

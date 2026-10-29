@@ -5,7 +5,9 @@ from __future__ import annotations
 
 import io
 import json
+import os
 import re
+import selectors
 import struct
 import subprocess
 import sys
@@ -60,6 +62,96 @@ FORBIDDEN_PILOT_TEXT = (
 
 class PilotFailure(RuntimeError):
     pass
+
+
+def check_agent_terminal_response() -> None:
+    """Read one final reply from a bounded, ordered checkpoint stream."""
+
+    def read_fixture(values: list[dict[str, object]], state: playable.AgentResponseState) -> dict[str, object]:
+        payload = ("native startup log\n" + "".join(
+            "CAXECRAFT_AGENT_OBSERVATION=" + json.dumps(value, ensure_ascii=False) + "\n"
+            for value in values
+        )).encode("utf-8")
+        read_fd, write_fd = os.pipe()
+        try:
+            os.write(write_fd, payload)
+        finally:
+            os.close(write_fd)
+        with os.fdopen(read_fd, "rb", buffering=0) as output:
+            class FixtureProcess:
+                stdout = output
+
+                @staticmethod
+                def poll() -> int:
+                    return 0
+
+            with selectors.DefaultSelector() as selector:
+                selector.register(output, selectors.EVENT_READ)
+                return playable.read_agent_response(
+                    FixtureProcess(), selector, timeout_seconds=1.0, state=state,
+                )
+
+    checkpoint = {
+        "schemaVersion": 1, "sequence": 1, "terminal": False,
+        "screenshot": "caxecraft-pilot-runtime-final.png",
+    }
+    terminal = {
+        "schemaVersion": 1, "sequence": 2, "terminal": True,
+        "screenshot": "caxecraft-agent-session.png", "level": "synthetic-é",
+    }
+    state = playable.AgentResponseState()
+    response = read_fixture([checkpoint, terminal], state)
+    if response != terminal:
+        raise PilotFailure("an intermediate checkpoint completed the live batch")
+    next_response = {**terminal, "sequence": 3}
+    if read_fixture([next_response], state) != next_response:
+        raise PilotFailure("live observation order did not survive the next batch")
+
+    missing_marker = {key: value for key, value in terminal.items() if key != "terminal"}
+    malformed = (
+        ([missing_marker], "terminal marker"),
+        ([{**terminal, "terminal": "true"}], "terminal marker"),
+        ([{**terminal, "sequence": True}], "strictly ordered"),
+        ([checkpoint, {**terminal, "sequence": 1}], "strictly ordered"),
+        ([{**checkpoint, "screenshot": "../escape.png"}, terminal], "unknown screenshot"),
+        ([{**terminal, "screenshot": checkpoint["screenshot"]}], "unknown screenshot"),
+        ([checkpoint], "exited before its response"),
+    )
+    for values, expected_error in malformed:
+        try:
+            read_fixture(values, playable.AgentResponseState())
+        except playable.PlayFailure as error:
+            if expected_error not in str(error):
+                raise PilotFailure(f"live response failed for the wrong reason: {error}") from error
+        else:
+            raise PilotFailure(f"live response admitted malformed input: {expected_error}")
+    try:
+        read_fixture([next_response], state)
+    except playable.PlayFailure as error:
+        if "strictly ordered" not in str(error):
+            raise
+    else:
+        raise PilotFailure("live response accepted a sequence repeated across batches")
+
+    class TimeoutSelector:
+        @staticmethod
+        def select(_timeout: float) -> list[object]:
+            return []
+
+    for pending, expected_error in (
+        (b"unfinished native line", "timed out"),
+        (b"x" * (1024 * 1024 + 1), "line limit"),
+    ):
+        try:
+            playable.read_agent_response(
+                None, TimeoutSelector(), timeout_seconds=1.0,
+                state=playable.AgentResponseState(pending=pending),
+            )
+        except playable.PlayFailure as error:
+            if expected_error not in str(error):
+                raise
+        else:
+            raise PilotFailure(f"live response omitted its {expected_error} bound")
 
 
 def check_pilot_catalog_authority() -> None:
@@ -673,6 +765,7 @@ def main() -> int:
         check_runtime_campaign_staging_boundary()
         check_motion_interpolation_boundary()
         check_native_telemetry_decoder()
+        check_agent_terminal_response()
         check_memory_software_capture_normalization()
         check_native_sanitizer_profile()
         check_renderer_pilot_compatibility()
