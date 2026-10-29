@@ -3934,8 +3934,17 @@ class CBodyEmitter {
 		return headers;
 	}
 
+	/**
+		Collect the headers required by one function's values and operations.
+
+		Type layouts are finalized before emission. Reuse instance traversal in
+		this collection: revisiting finalized fields cannot add new headers, and
+		first encounter still determines their order. Each function gets a fresh
+		visited set so its dependencies remain independent of other functions.
+	**/
 	public function requiredHeaders(fn:HxcIRFunction):Array<String> {
 		final headers:Array<String> = [];
+		final visitedInstances:Map<String, Bool> = [];
 		if (fn.managedRoots != null && fn.managedRoots.length > 0) {
 			addUnique(headers, "hxrt/gc.h");
 			addUnique(headers, "stdlib.h");
@@ -3945,17 +3954,17 @@ class CBodyEmitter {
 				addUnique(headers, "stdbool.h");
 			case IRFCInfallible:
 		}
-		addTypeHeaders(headers, fn.returnType);
+		addTypeHeaders(headers, fn.returnType, visitedInstances);
 		for (parameter in fn.parameters) {
-			addTypeHeaders(headers, parameter.type);
+			addTypeHeaders(headers, parameter.type, visitedInstances);
 		}
 		for (local in fn.locals) {
-			addTypeHeaders(headers, local.type);
+			addTypeHeaders(headers, local.type, visitedInstances);
 		}
 		for (block in fn.blocks) {
 			for (instruction in block.instructions) {
 				if (instruction.result != null) {
-					addTypeHeaders(headers, instruction.result.type);
+					addTypeHeaders(headers, instruction.result.type, visitedInstances);
 				}
 				switch instruction.kind {
 					case IRIOCall(call) if (isHostedOutputDispatch(call.dispatch)):
