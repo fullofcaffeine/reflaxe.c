@@ -1,7 +1,9 @@
 #if macro
 import haxe.macro.Context;
+import haxe.macro.Type;
 import reflaxe.c.CompilationContext;
 import reflaxe.c.ir.HxcSourceSpan;
+import reflaxe.c.lowering.CBodyAggregate.CBodyAggregateRegistry;
 import reflaxe.c.lowering.CBodyEnum.CBodyEnumRegistry;
 import reflaxe.c.lowering.CBodyEnum.CPreparedBodyEnumInstance;
 import reflaxe.c.lowering.CBodyEmissionError;
@@ -56,7 +58,52 @@ class EnumProvenanceProbe {
 		}
 		if (!rejected)
 			throw new haxe.Exception("invalid provenance position was accepted");
+		checkValueClassification();
 		Sys.println("ENUM_PROVENANCE_DELTA_OK");
+	}
+
+	/**
+		Keep source evidence and generic identity through the ordinary value classifier.
+
+		A repeated enum use may skip unrelated type families, but it must still
+		record each distinct source range. Aliases share their enum; different
+		payload arguments keep separate layouts. These checks use synthetic source
+		ranges and do not depend on the classifier's dispatch order.
+	**/
+	static function checkValueClassification():Void {
+		final registry = new CBodyAggregateRegistry(new CompilationContext(reflaxe.c.CProfile.Portable));
+		final source = "test/enum_lowering/fixtures/provenance/ProvenanceFixture.hx";
+		final first = Context.makePosition({file: source, min: 0, max: 1});
+		final second = Context.makePosition({file: source, min: 2, max: 3});
+		final generic = switch Context.getType("ProvenanceFixture.GenericReasonEnum") {
+			case TEnum(reference, _): reference;
+			case _: throw new haxe.Exception("generic provenance fixture is not an enum");
+		};
+		final types = [
+			Context.getType("ProvenanceFixture.FirstReasonEnum"),
+			Context.getType("ProvenanceFixture.FirstReasonAlias"),
+			TEnum(generic, [Context.getType("Int")]),
+			TEnum(generic, [Context.getType("Bool")])
+		];
+		final values = [
+			for (type in types)
+				registry.valueType(type, first, "ProvenanceFixture", source, (position, message) -> Context.error(message, position), "value-provenance")
+		];
+		if (values[0].cSpelling != values[1].cSpelling || values[2].cSpelling == values[3].cSpelling)
+			throw new haxe.Exception("enum classification changed alias or generic identity");
+		final checkpoint = registry.enumReasonCheckpoint();
+		for (_ in 0...2)
+			for (type in types)
+				registry.valueType(type, second, "ProvenanceFixture", source, (position, message) -> Context.error(message, position), "value-provenance");
+		final delta = registry.enumReasonsSince(checkpoint);
+		final enums = registry.canonicalEnums();
+		if (enums.length != 3)
+			throw new haxe.Exception("enum classification lost a concrete specialization");
+		for (value in enums) {
+			final added = delta.get(value.instanceId);
+			if (added == null || added.length != 1 || value.reasonCount() != 2)
+				throw new haxe.Exception("enum classification lost or duplicated a source range");
+		}
 	}
 
 	/** Discover a real payload-free enum through the production registry. */

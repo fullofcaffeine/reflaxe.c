@@ -866,6 +866,14 @@ class CBodyAggregateRegistry {
 		return count;
 	}
 
+	/**
+		Select one typed value representation and retain its required source evidence.
+
+		Imports own the first interpretation of header-backed declarations. Once
+		they decline an exact enum node, its enum registry can validate arguments,
+		prepare payloads, and record this use without probing unrelated families.
+		Wrapped types still follow the complete alias and representation path.
+	**/
 	public function valueType(type:Type, position:Position, ownerModule:String, sourcePath:String, fail:(Position, String) -> Void,
 			node:String):CBodyValueType {
 		final atomic = atomicValueType(type, position, ownerModule, sourcePath, fail, node);
@@ -877,6 +885,11 @@ class CBodyAggregateRegistry {
 		final imported = importRegistry == null ? null : importRegistry.valueType(type, position, ownerModule, sourcePath, fail, node);
 		if (imported != null)
 			return imported;
+		switch type {
+			case TEnum(reference, parameters):
+				return enumRegistry.valueType(reference, parameters, position, ownerModule, sourcePath, fail, node);
+			case _:
+		}
 		final nativeRef = nativeRefValueType(type, position, ownerModule, sourcePath, fail, node);
 		if (nativeRef != null)
 			return nativeRef;
