@@ -3,6 +3,7 @@ from __future__ import annotations
 import importlib.util
 import io
 import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -12,6 +13,8 @@ import unittest
 from contextlib import contextmanager, redirect_stderr, redirect_stdout
 from pathlib import Path
 from unittest import mock
+
+from git_fixture import git_fixture_environment
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -361,39 +364,40 @@ class LocalGateEvidenceTests(unittest.TestCase):
         )
 
     def test_relevant_worktree_digest_covers_untracked_owner_inputs(self) -> None:
-        repository = self.temporary_root / "repository"
-        repository.mkdir()
-        subprocess.run(
-            ["git", "init", "--quiet"],
-            cwd=repository,
-            check=True,
-        )
-        shard_runner = sys.modules["run_toolchain_shard"]
-        with (
-            mock.patch.object(shard_runner, "ROOT", repository),
-            mock.patch.object(
-                shard_runner,
-                "RELEVANT_UNTRACKED_ROOTS",
-                ("src", "std", "test", "examples", "vendor"),
-            ),
-        ):
-            baseline = shard_runner.relevant_worktree_digest()
-            source = repository / "src" / "Unsafe.hx"
-            source.parent.mkdir()
-            source.write_text(
-                "class Unsafe { static var value:Dynamic; }\n",
-                encoding="utf-8",
+        with mock.patch.dict(os.environ, git_fixture_environment(), clear=True):
+            repository = self.temporary_root / "repository"
+            repository.mkdir()
+            subprocess.run(
+                ["git", "init", "--quiet"],
+                cwd=repository,
+                check=True,
             )
-            source_changed = shard_runner.relevant_worktree_digest()
-            vendor = repository / "vendor" / "reflaxe" / "src" / "Probe.hx"
-            vendor.parent.mkdir(parents=True)
-            vendor.write_text(
-                "class Probe { static var value:Int = 1; }\n",
-                encoding="utf-8",
-            )
-            vendor_changed = shard_runner.relevant_worktree_digest()
-        self.assertNotEqual(baseline, source_changed)
-        self.assertNotEqual(source_changed, vendor_changed)
+            shard_runner = sys.modules["run_toolchain_shard"]
+            with (
+                mock.patch.object(shard_runner, "ROOT", repository),
+                mock.patch.object(
+                    shard_runner,
+                    "RELEVANT_UNTRACKED_ROOTS",
+                    ("src", "std", "test", "examples", "vendor"),
+                ),
+            ):
+                baseline = shard_runner.relevant_worktree_digest()
+                source = repository / "src" / "Unsafe.hx"
+                source.parent.mkdir()
+                source.write_text(
+                    "class Unsafe { static var value:Dynamic; }\n",
+                    encoding="utf-8",
+                )
+                source_changed = shard_runner.relevant_worktree_digest()
+                vendor = repository / "vendor" / "reflaxe" / "src" / "Probe.hx"
+                vendor.parent.mkdir(parents=True)
+                vendor.write_text(
+                    "class Probe { static var value:Int = 1; }\n",
+                    encoding="utf-8",
+                )
+                vendor_changed = shard_runner.relevant_worktree_digest()
+            self.assertNotEqual(baseline, source_changed)
+            self.assertNotEqual(source_changed, vendor_changed)
 
     def test_closed_schema_owner_outcome_key_and_lifetime_fail_closed(self) -> None:
         baseline = self.inputs()

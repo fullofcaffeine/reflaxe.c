@@ -2585,6 +2585,17 @@ def main(argv: Iterable[str] = ()) -> int:
         subprocess.TimeoutExpired,
     ) as error:
         print(f"caxecraft-compiler-profile: ERROR: {error}", file=sys.stderr)
+        if isinstance(error, subprocess.TimeoutExpired):
+            # A timeout can interrupt a UTF-8 character, even with text=True.
+            # Keep the last phase and partial timings available for diagnosis.
+            for name, captured in (("stdout", error.stdout), ("stderr", error.stderr)):
+                if captured:
+                    text = (
+                        captured.decode("utf-8", errors="replace")
+                        if isinstance(captured, bytes)
+                        else captured
+                    )
+                    print(f"partial {name}:\n{text}", file=sys.stderr)
         return 1
     print(
         "caxecraft-compiler-profile: OK: "

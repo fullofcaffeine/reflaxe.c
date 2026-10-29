@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib.util
+import io
 import json
 import os
 import subprocess
@@ -28,6 +29,36 @@ def load_module(name: str, path: Path):
 
 
 class CaxecraftTimingTests(unittest.TestCase):
+    def test_compiler_profile_timeout_keeps_partial_diagnostics(self) -> None:
+        profiler = load_module(
+            "caxecraft_profile_partial_timeout_subject",
+            ROOT / "examples/caxecraft/profile_compiler.py",
+        )
+        for output, error_output, expected in (
+            (
+                b"HXC_PHASE_TIMING\ttyped input capture\t123\n",
+                b"C printing\npartial UTF-8: \xe2",
+                ("typed input capture\t123", "C printing", "partial UTF-8: \ufffd"),
+            ),
+            ("partial stdout", "partial stderr", ("partial stdout", "partial stderr")),
+            (None, None, ()),
+        ):
+            with self.subTest(output=output), tempfile.TemporaryDirectory() as directory:
+                report_path = Path(directory) / "profile.json"
+                timeout = subprocess.TimeoutExpired(
+                    ["haxe"], 120, output=output, stderr=error_output
+                )
+                diagnostics = io.StringIO()
+                with mock.patch.object(profiler, "profile", side_effect=timeout), mock.patch.object(
+                    sys, "stderr", diagnostics
+                ):
+                    status = profiler.main(["--output", str(report_path)])
+                self.assertEqual(status, 1)
+                self.assertIn("timed out after 120 seconds", diagnostics.getvalue())
+                for fragment in expected:
+                    self.assertIn(fragment, diagnostics.getvalue())
+                self.assertFalse(report_path.exists())
+
     def test_compiler_profile_timeout_override_is_bounded_and_explicit(self) -> None:
         profiler = load_module(
             "caxecraft_profile_timeout_subject",
