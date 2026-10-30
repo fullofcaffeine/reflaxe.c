@@ -315,6 +315,7 @@ class LocalGateEvidenceTests(unittest.TestCase):
         environment["SHLVL"] = "1"
         # CI starts without OLDPWD; bash adds it when the hook changes cwd.
         environment.pop("OLDPWD", None)
+        environment["_"] = "/fixture/previous-command"
         environment["PWD"] = str(repository)
 
         def run(command: list[str], selected: dict[str, str] = environment):
@@ -390,7 +391,7 @@ class LocalGateEvidenceTests(unittest.TestCase):
                 f"#!{sys.executable}\nimport hashlib,json,os\n"
                 f"print(json.dumps({{'label':{word!r},'environment':"
                 "{name:hashlib.sha256(os.environ[name].encode()).hexdigest() "
-                "for name in ('CODEX_TOOL_CALL_ID','GIT_DIR','OLDPWD') if name in os.environ}}))\n",
+                "for name in ('CODEX_TOOL_CALL_ID','GIT_DIR','OLDPWD','_') if name in os.environ}}))\n",
                 encoding="utf-8",
             )
             executable.chmod(0o755)
@@ -465,6 +466,7 @@ class LocalGateEvidenceTests(unittest.TestCase):
             "BD_GIT_HOOK": "1",
             "SHLVL": "5",
             "OLDPWD": "/workspace/previous-directory",
+            "_": "/usr/bin/git",
             "GIT_PREFIX": "",
             "GIT_INDEX_FILE": str(default_index),
             "GIT_EDITOR": ":",

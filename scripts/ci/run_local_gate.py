@@ -261,6 +261,9 @@ def normalized_owner_environment(
     # Owners use an explicit working directory, never shell navigation history;
     # remove it from their execution as well as their evidence identity.
     selected.pop("OLDPWD", None)
+    # Shells export their last command in _. It describes the invocation path,
+    # not an owner input; remove it from execution and evidence together.
+    selected.pop("_", None)
     if selected.get("GIT_PREFIX") == "":
         selected.pop("GIT_PREFIX")
     for name in GIT_HOOK_AUTHOR_VARIABLES:
