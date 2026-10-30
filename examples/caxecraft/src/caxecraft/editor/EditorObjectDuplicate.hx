@@ -1,6 +1,10 @@
 package caxecraft.editor;
 
 import caxecraft.editor.EditorTypes.EditorCommand;
+import caxecraft.scenario.CaxeFlow.FlowEvent;
+import caxecraft.scenario.CaxeFlow.FlowRule;
+import caxecraft.scenario.CaxeFlowCopy.copyFlowActions;
+import caxecraft.scenario.CaxeFlowCopy.copyFlowPredicate;
 import caxecraft.scenario.ScenarioGeometry.ScenarioTransform;
 import caxecraft.scenario.ScenarioGeometry.VoxelBounds;
 import caxecraft.scenario.ScenarioId;
@@ -18,6 +22,12 @@ import caxecraft.scenario.ScenarioObject.ObjectPlacement;
 typedef EditorObjectDuplicate = {
 	final id:ScenarioId;
 	final command:EditorCommand;
+}
+
+/** One normal duplicate gesture, including connected trigger behavior. */
+typedef EditorObjectDuplicatePlan = {
+	final id:ScenarioId;
+	final commands:Array<EditorCommand>;
 }
 
 /**
@@ -42,6 +52,37 @@ function duplicateObject(sourceId:ScenarioId, objects:Array<ScenarioObject>):Nul
 	};
 }
 
+/**
+	Duplicate an object and the rules whose event source is that trigger volume.
+
+	Only the WHEN source changes to the copied trigger. Predicate and action
+	references retain their original meaning, and every copied rule receives a
+	fresh stable ID. Non-trigger objects produce the ordinary one-command plan.
+**/
+function duplicateObjectWithConnectedRules(sourceId:ScenarioId, objects:Array<ScenarioObject>, rules:Array<FlowRule>):Null<EditorObjectDuplicatePlan> {
+	final duplicate = duplicateObject(sourceId, objects);
+	if (duplicate == null)
+		return null;
+	final commands:Array<EditorCommand> = [duplicate.command];
+	for (rule in rules) {
+		final copiedEvent:Null<FlowEvent> = switch rule.event {
+			case EnterZone(id) if (id.text() == sourceId.text()): EnterZone(duplicate.id);
+			case LeaveZone(id) if (id.text() == sourceId.text()): LeaveZone(duplicate.id);
+			case _: null;
+		};
+		if (copiedEvent != null)
+			commands.push(PutRule({
+				id: nextCopiedRuleId(rule.id, rules, commands),
+				priority: rule.priority,
+				repeat: rule.repeat,
+				event: copiedEvent,
+				predicate: copyFlowPredicate(rule.predicate),
+				actions: copyFlowActions(rule.actions)
+			}));
+	}
+	return {id: duplicate.id, commands: commands};
+}
+
 /** Find one object by semantic ID without trusting a presentation index. */
 private function findObject(expected:ScenarioId, objects:Array<ScenarioObject>):Null<ScenarioObject> {
 	final text = expected.text();
@@ -60,6 +101,29 @@ private function nextCopyId(sourceId:ScenarioId, objects:Array<ScenarioObject>):
 	while (hasObjectId(prefix + number, objects))
 		number++;
 	return new ScenarioId(prefix + number);
+}
+
+/** Choose a rule ID absent from both the draft and this atomic copy plan. */
+private function nextCopiedRuleId(sourceId:ScenarioId, rules:Array<FlowRule>, commands:Array<EditorCommand>):ScenarioId {
+	final prefix = sourceId.text() + ".copy.n";
+	var number = 1;
+	while (hasRuleId(prefix + number, rules, commands))
+		number++;
+	return new ScenarioId(prefix + number);
+}
+
+/** True when a source or already planned rule owns one exact identity. */
+private function hasRuleId(expected:String, rules:Array<FlowRule>, commands:Array<EditorCommand>):Bool {
+	for (rule in rules)
+		if (rule.id.text() == expected)
+			return true;
+	for (command in commands)
+		switch command {
+			case PutRule(rule) if (rule.id.text() == expected):
+				return true;
+			case _:
+		}
+	return false;
 }
 
 /** True when any placement role already owns one exact semantic identity. */

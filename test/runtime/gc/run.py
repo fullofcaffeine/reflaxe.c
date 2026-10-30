@@ -4,16 +4,24 @@
 from __future__ import annotations
 
 import argparse
+import concurrent.futures
 import json
 import os
+import re
 import shutil
 import subprocess
+import sys
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[3]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from scripts.test.bounded_process import run as run_bounded_process  # noqa: E402
+
 INCLUDE = ROOT / "runtime/hxrt/include"
 SOURCES = (
     ROOT / "runtime/hxrt/src/allocator.c",
@@ -22,6 +30,7 @@ SOURCES = (
 )
 CONTRACT = ROOT / "runtime/hxrt/test/gc_contract.c"
 FREESTANDING = ROOT / "runtime/hxrt/test/gc_freestanding.c"
+SCALING = ROOT / "runtime/hxrt/test/gc_scaling.c"
 CPP_HEADER = ROOT / "runtime/hxrt/test/gc_header_cpp.cpp"
 GENERATED_ROOT_HARNESS = ROOT / "runtime/hxrt/test/generated_root_frame_harness.c"
 GENERATED_ROOT_HXML = ROOT / "test/runtime/gc/generated_root_frame.hxml"
@@ -73,7 +82,7 @@ class Toolchain:
 
 
 def run(command: list[str], *, timeout: int = 30) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(
+    return run_bounded_process(
         command,
         cwd=ROOT,
         check=False,
@@ -132,7 +141,7 @@ def render_generated_root_frame(
     environment = os.environ.copy()
     # This is a cold determinism probe, not the interactive warm-server lane.
     environment["HAXE_NO_SERVER"] = "1"
-    result = subprocess.run(
+    result = run_bounded_process(
         [str(haxe), str(GENERATED_ROOT_HXML)],
         cwd=ROOT,
         env=environment,
@@ -166,6 +175,22 @@ def render_generated_root_frame(
         raise GcTestFailure(f"{label} omitted project-layout evidence")
     validate_generated_projects(projects, label)
     return source, projects
+
+
+def render_generated_root_frames() -> tuple[
+    tuple[str, list[dict[str, object]]],
+    tuple[str, list[dict[str, object]]],
+]:
+    """Render two isolated cold samples concurrently and retain result order."""
+    labels = (
+        "first generated root-frame render",
+        "second generated root-frame render",
+    )
+    with concurrent.futures.ThreadPoolExecutor(
+        max_workers=len(labels), thread_name_prefix="gc-cold-render"
+    ) as executor:
+        futures = [executor.submit(render_generated_root_frame, label) for label in labels]
+        return futures[0].result(), futures[1].result()
 
 
 def validate_generated_projects(
@@ -331,7 +356,7 @@ def compile_and_run(
     result = run([str(executable)])
     require_success(result, f"{toolchain.family} {suffix} collector run")
     if result.stderr or result.stdout.strip() != (
-        "gc-contract: OK allocations=265 collections=137 reclaimed=265 pause_ticks=973"
+        "gc-contract: OK allocations=265 collections=137 reclaimed=265 pause_ticks=980"
     ):
         raise GcTestFailure(
             f"{toolchain.family} {suffix} collector report drifted\n"
@@ -391,6 +416,53 @@ def freestanding_lane(toolchain: Toolchain, build: Path) -> None:
         )
 
 
+def scaling_lane(toolchain: Toolchain, build: Path) -> None:
+    """Prove exact tracing uses bounded hash probes, while reporting raw timing."""
+    executable = build / "gc-scaling"
+    require_success(
+        run(
+            [
+                toolchain.cc,
+                *C_FLAGS,
+                "-O2",
+                f"-I{INCLUDE}",
+                *(str(path) for path in (*SOURCES, SCALING)),
+                "-o",
+                str(executable),
+            ]
+        ),
+        f"{toolchain.family} collector scaling build",
+    )
+    result = run([str(executable)])
+    require_success(result, f"{toolchain.family} collector scaling run")
+    if result.stderr:
+        raise GcTestFailure(f"{toolchain.family} collector scaling wrote stderr:\n{result.stderr}")
+    pattern = re.compile(
+        r"^gc-scaling: objects=(\d+) repetitions=(\d+) clock_ticks=(\d+) "
+        r"index_bytes=(\d+) lookups=(\d+) probes=(\d+) fallbacks=(\d+)$"
+    )
+    expected = ((256, 200), (1024, 50), (4096, 5))
+    lines = result.stdout.splitlines()
+    if len(lines) != len(expected):
+        raise GcTestFailure(f"{toolchain.family} collector scaling report count drifted")
+    for line, (expected_objects, expected_repetitions) in zip(lines, expected, strict=True):
+        match = pattern.fullmatch(line)
+        if match is None:
+            raise GcTestFailure(f"{toolchain.family} collector scaling report drifted: {line!r}")
+        objects, repetitions, _ticks, index_bytes, lookups, probes, fallbacks = (
+            int(value) for value in match.groups()
+        )
+        expected_lookups = repetitions * (objects + 1)
+        if (
+            (objects, repetitions) != (expected_objects, expected_repetitions)
+            or index_bytes == 0
+            or lookups != expected_lookups
+            or not (lookups <= probes <= lookups * 8)
+            or fallbacks != 0
+        ):
+            raise GcTestFailure(f"{toolchain.family} collector scaling bounds failed: {line}")
+
+
 def cpp_lane(toolchain: Toolchain, build: Path) -> None:
     executable = build / "gc-header-cpp"
     result = run(
@@ -412,8 +484,10 @@ def main() -> int:
     parser.add_argument("--toolchain", choices=("auto", "gcc", "clang"), default="auto")
     arguments = parser.parse_args()
     toolchains = resolve(arguments.toolchain)
-    first_root_source, first_projects = render_generated_root_frame("first generated root-frame render")
-    second_root_source, second_projects = render_generated_root_frame("second generated root-frame render")
+    (
+        (first_root_source, first_projects),
+        (second_root_source, second_projects),
+    ) = render_generated_root_frames()
     if first_root_source != second_root_source or first_projects != second_projects:
         raise GcTestFailure("generated root-frame C was not byte-identical across cold renders")
     with tempfile.TemporaryDirectory(prefix="haxe-c-gc-runtime-") as temporary:
@@ -427,13 +501,14 @@ def main() -> int:
             compile_and_run(toolchain, build, optimization="O2", sanitizer=False)
             compile_and_run(toolchain, build, optimization="O1", sanitizer=True)
             freestanding_lane(toolchain, build)
+            scaling_lane(toolchain, build)
             cpp_lane(toolchain, build)
             generated_root_frame_lane(toolchain, build, generated_root_source)
             generated_project_lane(toolchain, build, first_projects)
     families = ", ".join(toolchain.family for toolchain in toolchains)
     print(
         "gc-runtime: OK: precise cycles, exact stack/global/thread roots, pins, "
-        "pressure, reports, generated root lifetimes, freestanding allocation, "
+        "pressure, indexed scaling, reports, generated root lifetimes, freestanding allocation, "
         f"C++17, and sanitizers passed ({families})"
     )
     return 0

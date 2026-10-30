@@ -2,7 +2,6 @@ package reflaxe.c.emit;
 
 import haxe.Json;
 import haxe.crypto.Sha256;
-import haxe.io.Bytes;
 #if (macro || reflaxe_runtime)
 import reflaxe.c.CPhaseTiming;
 import reflaxe.c.CPhaseTiming.CDetailTimingId;
@@ -17,7 +16,13 @@ import reflaxe.c.contract.TypedCContract.TypedCBuildFact;
 import reflaxe.c.emit.CBuildPlan.CBuildPlanBuilder;
 import reflaxe.c.emit.CBuildPlan.CBuildPlanSnapshot;
 import reflaxe.c.emit.CBuildPlan.CBuildStandard;
+import reflaxe.c.emit.COutputLicensePolicy.COutputLicensePolicySnapshot;
+#if macro
+import reflaxe.c.emit.COutputLicensePolicy.COutputLicensePolicyLoader;
+#end
 import reflaxe.c.emit.GeneratedFile.GeneratedFileKind;
+import reflaxe.c.emit.GeneratedFile.GeneratedFileProduction;
+import reflaxe.c.emit.GeneratedFile.GeneratedFileProvenance;
 import reflaxe.c.lowering.CDispatchReport.CDispatchReportBuilder;
 import reflaxe.c.lowering.CDispatchReport.CDispatchReportSnapshot;
 import reflaxe.c.lowering.CGenericSpecializationReport.CGenericSpecializationReportSnapshot;
@@ -107,6 +112,10 @@ typedef CProjectEmissionPlan = {
 	final ?stdlibCapabilities:Array<String>;
 	final ?staticInitialization:CStaticInitializationSnapshot;
 	final ?runtimePlan:RuntimeFeaturePlanSnapshot;
+
+	/** Optional compiler-owned semantic evidence requested for later read-only inspection. */
+	final ?inspectionFiles:Array<GeneratedFile>;
+
 	final symbolTable:CSymbolTableSnapshot;
 }
 
@@ -130,6 +139,22 @@ private typedef AddressedArtifact = {
 	final path:String;
 	final kind:GeneratedFileKind;
 	final sha256:String;
+	final provenance:GeneratedFileProvenance;
+	final licensing:ArtifactLicensingRecord;
+}
+
+private typedef ArtifactLicensingRecord = {
+	final licenseConcluded:String;
+	final projectCopyrightClaim:Bool;
+	final rationale:String;
+	final noticeFiles:Array<String>;
+}
+
+private typedef ManifestLicensingRecord = {
+	final decision:String;
+	final spdxLicenseListVersion:String;
+	final licenseConcluded:String;
+	final noticeFiles:Array<String>;
 }
 
 private typedef ProjectConfigurationRecord = {
@@ -153,6 +178,7 @@ private typedef CompilerManifestRecord = {
 	final compilationStatus:CProjectCompilationStatus;
 	final configuration:ProjectConfigurationRecord;
 	final contentAddressing:ContentAddressingRecord;
+	final licensing:ManifestLicensingRecord;
 	final artifacts:Array<AddressedArtifact>;
 	final build:CBuildPlanSnapshot;
 	final ownershipManifest:String;
@@ -274,21 +300,38 @@ private typedef RuntimePlanSummary = {
 /** Pure schema-1 project emitter. Filesystem ownership is handled separately. */
 class CProjectEmitter {
 	public static inline final SCHEMA_VERSION = 1;
+	public static inline final MANIFEST_SCHEMA_VERSION = 2;
 
 	static final SIDECAR_PATHS = [
 		"hxc.abi.json",
+		"hxc.c-ast.json",
+		"hxc.declarations.json",
 		"hxc.dispatch.json",
 		"hxc.initialization-plan.json",
+		"hxc.hxcir.json",
 		"hxc.manifest.json",
 		"hxc.runtime-plan.json",
 		"hxc.specializations.json",
 		"hxc.stdlib-report.json",
 		"hxc.symbols.json",
+		"hxc.typed-inventory.json",
 		CBuildAdapterEmitter.CMAKE_PATH,
 		CBuildAdapterEmitter.MESON_PATH
 	];
 
-	public function new() {}
+	final outputLicensePolicy:COutputLicensePolicySnapshot;
+
+	public function new()
+		this.outputLicensePolicy = loadOutputLicensePolicy();
+
+	/** Load policy in the macro host and keep target-side construction fail-closed. */
+	static function loadOutputLicensePolicy():COutputLicensePolicySnapshot {
+		#if macro
+		return COutputLicensePolicyLoader.load();
+		#else
+		throw new ProjectEmissionError("project emitter requires macro-host generated-output policy facts");
+		#end
+	}
 
 	public function emit(plan:CProjectEmissionPlan):Array<GeneratedFile> {
 		#if (macro || reflaxe_runtime)
@@ -302,6 +345,13 @@ class CProjectEmitter {
 		final units = canonicalUnits(plan.units);
 		final buildPlan = new CBuildPlanBuilder().build(plan.projectName, plan.cStandard, units, plan.buildFacts);
 		final files = units.copy();
+		files.push(new GeneratedFile(outputLicensePolicy.outputSupportLicenseFile, outputLicensePolicy.outputSupportLicenseText,
+			GeneratedFileKind.LicenseNotice));
+		if (plan.inspectionFiles != null) {
+			for (file in plan.inspectionFiles) {
+				files.push(file);
+			}
+		}
 		#if (macro || reflaxe_runtime)
 		CPhaseTiming.stopDetail(unitCanonicalizationTimer);
 
@@ -407,10 +457,12 @@ class CProjectEmitter {
 		final addressedArtifacts:Array<AddressedArtifact> = files.map(file -> {
 			path: file.relativePath,
 			kind: file.kind,
-			sha256: file.contentSha256
+			sha256: file.contentSha256,
+			provenance: file.provenance,
+			licensing: artifactLicensing(file.provenance)
 		});
 		final manifest:CompilerManifestRecord = {
-			schemaVersion: SCHEMA_VERSION,
+			schemaVersion: MANIFEST_SCHEMA_VERSION,
 			generator: "reflaxe.c",
 			projectName: plan.projectName,
 			compilationStatus: plan.compilationStatus,
@@ -426,6 +478,12 @@ class CProjectEmitter {
 				algorithm: "sha256",
 				scope: "all compiler artifacts except hxc.manifest.json and _GeneratedFiles.json"
 			},
+			licensing: {
+				decision: outputLicensePolicy.decision,
+				spdxLicenseListVersion: outputLicensePolicy.spdxLicenseListVersion,
+				licenseConcluded: outputLicensePolicy.outputSupportLicenseExpression,
+				noticeFiles: [outputLicensePolicy.outputSupportLicenseFile]
+			},
 			artifacts: addressedArtifacts,
 			build: buildPlan,
 			ownershipManifest: GeneratedFile.OWNERSHIP_MANIFEST
@@ -436,6 +494,33 @@ class CProjectEmitter {
 		CPhaseTiming.stopDetail(manifestConstructionTimer);
 		#end
 		return files;
+	}
+
+	/** Derive one license conclusion from the artifact's validated origin. */
+	function artifactLicensing(provenance:GeneratedFileProvenance):ArtifactLicensingRecord {
+		return switch provenance.production {
+			case GeneratedFileProduction.CompiledProgram:
+				{
+					licenseConcluded: outputLicensePolicy.compiledProgram.licenseConcluded,
+					projectCopyrightClaim: outputLicensePolicy.compiledProgram.projectCopyrightClaim,
+					rationale: "user-license-not-declared",
+					noticeFiles: []
+				};
+			case GeneratedFileProduction.CompilerSidecar:
+				{
+					licenseConcluded: outputLicensePolicy.compilerSidecars.licenseConcluded,
+					projectCopyrightClaim: outputLicensePolicy.compilerSidecars.projectCopyrightClaim,
+					rationale: "compiler-output-support",
+					noticeFiles: [outputLicensePolicy.outputSupportLicenseFile]
+				};
+			case GeneratedFileProduction.RepositoryCopy:
+				{
+					licenseConcluded: outputLicensePolicy.repositoryCopies.licenseConcluded,
+					projectCopyrightClaim: outputLicensePolicy.repositoryCopies.projectCopyrightClaim,
+					rationale: "audited-output-support-copy",
+					noticeFiles: [outputLicensePolicy.outputSupportLicenseFile]
+				};
+		};
 	}
 
 	function validatePlan(plan:CProjectEmissionPlan):Void {
@@ -498,6 +583,7 @@ class CProjectEmitter {
 		if (plan.symbolTable.schemaVersion != CSymbolRegistry.SCHEMA_VERSION || plan.symbolTable.algorithm != CSymbolRegistry.ALGORITHM) {
 			fail('project emission requires the finalized schema-${CSymbolRegistry.SCHEMA_VERSION} ${CSymbolRegistry.ALGORITHM} symbol table');
 		}
+		validateInspectionFiles(plan.inspectionFiles);
 		final helperIds = plan.primitiveHelperIds;
 		if (helperIds != null) {
 			final seen:Map<String, Bool> = [];
@@ -508,6 +594,28 @@ class CProjectEmitter {
 				}
 				seen.set(helperId, true);
 			}
+		}
+	}
+
+	/** Keep opt-in semantic evidence closed, deterministic, and separate from C payload ownership. */
+	function validateInspectionFiles(files:Null<Array<GeneratedFile>>):Void {
+		if (files == null)
+			return;
+		final seen:Map<String, Bool> = [];
+		for (file in files) {
+			final admitted = file.relativePath == "hxc.typed-inventory.json"
+				&& file.kind == GeneratedFileKind.TypedInventory
+				|| file.relativePath == "hxc.hxcir.json"
+				&& file.kind == GeneratedFileKind.HxcIR
+				|| file.relativePath == "hxc.c-ast.json"
+				&& file.kind == GeneratedFileKind.CAst
+				|| file.relativePath == "hxc.declarations.json"
+				&& file.kind == GeneratedFileKind.DeclarationReport;
+			if (!admitted)
+				fail('inspection artifact `${file.relativePath}` has an unsupported path or role');
+			if (seen.exists(file.relativePath))
+				fail('inspection artifact `${file.relativePath}` is duplicated');
+			seen.set(file.relativePath, true);
 		}
 	}
 
@@ -768,33 +876,41 @@ class CProjectEmitter {
 			expectedDirectDecisions.push("compiler-planned-eager-static-initialization");
 		}
 		/*
-		 * `features` is dependency-closed: Bytes can select the String-literal
-		 * runtime artifact even when reachable HxcIR contains no literal value.
-		 * The direct decision is narrower. It promises that the program itself
-		 * required compiler-owned UTF-8 bytes, so rebuild it from root evidence
-		 * rather than mistaking a transitive implementation dependency for
-		 * source behavior.
+		 * `features` is dependency-closed, while a direct decision describes
+		 * behavior that reachable HxcIR actually requested. Rebuild the latter
+		 * from root evidence so a StringMap's bundled iterator implementation,
+		 * for example, does not claim that source code used a Haxe Iterator.
 		 */
-		var hasDirectStringLiteral = false;
+		final directRuntimeFeatures:Map<String, Bool> = [];
 		for (reason in runtimePlan.rootReasons)
-			if (reason.featureId == "string-literal") {
-				hasDirectStringLiteral = true;
-				break;
-			}
-		if (hasDirectStringLiteral) {
+			directRuntimeFeatures.set(reason.featureId, true);
+		if (directRuntimeFeatures.exists("string-literal")) {
 			expectedDirectDecisions.push("direct-utf8-string-literals");
 		}
-		if (runtimePlan.features.indexOf("string-scalar") != -1)
+		if (directRuntimeFeatures.exists("string-scalar")
+			|| directRuntimeFeatures.exists("string")
+			|| directRuntimeFeatures.exists("string-lower-case")
+			|| directRuntimeFeatures.exists("string-split")
+			|| directRuntimeFeatures.exists("array-join")
+			|| directRuntimeFeatures.exists("bytes-string"))
 			expectedDirectDecisions.push("allocation-free-unicode-scalar-strings");
-		if (runtimePlan.features.indexOf("array") != -1)
+		if (directRuntimeFeatures.exists("array")
+			|| directRuntimeFeatures.exists("string-split")
+			|| directRuntimeFeatures.exists("array-join"))
 			expectedDirectDecisions.push("managed-haxe-arrays");
-		if (runtimePlan.features.indexOf("string-map") != -1)
+		if (directRuntimeFeatures.exists("iterator"))
+			expectedDirectDecisions.push("managed-haxe-iterators");
+		if (directRuntimeFeatures.exists("string-map") || directRuntimeFeatures.exists("gc-string-map"))
 			expectedDirectDecisions.push("managed-haxe-string-maps");
-		if (runtimePlan.features.indexOf("int-map") != -1)
+		if (directRuntimeFeatures.exists("int-map"))
 			expectedDirectDecisions.push("managed-haxe-int-maps");
-		if (runtimePlan.features.indexOf("bytes") != -1)
+		if (directRuntimeFeatures.exists("object-map"))
+			expectedDirectDecisions.push("managed-haxe-object-maps");
+		if (directRuntimeFeatures.exists("enum-value-map"))
+			expectedDirectDecisions.push("managed-haxe-enum-value-maps");
+		if (directRuntimeFeatures.exists("bytes"))
 			expectedDirectDecisions.push("managed-haxe-bytes");
-		if (runtimePlan.features.indexOf("gc") != -1)
+		if (directRuntimeFeatures.exists("gc"))
 			expectedDirectDecisions.push("exact-traced-haxe-object-graph");
 		expectedDirectDecisions.sort(compareUtf8);
 		if (runtimePlan.directDecisions.join("\n") != expectedDirectDecisions.join("\n")) {
@@ -819,22 +935,39 @@ class CProjectEmitter {
 					if (reason.kind == "direct-string-value"
 						|| (reason.kind == "runtime-representation" && reason.operationId == "type-carrier")):
 				case "string-scalar" if (reason.kind == "runtime-operation" && switch reason.operationId {
-						case "char-at" | "char-code-at" | "index-of" | "last-index-of" | "length" | "substring": true;
+						case "char-at" | "char-code-at" | "index-of" | "last-index-of" | "length" | "substr" | "substring": true;
 						case _: false;
 					}):
 				case "string" if ((reason.kind == "runtime-operation" && switch reason.operationId {
-					case "borrow-cstring" | "cleanup-release" | "concat" | "from-int" | "from-scalar" | "retain": true;
+					case "borrow-cstring" | "cleanup-release" | "concat" | "dispose-cstring" | "from-int" | "from-scalar" | "prepare-cstring" | "retain": true;
 					case _: false;
 				}) || (reason.kind == "runtime-representation" && reason.operationId == "type-carrier")):
+				case "string-lower-case" if (reason.kind == "runtime-operation" && reason.operationId == "to-lower-case"):
 				case "string-float" if (reason.kind == "runtime-operation" && reason.operationId == "from-float"):
 				case "string-split" if (reason.kind == "runtime-operation" && reason.operationId == "split"):
 				case "array-join" if (reason.kind == "runtime-operation" && reason.operationId == "join"):
-				case "bytes-string" if (reason.kind == "runtime-operation" && reason.operationId == "get-string-utf8"):
+				case "bytes-string" if (reason.kind == "runtime-operation" && switch reason.operationId {
+						case "get-string-utf8" | "to-hex": true;
+						case _: false;
+					}):
 				case "io" if (reason.kind == "hosted-output"):
 				case "array" if (reason.kind == "runtime-operation"):
+				case "iterator" if (reason.kind == "runtime-operation"):
 				case "int-map" if (reason.kind == "runtime-operation"):
 				case "string-map" if (reason.kind == "runtime-operation"):
+				case "gc-string-map" if (reason.kind == "runtime-operation"):
+				case "object-map" if (reason.kind == "runtime-operation"):
+				case "enum-value-map" if (reason.kind == "runtime-operation"):
 				case "bytes" if (reason.kind == "runtime-operation"):
+				case "date-time" if (reason.kind == "runtime-operation" && switch reason.operationId {
+						case "wall-milliseconds" | "monotonic-seconds" | "local-to-milliseconds" | "timezone-offset": true;
+						case _: false;
+					}):
+				case "dynamic" if (reason.kind == "runtime-operation" && switch reason.operationId {
+						case "box" | "box-null" | "box-type-token" | "unbox" | "get" | "set" | "call" | "invoke" | "equal": true;
+						case _: false;
+					}):
+				case "exception" if (reason.kind == "runtime-operation" && reason.operationId == "general-exception-region"):
 				case "alloc" if (reason.kind == "runtime-operation" && reason.operationId == "allocation"):
 				case "gc" if (reason.kind == "runtime-operation" && switch reason.operationId {
 						case "allocation" | "class-object-header" | "managed-type-representation" | "root-frame": true;
@@ -883,6 +1016,7 @@ class CProjectEmitter {
 				|| specialization.reasons.length == 0
 				|| specialization.semanticDigestSha256 != Sha256.encode(specialization.specializationKey)
 				|| specialization.instanceId != 'function.specialization.${specialization.semanticDigestSha256}'
+				&& specialization.instanceId != 'constructor.specialization.${specialization.semanticDigestSha256}'
 				|| priorFunctionKey != null
 				&& compareUtf8(priorFunctionKey, specialization.specializationKey) >= 0
 				|| specialization.codeSize.metric != "strict-c11-utf8-function-definition-bytes"
@@ -960,7 +1094,7 @@ class CProjectEmitter {
 		for (unit in plan.units) {
 			if (GeneratedFile.isPayloadKind(unit.kind)) {
 				payloadArtifacts++;
-				payloadBytes += Bytes.ofString(unit.contents).length;
+				payloadBytes += unit.contentByteLength;
 			}
 		}
 		if (report.summary.mergedFunctionReasons != functionReasons
@@ -1128,8 +1262,13 @@ class CProjectEmitter {
 		}
 		if (observedDirect != directCount || observedIndirect != indirectCount)
 			fail("dispatch call records differ from their direct and indirect summary counts");
-		if (indirectCount > 0 && (report.layouts.length == 0 || report.slots.length == 0 || report.tables.length == 0))
-			fail("indirect dispatch requires a non-empty reachable layout, slot, and table plan");
+		// A typed method body can remain reachable behind a null class field even
+		// when no constructor can create its interface receiver. The call still owns
+		// an exact layout and slot, but whole-program evidence correctly emits zero
+		// concrete tables. Interface construction validation remains responsible for
+		// requiring an exact table whenever a runtime value can actually exist.
+		if (indirectCount > 0 && (report.layouts.length == 0 || report.slots.length == 0))
+			fail("indirect dispatch requires a non-empty reachable layout and slot plan");
 	}
 
 	static function requireDispatchLayoutSlots(values:Map<String, Array<String>>, layoutId:String, tableId:String):Array<String> {
@@ -1159,7 +1298,7 @@ class CProjectEmitter {
 		// canonicalizer. Project emission must not reject a representation that
 		// body lowering has already admitted and recorded structurally.
 		switch representation {
-			case "direct-primitive" | "direct-enum" | "managed-array" | "direct-record" | "immutable-string" | "nullable-value":
+			case "direct-primitive" | "direct-enum" | "managed-class" | "managed-array" | "direct-record" | "immutable-string" | "nullable-value":
 			case _:
 				fail('generic type argument `$parameter` has unknown representation `$representation`');
 		}
@@ -1342,8 +1481,27 @@ class CProjectEmitter {
 		return values;
 	}
 
-	function jsonFile<T>(path:String, kind:GeneratedFileKind, value:T):GeneratedFile
-		return new GeneratedFile(path, Json.stringify(value, null, "  ") + "\n", kind);
+	/**
+		Writes the complete JSON value compactly, followed by one LF.
+
+		Omitting indentation avoids serializing and hashing formatting bytes; it
+		does not reduce report data or change its schema.
+	**/
+	function jsonFile<T>(path:String, kind:GeneratedFileKind, value:T):GeneratedFile {
+		#if (macro || reflaxe_runtime)
+		final jsonTimer = CPhaseTiming.startDetail(CDTArtifactJsonSerialization);
+		#end
+		final contents = Json.stringify(value) + "\n";
+		#if (macro || reflaxe_runtime)
+		CPhaseTiming.stopDetail(jsonTimer);
+		final fileTimer = CPhaseTiming.startDetail(CDTCGeneratedFileConstruction);
+		#end
+		final file = new GeneratedFile(path, contents, kind);
+		#if (macro || reflaxe_runtime)
+		CPhaseTiming.stopDetail(fileTimer);
+		#end
+		return file;
+	}
 
 	static function symbolReportDetail(plan:CProjectEmissionPlan):CProjectSymbolReportDetail
 		return plan.symbolReportDetail == null ? CProjectSymbolReportDetail.Full : plan.symbolReportDetail;

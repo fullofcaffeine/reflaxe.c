@@ -5,7 +5,7 @@ import haxe.io.Bytes;
 import reflaxe.c.CPhaseTiming;
 import reflaxe.c.CPhaseTiming.CProfileCounterId;
 #end
-import reflaxe.c.emit.CContentDigest.sha256Hex;
+import reflaxe.c.CContentDigest.sha256Hex;
 import reflaxe.c.emit.GeneratedFile.GeneratedFileKind;
 
 /**

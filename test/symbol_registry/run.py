@@ -15,6 +15,11 @@ from typing import Any
 
 
 ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from scripts.test.bounded_process import run as run_bounded_process  # noqa: E402
+
 HXML = Path(__file__).with_name("symbol_registry.hxml")
 EXPECTED = Path(__file__).with_name("expected") / "symbol-registry.json"
 REPORT_PREFIX = "HXC_SYMBOL_REGISTRY="
@@ -79,7 +84,7 @@ def development_tool(name: str) -> str:
 def render(label: str) -> tuple[str, dict[str, Any]]:
     environment = os.environ.copy()
     environment["HAXE_NO_SERVER"] = "1"
-    result = subprocess.run(
+    result = run_bounded_process(
         [development_tool("haxe"), str(HXML)],
         cwd=ROOT,
         env=environment,
@@ -320,7 +325,7 @@ int main(void)
         executable = root / "macro_probe"
         source_path.write_text(source, encoding="utf-8")
         compiler = os.environ.get("CC", "cc")
-        compiled = subprocess.run(
+        compiled = run_bounded_process(
             [
                 compiler,
                 "-std=c11",
@@ -346,7 +351,7 @@ int main(void)
                 "macro-safe native symbol probe failed to compile\n"
                 f"stdout:\n{compiled.stdout}\nstderr:\n{compiled.stderr}"
             )
-        executed = subprocess.run(
+        executed = run_bounded_process(
             [str(executable)],
             cwd=root,
             check=False,

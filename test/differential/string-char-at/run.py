@@ -18,6 +18,11 @@ from typing import Iterable
 
 
 ROOT = Path(__file__).resolve().parents[3]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from scripts.test.bounded_process import run as run_bounded_process  # noqa: E402
+
 CASE = Path(__file__).resolve().parent
 GENERATED = CASE / "generated"
 NEGATIVE = CASE / "negative"
@@ -102,7 +107,7 @@ def resolve_toolchains(selected: str) -> list[Toolchain]:
                 raise StringCharAtFailure(f"required C compiler is missing: {family}")
             print(f"string-char-at: SKIP optional {family}: missing command")
             continue
-        identity = subprocess.run(
+        identity = run_bounded_process(
             [compiler, "--version"],
             cwd=ROOT,
             check=False,
@@ -132,7 +137,7 @@ def resolve_toolchains(selected: str) -> list[Toolchain]:
 def run_eval_oracle() -> None:
     observations: list[tuple[int, str, str]] = []
     for _ in range(2):
-        result = subprocess.run(
+        result = run_bounded_process(
             [development_tool("haxe"), "oracle.hxml"],
             cwd=GENERATED,
             env=haxe_environment(),
@@ -181,7 +186,7 @@ def compile_haxe(
     for define in defines:
         command.extend(["-D", define])
     command.extend(["--custom-target", f"c={output}"])
-    return subprocess.run(
+    return run_bounded_process(
         command,
         cwd=ROOT,
         env=haxe_environment(server=connect is not None),
@@ -427,7 +432,7 @@ def compile_and_run(
         "-o",
         str(executable),
     ]
-    compiled = subprocess.run(
+    compiled = run_bounded_process(
         command,
         cwd=ROOT,
         check=False,
@@ -440,7 +445,7 @@ def compile_and_run(
             f"{toolchain.family} strict charAt compile failed\n"
             f"command={command!r}\nstdout={compiled.stdout!r}\nstderr={compiled.stderr!r}"
         )
-    executed = subprocess.run(
+    executed = run_bounded_process(
         [str(executable)],
         cwd=ROOT,
         check=False,
@@ -459,7 +464,7 @@ def inspect_symbols(toolchain: Toolchain, executable: Path) -> None:
     nm = shutil.which("nm")
     if nm is None:
         raise StringCharAtFailure(f"{toolchain.family} charAt evidence requires nm")
-    result = subprocess.run(
+    result = run_bounded_process(
         [nm, str(executable)],
         cwd=ROOT,
         check=False,

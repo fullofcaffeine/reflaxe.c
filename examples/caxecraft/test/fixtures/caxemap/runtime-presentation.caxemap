@@ -55,6 +55,10 @@ object zone.fixture-start
   tag qa
   placement trigger-zone 1 0 1 1 3 1
 end object
+object zone.fixture-edit
+  tag qa
+  placement trigger-zone 10 0 10 1 3 1
+end object
 object player.start
   tag player
   placement player-spawn 1500 1000 1500 0

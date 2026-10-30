@@ -520,6 +520,15 @@ running Haxe game checks this file at 20 Hz. It accepts a changed batch only
 after the normal parser validates its size, name, actions, frames, and optional
 inspection radius.
 
+Each batch produces one final host response. Native observations carry a
+Boolean `terminal` field: `false` marks an intermediate `capture` checkpoint,
+and `true` marks completion of the batch, not termination of the game. The host
+validates intermediate observations and waits for the final one before it
+returns control. Observation sequence numbers must increase throughout the
+session. A missing completion marker, stale sequence, unexpected screenshot
+name, or incomplete response fails the batch instead of returning a checkpoint
+as its result. Ordinary checkpoint runs retain their existing screenshots.
+
 For the memory-software renderer, the host corrects the known Raylib row and
 channel convention before it publishes each response. The screenshot path can
 therefore be reviewed directly. Desktop captures do not use this conversion.

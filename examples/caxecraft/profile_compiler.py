@@ -48,7 +48,9 @@ PINNED_HAXE_SOURCE_REVISION = "2c1e544e0a2c7524ef4c8e103f1b0580362ea538"
 PROFILE_WORKLOADS = (
     "runtime-free",
     "runtime-content-generation",
+    "runtime-level-loader",
     "playable",
+    "editor-shell",
 )
 PROFILE_TRANSPORTS = ("both", "cold", "warm")
 PHASES = (
@@ -115,6 +117,7 @@ DETAIL_PHASES = (
     "artifact unit canonicalization",
     "artifact sidecar construction",
     "artifact symbol-report serialization",
+    "artifact JSON text serialization",
     "artifact initialization-report serialization",
     "artifact runtime-report projection",
     "artifact runtime-report serialization",
@@ -405,6 +408,7 @@ class CompilerProfileFunctionBuildWork:
     added_arrays: int
     added_int_maps: int
     added_string_maps: int
+    added_typed_maps: int
     added_bytes: int
     added_optionals: int
     added_import_types: int
@@ -435,6 +439,7 @@ class CompilerProfileFunctionBuildWork:
             "addedArrays": self.added_arrays,
             "addedIntMaps": self.added_int_maps,
             "addedStringMaps": self.added_string_maps,
+            "addedTypedMaps": self.added_typed_maps,
             "addedBytes": self.added_bytes,
             "addedOptionals": self.added_optionals,
             "addedImportTypes": self.added_import_types,
@@ -706,6 +711,7 @@ FUNCTION_BUILD_WORK_FIELDS = frozenset(
         "addedArrays",
         "addedIntMaps",
         "addedStringMaps",
+        "addedTypedMaps",
         "addedBytes",
         "addedOptionals",
         "addedImportTypes",
@@ -756,6 +762,7 @@ REQUEST_FIELDS = frozenset(
     }
 )
 PROFILE_STATUSES = frozenset({"ok", "failed", "superseded"})
+MAXIMUM_DIAGNOSTIC_TIMEOUT_SECONDS = 600
 
 
 def profile_string(record: Mapping[str, object], field: str) -> str:
@@ -1270,6 +1277,9 @@ def parse_profile_records(
                         ),
                         added_string_maps=profile_integer(
                             function_build_value, "addedStringMaps", minimum=0
+                        ),
+                        added_typed_maps=profile_integer(
+                            function_build_value, "addedTypedMaps", minimum=0
                         ),
                         added_bytes=profile_integer(
                             function_build_value, "addedBytes", minimum=0
@@ -2255,9 +2265,15 @@ def workload_arguments(output: Path, workload: str) -> tuple[str, ...]:
             times=True,
             phase_timing=True,
         )
-    elif workload == "runtime-content-generation":
+    elif workload in ("runtime-content-generation", "runtime-level-loader"):
+        hxml = {
+            "runtime-content-generation": "runtime-content-generation-c.hxml",
+            "runtime-level-loader": "runtime-level-loader-c.hxml",
+        }[workload]
         arguments = [
-            "runtime-content-generation-c.hxml",
+            hxml,
+            "-D",
+            "hxc_runtime_diagnostics=off",
             "-D",
             "caxecraft_posix_hosted",
             *(("-D", "caxecraft_posix_darwin") if sys.platform == "darwin" else ()),
@@ -2269,7 +2285,7 @@ def workload_arguments(output: Path, workload: str) -> tuple[str, ...]:
             "--custom-target",
             f"c={output}",
         ]
-    elif workload == "playable":
+    elif workload in ("playable", "editor-shell"):
         platform_name = {
             "darwin": "macos",
             "linux": "linux",
@@ -2286,20 +2302,45 @@ def workload_arguments(output: Path, workload: str) -> tuple[str, ...]:
             "-D",
             f"raylib_platform_{platform_name}",
             "-D",
-            "raylib_configuration_desktop",
-            "-D",
-            "reflaxe_c_phase_timing",
-            "--times",
-            "--custom-target",
-            f"c={output}",
+            (
+                "raylib_configuration_desktop"
+                if workload == "playable"
+                else "raylib_configuration_memory"
+            ),
         ]
+        # Ordinary play also loads content through the hosted platform adapter.
+        # Omitting these defines profiles a different, smaller program.
+        arguments.extend(
+            ["-D", "hxc_runtime_report=summary", "-D", "reflaxe_c_phase_progress"]
+        )
+        if platform_name in ("macos", "linux"):
+            arguments.extend(["-D", "caxecraft_posix_hosted"])
+        if platform_name == "macos":
+            arguments.extend(["-D", "caxecraft_posix_darwin"])
+        if workload == "editor-shell":
+            arguments.extend(
+                ["-D", "caxecraft_pilot", "-D", "caxecraft_pilot_editor_shell"]
+            )
+        arguments.extend(
+            [
+                "-D",
+                "reflaxe_c_phase_timing",
+                "--times",
+                "--custom-target",
+                f"c={output}",
+            ]
+        )
     else:
         raise CompilerProfileFailure(f"unknown compiler workload {workload!r}")
     return resolve_haxe_arguments(arguments, locale="C")
 
 
 def profile(
-    runs: int, *, workload: str = "runtime-free", transport: str = "both"
+    runs: int,
+    *,
+    workload: str = "runtime-free",
+    transport: str = "both",
+    timeout_seconds: int | None = None,
 ) -> dict[str, object]:
     if runs < 1:
         raise CompilerProfileFailure("compiler profiling requires at least one run")
@@ -2307,6 +2348,13 @@ def profile(
         raise CompilerProfileFailure(f"unknown compiler workload {workload!r}")
     if transport not in PROFILE_TRANSPORTS:
         raise CompilerProfileFailure(f"unknown compiler transport {transport!r}")
+    default_timeout = 360 if workload == "playable" else 180
+    request_timeout = default_timeout if timeout_seconds is None else timeout_seconds
+    if request_timeout < 1 or request_timeout > MAXIMUM_DIAGNOSTIC_TIMEOUT_SECONDS:
+        raise CompilerProfileFailure(
+            "compiler profile timeout must be from 1 through "
+            f"{MAXIMUM_DIAGNOSTIC_TIMEOUT_SECONDS} seconds"
+        )
     installation = pinned_haxe_installation()
     verify_pinned_haxe(installation)
     clock = timer_clock(installation)
@@ -2320,8 +2368,6 @@ def profile(
         warm_output = root / "warm"
         cold_resolved = workload_arguments(cold_output, workload)
         warm_resolved = workload_arguments(warm_output, workload)
-        timeout = 360 if workload == "playable" else 180
-
         cold_samples: list[dict[str, object]] = []
         baseline: dict[str, bytes] | None = None
         if transport in ("both", "cold"):
@@ -2336,7 +2382,7 @@ def profile(
                     cold_resolved,
                     clock,
                     connection=None,
-                    timeout=timeout,
+                    timeout=request_timeout,
                 )
                 artifacts = normal_artifacts(cold_output)
                 if baseline is None:
@@ -2362,7 +2408,7 @@ def profile(
                     warm_resolved,
                     clock,
                     connection=connection,
-                    timeout=timeout,
+                    timeout=request_timeout,
                 )
                 warm_artifacts = normal_artifacts(warm_output)
                 if baseline is None:
@@ -2384,7 +2430,7 @@ def profile(
                         warm_resolved,
                         clock,
                         connection=connection,
-                        timeout=timeout,
+                        timeout=request_timeout,
                     )
                     assert_artifacts_equal(
                         baseline,
@@ -2431,6 +2477,7 @@ def profile(
                 "requestedRunsPerTransport": runs,
                 "replication": "five-or-more" if runs >= 5 else "diagnostic-only",
                 "transports": transport,
+                "requestTimeoutSeconds": request_timeout,
             },
             "workload": {
                 "name": workload,
@@ -2441,10 +2488,14 @@ def profile(
                     "none" if workload == "runtime-free" else "auto"
                 ),
                 "symbolReportDetail": (
-                    "full" if workload == "runtime-free" else "summary"
+                    "summary"
+                    if workload in ("playable", "editor-shell")
+                    else "full"
                 ),
                 "runtimeReportDetail": (
-                    "summary" if workload == "playable" else "full"
+                    "summary"
+                    if workload in ("playable", "editor-shell")
+                    else "full"
                 ),
                 "normalArtifactCount": len(baseline),
                 "normalArtifactSha256": artifact_digest(baseline),
@@ -2485,6 +2536,15 @@ def parse_args(argv: Iterable[str]) -> argparse.Namespace:
         default=None,
         help="write the path-free JSON report here",
     )
+    parser.add_argument(
+        "--timeout-seconds",
+        type=int,
+        default=None,
+        help=(
+            "override one compiler request timeout from 1 through 600 seconds "
+            "for a local correctness diagnostic; this does not change a budget"
+        ),
+    )
     return parser.parse_args(list(argv))
 
 
@@ -2504,6 +2564,7 @@ def main(argv: Iterable[str] = ()) -> int:
             args.runs,
             workload=args.workload,
             transport=args.transport,
+            timeout_seconds=args.timeout_seconds,
         )
         summaries: list[str] = []
         for name in ("cold", "warm"):
@@ -2526,6 +2587,17 @@ def main(argv: Iterable[str] = ()) -> int:
         subprocess.TimeoutExpired,
     ) as error:
         print(f"caxecraft-compiler-profile: ERROR: {error}", file=sys.stderr)
+        if isinstance(error, subprocess.TimeoutExpired):
+            # A timeout can interrupt a UTF-8 character, even with text=True.
+            # Keep the last phase and partial timings available for diagnosis.
+            for name, captured in (("stdout", error.stdout), ("stderr", error.stderr)):
+                if captured:
+                    text = (
+                        captured.decode("utf-8", errors="replace")
+                        if isinstance(captured, bytes)
+                        else captured
+                    )
+                    print(f"partial {name}:\n{text}", file=sys.stderr)
         return 1
     print(
         "caxecraft-compiler-profile: OK: "

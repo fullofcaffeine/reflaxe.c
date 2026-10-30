@@ -15,6 +15,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
+from scripts.test.bounded_process import run as run_bounded_process  # noqa: E402
+
 
 from scripts.raylib.core_binding import BindingFailure  # noqa: E402
 from scripts.raygui.core_binding import (  # noqa: E402
@@ -29,6 +31,7 @@ from scripts.raygui.provision import (  # noqa: E402
     RayguiProvisionFailure,
     compiler_warning_flags,
     implementation_bytes,
+    implementation_header_bytes,
     normalize_archive_headers,
     pinned_source,
 )
@@ -133,8 +136,15 @@ class RayguiBindingTests(unittest.TestCase):
             self.assertIn(b"0           0     0     ", first)
 
     def test_warning_exception_uses_only_the_selected_compiler_vocabulary(self) -> None:
-        self.assertEqual(compiler_warning_flags("clang version 18.1.0"), ("-Wno-error=shorten-64-to-32",))
-        self.assertEqual(compiler_warning_flags("gcc (GCC) 14.2.0"), ())
+        self.assertEqual(
+            compiler_warning_flags("clang version 18.1.0"),
+            ("-Wno-error=shorten-64-to-32", "-Wno-error=implicit-int-float-conversion"),
+        )
+        self.assertEqual(compiler_warning_flags("gcc (GCC) 14.2.0"), ("-Wno-error=conversion",))
+
+    def test_style_reader_patch_rejects_unreviewed_source(self) -> None:
+        with self.assertRaisesRegex(RayguiProvisionFailure, "requires the locked header"):
+            implementation_header_bytes(b"unreviewed raygui source")
 
     def test_lock_rejects_upstream_and_extraction_drift(self) -> None:
         lock = copy.deepcopy(load_lock())
@@ -175,7 +185,7 @@ class RayguiBindingTests(unittest.TestCase):
             environment = os.environ.copy()
             environment["HAXE_NO_SERVER"] = "1"
             environment["LC_ALL"] = "C"
-            result = subprocess.run(
+            result = run_bounded_process(
                 [
                     str(haxe),
                     "--cwd",
@@ -213,7 +223,7 @@ class RayguiBindingTests(unittest.TestCase):
         environment = os.environ.copy()
         environment["HAXE_NO_SERVER"] = "1"
         environment["LC_ALL"] = "C"
-        result = subprocess.run(
+        result = run_bounded_process(
             [str(haxe), "--cwd", str(fixture), "build.hxml"],
             cwd=ROOT,
             env=environment,

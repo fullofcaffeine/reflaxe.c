@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -16,6 +17,11 @@ from typing import Iterable
 
 
 ROOT = Path(__file__).resolve().parents[3]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from scripts.test.bounded_process import run as run_bounded_process  # noqa: E402
+
 CASE = Path(__file__).resolve().parent
 GENERATED = CASE / "generated"
 RETURN_STRING = CASE / "return_string"
@@ -107,7 +113,7 @@ def resolve_toolchains(selected: str) -> list[Toolchain]:
                 raise BytesRuntimeFailure(f"required C compiler is missing: {family}")
             print(f"bytes-runtime: SKIP optional {family}: missing command")
             continue
-        identity = subprocess.run(
+        identity = run_bounded_process(
             [compiler, "--version"],
             cwd=ROOT,
             check=False,
@@ -131,7 +137,7 @@ def resolve_toolchains(selected: str) -> list[Toolchain]:
 def run_eval_oracle() -> None:
     outputs: list[tuple[int, str, str]] = []
     for _ in range(2):
-        execution = subprocess.run(
+        execution = run_bounded_process(
             [development_tool("haxe"), "oracle.hxml"],
             cwd=GENERATED,
             env=haxe_environment(),
@@ -145,7 +151,7 @@ def run_eval_oracle() -> None:
         raise BytesRuntimeFailure(f"pinned Eval Bytes oracle drifted: {outputs!r}")
     return_outputs: list[tuple[int, str, str]] = []
     for _ in range(2):
-        execution = subprocess.run(
+        execution = run_bounded_process(
             [
                 development_tool("haxe"),
                 "-cp",
@@ -197,7 +203,7 @@ def compile_haxe(
     for define in defines:
         command.extend(["-D", define])
     command.extend(["--custom-target", f"c={output}"])
-    return subprocess.run(
+    return run_bounded_process(
         command,
         cwd=ROOT,
         env=haxe_environment(),
@@ -342,6 +348,51 @@ def validate_bytes_flow_carrier(hxcir: str, function_id: str) -> None:
         )
 
 
+def validate_lowercase_hex_path(hxcir: str) -> None:
+    """Prove digest bytes become one owned lowercase String through typed calls."""
+    function = hxcir_function(hxcir, "function.Main.lowercaseHex")
+    # The fresh to-hex result is the function's owned return value itself:
+    # no copy, retain, or release sits between the runtime call and return.
+    hex_result = re.search(
+        r'result="(value\.\d+)":managed-string-utf8 call '
+        r'dispatch=runtime\(feature="bytes-string",operation="to-hex"\)',
+        function,
+    )
+    if (
+        "returns=managed-string-utf8" not in function
+        or hex_result is None
+        or f'terminator return value="{hex_result.group(1)}"' not in function
+        or " retain " in function
+        or " release " in function
+    ):
+        raise BytesRuntimeFailure(
+            "lowercase hexadecimal reduction lost its owned String return"
+        )
+
+    main = hxcir_function(hxcir, "function.Main.main")
+    ordered_markers = (
+        'dispatch=direct("function.Main.lowercaseHex")',
+        "string-equality-left-owner-initialize",
+        "string-equality-left-borrow",
+        'operation="haxe.string.not-equal.right-non-null"',
+        "string-equality-result-initialize",
+        'string-equality-result" result=',
+        "release-branch-local-owner",
+    )
+    cursor = 0
+    for marker in ordered_markers:
+        position = main.find(marker, cursor)
+        if position < 0:
+            raise BytesRuntimeFailure(
+                f"direct lowercase hexadecimal comparison omitted {marker!r}"
+            )
+        cursor = position + len(marker)
+    if main.count('dispatch=direct("function.Main.lowercaseHex")') != 1:
+        raise BytesRuntimeFailure(
+            "direct lowercase hexadecimal comparison must evaluate its producer once"
+        )
+
+
 def validate_optional_bytes_lifecycle(hxcir: str) -> None:
     """Prove absence, payload ownership, replacement, and cleanup stay distinct."""
     function = hxcir_function(hxcir, "function.Main.inspectOptionalBytes")
@@ -430,6 +481,7 @@ def validate_generated_project(output: Path, hxcir: str) -> None:
         'runtime(feature="bytes",operation="blit")',
         'runtime(feature="bytes",operation="compare")',
         'runtime(feature="bytes-string",operation="get-string-utf8")',
+        'runtime(feature="bytes-string",operation="to-hex")',
         "bytes-temporary.local.",
         "static-call-argument-0-owner-initialize",
         "static-call-argument-0-borrow",
@@ -491,30 +543,40 @@ def validate_generated_project(output: Path, hxcir: str) -> None:
     validate_fresh_string_copy_ownership(
         hxcir, "function.Main.copyJoinedLines", expected_string_temporaries=2
     )
+    validate_lowercase_hex_path(hxcir)
     validate_bytes_flow_carrier(hxcir, "function.Main.inspectChoice")
     validate_bytes_flow_carrier(hxcir, "function.Main.returnChoice")
     validate_optional_bytes_lifecycle(hxcir)
     validate_optional_bytes_fallback(hxcir)
 
     main = hxcir_function(hxcir, "function.Main.main")
-    owner_actions = [
+    declared_owner_actions = [
         line.split('"', 2)[1]
         for line in main.splitlines()
         if " action " in line and '"bytes-temporary.' in line
+    ]
+    return_lines = [
+        line for line in main.splitlines() if "terminator return" in line
+    ]
+    final_return = max(
+        return_lines,
+        key=lambda line: sum(
+            f'"{action}"' in line for action in declared_owner_actions
+        ),
+        default="",
+    )
+    owner_actions = [
+        action
+        for action in declared_owner_actions
+        if f'"{action}"' in final_return
     ]
     if len(owner_actions) < 5:
         raise BytesRuntimeFailure(
             "nested fresh Bytes calls did not create their exact caller owners"
         )
-    return_lines = [
-        line
-        for line in main.splitlines()
-        if "terminator return" in line
-        and all(f'"{action}"' in line for action in owner_actions)
-    ]
-    if not return_lines or any(
-        return_lines[0].index(f'"{later}"')
-        >= return_lines[0].index(f'"{earlier}"')
+    if any(
+        final_return.index(f'"{later}"')
+        >= final_return.index(f'"{earlier}"')
         for earlier, later in zip(owner_actions, owner_actions[1:])
     ):
         raise BytesRuntimeFailure(
@@ -571,7 +633,7 @@ def validate_generated_project(output: Path, hxcir: str) -> None:
             "managed-type-representation",
         },
         "array-join": {"join"},
-        "bytes-string": {"get-string-utf8"},
+        "bytes-string": {"get-string-utf8", "to-hex"},
         "string": {"cleanup-release", "concat", "retain"},
     }:
         raise BytesRuntimeFailure(
@@ -589,22 +651,34 @@ def validate_generated_project(output: Path, hxcir: str) -> None:
         "hxc_bytes_ref_retain",
         "hxc_bytes_ref_release",
         "hxc_bytes_ref_get_string_utf8",
+        "hxc_bytes_ref_to_hex",
         "hxc_array_string_join",
         "hxc_string_concat_ref",
         "hxc_string_release",
     ):
         if marker not in sources:
             raise BytesRuntimeFailure(f"generated C omitted {marker}")
-    for marker in (
-        ".hxc_has_value = false",
-        ".hxc_has_value = true",
-        "hxc_bytes_ref_retain((*(struct hxc_optional_value *)",
-        "hxc_bytes_ref_release((*(struct hxc_optional_value *)",
-    ):
+    for marker in (".hxc_has_value = false", ".hxc_has_value = true"):
         if marker not in sources:
             raise BytesRuntimeFailure(
                 f"structural nullable Bytes C omitted {marker}"
             )
+    optional_retain = re.search(
+        r"hxc_bytes_ref_retain\(\(\*\(struct (hxc_optional_value(?:_h[0-9a-f]+)?) \*\)",
+        sources,
+    )
+    optional_release = re.search(
+        r"hxc_bytes_ref_release\(\(\*\(struct (hxc_optional_value(?:_h[0-9a-f]+)?) \*\)",
+        sources,
+    )
+    if (
+        optional_retain is None
+        or optional_release is None
+        or optional_retain.group(1) != optional_release.group(1)
+    ):
+        raise BytesRuntimeFailure(
+            "structural nullable Bytes C lost one shared typed retain/release carrier"
+        )
     if "goto " in sources:
         raise BytesRuntimeFailure("the structured Bytes fixture unexpectedly emitted goto")
 
@@ -815,7 +889,7 @@ def compile_and_run(
         "-o",
         str(executable),
     ]
-    compilation = subprocess.run(
+    compilation = run_bounded_process(
         command,
         cwd=ROOT,
         check=False,
@@ -827,7 +901,7 @@ def compile_and_run(
         raise BytesRuntimeFailure(
             f"strict native compile failed\ncommand={command!r}\nstdout={compilation.stdout!r}\nstderr={compilation.stderr!r}"
         )
-    execution = subprocess.run(
+    execution = run_bounded_process(
         [str(executable)],
         cwd=ROOT,
         check=False,
@@ -876,7 +950,7 @@ def validate_cpp_header(
         "-o",
         str(executable),
     ]
-    compilation = subprocess.run(
+    compilation = run_bounded_process(
         command,
         cwd=ROOT,
         check=False,
@@ -889,7 +963,7 @@ def validate_cpp_header(
             "strict C++17 generated-header consumer failed\n"
             f"command={command!r}\nstdout={compilation.stdout!r}\nstderr={compilation.stderr!r}"
         )
-    execution = subprocess.run(
+    execution = run_bounded_process(
         [str(executable)],
         cwd=ROOT,
         check=False,
@@ -928,7 +1002,7 @@ def validate_mutable_buffer_cpp_header(project: Path, build: Path, family: str) 
         "-o",
         str(executable),
     ]
-    result = subprocess.run(
+    result = run_bounded_process(
         command,
         cwd=ROOT,
         check=False,
@@ -947,7 +1021,7 @@ def inspect_symbols(executable: Path, family: str) -> None:
     nm = shutil.which("nm")
     if nm is None:
         raise BytesRuntimeFailure(f"{family} Bytes evidence requires nm")
-    result = subprocess.run([nm, str(executable)], check=False, capture_output=True, text=True, timeout=20)
+    result = run_bounded_process([nm, str(executable)], check=False, capture_output=True, text=True, timeout=20)
     if result.returncode != 0:
         raise BytesRuntimeFailure(f"{family} could not inspect Bytes symbols")
     for required in ("hxc_bytes_ref_blit", "hxc_bytes_ref_release", "hxc_bytes_ref_sub"):
@@ -1087,7 +1161,7 @@ def main(argv: Iterable[str] = ()) -> int:
     mode = "native contract" if args.native_only else "Eval plus generated ordinary-Haxe Bytes"
     print(
         "bytes-runtime: OK: "
-        f"{families}; {mode}; C11 O0/O2 and C++17 header consumers, aliasing, overlap, bounds, checked UTF-8 snapshots, call-scoped mutable C text, allocation rollback, ownership, sanitizers, and selective symbols passed"
+        f"{families}; {mode}; C11 O0/O2 and C++17 header consumers, aliasing, overlap, bounds, checked UTF-8 snapshots, lowercase hexadecimal encoding, call-scoped mutable C text, allocation rollback, ownership, sanitizers, and selective symbols passed"
     )
     return 0
 

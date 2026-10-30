@@ -14,6 +14,9 @@ interface ScenarioContentRegistry {
 	/** Return the compact world byte for a known block, or `-1` when unknown. */
 	function blockStorageCode(id:ContentId):Int;
 
+	/** Return the stable block ID for a compact world byte, or null when unknown. */
+	function blockContentIdForStorageCode(code:Int):Null<ContentId>;
+
 	function hasFluid(id:ContentId):Bool;
 	function hasItem(id:ContentId):Bool;
 
@@ -25,6 +28,10 @@ interface ScenarioContentRegistry {
 	function hasPrefab(id:ContentId):Bool;
 	function hasStatefulObject(id:ContentId):Bool;
 	function hasState(id:ContentId):Bool;
+
+	/** True only when one state belongs to the named stateful-object type. */
+	function statefulObjectHasState(objectType:ContentId, state:ContentId):Bool;
+
 	function hasEffect(id:ContentId):Bool;
 	function hasSignal(id:ContentId):Bool;
 	function maximumItemQuantity(id:ContentId):Int;

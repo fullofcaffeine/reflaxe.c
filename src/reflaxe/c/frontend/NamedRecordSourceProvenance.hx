@@ -2,6 +2,7 @@ package reflaxe.c.frontend;
 
 #if (macro || reflaxe_runtime)
 import haxe.crypto.Sha256;
+import reflaxe.c.CContentDigest.sha256Hex;
 import haxe.io.Bytes;
 import haxe.io.Path;
 import haxe.macro.Context;
@@ -221,7 +222,7 @@ class NamedRecordSourceProvenance {
 			return null;
 		}
 		final bytes = File.getBytes(path);
-		final source:NamedRecordSourceInput = {bytes: bytes, digest: Sha256.make(bytes).toHex()};
+		final source:NamedRecordSourceInput = {bytes: bytes, digest: sha256Hex(bytes)};
 		sourcesByPath.set(path, source);
 		return source;
 	}

@@ -59,7 +59,7 @@ private class ReplayBase {
 
 	/** Compute the base result; subclasses may refine it. */
 	public function value(delta:Int):Int
-		return offset + delta;
+		return (offset + delta);
 }
 
 /** Concrete override selected through the base-typed local in `score`. */

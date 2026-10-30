@@ -348,8 +348,10 @@ rule <id> priority <integer> once
 end rule
 ```
 
-The repeat policy is `once`, `repeat`, or `cooldown <positive-ticks>`. Exactly
-one `when` and one `if` record are required. Use `(always)` when no condition is
+The repeat policy is `once`, `repeat`, `cooldown <positive-ticks>`,
+`once-per-actor`, or `cooldown-per-actor <positive-ticks>`. Actor-local policies
+are valid only for events whose closed context carries an actor. Exactly one
+`when` and one `if` record are required. Use `(always)` when no condition is
 needed. Each rule has 0 through 64 ordered actions.
 
 Events are:
@@ -360,12 +362,33 @@ leave-zone <zone-id>
 interact <object-id>
 block-changed <zone-id> <block-content-id>
 use-item <item-content-id>
+collect-item <item-content-id>
 entity-defeated <entity-id>
 signal <signal-content-id>
 timer <timer-id>
 objective-changed <objective-id>
 state-changed <variable-id>
+level-entered <level-id>
+campaign-exit-requested <exit-id>
 ```
+
+The game queues these events from authoritative gameplay, not from presentation
+guesses. Player movement emits `enter-zone` and `leave-zone`; mining and
+placement emit one `block-changed` for each containing zone; successful
+recovery, placement, and weapon use emit `use-item`; and a final combat hit
+emits `entity-defeated` with the actor that caused it. Block, item, and combat
+transactions reserve and validate their complete event batch before changing
+gameplay state. The session separately reserves the worst-case spatial capacity
+for movement; a failed crossing batch keeps its observation state unchanged so
+the next committed tick can retry it. System water updates and initial content
+loading do not pretend to be player block edits.
+
+Every `timer` ID must match a `schedule` action in an authored rule or reusable
+sequence. Every `campaign-exit-requested` ID must match an authored
+`campaign-exit` action. Validation also rejects a bounded, provably
+unconditional deferred cycle. Such a cycle is a `repeat` rule with `(always)`
+that can feed its own event source again. Guarded, one-shot, cooldown, and
+idempotent state-setting paths are not classified as unconditional cycles.
 
 Predicates use a bounded prefix tree. Parentheses are tokens for the predicate
 grammar and nesting is limited to 16:
@@ -383,6 +406,8 @@ grammar and nesting is limited to 16:
 (objective <objective-id> <hidden|active|complete|failed>)
 (near <actor-id> <object-id> <maximum-milliblocks>)
 (mode <creative|adventure>)
+(event-actor <actor-id>)
+(event-swept <true|false>)
 ```
 
 Comparisons are `equal`, `not-equal`, `less`, `less-or-equal`, `greater`, and
@@ -405,6 +430,7 @@ set-object-state <object-id> <state-content-id>
 checkpoint <checkpoint-id>
 objective <objective-id> <hidden|active|complete|failed>
 effect <effect-content-id> [at <object-id>]
+campaign-exit <exit-id>
 signal <signal-content-id>
 schedule <timer-id> <positive-ticks> <sequence-id> [<argument> ...]
 call <sequence-id> [<argument> ...]
@@ -427,12 +453,21 @@ The descriptor is not executable code. `FlowAction` remains the closed typed
 payload, `CaxeFlowValidator` still validates scenario and content references,
 and `CaxeFlowExecutor` still exhaustively implements behavior. Content cannot
 register a callback, native function, script, or service through this catalog.
-All 18 descriptors are currently authorized only for CaxeFlow documents.
+All 19 descriptors are currently authorized only for CaxeFlow documents.
 Cutscene, developer-console, and CaxeTest consumers are represented so future
 work can request authority explicitly, but they remain denied because those
 integration and validation paths are not implemented. Editor label/help values
-are stable message IDs; translated visual-card copy remains part of the planned
-visual editor rather than a shipped UI claim.
+are stable message IDs. The labels used by current visual cards resolve through
+the validated runtime locale catalog; Haxe carries only their stable keys and
+ordered scalar arguments.
+
+Events and predicates have matching closed descriptor catalogs. Their stable
+IDs, argument/context schemas, card labels, parser admission, validation, trace
+names, and exhaustive typed values therefore cannot drift into independent
+string tables. A runtime event occurrence carries one closed context variant:
+no context, actor context, or spatial actor context with previous/current
+positions and a swept-crossing flag. A content file cannot add a new payload
+field or callback.
 
 The current catalog, parser/writer parity, validator/executor guards, and editor
 palette are executable under the pinned Eval oracle. haxe.c now admits the
@@ -522,9 +557,11 @@ lowering in generated C.
 
 One tick has these exact boundaries:
 
-1. Copy the game-supplied object positions into scenario state.
-2. Collect due signals, state/objective notifications, and timers in the order
-   they were queued. Append the caller's new events in caller order.
+1. Check the game-supplied positions, then collect due signals,
+   state/objective notifications, and timers in queue order. Append the
+   caller's new events in caller order and validate the complete input batch.
+2. After all input checks pass, advance the fixed tick and copy the supplied
+   positions into scenario state. No input-validation failure changes either.
 3. Find matching rules. Lower numeric priority runs first; equal priorities use
    the rule ID's raw UTF-8 byte order. Within one rule, events keep their order.
 4. Evaluate every matching predicate before running any admitted rule action.
@@ -541,9 +578,14 @@ One tick has these exact boundaries:
 Due work is removed from the queue only after rule planning succeeds. Once the
 action phase begins, however, that accepted due batch is consumed. If an action
 hits a limit or fails, its completed changes remain, later due sequences are
-skipped, and that batch is not automatically tried again on the next tick. The
-diagnostic identifies the exact sequence or rule that stopped, so the game can
-fail visibly instead of repeating a partially completed interaction.
+skipped, and that batch is not automatically tried again. The first diagnostic
+latches a terminal executor fault. Later tick calls return the same diagnostic
+without advancing or consuming work. A validated save restore is the explicit
+recovery boundary. The failure report identifies the exact sequence or rule
+that stopped, the number of attempted work items, the completed rule/action
+prefix, and the retained presentation/trace prefix. Its disposition explicitly
+says that the terminal fault retained that prefix, so the game can fail visibly
+without mistaking an unknown suffix for completed work.
 
 For example, if rule A sets `quest.bridge` and rule B tests that value in the
 same tick, B tests the old value. The change queues `StateChanged` for the next
@@ -584,18 +626,22 @@ The first executor keeps each tick bounded:
 | queued deferred entries across ticks | 4,096 |
 
 A planning-limit failure happens before scenario actions run and leaves ready
-deferred work queued for inspection or a later tick. An action-limit failure
-keeps the already completed action prefix, stops the remaining sequences and
-rules in that accepted batch, and returns the first exact `LimitExceeded`
-diagnostic with its work kind, maximum, and owning rule or sequence where one
-exists. It never hangs, recursively re-enters the action stack, or pretends the
-unknown suffix ran. Save-game state must include persistent variables,
-inventory, object/objective state, once/cooldown history, the current fixed
-tick, explicit seeds, and deferred work; that persistence belongs to the
-separate save-game owner rather than `.caxemap` authoring files.
+deferred work queued for inspection or validated restoration. An action-limit
+failure keeps the already completed action prefix and stops the remaining
+sequences and rules in that accepted batch. Both failures latch the first exact
+`LimitExceeded` diagnostic with its work kind, maximum, and owning rule or
+sequence where one exists. The executor never hangs, recursively re-enters the
+action stack, continues after a fault, or pretends the unknown suffix ran.
+Save-game state must include persistent variables, inventory, object/objective
+state, once/cooldown history, the current fixed tick, explicit seeds, and
+deferred work. Restore rejects unknown item IDs, quantities above the content
+stack limit, states unsupported by an object's content type, out-of-world
+positions, stale references, and malformed pending events before it changes
+live state. Persistence belongs to the separate save-game owner rather than
+`.caxemap` authoring files.
 
 The fast executable proof is `npm run test:caxecraft-caxeflow`. It executes all
-10 events, 12 predicates, and 18 actions, including reverse rule registration,
+13 events, 14 predicates, and 19 actions, including reverse rule registration,
 sequence locals and captured arguments, fixed-tick delays, repeat policies,
 the maximum positive delay and the 32-bit tick boundary, every runtime work
 limit with its exact owner, the complete typed presentation payload sequence,

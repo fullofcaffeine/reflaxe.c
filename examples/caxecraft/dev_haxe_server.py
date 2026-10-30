@@ -28,11 +28,13 @@ from typing import Mapping, Sequence
 
 from dev_build_state import atomic_write_state, canonical_digest
 from dev_generation import VariantLock
+from dev_windows_process import process_identity as windows_process_identity
 
 
 COOKIE_KIND = "caxecraft-owned-haxe-server"
 COOKIE_SCHEMA_VERSION = 1
 LOOPBACK = "127.0.0.1"
+STARTUP_STDERR_LIMIT = 4096
 ROOT = Path(__file__).resolve().parents[2]
 CASE = Path(__file__).resolve().parent
 
@@ -61,12 +63,41 @@ class HaxeServerConnection:
 
 
 @dataclass(frozen=True)
+class OwnedHaxeServerProcess:
+    """Exact process identity retained after its mutable cookie changes."""
+
+    endpoint: str
+    pid: int
+    start_identity: str
+    command_identity: str
+    compatibility_sha256: str
+    compiler: str
+    cookie_sha256: str
+
+    def cookie(self) -> dict[str, object]:
+        """Rebuild the validated ownership claim used by guarded termination."""
+
+        return {
+            "schemaVersion": COOKIE_SCHEMA_VERSION,
+            "kind": COOKIE_KIND,
+            "endpoint": self.endpoint,
+            "pid": self.pid,
+            "processStartIdentity": self.start_identity,
+            "processCommandIdentity": self.command_identity,
+            "compatibilitySha256": self.compatibility_sha256,
+            "compiler": self.compiler,
+            "sha256": self.cookie_sha256,
+        }
+
+
+@dataclass(frozen=True)
 class HaxeServerLease:
     """One server connection and whether Caxecraft owns its process lifecycle."""
 
     connection: HaxeServerConnection
     owned: bool
     compatibility_sha256: str | None
+    process: OwnedHaxeServerProcess | None
 
 
 def _development_tool(name: str) -> str:
@@ -279,29 +310,17 @@ def _available_endpoint() -> str:
 
 
 def process_start_identity(pid: int) -> str | None:
-    """Return an OS fact that distinguishes a live PID from a later reused PID."""
+    """Return an OS start identity, or None when it cannot be observed.
+
+    An absent process and an observation failure both return None. Callers must
+    not treat that result alone as proof that a process exited.
+    """
 
     if pid < 1:
         return None
     if os.name == "nt":
-        command = [
-            "powershell",
-            "-NoProfile",
-            "-NonInteractive",
-            "-Command",
-            (
-                f"$p=Get-Process -Id {pid} -ErrorAction SilentlyContinue;"
-                "if($p){$p.StartTime.ToUniversalTime().Ticks}"
-            ),
-        ]
-        try:
-            result = subprocess.run(
-                command, check=False, capture_output=True, text=True, timeout=3
-            )
-        except (OSError, subprocess.TimeoutExpired):
-            return None
-        value = result.stdout.strip()
-        return f"windows-start-ticks:{value}" if result.returncode == 0 and value else None
+        identity = windows_process_identity(pid)
+        return None if identity is None else identity.start
 
     linux_stat = Path(f"/proc/{pid}/stat")
     if linux_stat.is_file():
@@ -334,32 +353,17 @@ def process_start_identity(pid: int) -> str | None:
 
 
 def process_command_identity(pid: int) -> str | None:
-    """Identify the executable currently running under an already-owned PID."""
+    """Identify the executable, or None when its identity cannot be observed.
+
+    None does not distinguish an absent process from an observation failure.
+    """
 
     if pid < 1:
         return None
     if os.name == "nt":
-        try:
-            result = subprocess.run(
-                [
-                    "powershell",
-                    "-NoProfile",
-                    "-NonInteractive",
-                    "-Command",
-                    (
-                        f"$p=Get-Process -Id {pid} -ErrorAction SilentlyContinue;"
-                        "if($p){$p.Path}"
-                    ),
-                ],
-                check=False,
-                capture_output=True,
-                text=True,
-                timeout=3,
-            )
-        except (OSError, subprocess.TimeoutExpired):
-            return None
-        value = result.stdout.strip()
-        return f"windows-path:{value}" if result.returncode == 0 and value else None
+        identity = windows_process_identity(pid)
+        return None if identity is None else identity.command
+
     executable = Path(f"/proc/{pid}/exe")
     if executable.exists():
         try:
@@ -416,12 +420,47 @@ def _owned_cookie(cookie: Mapping[str, object]) -> bool:
     )
 
 
+def _owned_process(cookie: Mapping[str, object]) -> OwnedHaxeServerProcess:
+    """Copy one validated cookie into an immutable lease identity."""
+
+    if not _owned_cookie(cookie):
+        raise HaxeServerFailure("cannot lease an invalid Haxe server ownership cookie")
+    endpoint = cookie.get("endpoint")
+    pid = cookie.get("pid")
+    start_identity = cookie.get("processStartIdentity")
+    command_identity = cookie.get("processCommandIdentity")
+    compatibility_sha256 = cookie.get("compatibilitySha256")
+    compiler = cookie.get("compiler")
+    cookie_sha256 = cookie.get("sha256")
+    if (
+        not isinstance(endpoint, str)
+        or not isinstance(pid, int)
+        or isinstance(pid, bool)
+        or not isinstance(start_identity, str)
+        or not isinstance(command_identity, str)
+        or not isinstance(compatibility_sha256, str)
+        or not isinstance(compiler, str)
+        or not isinstance(cookie_sha256, str)
+    ):
+        raise HaxeServerFailure("owned Haxe server cookie lost its process identity")
+    return OwnedHaxeServerProcess(
+        endpoint=endpoint,
+        pid=pid,
+        start_identity=start_identity,
+        command_identity=command_identity,
+        compatibility_sha256=compatibility_sha256,
+        compiler=compiler,
+        cookie_sha256=cookie_sha256,
+    )
+
+
 def _terminate_owned(cookie: Mapping[str, object]) -> bool:
     """Stop only the exact process named by a still-valid ownership cookie."""
 
     if not _owned_cookie(cookie):
         return False
     pid = int(cookie["pid"])
+    wait_for_graceful_exit = True
     try:
         if os.name == "nt":
             result = subprocess.run(
@@ -431,8 +470,9 @@ def _terminate_owned(cookie: Mapping[str, object]) -> bool:
                 text=True,
                 timeout=5,
             )
-            if result.returncode != 0 and process_start_identity(pid) is not None:
-                return False
+            # A rejected graceful request still needs the ownership-checked
+            # force fallback below; waiting cannot make that request succeed.
+            wait_for_graceful_exit = result.returncode == 0
         else:
             os.kill(pid, signal.SIGTERM)
     except (OSError, subprocess.TimeoutExpired):
@@ -449,7 +489,7 @@ def _terminate_owned(cookie: Mapping[str, object]) -> bool:
         return process_start_identity(pid) is None
 
     deadline = time.monotonic() + 5.0
-    while time.monotonic() < deadline:
+    while wait_for_graceful_exit and time.monotonic() < deadline:
         if reaped_or_gone():
             return True
         time.sleep(0.05)
@@ -474,6 +514,34 @@ def _terminate_owned(cookie: Mapping[str, object]) -> bool:
             return True
         time.sleep(0.05)
     return False
+
+
+def _startup_failure(message: str, stderr_path: Path, offset: int | None) -> HaxeServerFailure:
+    """Keep bounded current-attempt stderr when temporary startup logs disappear.
+
+    Logs append across attempts, so the initial byte offset excludes earlier
+    failures. Unreadable logs must never replace the original startup error.
+    """
+
+    detail = f"{message}; see {stderr_path}"
+    try:
+        if offset is None or stderr_path.is_symlink() or not stderr_path.is_file():
+            raise OSError("startup log is unavailable")
+        with stderr_path.open("rb") as stream:
+            end = stream.seek(0, os.SEEK_END)
+            if end < offset:
+                raise OSError("startup log was truncated")
+            start = max(offset, end - STARTUP_STDERR_LIMIT)
+            stream.seek(start)
+            tail = stream.read(end - start)
+    except OSError:
+        return HaxeServerFailure(detail + "\nstartup stderr unavailable")
+    if not tail:
+        return HaxeServerFailure(detail + "\nno stderr captured for this startup")
+    label = "startup stderr"
+    if start > offset:
+        label += f" (last {STARTUP_STDERR_LIMIT} bytes)"
+    return HaxeServerFailure(detail + f"\n{label}:\n" + tail.decode("utf-8", errors="replace"))
 
 
 class OwnedHaxeServer:
@@ -511,6 +579,7 @@ class OwnedHaxeServer:
             connection=HaxeServerConnection(endpoint, self.installation),
             owned=True,
             compatibility_sha256=self.compatibility_sha256,
+            process=_owned_process(cookie),
         )
 
     def _start(self) -> HaxeServerLease:
@@ -522,6 +591,12 @@ class OwnedHaxeServer:
         endpoint = _available_endpoint()
         stdout_path = self.state_root / "server.stdout.log"
         stderr_path = self.state_root / "server.stderr.log"
+        try:
+            stderr_offset: int | None = stderr_path.stat().st_size
+        except FileNotFoundError:
+            stderr_offset = 0
+        except OSError:
+            stderr_offset = None
         command = [
             str(self.installation.compiler),
             "--server-listen",
@@ -578,8 +653,8 @@ class OwnedHaxeServer:
             try:
                 pid = int(raw_pid.strip())
             except ValueError as error:
-                raise HaxeServerFailure(
-                    f"could not start detached Haxe server; see {stderr_path}"
+                raise _startup_failure(
+                    "could not start detached Haxe server", stderr_path, stderr_offset
                 ) from error
         start_identity: str | None = None
         command_identity: str | None = None
@@ -589,16 +664,17 @@ class OwnedHaxeServer:
                 start_identity = process_start_identity(pid)
                 command_identity = process_command_identity(pid)
                 if start_identity is None or command_identity is None:
-                    raise HaxeServerFailure(
-                        "owned Haxe server exited before accepting connections; "
-                        f"see {stderr_path}"
+                    raise _startup_failure(
+                        "owned Haxe server process identity could not be verified "
+                        "before accepting connections",
+                        stderr_path, stderr_offset,
                     )
                 if _accepting(endpoint):
                     break
                 time.sleep(0.05)
             else:
-                raise HaxeServerFailure(
-                    f"owned Haxe server did not accept connections; see {stderr_path}"
+                raise _startup_failure(
+                    "owned Haxe server did not accept connections", stderr_path, stderr_offset
                 )
             body: dict[str, object] = {
                 "schemaVersion": COOKIE_SCHEMA_VERSION,
@@ -610,9 +686,8 @@ class OwnedHaxeServer:
                 "compatibilitySha256": self.compatibility_sha256,
                 "compiler": str(self.installation.compiler),
             }
-            atomic_write_state(
-                self.cookie_path, {**body, "sha256": canonical_digest(body)}
-            )
+            cookie = {**body, "sha256": canonical_digest(body)}
+            atomic_write_state(self.cookie_path, cookie)
         except BaseException:
             # Startup has not published an ownership cookie yet. Kill only the
             # exact process we just observed; a reused PID or changed command
@@ -632,6 +707,7 @@ class OwnedHaxeServer:
             connection=HaxeServerConnection(endpoint, self.installation),
             owned=True,
             compatibility_sha256=self.compatibility_sha256,
+            process=_owned_process(cookie),
         )
 
     def connect(self) -> HaxeServerLease:
@@ -671,6 +747,36 @@ class OwnedHaxeServer:
                 self.cookie_path.unlink(missing_ok=True)
             return stopped
 
+    def stop_lease(self, lease: HaxeServerLease) -> bool:
+        """Stop the exact process retained by one automatic lease.
+
+        A timed-out client can lose or replace the mutable state-root cookie
+        while its server keeps compiling. The lease retains the same validated
+        PID, start identity, and command identity, so failure cleanup can still
+        stop that process without touching a newer server.
+        """
+
+        process = lease.process
+        if (
+            not lease.owned
+            or process is None
+            or lease.compatibility_sha256 != self.compatibility_sha256
+            or process.compatibility_sha256 != self.compatibility_sha256
+        ):
+            return False
+        self.state_root.mkdir(parents=True, exist_ok=True)
+        with VariantLock(self.lock_path):
+            stopped = _terminate_owned(process.cookie())
+            if not stopped:
+                return False
+            try:
+                current = _read_cookie(self.cookie_path)
+            except HaxeServerFailure:
+                current = None
+            if current is not None and current.get("sha256") == process.cookie_sha256:
+                self.cookie_path.unlink(missing_ok=True)
+            return True
+
     def restart_after_transport_failure(
         self, lease: HaxeServerLease
     ) -> HaxeServerLease:
@@ -678,7 +784,7 @@ class OwnedHaxeServer:
 
         if not lease.owned:
             raise HaxeServerFailure("an explicitly attached Haxe server is not owned")
-        self.stop()
+        self.stop_lease(lease)
         return self.connect()
 
 
@@ -694,6 +800,7 @@ def attached_server(
         connection=HaxeServerConnection(endpoint, installation),
         owned=False,
         compatibility_sha256=None,
+        process=None,
     )
 
 

@@ -29,6 +29,12 @@ from dev_haxe_server import (  # noqa: E402
 
 CASE_ROOT = Path(__file__).resolve().parent
 ROOT = CASE_ROOT.parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from scripts.test.bounded_process import run as run_bounded_process  # noqa: E402
+from scripts.test.compiler_progress import compiler_process_detail  # noqa: E402
+
 STRICT_FLAGS = (
     "-std=c11",
     "-Wall",
@@ -85,6 +91,7 @@ class HaxeCTestCase:
     native_defines: tuple[str, ...] = ()
     haxe_defines: tuple[str, ...] = ()
     native_runs_from_case_root: bool = False
+    compile_javascript: bool = False
     eval_timeout_seconds: int = 30
     c_build_timeout_seconds: int = 60
     native_timeout_seconds: int = 20
@@ -163,8 +170,8 @@ EVAL_CASES = {
         probes=(
             EvalProbe(
                 "caxeflow.hxml",
-                "caxeflow: 10 events, 12 predicates, 19 actions; "
-                "stable order/repeat/defer/sequence/budgets; trace=-670871898\n",
+                "caxeflow: 13 events, 14 predicates, 19 actions; "
+                "context/trace/per-actor/repeat/defer/sequence/budgets; trace=-670871898\n",
             ),
         ),
         alternate_locale=True,
@@ -218,11 +225,17 @@ EVAL_CASES = {
         case_id="editor",
         probes=(
             EvalProbe(
-				"editor.hxml",
-				"caxemap-editor: 21 command round trips, 50 protocol checks, "
-				"33 focus checks, 18 navigation checks, 13 2D checks, 19 3D "
-				"checks, 13 active-level checks, 1890 canonical bytes; bounded "
-				"history/test-play/recovery; trace=835811628\n",
+                "editor.hxml",
+				"caxemap-editor: 22 command round trips, 51 protocol checks, "
+				"49 focus checks, 18 navigation checks, 68 Build-control checks, "
+				"28 2D checks, 31 3D "
+				"checks, 31 runtime-terrain checks, 13 active-level checks, 18 advanced-text checks, "
+				"1891 canonical bytes; bounded history/test-play/recovery; trace=946018288\n",
+            ),
+            EvalProbe(
+                "editor-package-session.hxml",
+                "editor-package-session: one shared session, rejected saves preserve "
+                "the draft, canonical save/reopen and clean undo/redo passed\n",
             ),
         ),
         source_audits=(
@@ -230,6 +243,14 @@ EVAL_CASES = {
             SourceAudit("src/caxecraft/input/NavigationInput.hx", TARGET_NEUTRAL_PATTERNS),
             SourceAudit(
                 "src/caxecraft/app/RaylibNavigationInput.hx",
+                (
+                    r"raylib\.raw\.",
+                    r"IsGamepadButton(?:Down|Pressed)\([^,]+,\s*[0-9]",
+                    r"GetGamepadAxisMovement\([^,]+,\s*[0-9]",
+                ),
+            ),
+            SourceAudit(
+                "src/caxecraft/app/RaylibGameInput.hx",
                 (
                     r"raylib\.raw\.",
                     r"IsGamepadButton(?:Down|Pressed)\([^,]+,\s*[0-9]",
@@ -247,10 +268,10 @@ EVAL_CASES = {
     "scenario-model": EvalTestCase(
         case_id="scenario-model",
         probes=(
-            EvalProbe("scenario-model.hxml", "scenario-model: -1725217016\n"),
+            EvalProbe("scenario-model.hxml", "scenario-model: -1919555730\n"),
             EvalProbe(
                 "scenario-codec.hxml",
-                "scenario-codec: 1192 + 4027 + 15634 bytes, staged round-trip and "
+                "scenario-codec: 1192 + 4027 + 15610 bytes, staged round-trip and "
                 "exact malformed-input audit\n",
             ),
         ),
@@ -277,7 +298,7 @@ EVAL_CASES = {
         probes=(
             EvalProbe(
                 "scenario-codec.hxml",
-                "scenario-codec: 1192 + 4027 + 15634 bytes, staged round-trip and "
+                "scenario-codec: 1192 + 4027 + 15610 bytes, staged round-trip and "
                 "exact malformed-input audit\n",
             ),
         ),
@@ -293,6 +314,26 @@ EVAL_CASES = {
 
 
 CASES = {
+    "sha256": HaxeCTestCase(
+        case_id="sha256",
+        eval_hxml="sha256.hxml",
+        c_hxml="sha256-c.hxml",
+        native_harness="test/native/sha256_harness.c",
+        generated_source="src/modules/haxe/crypto/Sha256.c",
+        required_source_markers=("Sha256_make", "Sha256_doEncode"),
+        forbidden_source_markers=("goto ", "Dynamic", "Reflect"),
+        output_line_count=3,
+        success_line="0",
+        expected_runtime_features=(
+            "runtime-base",
+            "status",
+            "alloc",
+            "array",
+            "string-literal",
+            "bytes",
+        ),
+        runs_generated_main=True,
+    ),
     "runtime-piloscript": HaxeCTestCase(
         case_id="runtime-piloscript",
         eval_hxml="runtime-piloscript.hxml",
@@ -416,31 +457,42 @@ CASES = {
         forbidden_source_markers=("goto ",),
         output_line_count=1,
         success_line="0",
+        # The C build selects `hxc_runtime=none`, so the honest closure is empty.
+        expected_runtime_features=(),
     ),
     "aquatics": HaxeCTestCase(
         case_id="aquatics",
         eval_hxml="aquatics.hxml",
         c_hxml="aquatics-c.hxml",
         native_harness="test/native/aquatics_harness.c",
+        runs_generated_main=True,
         generated_source="src/modules/caxecraft/domain/GameSession.c",
         required_source_markers=("GameSession_tick", "GameSession *hxc_l_self"),
         forbidden_source_markers=("goto ",),
         output_line_count=2,
         success_line="0",
+        # GameSession now runs authored CaxeFlow rules (df5e974b), so the probe's
+        # session reaches CaxeFlow's managed state, owned Strings, and collector.
         expected_runtime_features=(
             "runtime-base",
             "status",
             "alloc",
             "array",
+            "object",
+            "gc",
             "string-literal",
+            "string-scalar",
+            "string",
         ),
         required_runtime_roots=(
-            ("string-literal", "type-carrier", "runtime-representation"),
+            ("string-literal", "static-value", "direct-string-value"),
         ),
         split_source_checks=(
             GeneratedSourceCheck(
                 path="include/hxc/detail/program_types.h",
-                required_markers=("#include <hxrt/string_literal.h>",),
+                # Owned Strings bring the managed header, which supplies the literal type
+                # through hxrt/string_scalar.h, so the literal header is not included twice.
+                required_markers=("#include <hxrt/string.h>",),
                 forbidden_markers=(),
             ),
         ),
@@ -459,6 +511,37 @@ CASES = {
         forbidden_source_markers=("goto ",),
         output_line_count=1,
         success_line="0",
+        split_source_checks=(
+            GeneratedSourceCheck(
+                path="src/modules/caxecraft/input/GamepadInput.c",
+                required_markers=(
+                    "GamepadInput_gamepadInput",
+                    "GamepadInput_mergeGameInput",
+                ),
+                forbidden_markers=("raylib", "Dynamic", "Reflect", "goto "),
+            ),
+        ),
+    ),
+    "player-camera": HaxeCTestCase(
+        case_id="player-camera",
+        eval_hxml="player-camera.hxml",
+        c_hxml="player-camera-c.hxml",
+        native_harness="test/native/player_camera_harness.c",
+        generated_source="src/modules/caxecraft/domain/PlayerCamera.c",
+        required_source_markers=(
+            "PlayerCamera_resolvePlayerCamera",
+            "PlayerCamera_clearBoomDistance",
+            "hxc_f64_sqrt",
+        ),
+        forbidden_source_markers=("goto ",),
+        output_line_count=1,
+        success_line="0",
+        expected_runtime_features=(
+            "runtime-base",
+            "status",
+            "alloc",
+            "array",
+        ),
     ),
     "package-store": HaxeCTestCase(
         case_id="package-store",
@@ -536,10 +619,11 @@ CASES = {
             "array",
             "string-literal",
             "bytes",
-            "object",
-            "gc",
             "string-scalar",
             "string",
+            "bytes-string",
+            "object",
+            "gc",
             "string-split",
         ),
         split_source_checks=(
@@ -673,10 +757,11 @@ CASES = {
             "array",
             "string-literal",
             "bytes",
-            "object",
-            "gc",
             "string-scalar",
             "string",
+            "bytes-string",
+            "object",
+            "gc",
         ),
         split_source_checks=(
             GeneratedSourceCheck(
@@ -719,11 +804,14 @@ CASES = {
             "alloc",
             "array",
             "string-literal",
-            "bytes",
-            "object",
-            "gc",
             "string-scalar",
             "string",
+            "array-join",
+            "bytes",
+            "bytes-string",
+            "object",
+            "gc",
+            "string-lower-case",
             "string-split",
         ),
         split_source_checks=(
@@ -772,11 +860,15 @@ CASES = {
             "array",
             "string-literal",
             "bytes",
-            "object",
-            "gc",
-            "int-map",
             "string-scalar",
             "string",
+            "bytes-string",
+            "object",
+            "gc",
+            "iterator",
+            "typed-map",
+            "gc-string-map",
+            "int-map",
             "string-map",
             "string-split",
         ),
@@ -838,6 +930,9 @@ CASES = {
         forbidden_source_markers=("haxe.Json", "Dynamic", "Reflect", "goto "),
         output_line_count=6,
         success_line="0",
+        # CaxeFlowValidator and ScenarioValidationContext keep collector-reachable
+        # values in String-keyed maps (gc-string-map); iterator and typed-map arrive
+        # only as that feature's dependencies.
         expected_runtime_features=(
             "runtime-base",
             "status",
@@ -850,6 +945,9 @@ CASES = {
             "bytes-string",
             "object",
             "gc",
+            "iterator",
+            "typed-map",
+            "gc-string-map",
             "int-map",
             "string-map",
             "string-split",
@@ -900,6 +998,8 @@ CASES = {
         forbidden_source_markers=("ScenarioLexer", "ScenarioParser", "goto "),
         output_line_count=15,
         success_line="0",
+        # The lexer converts Bytes to String; validation stores managed records
+        # in StringMaps, whose reviewed closure includes typed-map and iterator.
         expected_runtime_features=(
             "runtime-base",
             "status",
@@ -907,11 +1007,15 @@ CASES = {
             "array",
             "string-literal",
             "bytes",
-            "object",
-            "gc",
-            "int-map",
             "string-scalar",
             "string",
+            "bytes-string",
+            "object",
+            "gc",
+            "iterator",
+            "typed-map",
+            "gc-string-map",
+            "int-map",
             "string-map",
             "string-split",
         ),
@@ -948,6 +1052,8 @@ CASES = {
         forbidden_source_markers=("FirstPlayableLevel", "goto "),
         output_line_count=4,
         success_line="0",
+        # The lexer converts Bytes to String; validation stores managed records
+        # in StringMaps, whose reviewed closure includes typed-map and iterator.
         expected_runtime_features=(
             "runtime-base",
             "status",
@@ -955,11 +1061,15 @@ CASES = {
             "array",
             "string-literal",
             "bytes",
-            "object",
-            "gc",
-            "int-map",
             "string-scalar",
             "string",
+            "bytes-string",
+            "object",
+            "gc",
+            "iterator",
+            "typed-map",
+            "gc-string-map",
+            "int-map",
             "string-map",
             "string-split",
         ),
@@ -1012,11 +1122,15 @@ CASES = {
             "array",
             "string-literal",
             "bytes",
-            "object",
-            "gc",
-            "int-map",
             "string-scalar",
             "string",
+            "bytes-string",
+            "object",
+            "gc",
+            "iterator",
+            "typed-map",
+            "gc-string-map",
+            "int-map",
             "string-map",
             "string-split",
         ),
@@ -1054,8 +1168,20 @@ CASES = {
                 required_markers=("ActiveContent_publish",),
                 forbidden_markers=("FirstPlayable", "goto "),
             ),
+            GeneratedSourceCheck(
+                path="src/modules/caxecraft/content/ContentGenerationSequence.c",
+                required_markers=("ContentGenerationSequence_allocate",),
+                forbidden_markers=("1000000", "goto "),
+            ),
+            GeneratedSourceCheck(
+                path="src/modules/caxecraft/app/EditorTestPlayRuntime.c",
+                required_markers=("ContentGenerationSequence_allocate",),
+                forbidden_markers=("1000000", "goto "),
+            ),
         ),
-        runs_generated_main=True,
+        # The independent harness owns collector setup so it can force one
+        # collection after the Haxe Test Play lifecycle has dropped every root.
+        runs_generated_main=False,
         haxe_defines=("caxecraft_posix_hosted",),
         native_defines=("_POSIX_C_SOURCE=200809L", "_DARWIN_C_SOURCE=1"),
         native_runs_from_case_root=True,
@@ -1088,11 +1214,15 @@ CASES = {
             "array",
             "string-literal",
             "bytes",
-            "object",
-            "gc",
-            "int-map",
             "string-scalar",
             "string",
+            "bytes-string",
+            "object",
+            "gc",
+            "iterator",
+            "typed-map",
+            "gc-string-map",
+            "int-map",
             "string-map",
             "string-split",
         ),
@@ -1116,14 +1246,16 @@ CASES = {
                 required_markers=("ScenarioValidator_validate",),
                 forbidden_markers=("goto ",),
             ),
+            GeneratedSourceCheck(
+                path="src/modules/caxecraft/content/ContentPackageStore.c",
+                required_markers=("ContentPackageStore_open", "ContentPackageStore_read"),
+                forbidden_markers=("LoadFileData", "goto "),
+            ),
         ),
         runs_generated_main=True,
-        embedded_source_path="scenarios/first-playable/map.caxemap",
-        embedded_haxe_path="test/caxecraft/qa/ScenarioNativeCodecProbe.hx",
-        embedded_source_functions=(
-            "firstPlayablePrefix",
-            "firstPlayableSuffix",
-        ),
+        haxe_defines=("caxecraft_posix_hosted",),
+        native_defines=("_POSIX_C_SOURCE=200809L", "_DARWIN_C_SOURCE=1"),
+        native_runs_from_case_root=True,
     ),
     "water": HaxeCTestCase(
         case_id="water",
@@ -1135,6 +1267,55 @@ CASES = {
         forbidden_source_markers=("goto ",),
         output_line_count=2,
         success_line="0",
+    ),
+    "cross-target-adapter": HaxeCTestCase(
+        case_id="cross-target-adapter",
+        eval_hxml="cross-target-adapter.hxml",
+        c_hxml="cross-target-adapter-c.hxml",
+        native_harness="test/native/cross_target_adapter_harness.c",
+        generated_source="src/modules/caxecraft/adapterprobe/AdapterRules.c",
+        required_source_markers=(
+            "AdapterRules_sourceRootScore",
+            "AdapterRules_interfaceScore",
+            "hxc_l_port.table->",
+            "AdapterRules_conditionalScore",
+            "uint8_t hxc_l_normalized",
+        ),
+        forbidden_source_markers=("malloc(", "hxrt_", "goto "),
+        output_line_count=1,
+        success_line="0",
+        split_source_checks=(
+            GeneratedSourceCheck(
+                path="src/modules/caxecraft/adapterprobe/AdapterArchitectureProbe.c",
+                required_markers=(
+                    "AdapterArchitectureProbe_selfCheck",
+                    "AdapterRules_sourceRootScore",
+                    "hxc_l_tmp_object_storage",
+                ),
+                forbidden_markers=("malloc(", "hxrt_", "goto "),
+            ),
+            GeneratedSourceCheck(
+                path=(
+                    "src/modules/caxecraft/adapterprobe/interfaceport/"
+                    "SelectedNormalizationPort.c"
+                ),
+                required_markers=(
+                    "SelectedNormalizationPort_normalize",
+                    "uint8_t hxc_l_normalized",
+                ),
+                forbidden_markers=("malloc(", "hxrt_", "goto "),
+            ),
+            GeneratedSourceCheck(
+                path="src/modules/caxecraft/adapterprobe/OwnedCarrierProbe.c",
+                required_markers=(
+                    "OwnedCarrierProbe_view",
+                    "hxc_base.hxc_world",
+                    "hxc_l_returned_span_length = 32768",
+                ),
+                forbidden_markers=("malloc(", "hxrt_", "goto "),
+            ),
+        ),
+        compile_javascript=True,
     ),
     "session": HaxeCTestCase(
         case_id="session",
@@ -1152,6 +1333,8 @@ CASES = {
             "GameSession_reviveLocalPlayerAt",
             "GameSession_useSelectedRecovery",
             "GameSession_view",
+            "hxc_base.hxc_worldStorage",
+            "hxc_base.hxc_authoredItemStorage",
             "hxc_completedTicks",
             "hxc_tickIndex",
         ),
@@ -1183,6 +1366,14 @@ CASES = {
                 ),
                 forbidden_markers=("goto ",),
             ),
+            GeneratedSourceCheck(
+                path="src/modules/caxecraft/domain/WaterSimulation.c",
+                required_markers=(
+                    "WaterSimulation_tick",
+                    "hxc_base.hxc_pendingStorage",
+                ),
+                forbidden_markers=("goto ",),
+            ),
         ),
         runs_generated_main=True,
     ),
@@ -1202,6 +1393,20 @@ CASES = {
         forbidden_source_markers=("goto ", "malloc(", "calloc("),
         output_line_count=1,
         success_line="0",
+        split_source_checks=(
+            GeneratedSourceCheck(
+                path="src/modules/caxecraft/app/TerrainChunkLayout.c",
+                required_markers=(
+                    "TerrainChunkLayout_chunkFor",
+                    "TerrainChunkLayout_chunkOriginZ",
+                    "TerrainChunkLayout_unpackKind",
+                ),
+                forbidden_markers=(
+                    "hxc_f64_divide",
+                    "hxc_f64_to_i32",
+                ),
+            ),
+        ),
     ),
 }
 
@@ -1244,11 +1449,12 @@ def run(
     timeout: int,
     label: str,
     environment: dict[str, str] | None = None,
+    compiler_progress: bool = False,
 ) -> subprocess.CompletedProcess[str]:
     """Run one bounded process and preserve stdout and stderr on failure."""
 
     try:
-        result = subprocess.run(
+        result = run_bounded_process(
             arguments,
             cwd=cwd,
             env={
@@ -1262,8 +1468,13 @@ def run(
             text=True,
             encoding="utf-8",
             timeout=timeout,
+            compiler_progress=compiler_progress,
         )
-    except (OSError, subprocess.TimeoutExpired) as error:
+    except subprocess.TimeoutExpired as error:
+        detail = compiler_process_detail(error.output, error.stderr)
+        suffix = f"\n{detail}" if detail else ""
+        raise HaxeCTestFailure(f"{label} could not run: {error}{suffix}") from error
+    except OSError as error:
         raise HaxeCTestFailure(f"{label} could not run: {error}") from error
     if result.returncode != 0:
         raise HaxeCTestFailure(
@@ -1319,6 +1530,45 @@ def validate_oracle(test_case: HaxeCTestCase, output: str) -> None:
         raise HaxeCTestFailure(
             f"{test_case.case_id} Eval test emitted an invalid result envelope: {output!r}"
         )
+    if test_case.case_id == "sha256":
+        inputs = [
+            b"",
+            b"abc",
+            b"The quick brown fox jumps over the lazy dog",
+            *(
+                bytes((index * 131 + length * 17) & 0xFF for index in range(length))
+                for length in (
+                    1,
+                    2,
+                    3,
+                    54,
+                    55,
+                    56,
+                    57,
+                    63,
+                    64,
+                    65,
+                    119,
+                    120,
+                    121,
+                    127,
+                    128,
+                    129,
+                    1024,
+                    65537,
+                )
+            ),
+        ]
+        trace = 0
+        for input_bytes in inputs:
+            for value in hashlib.sha256(input_bytes).digest():
+                trace = ((trace * 31 + value + (1 << 31)) % (1 << 32)) - (1 << 31)
+        expected = f"0\n{trace}\n{len(inputs)}\n"
+        if output != expected:
+            raise HaxeCTestFailure(
+                "sha256 output differs from independent Python hashlib evidence: "
+                f"expected={expected!r}, actual={output!r}"
+            )
 
 
 def validate_package_zip_archive(archive: Path) -> None:
@@ -1530,6 +1780,91 @@ def validate_resolved_level_privacy(test_case: HaxeCTestCase) -> None:
         )
 
 
+def validate_cross_target_source_boundary(test_case: HaxeCTestCase) -> None:
+    """Keep ordinary game rules free of target selection and foreign APIs."""
+
+    if test_case.case_id != "cross-target-adapter":
+        return
+    adapter_modules = {
+        "AuthoredItemView.hx",
+        "SessionStorageBase.hx",
+        "WaterStorageBase.hx",
+        "WaterPendingCells.hx",
+        "WaterPendingStorage.hx",
+        "WorldCells.hx",
+        "WorldStorage.hx",
+        "WorldView.hx",
+        "WorldViewStorage.hx",
+    }
+    evidence_modules = {"CaxecraftTrace.hx"}
+    ordinary_sources = [
+        path
+        for path in (CASE_ROOT / "src/caxecraft/domain").glob("*.hx")
+        if path.name not in adapter_modules | evidence_modules
+    ]
+    ordinary_sources.extend(
+        path for path in (CASE_ROOT / "src/caxecraft/scenario").rglob("*.hx")
+    )
+    ordinary_sources.extend(
+        path
+        for path in (CASE_ROOT / "src/caxecraft/localization").rglob("*.hx")
+        if path.name != "LocalizationText.hx"
+    )
+    forbidden = (
+        re.compile(r"^\s*#if\b", re.MULTILINE),
+        re.compile(r"^\s*import\s+(?:c|raylib)\.", re.MULTILINE),
+        re.compile(r"\b(?:c|raylib)\.[A-Z][A-Za-z0-9_]*"),
+    )
+    for source in sorted(ordinary_sources):
+        source_text = source.read_text(encoding="utf-8")
+        for pattern in forbidden:
+            if pattern.search(source_text):
+                raise HaxeCTestFailure(
+                    f"{source.relative_to(CASE_ROOT)} crosses the portable core "
+                    f"boundary: {pattern.pattern}"
+                )
+
+
+def validate_javascript_compile(
+    test_case: HaxeCTestCase, eval_hxml: Path, temporary_root: Path
+) -> None:
+    """Compile the Eval probe's shared source with the official JavaScript target."""
+
+    if not test_case.compile_javascript:
+        return
+    installation = pinned_haxe_installation()
+    verify_pinned_haxe(installation)
+    arguments = list(resolve_haxe_arguments((eval_hxml.name,), locale="C"))
+    if arguments.count("--interp") != 1:
+        raise HaxeCTestFailure(
+            f"{test_case.case_id} expected one --interp argument before JS selection"
+        )
+    arguments.remove("--interp")
+    if arguments.count("-main") != 1:
+        raise HaxeCTestFailure(
+            f"{test_case.case_id} expected one -main argument before JS selection"
+        )
+    main_index = arguments.index("-main")
+    if main_index + 1 >= len(arguments):
+        raise HaxeCTestFailure(
+            f"{test_case.case_id} found -main without a module name"
+        )
+    arguments[main_index + 1] = "caxecraft.adapterprobe.AdapterArchitectureProbe"
+    javascript = temporary_root / f"{test_case.case_id}.js"
+    arguments.extend(("--js", str(javascript)))
+    run(
+        [str(installation.compiler), *arguments],
+        cwd=CASE_ROOT,
+        timeout=test_case.eval_timeout_seconds,
+        label=f"{test_case.case_id} JavaScript compile",
+        environment=pinned_haxe_environment("C", installation),
+    )
+    if not javascript.is_file() or javascript.stat().st_size == 0:
+        raise HaxeCTestFailure(
+            f"{test_case.case_id} JavaScript target emitted no program"
+        )
+
+
 def validate_source_audits(test_case: EvalTestCase) -> None:
     """Keep reusable Haxe semantics free of target-specific dependencies."""
 
@@ -1571,7 +1906,7 @@ def run_eval_probe(
         command.extend(("--connect", connection))
     command.extend(arguments)
     try:
-        result = subprocess.run(
+        result = run_bounded_process(
             command,
             cwd=CASE_ROOT,
             env=pinned_haxe_environment(locale, installation),
@@ -1604,7 +1939,7 @@ def run_shim_eval_probe(test_case: EvalTestCase, probe: EvalProbe) -> str:
     """Run a cold Eval case through the checkout's ordinary Haxe shim."""
 
     try:
-        result = subprocess.run(
+        result = run_bounded_process(
             [development_tool("haxe"), "--cwd", str(CASE_ROOT), probe.hxml],
             cwd=ROOT,
             env={**os.environ, "HAXE_NO_SERVER": "1", "LC_ALL": "C"},
@@ -1654,7 +1989,7 @@ def validate_negative_compile(
         command = [str(installation.compiler), *arguments]
         environment = pinned_haxe_environment("C", installation)
     try:
-        result = subprocess.run(
+        result = run_bounded_process(
             command,
             cwd=ROOT if installation is None else CASE_ROOT,
             env=environment,
@@ -1787,7 +2122,7 @@ def sanitizer_supported(compiler: str, root: Path) -> bool:
     executable = root / "sanitizer-probe"
     source.write_text("int main(void) { return 0; }\n", encoding="utf-8", newline="\n")
     try:
-        result = subprocess.run(
+        result = run_bounded_process(
             [compiler, *SANITIZER_FLAGS, str(source), "-o", str(executable)],
             cwd=ROOT,
             env={**os.environ, "LC_ALL": "C"},
@@ -1800,6 +2135,42 @@ def sanitizer_supported(compiler: str, root: Path) -> bool:
     except (OSError, subprocess.TimeoutExpired) as error:
         raise HaxeCTestFailure(f"sanitizer capability probe could not run: {error}") from error
     return result.returncode == 0
+
+
+# Focused Caxecraft cases link only their own generated code plus a native
+# harness, so the only library the compiler may request is the C math library.
+ADMITTED_GENERATED_SYSTEM_LIBRARIES = frozenset({"m"})
+
+
+def generated_link_arguments(generated: Path) -> list[str]:
+    """Return `-l` arguments for the libraries the generated manifest requests.
+
+    The compiler records each C library a generated program needs, such as
+    `m` when it calls `sqrt`. Some platforms (macOS) link the math library
+    implicitly and others (Linux) do not, so the link step must follow the
+    manifest instead of the host's defaults. Unknown libraries fail closed.
+    """
+
+    manifest_path = generated / "hxc.manifest.json"
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as error:
+        raise HaxeCTestFailure(f"cannot read generated manifest: {error}") from error
+    build = manifest.get("build") if isinstance(manifest, dict) else None
+    libraries = build.get("libraries") if isinstance(build, dict) else None
+    if not isinstance(libraries, list):
+        raise HaxeCTestFailure("generated manifest omitted its build library list")
+    arguments: list[str] = []
+    for index, item in enumerate(libraries):
+        name = item.get("name") if isinstance(item, dict) else None
+        if not isinstance(name, str) or name not in ADMITTED_GENERATED_SYSTEM_LIBRARIES:
+            raise HaxeCTestFailure(
+                f"generated manifest library {index} is not admitted for focused tests: {item!r}"
+            )
+        arguments.append(f"-l{name}")
+    if len(arguments) != len(set(arguments)):
+        raise HaxeCTestFailure("generated manifest lists a library twice")
+    return arguments
 
 
 def generated_sources(root: Path) -> list[Path]:
@@ -1842,6 +2213,7 @@ def compile_native(
         for argument in ("-I", str(include_root))
     ]
     define_flags = [f"-D{define}" for define in native_defines]
+    link_arguments = generated_link_arguments(generated)
     if layout == "unity":
         objects: list[Path] = []
         for index, source in enumerate(sources):
@@ -1928,6 +2300,7 @@ def compile_native(
                 *flags,
                 *(str(path) for path in objects),
                 str(harness_object),
+                *link_arguments,
                 "-o",
                 str(executable),
             ],
@@ -1970,6 +2343,7 @@ def compile_native(
             *(str(path) for path in support_sources),
             str(harness),
             *((str(generated_main_object),) if generated_main_object else ()),
+            *link_arguments,
             "-o",
             str(executable),
         ],
@@ -1986,6 +2360,7 @@ def execute(
 
     validate_embedded_source(test_case)
     validate_resolved_level_privacy(test_case)
+    validate_cross_target_source_boundary(test_case)
     eval_hxml = checked_case_path(test_case.eval_hxml, "Eval HXML")
     c_hxml = checked_case_path(test_case.c_hxml, "C HXML")
     harness = checked_case_path(test_case.native_harness, "native harness")
@@ -2017,6 +2392,7 @@ def execute(
             ),
         ).stdout
         validate_oracle(test_case, oracle)
+        validate_javascript_compile(test_case, eval_hxml, temporary_root)
         if eval_archive is not None:
             validate_package_zip_archive(eval_archive)
 
@@ -2037,12 +2413,15 @@ def execute(
                 ),
                 "-D",
                 f"hxc_project_layout={layout}",
+                "-D",
+                "reflaxe_c_phase_progress",
                 "--custom-target",
                 f"c={generated}",
             ],
             cwd=ROOT,
             timeout=test_case.c_build_timeout_seconds,
             label=f"{test_case.case_id} Haxe-to-C build",
+            compiler_progress=True,
         )
         runtime_plan = json.loads(
             (generated / "hxc.runtime-plan.json").read_text(encoding="utf-8")

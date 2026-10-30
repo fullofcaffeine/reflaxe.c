@@ -34,12 +34,18 @@ aligned generated payload
 
 The payload pointer is the stable Haxe object identity. Private links and mark
 bits never become generated fields or public application binary interface
-(ABI) facts. The current correctness baseline validates an exact payload base
-by looking it up in the collector's allocation list. That deliberately rejects
-interior and foreign pointers without dereferencing unknown memory. It is
-linear in the number of live allocations per lookup, so the pause report must
-guide a later indexed-lookup optimization before large-heap performance is
-claimed.
+(ABI) facts. Before marking, the collector rebuilds a request-local hash table
+from those exact payload bases. A generation stamp makes old entries empty
+without clearing a table sized for a past heap peak. Lookup compares addresses
+only; it never dereferences an unknown address. Interior, foreign, and already
+freed payload addresses therefore remain safely rejected.
+
+The table uses the configured allocator and remains owned by its collector
+until disposal. If storage growth fails, that collection uses the original
+allocation-list lookup. This explicit fallback preserves correctness under
+memory pressure, including with a freestanding allocator, but it restores the
+slower linear lookup cost for that collection. The report distinguishes indexed
+builds, fallback collections, lookups, probes, current bytes, and peak bytes.
 
 ## Roots in plain language
 
@@ -66,16 +72,12 @@ collection reports `HXC_STATUS_INTERNAL_ERROR` without sweeping.
 
 ## Thread boundary
 
-`hxc_gc_thread` is currently an execution-context root chain, not a promise of
-operating-system thread support. The collector can mark several registered
-chains, which proves the shape required by future threads, but every API call
-currently requires managed execution to be stopped. The runtime advertises no
-thread or atomic capability, contains no hidden lock, and must not be called
-concurrently.
-
-E5.T11 owns actual thread registration, synchronization, safepoint
-coordination, and stop-the-world handshakes. A single-thread build links none of
-that future machinery.
+`hxc_gc_thread` remains an execution-context root chain. The standalone `gc`
+slice still requires managed execution to be stopped and contains no hidden
+lock. Programs that combine POSIX threads with managed values select the
+separate `thread-gc` adapter. It registers one chain per managed thread and
+parks every peer at generated safepoints before allocation or collection reads
+roots. A single-thread build links none of that coordination or pthread state.
 
 ## Collection and pressure
 
@@ -105,7 +107,8 @@ for the C printer to repair.
 
 `hxc_gc_stats` reports allocations, completed collections, pressure-triggered
 collections, live/peak/reclaimed objects and payload bytes, collector overhead,
-and pause ticks. Counts saturate rather than overflow.
+exact-index builds/fallbacks/lookups/probes/current and peak bytes, and pause
+ticks. Counts saturate rather than overflow.
 
 Freestanding C has no required monotonic clock, so configuration accepts an
 optional `hxc_gc_clock_fn`. The embedding target owns the tick unit and
@@ -113,7 +116,7 @@ monotonicity. With no callback, pause sampling is explicitly unavailable. A
 clock that moves backward increments `clock_regression_count` and records a
 zero-duration sample rather than corrupting the totals.
 
-These counters make cost observable; they are not yet a performance claim. The
+These counters make cost observable; they are not a low-latency claim. The
 collector cannot portably observe fragmentation inside an arbitrary external
 allocator, so it reports its own live payload and internal overhead instead of
 inventing a misleading heap-fragmentation percentage.
@@ -149,14 +152,22 @@ compaction that this baseline does not yet claim.
 “Modern foundation” does not mean “already optimized for a large heap.” Let
 `N` be the number of live collector allocations, `R` the number of non-null
 root references inspected, and `E` the number of managed object edges reported
-by descriptors. The current exact-base check walks the allocation list for
-every root and edge. One collection can therefore spend
-`O((R + E) * N)` time validating pointers, followed by the ordinary `O(N)`
-sweep. Each object also uses one call to the configured allocator instead of a
-page, region, size-class, or bump-allocation fast path. These choices keep the
-first implementation small, deterministic, freestanding-compatible, and easy
-to validate, but they are not suitable evidence for high allocation throughput
-or bounded game-frame pauses.
+by descriptors. Building the exact-base index and sweeping each visit all
+allocations once. With ordinary hash distribution, pointer validation is
+expected `O(R + E)`, so a collection is expected `O(N + R + E)`. Open
+addressing still has an `O(N)` worst case for one lookup if hashes collide. An
+allocator failure deliberately restores the safe `O((R + E) * N)` list path
+for that collection.
+
+The index holds at most one populated entry per allocation and keeps its load
+at or below one half. Capacity is a power of two and is retained after the heap
+shrinks. `exact_index_bytes` reports the resulting reserved block instead of
+hiding it inside object metadata. Growth briefly owns the old and new blocks
+together; allocators that cannot reuse released blocks can therefore retain
+fragmentation outside the collector's observable byte counters. Each object
+also uses one allocator call instead of a page, region, size-class, or
+bump-allocation fast path. These remaining costs are not evidence for high
+allocation throughput or bounded game-frame pauses.
 
 The current backend also performs a complete stop-the-world collection. It has
 no generations, write barrier, remembered set, incremental marking, concurrent
@@ -166,29 +177,44 @@ adds compiler barriers, runtime state, and new correctness obligations. Add one
 only when reproducible application-shaped measurements show that the simpler
 backend misses an accepted pause, throughput, or memory target.
 
-The first planned scaling step is Beads issue `haxe_c-53k.3`: replace the
-per-reference list scan with a request-local exact-base index while preserving
-safe rejection of interior, foreign, and freed pointers. Its acceptance gate
-requires representative graph measurements, index memory overhead, strict
-hosted/freestanding builds, and sanitizer evidence. After that evidence exists,
-reassess allocation regions and generational or incremental collection
-independently. Until then, describe this collector as a verified
-correctness-first backend, not a high-performance or low-latency collector.
+Beads issue `haxe_c-53k.3` owns this first scaling step and its reproducible
+cycle benchmark. The benchmark reports raw process-clock ticks for trend review
+and deterministic lookup/probe/index counters for the required regression
+gate. Timing from a loaded host is descriptive only. Allocation regions and
+generational or incremental collection remain independent decisions. Describe
+this collector as an indexed correctness-first backend, not a high-performance
+or low-latency collector.
+
+The checked workload keeps a cycle live across repeated collections. Its
+deterministic expectations on a 64-bit build are:
+
+| Objects | Collections | Exact lookups | Accepted hash probes | Index bytes |
+| ---: | ---: | ---: | ---: | ---: |
+| 256 | 200 | 51,400 | 51,400–411,200 | 12,288 |
+| 1,024 | 50 | 51,250 | 51,250–410,000 | 49,152 |
+| 4,096 | 5 | 20,485 | 20,485–163,880 | 196,608 |
+
+This table records operation and storage bounds, not elapsed-time authority.
+Exact probe counts vary with allocator addresses. The test requires no fallback
+and at most eight probes per lookup on average. Review the emitted
+`clock_ticks` separately on an otherwise representative host when a pause-time
+decision is needed.
 
 ## Current compiler boundary
 
 E4.T06 owns the backend, exact root/pin contracts, pressure behavior, reports,
 and selective `runtime-base + status + alloc + object + gc` package. HxcIR
-schema 24 records exact managed parameters, instruction results, and typed
-paths to managed references embedded in direct records, enums, or optionals; and
-generated functions emit balanced frames for normal and early propagated
-returns. The project emitter owns one request-local collector and main
+schema 27 records exact managed parameters, instruction results, call-bounded
+mutable-record borrows, and typed paths to managed references in direct records,
+enums, optionals, or a validated Dynamic payload. Typed-only programs keep the
+Dynamic plan empty. Generated functions emit balanced frames for normal and
+early propagated returns. The project emitter owns one request-local collector and main
 execution-context chain in unity, module-split, and package-coalesced layouts.
 It initializes them before the Haxe entry function and unregisters/disposes them
 afterward.
 
-`haxe_c-53k.2.1.2` connects this foundation to one bounded generated-Haxe
-graph: a concrete class used through `Array<Class>`. Whole-program
+`haxe_c-53k.2.1.2` first connected this foundation to one bounded generated-
+Haxe graph: a concrete class used through `Array<Class>`. Whole-program
 representation settling marks the class and array as collector-managed,
 generated `new` publishes its allocation in a root before construction, and
 exact descriptors trace class fields and live array slots. The class finalizer
@@ -200,6 +226,16 @@ collection, and checks that every remaining graph payload was reclaimed; both
 paths run under strict C11 and sanitizers. A runtime-none request rejects this
 graph, while the existing direct-class and primitive-array fixtures remain
 collector-free.
+
+`haxe_c-0t3q` extends that selection rule to cyclic value graphs. The compiler
+walks an Array's closed element type through records, optionals, and enum
+payloads. It promotes the Array to collector storage when the walk returns to
+the same Array specialization or reaches another collector-managed Array.
+Enum trace functions switch on the stored tag and inspect only the active
+payload. The generated fixture proves self-cycles, mutual cycles, explicit
+cycle breakup, deep graphs, and pressure collection through
+`Array -> enum -> record -> Array`. A structurally acyclic enum/record fixture
+keeps reference counting and does not select `object` or `gc`.
 
 This is still not general escaping-class support. Managed virtual hierarchies,
 interfaces, generic classes, inline owned-class fields, and other unproved
@@ -220,10 +256,11 @@ npm run test:runtime-features
 ```
 
 The native contract covers reachable and unreachable cycles, exact stack,
-global, and multiple execution-context roots, foreign pins, rejected interior
-pointers, malformed trace output, allocation pressure, deterministic fake-clock
-reports, a custom freestanding allocator, strict C11 at `-O0`/`-O2`, C++17
-header use, and AddressSanitizer/UndefinedBehaviorSanitizer execution. A second
+global, and multiple execution-context roots, foreign pins, rejected interior,
+foreign, and freed pointers, malformed trace output, allocation pressure,
+deterministic fake-clock reports, indexed scaling, allocator-failure fallback,
+a custom freestanding allocator, strict C11 at `-O0`/`-O2`, C++17 header use,
+and AddressSanitizer/UndefinedBehaviorSanitizer execution. A second
 fixture starts from typed HxcIR, emits structural C twice, and compares the
 bytes. It collects while generated normal and failing-call frames are active,
 then proves reclamation after each return. It also compiles, runs, and

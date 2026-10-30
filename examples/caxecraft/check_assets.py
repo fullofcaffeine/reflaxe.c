@@ -31,6 +31,9 @@ REQUIRED_ASSET_IDS = frozenset(
         "adventure-characters",
         "adventure-items",
         "adventure-terrain",
+        "boundary-boulder-model",
+        "boundary-root-model",
+        "boundary-thicket-model",
         "caxecraft-wordmark",
         "cutscene-editor",
         "entities",
@@ -67,6 +70,7 @@ REQUIRED_GENERATION_RECORD_IDS = frozenset(
         "adventure-characters",
         "adventure-items",
         "adventure-terrain",
+        "boundary-vegetation-models",
         "cutscene-editor",
         "entities",
         "field-note-model",
@@ -106,7 +110,13 @@ FIELD_NOTE_REFERENCE = (
     "teal, copper, and cream art direction. No external game asset was copied."
 )
 DETERMINISTIC_VOX_RECORD_IDS = frozenset(
-    {"field-note-model", "forge-relay-model", "gate-winch-model", "vault-glyph-models"}
+    {
+        "boundary-vegetation-models",
+        "field-note-model",
+        "forge-relay-model",
+        "gate-winch-model",
+        "vault-glyph-models",
+    }
 )
 EXPECTED_GRID_CELLS = {
     "adventure-characters": (
@@ -433,6 +443,11 @@ def validate_generation_records(records: dict[str, Any]) -> None:
                 "identities and teal, copper, cream, and orange palette direction; their flat pixel "
                 "shapes were not extruded."
             ]
+        elif record_id == "boundary-vegetation-models":
+            expected_references = [
+                "The existing Caxecraft terrain palette and family-adventure art direction "
+                "guided the original forms. No external model, texture, or game asset was copied."
+            ]
         elif record_id in REQUIRED_GENERATION_RECORD_IDS:
             expected_references = []
         else:
@@ -492,6 +507,7 @@ def validate_asset_pack(asset_root: Path = ASSET_ROOT) -> int:
     required_runtime_ids = {
         "caxecraft-wordmark", "title-panorama", "hud", "items",
         "adventure-characters", "adventure-items", "adventure-terrain", "entities",
+        "boundary-boulder-model", "boundary-root-model", "boundary-thicket-model",
         "field-note-model", "field-note-opening-model", "field-note-open-model",
         "forge-relay-model", "forge-relay-switching-model", "forge-relay-active-model",
         "gate-winch-model", "gate-winch-turning-model", "gate-winch-active-model", "terrain",

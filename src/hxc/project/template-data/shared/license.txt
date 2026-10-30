@@ -1,0 +1,5 @@
+SPDX-License-Identifier: ${LICENSE}
+
+This generated project records the selected SPDX identifier. Replace this note
+with the canonical license text before you distribute the project. UNLICENSED
+means that no public license has been granted.

@@ -5,6 +5,17 @@ private typedef ManagedRecord = {
 	final bytes:Bytes;
 }
 
+/** One direct point whose optional wrapper can be nested in another record. */
+private typedef DirectPoint = {
+	final x:Int;
+	final y:Int;
+}
+
+/** One record that contains a direct tagged optional value. */
+private typedef OptionalEnvelope = {
+	final point:Null<DirectPoint>;
+}
+
 /** Managed enum payload proving that optional lifetime is not record-specific. */
 private enum ManagedChoice {
 	NoValues;
@@ -96,6 +107,13 @@ private final class TextDiagnosticCursor {
 }
 
 class Main {
+	/** Read both tagged levels from one nullable function parameter. */
+	static function nestedOptionalSum(value:Null<OptionalEnvelope>):Int {
+		if (value == null)
+			return -1;
+		return value.point == null ? 0 : value.point.x + value.point.y;
+	}
+
 	static function maybe(value:ManagedRecord):Null<ManagedRecord>
 		return value;
 
@@ -142,6 +160,10 @@ class Main {
 	}
 
 	static function main():Void {
+		final emptyEnvelope:OptionalEnvelope = {point: null};
+		final pointEnvelope:OptionalEnvelope = {point: {x: 19, y: 23}};
+		while (nestedOptionalSum(null) != -1 || nestedOptionalSum(emptyEnvelope) != 0 || nestedOptionalSum(pointEnvelope) != 42) {}
+
 		final value:ManagedRecord = {bytes: Bytes.alloc(1)};
 		final absent:Null<ManagedRecord> = null;
 		var selected:Null<ManagedRecord> = absent;

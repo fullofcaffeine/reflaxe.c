@@ -23,6 +23,11 @@ from types import ModuleType
 
 
 ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from scripts.test.bounded_process import run as run_bounded_process  # noqa: E402
+
 HXML = Path(__file__).with_name("project_emitter.hxml")
 EXPECTED = Path(__file__).with_name("expected")
 OWNERSHIP = "_GeneratedFiles.json"
@@ -181,7 +186,7 @@ def run_emitter(
             macro_call(mode, output),
         ]
     )
-    result = subprocess.run(
+    result = run_bounded_process(
         command,
         cwd=ROOT,
         env=environment,
@@ -409,7 +414,8 @@ def json_value(path: Path) -> object:
 
 
 def snapshot_format(relative: str) -> str:
-    if relative in {CMAKE_ADAPTER, MESON_ADAPTER}:
+    # The generated-output license notice is reviewed plain text.
+    if relative in {CMAKE_ADAPTER, MESON_ADAPTER, "LICENSES/HAXE-C-OUTPUT-SUPPORT-MIT.txt"}:
         return "text"
     suffix = Path(relative).suffix
     if suffix == ".json":
@@ -495,13 +501,33 @@ def check_expected(output: Path) -> None:
             )
 
 
+def check_compact_reports(tree: Mapping[str, bytes]) -> None:
+    # CProjectEmitter.jsonFile owns these reports. Optional CCompiler inspection
+    # dumps and metadata from other project tools retain their own formats.
+    for relative in (
+        MANIFEST, "hxc.symbols.json", "hxc.runtime-plan.json", "hxc.abi.json",
+        "hxc.stdlib-report.json", "hxc.initialization-plan.json",
+        "hxc.specializations.json", "hxc.dispatch.json",
+    ):
+        if relative not in tree:
+            continue
+        payload = tree[relative]
+        json.loads(payload)
+        outside_strings = re.sub(rb'"(?:[^"\\]|\\.)*"', b'""', payload[:-1])
+        if not payload.endswith(b"\n") or re.search(rb"[ \t\r\n]", outside_strings):
+            raise ProjectEmitterFailure(
+                f"compiler JSON sidecar `{relative}` must be compact with one final LF"
+            )
+
+
 def check_manifest(output: Path, *, expected_original_build: bool = True) -> None:
     tree = output_tree(output)
+    check_compact_reports(tree)
     manifest = json_value(output / MANIFEST)
     if not isinstance(manifest, dict):
         raise ProjectEmitterFailure("compiler manifest is not a JSON object")
     if (
-        manifest.get("schemaVersion") != 1
+        manifest.get("schemaVersion") != 2
         or manifest.get("generator") != "reflaxe.c"
         or manifest.get("compilationStatus")
         != "structural-fixture-no-haxe-lowering"
@@ -577,6 +603,14 @@ def check_manifest(output: Path, *, expected_original_build: bool = True) -> Non
                 )
             )
         )
+    expected_manifest_licensing = {
+        "decision": "haxe_c-od2.5",
+        "spdxLicenseListVersion": "3.28.0",
+        "licenseConcluded": "MIT",
+        "noticeFiles": ["LICENSES/HAXE-C-OUTPUT-SUPPORT-MIT.txt"],
+    }
+    if manifest.get("licensing") != expected_manifest_licensing:
+        raise ProjectEmitterFailure("compiler manifest lost its output-support licensing policy")
     raw_artifacts = manifest.get("artifacts")
     if not isinstance(raw_artifacts, list):
         raise ProjectEmitterFailure("compiler manifest omitted content-addressed artifacts")
@@ -586,8 +620,41 @@ def check_manifest(output: Path, *, expected_original_build: bool = True) -> Non
             raise ProjectEmitterFailure(f"invalid addressed artifact: {entry!r}")
         path = entry.get("path")
         digest = entry.get("sha256")
+        kind = entry.get("kind")
+        provenance = entry.get("provenance")
+        licensing = entry.get("licensing")
         if not isinstance(path, str) or not isinstance(digest, str):
             raise ProjectEmitterFailure(f"invalid addressed artifact: {entry!r}")
+        expected_production = (
+            "compiled-program"
+            if kind in {"public-header", "private-header", "source"}
+            else "compiler-sidecar"
+        )
+        if provenance != {"production": expected_production}:
+            raise ProjectEmitterFailure(
+                f"runtime-free artifact {path!r} has {provenance!r}; "
+                f"expected production {expected_production!r}"
+            )
+        expected_licensing = (
+            {
+                "licenseConcluded": "NOASSERTION",
+                "projectCopyrightClaim": False,
+                "rationale": "user-license-not-declared",
+                "noticeFiles": [],
+            }
+            if expected_production == "compiled-program"
+            else {
+                "licenseConcluded": "MIT",
+                "projectCopyrightClaim": True,
+                "rationale": "compiler-output-support",
+                "noticeFiles": ["LICENSES/HAXE-C-OUTPUT-SUPPORT-MIT.txt"],
+            }
+        )
+        if licensing != expected_licensing:
+            raise ProjectEmitterFailure(
+                f"runtime-free artifact {path!r} has licensing {licensing!r}; "
+                f"expected {expected_licensing!r}"
+            )
         if path in addressed:
             raise ProjectEmitterFailure(f"duplicate addressed artifact: {path}")
         addressed[path] = digest
@@ -667,7 +734,7 @@ def run_native_command(
     environment: Mapping[str, str] | None = None,
     timeout: int = 60,
 ) -> subprocess.CompletedProcess[str]:
-    result = subprocess.run(
+    result = run_bounded_process(
         command,
         cwd=cwd,
         env=None if environment is None else dict(environment),
@@ -694,7 +761,7 @@ def run_built_executable(executable: Path, sentinel: str, label: str) -> None:
 
 
 def compiler_identity(executable: str) -> str:
-    result = subprocess.run(
+    result = run_bounded_process(
         [executable, "--version"],
         check=False,
         capture_output=True,
@@ -1309,6 +1376,7 @@ def check_negative_guards() -> None:
         "conflicting-include",
         "invalid-layout",
         "invalid-line-endings",
+        "invalid-runtime-provenance",
         "lowered",
     ):
         with tempfile.TemporaryDirectory(

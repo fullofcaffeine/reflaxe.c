@@ -133,7 +133,7 @@ The probes cover:
 - two byte-identical declaration plans and planned-header renders, matched
   against `test/declaration_plan/expected/**`, including actionable complete
   cycle/source-placement diagnostics and no runtime selection;
-- two byte-identical schema-23 HxcIR reports, including reversed unordered
+- two byte-identical schema-27 HxcIR reports, including reversed unordered
   inputs, source-aware semantic/coverage goldens, exact UTF-8 String constants,
   explicit side-effect and cleanup order, every call dispatch form, named
   runtime intent, and stable negative diagnostics, plus Eval oracles;
@@ -189,7 +189,8 @@ Direct Haxe/HXML use remains the compiler foundation:
 `CompilerBootstrap` resolves the reviewed framework before initialization.
 Before that sequence, Haxe resolves `c.Init` by convention and accepts its
 `PlatformConfig`: static typing, scalar Unicode, block scoping, environment-
-derived `sys`, and no threads/atomics until an adapter proves them.
+derived `sys`, with atomics and threads disabled unless the caller explicitly
+selects the reviewed C11 and POSIX backends.
 `CompilerInit` validates the resulting compiler snapshot and output path before
 registration. A caller-supplied `-D c` does not activate the compiler;
 `c_output` alone is a legacy bootstrap signal rather than a conforming carrier;

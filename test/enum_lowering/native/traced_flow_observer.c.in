@@ -1,0 +1,66 @@
+/*
+ * Force real collection while generated switch arms and their join are active.
+ * The generated translation unit supplies exact roots; this observer supplies
+ * only a small collection threshold and an independent allocation counter.
+ */
+#include <stdlib.h>
+#include "hxrt/gc.h"
+
+static size_t fixture_live = 0u;
+
+static hxc_status fixture_allocate(void *context, size_t size, size_t alignment, void **out_memory) {
+  hxc_allocator base = hxc_default_allocator();
+  hxc_status status;
+  (void)context;
+  status = base.allocate(base.context, size, alignment, out_memory);
+  if (status == HXC_STATUS_OK) {
+    fixture_live += 1u;
+  }
+  return status;
+}
+
+static void fixture_release(void *context, void *memory, size_t size, size_t alignment) {
+  hxc_allocator base = hxc_default_allocator();
+  (void)context;
+  if (fixture_live == 0u) {
+    abort();
+  }
+  fixture_live -= 1u;
+  base.release(base.context, memory, size, alignment);
+}
+
+static hxc_allocator fixture_allocator(void) {
+  hxc_allocator allocator = { NULL, fixture_allocate, NULL, fixture_release };
+  return allocator;
+}
+
+int fixture_unobserved_main(void);
+#define main fixture_unobserved_main
+#define hxc_default_allocator fixture_allocator
+#include "../generated/src/program.c"
+#undef hxc_default_allocator
+#undef main
+
+int main(void) {
+  hxc_gc_config config = { fixture_allocator(), 256u, NULL, NULL };
+  hxc_gc_stats stats = HXC_GC_STATS_INITIALIZER;
+  if (hxc_gc_init(&config, &@COLLECTOR@) != HXC_STATUS_OK
+      || hxc_gc_thread_register(&@COLLECTOR@, &@THREAD@) != HXC_STATUS_OK) {
+    return 1;
+  }
+  @ENTRY@();
+  if (hxc_gc_get_stats(&@COLLECTOR@, &stats) != HXC_STATUS_OK
+      || stats.pressure_collection_count == 0u) {
+    return 2;
+  }
+  if (hxc_gc_collect(&@COLLECTOR@) != HXC_STATUS_OK
+      || hxc_gc_get_stats(&@COLLECTOR@, &stats) != HXC_STATUS_OK
+      || stats.current_object_count != 0u) {
+    return 3;
+  }
+  if (hxc_gc_thread_unregister(&@THREAD@) != HXC_STATUS_OK
+      || hxc_gc_dispose(&@COLLECTOR@) != HXC_STATUS_OK || fixture_live != 0u) {
+    return 4;
+  }
+  return 0;
+}

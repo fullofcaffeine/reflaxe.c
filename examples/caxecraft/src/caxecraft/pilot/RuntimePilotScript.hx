@@ -561,6 +561,8 @@ final class RuntimePilotScript {
 			return KnownRuntimePilotAction(PilotAction.Pause);
 		if (value == "capture")
 			return KnownRuntimePilotAction(PilotAction.Capture);
+		if (value == "toggle-camera")
+			return KnownRuntimePilotAction(PilotAction.ToggleCamera);
 		if (value == "select-next")
 			return KnownRuntimePilotAction(PilotAction.SelectNext);
 		if (value == "select-sword")

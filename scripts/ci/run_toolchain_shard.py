@@ -42,6 +42,10 @@ SHARDS: dict[str, tuple[str, ...]] = {
         "test:beads-plan",
         "test:diagnostics",
         "test:hxc-config",
+        "test:hxc-cli",
+        "test:hxc-new",
+        "test:hxc-inspect",
+        "test:hxc-bindgen",
         "test:all-sources",
         "test:content-digest",
         "test:bootstrap",
@@ -52,10 +56,14 @@ SHARDS: dict[str, tuple[str, ...]] = {
         "test:typed-ast",
         "test:incremental-backend",
         "test:c-ast",
+        "test:c-ast-fuzz",
         "test:declaration-plan",
         "test:symbol-registry",
         "test:project-emitter",
         "test:runtime-features",
+        "test:thread-runtime",
+        "test:dynamic-runtime",
+        "test:dynamic-lowering",
         "test:array-runtime",
         "test:int-map",
         "test:string-map",
@@ -63,8 +71,11 @@ SHARDS: dict[str, tuple[str, ...]] = {
         "test:string-null",
         "test:bytes-runtime",
         "test:gc-runtime",
+        "test:runtime-stress",
         "test:string-runtime",
+        "test:date-time",
         "test:string-output",
+        "test:typed-output",
         "test:hello",
         "test:hxc-ir",
         "test:primitive-semantics",
@@ -72,6 +83,8 @@ SHARDS: dict[str, tuple[str, ...]] = {
     ),
     "lowering-objects": (
         "test:body-lowering",
+        "test:atomic-lowering",
+        "test:exception-lowering",
         "test:function-lowering",
         "test:aggregate-lowering",
         "test:class-layout",
@@ -104,11 +117,14 @@ SHARDS: dict[str, tuple[str, ...]] = {
         "test:caxecraft-runtime-piloscript",
         "test:caxecraft-campaign-runtime",
         "test:caxecraft-runtime-content-publication",
+        "test:caxecraft-cross-target-adapter",
+        "test:caxecraft-eval-assisted-loop-profile",
         "test:caxecraft-water",
         "test:caxecraft-aquatics",
         "test:caxecraft-session",
         "test:caxecraft-app-screen",
         "test:caxecraft-presentation",
+        "test:caxecraft-player-camera",
         "test:caxecraft-terrain-chunks",
         "test:caxecraft-inventory",
         "test:caxecraft-gameplay",
@@ -174,11 +190,11 @@ EVIDENCE_LOCK_PATHS = (
 
 # Shards inherit the runner's complete environment, so an arbitrary variable
 # may select a Python module, Node behavior, SDK, compiler, or build mode. Only
-# these two values are proven not to change shard semantics: one controls outer
-# worker count, and the other is replaced with a private report path before the
-# Caxecraft command starts.
+# these three values are proven not to change shard semantics: one controls
+# outer worker count, one changes only bounded deadlines, and the last is
+# replaced with a private report path before the Caxecraft command starts.
 EVIDENCE_ENVIRONMENT_EXCLUSIONS = frozenset(
-    ("HXC_TEST_JOBS", CAXECRAFT_TIMING_ENV)
+    ("HXC_TEST_JOBS", "HXC_TEST_TIMEOUT_SCALE", CAXECRAFT_TIMING_ENV)
 )
 
 # The shard family invokes these tools directly or through its focused

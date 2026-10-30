@@ -18,6 +18,7 @@ from run import (
     clang_cl_link_arguments,
 )
 from scripts.raylib.provision import (
+    ROOT as REPOSITORY_ROOT,
     ProvisionFailure,
     assert_report_redacted,
     build_source,
@@ -32,11 +33,13 @@ from scripts.raylib.provision import (
     pinned_source,
     prepare_build_source,
     resolve_system_pkg_config,
+    repository_text_sha256,
     run_command,
     safe_extract_archive,
     sha256_file,
     split_pkg_config_flags,
     validate_lock,
+    verify_repository_text_sha256,
     verify_archive,
     verify_source,
 )
@@ -104,6 +107,28 @@ def synthetic_source_lock(root: Path) -> dict[str, object]:
 
 
 class RaylibProvisioningTests(unittest.TestCase):
+    def test_locked_repository_text_requires_lf_and_distinguishes_drift(self) -> None:
+        attributes = (REPOSITORY_ROOT / ".gitattributes").read_text(encoding="utf-8")
+        self.assertIn(
+            "scripts/raylib/patches/*.json text eol=lf",
+            attributes.splitlines(),
+        )
+        with tempfile.TemporaryDirectory(prefix="hxc-raylib-repository-text-") as raw_root:
+            recipe = Path(raw_root) / "recipe.json"
+            recipe.write_bytes(b'{\n  "value": 1\n}\n')
+            expected = repository_text_sha256(recipe)
+            verify_repository_text_sha256(recipe, expected, "fixture recipe")
+
+            recipe.write_bytes(b'{\r\n  "value": 1\r\n}\r\n')
+            with self.assertRaisesRegex(ProvisionFailure, "line-ending drift.*LF checkout"):
+                verify_repository_text_sha256(recipe, expected, "fixture recipe")
+            with self.assertRaisesRegex(ProvisionFailure, "must use LF line endings"):
+                repository_text_sha256(recipe)
+
+            recipe.write_bytes(b'{\n  "value": 2\n}\n')
+            with self.assertRaisesRegex(ProvisionFailure, "content hash mismatch"):
+                verify_repository_text_sha256(recipe, expected, "fixture recipe")
+
     def test_patch_application_uses_a_private_exact_hash_copy(self) -> None:
         with tempfile.TemporaryDirectory(prefix="hxc-raylib-patch-") as raw_root:
             root = Path(raw_root)

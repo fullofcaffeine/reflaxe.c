@@ -64,7 +64,7 @@ function agentNearby(session:GameSession, level:PlayableLevelView, player:Charac
 				xMilli: Std.int(actor.body.x * 1000.0),
 				yMilli: Std.int(actor.body.y * 1000.0),
 				zMilli: Std.int(actor.body.z * 1000.0),
-				distanceSquaredMilliBlocks: distanceSquared,
+				distanceSquaredMilliBlocks: Std.int(distanceSquared),
 				interactable: session.actorInteractionAvailable(entityId),
 				state: actor.vitals.health > 0 ? "active" : "defeated"
 			});
@@ -79,7 +79,7 @@ function agentNearby(session:GameSession, level:PlayableLevelView, player:Charac
 			xMilli: Std.int(enemy.body.x * 1000.0),
 			yMilli: Std.int(enemy.body.y * 1000.0),
 			zMilli: Std.int(enemy.body.z * 1000.0),
-			distanceSquaredMilliBlocks: enemyDistanceSquared,
+			distanceSquaredMilliBlocks: Std.int(enemyDistanceSquared),
 			interactable: false,
 			state: enemy.vitals.health <= 0 ? "defeated" : enemyPhase(session, enemyId)
 		});
@@ -97,7 +97,7 @@ function agentNearby(session:GameSession, level:PlayableLevelView, player:Charac
 				xMilli: transform.xMilli,
 				yMilli: transform.yMilli,
 				zMilli: transform.zMilli,
-				distanceSquaredMilliBlocks: distanceSquared,
+				distanceSquaredMilliBlocks: Std.int(distanceSquared),
 				interactable: session.statefulObjectInteractionAvailable(id),
 				state: state == null ? "missing" : state.text()
 			});
@@ -179,9 +179,17 @@ private function blockName(kind:BlockKind):String
 		case Ash: "ash";
 	};
 
-/** Calculate one exact squared distance after milliblock conversion. */
-private function horizontalDistanceSquaredMilliBlocks(fromX:Float, fromZ:Float, toX:Float, toZ:Float):Int {
+/**
+ * Calculate one exact squared distance without overflowing a Haxe `Int`.
+ *
+ * The deltas keep the existing whole-milliblock precision. They widen before
+ * multiplication because valid points across the finite world can exceed the
+ * 32-bit range. The admitted world bounds keep the result in the exact integer
+ * range of `Float`. Callers convert it back only after the nearby limit proves
+ * that the value fits the observation's `Int` field.
+ */
+function horizontalDistanceSquaredMilliBlocks(fromX:Float, fromZ:Float, toX:Float, toZ:Float):Float {
 	final dxMilli = Std.int((toX - fromX) * 1000.0);
 	final dzMilli = Std.int((toZ - fromZ) * 1000.0);
-	return dxMilli * dxMilli + dzMilli * dzMilli;
+	return (dxMilli * 1.0) * dxMilli + (dzMilli * 1.0) * dzMilli;
 }

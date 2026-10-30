@@ -3,25 +3,60 @@ package caxecraft.qa;
 import caxecraft.content.ContentPackageModel.ContentPackageReadResult;
 import caxecraft.content.ContentPackageModel.LoadedPackageBytes;
 import caxecraft.content.ContentPackageStore;
+import caxecraft.content.ContentJson;
+import caxecraft.content.ContentJson.ContentJsonField;
+import caxecraft.content.ContentJson.ContentJsonNode;
+import caxecraft.content.ContentJson.ContentJsonReadResult;
+import caxecraft.content.ContentJson.ContentJsonValue;
 import caxecraft.content.LevelContentResolver.FluidContentResolution;
 import caxecraft.content.LevelContentResolver.ActorPresentationResolution;
 import caxecraft.content.LevelContentResolver.StatefulObjectCollisionProfile;
 import caxecraft.content.LevelContentResolver.StatefulObjectContentResolution;
 import caxecraft.content.RuntimeContentPack;
 import caxecraft.content.RuntimeContentPack.RuntimeContentPackResult;
+import caxecraft.content.RuntimeContentPack.RuntimeContentRegistry;
 import caxecraft.content.RuntimeContentPack.RuntimeItemUseProfile;
 import caxecraft.content.RuntimeContentPack.RuntimeModelPresentation;
+import caxecraft.content.RuntimeContentPack.RuntimePresentation;
 import caxecraft.content.EditorObjectCatalog.EditorObjectRecipeKind;
+import caxecraft.content.EditorObjectCatalog.EditorObjectRecipe;
 import caxecraft.content.RuntimeSchema.RuntimeSchemaDiagnostic;
 import caxecraft.content.RuntimeSchema.RuntimeSchemaErrorKind;
 import caxecraft.app.RuntimeInventoryBinding.inventoryKindForRuntimeItem;
 import caxecraft.app.VoxelFrameAnimation.VoxelFrameAnimationPlayer;
+import caxecraft.editor.EditorObjectPresentation.EditorObjectVisual;
+import caxecraft.editor.EditorObjectPresentation.visualFor as editorObjectVisualFor;
+import caxecraft.editor.EditorAssetBrowser.EditorAssetCategory;
+import caxecraft.editor.EditorAssetBrowser.EditorAssetEntry;
+import caxecraft.editor.EditorAssetBrowser.EditorAssetThumbnail;
+import caxecraft.editor.EditorAssetBrowser.EditorAssetUse;
+import caxecraft.editor.EditorAssetBrowser.availableEditorAssets;
+import caxecraft.editor.EditorAssetBrowser.filterEditorAssets;
+import caxecraft.editor.EditorAssetBrowser.moveEditorAssetSelection;
+import caxecraft.editor.EditorFlowProjection.allEditorFlowUiMessages;
 import caxecraft.gameplay.ItemKind;
+import caxecraft.input.ControlPrompts.ControlPromptDevice;
+import caxecraft.input.ControlPrompts.capturePromptMessage;
+import caxecraft.input.ControlPrompts.controlsMessage;
+import caxecraft.input.ControlPrompts.conversationHelpMessage;
+import caxecraft.input.ControlPrompts.gamepadInteractionPrompt;
+import caxecraft.input.ControlPrompts.menuInstructionsMessage;
+import caxecraft.input.ControlPrompts.pauseHelpMessage;
+import caxecraft.input.ControlPrompts.returnPromptMessage;
 import caxecraft.localization.RuntimeUiCatalog;
 import caxecraft.localization.RuntimeUiCatalog.RuntimeUiCatalogResult;
 import caxecraft.localization.UiTypes.LocaleCursor;
 import caxecraft.localization.UiTypes.UiMessage;
 import caxecraft.scenario.ContentId;
+import caxecraft.scenario.MessageId;
+import caxecraft.scenario.CaxeFlowActionRegistry.allFlowActionDescriptors;
+import caxecraft.scenario.CaxeFlowEventRegistry.allFlowEventDescriptors;
+import caxecraft.scenario.CaxeFlowPredicateRegistry.allFlowPredicateDescriptors;
+import caxecraft.scenario.CaxeFlowDiagnosticText.requiredCaxeFlowDiagnosticMessageIds;
+import caxecraft.scenario.ScenarioDiagnosticText.requiredScenarioDiagnosticMessageIds;
+import caxecraft.scenario.ScenarioGeometry.ScenarioTransform;
+import caxecraft.scenario.ScenarioId;
+import caxecraft.scenario.ScenarioObject.ObjectPlacement;
 import haxe.io.Bytes;
 
 /**
@@ -40,7 +75,7 @@ var observed:Int = 0;
 /** Manually expected semantic proof from the reviewed base content JSON. */
 var tracePack:Int = 0;
 
-/** Manually expected text/shape proof from the reviewed UI JSON. */
+/** Data-derived locale shape and one non-empty translated-message observation. */
 var traceUi:Int = 0;
 
 /** Source line from a representative version diagnostic. */
@@ -61,7 +96,7 @@ function main():Void {
 
 /** Return zero only when the real positive path and focused negatives agree. */
 function selfCheck():Int {
-	final store = switch ContentPackageStore.open(".", "caxecraft-runtime-schema", 32 * 1024) {
+	final store = switch ContentPackageStore.open(".", "caxecraft-runtime-schema", ContentJson.MAXIMUM_BYTES) {
 		case PackageStoreOpened(value): value;
 		case PackageStoreRejected(_): return 1;
 	};
@@ -80,18 +115,116 @@ function selfCheck():Int {
 		case RuntimeUiCatalogReady(value): value;
 		case RuntimeUiCatalogRejected(_): return 5;
 	};
-	final editorObject = registry.editorObjectAt(0);
-	if (registry.editorObjectCount() != 1
-		|| editorObject == null
-		|| editorObject.id != "forge-relay"
-		|| editorObject.labelEn != "FORGE RELAY"
-		|| editorObject.labelEsMx != "RELE DE FORJA")
-		return 58;
-	switch editorObject.kind {
-		case EditorStatefulObject(objectType, initialState):
-			if (objectType.text() != "caxecraft:gate-relay" || initialState.text() != "caxecraft:waiting")
-				return 58;
+	var foundBoundaryBoulder = false;
+	var foundBoundaryRoot = false;
+	var foundBoundaryThicket = false;
+	var foundBridgeSwitch = false;
+	for (index in 0...registry.editorObjectCount()) {
+		final recipe = registry.editorObjectAt(index);
+		if (recipe == null)
+			return 58;
+		switch recipe.id {
+			case "boundary-boulder":
+				foundBoundaryBoulder = matchesStatefulEditorRecipe(recipe, "caxecraft:boundary-boulder");
+			case "boundary-root":
+				foundBoundaryRoot = matchesStatefulEditorRecipe(recipe, "caxecraft:boundary-root");
+			case "boundary-thicket":
+				foundBoundaryThicket = matchesStatefulEditorRecipe(recipe, "caxecraft:boundary-thicket");
+			case "bridge-switch":
+				foundBridgeSwitch = matchesBridgeSwitchRecipe(recipe);
+			case _:
+		}
 	}
+	if (!foundBoundaryBoulder || !foundBoundaryRoot || !foundBoundaryThicket || !foundBridgeSwitch)
+		return 58;
+	final assets = availableEditorAssets(registry, catalog);
+	var terrainAssets = 0;
+	var itemAssets = 0;
+	var npcAssets = 0;
+	var enemyAssets = 0;
+	var enemyWaveAssets = 0;
+	var mechanismAssets = 0;
+	var editorObjectLabelsMatch = true;
+	for (left in 0...assets.length) {
+		final entry = assets[left];
+		if (entry.labelEn.length == 0
+			|| entry.labelEsMx.length == 0
+			|| entry.helpEn.length == 0
+			|| entry.helpEsMx.length == 0
+			|| !thumbnailMatchesAssetUse(registry, entry))
+			return 76;
+		switch entry.category {
+			case TerrainAssets:
+				terrainAssets++;
+				switch entry.use {
+					case PaintTerrainAsset(_):
+					case PlaceObjectAsset(_): return 76;
+				}
+			case ItemAssets:
+				itemAssets++;
+				switch entry.use {
+					case PlaceObjectAsset({kind: EditorItem(_, 1)}):
+					case _: return 76;
+				}
+			case NpcAssets:
+				npcAssets++;
+				switch entry.use {
+					case PlaceObjectAsset({kind: EditorNpc(_)}):
+					case _: return 76;
+				}
+			case EnemyAssets:
+				enemyAssets++;
+				switch entry.use {
+					case PlaceObjectAsset({kind: EditorEnemy(_)}):
+					case PlaceObjectAsset({kind: EditorEnemyWave(_)}): enemyWaveAssets++;
+					case _: return 76;
+				}
+			case MechanismAssets:
+				mechanismAssets++;
+				switch entry.use {
+					case PlaceObjectAsset(recipe):
+						switch recipe.kind {
+							case EditorStatefulObject(_, _) | EditorLinkedStatefulPair(_, _):
+								if (entry.labelEn != recipe.labelEn || entry.labelEsMx != recipe.labelEsMx) editorObjectLabelsMatch = false;
+							case _: return 76;
+						}
+					case PaintTerrainAsset(_): return 76;
+				}
+		}
+		for (right in left + 1...assets.length)
+			if (entry.id == assets[right].id)
+				return 76;
+	}
+	var firstItem:Null<EditorAssetEntry> = null;
+	for (entry in assets)
+		if (firstItem == null && entry.category == EditorAssetCategory.ItemAssets)
+			firstItem = entry;
+	final searchedItem = switch firstItem {
+		case null: return 76;
+		case value: value;
+	};
+	final translatedSearch = filterEditorAssets(assets, EditorAssetCategory.ItemAssets, searchedItem.labelEsMx.toLowerCase());
+	var foundFirstItem = false;
+	for (entry in translatedSearch)
+		if (entry.id == searchedItem.id)
+			foundFirstItem = true;
+	if (assets.length != registry.blockCount()
+		- 1
+		+ registry.itemCount()
+		+ registry.npcCount()
+		+ registry.enemyCount() * 2
+		+ registry.editorObjectCount() || terrainAssets != registry.blockCount() - 1
+		|| itemAssets != registry.itemCount()
+		|| npcAssets != registry.npcCount()
+		|| enemyAssets != registry.enemyCount() * 2
+		|| enemyWaveAssets != registry.enemyCount()
+		|| mechanismAssets != registry.editorObjectCount()
+		|| !editorObjectLabelsMatch
+		|| !foundFirstItem
+		|| moveEditorAssetSelection(0, 3, -1) != 2
+		|| moveEditorAssetSelection(2, 3, 1) != 0
+		|| moveEditorAssetSelection(0, 0, 1) != -1)
+		return 76;
 
 	tracePack = registry.semanticProof();
 	final sand = new ContentId("caxecraft:sand");
@@ -140,6 +273,44 @@ function selfCheck():Int {
 		case _:
 			return 39;
 	}
+	final markerId = new ScenarioId("editor.marker");
+	final transform:ScenarioTransform = {
+		xMilli: 1000,
+		yMilli: 0,
+		zMilli: 1000,
+		yawDegrees: 0
+	};
+	switch [
+		editorObjectVisualFor(registry, {id: markerId, tags: [], placement: Npc(new ContentId("caxecraft:nia"), markerId, transform)}),
+		editorObjectVisualFor(registry, {id: markerId, tags: [], placement: Item(new ContentId("caxecraft:sand-block"), 1, transform)}),
+		editorObjectVisualFor(registry, {
+			id: markerId,
+			tags: [],
+			placement: StatefulObject(new ContentId("caxecraft:vault-gate"), new ContentId("caxecraft:sealed"), transform)
+		})
+	] {
+		case [
+			ActorVisual("entities", 4),
+			ItemVisual("items", 14),
+			StatefulObjectVisual("terrain", 10)
+		]:
+		case _:
+			return 69;
+	}
+	switch [
+		editorObjectVisualFor(registry, {id: markerId, tags: [], placement: PlayerSpawn(transform)}),
+		editorObjectVisualFor(registry, {id: markerId, tags: [], placement: Checkpoint(transform)}),
+		editorObjectVisualFor(registry, {
+			id: markerId,
+			tags: [],
+			placement: TriggerZone({origin: {x: 0, y: 0, z: 0}, size: {width: 1, height: 1, depth: 1}})
+		}),
+		editorObjectVisualFor(registry, {id: markerId, tags: [], placement: Entity(new ContentId("caxecraft:missing"), transform)})
+	] {
+		case [PlayerSpawnVisual, CheckpointVisual, TriggerVolumeVisual, FallbackObjectVisual]:
+		case _:
+			return 70;
+	}
 	final gateId = new ContentId("caxecraft:vault-gate");
 	final gateOpen = new ContentId("caxecraft:open");
 	final gateSealed = new ContentId("caxecraft:sealed");
@@ -154,79 +325,142 @@ function selfCheck():Int {
 			return 53;
 	}
 
+	final adventureEn = catalog.text(LocaleCursor.Locale0, UiMessage.MenuAdventure);
+	final adventureEsMx = catalog.text(LocaleCursor.Locale1, UiMessage.MenuAdventure);
 	if (catalog.localeCount() != 2
-		|| catalog.messageCount() != 51
-		|| catalog.text(LocaleCursor.Locale0, UiMessage.Brand) != "CAXECRAFT  //  C + HAXE"
-		|| catalog.text(LocaleCursor.Locale1, UiMessage.MenuAdventure) != "AVENTURA"
-		|| catalog.text(LocaleCursor.Locale1, UiMessage.EditorTitle) != "EDITOR DE MUNDOS CAXECRAFT")
+		|| catalog.messageCount() <= 0
+		|| adventureEn.length == 0
+		|| adventureEsMx.length == 0
+		|| catalog.text(LocaleCursor.Locale1, UiMessage.EditorTitle).length == 0)
 		return 8;
-	if (!allUiMessagesHaveText(catalog)) {
-		return 9;
-	}
-	traceUi = catalog.messageCount() * 100 + catalog.localeCount() * 10 + catalog.text(LocaleCursor.Locale1, UiMessage.MenuAdventure).length;
-	if (traceUi != 5128)
+	if (controlsMessage(ControlPromptDevice.KeyboardMouse) != UiMessage.Controls
+		|| controlsMessage(ControlPromptDevice.Gamepad) != UiMessage.ControlsGamepad
+		|| menuInstructionsMessage(ControlPromptDevice.Gamepad) != UiMessage.MenuInstructionsGamepad
+		|| capturePromptMessage(ControlPromptDevice.Gamepad) != UiMessage.CapturePromptGamepad
+		|| pauseHelpMessage(ControlPromptDevice.Gamepad) != UiMessage.PauseHelpGamepad
+		|| returnPromptMessage(ControlPromptDevice.Gamepad) != UiMessage.ReturnPromptGamepad
+		|| conversationHelpMessage(ControlPromptDevice.Gamepad) != UiMessage.ConversationHelpGamepad
+		|| catalog.text(LocaleCursor.Locale0, UiMessage.ControlsGamepad).length == 0
+		|| catalog.text(LocaleCursor.Locale1, UiMessage.ConversationHelpGamepad).length == 0
+		|| catalog.text(LocaleCursor.Locale1, UiMessage.InteractionControlGamepad).length == 0)
+		return 77;
+	for (message in [
+		UiMessage.EditorToolNeedsAdjacentCell,
+		UiMessage.EditorToolNeedsAsset,
+		UiMessage.EditorToolNeedsDialogue,
+		UiMessage.EditorToolNeedsSelection,
+		UiMessage.EditorToolNeedsWaveSpace
+	])
+		if (catalog.text(LocaleCursor.Locale0, message).length == 0 || catalog.text(LocaleCursor.Locale1, message).length == 0)
+			return 77;
+	if (gamepadInteractionPrompt("KEY  ACTION", "PAD") != "PAD  ACTION" || gamepadInteractionPrompt("ACTION", "PAD") != "PAD  ACTION")
+		return 77;
+	if (catalog.templateCount() <= 0 || !allRequiredTemplatesExist(catalog))
+		return 71;
+	final eventArgument = "zone.harbor";
+	final eventEn = catalog.format(Locale0, allFlowEventDescriptors()[0].editorLabel, [eventArgument]);
+	final eventEsMx = catalog.format(Locale1, allFlowEventDescriptors()[0].editorLabel, [eventArgument]);
+	final diagnostic = catalog.format(Locale0, new MessageId("scenario.diagnostic.stale-reference"), ["object.gone", "21", "5"]);
+	if (eventEn.indexOf(eventArgument) < 0
+		|| eventEsMx.indexOf(eventArgument) < 0
+		|| diagnostic.indexOf("object.gone") < 0
+		|| diagnostic.indexOf("21") < 0
+		|| diagnostic.indexOf("5") < 0
+		|| catalog.format(Locale0, new MessageId("scenario.diagnostic.stale-reference"), ["object.gone"]) != "")
+		return 72;
+	final mismatchedPlaceholders = removeFirstOccurrence(ui.bytes.toString(), "{1}");
+	if (!rejectsUi(mismatchedPlaceholders, IncompatibleTypedCatalog))
+		return 73;
+	traceUi = catalog.localeCount() * 10 + adventureEsMx.length;
+	if (traceUi <= catalog.localeCount() * 10)
 		return 36;
 
 	return negativeChecks();
 }
 
-/** Exercise every typed message lookup and reject a missing translation. */
-function allUiMessagesHaveText(catalog:RuntimeUiCatalog):Bool {
-	final messages:Array<UiMessage> = [
-		AquaticGearEquipped,
-		Brand,
-		CapturePrompt,
-		Controls,
-		DebugCells,
-		DebugDraws,
-		DebugFrame,
-		DebugTick,
-		DebugVisible,
-		EditorAdvanced,
-		EditorBack,
-		EditorBuild,
-		EditorCanvasHelp,
-		EditorCheckpoint,
-		EditorCoordinates,
-		EditorDelete,
-		EditorDuplicate,
-		EditorErase,
-		EditorGround,
-		EditorInvalid,
-		EditorKeepEditing,
-		EditorLeaveWithoutSaving,
-		EditorMaterial,
-		EditorMoreDetails,
-		EditorName,
-		EditorNewWorld,
-		EditorPlan,
-		EditorReady,
-		EditorRedo,
-		EditorScene,
-		EditorSelect,
-		EditorStopTest,
-		EditorTest,
-		EditorTesting,
-		EditorTitle,
-		EditorToolList,
-		EditorUndo,
-		EditorUnsavedChanges,
-		EditorValid,
-		EditorValidate,
-		EditorWorldList,
-		HealthFull,
-		MenuAdventure,
-		MenuCreative,
-		MenuEditor,
-		MenuInstructions,
-		NoBlockInReach,
-		PauseHelp,
-		PauseTitle,
-		PlaceBlocked,
-		TitleFallback
-	];
-	for (message in messages)
-		if (catalog.text(Locale0, message).length == 0 || catalog.text(Locale1, message).length == 0)
+/** Verify one feature-owned recipe without mirroring the complete data catalog. */
+function matchesStatefulEditorRecipe(recipe:EditorObjectRecipe, expectedObjectType:String):Bool {
+	if (recipe.labelEn.length == 0 || recipe.labelEsMx.length == 0)
+		return false;
+	return switch recipe.kind {
+		case EditorStatefulObject(objectType, initialState): objectType.text() == expectedObjectType && initialState.text() == "caxecraft:waiting";
+		case EditorItem(_, _) | EditorNpc(_) | EditorEnemy(_) | EditorEnemyWave(_) | EditorLinkedStatefulPair(_, _): false;
+	};
+}
+
+/** Verify the bridge template exposes only references admitted by its data record. */
+function matchesBridgeSwitchRecipe(recipe:EditorObjectRecipe):Bool {
+	return switch recipe.kind {
+		case EditorLinkedStatefulPair(source, target):
+			source.objectType.text() == "caxecraft:gate-relay"
+			&& source.initialState.text() == "caxecraft:waiting"
+			&& source.activeState.text() == "caxecraft:entered"
+			&& target.objectType.text() == "caxecraft:editor-bridge"
+			&& target.initialState.text() == "caxecraft:raised"
+			&& target.activeState.text() == "caxecraft:lowered";
+		case _:
+			false;
+	};
+}
+
+/** Prove each cached picture came from the same registry record as its action. */
+function thumbnailMatchesAssetUse(registry:RuntimeContentRegistry, entry:EditorAssetEntry):Bool {
+	return switch [entry.thumbnail, entry.use] {
+		case [TerrainAssetThumbnail(storageCode), PaintTerrainAsset(blockType)]: storageCode > 0 && storageCode == registry.blockStorageCode(blockType);
+		case [AtlasAssetThumbnail(asset, cellIndex), PlaceObjectAsset(recipe)]:
+			thumbnailMatchesRecipe(registry, recipe.kind, asset, cellIndex);
+		case [MissingAssetThumbnail, _] | [TerrainAssetThumbnail(_), PlaceObjectAsset(_)] | [AtlasAssetThumbnail(_, _), PaintTerrainAsset(_)]:
+			false;
+	};
+}
+
+/** Compare one recipe with its validated item, actor, or mechanism visual. */
+function thumbnailMatchesRecipe(registry:RuntimeContentRegistry, kind:EditorObjectRecipeKind, asset:String, cellIndex:Int):Bool {
+	return switch kind {
+		case EditorItem(itemType, _):
+			thumbnailMatchesPresentation(registry.itemPresentation(registry.itemStorageCode(itemType)), asset, cellIndex);
+		case EditorNpc(actorType) | EditorEnemy(actorType) | EditorEnemyWave(actorType):
+			switch registry.resolveActorPresentation(actorType) {
+				case ActorPresentationResolved(expectedAsset, expectedCellIndex): expectedAsset == asset && expectedCellIndex == cellIndex;
+				case UnknownActorPresentation:
+					false;
+			};
+		case EditorStatefulObject(objectType, initialState):
+			thumbnailMatchesPresentation(registry.statefulObjectPresentation(objectType, initialState), asset, cellIndex);
+		case EditorLinkedStatefulPair(source, _):
+			thumbnailMatchesPresentation(registry.statefulObjectPresentation(source.objectType, source.initialState), asset, cellIndex);
+	};
+}
+
+/** Compare one nullable validated presentation with the copied atlas pair. */
+function thumbnailMatchesPresentation(presentation:Null<RuntimePresentation>, asset:String, cellIndex:Int):Bool
+	return presentation != null && presentation.asset == asset && presentation.cellIndex == cellIndex;
+
+/** Remove one placeholder without depending on the owning catalog sentence. */
+function removeFirstOccurrence(source:String, needle:String):String {
+	final at = source.indexOf(needle);
+	return at < 0 ? "" : source.substring(0, at) + source.substring(at + needle.length);
+}
+
+/** Prove every code-owned key used by this slice exists in the data catalog. */
+function allRequiredTemplatesExist(catalog:RuntimeUiCatalog):Bool {
+	for (message in requiredCaxeFlowDiagnosticMessageIds())
+		if (!catalog.hasTemplate(message))
+			return false;
+	for (message in requiredScenarioDiagnosticMessageIds())
+		if (!catalog.hasTemplate(message))
+			return false;
+	for (message in allEditorFlowUiMessages())
+		if (!catalog.hasTemplate(message.messageId()))
+			return false;
+	for (descriptor in allFlowEventDescriptors())
+		if (!catalog.hasTemplate(descriptor.editorLabel) || !catalog.hasTemplate(descriptor.editorHelp))
+			return false;
+	for (descriptor in allFlowPredicateDescriptors())
+		if (!catalog.hasTemplate(descriptor.editorLabel) || !catalog.hasTemplate(descriptor.editorHelp))
+			return false;
+	for (descriptor in allFlowActionDescriptors())
+		if (!catalog.hasTemplate(descriptor.editorLabel) || !catalog.hasTemplate(descriptor.editorHelp))
 			return false;
 	return true;
 }
@@ -317,72 +551,103 @@ function negativeChecks():Int {
 		case RuntimeContentPackRejected(_):
 			return 37;
 	}
-	if (!rejectsPack(replaceOnce(minimal, '"id":"caxecraft:idle","collision"', '"id":"caxecraft:missing","collision"'), UnresolvedReference))
+	final parsed = switch ContentJson.read(Bytes.ofString(minimal)) {
+		case ContentJsonReady(root): root;
+		case ContentJsonRejected(_): return 63;
+	};
+	if (!rejectsParsedPack(parsed,
+		replaceValue([field("statefulObjects"), index(0), field("states"), index(1), field("id")], JsonString("caxecraft:missing")), UnresolvedReference))
 		return 46;
-	if (!rejectsPack(replaceOnce(minimal, '"id":"caxecraft:active","collision"', '"id":"caxecraft:idle","collision"'), DuplicateId))
+	if (!rejectsParsedPack(parsed, replaceValue([field("statefulObjects"), index(0), field("states"), index(0), field("id")], JsonString("caxecraft:idle")),
+		DuplicateId))
 		return 47;
-	if (!rejectsPack(replaceOnce(minimal, '"widthMilli":1000', '"widthMilli":0'), InvalidInteger))
+	if (!rejectsParsedPack(parsed, replaceValue([field("statefulObjects"), index(0), field("bounds"), field("widthMilli")], JsonNumber("0")), InvalidInteger))
 		return 49;
-	if (!rejectsPack(replaceOnce(minimal, '"collision":"solid"', '"collision":"blocking"'), InvalidClosedValue))
+	if (!rejectsParsedPack(parsed, replaceValue([
+		field("statefulObjects"),
+		index(0),
+		field("states"),
+		index(0),
+		field("collision")
+	], JsonString("blocking")), InvalidClosedValue))
 		return 50;
-	if (!rejectsPack(replaceOnce(minimal, '"render":"hidden"', '"render":"sometimes"'), InvalidClosedValue))
+	if (!rejectsParsedPack(parsed, replaceValue([field("statefulObjects"), index(0), field("states"), index(1), field("render")], JsonString("sometimes")),
+		InvalidClosedValue))
 		return 51;
-	if (!rejectsPack(replaceOnce(minimal, '"durationTicks":2', '"durationTicks":0'), InvalidInteger))
+	if (!rejectsParsedPack(parsed, replaceValue([
+		field("statefulObjects"),
+		index(0),
+		field("states"),
+		index(0),
+		field("presentation"),
+		field("model"),
+		field("frames"),
+		index(1),
+		field("durationTicks")
+	], JsonNumber("0")), InvalidInteger))
 		return 56;
-	if (!rejectsPack(replaceOnce(minimal, '"interaction":"activate"', '"interaction":"none"'), InvalidInvariant))
+	if (!rejectsParsedPack(parsed, replaceValue([field("statefulObjects"), index(0), field("interaction")], JsonString("none")), InvalidInvariant))
 		return 54;
-	if (!rejectsPack(replaceOnce(minimal, '"id":"entities"', '"id":"adventure-items"'), DuplicateId))
+	if (!rejectsParsedPack(parsed, replaceValue([field("assetCells"), index(1), field("id")], JsonString("adventure-items")), DuplicateId))
 		return 41;
-	if (!rejectsPack(replaceOnce(minimal, '"grass-block"', '"berries"'), DuplicateValue))
+	if (!rejectsParsedPack(parsed, replaceValue([field("assetCells"), index(2), field("cells"), index(1)], JsonString("berries")), DuplicateValue))
 		return 42;
-	if (!rejectsPack(replaceOnce(minimal, '"id":"adventure-items"', '"id":"zz-assets"'), NonCanonicalOrder))
+	if (!rejectsParsedPack(parsed, replaceValue([field("assetCells"), index(0), field("id")], JsonString("zz-assets")), NonCanonicalOrder))
 		return 43;
-	if (!rejectsPack(replaceOnce(minimal, '"mossling-front"', '"Mossling"'), InvalidString))
+	if (!rejectsParsedPack(parsed, replaceValue([field("assetCells"), index(1), field("cells"), index(0)], JsonString("Mossling")), InvalidString))
 		return 44;
-	if (!rejectsPack(replaceOnce(minimal, '"packVersion":1,', ""), MissingField))
+	if (!rejectsParsedPack(parsed, removeField([], "packVersion"), MissingField))
 		return 12;
-	if (!rejectsPack(replaceOnce(minimal, '"packVersion":1', '"surprise":1'), UnknownField))
+	if (!rejectsParsedPack(parsed, renameField([], "packVersion", "surprise"), UnknownField))
 		return 13;
-	if (!rejectsPack(replaceOnce(minimal, '"packVersion":1', '"packVersion":"1"'), WrongType))
+	if (!rejectsParsedPack(parsed, replaceValue([field("packVersion")], JsonString("1")), WrongType))
 		return 14;
-	if (!rejectsPack(replaceOnce(minimal, '"id":"caxecraft:dirt"', '"id":"caxecraft:air"'), DuplicateId))
+	if (!rejectsParsedPack(parsed, replaceValue([field("blocks"), index(1), field("id")], JsonString("caxecraft:air")), DuplicateId))
 		return 15;
-	if (!rejectsPack(replaceOnce(minimal, '"id":"caxecraft:feedback"', '"id":"caxecraft:core"'), CrossKindId))
+	if (!rejectsParsedPack(parsed, replaceValue([field("effects"), index(0), field("id")], JsonString("caxecraft:core")), CrossKindId))
 		return 16;
-	if (!rejectsPack(replaceOnce(minimal, '"simulationProfile":"bounded-water"', '"simulationProfile":"unbounded-water"'), InvalidClosedValue))
+	if (!rejectsParsedPack(parsed, replaceValue([field("fluids"), index(0), field("simulationProfile")], JsonString("unbounded-water")), InvalidClosedValue))
 		return 17;
-	final missingAir = replaceOnce(minimal, '"airBlock":"caxecraft:air"', '"airBlock":"caxecraft:missing"');
-	final missingAirDiagnostic = expectPackRejection(missingAir, UnresolvedReference);
-	if (!pointsAtFirstValue(missingAirDiagnostic, missingAir, "caxecraft:missing"))
+	final missingAirPath = [field("airBlock")];
+	final missingAirDiagnostic = expectParsedPackRejection(parsed, replaceValue(missingAirPath, JsonString("caxecraft:missing")), UnresolvedReference);
+	if (!pointsAtNode(missingAirDiagnostic, nodeAt(parsed, missingAirPath)))
 		return 34;
-	final missingDefault = replaceOnce(minimal, '"defaultAquaticProfile":"caxecraft:standard"', '"defaultAquaticProfile":"caxecraft:missing"');
-	final missingDefaultDiagnostic = expectPackRejection(missingDefault, UnresolvedReference);
-	if (!pointsAtFirstValue(missingDefaultDiagnostic, missingDefault, "caxecraft:missing"))
+	final missingDefaultPath = [field("defaultAquaticProfile")];
+	final missingDefaultDiagnostic = expectParsedPackRejection(parsed, replaceValue(missingDefaultPath, JsonString("caxecraft:missing")), UnresolvedReference);
+	if (!pointsAtNode(missingDefaultDiagnostic, nodeAt(parsed, missingDefaultPath)))
 		return 35;
-	if (!rejectsPack(replaceOnce(minimal, '"placementBlock":"caxecraft:dirt"', '"placementBlock":"caxecraft:missing"'), UnresolvedReference))
+	if (!rejectsParsedPack(parsed, replaceValue([field("items"), index(0), field("placementBlock")], JsonString("caxecraft:missing")), UnresolvedReference))
 		return 18;
-	if (!rejectsPack(replaceOnce(minimal, '"dropItem":"caxecraft:block-item"', '"dropItem":"caxecraft:water"'), WrongReferenceKind))
+	if (!rejectsParsedPack(parsed, replaceValue([field("blocks"), index(1), field("dropItem")], JsonString("caxecraft:water")), WrongReferenceKind))
 		return 19;
-	if (!rejectsPack(replaceOnce(minimal, '"aquaticProfile":"caxecraft:standard"', '"aquaticProfile":"caxecraft:missing"'), UnresolvedReference))
+	if (!rejectsParsedPack(parsed, replaceValue([field("items"), index(1), field("aquaticProfile")], JsonString("caxecraft:missing")), UnresolvedReference))
 		return 20;
-	if (!rejectsPack(replaceOnce(minimal, '"drop":"caxecraft:drop"', '"drop":"caxecraft:missing"'), UnresolvedReference))
+	if (!rejectsParsedPack(parsed, replaceValue([field("enemies"), index(0), field("drop")], JsonString("caxecraft:missing")), UnresolvedReference))
 		return 21;
-	if (!rejectsPack(replaceOnce(minimal, '"asset":"terrain"', '"asset":"missing"'), UnknownAsset))
+	if (!rejectsParsedPack(parsed, replaceValue([field("fluids"), index(0), field("presentation"), field("asset")], JsonString("missing")), UnknownAsset))
 		return 22;
-	if (!rejectsPack(replaceOnce(minimal, '"cell":"teal-water"', '"cell":"missing"'), UnknownAssetCell))
+	if (!rejectsParsedPack(parsed, replaceValue([field("fluids"), index(0), field("presentation"), field("cell")], JsonString("missing")), UnknownAssetCell))
 		return 23;
-	if (!rejectsPack(replaceOnce(minimal, '"id":"caxecraft:air"', '"id":"caxecraft:zz-air"'), NonCanonicalOrder))
+	if (!rejectsParsedPack(parsed, replaceValue([field("blocks"), index(0), field("id")], JsonString("caxecraft:zz-air")), NonCanonicalOrder))
 		return 24;
-	if (!rejectsPack(replaceOnce(minimal, '"maxStack":64', '"maxStack":65'), InvalidInteger))
+	if (!rejectsParsedPack(parsed, replaceValue([field("items"), index(0), field("maxStack")], JsonNumber("65")), InvalidInteger))
 		return 25;
-	if (!rejectsPack(replaceOnce(minimal, '"storageCode":1', '"storageCode":0'), DuplicateStorageCode))
+	if (!rejectsParsedPack(parsed, replaceValue([field("blocks"), index(1), field("storageCode")], JsonNumber("0")), DuplicateStorageCode))
 		return 38;
-	if (!rejectsPack(replaceOnce(minimal, '"prefabs":[]', '"prefabs":[null]'), UnsupportedReservedKind))
+	final prefabs = nodeAt(parsed, [field("prefabs")]);
+	if (prefabs == null
+		|| !rejectsParsedPack(parsed, replaceValue([field("prefabs")], JsonArray([new ContentJsonNode(JsonNull, prefabs.line, prefabs.column)])),
+			UnsupportedReservedKind))
 		return 26;
-	if (!rejectsPack(replaceOnce(minimal, '"objectType":"caxecraft:glyph-control"', '"objectType":"caxecraft:missing"'), UnresolvedReference))
+	if (!rejectsParsedPack(parsed, replaceValue([field("editorObjects"), index(0), field("objectType")], JsonString("caxecraft:missing")), UnresolvedReference))
 		return 61;
-	if (!rejectsPack(replaceOnce(minimal, '"initialState":"caxecraft:idle"', '"initialState":"caxecraft:other"'), InvalidInvariant))
+	if (!rejectsParsedPack(parsed, replaceValue([field("editorObjects"), index(0), field("initialState")], JsonString("caxecraft:other")), InvalidInvariant))
 		return 62;
+	if (!rejectsParsedPack(parsed, replaceValue([field("editorObjects"), index(1), field("targetObjectType")], JsonString("caxecraft:missing")),
+		UnresolvedReference))
+		return 77;
+	if (!rejectsParsedPack(parsed, replaceValue([field("editorObjects"), index(1), field("activeState")], JsonString("caxecraft:other")), InvalidInvariant))
+		return 78;
 	return uiNegativeChecks(minimalUiCatalog());
 }
 
@@ -423,7 +688,11 @@ function minimalPack():String
 		+ '"drops":[{"id":"caxecraft:drop","item":"caxecraft:item","quantity":1,"pickupRadiusMilli":1500,"presentation":{"asset":"items","cell":"berries"}}],'
 		+ '"effects":[{"id":"caxecraft:feedback","profile":"pickup-feedback"}],'
 		+ '"editorObjects":[{"id":"glyph-control","kind":"stateful-object","label":{"en":"GLYPH CONTROL","es-MX":"CONTROL DE GLIFO"},'
-		+ '"objectType":"caxecraft:glyph-control","initialState":"caxecraft:idle"}],"prefabs":[],'
+		+ '"objectType":"caxecraft:glyph-control","initialState":"caxecraft:idle","activeState":null,"targetObjectType":null,'
+		+ '"targetInitialState":null,"targetActiveState":null},'
+		+ '{"id":"linked-control","kind":"linked-stateful-pair","label":{"en":"LINKED CONTROL","es-MX":"CONTROL VINCULADO"},'
+		+ '"objectType":"caxecraft:glyph-control","initialState":"caxecraft:idle","activeState":"caxecraft:active",'
+		+ '"targetObjectType":"caxecraft:glyph-control","targetInitialState":"caxecraft:idle","targetActiveState":"caxecraft:active"}],"prefabs":[],'
 		+ '"statefulObjects":[{"id":"caxecraft:glyph-control","interaction":"activate","interactionRadiusMilli":2500,'
 		+ '"bounds":{"widthMilli":1000,"heightMilli":1000,"depthMilli":1000},'
 		+ '"states":[{"id":"caxecraft:active","collision":"solid","render":"visible","presentation":{"asset":"adventure-items","cell":"glyph-leaf",'
@@ -436,14 +705,14 @@ function minimalPack():String
 /**
  * Return the first two correctly shaped typed messages for fast UI negatives.
  *
- * Every mutation below fails before the complete-catalog compatibility check;
- * the real 35-message positive path remains the proof that all shipped text is
- * admitted and mapped to the existing constructors.
+ * These mutations fail before catalog compatibility is checked. The complete
+ * positive path proves that all shipped text maps to a typed key.
  */
 function minimalUiCatalog():String
 	return '{"schemaVersion":1,"catalogId":"caxecraft.ui","defaultLocale":"en","locales":["en","es-MX"],"messages":['
-		+ '{"id":"aquatic_gear_equipped","symbol":"AquaticGearEquipped","text":{"en":"AQUATIC GEAR EQUIPPED","es-MX":"EQUIPO ACUATICO ACTIVADO"}},'
-		+ '{"id":"brand","symbol":"Brand","text":{"en":"CAXECRAFT  //  C + HAXE","es-MX":"CAXECRAFT  //  C + HAXE"}}]}';
+		+ '{"id":"aquatic_gear_equipped","text":{"en":"AQUATIC GEAR EQUIPPED","es-MX":"EQUIPO ACUATICO ACTIVADO"}},'
+		+ '{"id":"brand","text":{"en":"CAXECRAFT  //  C + HAXE","es-MX":"CAXECRAFT  //  C + HAXE"}}],'
+		+ '"templates":[{"id":"test.template","text":{"en":"TEST {0}","es-MX":"PRUEBA {0}"}}]}';
 
 /** Exercise catalog identity, ordering, locale, message, and text bounds. */
 function uiNegativeChecks(ui:String):Int {
@@ -455,7 +724,7 @@ function uiNegativeChecks(ui:String):Int {
 		return 29;
 	if (!rejectsUi(replaceOnce(ui, '"id":"aquatic_gear_equipped"', '"id":"zz_aquatic_gear_equipped"'), NonCanonicalOrder))
 		return 30;
-	if (!rejectsUiAt(replaceOnce(ui, '"symbol":"Brand"', '"symbol":"DifferentBrand"'), IncompatibleTypedCatalog, "messages[1]"))
+	if (!rejectsUiAt(replaceOnce(ui, '"id":"brand"', '"extra":"duplicate-owner","id":"brand"'), UnknownField, "messages[1].extra"))
 		return 31;
 	if (!rejectsUi(replaceOnce(ui, '"es-MX":"CAXECRAFT  //  C + HAXE"', '"fr":"CAXECRAFT  //  C + HAXE"'), InvalidLocale))
 		return 32;
@@ -464,9 +733,171 @@ function uiNegativeChecks(ui:String):Int {
 	return 0;
 }
 
-/** Decode one mutated pack and compare only its intended rejection family. */
-function rejectsPack(source:String, family:ExpectedSchemaFamily):Bool
-	return expectPackRejection(source, family) != null;
+/** One exact traversal step through the parser's closed JSON tree. */
+private enum JsonPathStep {
+	/** Select a named object field. */
+	JsonField(name:String);
+
+	/** Select a zero-based array element. */
+	JsonIndex(index:Int);
+}
+
+/** One immutable edit applied at the end of a JSON-tree path. */
+private enum JsonTreeOperation {
+	/** Replace a value while preserving its source coordinate. */
+	ReplaceJsonValue(value:ContentJsonValue);
+
+	/** Remove one required field from an object. */
+	RemoveJsonField(name:String);
+
+	/** Rename one known field into an unknown field. */
+	RenameJsonField(from:String, to:String);
+}
+
+/** A schema mutation whose path and operation are kept together. */
+private typedef JsonTreeMutation = {
+	/** Exact field/index path from the pack root. */
+	final path:Array<JsonPathStep>;
+
+	/** Immutable edit to apply at that path. */
+	final operation:JsonTreeOperation;
+}
+
+/** Construct one field path step without exposing enum spelling at call sites. */
+inline function field(name:String):JsonPathStep
+	return JsonField(name);
+
+/** Construct one array path step without exposing enum spelling at call sites. */
+inline function index(value:Int):JsonPathStep
+	return JsonIndex(value);
+
+/** Describe one value replacement at an exact schema path. */
+function replaceValue(path:Array<JsonPathStep>, value:ContentJsonValue):JsonTreeMutation
+	return {path: path, operation: ReplaceJsonValue(value)};
+
+/** Describe removal of one field from the object at an exact schema path. */
+function removeField(path:Array<JsonPathStep>, name:String):JsonTreeMutation
+	return {path: path, operation: RemoveJsonField(name)};
+
+/** Describe renaming one field in the object at an exact schema path. */
+function renameField(path:Array<JsonPathStep>, from:String, to:String):JsonTreeMutation
+	return {path: path, operation: RenameJsonField(from, to)};
+
+/**
+ * Copy only the containers along one mutation path.
+ *
+ * Untouched parser-owned nodes remain shared and immutable. This keeps each
+ * schema case independent without reparsing the same 3.3 KiB JSON source.
+ */
+function mutateNode(node:ContentJsonNode, path:Array<JsonPathStep>, operation:JsonTreeOperation):Null<ContentJsonNode> {
+	return mutateNodeAt(node, path, 0, operation);
+}
+
+/** Copy the next path container without allocating a sliced path. */
+function mutateNodeAt(node:ContentJsonNode, path:Array<JsonPathStep>, pathIndex:Int, operation:JsonTreeOperation):Null<ContentJsonNode> {
+	if (pathIndex == path.length)
+		return applyTreeOperation(node, operation);
+	return switch path[pathIndex] {
+		case JsonField(name):
+			switch node.value {
+				case JsonObject(fields):
+					final copied = fields.copy();
+					var found = false;
+					for (fieldIndex in 0...copied.length) {
+						final current = copied[fieldIndex];
+						if (!found && current.name == name) {
+							final changed = mutateNodeAt(current.value, path, pathIndex + 1, operation);
+							if (changed == null)
+								return null;
+							copied[fieldIndex] = new ContentJsonField(current.name, changed, current.line, current.column);
+							found = true;
+						}
+					}
+					found ? new ContentJsonNode(JsonObject(copied), node.line, node.column) : null;
+				case _: null;
+			}
+		case JsonIndex(arrayIndex):
+			switch node.value {
+				case JsonArray(values):
+					if (arrayIndex < 0 || arrayIndex >= values.length)
+						return null;
+					final changed = mutateNodeAt(values[arrayIndex], path, pathIndex + 1, operation);
+					if (changed == null)
+						return null;
+					final copied = values.copy();
+					copied[arrayIndex] = changed;
+					new ContentJsonNode(JsonArray(copied), node.line, node.column);
+				case _: null;
+			}
+	};
+}
+
+/** Apply one mutation after its complete path has resolved. */
+function applyTreeOperation(node:ContentJsonNode, operation:JsonTreeOperation):Null<ContentJsonNode> {
+	return switch operation {
+		case ReplaceJsonValue(value): new ContentJsonNode(value, node.line, node.column);
+		case RemoveJsonField(name):
+			switch node.value {
+				case JsonObject(fields):
+					final copied:Array<ContentJsonField> = [];
+					var removed = false;
+					for (current in fields) {
+						if (!removed && current.name == name)
+							removed = true;
+						else
+							copied.push(current);
+					}
+					removed ? new ContentJsonNode(JsonObject(copied), node.line, node.column) : null;
+				case _: null;
+			}
+		case RenameJsonField(from, to):
+			switch node.value {
+				case JsonObject(fields):
+					final copied = fields.copy();
+					var renamed = false;
+					for (fieldIndex in 0...copied.length) {
+						final current = copied[fieldIndex];
+						if (!renamed && current.name == from) {
+							copied[fieldIndex] = new ContentJsonField(to, current.value, current.line, current.column);
+							renamed = true;
+						}
+					}
+					renamed ? new ContentJsonNode(JsonObject(copied), node.line, node.column) : null;
+				case _: null;
+			}
+	};
+}
+
+/** Resolve one source-bearing node so location assertions stay explicit. */
+function nodeAt(root:ContentJsonNode, path:Array<JsonPathStep>):Null<ContentJsonNode> {
+	var current = root;
+	for (step in path) {
+		final next = switch step {
+			case JsonField(name):
+				switch current.value {
+					case JsonObject(fields):
+						var found:Null<ContentJsonNode> = null;
+						for (field in fields)
+							if (field.name == name)
+								found = field.value;
+						found;
+					case _: null;
+				}
+			case JsonIndex(arrayIndex):
+				switch current.value {
+					case JsonArray(values):
+						if (arrayIndex < 0 || arrayIndex >= values.length)
+							return null;
+						values[arrayIndex];
+					case _: null;
+				}
+		};
+		if (next == null)
+			return null;
+		current = next;
+	}
+	return current;
+}
 
 /** Return one located pack diagnostic when its family is the expected one. */
 function expectPackRejection(source:String, family:ExpectedSchemaFamily):Null<RuntimeSchemaDiagnostic> {
@@ -476,12 +907,24 @@ function expectPackRejection(source:String, family:ExpectedSchemaFamily):Null<Ru
 	};
 }
 
-/** Prove one diagnostic points at the mutated JSON String, not a fallback. */
-function pointsAtFirstValue(diagnostic:Null<RuntimeSchemaDiagnostic>, source:String, value:String):Bool {
-	if (diagnostic == null || diagnostic.line != 1)
-		return false;
-	return diagnostic.column == source.indexOf('"' + value + '"') + 1;
+/** Compare one immutable tree mutation with its intended rejection family. */
+function rejectsParsedPack(root:ContentJsonNode, mutation:JsonTreeMutation, family:ExpectedSchemaFamily):Bool
+	return expectParsedPackRejection(root, mutation, family) != null;
+
+/** Apply one schema-only mutation and return its located rejection. */
+function expectParsedPackRejection(root:ContentJsonNode, mutation:JsonTreeMutation, family:ExpectedSchemaFamily):Null<RuntimeSchemaDiagnostic> {
+	final candidate = mutateNode(root, mutation.path, mutation.operation);
+	if (candidate == null)
+		return null;
+	return switch RuntimeContentPack.decodeParsed(candidate) {
+		case RuntimeContentPackRejected(diagnostic) if (sameFamily(diagnostic.kind, family) && diagnostic.line > 0 && diagnostic.column > 0): diagnostic;
+		case _: null;
+	};
 }
+
+/** Prove one rejection points at the exact mutated value node. */
+function pointsAtNode(diagnostic:Null<RuntimeSchemaDiagnostic>, node:Null<ContentJsonNode>):Bool
+	return diagnostic != null && node != null && diagnostic.line == node.line && diagnostic.column == node.column;
 
 /** Decode one mutated UI catalog and compare its intended rejection family. */
 function rejectsUi(source:String, family:ExpectedSchemaFamily):Bool {
@@ -496,6 +939,7 @@ function rejectsUiAt(source:String, family:ExpectedSchemaFamily, expectedPath:St
 	return switch RuntimeUiCatalog.decode(Bytes.ofString(source)) {
 		case RuntimeUiCatalogRejected(diagnostic): final pathMatches = switch diagnostic.kind {
 				case SchemaIncompatibleTypedCatalog(path): path == expectedPath;
+				case SchemaUnknownField(path, field): '$path.$field' == expectedPath;
 				case _: false;
 			}; sameFamily(diagnostic.kind, family) && pathMatches && diagnostic.line > 0 && diagnostic.column > 0;
 		case RuntimeUiCatalogReady(_): false;

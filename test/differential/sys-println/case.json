@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 1,
+  "id": "sys-println",
+  "role": "fixture",
+  "type": "differential",
+  "status": "active",
+  "requirements": [
+    "HXC-SEM-006",
+    "HXC-STD-004",
+    "HXC-QA-005"
+  ],
+  "sources": [
+    "src/reflaxe/c/lowering/CBodyLowering.hx",
+    "test/string_output/run.py",
+    "test/string_output/fixtures/nonstring/Main.hx",
+    "test/differential/sys-println/conditional/Main.hx",
+    "test/differential/sys-println/integer/Main.hx",
+    "test/differential/sys-println/mixed/Main.hx",
+    "test/differential/sys-println/scalars/Main.hx",
+    "test/differential/sys-println/selection/Main.hx"
+  ],
+  "runner": {
+    "command": [
+      "python3",
+      "test/string_output/run.py",
+      "--typed-only"
+    ],
+    "workingDirectory": ".",
+    "timeoutSeconds": 600,
+    "network": false
+  },
+  "expected": {
+    "exitCode": 0,
+    "stdout": {
+      "mode": "contains",
+      "value": "typed-output: OK:"
+    }
+  }
+}

@@ -10,6 +10,7 @@ import caxecraft.scenario.CaxeFlow.FlowScope;
 import caxecraft.scenario.CaxeFlow.FlowValue;
 import caxecraft.scenario.CaxeFlowActionRegistry.FlowActionId;
 import caxecraft.scenario.CaxeFlowActionRegistry.flowActionId;
+import caxecraft.scenario.CaxeFlowEventRegistry.flowEventId;
 import caxecraft.scenario.Scenario.ScenarioMode;
 import caxecraft.scenario.ScenarioEnvironment.ScenarioEnvironmentProfile;
 import caxecraft.scenario.ScenarioEnvironment.ScenarioHorizonEdge;
@@ -291,6 +292,8 @@ final class ScenarioWriter {
 			case Once: "once";
 			case Repeat: "repeat";
 			case Cooldown(ticks): 'cooldown $ticks';
+			case OncePerActor: "once-per-actor";
+			case CooldownPerActor(ticks): 'cooldown-per-actor $ticks';
 		}
 	}
 
@@ -321,18 +324,12 @@ final class ScenarioWriter {
 	}
 
 	static function event(value:FlowEvent):String {
+		final syntax = flowEventId(value).text();
 		return switch value {
-			case EnterZone(id): 'enter-zone ${id.text()}';
-			case LeaveZone(id): 'leave-zone ${id.text()}';
-			case Interact(id): 'interact ${id.text()}';
-			case BlockChanged(zone, block): 'block-changed ${zone.text()} ${block.text()}';
-			case UseItem(item): 'use-item ${item.text()}';
-			case ItemCollected(item): 'collect-item ${item.text()}';
-			case EntityDefeated(entity): 'entity-defeated ${entity.text()}';
-			case SignalReceived(signal): 'signal ${signal.text()}';
-			case TimerExpired(timer): 'timer ${timer.text()}';
-			case ObjectiveChanged(objective): 'objective-changed ${objective.text()}';
-			case StateChanged(variable): 'state-changed ${variable.text()}';
+			case EnterZone(id) | LeaveZone(id) | Interact(id) | EntityDefeated(id) | TimerExpired(id) | ObjectiveChanged(id) | StateChanged(id) |
+				LevelEntered(id) | CampaignExitRequested(id): '$syntax ${id.text()}';
+			case BlockChanged(zone, block): '$syntax ${zone.text()} ${block.text()}';
+			case UseItem(item) | ItemCollected(item) | SignalReceived(item): '$syntax ${item.text()}';
 		}
 	}
 
@@ -351,6 +348,8 @@ final class ScenarioWriter {
 			case ObjectiveIs(objective, expected): '(objective ${objective.text()} ${objectiveState(expected)})';
 			case NearObject(actor, objectId, maximum): '(near ${actor.text()} ${objectId.text()} $maximum)';
 			case ModeIs(value): '(mode ${mode(value)})';
+			case EventActorIs(actor): '(event-actor ${actor.text()})';
+			case EventSweptIs(expected): '(event-swept $expected)';
 		}
 	}
 

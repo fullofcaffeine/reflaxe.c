@@ -214,6 +214,43 @@ def sha256_file(path: Path) -> str:
     return digest.hexdigest()
 
 
+def repository_text_sha256(path: Path) -> str:
+    """Hash one repository-owned UTF-8 file whose canonical checkout uses LF."""
+    try:
+        content = path.read_bytes()
+        content.decode("utf-8", errors="strict")
+    except (OSError, UnicodeError) as error:
+        raise ProvisionFailure(
+            f"cannot read canonical repository text {path}: {error}"
+        ) from error
+    if b"\r" in content:
+        raise ProvisionFailure(
+            f"canonical repository text must use LF line endings: {path}"
+        )
+    return sha256_bytes(content)
+
+
+def verify_repository_text_sha256(path: Path, expected: str, label: str) -> None:
+    """Distinguish checkout EOL drift from a genuine locked-content change."""
+    try:
+        content = path.read_bytes()
+    except OSError as error:
+        raise ProvisionFailure(f"cannot read {label} {path}: {error}") from error
+    actual = sha256_bytes(content)
+    if actual == expected:
+        return
+    try:
+        text = content.decode("utf-8", errors="strict")
+    except UnicodeError:
+        text = ""
+    normalized = text.replace("\r\n", "\n").replace("\r", "\n")
+    if normalized != text and sha256_bytes(normalized.encode("utf-8")) == expected:
+        raise ProvisionFailure(
+            f"{label} line-ending drift: {path}; the locked repository file requires an LF checkout"
+        )
+    raise ProvisionFailure(f"{label} content hash mismatch: {path}")
+
+
 def canonical_json(value: object) -> str:
     return json.dumps(value, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
 
@@ -423,8 +460,7 @@ def validate_lock(lock: Mapping[str, object]) -> None:
         recipe_path = ROOT.joinpath(*relative.parts)
         if recipe_path.is_symlink() or not recipe_path.is_file():
             raise ProvisionFailure(f"locked raylib patch recipe is missing: {relative.as_posix()}")
-        if sha256_file(recipe_path) != digest:
-            raise ProvisionFailure(f"locked raylib patch recipe hash mismatch: {relative.as_posix()}")
+        verify_repository_text_sha256(recipe_path, digest, "locked raylib patch recipe")
         upstream_commit = entry.get("upstreamCommit")
         if upstream_commit != PINNED_COMMIT:
             raise ProvisionFailure(f"patches[{index}].upstreamCommit drifted")
@@ -663,8 +699,7 @@ def load_patch_recipe(entry: Mapping[str, object]) -> dict[str, object]:
     path = ROOT.joinpath(*relative.parts)
     if path.is_symlink() or not path.is_file():
         raise ProvisionFailure(f"raylib patch recipe is missing: {relative.as_posix()}")
-    if sha256_file(path) != entry.get("sha256"):
-        raise ProvisionFailure(f"raylib patch recipe hash mismatch: {relative.as_posix()}")
+    verify_repository_text_sha256(path, str(entry.get("sha256")), "raylib patch recipe")
     try:
         value = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, UnicodeError, json.JSONDecodeError) as error:
@@ -1804,6 +1839,14 @@ def parse_args(argv: Iterable[str]) -> argparse.Namespace:
 
     subparsers.add_parser("verify-lock", help="validate the repository lock without provisioning")
 
+    digest = subparsers.add_parser(
+        "patch-recipe-digest",
+        help="print the canonical LF-byte digest used to update one patch lock entry",
+    )
+    digest.add_argument(
+        "recipe", help="repository-relative path below scripts/raylib/patches"
+    )
+
     source = subparsers.add_parser("build-source", help="verify, configure, and build pinned source")
     source.add_argument("--authority", choices=("pinned-source", "offline-source"), required=True)
     source.add_argument("--configuration", choices=SUPPORTED_CONFIGURATIONS, required=True)
@@ -1830,6 +1873,17 @@ def parse_args(argv: Iterable[str]) -> argparse.Namespace:
 def main(argv: Iterable[str] = ()) -> int:
     try:
         args = parse_args(argv)
+        if args.command == "patch-recipe-digest":
+            relative = safe_relative_path(args.recipe, "raylib patch recipe path")
+            if relative.parts[:3] != ("scripts", "raylib", "patches"):
+                raise ProvisionFailure(
+                    "raylib patch recipe path must stay under scripts/raylib/patches"
+                )
+            path = ROOT.joinpath(*relative.parts)
+            if path.is_symlink() or not path.is_file():
+                raise ProvisionFailure(f"raylib patch recipe is missing: {relative.as_posix()}")
+            print(repository_text_sha256(path))
+            return 0
         lock = load_lock(args.lock)
         if args.command == "verify-lock":
             print("raylib-provision: OK: raylib 6.0 archive, tree, configuration, and platform lock")

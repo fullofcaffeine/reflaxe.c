@@ -1,6 +1,7 @@
 package caxecraft.editor;
 
 import caxecraft.editor.EditorTypes.EditorError;
+import caxecraft.editor.EditorWorldGrid.isEditable as isWorldGridEditable;
 import caxecraft.scenario.CaxeFlow.FlowAction;
 import caxecraft.scenario.Scenario;
 import caxecraft.scenario.ScenarioCodecModel.ParsedScenario;
@@ -20,7 +21,21 @@ import haxe.io.Bytes;
 @:noCompletion
 typedef EditorScenarioImage = {
 	final bytes:Bytes;
-	final parsed:ParsedScenario;
+	final scenario:Scenario;
+	final parseState:EditorScenarioParseState;
+
+	/** True after the complete chunk layout passes the editor's exact decoder. */
+	final worldGridEditable:Bool;
+}
+
+/** Whether this image already owns exact source coordinates for its bytes. */
+@:noCompletion
+enum EditorScenarioParseState {
+	/** The image came through the public reader and has exact parser metadata. */
+	ParsedScenarioImage(parsed:ParsedScenario);
+
+	/** A trusted copy-owning reducer wrote these bytes; validation parses on demand. */
+	DeferredScenarioParse;
 }
 
 /** Internal success/failure result for the same snapshot boundary. */
@@ -31,11 +46,14 @@ enum EditorScenarioImageResult {
 }
 
 /**
-	Copies editor state through the public CAXEMAP codec.
+	Copies general editor state through the public CAXEMAP codec.
 
 	This avoids mutable array aliases between edit, history, and test play while
 	also ensuring every editor-produced draft remains representable by the public
-	file format. It performs no filesystem work.
+	file format. It performs no filesystem work. A separate reducer-owned capture
+	writes canonical bytes but defers parsing when the reducer constructs or
+	deep-copies all changed arrays and records and the session keeps the result
+	private.
 
 	The codec round trip is a stateless operation over caller-owned values, so
 	module functions are clearer than a class containing only static methods.
@@ -55,6 +73,32 @@ function capture(scenario:Scenario):EditorScenarioImageResult {
 	return restore(ScenarioWriter.write(scenario));
 }
 
+/**
+	Capture canonical bytes after a copy-owning reducer edit without parsing them.
+
+	Eligible reducers either build values from scalar input or deep-copy every
+	structured input that they retain. The remaining scenario values come from
+	the session's private image. This lets the session publish exact canonical
+	bytes and history immediately while deferring source-coordinate reconstruction
+	until validation needs it. Do not use this boundary for a command that can
+	retain caller-owned structured input. `worldGridEditable` carries the complete
+	decoder result from the private image that supplied the reducer input; accepted
+	reducers preserve that structural fact.
+**/
+@:noCompletion
+function captureReducerOwnedEdit(scenario:Scenario, worldGridEditable:Bool):EditorScenarioImageResult {
+	if (scenario.formatVersion != ScenarioWriter.FORMAT_VERSION)
+		return ImageRejected(UnsupportedFormatVersion(scenario.formatVersion, ScenarioWriter.FORMAT_VERSION));
+	if (containsNestedChoice(scenario))
+		return ImageRejected(NestedChoiceIsNotRepresentable);
+	return ImageReady({
+		bytes: ScenarioWriter.write(scenario),
+		scenario: scenario,
+		parseState: DeferredScenarioParse,
+		worldGridEditable: worldGridEditable
+	});
+}
+
 /** Restore an isolated editor image from canonical in-memory CAXEMAP bytes. */
 @:noCompletion
 function restore(bytes:Bytes):EditorScenarioImageResult {
@@ -63,7 +107,12 @@ function restore(bytes:Bytes):EditorScenarioImageResult {
 		case ReadOk(records):
 			switch ScenarioParser.parse(records) {
 				case ReadError(diagnostics): ImageRejected(SnapshotRejected(diagnostics));
-				case ReadOk(parsed): ImageReady({bytes: bytes.sub(0, bytes.length), parsed: parsed});
+				case ReadOk(parsed): ImageReady({
+						bytes: bytes.sub(0, bytes.length),
+						scenario: parsed.candidate,
+						parseState: ParsedScenarioImage(parsed),
+						worldGridEditable: isWorldGridEditable(parsed.candidate.world)
+					});
 			}
 	}
 }

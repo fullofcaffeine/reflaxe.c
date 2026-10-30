@@ -1,13 +1,15 @@
 # Deterministic generic specialization
 
-E3.T03 adds a bounded production path for closed generic functions and the
-already admitted generic enum values. It covers static calls and instance calls
-whose exact method body is known, such as a method on a `final` class.
+E3.T03 adds a bounded production path for closed generic functions, generic
+class owners, generic abstract implementation functions, and the already
+admitted generic enum values. It covers static calls and instance calls whose
+exact method body is known, including one closed generic class with one proven
+effective target.
 Reachability is discovered from the real pinned-Haxe typed call graph, each
 closed instance is lowered through validated HxcIR, and equivalent instances
 share one structural strict-C11 definition. This is program-local
 monomorphization, not a public generic ABI or general support for generic
-classes and containers.
+virtual dispatch and containers.
 
 ## Closed input boundary
 
@@ -16,7 +18,11 @@ representation is already proven:
 
 - non-null `Bool`, `Int`, `UInt`, and `Float`;
 - concrete admitted Haxe enum instances whose own arguments meet this rule; and
-- closed anonymous records whose fields have an admitted direct representation.
+- closed anonymous records whose fields have an admitted direct representation;
+  and
+- ordinary closed Haxe class references, including recursively closed owner
+  arguments, when the class is neither an extern, interface, nor explicit
+  native-layout declaration.
 
 While canonicalizing a closed record, the compiler also accepts an ordinary
 non-`@:coreType` Haxe abstract when its underlying carrier already satisfies
@@ -31,10 +37,11 @@ legal.
 
 Haxe typedef aliases are expanded before identity is computed, so an alias of
 `Int` shares the same instance as `Int`. `Dynamic`, unresolved type variables,
-classes and references, open records, function types, unsupported nullable
-values, native pointers, and other open or representation-dependent arguments
-fail at the source call with exact `HXC1001`. No boxed or descriptor-driven
-fallback is selected implicitly, and rejection leaves no plausible output.
+extern or interface references, open records, function types, unsupported
+nullable values, native pointers, and other open or representation-dependent
+arguments fail at the source call with exact `HXC1001`. No universal box or
+descriptor-driven generic fallback is selected implicitly, and rejection
+leaves no plausible output.
 
 Type arguments are inferred from the written typed call arguments first and,
 when needed, from the compiler-resolved callee function type. A shorter direct
@@ -51,13 +58,25 @@ nullable injection. This division matters: the resolver recovers type
 arguments from a call Haxe has already accepted; it does not erase the
 representation step required by C.
 
-An instance method is specialized only when dispatch is statically direct:
-the compiler must know that the call cannot select an override at runtime.
-Each specialization keeps the receiver parameter and uses the same full
-semantic key, worklist, recursion budget, code-size budget, and collision
-checks as a static function. Generic virtual and interface methods remain
-fail-closed because specializing their dispatch-table slots needs a separate
-ABI design; this slice does not guess one.
+An instance method is specialized only when dispatch is statically direct: the
+compiler must know that the call cannot select an override at runtime. A
+`final` or private method already supplies that proof. A closed generic owner
+can also supply it when the reachable graph contains that exact construction
+and no distinct reachable descendant can implement the method. Discovery
+settles this decision only after the reachable work queue reaches a fixed
+point, so seeing a call before its constructor does not change the result. If a
+base and child provide two effective targets, compilation fails at the call
+instead of choosing whichever body was visited first.
+
+Each specialization keeps the receiver parameter and records owner type
+arguments before method type arguments. Constructors use the same full key,
+worklist, budgets, and collision checks, but their instance IDs begin with
+`constructor.specialization.` so a report cannot confuse construction with an
+ordinary function. Generic abstract implementation methods follow the same
+owner-first rule and keep their proven carrier, such as `Array<T>` for
+`haxe.ds.Vector<T>`. Generic virtual and interface slots remain fail-closed
+because specializing their dispatch tables needs a separate ABI design; this
+slice does not guess one.
 
 ## Semantic identity and sharing
 
@@ -65,11 +84,11 @@ The authoritative specialization key is a versioned, length-prefixed UTF-8
 encoding of the base function ID and normalized type-argument keys. Length
 prefixes keep component boundaries unambiguous without relying on punctuation
 escaping. Primitive keys preserve their semantic representation (`bool`,
-`i32`, `u32`, or `f64`); enum keys include the nominal Haxe path and recursively
-normalized argument list. A transparent record-field abstract key includes its
-nominal Haxe path, closed abstract arguments, and normalized carrier key. Two
-abstracts can therefore share the same C spelling without sharing a generic
-specialization accidentally.
+`i32`, `u32`, or `f64`); enum and class keys include the nominal Haxe path and
+recursively normalized argument list. A transparent record-field abstract key
+includes its nominal Haxe path, closed abstract arguments, and normalized
+carrier key. Two abstracts or classes can therefore share the same C spelling
+without sharing a generic specialization accidentally.
 
 The nominal path is the typed `pack + name` identity supplied by Haxe. For a
 public secondary type, the pinned compiler omits the source-module name and
@@ -87,11 +106,13 @@ server reuse therefore do not affect instance ownership or C names.
 ## Reachability and recursion
 
 `CStaticFunctionGraphCollector` uses a request-local worklist keyed by the full
-specialized instance ID. A first call creates one closed input; later equivalent
-calls merge source-rooted reachability reasons. The instance is registered
-before its body is scanned, so direct and mutually recursive calls revisit the
-same work item instead of expanding forever. Initializer bodies participate as
-ordinary graph roots.
+specialized instance ID. A first call or construction creates one closed input;
+later equivalent uses merge source-rooted reachability reasons. The instance is
+registered before its body is scanned, so direct and mutually recursive calls
+revisit the same work item instead of expanding forever. Initializer bodies
+participate as ordinary graph roots. Closed class constructions are also kept
+by full owner identity. Their provisional calls are accepted or rejected only
+after all reachable constructions and descendants are known.
 
 The compiler admits at most 64 generic function instances and 64 generic enum
 instances per build. The 65th new function instance fails at the expanding
@@ -110,8 +131,8 @@ content-addressed non-payload sidecar `hxc.specializations.json`. Its schema is
 [`generic-specialization-report.schema.json`](specs/generic-specialization-report.schema.json).
 The report records:
 
-- the full semantic key, its checked digest, final C name, normalized arguments,
-  and every sorted source reachability reason;
+- the full semantic key, its checked digest, final C name, normalized owner and
+  method arguments, and every sorted source reachability reason;
 - whether each function or enum instance participates in a recursive cycle;
 - isolated strict-C11 function-definition bytes, hashes, and HxcIR block and
   instruction counts;
@@ -231,10 +252,10 @@ semantics that truly need runtime state.
 
 Specialized names are private implementation details. Exported generic values
 or functions still require E7's explicit layout, ownership, naming, calling-
-convention, and compatibility contract. Generic classes, general arrays and
-containers, reference arguments, descriptor-driven shared bodies, boxing,
-reflection, dynamic dispatch, closures, and cross-program specialization
-stability remain outside this slice.
+convention, and compatibility contract. Generic virtual/interface slots,
+unknown descendant sets, general container element shapes, descriptor-driven
+shared bodies, universal boxing, reflection, closures, and cross-program
+specialization stability remain outside this slice.
 
 ## Evidence
 
@@ -263,6 +284,23 @@ byte-identically, emits readable `hxc_AssetRecord`/`hxc_assetPack` C in split,
 package, and unity layouts, and executes as warning-clean strict C11. A paired
 abstract-over-class-reference record fails at the field and leaves no
 artifacts.
+
+Two focused owner fixtures extend that proof without changing the source into
+C-shaped code. `Box<Int>` and `Box<Payload>` produce separate typed class
+layouts, constructors, and direct methods; their calls are deliberately found
+before the factory bodies that construct the owners. `FirstBox<Int>` proves a
+generic abstract implementation keeps its owner argument while using the
+existing typed Array carrier. Eval and split, package, and unity generated C
+all execute under each available native compiler family. A paired base/child
+fixture proves that two effective targets fail closed at the exact call.
+
+[`test/differential/vector-list`](../test/differential/vector-list) then runs
+the unchanged pinned `haxe.ds.List<T>` and `haxe.ds.Vector<T>` source as a
+product-shaped differential. It checks primitive and collector-managed
+elements, List mutation during traversal, exact traced node layouts, Vector
+copy/map/fill/sort and overlap-safe `blit`, the Array carrier, full report
+digests and budgets, deterministic layouts, C++ header consumption,
+sanitizers, runtime plans, and selective symbols.
 
 The suite also compares repeated isolated roots, reversed typed-module
 discovery, an alternate locale, and a warm compiler server before and after a

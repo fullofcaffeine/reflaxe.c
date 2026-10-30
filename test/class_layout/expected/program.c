@@ -81,7 +81,8 @@ const struct hxc_type_descriptor hxc_RootRecord_descriptor = { .abi_version = HX
 
 struct hxc_EmptyBase *hxc_ClassLayoutFixture_asEmptyBase(struct hxc_EmptyLeaf *hxc_l_value)
 {
-  const void *hxc_l_gc_roots[2] = { (const void *)hxc_l_value, NULL };
+  const void *volatile hxc_l_gc_roots[2] = { NULL, NULL };
+  hxc_l_gc_roots[0] = (const void *)hxc_l_value;
   struct hxc_gc_root_frame hxc_l_gc_frame = HXC_GC_ROOT_FRAME_INITIALIZER;
   if (hxc_gc_root_frame_push(&hxc_program_gc_thread, hxc_l_gc_roots, 2, &hxc_l_gc_frame) != HXC_STATUS_OK)
   {
@@ -97,7 +98,8 @@ struct hxc_EmptyBase *hxc_ClassLayoutFixture_asEmptyBase(struct hxc_EmptyLeaf *h
 
 struct hxc_MiddleRecord *hxc_ClassLayoutFixture_asMiddle(struct hxc_LeafRecord *hxc_l_value)
 {
-  const void *hxc_l_gc_roots[2] = { (const void *)hxc_l_value, NULL };
+  const void *volatile hxc_l_gc_roots[2] = { NULL, NULL };
+  hxc_l_gc_roots[0] = (const void *)hxc_l_value;
   struct hxc_gc_root_frame hxc_l_gc_frame = HXC_GC_ROOT_FRAME_INITIALIZER;
   if (hxc_gc_root_frame_push(&hxc_program_gc_thread, hxc_l_gc_roots, 2, &hxc_l_gc_frame) != HXC_STATUS_OK)
   {
@@ -113,7 +115,8 @@ struct hxc_MiddleRecord *hxc_ClassLayoutFixture_asMiddle(struct hxc_LeafRecord *
 
 struct hxc_RootRecord *hxc_ClassLayoutFixture_asRoot(struct hxc_LeafRecord *hxc_l_value)
 {
-  const void *hxc_l_gc_roots[2] = { (const void *)hxc_l_value, NULL };
+  const void *volatile hxc_l_gc_roots[2] = { NULL, NULL };
+  hxc_l_gc_roots[0] = (const void *)hxc_l_value;
   struct hxc_gc_root_frame hxc_l_gc_frame = HXC_GC_ROOT_FRAME_INITIALIZER;
   if (hxc_gc_root_frame_push(&hxc_program_gc_thread, hxc_l_gc_roots, 2, &hxc_l_gc_frame) != HXC_STATUS_OK)
   {
@@ -129,7 +132,9 @@ struct hxc_RootRecord *hxc_ClassLayoutFixture_asRoot(struct hxc_LeafRecord *hxc_
 
 int32_t hxc_ClassLayoutFixture_branchProofDoesNotEscape(struct hxc_RootRecord *hxc_l_value, struct hxc_RootRecord *hxc_l_other, bool hxc_l_useFirst)
 {
-  const void *hxc_l_gc_roots[2] = { (const void *)hxc_l_value, (const void *)hxc_l_other };
+  const void *volatile hxc_l_gc_roots[2] = { NULL, NULL };
+  hxc_l_gc_roots[0] = (const void *)hxc_l_value;
+  hxc_l_gc_roots[1] = (const void *)hxc_l_other;
   struct hxc_gc_root_frame hxc_l_gc_frame = HXC_GC_ROOT_FRAME_INITIALIZER;
   if (hxc_gc_root_frame_push(&hxc_program_gc_thread, hxc_l_gc_roots, 2, &hxc_l_gc_frame) != HXC_STATUS_OK)
   {
@@ -174,7 +179,9 @@ int32_t hxc_ClassLayoutFixture_branchProofDoesNotEscape(struct hxc_RootRecord *h
 
 bool hxc_ClassLayoutFixture_different(struct hxc_RootRecord *hxc_l_left, struct hxc_RootRecord *hxc_l_right)
 {
-  const void *hxc_l_gc_roots[2] = { (const void *)hxc_l_left, (const void *)hxc_l_right };
+  const void *volatile hxc_l_gc_roots[2] = { NULL, NULL };
+  hxc_l_gc_roots[0] = (const void *)hxc_l_left;
+  hxc_l_gc_roots[1] = (const void *)hxc_l_right;
   struct hxc_gc_root_frame hxc_l_gc_frame = HXC_GC_ROOT_FRAME_INITIALIZER;
   if (hxc_gc_root_frame_push(&hxc_program_gc_thread, hxc_l_gc_roots, 2, &hxc_l_gc_frame) != HXC_STATUS_OK)
   {
@@ -189,7 +196,8 @@ bool hxc_ClassLayoutFixture_different(struct hxc_RootRecord *hxc_l_left, struct 
 
 bool hxc_ClassLayoutFixture_isNull(struct hxc_RootRecord *hxc_l_value)
 {
-  const void *hxc_l_gc_roots[2] = { (const void *)hxc_l_value, NULL };
+  const void *volatile hxc_l_gc_roots[2] = { NULL, NULL };
+  hxc_l_gc_roots[0] = (const void *)hxc_l_value;
   struct hxc_gc_root_frame hxc_l_gc_frame = HXC_GC_ROOT_FRAME_INITIALIZER;
   if (hxc_gc_root_frame_push(&hxc_program_gc_thread, hxc_l_gc_roots, 2, &hxc_l_gc_frame) != HXC_STATUS_OK)
   {
@@ -205,7 +213,7 @@ bool hxc_ClassLayoutFixture_isNull(struct hxc_RootRecord *hxc_l_value)
 
 void hxc_ClassLayoutFixture_main(void)
 {
-  const void *hxc_l_gc_roots[19] = { NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL };
+  const void *volatile hxc_l_gc_roots[19] = { NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL };
   struct hxc_gc_root_frame hxc_l_gc_frame = HXC_GC_ROOT_FRAME_INITIALIZER;
   if (hxc_gc_root_frame_push(&hxc_program_gc_thread, hxc_l_gc_roots, 19, &hxc_l_gc_frame) != HXC_STATUS_OK)
   {
@@ -287,7 +295,8 @@ void hxc_ClassLayoutFixture_main(void)
 
 int32_t hxc_ClassLayoutFixture_readInherited(struct hxc_LeafRecord *hxc_l_value)
 {
-  const void *hxc_l_gc_roots[1] = { (const void *)hxc_l_value };
+  const void *volatile hxc_l_gc_roots[1] = { NULL };
+  hxc_l_gc_roots[0] = (const void *)hxc_l_value;
   struct hxc_gc_root_frame hxc_l_gc_frame = HXC_GC_ROOT_FRAME_INITIALIZER;
   if (hxc_gc_root_frame_push(&hxc_program_gc_thread, hxc_l_gc_roots, 1, &hxc_l_gc_frame) != HXC_STATUS_OK)
   {
@@ -307,7 +316,8 @@ int32_t hxc_ClassLayoutFixture_readInherited(struct hxc_LeafRecord *hxc_l_value)
 
 struct hxc_RootRecord *hxc_ClassLayoutFixture_readPeer(struct hxc_LeafRecord *hxc_l_value)
 {
-  const void *hxc_l_gc_roots[2] = { (const void *)hxc_l_value, NULL };
+  const void *volatile hxc_l_gc_roots[2] = { NULL, NULL };
+  hxc_l_gc_roots[0] = (const void *)hxc_l_value;
   struct hxc_gc_root_frame hxc_l_gc_frame = HXC_GC_ROOT_FRAME_INITIALIZER;
   if (hxc_gc_root_frame_push(&hxc_program_gc_thread, hxc_l_gc_roots, 2, &hxc_l_gc_frame) != HXC_STATUS_OK)
   {
@@ -328,7 +338,8 @@ struct hxc_RootRecord *hxc_ClassLayoutFixture_readPeer(struct hxc_LeafRecord *hx
 
 int32_t hxc_ClassLayoutFixture_readRoot(struct hxc_RootRecord *hxc_l_value)
 {
-  const void *hxc_l_gc_roots[1] = { (const void *)hxc_l_value };
+  const void *volatile hxc_l_gc_roots[1] = { NULL };
+  hxc_l_gc_roots[0] = (const void *)hxc_l_value;
   struct hxc_gc_root_frame hxc_l_gc_frame = HXC_GC_ROOT_FRAME_INITIALIZER;
   if (hxc_gc_root_frame_push(&hxc_program_gc_thread, hxc_l_gc_roots, 1, &hxc_l_gc_frame) != HXC_STATUS_OK)
   {
@@ -348,7 +359,8 @@ int32_t hxc_ClassLayoutFixture_readRoot(struct hxc_RootRecord *hxc_l_value)
 
 double hxc_ClassLayoutFixture_readScore(struct hxc_LeafRecord *hxc_l_value)
 {
-  const void *hxc_l_gc_roots[1] = { (const void *)hxc_l_value };
+  const void *volatile hxc_l_gc_roots[1] = { NULL };
+  hxc_l_gc_roots[0] = (const void *)hxc_l_value;
   struct hxc_gc_root_frame hxc_l_gc_frame = HXC_GC_ROOT_FRAME_INITIALIZER;
   if (hxc_gc_root_frame_push(&hxc_program_gc_thread, hxc_l_gc_roots, 1, &hxc_l_gc_frame) != HXC_STATUS_OK)
   {
@@ -368,7 +380,9 @@ double hxc_ClassLayoutFixture_readScore(struct hxc_LeafRecord *hxc_l_value)
 
 bool hxc_ClassLayoutFixture_same(struct hxc_RootRecord *hxc_l_left, struct hxc_RootRecord *hxc_l_right)
 {
-  const void *hxc_l_gc_roots[2] = { (const void *)hxc_l_left, (const void *)hxc_l_right };
+  const void *volatile hxc_l_gc_roots[2] = { NULL, NULL };
+  hxc_l_gc_roots[0] = (const void *)hxc_l_left;
+  hxc_l_gc_roots[1] = (const void *)hxc_l_right;
   struct hxc_gc_root_frame hxc_l_gc_frame = HXC_GC_ROOT_FRAME_INITIALIZER;
   if (hxc_gc_root_frame_push(&hxc_program_gc_thread, hxc_l_gc_roots, 2, &hxc_l_gc_frame) != HXC_STATUS_OK)
   {
@@ -383,7 +397,8 @@ bool hxc_ClassLayoutFixture_same(struct hxc_RootRecord *hxc_l_left, struct hxc_R
 
 double hxc_ClassLayoutFixture_sumAcrossBranch(struct hxc_LeafRecord *hxc_l_value, bool hxc_l_addScore)
 {
-  const void *hxc_l_gc_roots[1] = { (const void *)hxc_l_value };
+  const void *volatile hxc_l_gc_roots[1] = { NULL };
+  hxc_l_gc_roots[0] = (const void *)hxc_l_value;
   struct hxc_gc_root_frame hxc_l_gc_frame = HXC_GC_ROOT_FRAME_INITIALIZER;
   if (hxc_gc_root_frame_push(&hxc_program_gc_thread, hxc_l_gc_roots, 1, &hxc_l_gc_frame) != HXC_STATUS_OK)
   {
@@ -412,7 +427,8 @@ double hxc_ClassLayoutFixture_sumAcrossBranch(struct hxc_LeafRecord *hxc_l_value
 
 int32_t hxc_ClassLayoutFixture_writeInherited(struct hxc_LeafRecord *hxc_l_value, int32_t hxc_l_next)
 {
-  const void *hxc_l_gc_roots[1] = { (const void *)hxc_l_value };
+  const void *volatile hxc_l_gc_roots[1] = { NULL };
+  hxc_l_gc_roots[0] = (const void *)hxc_l_value;
   struct hxc_gc_root_frame hxc_l_gc_frame = HXC_GC_ROOT_FRAME_INITIALIZER;
   if (hxc_gc_root_frame_push(&hxc_program_gc_thread, hxc_l_gc_roots, 1, &hxc_l_gc_frame) != HXC_STATUS_OK)
   {
@@ -433,7 +449,9 @@ int32_t hxc_ClassLayoutFixture_writeInherited(struct hxc_LeafRecord *hxc_l_value
 
 struct hxc_RootRecord *hxc_ClassLayoutFixture_writePeer(struct hxc_LeafRecord *hxc_l_value, struct hxc_RootRecord *hxc_l_peer)
 {
-  const void *hxc_l_gc_roots[3] = { (const void *)hxc_l_value, (const void *)hxc_l_peer, NULL };
+  const void *volatile hxc_l_gc_roots[3] = { NULL, NULL, NULL };
+  hxc_l_gc_roots[0] = (const void *)hxc_l_value;
+  hxc_l_gc_roots[1] = (const void *)hxc_l_peer;
   struct hxc_gc_root_frame hxc_l_gc_frame = HXC_GC_ROOT_FRAME_INITIALIZER;
   if (hxc_gc_root_frame_push(&hxc_program_gc_thread, hxc_l_gc_roots, 3, &hxc_l_gc_frame) != HXC_STATUS_OK)
   {

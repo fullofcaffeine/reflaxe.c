@@ -24,10 +24,15 @@ import caxecraft.app.AppScreen.showsLoading;
 import caxecraft.app.AppScreen.showsTitle;
 import caxecraft.app.AppScreen.startPlaying;
 import caxecraft.app.AppScreen.togglePause;
+import caxecraft.app.AppScreen.AppPointerDirective;
+import caxecraft.app.AppScreen.advancePlayScreenFrame;
 import caxecraft.app.GameMode;
+import caxecraft.app.CampaignMenu.CampaignMenuHit;
+import caxecraft.app.CampaignMenuFlow.advanceCampaignMenuFrame;
 import caxecraft.app.SpawnCameraHeading.headingForSpawn;
 import caxecraft.app.TitleMenuFlow.TitleMenuCommand;
 import caxecraft.app.TitleMenuFlow.allowsCampaignTravel;
+import caxecraft.app.TitleMenuFlow.advanceTitleMenuFrame;
 import caxecraft.app.TitleMenuFlow.applyTitleMenuCommand;
 import caxecraft.app.TitleMenuFlow.titleMenuState;
 
@@ -69,6 +74,30 @@ function selfCheck():Int {
 		return 6;
 	if (togglePause(playing) != AppScreen.Paused)
 		return 7;
+	final focusLoss = advancePlayScreenFrame({
+		screen: playing,
+		focused: false,
+		playerDefeated: false,
+		pausePressed: false,
+		capturePressed: false
+	});
+	if (focusLoss.screen != AppScreen.Paused
+		|| focusLoss.pointer != AppPointerDirective.ReleasePointer
+		|| !focusLoss.clearQueuedJump
+		|| !focusLoss.resetSimulationClock
+		|| !focusLoss.resetMotion)
+		return 32; // focus loss did not request one complete pause boundary
+	final recapturedFrame = advancePlayScreenFrame({
+		screen: AppScreen.Paused,
+		focused: true,
+		playerDefeated: false,
+		pausePressed: false,
+		capturePressed: true
+	});
+	if (recapturedFrame.screen != playing
+		|| recapturedFrame.pointer != AppPointerDirective.CapturePointer
+		|| !recapturedFrame.recapturedThisFrame)
+		return 33; // capture did not restore ordinary play
 	if (initialScreen(false) != AppScreen.Playing)
 		return 8;
 	final editor = openEditor(title);
@@ -103,6 +132,38 @@ function selfCheck():Int {
 	if (lateMenuInput.screen != AppScreen.CampaignSelect || lateMenuInput.mode != GameMode.Adventure)
 		return 19;
 	final editorFromTitle = applyTitleMenuCommand(initialMenu, TitleMenuCommand.OpenEditor);
+	final editorFromPointer = advanceTitleMenuFrame({
+		state: initialMenu,
+		campaignAvailable: true,
+		cycleMode: false,
+		confirmMode: false,
+		pointerChoice: 2,
+		pointerPressed: true
+	});
+	if (editorFromPointer.screen != editorFromTitle.screen)
+		return 34; // pointer and semantic editor commands diverged
+	final unavailableAdventure = advanceTitleMenuFrame({
+		state: titleMenuState(title, GameMode.Adventure),
+		campaignAvailable: false,
+		cycleMode: false,
+		confirmMode: true,
+		pointerChoice: -1,
+		pointerPressed: false
+	});
+	if (unavailableAdventure.screen != title || unavailableAdventure.mode != GameMode.Adventure)
+		return 35; // an unavailable campaign escaped the title screen
+	final campaignFrame = advanceCampaignMenuFrame({
+		selectedLevelIndex: 0,
+		levelCount: 3,
+		selectionEnabled: true,
+		cycleSelection: true,
+		confirmSelection: false,
+		cancelSelection: false,
+		pointerHit: CampaignMenuHit.LaunchHit,
+		pointerPressed: true
+	});
+	if (campaignFrame.selectedLevelIndex != 1 || !campaignFrame.launchRequested || campaignFrame.backRequested)
+		return 36; // campaign menu frame did not preserve selection and launch precedence
 	if (editorFromTitle.screen != AppScreen.Editor || editorFromTitle.mode != GameMode.Creative)
 		return 20;
 	final loading = beginLoading(playing);

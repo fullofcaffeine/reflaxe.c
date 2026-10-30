@@ -55,7 +55,10 @@ final class RuntimeTextureAtlasCatalog {
 			return null;
 		final version = reader.integer(reader.field(fields, "schemaVersion"), "schemaVersion", 1, 1);
 		final packId = reader.string(reader.field(fields, "packId"), "packId", 128);
-		final values = reader.array(reader.field(fields, "assets"), "assets", 1, 32);
+		// Keep this transport view aligned with the authoritative asset manifest.
+		// The catalog skips non-texture records below, but it must still admit the
+		// complete reviewed package inventory before selecting the atlases it owns.
+		final values = reader.array(reader.field(fields, "assets"), "assets", 1, 128);
 		if (version == null || packId == null || !RuntimeSchemaReader.validProfile(packId) || values == null)
 			return null;
 

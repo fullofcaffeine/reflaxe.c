@@ -19,6 +19,7 @@ import tempfile
 from pathlib import Path
 
 import play as play_tool
+from dev_generation import GenerationFailure, current_generation
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -462,7 +463,13 @@ def require_number(value: object, label: str) -> int | float:
 
 
 def source_evidence(variant: Path) -> dict[str, object]:
-    generated = variant / "generated"
+    """Inspect the verified generation selected for this benchmark variant."""
+    try:
+        generated = current_generation(variant).generated
+    except GenerationFailure as error:
+        raise BenchmarkFailure(
+            f"cannot inspect the published generated project: {error}"
+        ) from error
     sources = sorted(generated.rglob("*.c"))
     headers = sorted(generated.rglob("*.h"))
     if not sources or not headers:
@@ -487,9 +494,11 @@ def source_evidence(variant: Path) -> dict[str, object]:
         allocation_count += len(ALLOCATOR_CALL.findall(text))
         hxrt_count += len(HXRT_REFERENCE.findall(text))
 
+    # This remains a whole-project guard. haxe_c-rl9u owns separating startup
+    # dependencies from measured rendering work without hiding either cost.
     if goto_count != 0 or allocation_count != 0 or hxrt_count != 0:
         raise BenchmarkFailure(
-            "generated renderer project violated the steady-state structural budget: "
+            "generated renderer project violated the whole-project structural budget: "
             f"goto={goto_count}, allocation calls={allocation_count}, hxrt references={hxrt_count}"
         )
     executable = variant / "bin/caxecraft"

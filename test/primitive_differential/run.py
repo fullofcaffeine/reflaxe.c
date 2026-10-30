@@ -18,6 +18,11 @@ from pathlib import Path, PurePosixPath
 
 
 ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from scripts.test.bounded_process import run as run_bounded_process  # noqa: E402
+
 EXPECTED = Path(__file__).with_name("expected")
 SEED_PATH = Path(__file__).with_name("seed.json")
 MINIMIZER_REGRESSION = Path(__file__).with_name("regressions") / "minimizer-regression.json"
@@ -465,7 +470,7 @@ def render_fixture(cases: Sequence[Case]) -> str:
 def run_haxe(command: list[str], *, label: str, timeout: int = 120) -> subprocess.CompletedProcess[str]:
     environment = os.environ.copy()
     environment["HAXE_NO_SERVER"] = "1"
-    result = subprocess.run(
+    result = run_bounded_process(
         command,
         cwd=ROOT,
         env=environment,
@@ -1167,7 +1172,7 @@ def sanitizer_supported(toolchain: CToolchain, root: Path) -> bool:
     source = root / f"sanitizer-probe-{toolchain.family}.c"
     executable = root / f"sanitizer-probe-{toolchain.family}"
     source.write_text("int main(void) { return 0; }\n", encoding="utf-8", newline="\n")
-    compiled = subprocess.run(
+    compiled = run_bounded_process(
         [toolchain.compiler, *SANITIZER_FLAGS, str(source), "-o", str(executable)],
         cwd=ROOT,
         check=False,
@@ -1177,7 +1182,7 @@ def sanitizer_supported(toolchain: CToolchain, root: Path) -> bool:
     )
     if compiled.returncode != 0:
         return False
-    executed = subprocess.run(
+    executed = run_bounded_process(
         [str(executable)],
         cwd=root,
         check=False,

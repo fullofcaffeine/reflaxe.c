@@ -112,10 +112,16 @@ final class CaxeFlowReader {
 			repeat = Once;
 		else if (ScenarioTokenGrammar.isBare(header.tokens[4], "repeat") && header.tokens.length == 5)
 			repeat = Repeat;
+		else if (ScenarioTokenGrammar.isBare(header.tokens[4], "once-per-actor") && header.tokens.length == 5)
+			repeat = OncePerActor;
 		else if (ScenarioTokenGrammar.isBare(header.tokens[4], "cooldown") && header.tokens.length == 6) {
 			final ticks = ScenarioTokenGrammar.integer(header.tokens[5]);
 			if (ticks != null)
 				repeat = Cooldown(ticks);
+		} else if (ScenarioTokenGrammar.isBare(header.tokens[4], "cooldown-per-actor") && header.tokens.length == 6) {
+			final ticks = ScenarioTokenGrammar.integer(header.tokens[5]);
+			if (ticks != null)
+				repeat = CooldownPerActor(ticks);
 		}
 		if (id == null || priority == null || repeat == null)
 			return cursor.failAt(header, InvalidToken);

@@ -29,6 +29,8 @@ final class ScenarioValidationContext {
 
 	final parsed:ParsedScenario;
 	final objectIds:Map<String, Bool> = [];
+	final statefulObjectIds:Map<String, Bool> = [];
+	final statefulObjectTypes:Map<String, ContentId> = [];
 	final fluidIds:Map<String, Bool> = [];
 	final zoneIds:Map<String, Bool> = [];
 	final entityIds:Map<String, Bool> = [];
@@ -74,6 +76,9 @@ final class ScenarioValidationContext {
 					npcIds.set(object.id.text(), true);
 				case TriggerZone(_):
 					zoneIds.set(object.id.text(), true);
+				case StatefulObject(objectType, _, _):
+					statefulObjectIds.set(object.id.text(), true);
+					statefulObjectTypes.set(object.id.text(), objectType);
 				case _:
 			}
 		}
@@ -116,6 +121,16 @@ final class ScenarioValidationContext {
 
 	public inline function hasObject(id:ScenarioId):Bool
 		return objectIds.exists(id.text());
+
+	/** True only when an object owns persistent authored state. */
+	public inline function hasStatefulObject(id:ScenarioId):Bool
+		return statefulObjectIds.exists(id.text());
+
+	/** True only when the named object type owns the requested content state. */
+	public function statefulObjectHasState(id:ScenarioId, state:ContentId):Bool {
+		final objectType = statefulObjectTypes.get(id.text());
+		return objectType != null && registry.statefulObjectHasState(objectType, state);
+	}
 
 	public inline function hasZone(id:ScenarioId):Bool
 		return zoneIds.exists(id.text());

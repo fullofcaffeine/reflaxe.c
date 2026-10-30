@@ -17,7 +17,6 @@
     "test/differential/int-map/generated/Main.hx",
     "test/differential/int-map/generated/oracle.hxml",
     "test/differential/int-map/int_map_runtime.c",
-    "test/differential/int-map/negative/get/Main.hx",
     "test/differential/int-map/negative/value_type/Main.hx",
     "test/differential/int-map/run.py"
   ],
@@ -34,7 +33,7 @@
     "exitCode": 0,
     "stdout": {
       "mode": "regex",
-      "value": "int-map: OK: .*Eval and generated Map<Int, Bool> construction, set, exists, aliases, growth rollback, layouts, determinism, sanitizers, runtime-none, negative diagnostics, and selective symbols passed$"
+      "value": "int-map: OK: .*Eval and generated Map<Int, Bool> construction, set, exists, aliases, growth rollback, lookup, removal, clear, copy independence and rollback, snapshot values/keys/pairs, toString, layouts, determinism, sanitizers, runtime-none, negative diagnostics, and selective symbols passed$"
     },
     "oracle": "test/differential/int-map/generated/oracle.hxml",
     "artifacts": [

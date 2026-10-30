@@ -14,8 +14,8 @@ import caxecraft.content.ResolvedLevelPlan.ResolvedLevelPlanResult;
 import caxecraft.domain.EntityId;
 import caxecraft.domain.Vitals.MAX_HEALTH;
 import caxecraft.domain.World;
-import caxecraft.qa.ResolvedLevelFixture.readFirstPlayableScenario;
-import caxecraft.qa.ResolvedLevelFixture.resolveFirstPlayable;
+import caxecraft.qa.ResolvedLevelFixture.readResolutionScenario;
+import caxecraft.qa.ResolvedLevelFixture.resolveResolutionScenario;
 import caxecraft.qa.FocusedContentFixture.FocusedContentRegistry;
 import caxecraft.qa.FocusedContentFixture.standardAquaticProfile;
 import caxecraft.scenario.ContentId;
@@ -29,8 +29,8 @@ import caxecraft.scenario.ScenarioWorld.VoxelChunk;
 /**
  * Proves the private level-construction boundary on Eval and generated C.
  *
- * The probe parses the same embedded first-playable CAXEMAP as the native codec
- * test, validates it against the built-in registry, and resolves a complete
+ * The probe parses a small synthetic CAXEMAP, validates it against the focused
+ * test registry, and resolves a complete
  * plan. Haxe owns every semantic assertion. The native harness only reports the
  * exported scalar trace, so it cannot accidentally become a second resolver.
  */
@@ -116,10 +116,10 @@ function main():Void {
  */
 function selfCheck():Int {
 	final registry = new FocusedContentRegistry();
-	final scenario = readFirstPlayableScenario();
+	final scenario = readResolutionScenario();
 	if (scenario == null)
 		return 1;
-	final resolved = resolveFirstPlayable(scenario, registry);
+	final resolved = resolveResolutionScenario(scenario, registry);
 	final values = switch resolved {
 		case LevelPlanResolved(plan, presentation): {plan: plan, presentation: presentation};
 		case LevelPlanRejected(_): return 2;
@@ -169,10 +169,10 @@ function selfCheck():Int {
 		|| values.presentation.fluidRequests().length != 2)
 		return 4;
 
-	final freshScenario = readFirstPlayableScenario();
+	final freshScenario = readResolutionScenario();
 	if (freshScenario == null)
 		return 5;
-	final interleaved = switch resolveFirstPlayable(withInterleavedFluidIds(freshScenario), registry) {
+	final interleaved = switch resolveResolutionScenario(withInterleavedFluidIds(freshScenario), registry) {
 		case LevelPlanResolved(plan, presentation): {construction: plan.fluids(), presentation: presentation.fluidRequests()};
 		case LevelPlanRejected(_): return 6;
 	};
@@ -183,7 +183,7 @@ function selfCheck():Int {
 		|| interleaved.construction[1].authoredId.text() != "water.a-source"
 		|| interleaved.presentation[1].authoredId.text() != "water.a-source")
 		return 7;
-	final stateful = switch resolveFirstPlayable(withStatefulObject(freshScenario, new ContentId("caxecraft:active")), registry) {
+	final stateful = switch resolveResolutionScenario(withStatefulObject(freshScenario, new ContentId("caxecraft:active")), registry) {
 		case LevelPlanResolved(plan, presentation): {plan: plan, presentation: presentation};
 		case LevelPlanRejected(_): return 13;
 	};
@@ -204,7 +204,7 @@ function selfCheck():Int {
 	statefulPresentation.pop();
 	if (stateful.plan.statefulObjects().length != 1 || stateful.presentation.statefulObjectRequests().length != 1)
 		return 15;
-	switch resolveFirstPlayable(withStatefulObject(freshScenario, new ContentId("caxecraft:missing")), registry) {
+	switch resolveResolutionScenario(withStatefulObject(freshScenario, new ContentId("caxecraft:missing")), registry) {
 		case LevelPlanRejected(StatefulObjectResolutionRejected(authoredId, contentId, state))
 			if (authoredId.text() == "object.glyph-control"
 				&& contentId.text() == "caxecraft:glyph-control"
@@ -212,23 +212,23 @@ function selfCheck():Int {
 		case _:
 			return 16;
 	}
-	switch resolveFirstPlayable(withStatefulObject(freshScenario, new ContentId("caxecraft:active"), 45), registry) {
+	switch resolveResolutionScenario(withStatefulObject(freshScenario, new ContentId("caxecraft:active"), 45), registry) {
 		case LevelPlanRejected(UnsupportedStatefulObjectCollisionYaw(authoredId, 45)) if (authoredId.text() == "object.glyph-control"):
 		case _:
 			return 28;
 	}
-	switch resolveFirstPlayable(freshScenario, new RejectingLevelRegistry(MissingTerrain)) {
+	switch resolveResolutionScenario(freshScenario, new RejectingLevelRegistry(MissingTerrain)) {
 		case LevelPlanRejected(UnknownTerrain(_, id)) if (id.text() == "caxecraft:grass"):
 		case _:
 			return 8;
 	}
-	switch resolveFirstPlayable(freshScenario, new RejectingLevelRegistry(WrongActorKind)) {
+	switch resolveResolutionScenario(freshScenario, new RejectingLevelRegistry(WrongActorKind)) {
 		case LevelPlanRejected(ActorResolutionRejected(PlacedActorKindMismatch(authored, content, EnemyContent, NpcContent)))
 			if (authored.text() == "enemy.mossling" && content.text() == "caxecraft:mossling"):
 		case _:
 			return 9;
 	}
-	switch resolveFirstPlayable(withTooManyItems(freshScenario), registry) {
+	switch resolveResolutionScenario(withTooManyItems(freshScenario), registry) {
 		case LevelPlanRejected(ItemCapacityExceeded(257, maximum)) if (maximum == 256):
 		case _:
 			return 10;
@@ -247,14 +247,14 @@ function selfCheck():Int {
 		|| storageAt(values.plan.terrainRuns(), World.indexOf(World.coord(33, 0, 0))) != World.kindCode(caxecraft.domain.BlockKind.Air))
 		return 29;
 	final fullWidth = withWorldWidth(freshScenario, World.WIDTH);
-	switch resolveFirstPlayable(fullWidth, registry) {
+	switch resolveResolutionScenario(fullWidth, registry) {
 		case LevelPlanResolved(plan, _):
 			if (storageAt(plan.terrainRuns(), World.indexOf(World.coord(32, 0, 0))) != World.kindCode(caxecraft.domain.BlockKind.Air))
 				return 30;
 		case LevelPlanRejected(_):
 			return 31;
 	}
-	switch resolveFirstPlayable(withWorldWidth(freshScenario, 48), registry) {
+	switch resolveResolutionScenario(withWorldWidth(freshScenario, 48), registry) {
 		case LevelPlanRejected(WorldSizeMismatch(48, 16, 32)):
 		case _:
 			return 32;

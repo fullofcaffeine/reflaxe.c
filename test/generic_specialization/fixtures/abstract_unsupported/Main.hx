@@ -6,8 +6,11 @@
 	type legal merely by hiding it behind a nominal name.
 **/
 
-/** A deliberately unsupported reference carrier for the generic boundary. */
-final class UnsupportedCarrier {
+/** A deliberately unsupported interface carrier for the generic boundary. */
+interface UnsupportedCarrier {}
+
+/** One concrete value that lets Haxe construct the interface-backed abstract. */
+final class CarrierImpl implements UnsupportedCarrier {
 	public function new() {}
 }
 
@@ -30,7 +33,7 @@ class Main {
 
 	static function main():Void {
 		final value:UnsafeRecord = {
-			value: new UnsafeValue(new UnsupportedCarrier())
+			value: new UnsafeValue(new CarrierImpl())
 		};
 		identity(value);
 	}

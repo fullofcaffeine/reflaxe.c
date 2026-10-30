@@ -133,6 +133,8 @@ void hxc_caxecraft_app_CaxecraftAtlas_drawAtlasSprite(struct Camera3D hxc_l_came
     hxc_l_this1 = (struct Color){ .r = 255, .g = 255, .b = 255, .a = 255 };
     hxc_l_sourceWidth = hxc_f64_divide_zero_safe((double)(int32_t)hxc_l_texture.width, (double)hxc_l_columns);
     hxc_l_sourceHeight = hxc_f64_divide_zero_safe((double)(int32_t)hxc_l_texture.height, (double)hxc_l_rows);
+    rlDrawRenderBatchActive();
+    rlDisableDepthMask();
     int32_t hxc_l_tmp_load_result_n6 = hxc_l_column;
     double hxc_l_tmp_load_result_n7 = hxc_l_sourceWidth;
     int32_t hxc_l_tmp_load_result_n8 = hxc_l_row;
@@ -140,9 +142,68 @@ void hxc_caxecraft_app_CaxecraftAtlas_drawAtlasSprite(struct Camera3D hxc_l_came
     double hxc_l_tmp_load_result_n10 = hxc_l_sourceWidth;
     double hxc_l_tmp_load_result_n11 = hxc_l_sourceHeight;
     DrawBillboardRec(hxc_l_camera, hxc_l_texture, (struct Rectangle){ .x = (float)((double)hxc_l_tmp_load_result_n6 * hxc_l_tmp_load_result_n7), .y = (float)((double)hxc_l_tmp_load_result_n8 * hxc_l_tmp_load_result_n9), .width = (float)hxc_l_tmp_load_result_n10, .height = (float)hxc_l_tmp_load_result_n11 }, hxc_l_position, (struct Vector2){ .x = (float)hxc_l_width, .y = (float)hxc_l_height }, hxc_l_this1);
+    rlDrawRenderBatchActive();
+    rlEnableDepthMask();
     return;
   }
   return;
+}
+
+bool hxc_caxecraft_app_CaxecraftAtlas_drawEntityPortrait(struct Texture hxc_l_texture, int32_t hxc_l_cellIndex, int32_t hxc_l_x, int32_t hxc_l_y, int32_t hxc_l_width, int32_t hxc_l_height)
+{
+  bool hxc_l_tmp_short_circuit_result_n6 = hxc_l_cellIndex >= 0;
+  if (hxc_l_cellIndex >= 0)
+  {
+    hxc_l_tmp_short_circuit_result_n6 = hxc_l_cellIndex < 20;
+  }
+  if (!hxc_l_tmp_short_circuit_result_n6)
+  {
+    return false;
+  }
+  bool hxc_l_tmp_short_circuit_result_n8 = hxc_l_cellIndex >= 0;
+  if (hxc_l_cellIndex >= 0)
+  {
+    hxc_l_tmp_short_circuit_result_n8 = hxc_l_cellIndex < 20;
+  }
+  bool hxc_l_tmp_short_circuit_load_result_n1 = hxc_l_tmp_short_circuit_result_n8;
+  int32_t hxc_l_tmp_conditional_result_n9 = 0;
+  if (hxc_l_tmp_short_circuit_load_result_n1)
+  {
+    hxc_l_tmp_conditional_result_n9 = hxc_l_cellIndex / 4;
+  }
+  else
+  {
+    hxc_l_tmp_conditional_result_n9 = -1;
+  }
+  int32_t hxc_l_row = hxc_l_tmp_conditional_result_n9;
+  struct Color hxc_l_this1 = (struct Color){ .r = 255, .g = 255, .b = 255, .a = 255 };
+  double hxc_l_sourceWidth = hxc_f64_divide_zero_safe((double)(int32_t)hxc_l_texture.width, (double)4);
+  double hxc_l_sourceHeight = hxc_f64_divide_zero_safe((double)(int32_t)hxc_l_texture.height, (double)5);
+  struct Texture hxc_l_tmp_native_call_argument_0_n13 = hxc_l_texture;
+  bool hxc_l_tmp_short_circuit_result_n14 = hxc_l_cellIndex >= 0;
+  if (hxc_l_cellIndex >= 0)
+  {
+    hxc_l_tmp_short_circuit_result_n14 = hxc_l_cellIndex < 20;
+  }
+  bool hxc_l_tmp_short_circuit_load_result_n6 = hxc_l_tmp_short_circuit_result_n14;
+  int32_t hxc_l_tmp_conditional_result_n15 = 0;
+  if (hxc_l_tmp_short_circuit_load_result_n6)
+  {
+    hxc_l_tmp_conditional_result_n15 = hxc_i32_modulo_zero_safe(hxc_l_cellIndex, 4);
+  }
+  else
+  {
+    hxc_l_tmp_conditional_result_n15 = -1;
+  }
+  int32_t hxc_l_tmp_conditional_load_result_n7 = hxc_l_tmp_conditional_result_n15;
+  double hxc_l_tmp_load_result_n8 = hxc_l_sourceWidth;
+  int32_t hxc_l_tmp_load_result_n9 = hxc_l_row;
+  double hxc_l_tmp_load_result_n10 = hxc_l_sourceHeight;
+  double hxc_l_tmp_load_result_n11 = hxc_l_sourceWidth;
+  double hxc_l_tmp_load_result_n12 = hxc_l_sourceHeight;
+  struct Color hxc_l_tmp_load_result_n16 = hxc_l_this1;
+  DrawTexturePro(hxc_l_tmp_native_call_argument_0_n13, (struct Rectangle){ .x = (float)((double)hxc_l_tmp_conditional_load_result_n7 * hxc_l_tmp_load_result_n8), .y = (float)((double)hxc_l_tmp_load_result_n9 * hxc_l_tmp_load_result_n10), .width = (float)hxc_l_tmp_load_result_n11, .height = (float)hxc_l_tmp_load_result_n12 }, (struct Rectangle){ .x = (float)((double)hxc_l_x + 0.0), .y = (float)((double)hxc_l_y + 0.0), .width = (float)((double)hxc_l_width + 0.0), .height = (float)((double)hxc_l_height + 0.0) }, (struct Vector2){ .x = (float)0.0, .y = (float)0.0 }, (float)0.0, hxc_l_tmp_load_result_n16);
+  return true;
 }
 
 void hxc_caxecraft_app_CaxecraftAtlas_drawEntitySprite(struct Camera3D hxc_l_camera, struct Texture hxc_l_texture, int32_t hxc_l_cellIndex, struct Vector3 hxc_l_position, double hxc_l_width, double hxc_l_height)
@@ -165,7 +226,7 @@ void hxc_caxecraft_app_CaxecraftAtlas_drawEntitySprite(struct Camera3D hxc_l_cam
   int32_t hxc_l_tmp_conditional_result_n9 = 0;
   if (hxc_l_tmp_short_circuit_load_result_n1)
   {
-    hxc_l_tmp_conditional_result_n9 = hxc_f64_to_i32_saturating(hxc_f64_divide_zero_safe((double)hxc_l_cellIndex, (double)4));
+    hxc_l_tmp_conditional_result_n9 = hxc_l_cellIndex / 4;
   }
   else
   {
@@ -175,6 +236,8 @@ void hxc_caxecraft_app_CaxecraftAtlas_drawEntitySprite(struct Camera3D hxc_l_cam
   struct Color hxc_l_this1 = (struct Color){ .r = 255, .g = 255, .b = 255, .a = 255 };
   double hxc_l_sourceWidth = hxc_f64_divide_zero_safe((double)(int32_t)hxc_l_texture.width, (double)4);
   double hxc_l_sourceHeight = hxc_f64_divide_zero_safe((double)(int32_t)hxc_l_texture.height, (double)5);
+  rlDrawRenderBatchActive();
+  rlDisableDepthMask();
   struct Camera3D hxc_l_tmp_native_call_argument_0_n13 = hxc_l_camera;
   struct Texture hxc_l_tmp_native_call_argument_1_n14 = hxc_l_texture;
   bool hxc_l_tmp_short_circuit_result_n15 = hxc_l_cellIndex >= 0;
@@ -201,6 +264,8 @@ void hxc_caxecraft_app_CaxecraftAtlas_drawEntitySprite(struct Camera3D hxc_l_cam
   struct Color hxc_l_tmp_load_result_n15 = hxc_l_this1;
   struct Camera3D hxc_l_tmp_native_call_argument_0_load_result_n16 = hxc_l_tmp_native_call_argument_0_n13;
   DrawBillboardRec(hxc_l_tmp_native_call_argument_0_load_result_n16, hxc_l_tmp_native_call_argument_1_n14, (struct Rectangle){ .x = (float)((double)hxc_l_tmp_conditional_load_result_n7 * hxc_l_tmp_load_result_n8), .y = (float)((double)hxc_l_tmp_load_result_n9 * hxc_l_tmp_load_result_n10), .width = (float)hxc_l_tmp_load_result_n11, .height = (float)hxc_l_tmp_load_result_n12 }, hxc_l_position, (struct Vector2){ .x = (float)hxc_l_width, .y = (float)hxc_l_height }, hxc_l_tmp_load_result_n15);
+  rlDrawRenderBatchActive();
+  rlEnableDepthMask();
   return;
 }
 
@@ -237,6 +302,7 @@ void hxc_caxecraft_app_CaxecraftAtlas_drawHotbarFrame(struct Texture hxc_l_textu
 void hxc_caxecraft_app_CaxecraftAtlas_drawHudGlyph(struct Texture hxc_l_texture, enum hxc_caxecraft_app_HudGlyph hxc_l_glyph, int32_t hxc_l_x, int32_t hxc_l_y, int32_t hxc_l_size)
 {
   int32_t hxc_l_column = 0;
+  int32_t hxc_l_row = 0;
   switch (hxc_l_glyph) {
     case hxc_caxecraft_app_HudGlyph_HealthFull:
       {
@@ -252,6 +318,17 @@ void hxc_caxecraft_app_CaxecraftAtlas_drawHudGlyph(struct Texture hxc_l_texture,
         hxc_l_column = 2;
         break;
       }
+    case hxc_caxecraft_app_HudGlyph_Crosshair:
+      {
+        hxc_l_row = 3;
+        break;
+      }
+    case hxc_caxecraft_app_HudGlyph_QuestMarker:
+      {
+        hxc_l_column = 2;
+        hxc_l_row = 3;
+        break;
+      }
     default:
       {
         abort();
@@ -262,10 +339,11 @@ void hxc_caxecraft_app_CaxecraftAtlas_drawHudGlyph(struct Texture hxc_l_texture,
   double hxc_l_sourceHeight = hxc_f64_divide_zero_safe((double)(int32_t)hxc_l_texture.height, (double)4);
   int32_t hxc_l_tmp_load_result_n3 = hxc_l_column;
   double hxc_l_tmp_load_result_n4 = hxc_l_sourceWidth;
-  double hxc_l_tmp_load_result_n5 = hxc_l_sourceHeight;
-  double hxc_l_tmp_load_result_n6 = hxc_l_sourceWidth;
-  double hxc_l_tmp_load_result_n7 = hxc_l_sourceHeight;
-  DrawTexturePro(hxc_l_texture, (struct Rectangle){ .x = (float)((double)hxc_l_tmp_load_result_n3 * hxc_l_tmp_load_result_n4), .y = (float)((double)0 * hxc_l_tmp_load_result_n5), .width = (float)hxc_l_tmp_load_result_n6, .height = (float)hxc_l_tmp_load_result_n7 }, (struct Rectangle){ .x = (float)((double)hxc_l_x + 0.0), .y = (float)((double)hxc_l_y + 0.0), .width = (float)((double)hxc_l_size + 0.0), .height = (float)((double)hxc_l_size + 0.0) }, (struct Vector2){ .x = (float)0.0, .y = (float)0.0 }, (float)0.0, hxc_l_this1);
+  int32_t hxc_l_tmp_load_result_n5 = hxc_l_row;
+  double hxc_l_tmp_load_result_n6 = hxc_l_sourceHeight;
+  double hxc_l_tmp_load_result_n7 = hxc_l_sourceWidth;
+  double hxc_l_tmp_load_result_n8 = hxc_l_sourceHeight;
+  DrawTexturePro(hxc_l_texture, (struct Rectangle){ .x = (float)((double)hxc_l_tmp_load_result_n3 * hxc_l_tmp_load_result_n4), .y = (float)((double)hxc_l_tmp_load_result_n5 * hxc_l_tmp_load_result_n6), .width = (float)hxc_l_tmp_load_result_n7, .height = (float)hxc_l_tmp_load_result_n8 }, (struct Rectangle){ .x = (float)((double)hxc_l_x + 0.0), .y = (float)((double)hxc_l_y + 0.0), .width = (float)((double)hxc_l_size + 0.0), .height = (float)((double)hxc_l_size + 0.0) }, (struct Vector2){ .x = (float)0.0, .y = (float)0.0 }, (float)0.0, hxc_l_this1);
   return;
 }
 

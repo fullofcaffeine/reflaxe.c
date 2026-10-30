@@ -1,0 +1,7 @@
+-cp src
+-lib reflaxe.c
+--macro include("${MODULE_NAME}")
+-D reflaxe_c_profile=portable
+-D hxc_runtime=auto
+-D hxc_environment=hosted
+-D hxc_project_layout=split

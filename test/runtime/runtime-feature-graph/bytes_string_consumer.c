@@ -13,6 +13,7 @@ int main(void) {
   hxc_bytes_ref *bytes = NULL;
   const hxc_string source = HXC_STRING_LITERAL("A\xC3\xA9");
   hxc_string decoded = HXC_STRING_INITIALIZER;
+  hxc_string hexadecimal = HXC_STRING_INITIALIZER;
 
   if (hxc_bytes_ref_create_utf8_copy(
       hxc_default_allocator(),
@@ -31,6 +32,17 @@ int main(void) {
     || decoded.data[0] != (uint8_t)0xC3u
     || decoded.data[1] != (uint8_t)0xA9u
     || hxc_string_release(&decoded) != HXC_STATUS_OK
+    || hxc_bytes_ref_to_hex(
+      bytes,
+      hxc_default_allocator(),
+      &hexadecimal
+    ) != HXC_STATUS_OK
+    || hexadecimal.byte_length != 6u
+    || hexadecimal.data[0] != (uint8_t)'4'
+    || hexadecimal.data[1] != (uint8_t)'1'
+    || hexadecimal.data[4] != (uint8_t)'a'
+    || hexadecimal.data[5] != (uint8_t)'9'
+    || hxc_string_release(&hexadecimal) != HXC_STATUS_OK
     || hxc_bytes_ref_release(bytes) != HXC_STATUS_OK) {
     return 1;
   }

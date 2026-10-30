@@ -11,9 +11,22 @@ Literal-backed Strings remain allocation-free. Runtime-created values from
 `StringBuf.addChar` path use a small reference-counted owner. Those values may
 cross calls and returns, aliases, branches, closed records and enums, fixed
 Array literals, `Null<String>`, and class fields without dangling bytes.
-`length`, `charAt`, `charCodeAt`, `indexOf`, `lastIndexOf`, `substring`, and
-`split` use the shared Unicode-scalar rules. Other String methods still fail
-closed.
+`length`, `charAt`, `charCodeAt`, `indexOf`, `lastIndexOf`, `substr`,
+`substring`, and `split` use the shared Unicode-scalar rules. `toString()`
+returns the same immutable value without allocating. Other String methods
+still fail closed.
+The upstream `StringTools` implementations for containment, prefix/suffix
+checks, ASCII whitespace detection, trimming, padding, replacement, and
+hexadecimal formatting compose these admitted operations; they do not require
+target-specific replacements. The ordinary `StringBuf` String specialization
+supports append, scalar substring append, length, and clear through the same
+managed String field.
+
+This is still a bounded parity slice. Ordinary `String.toLowerCase()` now uses
+the pinned Eval-compatible Unicode mapping described below. `toUpperCase`,
+`UnicodeString`, URL/HTML codecs, generic non-String `StringBuf.add` values, and
+the remaining `StringTools` APIs remain explicit planned rows in the generated
+standard-library ledger.
 E4.T11 established the internal same-major runtime contract, and E7 owns any
 future public ABI.
 
@@ -27,7 +40,10 @@ String identity without changing the three-field layout advanced the internal
 semantic contract to 0.9.0. Adding the optional owner pointer needed by
 runtime-created ordinary Haxe values changes that private carrier and advances
 the marker to 0.10.0. That marker does not stabilize the private string layout
-or application ABI.
+or application ABI. Later additive runtime APIs advanced the marker through
+0.17.0; the separate lowercase conversion entry point advances it to 0.18.0.
+The private tagged Dynamic carrier advances the current marker to 0.19.0
+without changing the String layout.
 
 ## Representation and invariants
 
@@ -86,18 +102,19 @@ identity, then compares non-null values by byte length and canonical UTF-8
 content with `memcmp`. It never treats different non-null storage pointers as
 unequal.
 
-This is deliberately smaller than general String support. `String.charAt` and
-`substring` return borrowed views into the receiver's bytes. When such a view
+This is deliberately smaller than general String support. `String.charAt`,
+`substr`, and `substring` return borrowed views into the receiver's bytes. When such a view
 escapes its immediate expression, generated code retains the same optional
 owner; it does not copy the slice. `String.fromCharCode` and concatenation
 produce fresh owners, while aliases and aggregate/container copies retain them.
 The last cleanup releases the allocation. Hosted `Sys.println(value)` now
-accepts any expression whose static Haxe type is `String`, including a
-runtime-created managed String. It evaluates the expression once, keeps a fresh
+accepts `String`, `Int`, `Bool`, and `Float` expressions, including a
+runtime-created managed String. Scalar values use the existing typed
+`Std.string` conversions. It evaluates the expression once, keeps a fresh
 result alive through the write, and releases it on both success and output
-failure. The declared `Dynamic` surface remains deliberately narrower than
-Haxe's full standard library: non-String values still fail closed instead of
-silently choosing a formatting policy.
+failure. A conditional whose branches produce Strings also works, even when Haxe
+types the join as `Dynamic` for this call. Actual Dynamic values, mixed-type
+conditionals, and other formatting categories still fail before emission.
 
 `hxc_owned_string` pairs one immutable value with `hxc_allocation`. The complete
 allocator callback/context identity therefore follows owned bytes and disposal
@@ -177,8 +194,8 @@ when lifetime and representation are statically known.
 
 ## CString boundary
 
-`hxc_borrowed_cstring` and `hxc_owned_cstring` are deliberately different
-records.
+`hxc_borrowed_cstring`, `hxc_call_cstring`, and `hxc_owned_cstring` express
+three different lifetime policies.
 
 A borrowed conversion succeeds only when:
 
@@ -193,10 +210,17 @@ is disposed or when a mutable builder view is changed.
 
 Owned conversion also rejects embedded NUL, then allocates exact terminated
 storage and retains the selected allocator identity until explicit disposal.
-Neither path truncates at embedded NUL. The implemented `c.CStringRef.to(text)`
-surface exposes only the borrowed form to one direct, non-retaining imported C
-call. Its distinct HxcIR carrier keeps the source owner alive and forbids
+The call-scoped conversion accepts either representation. It borrows when the
+view already owns its following NUL byte. For an interior view, it allocates
+exactly `byte_length + 1` bytes and disposes that temporary immediately after
+the native consumer returns.
+
+No path truncates at embedded NUL. `c.CStringRef.to(text)` exposes only the
+allocation-free borrowed form. `c.CStringArg.to(text)` selects the
+borrow-or-copy form. Both work only as an argument to one direct, non-retaining
+imported C call. Their HxcIR carrier keeps the source owner alive and forbids
 storage, returns, forwarding, control-flow edges, indirect calls, or a second
+native consumer. The `CStringArg` form also requires one disposer after that
 consumer. General borrowed values and owned CString conversion remain future
 typed surfaces.
 
@@ -204,8 +228,8 @@ typed surfaces.
 
 The allocation-free `string-scalar` feature is compiler-selectable and depends
 only on `status` plus the `string-literal` carrier. Ordinary Haxe `length`,
-`charAt`, `charCodeAt`, `indexOf`, `lastIndexOf`, and `substring` select this
-slice when their inputs remain dynamic. Scalar views borrow the source bytes;
+`charAt`, `charCodeAt`, `indexOf`, `lastIndexOf`, `substr`, and `substring`
+select this slice when their inputs remain dynamic. Scalar views borrow the source bytes;
 both searches only observe their receiver and needle. Literal-only search
 programs therefore still avoid `alloc` and the broader `string` source.
 
@@ -214,6 +238,29 @@ The `string` feature is compiler-selectable and depends on `alloc` plus
 operation or lifetime action: `from-scalar`, `concat`, `retain`, or
 `cleanup-release`. It has no object, tracing collector, dynamic, reflection,
 exception, thread, or Unicode-table dependency.
+
+<!-- hxrt-feature:string-lower-case -->
+### Lowercase conversion
+
+Ordinary `String.toLowerCase()` selects the separate `string-lower-case` feature.
+It depends on `string` for checked allocation and result ownership. Keeping the
+case table separate means programs that only inspect, concatenate, or build
+Strings do not package approximately nine kilobytes of compiled mapping data.
+
+The mapping is generated from the pinned Haxe Eval target. It is independent of
+the host locale and maps one Unicode scalar to at most one scalar. Eval maps the
+Basic Multilingual Plane values in its table and leaves later supplementary
+values unchanged. This is simple lowercase conversion, not Unicode case folding:
+it does not normalize text, expand one scalar into several scalars, or apply a
+word-sensitive final-sigma rule.
+
+The runtime decodes by explicit UTF-8 byte length, so embedded NUL remains
+ordinary content. It builds a new managed String because a mapped scalar can use
+a different number of UTF-8 bytes. Allocation or validation failure destroys the
+partial builder and leaves the caller's output unchanged. The generated-data
+check compares the complete 1,110-entry table with Eval, while the differential
+fixture covers empty, ASCII, Latin, Greek, Turkish, supplementary, embedded-NUL,
+and runtime-created inputs through strict generated C and sanitizers.
 
 <!-- hxrt-feature:string-split -->
 ### Split composition
@@ -247,7 +294,9 @@ admits hosted output. A direct literal passed to `Sys.println` or default
 `runtime-base + status + string-literal + io` closure; it packages no allocator
 or `string.c` operation symbols. `Sys.println` also accepts a statically typed
 runtime String and reuses whatever String features created that value, plus
-`io`. Default `trace` remains literal-only. Generated C
+`io`. Integer formatting additionally selects `string`; Float formatting
+also selects `string-float`. Bool formatting selects immutable text without
+an allocation. Default `trace` remains literal-only. Generated C
 stores exact validated UTF-8 bytes and byte length, including embedded NUL, and
 the output helper writes by length, adds a newline, flushes, and returns
 `HXC_STATUS_IO_ERROR` on write or flush failure. The generated caller follows
@@ -318,22 +367,22 @@ has two complementary halves. Its independent strict-C fixture covers checked
 and maximal-subpart lossy decoding, slicing, scalar-indexed search, comparison,
 stable hashing, builder failure atomicity, allocator identity, borrowed/owned
 CString lifetime, reference counts, and exact allocations. Its ordinary-Haxe
-fixture compares Eval with generated C for `String.fromCharCode`, `split`,
-upstream `StringBuf.addChar`, `Std.string(Bool)`, `Std.string(Int)`,
-`Std.string(Float)`, and `Std.string(String)` across static, borrowed, viewed, fresh, stored, returned,
-and directly consumed values, integer interpolation, signed boundaries, single
-evaluation, concatenation, aliases, branches, records, enums, arrays,
-reassignment, nullable values, calls, returns, borrowed scalar slices, and
-forward and reverse search over literal and owned Strings, split ownership and
-empty/adjacent/Unicode delimiters, repeated and
-overlapping matches, non-Basic Multilingual Plane and combining text, embedded
-NUL, empty needles, omitted/supplied starts, and the pinned negative-start
-behavior. It also covers value-producing switches over Int, String, enum, and
-String-backed enum-abstract subjects. Each switch mixes a literal borrow, a
-caller-owned borrow, a fresh runtime-created String, and a terminating `throw`
-arm. The HxcIR report proves that normal arms retain or move exactly one owner,
-the throwing arm does not invent one, and the join moves the selected owner
-once.
+fixture compares Eval with generated C for `String.fromCharCode`, `substr`,
+`split`, the bounded upstream `StringBuf` API, eleven composed `StringTools`
+operations, `Std.string(Bool)`, `Std.string(Int)`, `Std.string(Float)`, and
+`Std.string(String)`. It covers static, borrowed, viewed, fresh, stored,
+returned, and directly consumed values; integer interpolation; signed bounds;
+single evaluation; concatenation; aliases; branches; records; enums; arrays;
+reassignment; nullable values; calls; returns; borrowed scalar slices; forward
+and reverse search; split ownership; empty, adjacent, and Unicode delimiters;
+repeated and overlapping matches; non-Basic Multilingual Plane and combining
+text; embedded NUL; empty needles; omitted or supplied starts; and the pinned
+negative-start behavior. It also covers value-producing switches over Int,
+String, enum, and String-backed enum-abstract subjects. Each switch mixes a
+literal borrow, a caller-owned borrow, a fresh runtime-created String, and a
+terminating `throw` arm. The HxcIR report proves that normal arms retain or
+move exactly one owner, the throwing arm does not invent one, and the join
+moves the selected owner once.
 
 Generated projects are checked in split, package, and unity layouts under cold,
 reversed, and warm compiler-server discovery. Strict C11

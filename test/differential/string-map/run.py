@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
-"""Prove exact scalar, fieldless-enum, and managed-record StringMap contracts."""
+"""Prove exact scalar, nominal-String, enum, and managed-record StringMaps."""
 
 from __future__ import annotations
 
 import argparse
 import json
 import os
+import re
 import shutil
 import socket
 import subprocess
@@ -18,14 +19,26 @@ from typing import Iterable
 
 
 ROOT = Path(__file__).resolve().parents[3]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from scripts.test.bounded_process import run as run_bounded_process  # noqa: E402
+
 CASE = Path(__file__).resolve().parent
 GENERATED = CASE / "generated"
+DIRECT_DECISION = CASE / "direct_decision"
+DISPATCH_OWNED = CASE / "dispatch_owned"
+COLLECTOR_RECORD = CASE / "collector_record"
 NEGATIVE = CASE / "negative"
 FIXTURE = CASE / "string_map_runtime.c"
 INCLUDE = ROOT / "runtime/hxrt/include"
 RUNTIME_SOURCES = (
     ROOT / "runtime/hxrt/src/allocator.c",
+    ROOT / "runtime/hxrt/src/array.c",
+    ROOT / "runtime/hxrt/src/iterator.c",
+    ROOT / "runtime/hxrt/src/string.c",
     ROOT / "runtime/hxrt/src/string_map.c",
+    ROOT / "runtime/hxrt/src/string_scalar.c",
 )
 TOOLCHAINS = ("gcc", "clang")
 LAYOUTS = ("split", "package", "unity")
@@ -90,7 +103,7 @@ def resolve_toolchains(selected: str) -> list[Toolchain]:
                 raise StringMapFailure(f"required C compiler is missing: {family}")
             print(f"string-map: SKIP optional {family}: missing command")
             continue
-        identity = subprocess.run(
+        identity = run_bounded_process(
             [compiler, "--version"],
             cwd=ROOT,
             check=False,
@@ -114,7 +127,7 @@ def resolve_toolchains(selected: str) -> list[Toolchain]:
 def run_eval_oracle() -> None:
     results: list[tuple[int, str, str]] = []
     for _ in range(2):
-        execution = subprocess.run(
+        execution = run_bounded_process(
             [development_tool("haxe"), "oracle.hxml"],
             cwd=GENERATED,
             env=haxe_environment(),
@@ -126,6 +139,184 @@ def run_eval_oracle() -> None:
         results.append((execution.returncode, execution.stdout, execution.stderr))
     if results != [(0, "", ""), (0, "", "")]:
         raise StringMapFailure(f"pinned Eval StringMap oracle drifted: {results!r}")
+
+
+def check_dispatch_owned_map(toolchains: list[Toolchain]) -> None:
+    """Keep compiler-owned maps out of ordinary class dispatch discovery."""
+
+    for label in ("first", "second"):
+        oracle = run_bounded_process(
+            [development_tool("haxe"), "-cp", str(DISPATCH_OWNED), "-main", "Main", "--interp"],
+            cwd=ROOT,
+            env=haxe_environment(),
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        if oracle.returncode != 0 or oracle.stdout or oracle.stderr:
+            raise StringMapFailure(
+                f"{label} dispatch-owned Eval oracle failed: "
+                f"{oracle.returncode} {oracle.stdout!r} {oracle.stderr!r}"
+            )
+
+    with tempfile.TemporaryDirectory(prefix="reflaxe-c-string-map-dispatch-owned-") as temporary:
+        root = Path(temporary)
+        normal = root / "normal"
+        reverse = root / "reverse"
+        first = compile_haxe(DISPATCH_OWNED, normal, report=True)
+        second = compile_haxe(DISPATCH_OWNED, reverse, reverse=True, report=True)
+        for label, result in (("normal", first), ("reverse", second)):
+            if result.returncode != 0:
+                raise StringMapFailure(
+                    f"dispatch-owned {label} compile failed: "
+                    f"{result.stdout!r} {result.stderr!r}"
+                )
+        if generated_tree(normal) != generated_tree(reverse):
+            raise StringMapFailure("dispatch-owned output changed under reversed discovery")
+
+        hxcir = extract_hxcir(first)
+        for marker in (
+            'representation=managed("string-map")',
+            "static-haxe-string-view:_Main.ItemId",
+            'runtime(feature="string-map",operation="create")',
+            'runtime(feature="string-map",operation="set")',
+            'runtime(feature="string-map",operation="get")',
+        ):
+            if marker not in hxcir:
+                raise StringMapFailure(f"dispatch-owned HxcIR omitted {marker}")
+        if "haxe.ds.StringMap" in hxcir or "vtable.haxe.ds.StringMap" in hxcir:
+            raise StringMapFailure("dispatch-owned HxcIR retained ordinary StringMap class dispatch")
+
+        sources = sorted((normal / "runtime/src").glob("*.c")) + sorted(
+            (normal / "src").rglob("*.c")
+        )
+        source_text = "\n".join(path.read_text(encoding="utf-8") for path in sources)
+        if "haxe_ds_StringMap" in source_text or "hxc_vtable_haxe_ds_StringMap" in source_text:
+            raise StringMapFailure("dispatch-owned generated C retained an ordinary StringMap class")
+
+        rejected = compile_haxe(
+            NEGATIVE / "abstract_class_value",
+            root / "negative-abstract-class",
+        )
+        if (
+            rejected.returncode == 0
+            or "HXC1001" not in rejected.stderr
+            or "StringMap-value-not-yet-admitted:haxe-class-reference:" not in rejected.stderr
+        ):
+            raise StringMapFailure(
+                "dispatch-owned admission weakened abstract-over-class rejection: "
+                f"{rejected.stderr!r}"
+            )
+
+        include_roots = [normal / "include", normal / "runtime/include"]
+        for toolchain in toolchains:
+            build = root / toolchain.family
+            build.mkdir()
+            for optimization in ("-O0", "-O2"):
+                compile_and_run(
+                    toolchain.compiler,
+                    sources,
+                    include_roots,
+                    build / f"dispatch-owned-{optimization[1:].lower()}",
+                    (optimization,),
+                )
+            if toolchain.family == "clang":
+                compile_and_run(
+                    toolchain.compiler,
+                    sources,
+                    include_roots,
+                    build / "dispatch-owned-sanitized",
+                    SANITIZER_FLAGS,
+                )
+
+
+def check_collector_minimal(toolchains: list[Toolchain]) -> None:
+    """Select key ownership without an incidental String operation or iterator."""
+    fixture = CASE / "collector_minimal"
+    interpreted = run_bounded_process(
+        [development_tool("haxe"), "-cp", str(fixture), "-main", "Main", "--interp"],
+        cwd=ROOT, env=haxe_environment(), check=False,
+        capture_output=True, text=True, timeout=30,
+    )
+    if interpreted.returncode or interpreted.stdout or interpreted.stderr:
+        raise StringMapFailure(f"minimal collector map Eval failed: {interpreted.stdout}{interpreted.stderr}")
+    with tempfile.TemporaryDirectory(prefix="hxc-string-map-minimal-") as directory:
+        root = Path(directory)
+        output = root / "generated"
+        compiled = compile_haxe(fixture, output, layout="unity")
+        if compiled.returncode:
+            raise StringMapFailure(f"minimal collector map compile failed: {compiled.stdout}{compiled.stderr}")
+        sources = [*sorted((output / "runtime/src").glob("*.c")), *sorted((output / "src").rglob("*.c"))]
+        includes = [output / "include", output / "runtime/include"]
+        for toolchain in toolchains:
+            compile_and_run(toolchain.compiler, sources, includes, root / toolchain.family, ("-O2",))
+
+
+def check_collector_record(toolchains: list[Toolchain]) -> None:
+    """Keep map-owned graphs and independent snapshots alive, then reclaim them."""
+    interpreted = run_bounded_process(
+        [development_tool("haxe"), "-cp", str(COLLECTOR_RECORD), "-main", "Main", "--interp"],
+        cwd=ROOT, env=haxe_environment(), check=False,
+        capture_output=True, text=True, timeout=30,
+    )
+    if interpreted.returncode or interpreted.stdout or interpreted.stderr:
+        raise StringMapFailure(f"collector record Eval failed: {interpreted.stdout}{interpreted.stderr}")
+    with tempfile.TemporaryDirectory(prefix="hxc-string-map-collector-") as temporary:
+        root = Path(temporary)
+        output = root / "generated"
+        compiled = compile_haxe(COLLECTOR_RECORD, output, layout="unity")
+        if compiled.returncode:
+            raise StringMapFailure(f"collector record compile failed: {compiled.stdout}{compiled.stderr}")
+        reverse = root / "reverse"
+        reversed_compile = compile_haxe(COLLECTOR_RECORD, reverse, layout="unity", reverse=True)
+        if reversed_compile.returncode:
+            raise StringMapFailure(f"reversed collector record compile failed: {reversed_compile.stdout}{reversed_compile.stderr}")
+        if generated_tree(output) != generated_tree(reverse):
+            raise StringMapFailure("collector record output changed under reversed discovery")
+        runtime = sorted((output / "runtime/src").glob("*.c"))
+        sources = [*runtime, *sorted((output / "src").rglob("*.c"))]
+        includes = [output / "include", output / "runtime/include"]
+        for toolchain in toolchains:
+            for label, flags in (("o0", ("-O0",)), ("o2", ("-O2",))):
+                compile_and_run(toolchain.compiler, sources, includes, root / f"{toolchain.family}-{label}", flags)
+            if toolchain.family == "clang":
+                compile_and_run(toolchain.compiler, sources, includes, root / "sanitized", SANITIZER_FLAGS)
+        check_collector_observer(root, output, toolchains)
+
+
+def check_collector_observer(root: Path, output: Path, toolchains: list[Toolchain]) -> None:
+    """Observe real GC pressure, zero surviving allocations, and map allocation abort."""
+    symbols = json.loads((output / "hxc.symbols.json").read_text(encoding="utf-8"))
+    template = (CASE / "collector_observer.c.in").read_text(encoding="utf-8")
+    for marker, parts in (
+        ("@COLLECTOR@", ["program", "gc"]),
+        ("@THREAD@", ["program", "gc", "thread"]),
+        ("@ENTRY@", ["Main", "main"]),
+    ):
+        names = [entry.get("cName") for entry in symbols["symbols"] if entry.get("readableName") == parts]
+        if len(names) != 1 or not isinstance(names[0], str) or re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", names[0]) is None:
+            raise StringMapFailure(f"collector observer lost exact symbol {parts!r}")
+        template = template.replace(marker, names[0])
+    observer = root / "observer/main.c"
+    observer.parent.mkdir(exist_ok=True)
+    observer.write_text(template, encoding="utf-8")
+    sources = [*sorted((output / "runtime/src").glob("*.c")), observer]
+    includes = [output / "include", output / "runtime/include"]
+    for toolchain in toolchains:
+        variants = [("lifecycle", ("-O2",), 0), ("allocation-failure", ("-O0", "-DFIXTURE_FAIL_MAP_ALLOCATION=1"), 77)]
+        if toolchain.family == "clang":
+            variants.append(("sanitized", SANITIZER_FLAGS, 0))
+        for label, flags, expected_exit in variants:
+            executable = root / f"observer-{toolchain.family}-{label}"
+            command = [toolchain.compiler, *STRICT_FLAGS, *flags, *(f"-I{path}" for path in includes),
+                       *(str(path) for path in sources), "-o", str(executable)]
+            built = run_bounded_process(command, cwd=ROOT, check=False, capture_output=True, text=True, timeout=60)
+            if built.returncode or built.stdout or built.stderr:
+                raise StringMapFailure(f"collector observer compile failed: {built.stdout}{built.stderr}")
+            observed = run_bounded_process([str(executable)], cwd=ROOT, check=False, capture_output=True, text=True, timeout=30)
+            if observed.returncode != expected_exit or observed.stdout or observed.stderr:
+                raise StringMapFailure(f"collector observer {label} failed: exit={observed.returncode} {observed.stdout}{observed.stderr}")
 
 
 def compile_haxe(
@@ -160,7 +351,7 @@ def compile_haxe(
     for define in defines:
         command.extend(["-D", define])
     command.extend(["--custom-target", f"c={output}"])
-    return subprocess.run(
+    return run_bounded_process(
         command,
         cwd=ROOT,
         env=haxe_environment(server=connect is not None),
@@ -199,14 +390,25 @@ def validate_generated_project(output: Path, hxcir: str) -> None:
         'representation=managed("string-map")',
         'arguments=[string-utf8,bool]',
         'arguments=[string-utf8,i32]',
+        'arguments=[string-utf8,managed-string-utf8]',
+        'name="Map<String, managed-haxe-string-view:String>"',
+        'name="Map<String, managed-haxe-string-view:_Main.StoredName>"',
+        'name="Map<String, managed-haxe-string-view:_Main.StoredTag>"',
         'arguments=[string-utf8,instance("instance.enum.',
         'arguments=[string-utf8,instance("instance.closed-record.',
         'runtime(feature="string-map",operation="create")',
         'runtime(feature="string-map",operation="set")',
         'runtime(feature="string-map",operation="get")',
         'runtime(feature="string-map",operation="remove")',
+        'runtime(feature="string-map",operation="copy")',
+		'runtime(feature="string-map",operation="keys")',
+		'runtime(feature="string-map",operation="key-value-iterator")',
+		'runtime(feature="string-map",operation="to-string")',
         'binary operation="haxe.string-map-reference.equal"',
         'binary operation="haxe.string-map-reference.not-equal"',
+        "static-call-argument-0-owner-initialize",
+        "instance-call-argument-0-owner-initialize",
+        "string-map-temporary.local.",
         'retain place=local(',
         'release place=local(',
     ):
@@ -221,7 +423,10 @@ def validate_generated_project(output: Path, hxcir: str) -> None:
         "status",
         "alloc",
         "array",
+        "iterator",
         "string-literal",
+        "string-scalar",
+        "string",
         "string-map",
     ]:
         raise StringMapFailure("generated StringMap program selected the wrong runtime closure")
@@ -233,6 +438,7 @@ def validate_generated_project(output: Path, hxcir: str) -> None:
     expected = {
         "cleanup-release",
         "clear",
+        "copy",
         "create",
         "exists",
         "get",
@@ -240,15 +446,46 @@ def validate_generated_project(output: Path, hxcir: str) -> None:
         "remove",
         "retain",
         "set",
+        "iterator",
+        "keys",
+        "key-value-iterator",
+        "to-string",
     }
     if operations != expected:
         raise StringMapFailure(
             f"generated StringMap operations drifted: {sorted(operations)!r}"
         )
+    string_operations = {
+        reason.get("operationId")
+        for reason in plan.get("rootReasons", [])
+        if isinstance(reason, dict) and reason.get("featureId") == "string"
+    }
+    if string_operations != {"cleanup-release", "concat", "from-int", "retain", "type-carrier"}:
+        raise StringMapFailure(
+            f"generated nominal-String operations drifted: {sorted(string_operations)!r}"
+        )
     if "managed-haxe-string-maps" not in plan.get("directDecisions", []):
         raise StringMapFailure("runtime plan omitted the exact StringMap representation decision")
     if "managed-haxe-arrays" not in plan.get("directDecisions", []):
         raise StringMapFailure("managed record fixture omitted its nested Array representation")
+    if "managed-haxe-iterators" not in plan.get("directDecisions", []):
+        raise StringMapFailure("managed record fixture omitted its shared Iterator representation")
+
+    iterator_operations = {
+        reason.get("operationId")
+        for reason in plan.get("rootReasons", [])
+        if isinstance(reason, dict) and reason.get("featureId") == "iterator"
+    }
+    if iterator_operations != {
+        "cleanup-release",
+        "has-next",
+        "managed-type-representation",
+        "next",
+        "retain",
+    }:
+        raise StringMapFailure(
+            f"generated Iterator operations drifted: {sorted(iterator_operations)!r}"
+        )
 
     sources = "\n".join(
         path.read_text(encoding="utf-8")
@@ -261,8 +498,17 @@ def validate_generated_project(output: Path, hxcir: str) -> None:
         "hxc_string_map_value_ops",
         "hxc_string_map_ref_set_copy",
         "hxc_string_map_ref_get_copy",
+        "hxc_string_map_ref_copy",
         "hxc_string_map_ref_retain",
         "hxc_string_map_ref_release",
+        "hxc_string_map_ref_value_iterator",
+		"hxc_string_map_ref_key_iterator",
+		"hxc_string_map_ref_pair_iterator",
+		"hxc_string_map_ref_to_string",
+        "hxc_iterator_ref_has_next",
+        "hxc_iterator_ref_next_move",
+        "hxc_iterator_ref_retain",
+        "hxc_iterator_ref_release",
         "sizeof(bool)",
         "_Alignof(bool)",
         "value_copy",
@@ -270,6 +516,12 @@ def validate_generated_project(output: Path, hxcir: str) -> None:
         "value_destroy",
         "hxc_array_ref_retain",
         "hxc_array_ref_release",
+        "hxc_string_retain",
+        "hxc_string_release",
+        "sizeof(hxc_string)",
+        "hxc_l_tmp_discarded_string_owner",
+        "hxc_l_tmp_string_map_set_key_owner",
+        "hxc_l_tmp_string_map_set_value_owner",
         "sizeof(int32_t)",
     ):
         if marker not in sources:
@@ -282,6 +534,16 @@ def validate_generated_project(output: Path, hxcir: str) -> None:
     for forbidden in ("hxc_dynamic", "goto "):
         if forbidden in sources:
             raise StringMapFailure(f"generated C retained forbidden shape {forbidden!r}")
+    for owner in (
+        "discarded_string_owner",
+        "string_map_set_key_owner",
+        "string_map_set_value_owner",
+    ):
+        if re.search(rf"hxc_string_release\(&hxc_l_tmp_{owner}_n[0-9]+\)", sources) is None:
+            raise StringMapFailure(f"generated C did not release its {owner.replace('_', ' ')}")
+    for role in ("static", "instance"):
+        if re.search(rf"hxc_string_map_ref_release\(hxc_l_tmp_{role}_call_argument_0_owner_n[0-9]+\)", sources) is None:
+            raise StringMapFailure(f"generated C did not release its fresh {role}-call StringMap owner")
 
 
 def available_port() -> int:
@@ -362,12 +624,12 @@ def render_projects(root: Path) -> dict[str, Path]:
 
 
 def run_negative_cases(root: Path) -> None:
+    # Object keys are supported and covered by the object-enum-map positive suite.
     expected = {
         "value_type": "StringMap-value-not-yet-admitted:double",
         "class_value": "StringMap-value-not-yet-admitted:haxe-class-reference:",
+        "abstract_class_value": "StringMap-value-not-yet-admitted:haxe-class-reference:",
         "payload_enum_value": "StringMap-value-not-yet-admitted:haxe-enum:",
-        "key_type": "virtual-slot-generic-requires-specialization:slot.haxe.ds.ObjectMap.set",
-        "iteration": "TVar(value:type).field:hasNext:method",
         "reassignment": "TBinop(OpAssign:managed-StringMap-reassignment-not-admitted)",
     }
     for name, marker in expected.items():
@@ -404,7 +666,7 @@ def compile_and_run(
         "-o",
         str(executable),
     ]
-    compiled = subprocess.run(
+    compiled = run_bounded_process(
         command,
         cwd=ROOT,
         check=False,
@@ -417,7 +679,7 @@ def compile_and_run(
             f"strict native compile failed\ncommand={command!r}\n"
             f"stdout={compiled.stdout!r}\nstderr={compiled.stderr!r}"
         )
-    executed = subprocess.run(
+    executed = run_bounded_process(
         [str(executable)],
         cwd=ROOT,
         check=False,
@@ -430,6 +692,174 @@ def compile_and_run(
             f"native execution drifted: exit={executed.returncode} "
             f"stdout={executed.stdout!r} stderr={executed.stderr!r}"
         )
+
+
+def check_direct_runtime_decisions(toolchains: list[Toolchain]) -> None:
+    """Keep dependency artifacts distinct from source-reached behavior."""
+    oracle = run_bounded_process(
+        [
+            development_tool("haxe"),
+            "-cp",
+            str(DIRECT_DECISION),
+            "-main",
+            "Main",
+            "--interp",
+        ],
+        cwd=ROOT,
+        env=haxe_environment(),
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    if oracle.returncode != 0 or oracle.stdout or oracle.stderr:
+        raise StringMapFailure(
+            "StringMap direct-decision Eval oracle failed: "
+            f"{oracle.returncode} {oracle.stdout!r} {oracle.stderr!r}"
+        )
+
+    with tempfile.TemporaryDirectory(
+        prefix="reflaxe-c-string-map-direct-decisions-"
+    ) as temporary:
+        root = Path(temporary)
+        port = available_port()
+        endpoint = str(port)
+        server = subprocess.Popen(
+            [development_tool("haxe"), "--wait", endpoint],
+            cwd=ROOT,
+            env=haxe_environment(server=True),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+        try:
+            wait_for_server(server, port)
+            rendered: list[tuple[Path, str]] = []
+            for label in ("server-cold", "server-warm"):
+                output = root / label
+                result = compile_haxe(
+                    DIRECT_DECISION,
+                    output,
+                    layout="unity",
+                    report=True,
+                    connect=endpoint,
+                )
+                if result.returncode != 0:
+                    raise StringMapFailure(
+                        f"{label} direct-decision compile failed: "
+                        f"{result.stdout!r} {result.stderr!r}"
+                    )
+                rendered.append((output, extract_hxcir(result)))
+        finally:
+            server.terminate()
+            try:
+                server.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                server.kill()
+                server.wait(timeout=5)
+
+        output, hxcir = rendered[0]
+        warm_output, warm_hxcir = rendered[1]
+        if hxcir != warm_hxcir or generated_tree(output) != generated_tree(warm_output):
+            raise StringMapFailure(
+                "StringMap direct-decision output changed under warm server reuse"
+            )
+        if (
+            'representation=managed("string-map")' not in hxcir
+            or 'representation=managed("iterator")' in hxcir
+            or 'runtime(feature="iterator"' in hxcir
+        ):
+            raise StringMapFailure(
+                "StringMap-only HxcIR gained an unrequested Iterator value or operation"
+            )
+
+        plan = json.loads((output / "hxc.runtime-plan.json").read_text(encoding="utf-8"))
+        expected_features = [
+            "runtime-base",
+            "status",
+            "alloc",
+            "array",
+            "iterator",
+            "string-literal",
+            "string-scalar",
+            "string",
+            "string-map",
+        ]
+        if plan.get("features") != expected_features:
+            raise StringMapFailure(
+                "StringMap-only runtime dependency closure drifted: "
+                f"{plan.get('features')!r}"
+            )
+        root_features = {
+            reason.get("featureId")
+            for reason in plan.get("rootReasons", [])
+            if isinstance(reason, dict)
+        }
+        if root_features != {"string-literal", "string-map"}:
+            raise StringMapFailure(
+                f"StringMap-only runtime roots drifted: {sorted(root_features)!r}"
+            )
+        expected_decisions = [
+            "direct-calls",
+            "direct-utf8-string-literals",
+            "executable-entry-point",
+            "explicit-evaluation-order",
+            "managed-haxe-string-maps",
+            "primitive-static-storage",
+            "primitive-values",
+            "static-functions",
+            "ub-safe-primitive-operations",
+        ]
+        if plan.get("directDecisions") != expected_decisions:
+            raise StringMapFailure(
+                "StringMap-only direct decisions confused dependencies with source use: "
+                f"{plan.get('directDecisions')!r}"
+            )
+        iterator_feature = next(
+            (
+                feature
+                for feature in plan.get("selectedFeatures", [])
+                if isinstance(feature, dict) and feature.get("id") == "iterator"
+            ),
+            None,
+        )
+        if iterator_feature is None or iterator_feature.get("root") is not False:
+            raise StringMapFailure(
+                "StringMap-only runtime plan lost its transitive Iterator artifact"
+            )
+
+        program_sources = "\n".join(
+            path.read_text(encoding="utf-8")
+            for path in sorted((output / "src").rglob("*.c"))
+        )
+        if "hxc_iterator_ref_" in program_sources:
+            raise StringMapFailure(
+                "StringMap-only generated application C called an Iterator operation"
+            )
+
+        sources = sorted((output / "runtime/src").glob("*.c")) + sorted(
+            (output / "src").rglob("*.c")
+        )
+        include_roots = [output / "include", output / "runtime/include"]
+        for toolchain in toolchains:
+            build = root / toolchain.family
+            build.mkdir()
+            for optimization in ("-O0", "-O2"):
+                compile_and_run(
+                    toolchain.compiler,
+                    sources,
+                    include_roots,
+                    build / f"direct-decisions-{optimization[1:].lower()}",
+                    (optimization,),
+                )
+            if toolchain.family == "clang":
+                compile_and_run(
+                    toolchain.compiler,
+                    sources,
+                    include_roots,
+                    build / "direct-decisions-sanitized",
+                    SANITIZER_FLAGS,
+                )
 
 
 def validate_cpp_headers(project: Path, family: str, root: Path) -> None:
@@ -450,7 +880,7 @@ def validate_cpp_headers(project: Path, family: str, root: Path) -> None:
         "-fsyntax-only",
         str(source),
     ]
-    result = subprocess.run(command, cwd=ROOT, check=False, capture_output=True, text=True, timeout=30)
+    result = run_bounded_process(command, cwd=ROOT, check=False, capture_output=True, text=True, timeout=30)
     if result.returncode != 0 or result.stdout or result.stderr:
         raise StringMapFailure(f"{family} C++ private-header check failed: {result.stderr!r}")
 
@@ -459,14 +889,18 @@ def inspect_symbols(executable: Path, family: str, *, allow_array: bool = False)
     nm = shutil.which("nm")
     if nm is None:
         raise StringMapFailure(f"{family} StringMap evidence requires nm")
-    result = subprocess.run([nm, str(executable)], check=False, capture_output=True, text=True, timeout=20)
+    result = run_bounded_process([nm, str(executable)], check=False, capture_output=True, text=True, timeout=20)
     if result.returncode != 0:
         raise StringMapFailure(f"{family} could not inspect StringMap symbols")
     for required in (
         "hxc_string_map_ref_create",
         "hxc_string_map_ref_create_with_ops",
         "hxc_string_map_ref_get_copy",
+        "hxc_string_map_ref_copy",
         "hxc_string_map_ref_release",
+        "hxc_string_map_ref_value_iterator",
+        "hxc_iterator_ref_has_next",
+        "hxc_iterator_ref_next_move",
         "hxc_string_map_value_ops_is_valid",
     ):
         if required not in result.stdout:
@@ -482,6 +916,8 @@ def inspect_symbols(executable: Path, family: str, *, allow_array: bool = False)
 def run_native(toolchains: list[Toolchain], *, generated_haxe: bool) -> None:
     with tempfile.TemporaryDirectory(prefix="reflaxe-c-string-map-") as temporary:
         root = Path(temporary)
+        if generated_haxe:
+            check_direct_runtime_decisions(toolchains)
         projects = render_projects(root) if generated_haxe else {}
         if generated_haxe:
             run_negative_cases(root)
@@ -503,7 +939,7 @@ def run_native(toolchains: list[Toolchain], *, generated_haxe: bool) -> None:
                 build / "native-o2",
                 ("-O2",),
             )
-            inspect_symbols(native, toolchain.family)
+            inspect_symbols(native, toolchain.family, allow_array=True)
             if generated_haxe:
                 for layout, project in projects.items():
                     sources = sorted((project / "runtime/src").glob("*.c")) + sorted(
@@ -545,6 +981,10 @@ def parse_args(argv: Iterable[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--toolchain", choices=("auto", *TOOLCHAINS), default="auto")
     parser.add_argument("--native-only", action="store_true")
+    parser.add_argument("--direct-decision-only", action="store_true")
+    parser.add_argument("--dispatch-owned-only", action="store_true")
+    parser.add_argument("--collector-record-only", action="store_true")
+    parser.add_argument("--collector-minimal-only", action="store_true")
     return parser.parse_args(list(argv))
 
 
@@ -552,8 +992,33 @@ def main(argv: Iterable[str] = ()) -> int:
     args = parse_args(argv)
     try:
         toolchains = resolve_toolchains(args.toolchain)
+        if args.collector_minimal_only:
+            check_collector_minimal(toolchains)
+            print("string-map: OK: minimal collector map key ownership passed")
+            return 0
+        if args.collector_record_only:
+            check_collector_minimal(toolchains)
+            check_collector_record(toolchains)
+            print("string-map: OK: collector record semantics, reclamation, and allocation failure")
+            return 0
+        if args.dispatch_owned_only:
+            check_dispatch_owned_map(toolchains)
+            print(
+                "string-map: OK: compiler-owned map construction bypasses class "
+                "dispatch while nominal String values retain exact typed storage"
+            )
+            return 0
+        if args.direct_decision_only:
+            check_direct_runtime_decisions(toolchains)
+            print(
+                "string-map: OK: dependency-closed Iterator artifacts remain "
+                "distinct from source-reached direct decisions"
+            )
+            return 0
         if not args.native_only:
             run_eval_oracle()
+            check_collector_minimal(toolchains)
+            check_collector_record(toolchains)
         run_native(toolchains, generated_haxe=not args.native_only)
     except (
         StringMapFailure,
@@ -565,11 +1030,16 @@ def main(argv: Iterable[str] = ()) -> int:
         print(f"string-map: ERROR: {error}", file=sys.stderr)
         return 1
     families = ", ".join(toolchain.family for toolchain in toolchains)
-    mode = "native contract" if args.native_only else "Eval plus generated Bool/Int/fieldless-enum/managed-record StringMaps"
+    mode = (
+        "native contract"
+        if args.native_only
+        else "Eval plus generated Bool/Int/nominal-String/fieldless-enum/managed-record StringMaps"
+    )
     print(
         "string-map: OK: "
-        f"{families}; {mode}; missing-vs-false, replacement, removal, clear, aliases, "
-        "nullable identity, empty keys, growth, allocation rollback, value-callback rollback, unsupported-class/payload-enum rejection, "
+        f"{families}; {mode}; missing-vs-false, replacement, removal, clear, copy independence, aliases, "
+        "nullable identity, empty keys, growth, allocation rollback, value-callback rollback, snapshot values/keys/pairs, toString, "
+        "unsupported-class/abstract-class/payload-enum rejection, "
         "malformed-call rejection, layouts, determinism, sanitizers, C++ headers, runtime-none, and selective symbols passed"
     )
     return 0

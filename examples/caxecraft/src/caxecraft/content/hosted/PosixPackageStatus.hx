@@ -1,7 +1,7 @@
 package caxecraft.content.hosted;
 
 /**
-	Names the closed outcomes produced by the Haxe-authored POSIX reader.
+	Names the closed outcomes produced by Haxe-authored POSIX package I/O.
 
 	Product code converts these platform results immediately into
 	`ContentPackageError`, so file-descriptor and system-call details never cross
@@ -18,6 +18,10 @@ enum PosixPackageStatus {
 	PosixEntryNotFile;
 	PosixEntryTooLarge;
 	PosixEntryChanged;
+	PosixEntryExists;
 	PosixReadFailed;
+	PosixWriteFailed;
+	PosixRenameFailed;
+	PosixDeleteFailed;
 	PosixCloseFailed;
 }

@@ -37,6 +37,29 @@ final class Main {
 		return copyEvent(selected);
 	}
 
+	/**
+	 * Select an existing collector-bearing value through a source value-switch.
+	 *
+	 * The early return makes Haxe expose the result as an empty local followed by
+	 * branch assignments. That local needs the same trace-safe zero state as the
+	 * direct conditional carrier above.
+	 */
+	static function chooseEventBySwitch(kind:Int, reject:Bool, opened:Session, maybeOpened:Session):SessionEvent {
+		final selected = switch kind {
+			case 0:
+				if (reject)
+					return Closed;
+				Opened(opened);
+			case 1:
+				if (reject)
+					return Closed;
+				MaybeOpened(maybeOpened);
+			case _:
+				return Closed;
+		};
+		return selected;
+	}
+
 	static function makeEnvelope(value:Int):SessionEnvelope
 		return {event: makeEvent(value)};
 
@@ -66,6 +89,9 @@ final class Main {
 		final nullable = MaybeOpened(null);
 		final selectedFresh = chooseEvent(true, direct);
 		final selectedBorrowed = chooseEvent(false, direct);
+		final selectedBySwitch = chooseEventBySwitch(0, false, new Session(23), new Session(29));
+		final maybeSelectedBySwitch = chooseEventBySwitch(1, false, new Session(31), new Session(37));
+		final rejectedBySwitch = chooseEventBySwitch(0, true, new Session(41), new Session(43));
 		final envelope = makeEnvelope(11);
 		final events = makeEventArray(13);
 		final envelopes = makeEnvelopeArray(17);
@@ -78,6 +104,7 @@ final class Main {
 			case Closed | MaybeOpened(_):
 		}
 		while (read(direct) != 12 || read(assigned) != 12 || read(nullable) != -2 || read(selectedFresh) != 19 || read(selectedBorrowed) != 12
-			|| read(envelope.event) != 11 || read(events[0]) != 13 || read(events[1]) != -1 || read(events[2]) != -2 || read(envelopes[0].event) != 17) {}
+			|| read(selectedBySwitch) != 23 || read(maybeSelectedBySwitch) != 37 || read(rejectedBySwitch) != -1 || read(envelope.event) != 11
+			|| read(events[0]) != 13 || read(events[1]) != -1 || read(events[2]) != -2 || read(envelopes[0].event) != 17) {}
 	}
 }

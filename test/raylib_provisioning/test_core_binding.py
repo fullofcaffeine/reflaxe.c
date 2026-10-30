@@ -15,6 +15,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
+from scripts.test.bounded_process import run as run_bounded_process  # noqa: E402
+
 
 from scripts.raylib.core_binding import (
     BindingFailure,
@@ -35,6 +37,15 @@ from scripts.raylib.core_binding import (
 
 
 class RaylibCoreBindingTests(unittest.TestCase):
+    def test_runtime_text_facade_avoids_unconditional_per_draw_copy(self) -> None:
+        facade = (ROOT / "src/raylib/Raylib.hx").read_text(encoding="utf-8")
+        start = facade.index("public static inline function DrawTextString")
+        end = facade.index("public static inline function DrawFPS", start)
+        implementation = facade[start:end]
+        self.assertIn("c.CStringArg.to(text)", implementation)
+        self.assertNotIn("new StringBuf", implementation)
+        self.assertNotIn("c.CStringRef.to", implementation)
+
     def test_repository_lock_and_generated_raw_files_are_current(self) -> None:
         lock = load_lock()
         first = render_files(lock)
@@ -205,7 +216,7 @@ class RaylibCoreBindingTests(unittest.TestCase):
             environment = os.environ.copy()
             environment["HAXE_NO_SERVER"] = "1"
             environment["LC_ALL"] = "C"
-            result = subprocess.run(
+            result = run_bounded_process(
                 [
                     str(haxe),
                     "--cwd",

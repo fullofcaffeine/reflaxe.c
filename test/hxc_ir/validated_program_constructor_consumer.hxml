@@ -1,0 +1,6 @@
+# Compile-time boundary: only HxcIRValidator constructs validation proofs.
+
+-cp test/hxc_ir/fixtures
+-cp src
+-main ValidatedProgramConstructorConsumer
+--no-output

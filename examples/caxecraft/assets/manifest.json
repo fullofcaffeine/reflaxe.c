@@ -22,6 +22,9 @@
       "items",
       "adventure-items",
       "adventure-terrain",
+      "boundary-boulder-model",
+      "boundary-root-model",
+      "boundary-thicket-model",
       "castle-gate",
       "castle-mechanisms",
       "entities",
@@ -90,6 +93,15 @@
       "promptSummary": "Original seamless 4x4 voxel material atlas for snow, ice, ash, basalt, pine, underwater ruins, castle, copper roof, and bridge runes; edge-to-edge square textures; no text, logos, or copied game textures.",
       "referenceInputs": [],
       "processing": "Selected built-in output and packed to 1024x1024 RGB."
+    },
+    "boundary-vegetation-models": {
+      "mode": "repository-haxe-vox-builder",
+      "artifactIds": [],
+      "promptSummary": "Three original 32-cubed finite-edge treatments: a deep tangled teal thicket, a broad rooted stump, and an irregular mossy boulder with readable solid silhouettes from every side.",
+      "referenceInputs": [
+        "The existing Caxecraft terrain palette and family-adventure art direction guided the original forms. No external model, texture, or game asset was copied."
+      ],
+      "processing": "examples/caxecraft/tools/CaxecraftVoxels.hx deterministically writes three MagicaVoxel 150 models. Each uses layered geometry and surface-color variation instead of extruding a billboard or hiding collision behind an unrelated shape."
     },
     "castle-gate": {
       "mode": "openai-built-in-imagegen",
@@ -337,6 +349,39 @@
           "bridge-rune-tile"
         ]
       }
+    },
+    {
+      "id": "boundary-boulder-model",
+      "path": "models/boundary-boulder.vox",
+      "kind": "voxel-model",
+      "width": 32,
+      "height": 32,
+      "depth": 32,
+      "sha256": "77a6a60ffa16928cd1b752ded35ebe2d9752059d0fb7fd1b3d3febd6862e10d6",
+      "generationRecord": "boundary-vegetation-models",
+      "rights": "caxecraft-original"
+    },
+    {
+      "id": "boundary-root-model",
+      "path": "models/boundary-root.vox",
+      "kind": "voxel-model",
+      "width": 32,
+      "height": 32,
+      "depth": 32,
+      "sha256": "39ec0026f04695425619ddb35386f63ef874e549415434fb0bdea7a5d960d8a4",
+      "generationRecord": "boundary-vegetation-models",
+      "rights": "caxecraft-original"
+    },
+    {
+      "id": "boundary-thicket-model",
+      "path": "models/boundary-thicket.vox",
+      "kind": "voxel-model",
+      "width": 32,
+      "height": 32,
+      "depth": 32,
+      "sha256": "49bec49ecba3b6d1e7748c7682142c885fa8d33cfad4d83188b99ff21e428f4f",
+      "generationRecord": "boundary-vegetation-models",
+      "rights": "caxecraft-original"
     },
     {
       "id": "castle-gate",

@@ -3,7 +3,7 @@
 This directory contains the first original Caxecraft visual-design pack. The
 native game now packages and loads the title panorama, wordmark, HUD atlas,
 base and Adventure item atlases, entity atlas, base and Adventure terrain
-atlases, and seven voxel world props. The props use 21 model files for their
+atlases, and voxel world props. Props can use separate model files for their
 idle, transition, and active frames. Three atlases remain design inputs: their
 presence is not evidence that Adventure characters, Ivvy, or cutscene-editor
 icons are used by the native game yet. The
@@ -34,8 +34,9 @@ packaging copies the hash-verified primary bytes without changing them.
 ## Voxel world props
 
 The files below `models/` are original voxel props. They include the forge
-relay, gate winch, field note, and four route-glyph stones with illuminated
-interaction states. The `.vox` files
+relay, gate winch, field note, four route-glyph stones with illuminated
+interaction states, and three solid boundary treatments: a thicket, root fan,
+and mossy boulder. The `.vox` files
 use the MagicaVoxel 150 format. Raylib reads this standard format directly.
 
 The Haxe source in `tools/CaxecraftVoxels.hx` is the editable authority. It

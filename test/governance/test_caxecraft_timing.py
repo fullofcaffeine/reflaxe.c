@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib.util
+import io
 import json
 import os
 import subprocess
@@ -28,6 +29,68 @@ def load_module(name: str, path: Path):
 
 
 class CaxecraftTimingTests(unittest.TestCase):
+    def test_compiler_profile_timeout_keeps_partial_diagnostics(self) -> None:
+        profiler = load_module(
+            "caxecraft_profile_partial_timeout_subject",
+            ROOT / "examples/caxecraft/profile_compiler.py",
+        )
+        for output, error_output, expected in (
+            (
+                b"HXC_PHASE_TIMING\ttyped input capture\t123\n",
+                b"C printing\npartial UTF-8: \xe2",
+                ("typed input capture\t123", "C printing", "partial UTF-8: \ufffd"),
+            ),
+            ("partial stdout", "partial stderr", ("partial stdout", "partial stderr")),
+            (None, None, ()),
+        ):
+            with self.subTest(output=output), tempfile.TemporaryDirectory() as directory:
+                report_path = Path(directory) / "profile.json"
+                timeout = subprocess.TimeoutExpired(
+                    ["haxe"], 120, output=output, stderr=error_output
+                )
+                diagnostics = io.StringIO()
+                with mock.patch.object(profiler, "profile", side_effect=timeout), mock.patch.object(
+                    sys, "stderr", diagnostics
+                ):
+                    status = profiler.main(["--output", str(report_path)])
+                self.assertEqual(status, 1)
+                self.assertIn("timed out after 120 seconds", diagnostics.getvalue())
+                for fragment in expected:
+                    self.assertIn(fragment, diagnostics.getvalue())
+                self.assertFalse(report_path.exists())
+
+    def test_compiler_profile_timeout_override_is_bounded_and_explicit(self) -> None:
+        profiler = load_module(
+            "caxecraft_profile_timeout_subject",
+            ROOT / "examples/caxecraft/profile_compiler.py",
+        )
+
+        self.assertIsNone(profiler.parse_args([]).timeout_seconds)
+        self.assertEqual(
+            profiler.parse_args(["--timeout-seconds", "600"]).timeout_seconds,
+            600,
+        )
+        for timeout in (0, 601):
+            with self.assertRaisesRegex(
+                profiler.CompilerProfileFailure,
+                "timeout must be from 1 through 600",
+            ):
+                profiler.profile(1, timeout_seconds=timeout)
+
+    def test_secondary_locale_pilot_has_a_measured_bounded_budget(self) -> None:
+        with mock.patch.object(
+            sys, "path", [str(ROOT / "examples/caxecraft"), *sys.path]
+        ):
+            play = load_module(
+                "caxecraft_pilot_timeout_subject",
+                ROOT / "examples/caxecraft/play.py",
+            )
+
+        self.assertEqual(play.pilot_timeout_seconds("secondary-locale"), 35)
+        self.assertEqual(play.pilot_timeout_seconds("editor-shell"), 90)
+        self.assertEqual(play.pilot_timeout_seconds("adventure-journey"), 35)
+        self.assertEqual(play.pilot_timeout_seconds("launch-smoke"), 15)
+
     def test_compiler_profile_parses_closed_phase_and_haxe_timer_records(self) -> None:
         profiler = load_module(
             "caxecraft_compiler_profile_subject",
@@ -337,6 +400,7 @@ class CaxecraftTimingTests(unittest.TestCase):
                         "addedArrays": 1,
                         "addedIntMaps": 0,
                         "addedStringMaps": 0,
+                        "addedTypedMaps": 0,
                         "addedBytes": 0,
                         "addedOptionals": 0,
                         "addedImportTypes": 1,
@@ -634,6 +698,153 @@ class CaxecraftTimingTests(unittest.TestCase):
             lock["haxe"]["sourceRevision"],
         )
 
+    def test_compiler_profile_matches_ordinary_play_on_each_platform(self) -> None:
+        profiler = load_module(
+            "caxecraft_playable_profile_subject",
+            ROOT / "examples/caxecraft/profile_compiler.py",
+        )
+        play = load_module(
+            "caxecraft_playable_arguments_subject",
+            ROOT / "examples/caxecraft/play.py",
+        )
+        output = Path("generated-playable-profile")
+        for host, target in (("darwin", "macos"), ("linux", "linux"), ("win32", "windows")):
+            with (
+                self.subTest(platform=target),
+                mock.patch.object(profiler.sys, "platform", host),
+                mock.patch.object(
+                    profiler, "resolve_haxe_arguments",
+                    side_effect=lambda arguments, *, locale: tuple(arguments),
+                ),
+                mock.patch.object(play, "run") as run_process,
+                mock.patch.object(play, "validate_compiled_haxe", return_value={}),
+                mock.patch.object(play, "validate_content_platform_output"),
+                mock.patch("builtins.print"),
+            ):
+                arguments = list(profiler.workload_arguments(output, "playable"))
+                play.compile_haxe(
+                    output, layout="split", platform_name=target,
+                    raylib_configuration="desktop",
+                )
+                # Timing instrumentation is the only permitted difference from
+                # the ordinary build, including its real content adapter.
+                timing_define = arguments.index("reflaxe_c_phase_timing")
+                del arguments[timing_define - 1 : timing_define + 1]
+                arguments.remove("--times")
+                self.assertEqual(tuple(arguments), tuple(run_process.call_args.args[0][3:]))
+
+    def test_compiler_profile_can_match_the_editor_shell_request(self) -> None:
+        profiler = load_module(
+            "caxecraft_editor_profile_subject",
+            ROOT / "examples/caxecraft/profile_compiler.py",
+        )
+        output = Path("generated-editor-profile")
+
+        with (
+            mock.patch.object(profiler.sys, "platform", "darwin"),
+            mock.patch.object(
+                profiler,
+                "resolve_haxe_arguments",
+                side_effect=lambda arguments, *, locale: tuple(arguments),
+            ),
+        ):
+            arguments = profiler.workload_arguments(output, "editor-shell")
+
+        self.assertEqual(
+            arguments,
+            (
+                "play.hxml",
+                "-D",
+                "hxc_runtime_diagnostics=off",
+                "-D",
+                "raylib_platform_macos",
+                "-D",
+                "raylib_configuration_memory",
+                "-D",
+                "hxc_runtime_report=summary",
+                "-D",
+                "reflaxe_c_phase_progress",
+                "-D",
+                "caxecraft_posix_hosted",
+                "-D",
+                "caxecraft_posix_darwin",
+                "-D",
+                "caxecraft_pilot",
+                "-D",
+                "caxecraft_pilot_editor_shell",
+                "-D",
+                "reflaxe_c_phase_timing",
+                "--times",
+                "--custom-target",
+                f"c={output}",
+            ),
+        )
+
+        play = load_module(
+            "caxecraft_editor_play_arguments_subject",
+            ROOT / "examples/caxecraft/play.py",
+        )
+        with (
+            mock.patch.object(play, "run") as run_process,
+            mock.patch.object(play, "validate_compiled_haxe", return_value={}),
+            mock.patch.object(play, "validate_content_platform_output"),
+            mock.patch("builtins.print"),
+        ):
+            play.compile_haxe(
+                output,
+                layout="split",
+                platform_name="macos",
+                raylib_configuration="memory-software",
+                pilot="editor-shell",
+            )
+
+        play_arguments = tuple(run_process.call_args.args[0][3:])
+        profiled_play_arguments = list(arguments)
+        timing_define = profiled_play_arguments.index("reflaxe_c_phase_timing")
+        del profiled_play_arguments[timing_define - 1 : timing_define + 1]
+        profiled_play_arguments.remove("--times")
+        self.assertEqual(tuple(profiled_play_arguments), play_arguments)
+
+    def test_compiler_profile_can_match_the_runtime_level_loader_request(
+        self,
+    ) -> None:
+        profiler = load_module(
+            "caxecraft_runtime_level_loader_profile_subject",
+            ROOT / "examples/caxecraft/profile_compiler.py",
+        )
+        output = Path("generated-runtime-level-loader-profile")
+
+        with (
+            mock.patch.object(profiler.sys, "platform", "darwin"),
+            mock.patch.object(
+                profiler,
+                "resolve_haxe_arguments",
+                side_effect=lambda arguments, *, locale: tuple(arguments),
+            ),
+        ):
+            arguments = profiler.workload_arguments(output, "runtime-level-loader")
+
+        self.assertIn("runtime-level-loader", profiler.PROFILE_WORKLOADS)
+        self.assertEqual(
+            arguments,
+            (
+                "runtime-level-loader-c.hxml",
+                "-D",
+                "hxc_runtime_diagnostics=off",
+                "-D",
+                "caxecraft_posix_hosted",
+                "-D",
+                "caxecraft_posix_darwin",
+                "-D",
+                "hxc_project_layout=split",
+                "-D",
+                "reflaxe_c_phase_timing",
+                "--times",
+                "--custom-target",
+                f"c={output}",
+            ),
+        )
+
     def test_pinned_haxe_resolution_uses_the_haxerc_version(self) -> None:
         caxecraft = load_module(
             "caxecraft_pin_subject", ROOT / "examples/caxecraft/run.py"
@@ -749,7 +960,7 @@ class CaxecraftTimingTests(unittest.TestCase):
                 return_value=("-cp", "src", "--custom-target", "c=/test/out"),
             ) as resolve,
             mock.patch.object(
-                caxecraft.subprocess, "run", return_value=completed
+                caxecraft, "run_bounded_process", return_value=completed
             ) as run,
         ):
             observed = caxecraft.compile_target(

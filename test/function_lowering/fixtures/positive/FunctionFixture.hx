@@ -5,6 +5,12 @@
 	Eval and generated C can execute the same program.
 **/
 
+/** A direct record that proves callback carriers receive complete value types. */
+private typedef CallbackPoint = {
+	final x:Int;
+	final y:Int;
+}
+
 /**
 	Exercises ordinary Haxe function calls through the semantic C pipeline.
 
@@ -46,6 +52,15 @@ class FunctionFixture {
 
 	static function apply(value:Int, operation:Int->Int):Int {
 		return operation(value);
+	}
+
+	/** Pass a complete record through the callback function pointer by value. */
+	static function applyPoint(point:CallbackPoint, operation:CallbackPoint->Int):Int {
+		return operation(point);
+	}
+
+	static function pointValue(point:CallbackPoint):Int {
+		return point.x + point.y;
 	}
 
 	/**
@@ -95,6 +110,36 @@ class FunctionFixture {
 	static function indirect(value:Int):Int {
 		var operation:Int->Int = choose();
 		return apply(operation(value), passthrough);
+	}
+
+	static function selectedFive(value:Int):Int {
+		return 5;
+	}
+
+	static function selectedTen(value:Int):Int {
+		return 10;
+	}
+
+	/** Select an exact non-capturing function through an `if` expression. **/
+	static function chooseConditional(enabled:Bool):Int->Int {
+		return enabled ? selectedFive : selectedTen;
+	}
+
+	/** Select an exact non-capturing function through a `switch` expression. **/
+	static function chooseSwitch(mode:Int):Int->Int {
+		return switch mode {
+			case 0: selectedFive;
+			case 1: selectedTen;
+			case _: passthrough;
+		};
+	}
+
+	/** Re-enter this function through a typed local function value. **/
+	static function recursiveThroughValue(reenter:Bool):Int {
+		if (!reenter)
+			return 4;
+		final next:Bool->Int = recursiveThroughValue;
+		return next(false);
 	}
 
 	/**
@@ -168,6 +213,14 @@ class FunctionFixture {
 		// Native execution must prove the function pointer was called with the
 		// right argument and result, not merely that the generated C compiled.
 		while (indirectValue != 17) {}
+		while (chooseConditional(true)(4) != 5) {}
+		while (chooseConditional(false)(4) != 10) {}
+		while (chooseSwitch(0)(5) != 5) {}
+		while (chooseSwitch(1)(5) != 10) {}
+		while (chooseSwitch(2)(5) != 5) {}
+		while (recursiveThroughValue(true) != 4) {}
+		final pointResult = applyPoint({x: 2, y: 3}, pointValue);
+		while (pointResult != 5) {}
 		final captured = captureRoundTrip(5);
 		// The first result (5) becomes the second call's argument; its result is 15.
 		while (captured != 15) {}

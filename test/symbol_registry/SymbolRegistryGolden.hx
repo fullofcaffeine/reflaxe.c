@@ -21,6 +21,8 @@ class SymbolRegistryGolden {
 
 	static function main():Void {
 		verifyUtf8Order();
+		verifySemanticComponentControls();
+		verifyUnicodeHashCompatibility();
 		final requests = corpus();
 		final forward = registry(requests);
 		final reverseRequests = requests.copy();
@@ -42,6 +44,7 @@ class SymbolRegistryGolden {
 			throw "typed C name finalization changed with declaration discovery order";
 		}
 		verifyRepeatedCollisionRound();
+		verifySparseCollisionNamespaces();
 		final plan = new CDeclarationPlanner().plan(finalized.snapshot);
 		final forwardNames = [];
 		for (header in plan.headers) {
@@ -89,6 +92,41 @@ class SymbolRegistryGolden {
 		}
 	}
 
+	/** Preserve the exact name policy across native and portable control checks. */
+	static function verifySemanticComponentControls():Void {
+		final constructors:Array<String->CSymbolRequest> = [
+			value -> new CSymbolRequest(CSKMethod, [value], CNSOrdinary("global")),
+			value -> new CSymbolRequest(CSKMethod, ["method"], CNSOrdinary(value)),
+			value -> new CSymbolRequest(CSKMethod, ["method"], CNSOrdinary("global"), null, null, [value]),
+			value -> new CSymbolRequest(CSKMethod, ["method"], CNSOrdinary("global"), null, null, null, [value]),
+			value -> new CSymbolRequest(CSKMethod, ["method"], CNSOrdinary("global"), null, null, null, null, null, [value])
+		];
+		for (code in 0...128) {
+			if (code >= 0x20 && code != 0x7F)
+				continue;
+			final control = String.fromCharCode(code);
+			for (value in [control + "name", "na" + control + "me", "name" + control]) {
+				for (construct in constructors) {
+					var rejected = false;
+					try {
+						construct(value);
+					} catch (error:CSymbolRegistryError) {
+						if (error.diagnosticId != CDiagnosticId.InternalCompilerError)
+							throw "control character changed the diagnostic identity";
+						rejected = true;
+					}
+					if (!rejected)
+						throw 'symbol component accepted ASCII control $code';
+				}
+			}
+		}
+		// C1 controls and Unicode separators are outside this existing ASCII rule.
+		for (value in ["name with space", "Café", "雪🙂", "a\u0085b", "a\u009Fb", "a\u2028b"]) {
+			for (construct in constructors)
+				construct(value);
+		}
+	}
+
 	static function compareUtf8Bytes(left:Bytes, right:Bytes):Int {
 		final length = left.length < right.length ? left.length : right.length;
 		for (index in 0...length) {
@@ -97,6 +135,45 @@ class SymbolRegistryGolden {
 				return difference;
 		}
 		return left.length - right.length;
+	}
+
+	/**
+		Keep existing Unicode symbol suffixes when optimizing ASCII hashing.
+
+		These literal names were produced by the pinned legacy string-hash path.
+		A shared readable name forces collisions; a 140-character readable name
+		forces truncation. Both paths must preserve their suffixes for accented
+		and supplementary Unicode, even though byte-based SHA-256 differs.
+	**/
+	static function verifyUnicodeHashCompatibility():Void {
+		final cases = [
+			{
+				name: "é",
+				collision: "hxc_same_h01a7c66bbbef",
+				bounded: "hxc_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa_h01a7c66bbbefa791"
+			},
+			{
+				name: "雪🙂",
+				collision: "hxc_same_h7798c29fd8fc",
+				bounded: "hxc_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa_h7798c29fd8fcdb58"
+			}
+		];
+		final collisions = new CSymbolRegistry();
+		final requests = cases.map(item -> new CSymbolRequest(CSKMethod, [item.name], CNSOrdinary("translation-unit"), null, null, null, null, null, ["same"]));
+		collisions.registerAll(requests);
+		collisions.finalizeSymbols();
+		for (index in 0...cases.length) {
+			final item = cases[index];
+			if (collisions.identifierFor(requests[index]).value != item.collision)
+				throw 'legacy Unicode collision suffix changed for `${item.name}`';
+			final bounded = new CSymbolRegistry();
+			final request = new CSymbolRequest(CSKMethod, [item.name], CNSOrdinary("translation-unit"), null, null, null, null, null,
+				[StringTools.lpad("long_name", "a", 140)]);
+			bounded.register(request);
+			bounded.finalizeSymbols();
+			if (bounded.identifierFor(request).value != item.bounded)
+				throw 'legacy Unicode length-limit suffix changed for `${item.name}`';
+		}
 	}
 
 	static function corpus():Array<CSymbolRequest> {
@@ -170,7 +247,10 @@ class SymbolRegistryGolden {
 		final occupant = new CSymbolRequest(CSKMethod, ["collision", "occupant"], namespace, CSVInternal, null, null, null, null,
 			["demo", "Box", "map", "h8297ed1a605e"]);
 		final registry = new CSymbolRegistry();
-		registry.registerAll([first, second, occupant]);
+		final requests = [first, second, occupant];
+		for (index in 0...32)
+			requests.push(new CSymbolRequest(CSKMethod, ["unrelated", "method" + index], namespace));
+		registry.registerAll(requests);
 		final snapshot = registry.finalizeSymbols();
 		final firstName = registry.identifierFor(first).value;
 		final secondName = registry.identifierFor(second).value;
@@ -181,6 +261,38 @@ class SymbolRegistryGolden {
 			|| snapshot.collisions.length != 2) {
 			throw 'a generated C name that collided after its first hash suffix was not advanced deterministically: first=$firstName second=$secondName occupant=$occupantName collisions=${snapshot.collisions.length}';
 		}
+		if (snapshot.collisions[0].baseName != "hxc_demo_Box_map" || snapshot.collisions[1].baseName != "hxc_demo_Box_map_h8297ed1a605e")
+			throw "successive collision groups lost their canonical report order";
+		for (index in 0...32)
+			if (registry.identifierFor(requests[index + 3]).value != "hxc_unrelated_method" + index)
+				throw "an unrelated singleton changed during repeated collision resolution";
+		requests.reverse();
+		final reversed = new CSymbolRegistry();
+		reversed.registerAll(requests);
+		if (registry.toJson() != reversed.toJson())
+			throw "sparse repeated collisions changed with registration order";
+	}
+
+	/** Keep identical spellings independent in distinct C namespaces, including exact names. */
+	static function verifySparseCollisionNamespaces():Void {
+		final requests = [
+			new CSymbolRequest(CSKMethod, ["unique"], CNSOrdinary("translation-unit")),
+			new CSymbolRequest(CSKType, ["unique"], CNSTag("translation-unit")),
+			new CSymbolRequest(CSKField, ["unique"], CNSMember("left.Owner")),
+			new CSymbolRequest(CSKField, ["unique"], CNSMember("right.Owner")),
+			new CSymbolRequest(CSKMethod, ["public", "method"], CNSOrdinary("translation-unit"), CSVPublic, "project_name"),
+			new CSymbolRequest(CSKType, ["public", "type"], CNSTag("translation-unit"), CSVPublic, "project_name")
+		];
+		final registry = new CSymbolRegistry();
+		registry.registerAll(requests);
+		final snapshot = registry.finalizeSymbols();
+		if (snapshot.symbols.length != 6 || snapshot.collisions.length != 0)
+			throw "independent singleton namespaces produced a collision";
+		for (index in 0...requests.length)
+			if (registry.identifierFor(requests[index]).value != (index < 4 ? "hxc_unique" : "project_name"))
+				throw "a unique generated or exact name changed";
+		if (new CSymbolRegistry().finalizeSymbols().symbols.length != 0)
+			throw "an empty registry acquired a symbol";
 	}
 
 	static function readableIdentityProof():String {
