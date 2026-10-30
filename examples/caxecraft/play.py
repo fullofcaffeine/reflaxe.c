@@ -2047,6 +2047,10 @@ def haxe_server_compatibility(
             "repo/caxecraft/tooling/dev_haxe_server.py",
             CASE / "dev_haxe_server.py",
         ),
+        InputPath(
+            "repo/caxecraft/tooling/dev_windows_process.py",
+            CASE / "dev_windows_process.py",
+        ),
         InputPath("haxe/compiler", installation.compiler),
         InputPath("haxe/std", installation.standard_library),
     )

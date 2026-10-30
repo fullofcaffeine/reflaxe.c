@@ -570,6 +570,13 @@ jobs:
             --run \
             --report "$raylib_report"
 
+      - name: Verify Windows process identity and owned server lifecycle
+        if: matrix.platform == 'windows'
+        shell: bash
+        run: |
+          python3 -m unittest discover -s test/governance -p test_windows_process_identity.py
+          python3 -m unittest discover -s test/governance -p test_caxecraft_haxe_server.py
+
       - name: Compile Windows Caxecraft with explicit unsupported package capability
         if: matrix.platform == 'windows'
         shell: bash

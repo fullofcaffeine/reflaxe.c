@@ -28,6 +28,7 @@ from typing import Mapping, Sequence
 
 from dev_build_state import atomic_write_state, canonical_digest
 from dev_generation import VariantLock
+from dev_windows_process import process_identity as windows_process_identity
 
 
 COOKIE_KIND = "caxecraft-owned-haxe-server"
@@ -318,24 +319,8 @@ def process_start_identity(pid: int) -> str | None:
     if pid < 1:
         return None
     if os.name == "nt":
-        command = [
-            "powershell",
-            "-NoProfile",
-            "-NonInteractive",
-            "-Command",
-            (
-                f"$p=Get-Process -Id {pid} -ErrorAction SilentlyContinue;"
-                "if($p){$p.StartTime.ToUniversalTime().Ticks}"
-            ),
-        ]
-        try:
-            result = subprocess.run(
-                command, check=False, capture_output=True, text=True, timeout=3
-            )
-        except (OSError, subprocess.TimeoutExpired):
-            return None
-        value = result.stdout.strip()
-        return f"windows-start-ticks:{value}" if result.returncode == 0 and value else None
+        identity = windows_process_identity(pid)
+        return None if identity is None else identity.start
 
     linux_stat = Path(f"/proc/{pid}/stat")
     if linux_stat.is_file():
@@ -376,27 +361,9 @@ def process_command_identity(pid: int) -> str | None:
     if pid < 1:
         return None
     if os.name == "nt":
-        try:
-            result = subprocess.run(
-                [
-                    "powershell",
-                    "-NoProfile",
-                    "-NonInteractive",
-                    "-Command",
-                    (
-                        f"$p=Get-Process -Id {pid} -ErrorAction SilentlyContinue;"
-                        "if($p){$p.Path}"
-                    ),
-                ],
-                check=False,
-                capture_output=True,
-                text=True,
-                timeout=3,
-            )
-        except (OSError, subprocess.TimeoutExpired):
-            return None
-        value = result.stdout.strip()
-        return f"windows-path:{value}" if result.returncode == 0 and value else None
+        identity = windows_process_identity(pid)
+        return None if identity is None else identity.command
+
     executable = Path(f"/proc/{pid}/exe")
     if executable.exists():
         try:
