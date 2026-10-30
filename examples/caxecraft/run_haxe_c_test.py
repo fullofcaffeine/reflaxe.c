@@ -33,6 +33,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from scripts.test.bounded_process import run as run_bounded_process  # noqa: E402
+from scripts.test.compiler_progress import compiler_process_detail  # noqa: E402
 
 STRICT_FLAGS = (
     "-std=c11",
@@ -1469,7 +1470,11 @@ def run(
             timeout=timeout,
             compiler_progress=compiler_progress,
         )
-    except (OSError, subprocess.TimeoutExpired) as error:
+    except subprocess.TimeoutExpired as error:
+        detail = compiler_process_detail(error.output, error.stderr)
+        suffix = f"\n{detail}" if detail else ""
+        raise HaxeCTestFailure(f"{label} could not run: {error}{suffix}") from error
+    except OSError as error:
         raise HaxeCTestFailure(f"{label} could not run: {error}") from error
     if result.returncode != 0:
         raise HaxeCTestFailure(

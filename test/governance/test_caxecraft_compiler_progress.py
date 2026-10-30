@@ -55,10 +55,53 @@ class CaxecraftCompilerProgressTests(unittest.TestCase):
                 "caxecraft_compiler_progress_subject",
                 ROOT / "scripts/test/compiler_progress.py",
             )
+            cls.haxe_tests = load_module(
+                "caxecraft_native_progress_subject",
+                CASE / "run_haxe_c_test.py",
+            )
             cls.play = load_module(
                 "caxecraft_compiler_progress_play_subject",
                 CASE / "play.py",
             )
+
+    def test_native_timeout_preserves_partial_stdout_and_stderr(self) -> None:
+        for binary in (False, True):
+            stdout = "partial native output\n"
+            stderr = "native test phase: probe main\n"
+            timeout = subprocess.TimeoutExpired(
+                ["native-test"], 40,
+                output=stdout.encode() if binary else stdout,
+                stderr=stderr.encode() if binary else stderr,
+            )
+            with self.subTest(binary=binary), mock.patch.object(
+                self.haxe_tests, "run_bounded_process", side_effect=timeout
+            ):
+                with self.assertRaises(self.haxe_tests.HaxeCTestFailure) as failure:
+                    self.haxe_tests.run(
+                        ["native-test"], cwd=ROOT, timeout=40, label="native test"
+                    )
+            message = str(failure.exception)
+            self.assertIn("timed out after 40 seconds", message)
+            self.assertIn(stdout.strip(), message)
+            self.assertIn(stderr.strip(), message)
+            self.assertNotIn("last active compiler phase", message)
+
+    def test_native_success_preserves_the_stdout_comparison_envelope(self) -> None:
+        oracle = "0\n11\n12\n13\n14\n15\n16\n17\n"
+        expected = subprocess.CompletedProcess(
+            ["native-test"], 0, oracle, "native test phase: complete\n"
+        )
+        with mock.patch.object(
+            self.haxe_tests, "run_bounded_process", return_value=expected
+        ):
+            actual = self.haxe_tests.run(
+                ["native-test"], cwd=ROOT, timeout=40, label="native test"
+            )
+        self.assertIs(actual, expected)
+        self.assertEqual(actual.stdout, oracle)
+        self.haxe_tests.validate_oracle(
+            self.haxe_tests.CASES["runtime-level-loader"], actual.stdout
+        )
 
     def test_nested_progress_names_the_last_active_phase(self) -> None:
         lines = "\n".join(
