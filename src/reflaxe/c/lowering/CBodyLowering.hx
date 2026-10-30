@@ -573,8 +573,15 @@ class CBodyLowering {
 		// later body is the first place that retains the same class in an Array or map.
 		CPhaseTiming.startProgressDetail(Std.string(CDTHxcIRRepresentationPlanning));
 		final representationTimer = CPhaseTiming.startDetail(CDTHxcIRRepresentationPlanning);
+		// Generic calls use specialized function IDs. Index their source IDs once
+		// for this discovery pass, so an intrinsic or external call cannot trigger
+		// a scan of every prepared function. Later adapters do not share this index.
+		final specializationBases:Map<String, Bool> = [];
+		for (fn in preparedById)
+			if (fn.specialization != null)
+				specializationBases.set(fn.specialization.baseFunctionId, true);
 		for (builder in builders)
-			builder.discoverDynamicSemantics();
+			builder.discoverDynamicSemantics(specializationBases);
 		for (builder in builders)
 			builder.discoverManagedRepresentations();
 		// A returned class outlives its callee regardless of where its constructor
@@ -4904,8 +4911,12 @@ private class FunctionBuilder {
 		one exact value. That fact is enough for the first closed-world slice: field,
 		method, function-call, cast, and equality adapters remain exact and ambiguous
 		flows fail during authoritative lowering instead of growing reflection data.
+
+		`specializationBases` contains the source function IDs represented by the
+		prepared specializations for this pass. It is rebuilt for each lowering
+		request and is not retained across later additions to the function map.
 	**/
-	public function discoverDynamicSemantics():Void {
+	public function discoverDynamicSemantics(specializationBases:Map<String, Bool>):Void {
 		final localTypes:Map<Int, CPreparedBodyDynamicType> = [];
 		function hasReachableStaticTarget(callee:TypedExpr):Bool {
 			final baseId = switch unwrapExpression(callee).expr {
@@ -4918,12 +4929,7 @@ private class FunctionBuilder {
 				return false;
 			if (functionsById.exists(baseId))
 				return true;
-			for (target in functionsById) {
-				final specialization = target.specialization;
-				if (specialization != null && specialization.baseFunctionId == baseId)
-					return true;
-			}
-			return false;
+			return specializationBases.exists(baseId);
 		}
 
 		function visit(expression:TypedExpr):Void {

@@ -2316,9 +2316,26 @@ def run_null_comparison_lane(toolchains: list[Toolchain]) -> None:
                 )
 
 
+def check_classification() -> None:
+    """Check typed Array identity, lifetimes, source evidence, and import boundaries."""
+    command = [development_tool("haxe"), "-cp", str(ROOT / "src"),
+               "-cp", str(ROOT / "std"), "-cp", str(ROOT / "vendor/reflaxe/src"),
+               "-cp", str(CASE / "classification"),
+               "--macro", "ArrayClassificationProbe.install()",
+               "-main", "ArrayClassificationFixture", "--interp"]
+    result = run_bounded_process(command, cwd=ROOT, env=haxe_environment(),
+                                 capture_output=True, text=True, check=False, timeout=30)
+    if result.returncode or result.stdout.strip() != "ARRAY_CLASSIFICATION_OK" or result.stderr:
+        raise ArrayRuntimeFailure(
+            f"Array classification contract failed: {result.stdout}{result.stderr}"
+        )
+
+
 def parse_args(argv: Iterable[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--toolchain", choices=("auto", *TOOLCHAINS), default="auto")
+    parser.add_argument("--classification-only", action="store_true",
+                        help="check Array type identity and source evidence without C compilation")
     parser.add_argument("--reference-comparison-only", action="store_true",
                         help="check fresh Array comparison values and native cleanup")
     parser.add_argument(
@@ -2352,9 +2369,9 @@ def parse_args(argv: Iterable[str]) -> argparse.Namespace:
 def main(argv: Iterable[str] = ()) -> int:
     args = parse_args(argv)
     try:
-        toolchains = selected_toolchains(args.toolchain)
         focused = sum(
             (
+                args.classification_only,
                 args.function_values_only,
                 args.to_string_only,
                 args.collection_cycles_only,
@@ -2368,6 +2385,15 @@ def main(argv: Iterable[str] = ()) -> int:
             raise ArrayRuntimeFailure(
                 "choose only one focused Array lane"
             )
+        if args.classification_only:
+            if args.native_only:
+                raise ArrayRuntimeFailure("--classification-only requires Haxe")
+            check_classification()
+            print("array-runtime: OK: typed Array classification contracts passed")
+            return 0
+        toolchains = selected_toolchains(args.toolchain)
+        if focused == 0 and not args.native_only:
+            check_classification()
         if args.reference_comparison_only:
             if args.native_only:
                 raise ArrayRuntimeFailure("--reference-comparison-only requires generated Haxe")

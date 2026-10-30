@@ -25,6 +25,8 @@ from scripts.test.bounded_process import run as run_bounded_process  # noqa: E40
 
 CASE = Path(__file__).resolve().parent
 FIXTURE = CASE / "fixtures"
+DISCOVERY = CASE / "discovery"
+DISCOVERY_EXPECTED = "3:4:5:6:7:true:9:11\n"
 SCALAR = CASE / "scalar"
 TYPED = CASE / "typed"
 NEGATIVE = CASE / "negative"
@@ -807,6 +809,8 @@ def compile_and_run(
     build: Path,
     label: str,
     flags: tuple[str, ...],
+    *,
+    expected: str = EXPECTED,
 ) -> None:
     """Compile one generated project and require exact Eval parity."""
 
@@ -847,7 +851,7 @@ def compile_and_run(
         text=True,
         timeout=60,
     )
-    if executed.returncode != 0 or executed.stdout != EXPECTED or executed.stderr:
+    if executed.returncode != 0 or executed.stdout != expected or executed.stderr:
         raise DynamicLoweringFailure(
             f"{toolchain.family} {label} execution drifted\n"
             f"exit={executed.returncode} stdout={executed.stdout!r} stderr={executed.stderr!r}"
@@ -889,12 +893,14 @@ def compile_cpp_header(toolchain: Toolchain, project: Path, build: Path) -> None
         )
 
 
-def run_native(toolchains: list[Toolchain], project: Path, build: Path) -> None:
+def run_native(
+    toolchains: list[Toolchain], project: Path, build: Path, *, expected: str = EXPECTED
+) -> None:
     """Reuse the split project for strict O0/O2, C++17, and sanitizer proof."""
 
     for toolchain in toolchains:
-        compile_and_run(toolchain, project, build, f"dynamic-{toolchain.family}-o0", ("-O0",))
-        compile_and_run(toolchain, project, build, f"dynamic-{toolchain.family}-o2", ("-O2",))
+        compile_and_run(toolchain, project, build, f"dynamic-{toolchain.family}-o0", ("-O0",), expected=expected)
+        compile_and_run(toolchain, project, build, f"dynamic-{toolchain.family}-o2", ("-O2",), expected=expected)
         compile_cpp_header(toolchain, project, build)
         if toolchain.family == "clang":
             compile_and_run(
@@ -903,7 +909,45 @@ def run_native(toolchains: list[Toolchain], project: Path, build: Path) -> None:
                 build,
                 "dynamic-clang-sanitize",
                 SANITIZER_FLAGS,
+                expected=expected,
             )
+
+
+def run_discovery_cases(root: Path, toolchains: list[Toolchain]) -> None:
+    """Preserve call discovery and nested argument effects through native execution."""
+
+    evaluated = run_bounded_process(
+        [development_tool("haxe"), "-cp", str(DISCOVERY), "-main", "Main", "--interp"],
+        cwd=ROOT, env=haxe_environment(), capture_output=True, text=True, timeout=45,
+    )
+    if evaluated.returncode or evaluated.stdout != DISCOVERY_EXPECTED or evaluated.stderr:
+        raise DynamicLoweringFailure(f"discovery Eval oracle drifted: {evaluated!r}")
+    project = root / "discovery"
+    result = compile_haxe(DISCOVERY, project, report=True)
+    require_compile(result, "static-call discovery")
+    hxcir = extract_hxcir(result)
+    for marker in ("dynamic-box ", "dynamic-unbox ", "category=float storage=inline-float64",
+                   "category=int storage=inline-int32", "function.Main.increment"):
+        if marker not in hxcir:
+            raise DynamicLoweringFailure(f"discovery HxcIR omitted {marker!r}")
+    specialized = [line for line in hxcir.splitlines()
+                   if line.startswith('  function "function.specialization.')]
+    for name in ("Main.identity<Int>", "Main.identity<Bool>"):
+        if sum(f'name="{name}"' in line for line in specialized) != 1:
+            raise DynamicLoweringFailure(f"discovery omitted one exact specialization of {name}")
+    if len(specialized) != 2:
+        raise DynamicLoweringFailure("discovery changed its two generic specializations")
+    build = root / "discovery-native"
+    build.mkdir()
+    run_native(toolchains, project, build, expected=DISCOVERY_EXPECTED)
+    # An unavailable static call must retain its normal diagnostic rather than
+    # entering specialization resolution or silently becoming reachable.
+    output = root / "discovery-negative"
+    rejected = compile_haxe(NEGATIVE / "computed-name", output)
+    marker = "TCall(unavailable-static-target:function.Reflect.field)"
+    if rejected.returncode == 0 or "HXC1001:" not in rejected.stderr or marker not in rejected.stderr:
+        raise DynamicLoweringFailure(f"discovery unavailable-target diagnostic drifted: {rejected!r}")
+    require_no_output(output, "discovery unavailable target")
 
 
 def main() -> None:
@@ -911,11 +955,19 @@ def main() -> None:
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--toolchain", choices=("auto", "gcc", "clang"), default="auto")
+    parser.add_argument("--discovery-only", action="store_true",
+                        help="check static/generic/intrinsic call discovery and its native effects")
     arguments = parser.parse_args()
+    if arguments.discovery_only:
+        with tempfile.TemporaryDirectory(prefix="haxe-c-dynamic-discovery-") as temporary:
+            run_discovery_cases(Path(temporary), resolve_toolchains(arguments.toolchain))
+        print("dynamic-discovery: OK: Eval, HxcIR, native O0/O2, sanitizers, headers, and unavailable-target diagnostic")
+        return
     run_eval()
     toolchains = resolve_toolchains(arguments.toolchain)
     with tempfile.TemporaryDirectory(prefix="haxe-c-dynamic-lowering-") as temporary:
         root = Path(temporary)
+        run_discovery_cases(root, toolchains)
         project = render_projects(root)
         build = root / "native"
         build.mkdir()

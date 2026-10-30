@@ -369,13 +369,31 @@ def check_nominal_cache() -> None:
         raise HxcIRFailure(f"nominal cache check failed\n{result.stdout}\n{result.stderr}")
 
 
+
+def check_carrier_declarations() -> None:
+    """Protect declaration multiplicity and function/request-local ownership identities."""
+    environment = {**os.environ, "HAXE_NO_SERVER": "1"}
+    result = run_bounded_process(
+        [development_tool("haxe"), "-cp", "test/hxc_ir", "-lib", "reflaxe.c",
+         "-main", "HxcIRCarrierDeclarationProbe", "--interp"],
+        cwd=ROOT, env=environment, check=False, capture_output=True, text=True, timeout=30,
+    )
+    if result.returncode or result.stdout != "HXC_IR_CARRIER_DECLARATIONS_OK\n" or result.stderr:
+        raise HxcIRFailure(f"carrier declaration check failed\n{result.stdout}\n{result.stderr}")
+
+
 def main() -> int:
     if shutil.which(development_tool("haxe")) is None:
         print("hxc-ir: ERROR: pinned Haxe executable is unavailable", file=sys.stderr)
         return 1
     try:
-        if sys.argv[1:] not in ([], ["--json-strings-only"], ["--nominal-cache-only"]):
-            raise HxcIRFailure("usage: test/hxc_ir/run.py [--json-strings-only | --nominal-cache-only]")
+        if sys.argv[1:] not in ([], ["--json-strings-only"], ["--nominal-cache-only"], ["--carrier-declarations-only"]):
+            raise HxcIRFailure("usage: test/hxc_ir/run.py [--json-strings-only | --nominal-cache-only | --carrier-declarations-only]")
+        if not sys.argv[1:] or sys.argv[1:] == ["--carrier-declarations-only"]:
+            check_carrier_declarations()
+        if sys.argv[1:] == ["--carrier-declarations-only"]:
+            print("hxc-ir: OK: managed carrier declaration identities and diagnostics")
+            return 0
         if sys.argv[1:] != ["--json-strings-only"]:
             check_nominal_cache()
         if sys.argv[1:] == ["--nominal-cache-only"]:

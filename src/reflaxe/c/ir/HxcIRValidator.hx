@@ -196,6 +196,15 @@ private class HxcIRValidationState {
 	final dynamicCallShapes:Map<String, HxcIRDynamicCallShape> = [];
 	final dynamicOperations:Map<String, HxcIRDynamicOperation> = [];
 	final managedRootPaths:HxcIRManagedRootPaths;
+
+	/**
+		Count each local's declarations once when its function first needs them.
+
+		Most functions contain no managed carriers. Keeping this map lazy avoids
+		an extra instruction scan for those functions; each new function resets it.
+	**/
+	var managedCarrierDeclarationCounts:Null<Map<String, Int>> = null;
+
 	var callScopedFunctions:Int = 0;
 	var callScopedValues:Int = 0;
 	var callScopedInstructionVisits:Int = 0;
@@ -1283,6 +1292,7 @@ private class HxcIRValidationState {
 	}
 
 	function validateFunction(fn:HxcIRFunction, path:String):Void {
+		managedCarrierDeclarationCounts = null;
 		validateSpan(fn.source, '$path.source');
 		validateText(fn.displayName, '$path.displayName', fn.source);
 		validateTypeRef(fn.returnType, '$path.returnType', fn.source, true);
@@ -6127,17 +6137,28 @@ private class HxcIRValidationState {
 			case IRMCMoved: "moved";
 		};
 
-	/** Count the declaration that gives one carrier operation its ownership context. */
-	static function managedCarrierDeclarationCount(localId:String, blocks:Map<String, HxcIRBlock>):Int {
-		var count = 0;
-		for (block in blocks)
-			for (instruction in block.instructions)
-				switch instruction.kind {
-					case IRIODeclareManagedCarrier(IRPLocal(declaredId), _) if (declaredId == localId):
-						count++;
-					case _:
-				}
-		return count;
+	/**
+		Count declarations without rescanning the function for every operation.
+
+		The completed block map owns duplicate-block retention. Scan its instruction
+		arrays directly so duplicate instruction IDs still count as occurrences.
+	**/
+	function managedCarrierDeclarationCount(localId:String, blocks:Map<String, HxcIRBlock>):Int {
+		var counts = managedCarrierDeclarationCounts;
+		if (counts == null) {
+			counts = [];
+			for (block in blocks)
+				for (instruction in block.instructions)
+					switch instruction.kind {
+						case IRIODeclareManagedCarrier(IRPLocal(declaredId), _):
+							final prior = counts.get(declaredId);
+							counts.set(declaredId, prior == null ? 1 : prior + 1);
+						case _:
+					}
+			managedCarrierDeclarationCounts = counts;
+		}
+		final count = counts.get(localId);
+		return count == null ? 0 : count;
 	}
 
 	/**

@@ -116,6 +116,51 @@
       ]
     },
     {
+      "path": "test/differential/dynamic-runtime/discovery/Main.hx",
+      "line": 24,
+      "column": 23,
+      "construct": "unchecked-cast",
+      "boundaryKind": "language-semantics-fixture",
+      "symbol": "Main.main.castCallee",
+      "typedModel": "Int->Int static function",
+      "sourceLine": "final castCallee = (cast increment : Int->Int)(5);",
+      "justification": "The language fixture casts an already typed Int->Int function to the same type to exercise source call syntax without introducing a foreign value.",
+      "validation": "The focused discovery lane checks independently specified Eval output, both generic specializations, Dynamic IR operations, strict native O0/O2 output, sanitizers, and unavailable-target diagnostics with no emitted output.",
+      "testEvidence": [
+        "test/differential/dynamic-runtime/run.py"
+      ]
+    },
+    {
+      "path": "test/differential/dynamic-runtime/discovery/Main.hx",
+      "line": 28,
+      "column": 16,
+      "construct": "dynamic-type",
+      "boundaryKind": "language-semantics-fixture",
+      "symbol": "Main.main.boxed",
+      "typedModel": "HxcIRDynamicPlan and Float scalar adapters",
+      "sourceLine": "final boxed:Dynamic = 9.75;",
+      "justification": "The fixture needs a real Dynamic Float boundary nested inside an intrinsic argument to prove discovery still traverses arguments when no prepared static target exists.",
+      "validation": "The focused discovery lane checks independently specified Eval output, both generic specializations, Dynamic IR operations, strict native O0/O2 output, sanitizers, and unavailable-target diagnostics with no emitted output.",
+      "testEvidence": [
+        "test/differential/dynamic-runtime/run.py"
+      ]
+    },
+    {
+      "path": "test/differential/dynamic-runtime/discovery/Main.hx",
+      "line": 32,
+      "column": 23,
+      "construct": "dynamic-type",
+      "boundaryKind": "language-semantics-fixture",
+      "symbol": "Main.main.boxedArgument",
+      "typedModel": "HxcIRDynamicPlan and Int scalar adapters",
+      "sourceLine": "final boxedArgument:Dynamic = 10;",
+      "justification": "The fixture needs a real Dynamic Int argument to prove exact static targets retain their parameter conversion discovery.",
+      "validation": "The focused discovery lane checks independently specified Eval output, both generic specializations, Dynamic IR operations, strict native O0/O2 output, sanitizers, and unavailable-target diagnostics with no emitted output.",
+      "testEvidence": [
+        "test/differential/dynamic-runtime/run.py"
+      ]
+    },
+    {
       "path": "test/differential/dynamic-runtime/fixtures/Main.hx",
       "line": 2,
       "column": 36,
