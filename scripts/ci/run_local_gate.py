@@ -203,14 +203,32 @@ def default_git_index_path(environment: Mapping[str, str]) -> Path | None:
     return (ROOT / path).resolve() if not path.is_absolute() else path.resolve()
 
 
+def default_git_directory(environment: Mapping[str, str]) -> Path | None:
+    """Find this checkout's Git directory without a hook's explicit selector."""
+    selected = dict(environment)
+    selected.pop("GIT_DIR", None)
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "--absolute-git-dir"],
+            cwd=ROOT, env=selected, check=False, capture_output=True,
+            text=True, timeout=15,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    value = result.stdout.strip()
+    if result.returncode != 0 or not value or not Path(value).is_absolute():
+        return None
+    return Path(value).resolve()
+
+
 def normalized_owner_environment(
     environment: Mapping[str, str],
 ) -> dict[str, str]:
     """Remove only proven wrapper noise before keying and running an owner.
 
-    Git supplies the normal index plus commit-author/editor variables, while
-    stock Beads marks its own hook delegation with ``BD_GIT_HOOK=1``. None of
-    the admitted local owners consumes those transport values, so both direct
+    Git supplies its repository/index selectors and commit-author/editor
+    variables; Beads, shells, and Codex also add invocation metadata. Equivalent
+    default selectors and unused metadata are transport values, so both direct
     and hook runs remove them and execute under the same environment. A
     partial commit keeps its temporary index so an owner that invokes Git sees
     the intended staged state. Every other environment difference remains in
@@ -219,6 +237,28 @@ def normalized_owner_environment(
 
     selected = dict(environment)
     selected.pop("BD_GIT_HOOK", None)
+    # Codex assigns a new tracing ID to each tool invocation. Admitted owners
+    # do not consume that host metadata, so it must not reach their execution
+    # environment or invalidate a result produced by the preceding invocation.
+    selected.pop("CODEX_TOOL_CALL_ID", None)
+    # Linked-worktree hooks export GIT_DIR even though cwd already selects the
+    # same checkout. Keep an override that selects any other Git directory.
+    git_directory = selected.get("GIT_DIR")
+    if git_directory is not None:
+        candidate = Path(git_directory)
+        candidate = (
+            (ROOT / candidate).resolve()
+            if not candidate.is_absolute()
+            else candidate.resolve()
+        )
+        if candidate == default_git_directory(selected):
+            selected.pop("GIT_DIR")
+    # Shell nesting and Git's empty root prefix describe how the hook reached
+    # this runner. Admitted owners do not consume them; remove them from both
+    # execution and evidence, while retaining a nonempty Git prefix.
+    selected.pop("SHLVL", None)
+    if selected.get("GIT_PREFIX") == "":
+        selected.pop("GIT_PREFIX")
     for name in GIT_HOOK_AUTHOR_VARIABLES:
         selected.pop(name, None)
     if selected.get("GIT_EDITOR") == ":":

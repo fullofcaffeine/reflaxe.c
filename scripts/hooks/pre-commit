@@ -4,6 +4,22 @@ set -euo pipefail
 ROOT_DIR="$(git rev-parse --show-toplevel)"
 cd "$ROOT_DIR"
 
+# Git prepends its helper directory before invoking hooks. Remove only that
+# default leading copy before npm adds its own tool paths, so a direct owner
+# and the same owner in this hook resolve tools from the same user PATH.
+# Keep custom helper overrides and any original (possibly duplicate) entry.
+if [ -n "${GIT_EXEC_PATH:-}" ]; then
+  DEFAULT_GIT_EXEC_PATH="$(env -u GIT_EXEC_PATH git --exec-path)"
+  if [ "$GIT_EXEC_PATH" = "$DEFAULT_GIT_EXEC_PATH" ]; then
+    case "$PATH" in
+      "$GIT_EXEC_PATH":*)
+        export PATH="${PATH#"$GIT_EXEC_PATH":}"
+        unset GIT_EXEC_PATH
+        ;;
+    esac
+  fi
+fi
+
 # Keep an explicit local slowdown factor away from governance fixtures with
 # deliberately short deadlines. Only reusable bounded compiler owners receive
 # it through this one helper.

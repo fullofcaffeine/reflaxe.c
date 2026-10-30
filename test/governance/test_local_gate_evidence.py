@@ -4,6 +4,8 @@ import importlib.util
 import io
 import json
 import os
+import shlex
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -302,6 +304,149 @@ class LocalGateEvidenceTests(unittest.TestCase):
         self.assertEqual(before, after)
         self.assertFalse((imported.parent / "__pycache__").exists())
 
+    def test_real_commit_hook_preserves_owner_environment_and_tool_selection(self) -> None:
+        """Exercise Git and npm transport without starting a compiler or committing."""
+        primary = self.temporary_root / "primary-repository"
+        primary.mkdir()
+        repository = primary
+        environment = git_fixture_environment()
+        environment.pop("GIT_EXEC_PATH", None)
+        environment.pop("GIT_PREFIX", None)
+        environment["SHLVL"] = "1"
+        environment["PWD"] = str(repository)
+
+        def run(command: list[str], selected: dict[str, str] = environment):
+            return subprocess.run(
+                command, cwd=repository, env=selected, text=True,
+                capture_output=True, timeout=15,
+            )
+
+        self.assertEqual(run(["git", "init", "-q"]).returncode, 0)
+        for key, value in (
+            ("user.name", "Hook fixture"),
+            ("user.email", "hook@example.invalid"),
+            ("core.hooksPath", ".beads/hooks"),
+        ):
+            self.assertEqual(run(["git", "config", key, value]).returncode, 0)
+        self.assertEqual(run(["git", "commit", "--allow-empty", "-m", "fixture seed"]).returncode, 0)
+        linked = self.temporary_root / "linked-repository"
+        self.assertEqual(run(["git", "worktree", "add", "-b", "fixture", str(linked)]).returncode, 0)
+        repository = linked
+        environment["PWD"] = str(repository)
+        initial_head = run(["git", "rev-parse", "HEAD"]).stdout
+        (repository / ".beads/hooks").mkdir(parents=True)
+        shutil.copy2(ROOT / ".beads/hooks/pre-commit", repository / ".beads/hooks/pre-commit")
+        dependencies = self.temporary_root / "dependencies"
+        dependencies.mkdir()
+        (repository / "node_modules").symlink_to(dependencies, target_is_directory=True)
+        hook = repository / "scripts/hooks/pre-commit"
+        hook.parent.mkdir(parents=True)
+        shutil.copy2(ROOT / "scripts/hooks/pre-commit", hook)
+        hook.chmod(0o755)
+        (repository / ".beads/hooks/pre-commit").chmod(0o755)
+        # The real hook chooses an owner and launches npm. These stand-ins keep
+        # that transport intact while avoiding unrelated guards and compilation.
+        for relative in (
+            "scripts/beads/export-passive.sh",
+            "scripts/lint/local_path_guard_staged.sh",
+            "scripts/lint/whitespace_guard.sh",
+            "scripts/security/run-gitleaks.sh",
+        ):
+            path = repository / relative
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+        selector = repository / "scripts/ci/select_pre_commit_route.py"
+        selector.parent.mkdir(parents=True)
+        selector.write_text(
+            "import sys\n"
+            "print('test:all-sources\\tfixture' if '--smoke-owners' in sys.argv else 'affected')\n",
+            encoding="utf-8",
+        )
+        (repository / "package.json").write_text(json.dumps({"scripts": {
+            "test:governance": "node -e ''",
+            "test:local-gate": f"{shlex.quote(sys.executable)} probe.py",
+        }}), encoding="utf-8")
+        (repository / "probe.py").write_text(
+            "import hashlib,json,os,subprocess,sys\n"
+            "from pathlib import Path\n"
+            f"sys.path.insert(0, {str(SCRIPT_DIR)!r})\n"
+            "import run_local_gate as runner\n"
+            "runner.ROOT=Path.cwd()\n"
+            "env=runner.normalized_owner_environment(os.environ)\n"
+            "tool=json.loads(subprocess.check_output(['receipt-tool'],env=env))\n"
+            "key=runner.environment_for_evidence_digest(env)\n"
+            "print('HOOK_PROBE '+json.dumps({'environment':{name:hashlib.sha256(value.encode()).hexdigest() "
+            "for name,value in key.items()},'tool':tool}))\n"
+            "sys.exit(7)\n", encoding="utf-8",
+        )
+        tools = repository / "tools"
+        competing = repository / "competing-tools"
+        for directory, word in ((tools, "original"), (competing, "competing")):
+            directory.mkdir()
+            executable = directory / "receipt-tool"
+            executable.write_text(
+                f"#!{sys.executable}\nimport hashlib,json,os\n"
+                f"print(json.dumps({{'label':{word!r},'environment':"
+                "{name:hashlib.sha256(os.environ[name].encode()).hexdigest() "
+                "for name in ('CODEX_TOOL_CALL_ID','GIT_DIR') if name in os.environ}}))\n",
+                encoding="utf-8",
+            )
+            executable.chmod(0o755)
+        environment["PATH"] = str(tools) + os.pathsep + environment["PATH"]
+        default_helpers = run(["git", "--exec-path"]).stdout.strip()
+        self.assertTrue(default_helpers)
+
+        def observe(command: list[str], selected: dict[str, str]):
+            selected = {**selected, "CODEX_TOOL_CALL_ID": "hook-call" if command == hook_command else "direct-call"}
+            result = run(command, selected)
+            # A deliberate owner failure stops before Beads or a commit can run.
+            self.assertNotEqual(result.returncode, 0)
+            records = [line.removeprefix("HOOK_PROBE ")
+                       for line in (result.stdout + "\n" + result.stderr).splitlines()
+                       if line.startswith("HOOK_PROBE ")]
+            self.assertEqual(len(records), 1, result.stderr)
+            return json.loads(records[0])
+
+        direct_command = ["npm", "run", "--silent", "test:local-gate", "--", "test:all-sources"]
+        hook_command = ["git", "commit", "--allow-empty", "-m", "fixture"]
+        if sys.platform == "darwin" and shutil.which("taskpolicy") and shutil.which("nice"):
+            hook_command = ["taskpolicy", "-b", "nice", "-n", "10", *hook_command]
+        direct = observe(direct_command, environment)
+        self.assertEqual(direct, observe(hook_command, environment))
+        self.assertEqual(direct["tool"]["environment"], {})
+        override = observe(direct_command, {**environment, "GIT_DIR": str(primary / ".git")})
+        self.assertIn("GIT_DIR", override["environment"])
+        self.assertIn("GIT_DIR", override["tool"]["environment"])
+        self.assertNotEqual(direct["environment"], override["environment"])
+        explicit_helpers = {**environment, "PATH": default_helpers + os.pathsep + environment["PATH"]}
+        explicit_direct = observe(direct_command, explicit_helpers)
+        self.assertEqual(explicit_direct, observe(hook_command, explicit_helpers))
+        self.assertNotEqual(direct["environment"]["PATH"], explicit_direct["environment"]["PATH"])
+        changed_path = {**environment, "PATH": str(competing) + os.pathsep + environment["PATH"]}
+        changed_direct = observe(direct_command, changed_path)
+        self.assertEqual(changed_direct, observe(hook_command, changed_path))
+        self.assertNotEqual(direct["tool"], changed_direct["tool"])
+        self.assertNotEqual(direct["environment"]["PATH"], changed_direct["environment"]["PATH"])
+        custom_helpers = {**environment, "GIT_EXEC_PATH": str(competing)}
+        custom_hook = observe(hook_command, custom_helpers)
+        self.assertIn("GIT_EXEC_PATH", custom_hook["environment"])
+        self.assertNotEqual(direct["environment"], custom_hook["environment"])
+        self.assertNotEqual(direct["tool"], custom_hook["tool"])
+        self.assertEqual(run(["git", "rev-parse", "HEAD"]).stdout, initial_head)
+
+    def test_git_directory_discovery_failure_preserves_override(self) -> None:
+        selected = {**self.environment, "GIT_DIR": "/workspace/explicit-git-directory"}
+        failures = (
+            subprocess.CompletedProcess(["git"], 1, stdout="/workspace/explicit-git-directory"),
+            subprocess.TimeoutExpired(["git"], 15),
+        )
+        for failure in failures:
+            with self.subTest(failure=type(failure).__name__):
+                outcome = {"side_effect": failure} if isinstance(failure, Exception) else {"return_value": failure}
+                with mock.patch.object(self.runner.subprocess, "run", **outcome):
+                    normalized = self.runner.normalized_owner_environment(selected)
+                self.assertEqual(normalized["GIT_DIR"], selected["GIT_DIR"])
+
     def test_direct_and_git_hook_transport_environments_normalize_exactly(self) -> None:
         direct = {
             "PATH": f"{ROOT}/node_modules/.bin:/usr/bin:/bin",
@@ -313,6 +458,8 @@ class LocalGateEvidenceTests(unittest.TestCase):
         hook = {
             **direct,
             "BD_GIT_HOOK": "1",
+            "SHLVL": "5",
+            "GIT_PREFIX": "",
             "GIT_INDEX_FILE": str(default_index),
             "GIT_EDITOR": ":",
             "GIT_AUTHOR_NAME": "Test Author",
@@ -355,6 +502,13 @@ class LocalGateEvidenceTests(unittest.TestCase):
                     normalized_next_partial
                 )
             ),
+        )
+        nonempty_prefix = self.runner.normalized_owner_environment(
+            {**hook, "GIT_PREFIX": "nested/"}
+        )
+        self.assertEqual(nonempty_prefix["GIT_PREFIX"], "nested/")
+        self.assertNotEqual(
+            self.runner.normalized_owner_environment(direct), nonempty_prefix
         )
         changed_semantics = dict(hook)
         changed_semantics["HXC_MODE"] = "metal"
