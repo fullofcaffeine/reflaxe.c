@@ -460,6 +460,7 @@ def _terminate_owned(cookie: Mapping[str, object]) -> bool:
     if not _owned_cookie(cookie):
         return False
     pid = int(cookie["pid"])
+    wait_for_graceful_exit = True
     try:
         if os.name == "nt":
             result = subprocess.run(
@@ -469,8 +470,9 @@ def _terminate_owned(cookie: Mapping[str, object]) -> bool:
                 text=True,
                 timeout=5,
             )
-            if result.returncode != 0 and process_start_identity(pid) is not None:
-                return False
+            # A rejected graceful request still needs the ownership-checked
+            # force fallback below; waiting cannot make that request succeed.
+            wait_for_graceful_exit = result.returncode == 0
         else:
             os.kill(pid, signal.SIGTERM)
     except (OSError, subprocess.TimeoutExpired):
@@ -487,7 +489,7 @@ def _terminate_owned(cookie: Mapping[str, object]) -> bool:
         return process_start_identity(pid) is None
 
     deadline = time.monotonic() + 5.0
-    while time.monotonic() < deadline:
+    while wait_for_graceful_exit and time.monotonic() < deadline:
         if reaped_or_gone():
             return True
         time.sleep(0.05)

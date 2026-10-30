@@ -32,6 +32,53 @@ from dev_haxe_server import (  # noqa: E402
 )
 
 
+class HaxeServerWindowsStopTests(unittest.TestCase):
+    """A rejected graceful stop must still reach the guarded force fallback."""
+
+    def exercise_stop(self, *, graceful: bool, still_owned: bool = True):
+        alive = True
+        commands = []
+
+        def taskkill(command, **options):
+            nonlocal alive
+            commands.append(command)
+            if graceful or "/F" in command:
+                alive = False
+                return subprocess.CompletedProcess(command, 0)
+            return subprocess.CompletedProcess(command, 1)
+
+        windows_os = Mock(wraps=os)
+        windows_os.name = "nt"
+        with patch.object(server, "os", windows_os), patch.object(
+            server, "_owned_cookie", side_effect=[True, still_owned]
+        ) as ownership, patch.object(server.subprocess, "run", side_effect=taskkill), patch.object(
+            server, "process_start_identity", side_effect=lambda pid: "live" if alive else None
+        ), patch.object(server.time, "monotonic", return_value=0), patch.object(
+            server.time, "sleep", side_effect=AssertionError("rejected or completed stop must not wait")
+        ):
+            result = server._terminate_owned({"pid": 123})
+        return result, commands, ownership.call_count
+
+    def test_rejected_graceful_stop_revalidates_before_forcing(self) -> None:
+        result, commands, checks = self.exercise_stop(graceful=False)
+        self.assertTrue(result)
+        self.assertEqual(checks, 2)
+        self.assertEqual(commands, [["taskkill", "/PID", "123", "/T"],
+                                    ["taskkill", "/F", "/PID", "123", "/T"]])
+
+    def test_changed_ownership_prevents_force(self) -> None:
+        result, commands, checks = self.exercise_stop(graceful=False, still_owned=False)
+        self.assertFalse(result)
+        self.assertEqual(checks, 2)
+        self.assertEqual(commands, [["taskkill", "/PID", "123", "/T"]])
+
+    def test_completed_graceful_stop_needs_no_force(self) -> None:
+        result, commands, checks = self.exercise_stop(graceful=True)
+        self.assertTrue(result)
+        self.assertEqual(checks, 1)
+        self.assertEqual(commands, [["taskkill", "/PID", "123", "/T"]])
+
+
 class HaxeServerStartupDiagnosticTests(unittest.TestCase):
     """Exercise startup failures without resolving or launching a Haxe compiler."""
 
