@@ -33,6 +33,7 @@ from dev_generation import VariantLock
 COOKIE_KIND = "caxecraft-owned-haxe-server"
 COOKIE_SCHEMA_VERSION = 1
 LOOPBACK = "127.0.0.1"
+STARTUP_STDERR_LIMIT = 4096
 ROOT = Path(__file__).resolve().parents[2]
 CASE = Path(__file__).resolve().parent
 
@@ -308,7 +309,11 @@ def _available_endpoint() -> str:
 
 
 def process_start_identity(pid: int) -> str | None:
-    """Return an OS fact that distinguishes a live PID from a later reused PID."""
+    """Return an OS start identity, or None when it cannot be observed.
+
+    An absent process and an observation failure both return None. Callers must
+    not treat that result alone as proof that a process exited.
+    """
 
     if pid < 1:
         return None
@@ -363,7 +368,10 @@ def process_start_identity(pid: int) -> str | None:
 
 
 def process_command_identity(pid: int) -> str | None:
-    """Identify the executable currently running under an already-owned PID."""
+    """Identify the executable, or None when its identity cannot be observed.
+
+    None does not distinguish an absent process from an observation failure.
+    """
 
     if pid < 1:
         return None
@@ -539,6 +547,34 @@ def _terminate_owned(cookie: Mapping[str, object]) -> bool:
     return False
 
 
+def _startup_failure(message: str, stderr_path: Path, offset: int | None) -> HaxeServerFailure:
+    """Keep bounded current-attempt stderr when temporary startup logs disappear.
+
+    Logs append across attempts, so the initial byte offset excludes earlier
+    failures. Unreadable logs must never replace the original startup error.
+    """
+
+    detail = f"{message}; see {stderr_path}"
+    try:
+        if offset is None or stderr_path.is_symlink() or not stderr_path.is_file():
+            raise OSError("startup log is unavailable")
+        with stderr_path.open("rb") as stream:
+            end = stream.seek(0, os.SEEK_END)
+            if end < offset:
+                raise OSError("startup log was truncated")
+            start = max(offset, end - STARTUP_STDERR_LIMIT)
+            stream.seek(start)
+            tail = stream.read(end - start)
+    except OSError:
+        return HaxeServerFailure(detail + "\nstartup stderr unavailable")
+    if not tail:
+        return HaxeServerFailure(detail + "\nno stderr captured for this startup")
+    label = "startup stderr"
+    if start > offset:
+        label += f" (last {STARTUP_STDERR_LIMIT} bytes)"
+    return HaxeServerFailure(detail + f"\n{label}:\n" + tail.decode("utf-8", errors="replace"))
+
+
 class OwnedHaxeServer:
     """Start or reuse one compatible server below a worktree-owned state root."""
 
@@ -586,6 +622,12 @@ class OwnedHaxeServer:
         endpoint = _available_endpoint()
         stdout_path = self.state_root / "server.stdout.log"
         stderr_path = self.state_root / "server.stderr.log"
+        try:
+            stderr_offset: int | None = stderr_path.stat().st_size
+        except FileNotFoundError:
+            stderr_offset = 0
+        except OSError:
+            stderr_offset = None
         command = [
             str(self.installation.compiler),
             "--server-listen",
@@ -642,8 +684,8 @@ class OwnedHaxeServer:
             try:
                 pid = int(raw_pid.strip())
             except ValueError as error:
-                raise HaxeServerFailure(
-                    f"could not start detached Haxe server; see {stderr_path}"
+                raise _startup_failure(
+                    "could not start detached Haxe server", stderr_path, stderr_offset
                 ) from error
         start_identity: str | None = None
         command_identity: str | None = None
@@ -653,16 +695,17 @@ class OwnedHaxeServer:
                 start_identity = process_start_identity(pid)
                 command_identity = process_command_identity(pid)
                 if start_identity is None or command_identity is None:
-                    raise HaxeServerFailure(
-                        "owned Haxe server exited before accepting connections; "
-                        f"see {stderr_path}"
+                    raise _startup_failure(
+                        "owned Haxe server process identity could not be verified "
+                        "before accepting connections",
+                        stderr_path, stderr_offset,
                     )
                 if _accepting(endpoint):
                     break
                 time.sleep(0.05)
             else:
-                raise HaxeServerFailure(
-                    f"owned Haxe server did not accept connections; see {stderr_path}"
+                raise _startup_failure(
+                    "owned Haxe server did not accept connections", stderr_path, stderr_offset
                 )
             body: dict[str, object] = {
                 "schemaVersion": COOKIE_SCHEMA_VERSION,
