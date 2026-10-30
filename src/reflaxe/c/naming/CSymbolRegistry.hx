@@ -3,6 +3,7 @@ package reflaxe.c.naming;
 import haxe.Json;
 import haxe.crypto.Sha256;
 import haxe.io.Bytes;
+import reflaxe.c.CContentDigest.sha256Hex;
 #if (macro || reflaxe_runtime)
 import reflaxe.c.CPhaseTiming;
 import reflaxe.c.CPhaseTiming.CDetailTimingId;
@@ -435,7 +436,7 @@ class CSymbolRegistry {
 				registerCollisionEvent(events, key, colliding, exactGroup);
 				for (state in colliding) {
 					if (state.hash == null)
-						state.hash = Sha256.encode(state.draft.request.stableKey());
+						state.hash = symbolKeyDigest(state.draft.request.stableKey());
 					state.hashLength = state.hashLength == 0 ? 12 : state.hashLength + 4;
 					if (state.hashLength > 64) {
 						internalFailure("SHA-256 could not disambiguate distinct C semantic symbol keys", collisionSources(colliding, exactGroup));
@@ -736,7 +737,7 @@ class CSymbolRegistry {
 		}
 		if (baseName.length > MAX_GENERATED_LENGTH) {
 			addUnique(reasons, "length-limit");
-			baseName = appendHash(baseName, Sha256.encode(request.stableKey()), 16);
+			baseName = appendHash(baseName, symbolKeyDigest(request.stableKey()), 16);
 		}
 		reasons.sort(compareUtf8);
 		return {request: request, baseName: baseName, escapeReasons: reasons};
@@ -865,6 +866,24 @@ class CSymbolRegistry {
 			}
 			byCandidate.set(key, item);
 		}
+	}
+
+	/**
+		Hash ASCII symbol keys faster while preserving existing Unicode names.
+
+		The pinned string-hash implementation mixes character and UTF-8 byte
+		lengths for non-ASCII input. Its suffixes are part of naming algorithm v3,
+		so replacing them with standard byte hashes would rename existing symbols.
+		Eval can use the streaming worker only when the two lengths agree, which
+		proves the key is ASCII. Other keys and hosts retain the original path.
+	**/
+	static function symbolKeyDigest(key:String):String {
+		#if eval
+		final encoded = Bytes.ofString(key);
+		if (encoded.length == key.length)
+			return sha256Hex(encoded);
+		#end
+		return Sha256.encode(key);
 	}
 
 	static function appendHash(baseName:String, hash:String, hashLength:Int):String {

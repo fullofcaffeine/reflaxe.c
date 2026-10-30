@@ -22,6 +22,7 @@ class SymbolRegistryGolden {
 	static function main():Void {
 		verifyUtf8Order();
 		verifySemanticComponentControls();
+		verifyUnicodeHashCompatibility();
 		final requests = corpus();
 		final forward = registry(requests);
 		final reverseRequests = requests.copy();
@@ -133,6 +134,45 @@ class SymbolRegistryGolden {
 				return difference;
 		}
 		return left.length - right.length;
+	}
+
+	/**
+		Keep existing Unicode symbol suffixes when optimizing ASCII hashing.
+
+		These literal names were produced by the pinned legacy string-hash path.
+		A shared readable name forces collisions; a 140-character readable name
+		forces truncation. Both paths must preserve their suffixes for accented
+		and supplementary Unicode, even though byte-based SHA-256 differs.
+	**/
+	static function verifyUnicodeHashCompatibility():Void {
+		final cases = [
+			{
+				name: "é",
+				collision: "hxc_same_h01a7c66bbbef",
+				bounded: "hxc_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa_h01a7c66bbbefa791"
+			},
+			{
+				name: "雪🙂",
+				collision: "hxc_same_h7798c29fd8fc",
+				bounded: "hxc_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa_h7798c29fd8fcdb58"
+			}
+		];
+		final collisions = new CSymbolRegistry();
+		final requests = cases.map(item -> new CSymbolRequest(CSKMethod, [item.name], CNSOrdinary("translation-unit"), null, null, null, null, null, ["same"]));
+		collisions.registerAll(requests);
+		collisions.finalizeSymbols();
+		for (index in 0...cases.length) {
+			final item = cases[index];
+			if (collisions.identifierFor(requests[index]).value != item.collision)
+				throw 'legacy Unicode collision suffix changed for `${item.name}`';
+			final bounded = new CSymbolRegistry();
+			final request = new CSymbolRequest(CSKMethod, [item.name], CNSOrdinary("translation-unit"), null, null, null, null, null,
+				[StringTools.lpad("long_name", "a", 140)]);
+			bounded.register(request);
+			bounded.finalizeSymbols();
+			if (bounded.identifierFor(request).value != item.bounded)
+				throw 'legacy Unicode length-limit suffix changed for `${item.name}`';
+		}
 	}
 
 	static function corpus():Array<CSymbolRequest> {
