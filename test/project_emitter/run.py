@@ -501,8 +501,28 @@ def check_expected(output: Path) -> None:
             )
 
 
+def check_compact_reports(tree: Mapping[str, bytes]) -> None:
+    # CProjectEmitter.jsonFile owns these reports. Optional CCompiler inspection
+    # dumps and metadata from other project tools retain their own formats.
+    for relative in (
+        MANIFEST, "hxc.symbols.json", "hxc.runtime-plan.json", "hxc.abi.json",
+        "hxc.stdlib-report.json", "hxc.initialization-plan.json",
+        "hxc.specializations.json", "hxc.dispatch.json",
+    ):
+        if relative not in tree:
+            continue
+        payload = tree[relative]
+        json.loads(payload)
+        outside_strings = re.sub(rb'"(?:[^"\\]|\\.)*"', b'""', payload[:-1])
+        if not payload.endswith(b"\n") or re.search(rb"[ \t\r\n]", outside_strings):
+            raise ProjectEmitterFailure(
+                f"compiler JSON sidecar `{relative}` must be compact with one final LF"
+            )
+
+
 def check_manifest(output: Path, *, expected_original_build: bool = True) -> None:
     tree = output_tree(output)
+    check_compact_reports(tree)
     manifest = json_value(output / MANIFEST)
     if not isinstance(manifest, dict):
         raise ProjectEmitterFailure("compiler manifest is not a JSON object")

@@ -674,7 +674,7 @@
       "provenance": {
         "production": "compiler-sidecar"
       },
-      "sha256": "aa1df9ea5558b3ef7590b2f6e71a81a675f309abea1d47adbfd34034c0f67338",
+      "sha256": "51cb15072ad6a8390451da61d0a2c57b66b85ea5d5c73c302308285c5f9f0ad1",
       "path": "hxc.abi.json",
       "kind": "abi-manifest"
     },
@@ -690,7 +690,7 @@
       "provenance": {
         "production": "compiler-sidecar"
       },
-      "sha256": "1ca05e2ee0b5c3ae31f661612837e88b61c13ce84d7c1fcfad07277b7d1e2adf",
+      "sha256": "9a2de4347f7f0802429ca15157d10c2838b8fb3ed5ee259bff0195bc8c88583a",
       "path": "hxc.dispatch.json",
       "kind": "dispatch-report"
     },
@@ -706,7 +706,7 @@
       "provenance": {
         "production": "compiler-sidecar"
       },
-      "sha256": "e6bd1c720e7c281b9749545ac368e1e881aeb47bb49cafc33028dcc99335b858",
+      "sha256": "3f9029b635edd69d22915b55704b359849a6225ec7b5e9becf93a42dd538091f",
       "path": "hxc.initialization-plan.json",
       "kind": "initialization-plan"
     },
@@ -722,7 +722,7 @@
       "provenance": {
         "production": "compiler-sidecar"
       },
-      "sha256": "56571df55483615b0187c447e2392a0b3b9b884ad7b405fda73c644e5e228f47",
+      "sha256": "32d697da28daacc6d3253cb7c1a64c290ad0736b2139fb2a721dabccb177fa77",
       "path": "hxc.runtime-plan.json",
       "kind": "runtime-plan"
     },
@@ -738,7 +738,7 @@
       "provenance": {
         "production": "compiler-sidecar"
       },
-      "sha256": "fa6528ee7492823183ba5e6801282fbf87950f836eac29ff14bc5e05ab7c066a",
+      "sha256": "660a85d9ffa1c420255e3f30ed7b94b5b64948222bd349823bbe5cd120a79132",
       "path": "hxc.specializations.json",
       "kind": "specialization-report"
     },
@@ -754,7 +754,7 @@
       "provenance": {
         "production": "compiler-sidecar"
       },
-      "sha256": "9976aa239abbcc45ca41898f182657205ccc55b16fe5e5ee84bc7dd0e433ddbf",
+      "sha256": "2d42bf0b2e571b40ee6cf2e04ee609e12db2dbce40a6276c74f13ca4b02bf66f",
       "path": "hxc.stdlib-report.json",
       "kind": "stdlib-report"
     },
@@ -770,7 +770,7 @@
       "provenance": {
         "production": "compiler-sidecar"
       },
-      "sha256": "fd71c5e19b7e263f81133a36ee72ec718bc8974741dfe970f64879c257494571",
+      "sha256": "999ab7ce839f713511082afd255f6e7aa88acf16638ac1e3bb3817f408432f10",
       "path": "hxc.symbols.json",
       "kind": "symbol-table"
     },

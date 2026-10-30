@@ -1482,11 +1482,17 @@ class CProjectEmitter {
 		return values;
 	}
 
+	/**
+		Writes the complete JSON value compactly, followed by one LF.
+
+		Omitting indentation avoids serializing and hashing formatting bytes; it
+		does not reduce report data or change its schema.
+	**/
 	function jsonFile<T>(path:String, kind:GeneratedFileKind, value:T):GeneratedFile {
 		#if (macro || reflaxe_runtime)
 		final jsonTimer = CPhaseTiming.startDetail(CDTArtifactJsonSerialization);
 		#end
-		final contents = Json.stringify(value, null, "  ") + "\n";
+		final contents = Json.stringify(value) + "\n";
 		#if (macro || reflaxe_runtime)
 		CPhaseTiming.stopDetail(jsonTimer);
 		final fileTimer = CPhaseTiming.startDetail(CDTCGeneratedFileConstruction);

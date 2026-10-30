@@ -129,7 +129,7 @@
       "provenance": {
         "production": "compiler-sidecar"
       },
-      "sha256": "fa47ca7dc21884d5a936d0d67dcac41143571c731c683ddf30ed37f333610838",
+      "sha256": "72e89e57026f1e016db52327e7ace3a375068e4a83cc59ab4cb7686fe64179d4",
       "path": "hxc.abi.json",
       "kind": "abi-manifest"
     },
@@ -145,7 +145,7 @@
       "provenance": {
         "production": "compiler-sidecar"
       },
-      "sha256": "0057c9f340a5beb6a8944577904c8e70983694dc6ec7dea17b905f38f4ab6155",
+      "sha256": "77a4ac31c8f16ab759c1b5c2573b22a3e01fbb9422c74b4d3fd776a2b9937f05",
       "path": "hxc.runtime-plan.json",
       "kind": "runtime-plan"
     },
@@ -161,7 +161,7 @@
       "provenance": {
         "production": "compiler-sidecar"
       },
-      "sha256": "ab9bf46f0e34d824591a6be8a4758db6661e677ab4016d2132c15a60d54b33bd",
+      "sha256": "93db1df9060f6ac98c6c9a5c2f8c6415efb656de8b6d765ef6b5ea6e272212b1",
       "path": "hxc.stdlib-report.json",
       "kind": "stdlib-report"
     },
@@ -177,7 +177,7 @@
       "provenance": {
         "production": "compiler-sidecar"
       },
-      "sha256": "f02d8dff68467f04696b3a2a649231cbe50752f061ce1f26454e6e1ed07afe94",
+      "sha256": "0cb70304d5f9d53ce2dc5c766ba1e2670ee1cfc56fdd8ab3818bc8efe075aaf0",
       "path": "hxc.symbols.json",
       "kind": "symbol-table"
     },
