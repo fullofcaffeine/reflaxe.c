@@ -378,6 +378,10 @@ class CBodyEnumRegistry {
 	final context:CompilationContext;
 	final resolveValue:CBodyValueResolver;
 	final byShape:Map<String, CPreparedBodyEnumInstance> = [];
+
+	/** Non-generic instances need only their existing enum path as request-local identity. */
+	final byNonGenericPath:Map<String, CPreparedBodyEnumInstance> = [];
+
 	final shapeKeysByDigest:Map<String, String> = [];
 	var preparationDepth = 0;
 	var genericSpecializationCount = 0;
@@ -451,6 +455,16 @@ class CBodyEnumRegistry {
 		if (definition.params.length != parameters.length) {
 			return rejected(fail, position, '$node:enum-argument-count:${enumPath(definition)}:${parameters.length}-for-${definition.params.length}');
 		}
+		// Keep validation above the lookup and retain every use site's source range.
+		// Generic arguments still use full canonicalization before instance reuse.
+		final nonGenericPath = parameters.length == 0 ? enumPath(definition) : null;
+		if (nonGenericPath != null) {
+			final known = byNonGenericPath.get(nonGenericPath);
+			if (known != null) {
+				known.addReason(HaxeSourceSpan.fromPosition(position, ownerSourcePath));
+				return known;
+			}
+		}
 		final canonicalizer = new CGenericTypeCanonicalizer(context.profile);
 		final typeArguments = parameters.map(parameter -> canonicalizer.normalize(parameter, position, fail, '$node.type-argument'));
 		final argumentKeys = typeArguments.map(argument -> argument.key);
@@ -511,6 +525,9 @@ class CBodyEnumRegistry {
 			payloadUnionRequest, tagMemberRequest, payloadMemberRequest);
 		prepared.addReason(reason);
 		byShape.set(shapeKey, prepared);
+		// Publish both identities before payload traversal can revisit this enum.
+		if (nonGenericPath != null)
+			byNonGenericPath.set(nonGenericPath, prepared);
 		if (definition.params.length > 0)
 			genericSpecializationCount++;
 

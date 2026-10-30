@@ -16,6 +16,17 @@ enum GenericReasonEnum<T> {
 	Present(value:T);
 }
 
+/** Preparing a recursive payload must find the enum whose cases are still being built. */
+enum RecursiveReasonEnum {
+	End;
+	Next(child:RecursiveReasonEnum);
+}
+
+/** Ordinary enum preparation must reject externally owned representations. */
+extern enum ExternalReasonEnum {
+	External;
+}
+
 /** Minimal Eval entry point for the compiler-side provenance contract. */
 class ProvenanceFixture {
 	/** The macro performs the assertions; runtime execution has no side effects. */
