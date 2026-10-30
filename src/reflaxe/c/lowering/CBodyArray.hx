@@ -649,12 +649,27 @@ class CBodyArrayRegistry {
 
 /** Exact declaration identity used to keep Array methods out of class dispatch. */
 class CBodyArrayRecognition {
-	/** Recognize Array through typedef/lazy wrappers without unwrapping abstracts. */
-	public static function isCoreArrayType(type:Type):Bool
+	/**
+		Recognize core Array through aliases and root Null wrappers.
+
+		Parameterless Eval values need no macro-bridge conversion. All other shapes
+		retain Haxe's following behavior, including nested lazy evaluation or errors.
+	**/
+	public static function isCoreArrayType(type:Type):Bool {
+		#if eval
+		switch type {
+			case TInst(reference, parameters) if (parameters.length == 0):
+				return isCoreArray(reference);
+			case TAbstract(_, parameters) if (parameters.length == 0):
+				return false;
+			case _:
+		}
+		#end
 		return switch TypeTools.follow(type) {
 			case TInst(reference, _): isCoreArray(reference);
 			case _: false;
 		};
+	}
 
 	public static function isCoreArray(reference:Ref<ClassType>):Bool {
 		final value = reference.get();

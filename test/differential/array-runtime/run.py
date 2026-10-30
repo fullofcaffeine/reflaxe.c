@@ -2322,6 +2322,7 @@ def check_classification() -> None:
                "-cp", str(ROOT / "std"), "-cp", str(ROOT / "vendor/reflaxe/src"),
                "-cp", str(CASE / "classification"),
                "--macro", "ArrayClassificationProbe.install()",
+               "--macro", "CoreRecognitionProbe.install()",
                "-main", "ArrayClassificationFixture", "--interp"]
     result = run_bounded_process(command, cwd=ROOT, env=haxe_environment(),
                                  capture_output=True, text=True, check=False, timeout=30)

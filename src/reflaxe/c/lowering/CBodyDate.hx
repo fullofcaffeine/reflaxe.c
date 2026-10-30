@@ -21,12 +21,27 @@ class CBodyDateRecognition {
 		return value.pack.length == 0 && value.name == "Date";
 	}
 
-	/** Return true only when a type resolves to the root Date without parameters. */
-	public static function isCoreDateType(type:Type):Bool
+	/**
+		Return true only when a type resolves to the root Date without parameters.
+
+		Parameterless Eval values need no macro-bridge conversion. Parameterized
+		and wrapped types keep Haxe's nested-type evaluation and failure behavior.
+	**/
+	public static function isCoreDateType(type:Type):Bool {
+		#if eval
+		switch type {
+			case TInst(reference, parameters) if (parameters.length == 0):
+				return isCoreDate(reference);
+			case TAbstract(_, parameters) if (parameters.length == 0):
+				return false;
+			case _:
+		}
+		#end
 		return switch TypeTools.follow(type) {
 			case TInst(reference, parameters): parameters.length == 0 && isCoreDate(reference);
 			case _: false;
 		};
+	}
 
 	/** Recognize only the standard `haxe.Timer` declaration. */
 	public static function isCoreTimer(reference:Ref<ClassType>):Bool {
