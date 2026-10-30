@@ -10,6 +10,17 @@ private typedef HxcIRInstructionSite = {
 	final block:HxcIRBlock;
 }
 
+/**
+	Expected paths for one rooted value during one function validation.
+
+	Membership answers admission queries; the ordered keys retain duplicates so
+	malformed layouts still produce every missing-path diagnostic.
+**/
+private typedef HxcIRExpectedManagedRootPaths = {
+	final ordered:Array<String>;
+	final membership:Map<String, Bool>;
+}
+
 /** Deterministic work counts for validation paths whose growth must stay bounded. */
 typedef HxcIRValidationWorkReport = {
 	/** Functions whose call-scoped C-string uses required one complete scan. */
@@ -1891,6 +1902,21 @@ private class HxcIRValidationState {
 		}
 		final rootIds:Map<String, Bool> = [];
 		final rootedPaths:Map<String, Bool> = [];
+		// Only rooted values need retained keys. Other values keep their single
+		// completeness traversal below without allocating a membership index.
+		final expectedByValue:Map<String, HxcIRExpectedManagedRootPaths> = [];
+		function expectedPaths(valueId:String, type:HxcIRTypeRef):HxcIRExpectedManagedRootPaths {
+			var expected = expectedByValue.get(valueId);
+			if (expected == null) {
+				final ordered = managedRootPaths.collect(type).map(HxcIRManagedRootPaths.key);
+				final membership:Map<String, Bool> = [];
+				for (key in ordered)
+					membership.set(key, true);
+				expected = {ordered: ordered, membership: membership};
+				expectedByValue.set(valueId, expected);
+			}
+			return expected;
+		}
 		for (index => root in fn.managedRoots) {
 			final rootPath = ("" + path + ".managedRoot:" + index + ":" + root.id);
 			validateStableId(root.id, '$rootPath.id', root.source);
@@ -1918,19 +1944,20 @@ private class HxcIRValidationState {
 				add(rootPath, ("managed value `" + root.valueId + "` repeats root path `" + projectionKey + "`"), root.source);
 			else
 				rootedPaths.set(completeKey, true);
-			var admitted = false;
-			for (expected in managedRootPaths.collect(type))
-				if (HxcIRManagedRootPaths.key(expected) == projectionKey) {
-					admitted = true;
-					break;
-				}
-			if (!admitted)
+			if (!expectedPaths(root.valueId, type).membership.exists(projectionKey))
 				add(rootPath, ("managed root `" + root.id + "` has invalid path `" + projectionKey + "` for `" + (typeKey(type)) + "`"), root.source);
 		}
 		for (valueId => type in values) {
 			if (blockParameterIds.exists(valueId)) {
 				if (managedRootPaths.collect(type).length > 0)
 					add('$path.managedRoots', 'managed block parameter `$valueId` requires edge-owned root updates', fn.source);
+				continue;
+			}
+			final known = expectedByValue.get(valueId);
+			if (known != null) {
+				for (projectionKey in known.ordered)
+					if (!rootedPaths.exists(valueId + "|" + projectionKey))
+						add('$path.managedRoots', 'managed value `$valueId` is missing exact root path `$projectionKey`', fn.source);
 				continue;
 			}
 			for (expected in managedRootPaths.collect(type)) {

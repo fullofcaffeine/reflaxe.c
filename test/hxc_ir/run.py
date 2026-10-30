@@ -382,13 +382,30 @@ def check_carrier_declarations() -> None:
         raise HxcIRFailure(f"carrier declaration check failed\n{result.stdout}\n{result.stderr}")
 
 
+def check_managed_root_paths() -> None:
+    """Preserve complete root-path diagnostics, multiplicity, and local identities."""
+    environment = {**os.environ, "HAXE_NO_SERVER": "1"}
+    result = run_bounded_process(
+        [development_tool("haxe"), "-cp", "src", "-cp", "test/hxc_ir",
+         "-main", "HxcIRManagedRootProbe", "--interp"],
+        cwd=ROOT, env=environment, check=False, capture_output=True, text=True, timeout=30,
+    )
+    if result.returncode or result.stdout != "HXC_IR_MANAGED_ROOT_PATHS_OK\n" or result.stderr:
+        raise HxcIRFailure(f"managed root path check failed\n{result.stdout}\n{result.stderr}")
+
+
 def main() -> int:
     if shutil.which(development_tool("haxe")) is None:
         print("hxc-ir: ERROR: pinned Haxe executable is unavailable", file=sys.stderr)
         return 1
     try:
-        if sys.argv[1:] not in ([], ["--json-strings-only"], ["--nominal-cache-only"], ["--carrier-declarations-only"]):
-            raise HxcIRFailure("usage: test/hxc_ir/run.py [--json-strings-only | --nominal-cache-only | --carrier-declarations-only]")
+        if sys.argv[1:] not in ([], ["--json-strings-only"], ["--nominal-cache-only"], ["--carrier-declarations-only"], ["--managed-root-paths-only"]):
+            raise HxcIRFailure("usage: test/hxc_ir/run.py [--json-strings-only | --nominal-cache-only | --carrier-declarations-only | --managed-root-paths-only]")
+        if not sys.argv[1:] or sys.argv[1:] == ["--managed-root-paths-only"]:
+            check_managed_root_paths()
+        if sys.argv[1:] == ["--managed-root-paths-only"]:
+            print("hxc-ir: OK: exact managed-root paths and diagnostics")
+            return 0
         if not sys.argv[1:] or sys.argv[1:] == ["--carrier-declarations-only"]:
             check_carrier_declarations()
         if sys.argv[1:] == ["--carrier-declarations-only"]:
