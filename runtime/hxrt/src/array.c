@@ -384,7 +384,10 @@ hxc_status hxc_array_push_copy(
   if (element == NULL || !hxc_array_is_valid(array)) {
     return HXC_STATUS_INVALID_ARGUMENT;
   }
-  source_is_slot = hxc_array_find_source(array, element, &source_index);
+  /* Only growth can invalidate a borrowed source slot during append. Scanning
+   * spare-capacity appends would make repeated pushes quadratic. */
+  source_is_slot = array->length == array->capacity
+    && hxc_array_find_source(array, element, &source_index);
   status = hxc_size_add(array->length, 1u, &new_length);
   if (status != HXC_STATUS_OK) {
     return status;
@@ -394,7 +397,7 @@ hxc_status hxc_array_push_copy(
     return status;
   }
   if (source_is_slot) {
-    /* Account for both reserve relocation and the insertion shift. */
+    /* Recover the borrowed source after reserve relocates storage. */
     element = hxc_array_slot_const(array, source_index);
   }
   status = hxc_array_construct(

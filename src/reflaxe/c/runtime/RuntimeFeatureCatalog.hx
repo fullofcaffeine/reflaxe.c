@@ -888,7 +888,7 @@ class RuntimeFeatureCatalog {
 		return switch name {
 			case "abi.c": "3300a4498a7ca20f771b1334d7be8f2c908d2bb067ea8f2fe3c059300e680b32";
 			case "allocator.c": "13385273c7c3d4a15785caa3095dd82d97bda8a026ebd9b6d54e2f531eb3b10e";
-			case "array.c": "0ab7e5cb0654cc0969974a2719de7fa032e81497b4e7de66bcf3f4e7a3299c57";
+			case "array.c": "4416e022efdcb4f9b60d4aef2f3c2886214f1baef6be4684e5432a825915ed29";
 			case "array_join.c": "b158708b62c7e407f9da21c24a1b3306d4b41baa6b63f2d8019f631a98008fde";
 			case "bytes.c": "10a4c6c17d1cedc31562fef6708fd54351e094ec4be631848d6348bb82ced46c";
 			case "bytes_string.c": "21e54e678dfbd41d215499314b330dde189374d132c3e13360adc3a9fa23019b";

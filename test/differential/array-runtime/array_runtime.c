@@ -150,6 +150,10 @@ static hxc_status hxc_test_reallocate(
     hxc_test_release(context, replacement, new_size, alignment);
     return HXC_STATUS_INTERNAL_ERROR;
   }
+  /* Make stale source-slot reads fail even though the arena retains its banks. */
+  for (index = 0u; index < old_size; index++) {
+    ((unsigned char *)memory)[index] = 0u;
+  }
   arena->reallocation_count++;
   *out_memory = replacement;
   return HXC_STATUS_OK;
@@ -383,6 +387,8 @@ static int hxc_test_reference_array(
   const void *source = NULL;
   size_t length_before;
   size_t capacity_before;
+  size_t reallocations_before;
+  void *memory_before;
 
   HXC_TEST_CHECK(hxc_array_element_ops_is_valid(&elements));
   HXC_TEST_CHECK(
@@ -396,6 +402,35 @@ static int hxc_test_reference_array(
   HXC_TEST_CHECK(
     hxc_array_at_const(&array, 0u, &source) == HXC_STATUS_OK
   );
+  memory_before = array.storage.memory;
+  capacity_before = array.capacity;
+  arena->force_failure = true;
+  HXC_TEST_CHECK(hxc_array_push_copy(&array, source) == HXC_STATUS_OUT_OF_MEMORY);
+  arena->force_failure = false;
+  HXC_TEST_CHECK(array.length == 4u && array.capacity == capacity_before);
+  HXC_TEST_CHECK(array.storage.memory == memory_before);
+  HXC_TEST_CHECK(first.references == 3u && second.references == 3u);
+  lifecycle.copy_failure_armed = true;
+  lifecycle.copies_before_failure = 0u;
+  HXC_TEST_CHECK(hxc_array_push_copy(&array, source) == HXC_STATUS_OUT_OF_MEMORY);
+  lifecycle.copy_failure_armed = false;
+  HXC_TEST_CHECK(array.length == 4u && array.capacity > capacity_before);
+  HXC_TEST_CHECK(array.storage.memory != memory_before);
+  HXC_TEST_CHECK(first.references == 3u && second.references == 3u);
+  /* Exercise successful managed self-aliasing at growth after the failed copy. */
+  HXC_TEST_CHECK(hxc_array_resize(&array, array.capacity, &null_value) == HXC_STATUS_OK);
+  HXC_TEST_CHECK(hxc_array_at_const(&array, 0u, &source) == HXC_STATUS_OK);
+  memory_before = array.storage.memory;
+  length_before = array.length;
+  HXC_TEST_CHECK(hxc_array_push_copy(&array, source) == HXC_STATUS_OK);
+  HXC_TEST_CHECK(array.storage.memory != memory_before);
+  HXC_TEST_CHECK(array.length == length_before + 1u);
+  HXC_TEST_CHECK(first.references == 4u && second.references == 3u);
+  HXC_TEST_CHECK(hxc_array_at_const(&array, length_before, &source) == HXC_STATUS_OK);
+  HXC_TEST_CHECK(*(hxc_test_object *const *)source == &first);
+  HXC_TEST_CHECK(hxc_array_resize(&array, 4u, NULL) == HXC_STATUS_OK);
+  HXC_TEST_CHECK(first.references == 3u && second.references == 3u);
+  HXC_TEST_CHECK(hxc_array_at_const(&array, 0u, &source) == HXC_STATUS_OK);
   HXC_TEST_CHECK(hxc_array_push_copy(&array, source) == HXC_STATUS_OK);
   HXC_TEST_CHECK(arena->reallocation_count != 0u);
   HXC_TEST_CHECK(
@@ -416,6 +451,18 @@ static int hxc_test_reference_array(
   HXC_TEST_CHECK(hxc_test_expect_refs(&array, after_assign, 6u) == 0);
   HXC_TEST_CHECK(first.references == 6u && second.references == 2u);
   HXC_TEST_CHECK(hxc_array_set_copy(&array, 0u, source) == HXC_STATUS_OK);
+
+  /* A borrowed source stays valid when append has no reason to move storage. */
+  memory_before = array.storage.memory;
+  reallocations_before = arena->reallocation_count;
+  HXC_TEST_CHECK(array.length < array.capacity);
+  HXC_TEST_CHECK(hxc_array_push_copy(&array, source) == HXC_STATUS_OK);
+  HXC_TEST_CHECK(array.storage.memory == memory_before);
+  HXC_TEST_CHECK(arena->reallocation_count == reallocations_before);
+  HXC_TEST_CHECK(hxc_test_expect_refs(&array, after_set_append, 7u) == 0);
+  HXC_TEST_CHECK(first.references == 7u && second.references == 2u);
+  HXC_TEST_CHECK(hxc_array_remove_at(&array, 6u) == HXC_STATUS_OK);
+  HXC_TEST_CHECK(first.references == 6u && second.references == 2u);
 
   /* Haxe assignment at exactly `length` appends through the same typed copy. */
   length_before = array.length;
