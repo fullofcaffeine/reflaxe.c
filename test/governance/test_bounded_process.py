@@ -36,6 +36,7 @@ import sys
 import time
 
 pid_path = sys.argv[1]
+time.sleep(float(sys.argv[2]))
 grandchild = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(60)"])
 with open(pid_path, "a", encoding="utf-8") as output:
     output.write(f"{os.getpid()}\\n{grandchild.pid}\\n")
@@ -51,7 +52,7 @@ import time
 
 pid_path = sys.argv[1]
 child_program = sys.argv[2]
-child = subprocess.Popen([sys.executable, "-c", child_program, pid_path])
+child = subprocess.Popen([sys.executable, "-c", child_program, pid_path, sys.argv[3]])
 with open(pid_path, "a", encoding="utf-8") as output:
     output.write(f"{os.getpid()}\\n")
     output.flush()
@@ -59,7 +60,7 @@ time.sleep(60)
 """
 
 
-def process_is_active(pid: int) -> bool:
+def process_is_active(pid: int, *, timeout: float = 3) -> bool:
     """Return true only while a process can still consume host resources."""
 
     if os.name == "nt":
@@ -68,6 +69,7 @@ def process_is_active(pid: int) -> bool:
             check=False,
             capture_output=True,
             text=True,
+            timeout=timeout,
         )
         return f'"{pid}"' in result.stdout
     result = subprocess.run(
@@ -75,9 +77,78 @@ def process_is_active(pid: int) -> bool:
         check=False,
         capture_output=True,
         text=True,
+        timeout=timeout,
     )
     state = result.stdout.strip()
     return result.returncode == 0 and bool(state) and not state.startswith("Z")
+
+
+def run_ready_tree(command: list[str], pid_path: Path, *, setup_timeout: float = 15) -> None:
+    """Start the cleanup clock only after this real process tree is ready.
+
+    Python startup can exceed the cleanup deadline on a busy host. The test's
+    Popen adapter waits separately for all three live identities, then hands
+    the real process to the unchanged production timeout and termination path.
+    Other subprocesses, including OS activity probes and Windows taskkill,
+    pass directly through to the original constructor.
+    """
+
+    original_popen = subprocess.Popen
+
+    def start(*args, **kwargs):
+        process = original_popen(*args, **kwargs)
+        if args[0] != command:
+            return process
+        try:
+            deadline = time.monotonic() + setup_timeout
+            timeout_message = "nested fixture setup timed out before three live PIDs"
+            while True:
+                if process.poll() is not None:
+                    raise AssertionError("nested fixture exited before readiness")
+                if time.monotonic() >= deadline:
+                    raise AssertionError(timeout_message)
+                text = pid_path.read_text(encoding="utf-8") if pid_path.exists() else ""
+                try:
+                    pids = (
+                        {int(line) for line in text.splitlines()}
+                        if text.endswith("\n")
+                        else set()
+                    )
+                except ValueError as failure:
+                    raise AssertionError("nested fixture recorded malformed PIDs") from failure
+                if len(pids) == 3 and process.pid in pids:
+                    ready = True
+                    for pid in pids:
+                        remaining = deadline - time.monotonic()
+                        if remaining <= 0:
+                            raise AssertionError(timeout_message)
+                        if not process_is_active(pid, timeout=remaining):
+                            ready = False
+                            break
+                    if time.monotonic() >= deadline:
+                        raise AssertionError(timeout_message)
+                    if ready:
+                        return process
+                time.sleep(0.01)
+        except BaseException as failure:
+            # Popen's context manager has not acquired this process yet.
+            # Clean up even when readiness fails, preserving its diagnostic.
+            try:
+                bounded_process._terminate_process_tree(process)
+                process.communicate(timeout=5)
+            except BaseException as cleanup_failure:
+                raise failure from cleanup_failure
+            raise
+
+    with mock.patch.object(bounded_process.subprocess, "Popen", side_effect=start):
+        bounded_process.run(
+            command,
+            phase="nested compiler fixture",
+            timeout=3,
+            check=False,
+            capture_output=True,
+            text=True,
+        )
 
 
 def direct_bounded_subprocess_lines(path: Path) -> tuple[int, ...]:
@@ -158,16 +229,10 @@ class BoundedProcessTest(unittest.TestCase):
                     ROOT_PROGRAM,
                     str(pid_path),
                     CHILD_PROGRAM,
+                    "4" if attempt == 0 else "0",
                 ]
                 with self.assertRaises(bounded_process.ProcessTreeTimeout) as caught:
-                    bounded_process.run(
-                        command,
-                        phase="nested compiler fixture",
-                        timeout=3,
-                        check=False,
-                        capture_output=True,
-                        text=True,
-                    )
+                    run_ready_tree(command, pid_path)
                 self.assertIn("nested compiler fixture", str(caught.exception))
                 self.assertIn("3 seconds", str(caught.exception))
 
@@ -181,6 +246,49 @@ class BoundedProcessTest(unittest.TestCase):
                     if time.monotonic() >= deadline:
                         self.fail(f"timeout attempt {attempt} left active PIDs {pids}")
                     time.sleep(0.05)
+
+    def test_fixture_readiness_failure_cleans_up_its_process(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            pid_path = Path(temporary) / "not-ready.pids"
+            command = [sys.executable, "-c", "import time; time.sleep(60)"]
+            with mock.patch.object(
+                bounded_process,
+                "_terminate_process_tree",
+                wraps=bounded_process._terminate_process_tree,
+            ) as terminate:
+                with self.assertRaisesRegex(
+                    AssertionError, "setup timed out before three live PIDs"
+                ):
+                    run_ready_tree(command, pid_path, setup_timeout=0.1)
+            terminate.assert_called_once()
+            process = terminate.call_args.args[0]
+            self.assertIsNotNone(process.returncode)
+            self.assertFalse(process_is_active(process.pid))
+
+    def test_malformed_fixture_readiness_cleans_up_descendants(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            pid_path = Path(temporary) / "malformed.pids"
+            child_program = CHILD_PROGRAM.replace(
+                "output.flush()", 'output.write("invalid\\n"); output.flush()'
+            )
+            command = [sys.executable, "-c", ROOT_PROGRAM, str(pid_path), child_program, "0"]
+            with mock.patch.object(
+                bounded_process,
+                "_terminate_process_tree",
+                wraps=bounded_process._terminate_process_tree,
+            ) as terminate:
+                with self.assertRaisesRegex(AssertionError, "recorded malformed PIDs"):
+                    run_ready_tree(command, pid_path)
+            terminate.assert_called_once()
+            process = terminate.call_args.args[0]
+            pids = {process.pid} | {
+                int(line)
+                for line in pid_path.read_text(encoding="utf-8").splitlines()
+                if line != "invalid"
+            }
+            self.assertEqual(len(pids), 3)
+            self.assertIsNotNone(process.returncode)
+            self.assertFalse(any(process_is_active(pid) for pid in pids))
 
     def test_compiler_timeout_reports_phase_or_frontend(self) -> None:
         progress = (

@@ -250,7 +250,7 @@ class CGenericSpecializationReportBuilder {
 		for (unit in units) {
 			if (GeneratedFile.isPayloadKind(unit.kind)) {
 				payloadArtifacts++;
-				payloadBytes += Bytes.ofString(unit.contents).length;
+				payloadBytes += unit.contentByteLength;
 			}
 		}
 		return {

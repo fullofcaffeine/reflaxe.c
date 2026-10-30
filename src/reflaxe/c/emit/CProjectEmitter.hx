@@ -2,7 +2,6 @@ package reflaxe.c.emit;
 
 import haxe.Json;
 import haxe.crypto.Sha256;
-import haxe.io.Bytes;
 #if (macro || reflaxe_runtime)
 import reflaxe.c.CPhaseTiming;
 import reflaxe.c.CPhaseTiming.CDetailTimingId;
@@ -1095,7 +1094,7 @@ class CProjectEmitter {
 		for (unit in plan.units) {
 			if (GeneratedFile.isPayloadKind(unit.kind)) {
 				payloadArtifacts++;
-				payloadBytes += Bytes.ofString(unit.contents).length;
+				payloadBytes += unit.contentByteLength;
 			}
 		}
 		if (report.summary.mergedFunctionReasons != functionReasons
