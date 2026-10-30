@@ -257,6 +257,10 @@ def normalized_owner_environment(
     # this runner. Admitted owners do not consume them; remove them from both
     # execution and evidence, while retaining a nonempty Git prefix.
     selected.pop("SHLVL", None)
+    # Bash may export the previous directory after the hook changes cwd.
+    # Owners use an explicit working directory, never shell navigation history;
+    # remove it from their execution as well as their evidence identity.
+    selected.pop("OLDPWD", None)
     if selected.get("GIT_PREFIX") == "":
         selected.pop("GIT_PREFIX")
     for name in GIT_HOOK_AUTHOR_VARIABLES:

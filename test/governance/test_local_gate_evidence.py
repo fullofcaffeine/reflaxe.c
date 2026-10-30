@@ -313,6 +313,8 @@ class LocalGateEvidenceTests(unittest.TestCase):
         environment.pop("GIT_EXEC_PATH", None)
         environment.pop("GIT_PREFIX", None)
         environment["SHLVL"] = "1"
+        # CI starts without OLDPWD; bash adds it when the hook changes cwd.
+        environment.pop("OLDPWD", None)
         environment["PWD"] = str(repository)
 
         def run(command: list[str], selected: dict[str, str] = environment):
@@ -388,7 +390,7 @@ class LocalGateEvidenceTests(unittest.TestCase):
                 f"#!{sys.executable}\nimport hashlib,json,os\n"
                 f"print(json.dumps({{'label':{word!r},'environment':"
                 "{name:hashlib.sha256(os.environ[name].encode()).hexdigest() "
-                "for name in ('CODEX_TOOL_CALL_ID','GIT_DIR') if name in os.environ}}))\n",
+                "for name in ('CODEX_TOOL_CALL_ID','GIT_DIR','OLDPWD') if name in os.environ}}))\n",
                 encoding="utf-8",
             )
             executable.chmod(0o755)
@@ -414,6 +416,9 @@ class LocalGateEvidenceTests(unittest.TestCase):
         direct = observe(direct_command, environment)
         self.assertEqual(direct, observe(hook_command, environment))
         self.assertEqual(direct["tool"]["environment"], {})
+        previous_directory = {**environment, "OLDPWD": str(primary)}
+        self.assertEqual(direct, observe(direct_command, previous_directory))
+        self.assertEqual(direct, observe(hook_command, previous_directory))
         override = observe(direct_command, {**environment, "GIT_DIR": str(primary / ".git")})
         self.assertIn("GIT_DIR", override["environment"])
         self.assertIn("GIT_DIR", override["tool"]["environment"])
@@ -459,6 +464,7 @@ class LocalGateEvidenceTests(unittest.TestCase):
             **direct,
             "BD_GIT_HOOK": "1",
             "SHLVL": "5",
+            "OLDPWD": "/workspace/previous-directory",
             "GIT_PREFIX": "",
             "GIT_INDEX_FILE": str(default_index),
             "GIT_EDITOR": ":",
