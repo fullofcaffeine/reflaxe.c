@@ -395,6 +395,18 @@ class CSymbolRegistry {
 		for (state in generatedStates) {
 			addGeneratedCandidate(generatedByCandidate, namespacedCandidate(state.draft.request.namespace, generatedName(state)), state);
 		}
+		var candidateKeys = candidateKeysFor(generatedByCandidate, exactByCandidate);
+		final initialCandidateCount = candidateKeys.length;
+		/*
+			Only colliding groups can change names in this round. Sort that subset
+			in the same order as before, while retaining every group in the maps:
+			a later hash suffix can still collide with an initially unique name.
+		 */
+		candidateKeys = candidateKeys.filter(key -> {
+			final generatedGroup = generatedByCandidate.get(key);
+			final exactGroup = exactByCandidate.get(key);
+			return (generatedGroup == null ? 0 : generatedGroup.length) + (exactGroup == null ? 0 : exactGroup.length) >= 2;
+		});
 		#if reflaxe_c_phase_timing
 		var candidateSortComparisons = 0;
 		var candidateSortUtf8Encodings = 0;
@@ -407,11 +419,10 @@ class CSymbolRegistry {
 			#end
 			return compareUtf8(left, right);
 		};
-		var candidateKeys = candidateKeysFor(generatedByCandidate, exactByCandidate, compareCandidateKeys);
+		candidateKeys.sort(compareCandidateKeys);
 		#else
-		var candidateKeys = candidateKeysFor(generatedByCandidate, exactByCandidate, compareUtf8);
+		candidateKeys.sort(compareUtf8);
 		#end
-		final initialCandidateCount = candidateKeys.length;
 		var collisionCandidatesRechecked = 0;
 		var collisionStatesMoved = 0;
 		var rounds = 0;
@@ -774,8 +785,7 @@ class CSymbolRegistry {
 		group.push(state);
 	}
 
-	static function candidateKeysFor(generated:Map<String, Array<GeneratedState>>, exact:Map<String, Array<AssignedDraft>>,
-			compare:(String, String) -> Int):Array<String> {
+	static function candidateKeysFor(generated:Map<String, Array<GeneratedState>>, exact:Map<String, Array<AssignedDraft>>):Array<String> {
 		final present:Map<String, Bool> = [];
 		for (key in generated.keys()) {
 			present.set(key, true);
@@ -783,9 +793,7 @@ class CSymbolRegistry {
 		for (key in exact.keys()) {
 			present.set(key, true);
 		}
-		final keys = [for (key in present.keys()) key];
-		keys.sort(compare);
-		return keys;
+		return [for (key in present.keys()) key];
 	}
 
 	static function registerCollisionEvent(events:Map<String, CollisionEvent>, key:String, generated:Array<GeneratedState>,

@@ -44,6 +44,7 @@ class SymbolRegistryGolden {
 			throw "typed C name finalization changed with declaration discovery order";
 		}
 		verifyRepeatedCollisionRound();
+		verifySparseCollisionNamespaces();
 		final plan = new CDeclarationPlanner().plan(finalized.snapshot);
 		final forwardNames = [];
 		for (header in plan.headers) {
@@ -246,7 +247,10 @@ class SymbolRegistryGolden {
 		final occupant = new CSymbolRequest(CSKMethod, ["collision", "occupant"], namespace, CSVInternal, null, null, null, null,
 			["demo", "Box", "map", "h8297ed1a605e"]);
 		final registry = new CSymbolRegistry();
-		registry.registerAll([first, second, occupant]);
+		final requests = [first, second, occupant];
+		for (index in 0...32)
+			requests.push(new CSymbolRequest(CSKMethod, ["unrelated", "method" + index], namespace));
+		registry.registerAll(requests);
 		final snapshot = registry.finalizeSymbols();
 		final firstName = registry.identifierFor(first).value;
 		final secondName = registry.identifierFor(second).value;
@@ -257,6 +261,38 @@ class SymbolRegistryGolden {
 			|| snapshot.collisions.length != 2) {
 			throw 'a generated C name that collided after its first hash suffix was not advanced deterministically: first=$firstName second=$secondName occupant=$occupantName collisions=${snapshot.collisions.length}';
 		}
+		if (snapshot.collisions[0].baseName != "hxc_demo_Box_map" || snapshot.collisions[1].baseName != "hxc_demo_Box_map_h8297ed1a605e")
+			throw "successive collision groups lost their canonical report order";
+		for (index in 0...32)
+			if (registry.identifierFor(requests[index + 3]).value != "hxc_unrelated_method" + index)
+				throw "an unrelated singleton changed during repeated collision resolution";
+		requests.reverse();
+		final reversed = new CSymbolRegistry();
+		reversed.registerAll(requests);
+		if (registry.toJson() != reversed.toJson())
+			throw "sparse repeated collisions changed with registration order";
+	}
+
+	/** Keep identical spellings independent in distinct C namespaces, including exact names. */
+	static function verifySparseCollisionNamespaces():Void {
+		final requests = [
+			new CSymbolRequest(CSKMethod, ["unique"], CNSOrdinary("translation-unit")),
+			new CSymbolRequest(CSKType, ["unique"], CNSTag("translation-unit")),
+			new CSymbolRequest(CSKField, ["unique"], CNSMember("left.Owner")),
+			new CSymbolRequest(CSKField, ["unique"], CNSMember("right.Owner")),
+			new CSymbolRequest(CSKMethod, ["public", "method"], CNSOrdinary("translation-unit"), CSVPublic, "project_name"),
+			new CSymbolRequest(CSKType, ["public", "type"], CNSTag("translation-unit"), CSVPublic, "project_name")
+		];
+		final registry = new CSymbolRegistry();
+		registry.registerAll(requests);
+		final snapshot = registry.finalizeSymbols();
+		if (snapshot.symbols.length != 6 || snapshot.collisions.length != 0)
+			throw "independent singleton namespaces produced a collision";
+		for (index in 0...requests.length)
+			if (registry.identifierFor(requests[index]).value != (index < 4 ? "hxc_unique" : "project_name"))
+				throw "a unique generated or exact name changed";
+		if (new CSymbolRegistry().finalizeSymbols().symbols.length != 0)
+			throw "an empty registry acquired a symbol";
 	}
 
 	static function readableIdentityProof():String {
