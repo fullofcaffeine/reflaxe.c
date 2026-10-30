@@ -104,6 +104,7 @@ class EvaluationOrderProbe {
 	}
 
 	static function run():Void {
+		verifyValueTypeLookup();
 		final fixture = switch Context.getType("EvaluationFixture") {
 			case TInst(reference, _): reference.get();
 			case _: fatal("EvaluationFixture must remain a class", Context.currentPos());
@@ -1057,6 +1058,123 @@ class EvaluationOrderProbe {
 			}
 		}
 		return count;
+	}
+
+	/**
+		Keep value lookup precedence and emission reuse observable in printed C.
+
+		The duplicate-ID cases are deliberate raw-IR probes, not valid native input.
+		They protect the existing first-match rule; the owning native runner
+		covers valid authored programs and their generated C.
+	**/
+	static function verifyValueTypeLookup():Void {
+		final source = new HxcSourceSpan("test/evaluation_order/value-type-lookup.hx", 1, 1, 1, 2);
+		final i32:HxcIRTypeRef = IRTInt(32, true);
+		function equal(label:String, actual:String, expected:String):Void {
+			if (actual != expected)
+				throw new haxe.Exception(label + " mismatch\nactual=" + haxe.Json.stringify(actual) + "\nexpected=" + haxe.Json.stringify(expected));
+		}
+		function emit(emitter:CBodyEmitter, fn:HxcIRFunction):String {
+			final names:Map<String, CIdentifier> = [];
+			for (p in fn.parameters)
+				names.set(p.id, new CIdentifier(p.id));
+			final temps:Map<String, CIdentifier> = [];
+			final labels:Map<String, CIdentifier> = [];
+			for (b in fn.blocks) {
+				labels.set(b.id, new CIdentifier(b.id));
+				for (i in b.instructions)
+					if (i.result != null)
+						temps.set(i.result.id, new CIdentifier(i.result.id));
+			}
+			return new CASTPrinter().printStmt(emitter.emitBody(fn, names, [], temps, ['consume' => new CIdentifier('consume')], [], [], false, [], labels,
+				null, [], new CIdentifier('abort')));
+		}
+		function param(id:String, type:HxcIRTypeRef):HxcIRParameter
+			return {id: id, type: type, source: source};
+		function value(id:String, type:HxcIRTypeRef, kind:HxcIRInstructionKind):HxcIRInstruction
+			return valueInstruction('define_' + id, id, type, kind, source);
+		function effect(id:String, kind:HxcIRInstructionKind):HxcIRInstruction
+			return effectInstruction(id, kind, source);
+		function call(id:String, valueId:String):HxcIRInstruction
+			return effect(id, IRIOCall({
+				dispatch: IRCDDirect('consume'),
+				arguments: [valueId],
+				returnType: IRTVoid,
+				failure: null
+			}));
+		function block(id:String, parameters:Array<HxcIRParameter>, instructions:Array<HxcIRInstruction>, kind:HxcIRTerminatorKind):HxcIRBlock
+			return {
+				id: id,
+				parameters: parameters,
+				instructions: instructions,
+				terminator: {kind: kind, source: source},
+				source: source
+			};
+		function fn(id:String, parameters:Array<HxcIRParameter>, blocks:Array<HxcIRBlock>):HxcIRFunction
+			return syntheticFunction(id, parameters, 'entry', blocks, source);
+
+		final emitter = new CBodyEmitter();
+		for (n in [4, 64]) {
+			final instructions:Array<HxcIRInstruction> = [];
+			for (i in 0...n) {
+				instructions.push(value('v$i', i32, IRIOConstant(IRCInt(Std.string(i)))));
+				instructions.push(call('call$i', 'v$i'));
+			}
+			final fn = fn('sequence$n', [param('p0', i32), param('p1', i32), param('p2', i32)], [block('entry', [], instructions, IRTReturn(null, []))]);
+			final text = emit(emitter, fn);
+			var expected = "{\n  (void)p0;\n  (void)p1;\n  (void)p2;\n";
+			for (i in 0...n)
+				expected += '  consume($i);\n';
+			expected += "  return;\n}";
+			equal('sequence$n', text, expected);
+		}
+		final parameters = fn('parameter-order', [param('p0', i32), param('p1', i32), param('p2', i32)], [
+			block('entry', [], [call('first', 'p0'), call('last', 'p2'), call('repeat', 'p0')], IRTReturn(null, []))
+		]);
+		equal('parameters', emit(emitter, parameters), "{\n  (void)p1;\n  consume(p0);\n  consume(p2);\n  consume(p0);\n  return;\n}");
+		final check = effect('check', IRIONullCheck('same', IRNCPCheckedAbort('hosted', 'debug')));
+		final firstParameter = fn('parameter-before-result', [param('same', IRTString)], [
+			block('entry', [], [value('same', i32, IRIOConstant(IRCInt('7'))), check], IRTReturn(null, []))
+		]);
+		equal('parameter-before-result', emit(emitter, firstParameter), "{\n  if (7.data == NULL)\n  {\n    abort();\n  }\n  return;\n}");
+		final firstResult = fn('first-result', [], [
+			block('entry', [], [
+				value('same', i32, IRIOConstant(IRCInt('7'))),
+				value('same', IRTString, IRIOConstant(IRCInt('8'))),
+				check
+			], IRTReturn(null, []))
+		]);
+		equal('first-result', emit(emitter, firstResult), "{\n  if (8 == NULL)\n  {\n    abort();\n  }\n  return;\n}");
+		final blockParameter = fn('block-parameter', [], [
+			block('entry', [param('same', IRTString)], [value('same', i32, IRIOConstant(IRCInt('7'))), check], IRTReturn(null, []))
+		]);
+		var blockError = '';
+		try {
+			emit(emitter, blockParameter);
+		} catch (e:CBodyEmissionError) {
+			blockError = e.detail;
+		}
+		equal('block-parameter-rejected-before-lookup', blockError, 'control-flow planning for `block-parameter` does not admit block parameters at `entry`');
+		// A missing type is observed before the existing missing-expression diagnostic.
+		final missing = fn('missing', [], [
+			block('entry', [], [effect('check', IRIONullCheck('absent', IRNCPCheckedAbort('hosted', 'debug')))], IRTReturn(null, []))
+		]);
+		var error = '';
+		try {
+			emit(emitter, missing);
+		} catch (e:CBodyEmissionError) {
+			error = e.detail;
+		}
+		equal('missing', error, 'C lowering in `missing` cannot resolve HxcIR value `absent`');
+		// Reuse one emitter and one mutable raw function; production validated graphs stay read-only.
+		final mutable = fn('reused', [param('same', IRTPointer(i32, true))], [
+			block('entry', [], [effect('check', IRIONullCheck('same', IRNCPCheckedAbort('hosted', 'debug')))], IRTReturn(null, []))
+		]);
+		equal('pointer', emit(emitter, mutable), "{\n  if (same == NULL)\n  {\n    abort();\n  }\n  return;\n}");
+		final unused = fn('reused', [param('same', IRTString)], [block('entry', [], [], IRTReturn(null, []))]);
+		equal('zero-query', emit(emitter, unused), "{\n  (void)same;\n  return;\n}");
+		mutable.parameters[0] = param('same', IRTString);
+		equal('string', emit(emitter, mutable), "{\n  if (same.data == NULL)\n  {\n    abort();\n  }\n  return;\n}");
 	}
 
 	static function syntheticFunction(id:String, parameters:Array<HxcIRParameter>, entryBlockId:String, blocks:Array<HxcIRBlock>,

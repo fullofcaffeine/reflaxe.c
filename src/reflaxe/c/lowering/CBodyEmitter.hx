@@ -249,6 +249,15 @@ class CBodyEmitter {
 	final managedProgram:Null<CManagedProgramNames>;
 	final dynamicPlan:Null<CLoweredBodyDynamicPlan>;
 
+	/**
+		Types for the current body, built only when emission first needs a value type.
+
+		The validated function is read-only during emission. Reset this map at every
+		`emitBody` entry, including after failed or zero-query emissions; an emitter
+		serves several functions and focused fixtures can reuse a mutable raw graph.
+	**/
+	var emissionValueTypes:Null<Map<String, HxcIRTypeRef>> = null;
+
 	#if (macro || reflaxe_runtime)
 	public function new(?aggregates:Array<CLoweredBodyAggregate>, ?enums:Array<CLoweredBodyEnum>, ?classes:Array<CLoweredBodyClass>,
 			?arrays:Array<CLoweredBodyArray>, ?iterators:Array<CPreparedBodyIterator>, ?intMaps:Array<CPreparedBodyIntMap>,
@@ -589,6 +598,7 @@ class CBodyEmitter {
 			helperNames:Map<String, CIdentifier>, lineDirectives:Bool, tailArgumentNames:Map<String, Array<CIdentifier>>, labelNames:Map<String, CIdentifier>,
 			?nonReturningFunctionIds:Map<String, Bool>, ?spanLengthNames:Map<String, CIdentifier>, ?boundsAbortName:CIdentifier,
 			?controlFlowResolution:CBodyControlFlowPlanResolution):CStmt {
+		emissionValueTypes = null;
 		if (fn.blocks.length == 0 || fn.entryBlockId != fn.blocks[0].id) {
 			fail(("body lowering requires an entry-first block graph in `" + fn.id + "`"));
 		}
@@ -9004,25 +9014,34 @@ class CBodyEmitter {
 		};
 	}
 
-	static function valueType(fn:HxcIRFunction, valueId:String):Null<HxcIRTypeRef> {
-		for (parameter in fn.parameters) {
-			if (parameter.id == valueId) {
-				return parameter.type;
-			}
-		}
-		for (block in fn.blocks) {
-			for (parameter in block.parameters) {
-				if (parameter.id == valueId) {
-					return parameter.type;
+	/**
+		Resolve a value type without rescanning the function for each use.
+
+		Keep the original first-match order: function parameters, then each block's
+		parameters immediately followed by its results. First writes win even for
+		raw duplicate-ID fixtures; absent IDs still return null. The map belongs to
+		one non-recursive body emission, so it cannot retain another function's types.
+	**/
+	function valueType(fn:HxcIRFunction, valueId:String):Null<HxcIRTypeRef> {
+		var types = emissionValueTypes;
+		if (types == null) {
+			types = [];
+			for (parameter in fn.parameters)
+				if (!types.exists(parameter.id))
+					types.set(parameter.id, parameter.type);
+			for (block in fn.blocks) {
+				for (parameter in block.parameters)
+					if (!types.exists(parameter.id))
+						types.set(parameter.id, parameter.type);
+				for (instruction in block.instructions) {
+					final result = instruction.result;
+					if (result != null && !types.exists(result.id))
+						types.set(result.id, result.type);
 				}
 			}
-			for (instruction in block.instructions) {
-				if (instruction.result != null && instruction.result.id == valueId) {
-					return instruction.result.type;
-				}
-			}
+			emissionValueTypes = types;
 		}
-		return null;
+		return types.get(valueId);
 	}
 
 	function requireAggregateTag(instanceId:String):CIdentifier {
