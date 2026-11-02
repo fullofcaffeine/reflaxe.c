@@ -83,11 +83,15 @@ def process_is_active(pid: int, *, timeout: float = 3) -> bool:
     return result.returncode == 0 and bool(state) and not state.startswith("Z")
 
 
-def run_ready_tree(command: list[str], pid_path: Path, *, setup_timeout: float = 15) -> None:
+def run_ready_tree(
+    command: list[str], pid_path: Path, *, setup_timeout: float = 15,
+    expected_pids: int = 3, command_timeout: float = 3,
+    phase: str = "nested compiler fixture", compiler_progress: bool = False,
+) -> None:
     """Start the cleanup clock only after this real process tree is ready.
 
     Python startup can exceed the cleanup deadline on a busy host. The test's
-    Popen adapter waits separately for all three live identities, then hands
+    Popen adapter waits separately for the expected live identities, then hands
     the real process to the unchanged production timeout and termination path.
     Other subprocesses, including OS activity probes and Windows taskkill,
     pass directly through to the original constructor.
@@ -101,7 +105,7 @@ def run_ready_tree(command: list[str], pid_path: Path, *, setup_timeout: float =
             return process
         try:
             deadline = time.monotonic() + setup_timeout
-            timeout_message = "nested fixture setup timed out before three live PIDs"
+            timeout_message = f"fixture setup timed out before {expected_pids} live PIDs"
             while True:
                 if process.poll() is not None:
                     raise AssertionError("nested fixture exited before readiness")
@@ -116,7 +120,7 @@ def run_ready_tree(command: list[str], pid_path: Path, *, setup_timeout: float =
                     )
                 except ValueError as failure:
                     raise AssertionError("nested fixture recorded malformed PIDs") from failure
-                if len(pids) == 3 and process.pid in pids:
+                if len(pids) == expected_pids and process.pid in pids:
                     ready = True
                     for pid in pids:
                         remaining = deadline - time.monotonic()
@@ -143,11 +147,12 @@ def run_ready_tree(command: list[str], pid_path: Path, *, setup_timeout: float =
     with mock.patch.object(bounded_process.subprocess, "Popen", side_effect=start):
         bounded_process.run(
             command,
-            phase="nested compiler fixture",
-            timeout=3,
+            phase=phase,
+            timeout=command_timeout,
             check=False,
             capture_output=True,
             text=True,
+            compiler_progress=compiler_progress,
         )
 
 
@@ -257,7 +262,7 @@ class BoundedProcessTest(unittest.TestCase):
                 wraps=bounded_process._terminate_process_tree,
             ) as terminate:
                 with self.assertRaisesRegex(
-                    AssertionError, "setup timed out before three live PIDs"
+                    AssertionError, "setup timed out before 3 live PIDs"
                 ):
                     run_ready_tree(command, pid_path, setup_timeout=0.1)
             terminate.assert_called_once()
@@ -296,23 +301,27 @@ class BoundedProcessTest(unittest.TestCase):
             '"phase":"semantic lowering","profile":"portable",'
             '"buildMode":"debug","status":null}'
         )
-        with self.assertRaisesRegex(
-            bounded_process.ProcessTreeTimeout,
-            r"last active compiler phase: semantic lowering \(portable/debug\)$",
-        ):
-            bounded_process.run(
-                [
-                    sys.executable,
-                    "-c",
-                    "import time; print(%r, flush=True); time.sleep(60)" % progress,
-                ],
-                phase="compiler progress fixture",
-                timeout=1,
-                check=False,
-                capture_output=True,
-                text=True,
-                compiler_progress=True,
-            )
+        with tempfile.TemporaryDirectory() as temporary:
+            ready = Path(temporary) / "progress-ready.pids"
+            # Deliberately start later than the diagnostic deadline. Readiness
+            # follows the flushed marker, leaving stdout for production to read.
+            command = [
+                sys.executable, "-c",
+                "import os, sys, time; from pathlib import Path; "
+                "time.sleep(2); print(%r, flush=True); "
+                "Path(sys.argv[1]).write_text(str(os.getpid()) + chr(10)); "
+                "time.sleep(60)" % progress,
+                str(ready),
+            ]
+            with self.assertRaisesRegex(
+                bounded_process.ProcessTreeTimeout,
+                r"last active compiler phase: semantic lowering \(portable/debug\)$",
+            ):
+                run_ready_tree(
+                    command, ready, expected_pids=1, command_timeout=1,
+                    phase="compiler progress fixture", compiler_progress=True,
+                )
+            self.assertFalse(process_is_active(int(ready.read_text().strip())))
 
         with self.assertRaisesRegex(
             bounded_process.ProcessTreeTimeout,

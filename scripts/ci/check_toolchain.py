@@ -344,7 +344,7 @@ def validate(root: Path, *, require_tools: bool) -> list[str]:
         "npm run test:body-lowering && "
         "npm run test:atomic-lowering && "
         "npm run test:exception-lowering && npm run test:function-lowering && npm run test:aggregate-lowering && npm run test:class-layout && npm run test:constructor-lowering && npm run test:virtual-dispatch && npm run test:enum-lowering && npm run test:generic-specialization && npm run test:evaluation-order && npm run test:static-initialization && "
-        "npm run test:arithmetic-semantics && npm run test:primitive-differential && npm run test:span-lowering && npm run test:project-layout && npm run test:caxecraft-content-json && npm run test:caxecraft-runtime-schemas && npm run test:caxecraft-actor-composition && npm run test:caxecraft-package-store && npm run test:caxecraft-package-manifest && npm run test:caxecraft-content-refresh && npm run test:caxecraft-package-zip-source && npm run test:caxecraft-package-zip-export && npm run test:caxecraft-resolved-level-plan && npm run test:caxecraft-content-generation && npm run test:caxecraft-runtime-level-loader && npm run test:caxecraft-runtime-content-generation && npm run test:caxecraft-runtime-piloscript && npm run test:caxecraft-campaign-runtime && npm run test:caxecraft-runtime-content-publication && npm run test:caxecraft-cross-target-adapter && npm run test:caxecraft-eval-assisted-loop-profile && npm run test:caxecraft-water && npm run test:caxecraft-aquatics && npm run test:caxecraft-session && npm run test:caxecraft-app-screen && npm run test:caxecraft-presentation && npm run test:caxecraft-player-camera && npm run test:caxecraft-terrain-chunks && npm run test:caxecraft-inventory && npm run test:caxecraft-gameplay && npm run test:caxecraft-pilot && npm run test:caxecraft-scenario-model && npm run test:caxecraft-caxeflow && npm run test:caxecraft-editor && npm run test:caxecraft-scenario-determinism && npm run test:caxecraft-domain:full && npm run snapshots:catalog"
+        "npm run test:arithmetic-semantics && npm run test:primitive-differential && npm run test:span-lowering && npm run test:project-layout && npm run test:caxecraft-renderer-interval && npm run test:caxecraft-content-json && npm run test:caxecraft-runtime-schemas && npm run test:caxecraft-actor-composition && npm run test:caxecraft-package-store && npm run test:caxecraft-package-manifest && npm run test:caxecraft-content-refresh && npm run test:caxecraft-package-zip-source && npm run test:caxecraft-package-zip-export && npm run test:caxecraft-resolved-level-plan && npm run test:caxecraft-content-generation && npm run test:caxecraft-runtime-level-loader && npm run test:caxecraft-runtime-content-generation && npm run test:caxecraft-runtime-piloscript && npm run test:caxecraft-campaign-runtime && npm run test:caxecraft-runtime-content-publication && npm run test:caxecraft-cross-target-adapter && npm run test:caxecraft-eval-assisted-loop-profile && npm run test:caxecraft-water && npm run test:caxecraft-aquatics && npm run test:caxecraft-session && npm run test:caxecraft-app-screen && npm run test:caxecraft-presentation && npm run test:caxecraft-player-camera && npm run test:caxecraft-terrain-chunks && npm run test:caxecraft-inventory && npm run test:caxecraft-gameplay && npm run test:caxecraft-pilot && npm run test:caxecraft-scenario-model && npm run test:caxecraft-caxeflow && npm run test:caxecraft-editor && npm run test:caxecraft-scenario-determinism && npm run test:caxecraft-domain:full && npm run snapshots:catalog"
     )
     if (
         not isinstance(scripts, dict)
@@ -739,6 +739,12 @@ def validate(root: Path, *, require_tools: bool) -> list[str]:
         or scripts.get("caxecraft:play") != expected_caxecraft_play_script
     ):
         errors.append("package.json must retain the one-command Caxecraft developer workflow")
+    if (
+        not isinstance(scripts, dict)
+        or scripts.get("test:caxecraft-renderer-interval")
+        != "python3 examples/caxecraft/run_haxe_c_test.py renderer-interval --layout unity"
+    ):
+        errors.append("package.json must retain the native renderer interval observer gate")
     if (
         not isinstance(scripts, dict)
         or scripts.get("benchmark:caxecraft-renderer")

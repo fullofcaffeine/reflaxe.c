@@ -29,6 +29,9 @@ SOURCES = (
     ROOT / "runtime/hxrt/src/gc.c",
 )
 CONTRACT = ROOT / "runtime/hxrt/test/gc_contract.c"
+INTERVAL_OBSERVER = ROOT / "runtime/hxrt/test/interval_observer.c"
+INTERVAL_CONTRACT = ROOT / "runtime/hxrt/test/interval_observer_contract.c"
+INTERVAL_HOOKS = ROOT / "runtime/hxrt/test/interval_observer_hooks.h"
 FREESTANDING = ROOT / "runtime/hxrt/test/gc_freestanding.c"
 SCALING = ROOT / "runtime/hxrt/test/gc_scaling.c"
 CPP_HEADER = ROOT / "runtime/hxrt/test/gc_header_cpp.cpp"
@@ -364,6 +367,51 @@ def compile_and_run(
         )
 
 
+def interval_observer_lanes(toolchain: Toolchain, build: Path) -> None:
+    """Check runtime entry attempts independently, without changing normal objects.
+
+    The native contract owns failure, callback ordering and sticky interval
+    expectations. Hooks enter only the three instrumented binaries. Separate O0
+    objects prove ordinary allocator/collector code has no observer references
+    even before an optimizer can remove unused work.
+    """
+    for optimization, sanitizer in (("O0", False), ("O2", False), ("O1", True)):
+        suffix = f"{optimization}{'-san' if sanitizer else ''}"
+        executable = build / f"interval-observer-{suffix}"
+        command = [toolchain.cc, *C_FLAGS, f"-{optimization}", f"-I{INCLUDE}",
+                   "-include", str(INTERVAL_HOOKS)]
+        if sanitizer:
+            command.extend(("-g", "-fsanitize=address,undefined", "-fno-omit-frame-pointer"))
+        command.extend(str(path) for path in (*SOURCES, INTERVAL_OBSERVER, INTERVAL_CONTRACT))
+        command.extend(("-o", str(executable)))
+        require_success(run(command), f"{toolchain.family} {suffix} interval observer build")
+        result = run([str(executable)])
+        require_success(result, f"{toolchain.family} {suffix} interval observer run")
+        if result.stderr or result.stdout != "interval-observer: OK\n":
+            raise GcTestFailure(
+                f"{toolchain.family} {suffix} interval observer report drifted\n"
+                f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
+            )
+
+    nm = shutil.which("nm")
+    if nm is None:
+        raise GcTestFailure("default runtime hook evidence requires nm")
+    for source in (SOURCES[0], SOURCES[-1]):
+        output = build / f"{source.stem}-default-hooks.o"
+        require_success(
+            run([toolchain.cc, *C_FLAGS, "-O0", f"-I{INCLUDE}",
+                 "-c", str(source), "-o", str(output)]),
+            f"{toolchain.family} default {source.stem} object",
+        )
+        symbols = run([nm, str(output)])
+        require_success(symbols, f"{toolchain.family} default {source.stem} symbol scan")
+        if any(line.split() and line.split()[-1].lstrip("_").startswith("caxecraft_test_interval_")
+               for line in symbols.stdout.splitlines()):
+            raise GcTestFailure(
+                f"{toolchain.family} default {source.stem} retained interval observer symbols"
+            )
+
+
 def freestanding_lane(toolchain: Toolchain, build: Path) -> None:
     executable = build / "gc-freestanding"
     command = [
@@ -482,8 +530,21 @@ def cpp_lane(toolchain: Toolchain, build: Path) -> None:
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--toolchain", choices=("auto", "gcc", "clang"), default="auto")
+    parser.add_argument(
+        "--interval-observer-only", action="store_true",
+        help="check native interval hooks without unrelated Haxe generation or collector lanes",
+    )
     arguments = parser.parse_args()
     toolchains = resolve(arguments.toolchain)
+    if arguments.interval_observer_only:
+        with tempfile.TemporaryDirectory(prefix="haxe-c-interval-observer-") as temporary:
+            for toolchain in toolchains:
+                build = Path(temporary) / toolchain.family
+                build.mkdir()
+                interval_observer_lanes(toolchain, build)
+        print("gc-runtime: interval observer O0/O2, sanitizers and default hooks passed ("
+              + ", ".join(toolchain.family for toolchain in toolchains) + ")")
+        return 0
     (
         (first_root_source, first_projects),
         (second_root_source, second_projects),
@@ -500,6 +561,7 @@ def main() -> int:
             compile_and_run(toolchain, build, optimization="O0", sanitizer=False)
             compile_and_run(toolchain, build, optimization="O2", sanitizer=False)
             compile_and_run(toolchain, build, optimization="O1", sanitizer=True)
+            interval_observer_lanes(toolchain, build)
             freestanding_lane(toolchain, build)
             scaling_lane(toolchain, build)
             cpp_lane(toolchain, build)
@@ -508,7 +570,7 @@ def main() -> int:
     families = ", ".join(toolchain.family for toolchain in toolchains)
     print(
         "gc-runtime: OK: precise cycles, exact stack/global/thread roots, pins, "
-        "pressure, indexed scaling, reports, generated root lifetimes, freestanding allocation, "
+        "pressure, indexed scaling, reports, generated root lifetimes, interval hooks, freestanding allocation, "
         f"C++17, and sanitizers passed ({families})"
     )
     return 0

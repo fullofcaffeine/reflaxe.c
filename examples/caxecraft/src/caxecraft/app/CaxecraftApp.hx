@@ -1,6 +1,11 @@
 package caxecraft.app;
 
 #if c
+#if caxecraft_observe_terrain
+import caxecraft.benchmark.IntervalObserver;
+import caxecraft.benchmark.TerrainIntervalEvidence.TerrainIntervalPhase;
+import caxecraft.benchmark.TerrainIntervalEvidence.writeTerrainIntervalSnapshot;
+#end
 import caxecraft.content.RuntimeContentPack.RuntimeItemUseProfile;
 import caxecraft.content.ActiveRuntimeContent;
 import caxecraft.app.ActivePlayableLevel.PlayableLevelCreationResult;
@@ -831,6 +836,12 @@ final class CaxecraftApp {
 		var measuredUpdateMicroseconds = 0;
 		var measuredPreparationMicroseconds = 0;
 		#end
+		#end
+
+		#if caxecraft_observe_terrain
+		IntervalObserver.reset();
+		var observedTerrainFrames = 0;
+		var observedPortalFrames = 0;
 		#end
 
 		// Outer frame loop: service the operating system and input devices once,
@@ -1894,6 +1905,13 @@ final class CaxecraftApp {
 					distantHorizonRenderer.draw(session.worldView(), terrainTexture, terrainTextureReady, adventureTerrainTexture,
 						adventureTerrainTextureReady, levelView.waterPresentationCell());
 				}
+				#if caxecraft_observe_terrain
+				// Keep warmup counts visible. The host subtracts this snapshot without
+				// resetting sticky protocol errors or moving draw arguments out of the interval.
+				if (observedTerrainFrames == 2)
+					writeTerrainIntervalSnapshot(Warmup, observedTerrainFrames, observedPortalFrames);
+				IntervalObserver.begin();
+				#end
 				#if caxecraft_render_benchmark
 				final terrainStarted = Raylib.GetTime();
 				#end
@@ -1910,6 +1928,12 @@ final class CaxecraftApp {
 					measuredPreparationMicroseconds += renderCounters.preparationMicroseconds;
 					measuredTerrainFrames++;
 				}
+				#end
+				#if caxecraft_observe_terrain
+				IntervalObserver.end();
+				observedTerrainFrames++;
+				if (portalVisible)
+					observedPortalFrames++;
 				#end
 				if (portalVisible) {
 					final preview = portal.staged();
@@ -2269,6 +2293,10 @@ final class CaxecraftApp {
 				loadingFramePresented = true;
 			frameCount++;
 		}
+
+		#if caxecraft_observe_terrain
+		writeTerrainIntervalSnapshot(Complete, observedTerrainFrames, observedPortalFrames);
+		#end
 
 		final unfinishedEditorTestPlay = activeEditorTestPlay;
 		if (unfinishedEditorTestPlay != null) {

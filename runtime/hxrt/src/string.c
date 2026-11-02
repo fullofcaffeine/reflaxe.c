@@ -191,6 +191,32 @@ HXC_API hxc_status hxc_string_from_int32(
   );
 }
 
+HXC_API hxc_status hxc_string_from_uint64(
+  uint64_t value,
+  hxc_allocator allocator,
+  hxc_string *out_string
+) {
+  uint8_t reversed[20];
+  uint8_t decimal[20];
+  size_t digit_count = 0u;
+  size_t index;
+
+  /* Stay unsigned: UINT64_MAX cannot pass through a signed integer or double. */
+  do {
+    reversed[digit_count] = (uint8_t)(
+      (uint8_t)'0' + (uint8_t)(value % UINT64_C(10))
+    );
+    digit_count += 1u;
+    value /= UINT64_C(10);
+  } while (value != UINT64_C(0));
+  for (index = 0u; index < digit_count; index++) {
+    decimal[index] = reversed[digit_count - index - 1u];
+  }
+  return hxc_string_ref_from_valid_segments(
+    decimal, digit_count, NULL, 0u, allocator, out_string
+  );
+}
+
 static bool hxc_owned_string_slot_is_empty(const hxc_owned_string *value) {
   return value != NULL
     && value->value.data == NULL

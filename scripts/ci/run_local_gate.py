@@ -15,6 +15,7 @@ import hashlib
 import json
 import os
 import re
+import shutil
 import stat
 import subprocess
 import sys
@@ -605,12 +606,30 @@ def environment_requests_ci(environment: Mapping[str, str]) -> bool:
 def execute_package_owner(
     script: str,
     environment: Mapping[str, str],
+    *,
+    background_owner: bool = False,
 ) -> tuple[int, int]:
-    """Execute one npm owner and return its status and wall duration."""
+    """Execute one owner, optionally lowering only its process-tree priority.
+
+    Keep identity collection in the caller. Native scheduling commands wrap
+    the unchanged npm arguments and environment; they do not relax deadlines
+    or alter which passing result may become reusable evidence.
+    """
+    command = ["npm", "run", script]
+    if background_owner:
+        nice = shutil.which("nice", path=environment.get("PATH", os.defpath))
+        if nice is None:
+            raise LocalGateFailure("--background-owner requires nice on this host")
+        prefix = [nice, "-n", "10"]
+        if sys.platform == "darwin":
+            taskpolicy = shutil.which("taskpolicy", path=environment.get("PATH", os.defpath))
+            if taskpolicy is not None:
+                prefix = [taskpolicy, "-b", *prefix]
+        command = [*prefix, *command]
     start = time.monotonic_ns()
     try:
         result = subprocess.run(
-            ["npm", "run", script],
+            command,
             cwd=ROOT,
             env=dict(environment),
             check=False,
@@ -629,6 +648,7 @@ def run_owner(
     evidence_dir: Path,
     environment: Mapping[str, str],
     now: int | None = None,
+    background_owner: bool = False,
 ) -> int:
     """Run or exactly reuse one package owner and return its process status."""
     scripts = load_scripts()
@@ -640,7 +660,7 @@ def run_owner(
     if not reusable_kind:
         reason = "this owner is not in the reviewed expensive-reuse set"
         print(f"local-gate: {script}: executing cold because {reason}", flush=True)
-        returncode, _ = execute_package_owner(script, owner_environment)
+        returncode, _ = execute_package_owner(script, owner_environment, background_owner=background_owner)
         if returncode != 0:
             print(
                 f"local-gate: {script}: failed with exit {returncode}; "
@@ -663,7 +683,7 @@ def run_owner(
             with owner_evidence_lock(record_path):
                 invalidate_prior_evidence(record_path)
                 returncode, _ = execute_package_owner(
-                    script, owner_environment
+                    script, owner_environment, background_owner=background_owner
                 )
                 cold_executed = True
                 # A cold result is authoritative execution evidence, not a
@@ -685,7 +705,7 @@ def run_owner(
                 file=sys.stderr,
                 flush=True,
             )
-            returncode, _ = execute_package_owner(script, owner_environment)
+            returncode, _ = execute_package_owner(script, owner_environment, background_owner=background_owner)
         if returncode != 0:
             print(
                 f"local-gate: {script}: failed with exit {returncode}; "
@@ -724,7 +744,7 @@ def run_owner(
             )
 
         invalidate_prior_evidence(record_path)
-        returncode, duration_ms = execute_package_owner(script, owner_environment)
+        returncode, duration_ms = execute_package_owner(script, owner_environment, background_owner=background_owner)
         if returncode != 0:
             print(
                 f"local-gate: {script}: failed with exit {returncode}; "
@@ -766,6 +786,10 @@ def parser() -> argparse.ArgumentParser:
     selected.add_argument("--hook", action="store_true", help="reuse before executing")
     selected.add_argument("--cold", action="store_true", help="always execute")
     selected.add_argument(
+        "--background-owner", action="store_true",
+        help="lower only the package owner's priority; start this runner at normal priority",
+    )
+    selected.add_argument(
         "--evidence-dir",
         type=Path,
         default=DEFAULT_EVIDENCE_DIR,
@@ -783,6 +807,7 @@ def main(arguments: list[str] | None = None) -> int:
             selected.script,
             hook_mode=selected.hook,
             cold=selected.cold,
+            background_owner=selected.background_owner,
             evidence_dir=selected.evidence_dir,
             environment=os.environ,
         )

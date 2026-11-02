@@ -601,6 +601,7 @@ class RuntimeFeatureCatalog {
 					"hxc_string_release_slot",
 					"hxc_string_from_scalar",
 					"hxc_string_from_int32",
+					"hxc_string_from_uint64",
 					"hxc_string_concat_ref",
 					"hxc_byte_view_from_cstring",
 					"hxc_string_from_utf8_checked",
@@ -629,6 +630,8 @@ class RuntimeFeatureCatalog {
 							"A reachable ordinary Haxe String.fromCharCode whose scalar is known only at run time."),
 						new RuntimeFeatureSelectionRoot("from-int", RuntimeFeatureSelectionRootKind.HxcIrOperation,
 							"A reachable Std.string(Int) whose decimal spelling depends on a run-time value."),
+						new RuntimeFeatureSelectionRoot("from-uint64", RuntimeFeatureSelectionRootKind.HxcIrOperation,
+							"A reachable c.UInt64 text conversion preserves the complete unsigned decimal value."),
 						new RuntimeFeatureSelectionRoot("concat", RuntimeFeatureSelectionRootKind.HxcIrOperation,
 							"A reachable ordinary Haxe String concatenation whose result bytes are not compile-time constants."),
 						new RuntimeFeatureSelectionRoot("borrow-cstring", RuntimeFeatureSelectionRootKind.HxcIrOperation,
@@ -868,7 +871,7 @@ class RuntimeFeatureCatalog {
 			case "object.h": "779b452097e4c58c7971b90743ace19a2dc6c91e381557abc84fbd5f9b30f1e5";
 			case "status.h": "6bf20f5d82594014ad0f2b79a25cb81417791bd9c07375d2fb89835e415be1c4";
 			case "status_name.h": "64bf3917787ffcf924369c8e1c0a525cf10902d004d5bb4b898f2af46a7456cc";
-			case "string.h": "fe4b3130433bf6b64d27da5b1acf0bb477763acce0644a7882c15bb67226d77f";
+			case "string.h": "211b7c098119eebd0686eefe79592004937fdd4cf114f7a349975abfd5ef0d1f";
 			case "string_lower_case.h": "c2fb77f0f59ba1b8804e308ca769c75fac2fde81a6faf52056424c8f6c7e490a";
 			case "string_lower_case_data.h": "b069c988dec0cd7f7cfc5b116ec0c534136f022d80c71684efd9294290ea9961";
 			case "string_decode.h": "aa93ea7f132aff625adfdcc7498532b139f621196deab4c0e9ecb5de2934fd48";
@@ -887,7 +890,7 @@ class RuntimeFeatureCatalog {
 	static function sourceSha256(name:String):String {
 		return switch name {
 			case "abi.c": "3300a4498a7ca20f771b1334d7be8f2c908d2bb067ea8f2fe3c059300e680b32";
-			case "allocator.c": "13385273c7c3d4a15785caa3095dd82d97bda8a026ebd9b6d54e2f531eb3b10e";
+			case "allocator.c": "77ca6241e529e789ed93089c95b6d0852052dbb75f0f878e93d77e07dae5bde6";
 			case "array.c": "4416e022efdcb4f9b60d4aef2f3c2886214f1baef6be4684e5432a825915ed29";
 			case "array_join.c": "b158708b62c7e407f9da21c24a1b3306d4b41baa6b63f2d8019f631a98008fde";
 			case "bytes.c": "10a4c6c17d1cedc31562fef6708fd54351e094ec4be631848d6348bb82ced46c";
@@ -895,13 +898,13 @@ class RuntimeFeatureCatalog {
 			case "date_time.c": "546e3f244d3187993254aca85dd4acfd64bd3c259b1531d736c950ce9de51b24";
 			case "dynamic.c": "804371b7eb2bfa6dbcb6598ff729754b312a2ba7b24a94a615915c30dee68503";
 			case "exception.c": "e6660d0b55b56be3cd436af8f0c16a7668b70f7e82031687a5a149e029c12741";
-			case "gc.c": "e15fbba1f99b7f951be64ffe5c54579218e06931d668692364872d56dfbeb64e";
+			case "gc.c": "f361e114a9182416deee356098cd3226a206d0f3de95183528163873e880017f";
 			case "io.c": "898b3f351b60a91f25fd1ffdfe8d832e95a5a6a738ffe226ac33581f1fcb5b0f";
 			case "int_map.c": "1b9a0cf4a376e2c2afe7cb79457f50557d50274e8187239e9e4ae80a5a8108cf";
 			case "iterator.c": "a4f3da3f7e3a3fb5ad2f24497b00d77eae1b11c600167b8f5553b656623dba6b";
 			case "object.c": "0e7fc6a55b562eaaf03fe63eca743dd73248f0bee1c09e21b79464917e8c89c0";
 			case "status.c": "0695ab2528db6e29d5cf29d905ad736b7c1a3a79333082347ec18faea2d4e6d8";
-			case "string.c": "07fb06813ca533677bf00f8580f874bd3c05a41a5bd1b647f45598b0d3e3c8c1";
+			case "string.c": "9b7ceeb92fa7689df6f3fbb414a8429552176683e3f5fb11c36a1494d95372f6";
 			case "string_lower_case.c": "55a692cfd855f71f1a1fa4f90f311f1653ec0638797ecfb024764e23a66680c8";
 			case "string_float.c": "60e5189e7f7304ccbc1f69136b7393e4eea35760cde590853ebced414bf39267";
 			case "string_map.c": "c637ffdce4e990fe7436f88e7445376722ee0b28dec10cf57db860a5120706e9";

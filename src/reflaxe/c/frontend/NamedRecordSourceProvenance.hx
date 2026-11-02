@@ -58,8 +58,10 @@ class NamedRecordSourceProvenance {
 		typedefs must find an exact content-keyed record captured by an earlier
 		request in this Haxe process. A missing record fails before HxcIR is built
 		instead of silently attaching a plausible but wrong source location.
+		An optional digest owner can reuse hashing after this plan reads equal bytes;
+		it cannot replace the plan's own file checks or snapshots.
 	**/
-	public static function plan(declarations:Array<TypedAstDeclaration>):NamedRecordSourcePlan {
+	public static function plan(declarations:Array<TypedAstDeclaration>, ?contentDigests:SourceContentDigest):NamedRecordSourcePlan {
 		final records:Map<String, Map<String, Position>> = [];
 		final sourcesByPath:Map<String, NamedRecordSourceInput> = [];
 		final defineDigest = currentDefineDigest();
@@ -69,7 +71,7 @@ class NamedRecordSourceProvenance {
 					final definition = reference.get();
 					final anonymous = directAnonymous(definition.type);
 					if (anonymous != null && hasClosedFieldSet(anonymous)) {
-						records.set(declaration.path, resolveRecord(declaration.path, definition.pos, anonymous, defineDigest, sourcesByPath));
+						records.set(declaration.path, resolveRecord(declaration.path, definition.pos, anonymous, defineDigest, sourcesByPath, contentDigests));
 					}
 				case TClassDecl(_) | TEnumDecl(_) | TAbstract(_):
 			}
@@ -86,12 +88,13 @@ class NamedRecordSourceProvenance {
 		source rule rather than falling back to Haxe's possibly mutated field
 		position.
 	**/
-	public static function planRecord(declarationPath:String, definitionPosition:Position, anonymous:Ref<AnonType>):NamedRecordSourcePlan {
+	public static function planRecord(declarationPath:String, definitionPosition:Position, anonymous:Ref<AnonType>,
+			?contentDigests:SourceContentDigest):NamedRecordSourcePlan {
 		if (!hasClosedFieldSet(anonymous)) {
 			throw new NamedRecordSourceProvenanceError('Named record `$declarationPath` does not have a closed field set.', definitionPosition);
 		}
 		final records:Map<String, Map<String, Position>> = [];
-		records.set(declarationPath, resolveRecord(declarationPath, definitionPosition, anonymous, currentDefineDigest(), []));
+		records.set(declarationPath, resolveRecord(declarationPath, definitionPosition, anonymous, currentDefineDigest(), [], contentDigests));
 		return new NamedRecordSourcePlan(records);
 	}
 
@@ -105,14 +108,14 @@ class NamedRecordSourceProvenance {
 		fails before semantic lowering rather than guessing from a use site.
 	**/
 	static function resolveRecord(declarationPath:String, definitionPosition:Position, anonymous:Ref<AnonType>, defineDigest:String,
-			sourcesByPath:Map<String, NamedRecordSourceInput>):Map<String, Position> {
+			sourcesByPath:Map<String, NamedRecordSourceInput>, contentDigests:Null<SourceContentDigest>):Map<String, Position> {
 		final definitionInfo = Context.getPosInfos(definitionPosition);
 		final fields = anonymous.get().fields.copy();
 		fields.sort((left, right) -> compareStrings(left.name, right.name));
 		final authoritative = hasOnlyDeclarationFields(fields, definitionInfo);
 		if (authoritative) {
 			final result = currentPositions(fields);
-			final source = readSource(definitionInfo.file, sourcesByPath);
+			final source = readSource(definitionInfo.file, sourcesByPath, contentDigests);
 			if (source != null) {
 				validateOffsets(declarationPath, definitionInfo.min, definitionInfo.max, fields, source.bytes.length, definitionPosition);
 				final key = cacheKey(declarationPath, source.digest, defineDigest);
@@ -128,7 +131,7 @@ class NamedRecordSourceProvenance {
 			return result;
 		}
 
-		final source = readSource(definitionInfo.file, sourcesByPath);
+		final source = readSource(definitionInfo.file, sourcesByPath, contentDigests);
 		if (source == null) {
 			throw new NamedRecordSourceProvenanceError('Cannot recover declaration positions for named record `$declarationPath`: Haxe reused the type with use-site positions, '
 				+ 'and `${definitionInfo.file}` is not a readable source file. Start a fresh Haxe compiler process for this build.',
@@ -209,7 +212,8 @@ class NamedRecordSourceProvenance {
 		use the same bytes even if an editor saves the file during compilation.
 		The map itself ends with this compiler request.
 	**/
-	static function readSource(rawPath:String, sourcesByPath:Map<String, NamedRecordSourceInput>):Null<NamedRecordSourceInput> {
+	static function readSource(rawPath:String, sourcesByPath:Map<String, NamedRecordSourceInput>,
+			contentDigests:Null<SourceContentDigest>):Null<NamedRecordSourceInput> {
 		var path = Path.normalize(rawPath);
 		if (!Path.isAbsolute(path)) {
 			path = Path.join([Sys.getCwd(), path]);
@@ -222,7 +226,7 @@ class NamedRecordSourceProvenance {
 			return null;
 		}
 		final bytes = File.getBytes(path);
-		final source:NamedRecordSourceInput = {bytes: bytes, digest: sha256Hex(bytes)};
+		final source:NamedRecordSourceInput = {bytes: bytes, digest: contentDigests == null ? sha256Hex(bytes) : contentDigests.digest(path, bytes)};
 		sourcesByPath.set(path, source);
 		return source;
 	}

@@ -308,10 +308,10 @@ def dependency_snapshot(
     return records
 
 
-def _current_dependencies(
+def _dependency_paths(
     stored: object,
     roots: Sequence[DependencyRoot],
-) -> list[dict[str, object]]:
+) -> tuple[Path, ...]:
     if not isinstance(stored, list):
         raise NativeCacheFailure("object dependency inventory is malformed")
     root_by_name = {
@@ -343,7 +343,14 @@ def _current_dependencies(
                 break
         if not matched:
             raise NativeCacheFailure(f"unknown dependency root in {logical}")
-    return dependency_snapshot(dependencies, roots)
+    return tuple(dependencies)
+
+
+def _current_dependencies(
+    stored: object,
+    roots: Sequence[DependencyRoot],
+) -> list[dict[str, object]]:
+    return dependency_snapshot(_dependency_paths(stored, roots), roots)
 
 
 def _load_json(path: Path, label: str) -> dict[str, object]:
@@ -393,6 +400,131 @@ def _atomic_copy(source: Path, target: Path) -> None:
         temporary.unlink(missing_ok=True)
 
 
+def _object_base_identity(
+    source: str, path: Path, compiler_facts: Mapping[str, object],
+    compile_flags: Sequence[str], include_inventory: Mapping[str, object],
+) -> dict[str, object]:
+    _logical(source, "generated source")
+    _real_file(path, f"generated source {source}")
+    return {
+        "schemaVersion": NATIVE_SCHEMA_VERSION,
+        "source": source,
+        "sourceBytes": path.stat().st_size,
+        "sourceSha256": sha256_file(path),
+        "compiler": dict(compiler_facts),
+        "compileFlags": list(compile_flags),
+        "includeInventory": dict(include_inventory),
+    }
+
+
+@dataclass(frozen=True)
+class NativeBuildPins:
+    """Current files proven equal to the metadata of the selected linked objects.
+
+    This is evidence for one build, not another cache. Keep opt-in retained object
+    transactions until their variant output is removed. Include names remain an
+    input too: a newly added header can shadow an unchanged recorded dependency.
+    """
+
+    sources: tuple[tuple[str, Path], ...]
+    flags: tuple[str, ...]
+    compiler: Path
+    objects: tuple[NativeObject, ...]
+    pins: tuple[tuple[Path, str], ...]
+    include_roots: tuple[IncludeRoot, ...]
+    include_inventory_sha256: str
+    environment: tuple[tuple[str, str], ...]
+    source_dependencies: tuple[tuple[str, tuple[Path, ...]], ...]
+
+    def verify(self) -> None:
+        """Recheck files and include resolution without invoking a compiler."""
+        try:
+            if tuple((key, os.environ[key]) for key in ENVIRONMENT_KEYS if key in os.environ) != self.environment:
+                raise NativeCacheFailure("native compiler environment changed")
+            if include_path_inventory(self.include_roots)["sha256"] != self.include_inventory_sha256:
+                raise NativeCacheFailure("native include inventory changed")
+            for path, expected in self.pins:
+                if sha256_file(_real_file(path, "native proof input")) != expected:
+                    raise NativeCacheFailure(f"native proof input changed: {path}")
+        except OSError as error:
+            raise NativeCacheFailure(f"cannot verify native build inputs: {error}") from error
+
+
+def verify_native_objects(
+    *, objects: Sequence[NativeObject], sources: Sequence[tuple[str, Path]],
+    compiler: str, compile_flags: Sequence[str], include_roots: Sequence[IncludeRoot],
+    dependency_roots: Sequence[DependencyRoot],
+) -> NativeBuildPins:
+    """Bind exact object selection to current source, flags, compiler and headers.
+
+    Read the same metadata in cache-on entries and retained cache-off transactions.
+    A matching key alone is insufficient: validate the metadata digest, recompute
+    the semantic key, compare the complete current base and dependency records,
+    and hash the selected object itself. No object is rebuilt or repaired here.
+    """
+    try:
+        selected = tuple((name, _real_file(path, "selected native source").resolve())
+                         for name, path in sources)
+        items = tuple(objects)
+        if (not selected or len(items) != len(selected)
+                or tuple(item.source for item in items) != tuple(name for name, _ in selected)
+                or len({name for name, _ in selected}) != len(selected)
+                or len({path for _, path in selected}) != len(selected)):
+            raise NativeCacheFailure("selected native objects differ from ordered source plan")
+        facts = compiler_identity(compiler)
+        inventory = include_path_inventory(include_roots)
+        pins: dict[Path, str] = {}
+        source_dependencies: list[tuple[str, tuple[Path, ...]]] = []
+
+        def pin(path: Path, expected: str) -> None:
+            path = _real_file(path, "native proof input").resolve()
+            if path in pins and pins[path] != expected:
+                raise NativeCacheFailure("inconsistent shared native input")
+            if sha256_file(_real_file(path, "native proof input")) != expected:
+                raise NativeCacheFailure(f"native proof input changed: {path}")
+            pins[path] = expected
+
+        native_compiler = Path(str(facts["path"])).resolve()
+        pin(native_compiler, str(facts["sha256"]))
+        pin(Path(__file__), sha256_file(Path(__file__)))
+        for (name, path), item in zip(selected, items):
+            metadata_path = item.path.parent / "metadata.json"
+            pin(metadata_path, sha256_file(_real_file(metadata_path, "native object metadata")))
+            metadata = _load_json(metadata_path, "native object metadata")
+            base = _object_base_identity(name, path, facts, compile_flags, inventory)
+            semantic = {key: metadata.get(key) for key in
+                        ("schemaVersion", "kind", "base", "dependencies", "objectSha256")}
+            if (metadata.get("schemaVersion") != NATIVE_SCHEMA_VERSION
+                    or metadata.get("kind") != OBJECT_KIND or metadata.get("base") != base
+                    or metadata.get("key") != item.key or canonical_digest(semantic) != item.key
+                    or metadata.get("objectSha256") != item.sha256):
+                raise NativeCacheFailure(f"native object metadata differs from build plan: {name}")
+            current = _current_dependencies(metadata.get("dependencies"), dependency_roots)
+            if current != metadata.get("dependencies"):
+                raise NativeCacheFailure(f"native dependencies changed after compilation: {name}")
+            dependencies = _dependency_paths(current, dependency_roots)
+            source_dependencies.append((name, tuple(dependency.resolve() for dependency in dependencies)))
+            if path not in {dependency.resolve() for dependency in dependencies}:
+                raise NativeCacheFailure("native dependencies omitted their source")
+            pin(path, str(base["sourceSha256"]))
+            pin(item.path, item.sha256)
+            # The snapshot just checked these exact paths and bytes. Retain the
+            # recorded digest rather than bless a second, possibly changed read.
+            for dependency, original in zip(dependencies, current):
+                pin(dependency, str(original["sha256"]))
+        flags = tuple(compile_flags) + tuple(
+            argument for root in include_roots for argument in ("-I", str(root.path))
+        )
+        result = NativeBuildPins(selected, flags, native_compiler, items, tuple(pins.items()),
+                                 tuple(include_roots), str(inventory["sha256"]),
+                                 tuple((key, facts["environment"][key]) for key in ENVIRONMENT_KEYS
+                                       if key in facts["environment"]), tuple(source_dependencies))
+        result.verify()
+        return result
+    except (OSError, ValueError, KeyError, TypeError) as error:
+        raise NativeCacheFailure(f"cannot verify selected native objects: {error}") from error
+
+
 class NativeCache:
     """Compile and link through one per-worktree immutable cache."""
 
@@ -423,17 +555,8 @@ class NativeCache:
             _real_directory(cache_root / name, f"native cache {name}", create=True)
 
     def _base_identity(self, source: str, path: Path) -> dict[str, object]:
-        _logical(source, "generated source")
-        _real_file(path, f"generated source {source}")
-        return {
-            "schemaVersion": NATIVE_SCHEMA_VERSION,
-            "source": source,
-            "sourceBytes": path.stat().st_size,
-            "sourceSha256": sha256_file(path),
-            "compiler": self.compiler_facts,
-            "compileFlags": list(self.compile_flags),
-            "includeInventory": self.include_inventory,
-        }
+        return _object_base_identity(source, path, self.compiler_facts,
+                                     self.compile_flags, self.include_inventory)
 
     def _lookup(self, base: Mapping[str, object]) -> NativeObject | None:
         if not self.enabled:
@@ -637,8 +760,14 @@ class NativeCache:
         output: Path,
         arguments_after_objects: Sequence[str],
         libraries: Sequence[tuple[str, Path]],
+        retain_objects: bool = False,
     ) -> bool:
-        """Reuse or publish one executable from an ordered, validated link plan."""
+        """Reuse or publish one executable from an ordered, validated link plan.
+
+        Opt-in coverage keeps cache-off object transactions as private evidence;
+        their variant output owner removes them with the output directory. Normal
+        cache-off builds still delete objects after a successful link.
+        """
 
         library_records = []
         for logical_name, path in libraries:
@@ -738,7 +867,8 @@ class NativeCache:
         _atomic_copy(executable, output)
         if not self.enabled:
             shutil.rmtree(transaction)
-            for item in objects:
-                if item.path.parent.parent == self.cache_root / "transactions":
-                    shutil.rmtree(item.path.parent, ignore_errors=True)
+            if not retain_objects:
+                for item in objects:
+                    if item.path.parent.parent == self.cache_root / "transactions":
+                        shutil.rmtree(item.path.parent, ignore_errors=True)
         return False

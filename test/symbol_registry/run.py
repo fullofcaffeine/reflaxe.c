@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import argparse
 import difflib
 import json
 import os
@@ -81,11 +82,11 @@ def development_tool(name: str) -> str:
     return str(local) if local.is_file() else name
 
 
-def render(label: str) -> tuple[str, dict[str, Any]]:
+def render(label: str, *, profile: bool = False) -> tuple[str, dict[str, Any]]:
     environment = os.environ.copy()
     environment["HAXE_NO_SERVER"] = "1"
     result = run_bounded_process(
-        [development_tool("haxe"), str(HXML)],
+        [development_tool("haxe"), str(HXML), *(["-D", "reflaxe_c_phase_timing"] if profile else [])],
         cwd=ROOT,
         env=environment,
         check=False,
@@ -381,8 +382,18 @@ def check_snapshot(report: dict[str, Any]) -> None:
 
 
 def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--profile-typing-only", action="store_true", help="compare ordinary and profile-defined Eval goldens without native compilation")
+    args = parser.parse_args()
     try:
         first_payload, first = render("first symbol registry render")
+        profiled_payload, profiled = render("profile-defined symbol registry render", profile=True)
+        if first_payload != profiled_payload or first != profiled:
+            raise SymbolRegistryFailure("profiling define changed the ordinary Eval symbol report")
+        check_snapshot(profiled)
+        if args.profile_typing_only:
+            print("symbol-registry-profile-typing: OK: exact ordinary/profiled Eval report and snapshot")
+            return 0
         second_payload, second = render("second symbol registry render")
         if first_payload != second_payload or first != second:
             raise SymbolRegistryFailure("two symbol registry renders were not byte-identical")

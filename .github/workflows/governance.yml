@@ -456,6 +456,68 @@ jobs:
           if-no-files-found: warn
           retention-days: 7
 
+      # Keep correctness instrumentation separate from the timing comparison.
+      # Run after a failed comparison too, so the existing whole-project guard
+      # cannot hide the evidence needed to resolve its measured boundary.
+      - name: Observe measured terrain runtime entries
+        if: ${{ !cancelled() }}
+        timeout-minutes: 10
+        shell: bash
+        run: |
+          python3 examples/caxecraft/play.py \
+            --raylib-configuration memory-software \
+            --pilot move-jump-edit \
+            --benchmark-renderer \
+            --observe-renderer-interval \
+            --optimization 2 \
+            --cc "${{ matrix.cc }}" \
+            --cxx "${{ matrix.cxx }}" \
+            --prebuilt-raylib-cache "$RUNNER_TEMP/raylib-headless-cache" \
+            --prebuilt-raylib-build "$RUNNER_TEMP/raylib-headless-build" \
+            --prebuilt-raylib-report "$RUNNER_TEMP/raylib-headless-report.json" \
+            --raygui-cache-root "$RUNNER_TEMP/raygui-headless-cache" \
+            --output-root "$RUNNER_TEMP/caxecraft-renderer-observation"
+
+      - name: Require portal rendering in the reloadable journey
+        if: ${{ !cancelled() }}
+        timeout-minutes: 10
+        shell: bash
+        run: |
+          python3 examples/caxecraft/play.py \
+            --raylib-configuration memory-software \
+            --pilot adventure-journey \
+            --observe-renderer-interval \
+            --optimization 2 \
+            --cc "${{ matrix.cc }}" \
+            --cxx "${{ matrix.cxx }}" \
+            --prebuilt-raylib-cache "$RUNNER_TEMP/raylib-headless-cache" \
+            --prebuilt-raylib-build "$RUNNER_TEMP/raylib-headless-build" \
+            --prebuilt-raylib-report "$RUNNER_TEMP/raylib-headless-report.json" \
+            --raygui-cache-root "$RUNNER_TEMP/raygui-headless-cache" \
+            --output-root "$RUNNER_TEMP/caxecraft-renderer-observation"
+
+      - name: Preserve terrain observer reports and screenshots
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: caxecraft-renderer-observation-${{ matrix.name }}
+          path: |
+            ${{ runner.temp }}/caxecraft-renderer-observation/variants/*/bin/caxecraft-pilot-report.json
+            ${{ runner.temp }}/caxecraft-renderer-observation/variants/*/bin/*.png
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Preserve generated terrain observer projects
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: caxecraft-renderer-observer-projects-${{ matrix.name }}
+          path: |
+            ${{ runner.temp }}/caxecraft-renderer-observation/variants/*/hxc-play-current-generation.json
+            ${{ runner.temp }}/caxecraft-renderer-observation/variants/*/generations/
+          if-no-files-found: warn
+          retention-days: 7
+
   raylib-desktop:
     name: Raylib 6.0 desktop (${{ matrix.name }})
     runs-on: ${{ matrix.os }}
@@ -585,7 +647,7 @@ jobs:
             --compile-only \
             --output-root "$RUNNER_TEMP/caxecraft-playable-c"
 
-      - name: Compile and link first Caxecraft playable at O0 and O2
+      - name: Compile cold Caxecraft and link at O0
         if: matrix.platform != 'windows'
         shell: bash
         run: |
@@ -608,6 +670,31 @@ jobs:
             --prebuilt-raylib-report "$raylib_report" \
             --raygui-cache-root "$raygui_cache" \
             --output-root "$RUNNER_TEMP/caxecraft-playable-o0"
+
+      # Capture O0 before the same variant's executable is replaced by O2.
+      # Native metadata binds each binary to object flags and library hashes.
+      - name: Preserve macOS Caxecraft O0 native evidence
+        if: matrix.platform == 'macos'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: caxecraft-native-o0-${{ matrix.name }}
+          path: |
+            ${{ runner.temp }}/caxecraft-playable-o0/variants/macos-split-interactive/bin
+            ${{ runner.temp }}/caxecraft-playable-o0/variants/macos-split-interactive/hxc-play-current-generation.json
+            ${{ runner.temp }}/caxecraft-playable-o0/variants/macos-split-interactive/generations
+            ${{ runner.temp }}/caxecraft-playable-o0/variants/macos-split-interactive/native-cache/**/metadata.json
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Link Caxecraft at O2 and run the Linux desktop pilot
+        if: matrix.platform != 'windows'
+        shell: bash
+        run: |
+          set -euo pipefail
+          raylib_cache="$RUNNER_TEMP/raylib-desktop-cache"
+          raylib_build="$RUNNER_TEMP/raylib-desktop-build"
+          raylib_report="$RUNNER_TEMP/raylib-desktop-report.json"
+          raygui_cache="$RUNNER_TEMP/raygui-desktop-cache"
           if [ "${{ matrix.platform }}" = linux ]; then
             # The O2 compile/link proof is also the graphical proof. This
             # title-screen pilot performs a real desktop resize, preserving
@@ -624,9 +711,8 @@ jobs:
                 --raygui-cache-root "$raygui_cache" \
                 --output-root "$RUNNER_TEMP/caxecraft-playable-o2"
           else
-            python3 examples/caxecraft/play.py \
-              --compile-only \
-              --output-root "$RUNNER_TEMP/caxecraft-playable-o2"
+            # Optimization changes native flags, not Haxe inputs. Revalidate
+            # the one cold generation through the existing build-only path.
             python3 examples/caxecraft/play.py \
               --build-only \
               --optimization 2 \
@@ -636,8 +722,21 @@ jobs:
               --prebuilt-raylib-build "$raylib_build" \
               --prebuilt-raylib-report "$raylib_report" \
               --raygui-cache-root "$raygui_cache" \
-              --output-root "$RUNNER_TEMP/caxecraft-playable-o2"
+              --output-root "$RUNNER_TEMP/caxecraft-playable-o0"
           fi
+
+      - name: Preserve macOS Caxecraft O2 native evidence
+        if: matrix.platform == 'macos'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: caxecraft-native-o2-${{ matrix.name }}
+          path: |
+            ${{ runner.temp }}/caxecraft-playable-o0/variants/macos-split-interactive/bin
+            ${{ runner.temp }}/caxecraft-playable-o0/variants/macos-split-interactive/hxc-play-current-generation.json
+            ${{ runner.temp }}/caxecraft-playable-o0/variants/macos-split-interactive/generations
+            ${{ runner.temp }}/caxecraft-playable-o0/variants/macos-split-interactive/native-cache/**/metadata.json
+          if-no-files-found: error
+          retention-days: 14
 
       - name: Preserve normalized Raylib desktop evidence
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2

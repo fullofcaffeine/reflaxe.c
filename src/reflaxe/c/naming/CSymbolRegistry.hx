@@ -330,7 +330,7 @@ class CSymbolRegistry {
 		final requestOrderingTimer = CPhaseTiming.startDetail(CDTSymbolRequestOrdering);
 		#end
 		final requests = [for (request in requestsByKey) request];
-		#if reflaxe_c_phase_timing
+		#if (reflaxe_c_phase_timing && (macro || reflaxe_runtime))
 		var primaryRequestSortComparisons = 0;
 		requests.sort((left, right) -> {
 			primaryRequestSortComparisons++;
@@ -407,7 +407,7 @@ class CSymbolRegistry {
 			final exactGroup = exactByCandidate.get(key);
 			return (generatedGroup == null ? 0 : generatedGroup.length) + (exactGroup == null ? 0 : exactGroup.length) >= 2;
 		});
-		#if reflaxe_c_phase_timing
+		#if (reflaxe_c_phase_timing && (macro || reflaxe_runtime))
 		var candidateSortComparisons = 0;
 		var candidateSortUtf8Encodings = 0;
 		var candidateSortUtf8CodeUnits = 0;
@@ -486,7 +486,7 @@ class CSymbolRegistry {
 				nextCandidateSet.set(nextCandidate, true);
 			}
 			candidateKeys = [for (key in nextCandidateSet.keys()) key];
-			#if reflaxe_c_phase_timing
+			#if (reflaxe_c_phase_timing && (macro || reflaxe_runtime))
 			candidateKeys.sort(compareCandidateKeys);
 			#else
 			candidateKeys.sort(compareUtf8);
@@ -503,7 +503,7 @@ class CSymbolRegistry {
 		CPhaseTiming.setCounter(CPCounterSymbolCollisionRounds, rounds);
 		CPhaseTiming.setCounter(CPCounterSymbolCollisionCandidatesRechecked, collisionCandidatesRechecked);
 		CPhaseTiming.setCounter(CPCounterSymbolCollisionStatesMoved, collisionStatesMoved);
-		#if reflaxe_c_phase_timing
+		#if (reflaxe_c_phase_timing && (macro || reflaxe_runtime))
 		CPhaseTiming.setCounter(CPCounterSymbolCandidateSortComparisons, candidateSortComparisons);
 		CPhaseTiming.setCounter(CPCounterSymbolCandidateSortUtf8Encodings, candidateSortUtf8Encodings);
 		CPhaseTiming.setCounter(CPCounterSymbolCandidateSortUtf8CodeUnits, candidateSortUtf8CodeUnits);
@@ -540,7 +540,7 @@ class CSymbolRegistry {
 				[request.sourceSymbol()]);
 			assigned.push(item);
 		}
-		#if reflaxe_c_phase_timing
+		#if (reflaxe_c_phase_timing && (macro || reflaxe_runtime))
 		CPhaseTiming.setCounter(CPCounterSymbolAssignedSortComparisons, 0);
 		CPhaseTiming.setCounter(CPCounterSymbolTableRecords, assigned.length);
 		#end
@@ -607,7 +607,7 @@ class CSymbolRegistry {
 		finalizedSnapshot = prior.snapshot;
 		request.staged = prior;
 		request.hits++;
-		#if reflaxe_c_phase_timing
+		#if (reflaxe_c_phase_timing && (macro || reflaxe_runtime))
 		// Keep the profile's counter inventory stable while reporting that the
 		// corresponding algorithms performed no work on this exact cache hit.
 		CPhaseTiming.setCounter(CPCounterSymbolAssignedSortComparisons, 0);

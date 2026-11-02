@@ -2593,7 +2593,7 @@ def create_transient_fixture(test_case: HaxeCTestCase) -> Path | None:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("case", choices=tuple(sorted((*CASES, *EVAL_CASES))))
+    parser.add_argument("case", choices=tuple(sorted((*CASES, *EVAL_CASES, "renderer-interval"))))
     parser.add_argument(
         "--cc",
         help="explicit C compiler command or path; the default keeps the focused local lane fast",
@@ -2609,6 +2609,21 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> int:
     args = parse_args()
+    if args.case == "renderer-interval":
+        # Native hooks observe C runtime calls; this boundary has no Eval path.
+        from renderer_interval_test import run_renderer_interval_tests
+
+        try:
+            run_renderer_interval_tests(args.cc, args.layout)
+        except (RuntimeError, HaxeServerFailure, OSError, UnicodeError, ValueError,
+                subprocess.TimeoutExpired) as error:
+            print(f"caxecraft-renderer-interval: ERROR: {error}", file=sys.stderr)
+            return 1
+        print(
+            "caxecraft-renderer-interval: OK: Haxe observer imports and exact UInt64 reports; "
+            "O0/O2 and ASan/UBSan; native-only correctness"
+        )
+        return 0
     if args.case in EVAL_CASES:
         test_case = EVAL_CASES[args.case]
         try:

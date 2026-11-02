@@ -912,6 +912,32 @@ def check_interface_determinism(*, connect: str) -> RenderedProject:
     return first
 
 
+def check_catalog_selection(*, connect: str | None = None) -> None:
+    """Check incremental discovery through the real public catalog without C emission."""
+    command = [development_tool("haxe")]
+    if connect is not None:
+        command.extend(["--connect", connect])
+    command.extend(
+        [
+            "-lib", "reflaxe.c",
+            "-cp", str(CASE),
+            "-cp", str(FIXTURES / "catalog"),
+            "-main", "CatalogSubject",
+            "--macro", "CatalogSelectionProbe.run()",
+            "--no-output",
+        ]
+    )
+    result = run_bounded_process(
+        command, cwd=ROOT, env=haxe_environment(connect=connect),
+        check=False, capture_output=True, text=True, timeout=30,
+    )
+    if result.returncode != 0 or result.stdout != "CATALOG_SELECTION_OK\n" or result.stderr:
+        raise VirtualDispatchFailure(
+            "incremental catalog selection contract failed\n"
+            f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
+        )
+
+
 def check_interface_eval(*, connect: str) -> None:
     """Run the same child-interface program on Haxe's Eval reference target."""
 
@@ -1350,6 +1376,7 @@ def parse_args(arguments: Iterable[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--toolchain", choices=("auto", "gcc", "clang"), default="auto")
     parser.add_argument("--native-only", action="store_true")
+    parser.add_argument("--catalog-only", action="store_true")
     return parser.parse_args(list(arguments))
 
 
@@ -1357,6 +1384,10 @@ def main(arguments: Iterable[str] = ()) -> int:
     args = parse_args(arguments)
     try:
         validate_schema_document()
+        if args.catalog_only:
+            check_catalog_selection()
+            print("virtual-dispatch: OK: incremental catalog selection passed")
+            return 0
         if args.native_only:
             check_native(snapshot_project(), requested_toolchain=args.toolchain)
             check_interface_native(
@@ -1365,6 +1396,7 @@ def main(arguments: Iterable[str] = ()) -> int:
             print("virtual-dispatch: OK: required class/interface native matrix passed")
             return 0
         with haxe_server() as endpoint:
+            check_catalog_selection(connect=endpoint)
             check_interface_eval(connect=endpoint)
             project = check_determinism_and_policy(connect=endpoint)
             interface_project = check_interface_determinism(connect=endpoint)

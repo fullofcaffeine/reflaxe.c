@@ -125,6 +125,91 @@ class LocalGateEvidenceTests(unittest.TestCase):
             )
         return result, process
 
+    def test_background_owner_cli_is_explicit(self) -> None:
+        self.assertFalse(self.runner.parser().parse_args([self.script]).background_owner)
+        self.assertTrue(self.runner.parser().parse_args(["--background-owner", self.script]).background_owner)
+
+    def test_background_owner_prefix_preserves_command_and_environment(self) -> None:
+        selected = {"PATH": "/owned/tools", "HXC_MODE": "portable"}
+        for platform, expected in (
+            ("darwin", ["/owned/taskpolicy", "-b", "/owned/nice", "-n", "10"]),
+            ("linux", ["/owned/nice", "-n", "10"]),
+        ):
+            with self.subTest(platform=platform), mock.patch.object(self.runner.sys, "platform", platform), mock.patch.object(
+                self.runner.shutil, "which", side_effect=lambda name, **kw: "/owned/" + name
+            ) as lookup, mock.patch.object(self.runner.subprocess, "run", return_value=subprocess.CompletedProcess([], 0)) as process:
+                self.runner.execute_package_owner(self.script, selected, background_owner=True)
+                self.assertEqual(process.call_args.args[0], expected + ["npm", "run", self.script])
+                self.assertEqual(process.call_args.kwargs["env"], selected)
+                self.assertEqual(process.call_args.kwargs["cwd"], self.runner.ROOT)
+                for call in lookup.call_args_list:
+                    self.assertEqual(call.kwargs, {"path": selected["PATH"]})
+        with mock.patch.object(self.runner.subprocess, "run", return_value=subprocess.CompletedProcess([], 0)) as process:
+            self.runner.execute_package_owner(self.script, selected)
+            self.assertEqual(process.call_args.args[0], ["npm", "run", self.script])
+
+    def test_background_owner_identity_and_receipt_hit_stay_outside_launch(self) -> None:
+        events = []
+        baseline = self.inputs()
+        def collect(*args):
+            events.append("identity")
+            return baseline
+        def execute(*args, **kwargs):
+            events.append("owner")
+            self.assertTrue(kwargs["background_owner"])
+            return 0, 1
+        with mock.patch.object(self.runner, "load_scripts", return_value={self.script: self.command}), mock.patch.object(
+            self.runner, "collect_inputs", side_effect=collect
+        ), mock.patch.object(self.runner, "execute_package_owner", side_effect=execute) as launch:
+            options = dict(cold=False, evidence_dir=self.evidence_dir, environment=self.environment, now=100, background_owner=True)
+            self.assertEqual(self.runner.run_owner(self.script, hook_mode=False, **options), 0)
+            self.assertEqual(events, ["identity", "owner", "identity"])
+            events.clear()
+            self.assertEqual(self.runner.run_owner(self.script, hook_mode=True, **options), 0)
+            self.assertEqual(events, ["identity"])
+            self.assertEqual(launch.call_count, 1)
+
+    def test_background_owner_cold_fallback_and_failure_do_not_publish(self) -> None:
+        baseline = self.inputs()
+        with mock.patch.object(self.runner, "load_scripts", return_value={self.script: self.command}), mock.patch.object(
+            self.runner, "collect_inputs", return_value=baseline
+        ), mock.patch.object(self.runner, "execute_package_owner", return_value=(1, 1)) as launch:
+            options = dict(hook_mode=False, evidence_dir=self.evidence_dir, environment=self.environment, background_owner=True)
+            self.assertEqual(self.runner.run_owner(self.script, cold=False, **options), 1)
+            self.assertFalse(self.runner.owner_record_path(self.evidence_dir, self.script).exists())
+            self.assertEqual(self.runner.run_owner(self.script, cold=True, **options), 1)
+            with mock.patch.object(self.runner, "prepare_evidence_directory", side_effect=self.runner.LocalGateFailure("fixture")):
+                self.assertEqual(self.runner.run_owner(self.script, cold=True, **options), 1)
+            with mock.patch.object(self.runner, "script_is_reusable", return_value=False):
+                self.assertEqual(self.runner.run_owner(self.script, cold=False, **options), 1)
+            self.assertEqual(launch.call_count, 4)
+            self.assertTrue(all(call.kwargs["background_owner"] for call in launch.call_args_list))
+
+    def test_background_owner_missing_scheduler_fails_closed(self) -> None:
+        with mock.patch.object(self.runner.shutil, "which", return_value=None), mock.patch.object(self.runner.subprocess, "run") as process:
+            with self.assertRaises(self.runner.LocalGateFailure):
+                self.runner.execute_package_owner(self.script, self.environment, background_owner=True)
+            process.assert_not_called()
+
+    @unittest.skipUnless(hasattr(os, "getpriority") and shutil.which("nice"), "requires POSIX priority observation")
+    def test_background_owner_real_child_leaves_parent_priority_unchanged(self) -> None:
+        parent_priority = os.getpriority(os.PRIO_PROCESS, 0)
+        tools = self.temporary_root / "priority-tools"
+        tools.mkdir()
+        report = self.temporary_root / "priority.json"
+        npm = tools / "npm"
+        npm.write_text("#!" + sys.executable + "\nimport json,os,sys\nfrom pathlib import Path\n"
+                       "Path(os.environ['PRIORITY_REPORT']).write_text(json.dumps({'nice':os.getpriority(os.PRIO_PROCESS,0),'argv':sys.argv[1:]}))\n")
+        npm.chmod(0o755)
+        environment = {**os.environ, "PATH": str(tools) + os.pathsep + os.environ["PATH"], "PRIORITY_REPORT": str(report)}
+        with mock.patch.object(self.runner, "ROOT", self.temporary_root):
+            result, _ = self.runner.execute_package_owner(self.script, environment, background_owner=True)
+        self.assertEqual(result, 0)
+        observed = json.loads(report.read_text())
+        self.assertGreaterEqual(observed["nice"], 10)
+        self.assertEqual(observed["argv"], ["run", self.script])
+        self.assertEqual(os.getpriority(os.PRIO_PROCESS, 0), parent_priority)
+
     def test_every_input_family_invalidates_reuse(self) -> None:
         baseline = self.inputs()
         record = self.record(baseline)
@@ -412,8 +497,7 @@ class LocalGateEvidenceTests(unittest.TestCase):
 
         direct_command = ["npm", "run", "--silent", "test:local-gate", "--", "test:all-sources"]
         hook_command = ["git", "commit", "--allow-empty", "-m", "fixture"]
-        if sys.platform == "darwin" and shutil.which("taskpolicy") and shutil.which("nice"):
-            hook_command = ["taskpolicy", "-b", "nice", "-n", "10", *hook_command]
+        # This lightweight transport fixture preserves caller priority; owner scheduling has separate tests.
         direct = observe(direct_command, environment)
         self.assertEqual(direct, observe(hook_command, environment))
         self.assertEqual(direct["tool"]["environment"], {})
@@ -717,7 +801,7 @@ class LocalGateEvidenceTests(unittest.TestCase):
 
         partial_index = self.temporary_root / "partial-index"
 
-        def observed_execute(_script: str, environment: dict[str, str]):
+        def observed_execute(_script: str, environment: dict[str, str], *, background_owner: bool = False):
             self.assertEqual(events, ["lock-enter"])
             self.assertEqual(environment["GIT_INDEX_FILE"], str(partial_index))
             events.append("execute")

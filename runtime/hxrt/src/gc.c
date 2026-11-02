@@ -9,6 +9,21 @@
  */
 #include "hxrt/gc.h"
 
+/* Optional correctness-test API-entry observation; default builds have no
+ * observer calls or state. Overrides must not allocate, reenter hxrt, or alter
+ * arguments/results. Root events are attempts, not successful links/unlinks.
+ * Collection observation precedes even the optional clock callback.
+ */
+#ifndef HXC_RUNTIME_COLLECT_ATTEMPT
+#define HXC_RUNTIME_COLLECT_ATTEMPT() ((void)0)
+#endif
+#ifndef HXC_RUNTIME_ROOT_PUSH_ATTEMPT
+#define HXC_RUNTIME_ROOT_PUSH_ATTEMPT() ((void)0)
+#endif
+#ifndef HXC_RUNTIME_ROOT_POP_ATTEMPT
+#define HXC_RUNTIME_ROOT_POP_ATTEMPT() ((void)0)
+#endif
+
 struct hxc_gc_allocation {
   hxc_gc_allocation *next;
   hxc_gc_allocation *mark_next;
@@ -641,6 +656,7 @@ hxc_status hxc_gc_allocate(
 }
 
 hxc_status hxc_gc_collect(hxc_gc *gc) {
+  HXC_RUNTIME_COLLECT_ATTEMPT();
   hxc_gc_mark_context context;
   hxc_gc_allocation **link;
   hxc_status status;
@@ -792,6 +808,7 @@ hxc_status hxc_gc_root_frame_push(
   size_t slot_count,
   hxc_gc_root_frame *frame
 ) {
+  HXC_RUNTIME_ROOT_PUSH_ATTEMPT();
   if (
     thread == NULL
     || !thread->registered
@@ -818,6 +835,7 @@ hxc_status hxc_gc_root_frame_push(
 }
 
 hxc_status hxc_gc_root_frame_pop(hxc_gc_root_frame *frame) {
+  HXC_RUNTIME_ROOT_POP_ATTEMPT();
   hxc_gc_thread *thread;
   if (
     frame == NULL

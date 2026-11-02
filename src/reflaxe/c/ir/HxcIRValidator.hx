@@ -5112,6 +5112,10 @@ private class HxcIRValidationState {
 				final argument = argumentTypes.length == 1 ? argumentTypes[0] : null;
 				if (argument == null || typeKey(argument) != typeKey(IRTInt(32, true)) || call.returnType != IRTManagedString)
 					add(path, "Std.string(Int) requires one Haxe Int and returns a managed String", source);
+			case "from-uint64":
+				final argument = argumentTypes.length == 1 ? argumentTypes[0] : null;
+				if (argument == null || typeKey(argument) != typeKey(IRTInt(64, false)) || call.returnType != IRTManagedString)
+					add(path, "Std.string(c.UInt64) requires one unsigned 64-bit integer and returns a managed String", source);
 			case "concat":
 				if (argumentTypes.length != 2
 					|| argumentTypes[0] != IRTManagedString

@@ -102,6 +102,7 @@ SHARDS: dict[str, tuple[str, ...]] = {
         "test:project-layout",
     ),
     "caxecraft": (
+        "test:caxecraft-renderer-interval",
         "test:caxecraft-content-json",
         "test:caxecraft-runtime-schemas",
         "test:caxecraft-actor-composition",

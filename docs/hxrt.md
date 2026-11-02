@@ -803,14 +803,17 @@ See [string runtime](string-runtime.md) and
 ### `string`
 
 Compiler-selectable owned UTF-8 construction, reference-counted aliases,
-builders, lossy decoding, locale-independent signed 32-bit decimal formatting,
+builders, lossy decoding, locale-independent signed 32-bit and unsigned 64-bit decimal formatting,
 and explicit CString conversion above `string-scalar`. A direct native call can
 borrow already terminated text or receive one temporary terminated copy for an
 interior view; generated code disposes that copy as soon as the call returns.
 The integer formatter
 is selected by the `from-int` HxcIR root used for `Std.string(Int)` and integer
 interpolation; it preserves the existing allocator, failure-atomic output, and
-owned String lifetime contracts. Literal emission, `Std.string(Bool)`,
+owned String lifetime contracts. The `from-uint64` root provides the same ownership
+and failure behavior for `c.UInt64` through `Std.string`, `Sys.println`, and
+interpolation. It preserves every digit through `18446744073709551615` without
+converting the value to Haxe Int or Float. Literal emission, `Std.string(Bool)`,
 `Std.string(String)`, and allocation-free scalar operations do not select it.
 `Std.string` with a String input reuses the input carrier and its ownership
 plan. This operation is an identity, not an `hxrt` call. See

@@ -782,6 +782,47 @@ static int hxc_test_reference_owned_strings(
   );
   HXC_TEST_CHECK(hxc_string_release(&integer) == HXC_STATUS_OK);
 
+  {
+    static const uint64_t values[] = {
+      UINT64_C(0), UINT64_C(4294967297), UINT64_MAX
+    };
+    static const char *const spellings[] = {
+      "0", "4294967297", "18446744073709551615"
+    };
+    static const size_t lengths[] = { 1u, 10u, 20u };
+    size_t index;
+    for (index = 0u; index < sizeof(values) / sizeof(values[0]); index++) {
+      allocations = arena->allocation_count;
+      releases = arena->release_count;
+      HXC_TEST_CHECK(
+        hxc_string_from_uint64(values[index], allocator, &integer) == HXC_STATUS_OK
+      );
+      HXC_TEST_CHECK(integer.byte_length == lengths[index]);
+      HXC_TEST_CHECK(hxc_bytes_equal(
+        integer.data, (const uint8_t *)spellings[index], lengths[index]
+      ));
+      HXC_TEST_CHECK(integer.has_trailing_nul);
+      HXC_TEST_CHECK(integer.data[integer.byte_length] == UINT8_C(0));
+      HXC_TEST_CHECK(arena->allocation_count == allocations + 2u);
+      HXC_TEST_CHECK(hxc_string_release(&integer) == HXC_STATUS_OK);
+      HXC_TEST_CHECK(arena->release_count == releases + 2u);
+    }
+    /* Fail each allocation independently; a failed data allocation releases its owner. */
+    for (index = 0u; index < 2u; index++) {
+      allocations = arena->allocation_count;
+      releases = arena->release_count;
+      arena->bounded_failure = true;
+      arena->allocations_before_failure = index;
+      HXC_TEST_CHECK(
+        hxc_string_from_uint64(UINT64_MAX, allocator, &failed) == HXC_STATUS_OUT_OF_MEMORY
+      );
+      arena->bounded_failure = false;
+      HXC_TEST_CHECK(failed.data == NULL && failed.owner == NULL && failed.byte_length == 0u);
+      HXC_TEST_CHECK(arena->allocation_count == allocations + index);
+      HXC_TEST_CHECK(arena->release_count == releases + index);
+    }
+  }
+
   arena->force_failure = true;
   HXC_TEST_CHECK(
     hxc_string_from_scalar(65, allocator, &failed) == HXC_STATUS_OUT_OF_MEMORY

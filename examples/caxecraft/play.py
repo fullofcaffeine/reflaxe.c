@@ -35,6 +35,10 @@ from scripts.test.compiler_progress import (  # noqa: E402
     compiler_process_detail,
     compiler_timeout_suffix,
 )
+from renderer_interval import IntervalEvidenceFailure, parse_interval_evidence  # noqa: E402
+from renderer_call_coverage import CoverageFailure  # noqa: E402
+from renderer_native_contract import NativeContractFailure, NativeTerrainContract  # noqa: E402
+from renderer_build_coverage import TerrainBuildCoverage  # noqa: E402
 from dev_build_state import (  # noqa: E402
     BuildStateFailure,
     ExternalFile,
@@ -2084,6 +2088,7 @@ def play_request_snapshot(
         "raylibConfiguration": args.raylib_configuration,
         "renderer": args.renderer,
         "benchmarkRenderer": args.benchmark_renderer,
+        "observeRendererInterval": getattr(args, "observe_renderer_interval", False),
         "pilot": selected_pilot,
         "optimization": args.optimization,
         "sanitizers": args.sanitizers,
@@ -2274,6 +2279,18 @@ def validated_relative(value: str, label: str) -> PurePosixPath:
     return path
 
 
+def validate_terrain_observation(*, pilot: str | None, benchmark_renderer: bool,
+                                 raylib_configuration: str, agent_session: bool = False) -> None:
+    """Admit only the fixed benchmark or a bounded reloadable journey observer."""
+    if (agent_session or raylib_configuration != "memory-software"
+            or (benchmark_renderer and pilot != "move-jump-edit")
+            or (not benchmark_renderer and pilot != "adventure-journey")):
+        raise PlayFailure(
+            "terrain observation requires memory-software and either the move-jump-edit "
+            "benchmark or a bounded adventure-journey without benchmark timing"
+        )
+
+
 def compile_haxe(
     generated: Path,
     *,
@@ -2284,6 +2301,7 @@ def compile_haxe(
     pilot: str | None = None,
     renderer: str = "chunk-cache",
     benchmark_renderer: bool = False,
+    observe_renderer_interval: bool = False,
     server_lease: HaxeServerLease | None = None,
     server_owner: OwnedHaxeServer | None = None,
     haxe_timeout_seconds: int = 120,
@@ -2319,6 +2337,10 @@ def compile_haxe(
         raise PlayFailure(f"unknown Caxecraft renderer {renderer!r}")
     if benchmark_renderer:
         arguments.extend(["-D", "caxecraft_render_benchmark"])
+    if observe_renderer_interval:
+        validate_terrain_observation(pilot=pilot, benchmark_renderer=benchmark_renderer,
+                                     raylib_configuration=raylib_configuration)
+        arguments.extend(["-D", "caxecraft_observe_terrain"])
     if pilot is not None:
         arguments.extend(
             ["-D", "caxecraft_pilot", "-D", pilot_metadata(pilot).haxe_define]
@@ -3144,11 +3166,14 @@ def provision_raylib(
             or state.get("raylibCommit") != provision.PINNED_COMMIT
             or state.get("librarySha256") != provision.sha256_file(library)
             or not isinstance(provisioning_report, dict)
-            or provisioning_report.get("configuration", {}).get("id") != raylib_configuration
-            or provision.patch_report_identity(provisioning_report) != expected_patches
             or not include_directory.is_dir()
         ):
             raise PlayFailure("cached Raylib build does not match its verified state; use --rebuild-raylib")
+        provision.verify_source_build_receipt(
+            lock=lock, report=provisioning_report, authority=authority,
+            platform_name=platform_name, configuration=raylib_configuration,
+            effective_source_root=include_directory.parent, library_file=library,
+        )
         return include_directory, library
 
     if build_root.exists():
@@ -3278,11 +3303,6 @@ def resolve_prebuilt_raylib(
     report = integration_report.get("provision")
     if not isinstance(report, dict):
         raise PlayFailure("prebuilt Raylib integration report omitted its provisioning record")
-    target = report.get("target")
-    configuration = report.get("configuration")
-    outputs = report.get("outputs")
-    claims = report.get("claims")
-    library_report = outputs.get("library") if isinstance(outputs, dict) else None
     expected_patches = provision.patch_lock_identity(
         lock, platform_name, raylib_configuration
     )
@@ -3291,55 +3311,50 @@ def resolve_prebuilt_raylib(
         if expected_patches
         else source_root / "src"
     )
-    if (
-        report.get("authority") != "pinned-source"
-        or not isinstance(target, dict)
-        or target.get("platform") != platform_name
-        or not isinstance(configuration, dict)
-        or configuration.get("id") != raylib_configuration
-        or not isinstance(claims, dict)
-        or claims.get("raylibBuilt") is not True
-        or not isinstance(library_report, dict)
-        or library_report.get("sha256") != provision.sha256_file(library)
-        or provision.patch_report_identity(report) != expected_patches
-        or not include_directory.is_dir()
-    ):
+    if not include_directory.is_dir():
         raise PlayFailure(
             "prebuilt Raylib inputs do not match the pinned "
             f"{raylib_configuration} provisioning report"
         )
+    provision.verify_source_build_receipt(
+        lock=lock, report=report, authority="pinned-source",
+        platform_name=platform_name, configuration=raylib_configuration,
+        effective_source_root=include_directory.parent, library_file=library,
+    )
     return include_directory, library
 
 
-def compile_native(
+@dataclass(frozen=True)
+class NativeCompilePlan:
+    """Ordered native inputs shared by compilation and future source inspection.
+
+    This value preserves the manifest's translation-unit and include order. It
+    describes compilation only; library admission and linking remain separate.
+    """
+
+    sources: tuple[tuple[str, Path], ...]
+    include_roots: tuple[IncludeRoot, ...]
+    dependency_roots: tuple[DependencyRoot, ...]
+    compile_flags: tuple[str, ...]
+
+
+def native_compile_plan(
     generated: Path,
     manifest: dict[str, object],
     *,
-    output: Path,
     include_directory: Path,
-    library: Path,
     raygui_include_directory: Path,
-    raygui_library: Path,
     platform_name: str,
-    raylib_configuration: str,
-    cc: str,
     optimization: str,
     native_sanitizer_flags: tuple[str, ...],
-    cache_root: Path,
-    cache_enabled: bool,
-    jobs: int,
-) -> NativeBuildResult:
-    """Build the generated project through depfile-validated object/link reuse.
+    observe_renderer_interval: bool = False,
+) -> NativeCompilePlan:
+    """Validate generated inputs and preserve the exact native compilation recipe.
 
-    The split project already gives each source module a stable C translation
-    unit. The native cache preserves that boundary: a source or dependency
-    change recompiles only the affected units, while link-only inputs can reuse
-    every object. ``cache_enabled=False`` runs the same depfile-aware compile
-    plan in private temporary directories and publishes no reusable entries.
+    Only opted-in correctness builds add the observer source and forced header.
+    No compiler is invoked and no static terrain-coverage claim is made here.
     """
 
-    if platform_name == "windows":
-        raise PlayFailure("the one-command Windows linker adapter is deferred; generated C remains available with --compile-only")
     build = manifest.get("build")
     if not isinstance(build, dict):
         raise PlayFailure("generated Caxecraft manifest omitted its build plan")
@@ -3378,21 +3393,83 @@ def compile_native(
         DependencyRoot("raygui-include", raygui_include_directory),
         DependencyRoot("caxecraft-native-include", CAXECRAFT_NATIVE_INCLUDE),
     ]
-    native_cache = NativeCache(
-        cache_root,
-        compiler=cc,
+    observer_flags: tuple[str, ...] = ()
+    if observe_renderer_interval:
+        # This source is an independent test oracle. Only this separate artifact
+        # receives entry hooks; Raylib and ordinary timing builds keep their flags.
+        observer_root = ROOT / "runtime/hxrt/test"
+        include_roots.append(IncludeRoot("terrain-observer", observer_root))
+        dependency_roots.append(DependencyRoot("terrain-observer", observer_root))
+        sources.append(("terrain-observer/interval_observer.c", observer_root / "interval_observer.c"))
+        observer_flags = ("-include", str(observer_root / "interval_observer_hooks.h"))
+    return NativeCompilePlan(
+        sources=tuple(sources),
+        include_roots=tuple(include_roots),
+        dependency_roots=tuple(dependency_roots),
         compile_flags=(
             *STRICT_FLAGS,
             *hosted_content_compile_flags(platform_name),
             f"-O{optimization}",
             *native_sanitizer_flags,
+            *observer_flags,
         ),
-        include_roots=include_roots,
-        dependency_roots=dependency_roots,
+    )
+
+
+def compile_native(
+    generated: Path,
+    manifest: dict[str, object],
+    *,
+    output: Path,
+    include_directory: Path,
+    library: Path,
+    raygui_include_directory: Path,
+    raygui_library: Path,
+    platform_name: str,
+    raylib_configuration: str,
+    cc: str,
+    optimization: str,
+    native_sanitizer_flags: tuple[str, ...],
+    cache_root: Path,
+    cache_enabled: bool,
+    jobs: int,
+    observe_renderer_interval: bool = False,
+    retain_objects: bool = False,
+) -> NativeBuildResult:
+    """Build the generated project through depfile-validated object/link reuse.
+
+    The split project already gives each source module a stable C translation
+    unit. The native cache preserves that boundary: a source or dependency
+    change recompiles only the affected units, while link-only inputs can reuse
+    every object. ``cache_enabled=False`` runs the same depfile-aware compile
+    plan in private temporary directories and publishes no reusable entries.
+    """
+
+    if platform_name == "windows":
+        raise PlayFailure("the one-command Windows linker adapter is deferred; generated C remains available with --compile-only")
+    plan = native_compile_plan(
+        generated,
+        manifest,
+        include_directory=include_directory,
+        raygui_include_directory=raygui_include_directory,
+        platform_name=platform_name,
+        optimization=optimization,
+        native_sanitizer_flags=native_sanitizer_flags,
+        observe_renderer_interval=observe_renderer_interval,
+    )
+    build = manifest.get("build")
+    if not isinstance(build, dict):
+        raise PlayFailure("generated Caxecraft manifest omitted its build plan")
+    native_cache = NativeCache(
+        cache_root,
+        compiler=cc,
+        compile_flags=plan.compile_flags,
+        include_roots=plan.include_roots,
+        dependency_roots=plan.dependency_roots,
         jobs=jobs,
         enabled=cache_enabled,
     )
-    objects = native_cache.objects(sources)
+    objects = native_cache.objects(plan.sources)
 
     lock = provision.load_lock()
     libraries, frameworks = provision.link_facts(lock, platform_name, raylib_configuration)
@@ -3433,6 +3510,9 @@ def compile_native(
     link_hit = native_cache.link(
         objects,
         output=output,
+        # Observer and ordinary benchmark builds retain cache-off object records
+        # as dependency evidence until the variant directory is removed.
+        retain_objects=observe_renderer_interval or retain_objects,
         arguments_after_objects=arguments_after_objects,
         libraries=(
             ("raygui/library", raygui_library),
@@ -3445,6 +3525,138 @@ def compile_native(
         object_hits=object_hits,
         object_misses=len(objects) - object_hits,
         link_hit=link_hit,
+    )
+
+
+def renderer_benchmark_binding(
+    *, output_root: Path, generated: Path, executable: Path,
+    request: dict[str, object], content: list[dict[str, object]],
+    plan: NativeCompilePlan, native_result: NativeBuildResult,
+    static_coverage: TerrainBuildCoverage | None,
+) -> dict[str, object]:
+    """Bind benchmark observations to the existing build and native owners.
+
+    The caller checks the request before and after pilots. This receipt retains
+    their exact schemas and native-plan operands, so the comparison can reconstruct
+    the plan and recheck the selected objects without accepting arbitrary flags.
+    Runtime content stays separate because it intentionally does not rebuild Haxe.
+    """
+    state_path = output_root / PLAY_BUILD_STATE
+    decision = validate_reuse(state_path=state_path, current_request=request,
+                              generated=generated, executable=executable)
+    if not decision.hit:
+        raise PlayFailure(f"renderer benchmark build binding failed: {decision.reason}")
+    if inventory_inputs((InputPath("runtime-content", executable.parent / "content"),)) != content:
+        raise PlayFailure("renderer benchmark runtime content changed during pilots")
+    return {
+        "schemaVersion": 1,
+        "buildStateSha256": sha256_file(state_path),
+        "runtimeContent": content,
+        "nativeBuild": {
+            "sources": [[name, str(path.resolve())] for name, path in plan.sources],
+            "compileFlags": list(plan.compile_flags),
+            "includeRoots": [[root.logical_name, str(root.path.resolve())] for root in plan.include_roots],
+            "dependencyRoots": [[root.logical_name, str(root.path.resolve())] for root in plan.dependency_roots],
+            "objects": [{"source": item.source, "key": item.key, "path": str(item.path.resolve()),
+                         "sha256": item.sha256} for item in native_result.objects],
+        },
+        "staticCoverageReceipt": (
+            {"path": static_coverage.receipt.relative_to(output_root).as_posix(),
+             "sha256": static_coverage.receipt_sha256}
+            if static_coverage is not None else None
+        ),
+    }
+
+
+def terrain_native_contract(args: argparse.Namespace, *, platform_name: str,
+                            source: Path, include_directory: Path, library: Path) -> NativeTerrainContract:
+    """Recheck the software library's source review against its actual build recipe.
+
+    Legacy normalized receipts need original invocation spellings. A bare tool
+    name must stay bare; CMake's subsequently resolved path is not that input.
+    A mismatched reconstruction fails instead of granting foreign-call admission.
+    """
+    from renderer_native_contract import verify_native_contract
+
+    if args.prebuilt_raylib_build is not None:
+        build = args.prebuilt_raylib_build.resolve()
+        source_cache = args.prebuilt_raylib_cache.resolve()
+        report = load_object(args.prebuilt_raylib_report, "Raylib integration report").get("provision")
+        authority = "pinned-source"
+    else:
+        key = raylib_cache_key(
+            authority=args.authority, platform_name=platform_name,
+            raylib_configuration=args.raylib_configuration, source=args.source,
+            cc=args.cc, cxx=args.cxx, cmake=args.cmake, generator=args.generator,
+        )
+        build = args.cache_root.resolve() / "build" / key
+        source_cache = args.cache_root.resolve() / "source" if args.authority == "pinned-source" else ""
+        report = load_object(build / "hxc-caxecraft-raylib.json", "Raylib cache state").get("provisioningReport")
+        authority = args.authority
+    if not isinstance(report, dict):
+        raise PlayFailure("terrain coverage requires a trusted Raylib source-build receipt")
+    replacements = None
+    outputs = report.get("outputs")
+    if not isinstance(outputs, dict) or "compileCommandsSha256" not in outputs:
+        target = report.get("target")
+        if not isinstance(target, dict):
+            raise PlayFailure("legacy terrain recipe omitted original tool arguments")
+        values: dict[str, Path | str] = {
+            "${CACHE_ROOT}": source_cache, "${RAYLIB_SOURCE}": source,
+            "${RAYLIB_BUILD}": build,
+        }
+        for key, placeholder, current in (
+            ("compiler", "${C_COMPILER}", args.cc),
+            ("cxxCompiler", "${CXX_COMPILER}", args.cxx),
+            ("cmake", "${CMAKE}", args.cmake),
+            ("buildTool", "${BUILD_TOOL}", "ninja" if args.generator == "Ninja" else "make"),
+        ):
+            identity = target.get(key)
+            command = identity.get("command") if isinstance(identity, dict) else None
+            if not isinstance(command, str) or not command:
+                raise PlayFailure("legacy terrain recipe omitted an original tool argument")
+            values[placeholder] = current if command == placeholder else command
+        replacements = provision.path_replacements(values)
+    return verify_native_contract(
+        lock=provision.load_lock(), report=report, authority=authority,
+        platform_name=platform_name, configuration=args.raylib_configuration,
+        source_root=source, effective_source_root=include_directory.parent,
+        build_root=build, library_file=library, original_replacements=replacements,
+    )
+
+
+def terrain_build_coverage(args: argparse.Namespace, *, generated: Path,
+                           manifest: dict[str, object], executable: Path,
+                           include_directory: Path, raygui_include_directory: Path,
+                           platform_name: str, native_sanitizer_flags: tuple[str, ...],
+                           native_contract: NativeTerrainContract, native_result: NativeBuildResult,
+                           output_root: Path) -> TerrainBuildCoverage:
+    """Inspect the exact native plan once; repeated pilot samples share its proof."""
+    from renderer_build_coverage import build_terrain_coverage
+    from dev_native_cache import verify_native_objects
+    from scripts.test.compiler_discovery import resolve_compiler
+
+    parser = resolve_compiler("clang")
+    preprocessor = shutil.which(args.cc)
+    if parser is None or preprocessor is None:
+        raise PlayFailure("terrain coverage requires Clang parsing and the selected native C compiler")
+    plan = native_compile_plan(
+        generated, manifest, include_directory=include_directory,
+        raygui_include_directory=raygui_include_directory, platform_name=platform_name,
+        optimization=args.optimization, native_sanitizer_flags=native_sanitizer_flags,
+        observe_renderer_interval=True,
+    )
+    flags = (*plan.compile_flags, *(flag for root in plan.include_roots for flag in ("-I", str(root.path))))
+    native_build_pins = verify_native_objects(
+        objects=native_result.objects, sources=plan.sources, compiler=args.cc,
+        compile_flags=plan.compile_flags, include_roots=plan.include_roots,
+        dependency_roots=plan.dependency_roots,
+    )
+    return build_terrain_coverage(
+        sources=plan.sources, flags=flags, compiler=Path(parser), preprocessor=Path(preprocessor),
+        cwd=ROOT, manifest=generated / "hxc.manifest.json", executable=executable,
+        native_contract=native_contract, native_build_pins=native_build_pins,
+        evidence=output_root / f"terrain-coverage-{time.time_ns()}",
     )
 
 
@@ -3482,6 +3694,7 @@ def run_pilot_sample(
     cc: str,
     compiler_version: str,
     label: str,
+    observe_renderer_interval: bool = False,
 ) -> tuple[dict[str, object], int, int, str, dict[str, str]]:
     """Run and inspect one Haxe-authored pilot without duplicating its oracle.
 
@@ -3550,6 +3763,20 @@ def run_pilot_sample(
         cc=cc,
         compiler_version=compiler_version,
     )
+    if observe_renderer_interval:
+        sample = report.get("benchmarkSample")
+        if benchmark_renderer and (not isinstance(sample, dict)
+                                   or type(sample.get("measuredFrames")) is not int):
+            raise PlayFailure("terrain observation requires measured benchmark frames")
+        try:
+            report["terrainInterval"] = parse_interval_evidence(
+                process.stdout,
+                measured_frames=sample.get("measuredFrames") if benchmark_renderer else None,
+                require_portal=pilot == "adventure-journey",
+                timing_enabled=benchmark_renderer,
+            )
+        except IntervalEvidenceFailure as error:
+            raise PlayFailure(f"{label}: {error}") from error
     if pilot == "adventure-journey":
         if not observations:
             raise PlayFailure(f"{label} emitted no agent world observations")
@@ -3996,6 +4223,11 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
         help="measure post-warmup terrain and update work in the move-jump-edit pilot",
     )
     parser.add_argument(
+        "--observe-renderer-interval",
+        action="store_true",
+        help="build separate runtime-entry evidence; recorded timings are not performance samples",
+    )
+    parser.add_argument(
         "--raylib-configuration",
         choices=RAYLIB_CONFIGURATIONS,
         default="desktop",
@@ -4130,6 +4362,7 @@ def main(argv: list[str]) -> int:
             or args.build_only
             or args.sanitizers
             or args.benchmark_renderer
+            or args.observe_renderer_interval
             or args.cold
             or args.no_build_cache
             or args.rebuild_raylib
@@ -4165,6 +4398,11 @@ def main(argv: list[str]) -> int:
             raise PlayFailure("--sanitizers is a native execution profile and cannot be combined with --check-snapshots")
         if args.renderer == "immediate-baseline" and selected_pilot is None:
             raise PlayFailure("the immediate renderer is benchmark evidence and requires a bounded pilot")
+        if args.observe_renderer_interval:
+            validate_terrain_observation(
+                pilot=selected_pilot, benchmark_renderer=args.benchmark_renderer,
+                raylib_configuration=args.raylib_configuration, agent_session=args.agent_session,
+            )
         if args.benchmark_renderer and selected_pilot != "move-jump-edit":
             raise PlayFailure("--benchmark-renderer requires --pilot move-jump-edit")
         if args.check_snapshots:
@@ -4222,13 +4460,14 @@ def main(argv: list[str]) -> int:
         profile = "interactive" if selected_pilot is None else f"pilot-{selected_pilot}"
         renderer_part = "" if args.renderer == "chunk-cache" else "-immediate-baseline"
         benchmark_part = "-benchmark" if args.benchmark_renderer else ""
+        observer_part = "-interval-observer" if args.observe_renderer_interval else ""
         configuration_part = "" if args.raylib_configuration == "desktop" else f"-{args.raylib_configuration}"
         sanitizer_part = "-sanitized" if args.sanitizers else ""
         output_root = prepare_output_root(
             variants
             / (
                 f"{platform_name}{configuration_part}-{args.layout}{sanitizer_part}-"
-                f"{profile}{renderer_part}{benchmark_part}"
+                f"{profile}{renderer_part}{benchmark_part}{observer_part}"
             )
         )
         variant_lock = VariantLock(output_root / "hxc-play-build.lock")
@@ -4240,13 +4479,17 @@ def main(argv: list[str]) -> int:
         reusable_profile = not args.sanitizers
         if reusable_profile and not args.compile_only:
             snapshot_started = time.monotonic()
-            requested_snapshot = play_request_snapshot(
-                args,
-                platform_name=platform_name,
-                selected_pilot=selected_pilot,
-                native_sanitizer_flags=native_sanitizer_flags,
-            )
-            snapshot_ms = (time.monotonic() - snapshot_started) * 1000.0
+            print("caxecraft: preparing build request and input inventory", flush=True)
+            try:
+                requested_snapshot = play_request_snapshot(
+                    args,
+                    platform_name=platform_name,
+                    selected_pilot=selected_pilot,
+                    native_sanitizer_flags=native_sanitizer_flags,
+                )
+            finally:
+                snapshot_ms = (time.monotonic() - snapshot_started) * 1000.0
+                print(f"caxecraft: build request preparation elapsed {snapshot_ms:.1f} ms", flush=True)
             fast_path_eligible = not args.build_only and (
                 not args.rebuild_raylib
                 and not args.rebuild_raygui
@@ -4342,6 +4585,7 @@ def main(argv: list[str]) -> int:
                     pilot=selected_pilot,
                     renderer=args.renderer,
                     benchmark_renderer=args.benchmark_renderer,
+                    observe_renderer_interval=args.observe_renderer_interval,
                     server_lease=server_lease,
                     server_owner=server_owner,
                     haxe_timeout_seconds=args.haxe_timeout_seconds,
@@ -4404,6 +4648,12 @@ def main(argv: list[str]) -> int:
             allow_network=args.allow_network,
             rebuild=args.rebuild_raygui,
         )
+        native_contract = None
+        if args.observe_renderer_interval:
+            native_contract = terrain_native_contract(
+                args, platform_name=platform_name, source=raylib_source,
+                include_directory=include_directory, library=library,
+            )
         native_result = compile_native(
             generated,
             manifest,
@@ -4422,6 +4672,8 @@ def main(argv: list[str]) -> int:
             cache_root=output_root / "native-cache",
             cache_enabled=args.native_cache == "auto",
             jobs=args.native_jobs,
+            observe_renderer_interval=args.observe_renderer_interval,
+            retain_objects=args.benchmark_renderer,
         )
         print(
             "caxecraft: native cache "
@@ -4472,6 +4724,40 @@ def main(argv: list[str]) -> int:
             print("caxecraft: live agent session ready; send one JSON envelope per line", flush=True)
             return run_agent_session(executable, args.agent_record_dir, args.raylib_configuration)
         if selected_pilot is not None:
+            static_coverage = None
+            if args.observe_renderer_interval:
+                if native_contract is None:
+                    raise PlayFailure("terrain observation lost its native build contract")
+                static_coverage = terrain_build_coverage(
+                    args, generated=generated, manifest=manifest, executable=executable,
+                    include_directory=include_directory, raygui_include_directory=raygui_include_directory,
+                    platform_name=platform_name, native_sanitizer_flags=native_sanitizer_flags,
+                    native_contract=native_contract, native_result=native_result, output_root=output_root,
+                )
+            benchmark_plan = None
+            benchmark_pins = None
+            benchmark_content = None
+            if args.benchmark_renderer:
+                from dev_native_cache import verify_native_objects
+                if requested_snapshot is None:
+                    raise PlayFailure("renderer benchmark requires its original build request")
+                benchmark_plan = native_compile_plan(
+                    generated, manifest, include_directory=include_directory,
+                    raygui_include_directory=raygui_include_directory, platform_name=platform_name,
+                    optimization=args.optimization, native_sanitizer_flags=native_sanitizer_flags,
+                    observe_renderer_interval=args.observe_renderer_interval,
+                )
+                benchmark_pins = verify_native_objects(
+                    objects=native_result.objects, sources=benchmark_plan.sources, compiler=args.cc,
+                    compile_flags=benchmark_plan.compile_flags, include_roots=benchmark_plan.include_roots,
+                    dependency_roots=benchmark_plan.dependency_roots,
+                )
+                benchmark_content = inventory_inputs((InputPath("runtime-content", executable.parent / "content"),))
+                renderer_benchmark_binding(
+                    output_root=output_root, generated=generated, executable=executable,
+                    request=requested_snapshot, content=benchmark_content, plan=benchmark_plan,
+                    native_result=native_result, static_coverage=static_coverage,
+                )
             reports: list[dict[str, object]] = []
             screenshot_hashes: list[str] = []
             supporting_hashes: dict[str, list[str]] = {}
@@ -4496,12 +4782,22 @@ def main(argv: list[str]) -> int:
                     cc=args.cc,
                     compiler_version=compiler_version,
                     label=f"Caxecraft {selected_pilot} graphical pilot run {repeat + 1}",
+                    observe_renderer_interval=args.observe_renderer_interval,
                 )
+                if static_coverage is not None:
+                    report["staticTerrainCoverage"] = static_coverage.summary()
                 reports.append(report)
                 screenshot_hashes.append(screenshot_hash)
                 for name, digest in sample_supporting_hashes.items():
                     supporting_hashes.setdefault(name, []).append(digest)
 
+            if static_coverage is not None:
+                # Hold all samples until the same source/library/executable inputs
+                # still verify; do not rebuild the AST for each repeated pilot.
+                static_coverage.verify(native_contract=terrain_native_contract(
+                    args, platform_name=platform_name, source=raylib_source,
+                    include_directory=include_directory, library=library,
+                ))
             semantic_reports: list[dict[str, object]] = []
             for report in reports:
                 comparable = dict(report)
@@ -4534,6 +4830,7 @@ def main(argv: list[str]) -> int:
                 update_median = statistics.median(update)
                 preparation_median = statistics.median(preparation)
                 final_report["benchmark"] = {
+                    "measurementKind": "instrumented-correctness" if args.observe_renderer_interval else "timing",
                     "clock": "raylib-monotonic-time",
                     "warmupFrames": 2,
                     "sampleCount": repetitions,
@@ -4549,6 +4846,24 @@ def main(argv: list[str]) -> int:
                     "preparationMedianMicrosecondsPerFrame": preparation_median / measured_frames,
                     "reviewScreenshotSha256": screenshot_hashes[0],
                 }
+            if args.benchmark_renderer:
+                if benchmark_plan is None or benchmark_pins is None or benchmark_content is None:
+                    raise PlayFailure("renderer benchmark lost its original native evidence")
+                final_request = play_request_snapshot(
+                    args, platform_name=platform_name, selected_pilot=selected_pilot,
+                    native_sanitizer_flags=native_sanitizer_flags,
+                )
+                if final_request != requested_snapshot:
+                    raise PlayFailure("renderer benchmark inputs changed during pilots")
+                benchmark_pins.verify()
+                binding = renderer_benchmark_binding(
+                    output_root=output_root, generated=generated, executable=executable,
+                    request=final_request, content=benchmark_content, plan=benchmark_plan,
+                    native_result=native_result, static_coverage=static_coverage,
+                )
+                binding_path = output_root / "renderer-benchmark-binding.json"
+                atomic_write_state(binding_path, binding)
+                final_report["benchmarkBindingSha256"] = sha256_file(binding_path)
             report_path = executable.parent / "caxecraft-pilot-report.json"
             report_path.write_text(
                 json.dumps(final_report, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
@@ -4575,6 +4890,8 @@ def main(argv: list[str]) -> int:
         GenerationFailure,
         HaxeServerFailure,
         NativeCacheFailure,
+        CoverageFailure,
+        NativeContractFailure,
         provision.ProvisionFailure,
         PlayFailure,
     ) as error:

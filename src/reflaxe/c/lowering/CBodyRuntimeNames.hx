@@ -25,6 +25,7 @@ enum CBodyRuntimeName {
 	CBRNStringReleaseSlot;
 	CBRNStringFromScalar;
 	CBRNStringFromInt;
+	CBRNStringFromUInt64;
 	CBRNStringFromFloat;
 	CBRNStringConcat;
 	CBRNStringToLowerCase;
@@ -238,6 +239,7 @@ class CBodyRuntimeNames {
 			case CBRNStringReleaseSlot: "hxc_string_release_slot";
 			case CBRNStringFromScalar: "hxc_string_from_scalar";
 			case CBRNStringFromInt: "hxc_string_from_int32";
+			case CBRNStringFromUInt64: "hxc_string_from_uint64";
 			case CBRNStringFromFloat: "hxc_string_from_float64";
 			case CBRNStringConcat: "hxc_string_concat_ref";
 			case CBRNStringToLowerCase: "hxc_string_to_lower_case";

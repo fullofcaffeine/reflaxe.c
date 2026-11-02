@@ -8738,6 +8738,7 @@ class CBodyEmitter {
 		final runtimeName = switch operation {
 			case "from-scalar": CBRNStringFromScalar;
 			case "from-int": CBRNStringFromInt;
+			case "from-uint64": CBRNStringFromUInt64;
 			case "from-float": CBRNStringFromFloat;
 			case "concat": CBRNStringConcat;
 			case "to-lower-case": CBRNStringToLowerCase;

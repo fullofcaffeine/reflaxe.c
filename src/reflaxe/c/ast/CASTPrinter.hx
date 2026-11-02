@@ -1,7 +1,7 @@
 package reflaxe.c.ast;
 
 import reflaxe.c.ast.CAST;
-#if reflaxe_c_phase_timing
+#if (reflaxe_c_phase_timing && (macro || reflaxe_runtime))
 import reflaxe.c.CPhaseTiming.CProfilePrinterWork;
 #end
 
@@ -20,7 +20,7 @@ class CASTPrinter {
 	final dialect:CDialect;
 	final indentPrefixes:Array<String> = [""];
 	var indent:Int = 0;
-	#if reflaxe_c_phase_timing
+	#if (reflaxe_c_phase_timing && (macro || reflaxe_runtime))
 	var work:Null<CASTPrinterWorkCounter> = null;
 	#end
 
@@ -72,7 +72,7 @@ class CASTPrinter {
 		return '#ifndef $guard\n#define $guard\n\n$body\n#endif /* $guard */\n';
 	}
 
-	#if reflaxe_c_phase_timing
+	#if (reflaxe_c_phase_timing && (macro || reflaxe_runtime))
 	/**
 		Print one source file and return bounded structural work counts.
 
@@ -96,7 +96,7 @@ class CASTPrinter {
 	#end
 
 	public function printDecl(decl:CDecl):String {
-		#if reflaxe_c_phase_timing
+		#if (reflaxe_c_phase_timing && (macro || reflaxe_runtime))
 		if (work != null)
 			work.declarationCount++;
 		#end
@@ -124,7 +124,7 @@ class CASTPrinter {
 	}
 
 	public function printStmt(stmt:CStmt):String {
-		#if reflaxe_c_phase_timing
+		#if (reflaxe_c_phase_timing && (macro || reflaxe_runtime))
 		if (work != null)
 			work.statementCount++;
 		#end
@@ -157,7 +157,7 @@ class CASTPrinter {
 	}
 
 	public function printExpr(expr:CExpr, parentPrecedence:Int = 0):String {
-		#if reflaxe_c_phase_timing
+		#if (reflaxe_c_phase_timing && (macro || reflaxe_runtime))
 		if (work != null)
 			work.expressionCount++;
 		#end
@@ -788,7 +788,7 @@ class CASTPrinter {
 		return value.value;
 
 	function ensureUnique(values:Array<String>, kind:String):Void {
-		#if reflaxe_c_phase_timing
+		#if (reflaxe_c_phase_timing && (macro || reflaxe_runtime))
 		if (work != null) {
 			work.uniquenessCheckCalls++;
 			work.uniquenessCheckInputs += values.length;
@@ -822,7 +822,7 @@ class CASTPrinter {
 		}
 
 	function joinTokens(tokens:Array<String>):String {
-		#if reflaxe_c_phase_timing
+		#if (reflaxe_c_phase_timing && (macro || reflaxe_runtime))
 		if (work != null) {
 			work.tokenJoinCalls++;
 			work.tokenJoinInputs += tokens.length;
@@ -838,7 +838,7 @@ class CASTPrinter {
 			retained.add(token);
 			retainedCount++;
 		}
-		#if reflaxe_c_phase_timing
+		#if (reflaxe_c_phase_timing && (macro || reflaxe_runtime))
 		if (work != null)
 			work.tokenJoinOutputs += retainedCount;
 		#end
@@ -846,7 +846,7 @@ class CASTPrinter {
 	}
 
 	function line(value:String):String {
-		#if reflaxe_c_phase_timing
+		#if (reflaxe_c_phase_timing && (macro || reflaxe_runtime))
 		if (work != null) {
 			work.indentationRequests++;
 		}
@@ -857,7 +857,7 @@ class CASTPrinter {
 	function indentPrefix():String {
 		while (indentPrefixes.length <= indent) {
 			indentPrefixes.push(indentPrefixes[indentPrefixes.length - 1] + indentUnit);
-			#if reflaxe_c_phase_timing
+			#if (reflaxe_c_phase_timing && (macro || reflaxe_runtime))
 			if (work != null)
 				work.indentationUnitCopies++;
 			#end
@@ -948,7 +948,7 @@ class CASTPrinter {
 	}
 
 	function utf8Bytes(value:String):Array<Int> {
-		#if reflaxe_c_phase_timing
+		#if (reflaxe_c_phase_timing && (macro || reflaxe_runtime))
 		if (work != null) {
 			work.utf8EncodingCalls++;
 			work.utf8InputCodeUnits += value.length;
@@ -1005,7 +1005,7 @@ class CASTPrinter {
 		}
 	}
 
-	#if reflaxe_c_phase_timing
+	#if (reflaxe_c_phase_timing && (macro || reflaxe_runtime))
 	function captureWork(render:() -> String):CASTPrintedUnit {
 		if (work != null)
 			throw "C AST printer work capture cannot be nested";
@@ -1021,7 +1021,7 @@ class CASTPrinter {
 	#end
 }
 
-#if reflaxe_c_phase_timing
+#if (reflaxe_c_phase_timing && (macro || reflaxe_runtime))
 /**
 	The text and stable work counts produced for one profiled C output file.
 

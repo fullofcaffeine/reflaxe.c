@@ -13,16 +13,6 @@ ROOT = Path(__file__).resolve().parents[2]
 SCRIPT = ROOT / "scripts/ci/check_typed_boundaries.py"
 MANIFEST = Path("docs/specs/typed-boundaries.json")
 SCHEMA = Path("docs/specs/typed-boundaries.schema.json")
-EXCLUDED_PREFIXES = (
-    ".beads/",
-    ".git/",
-    ".hxc/",
-    "node_modules/",
-    "runtime/third_party/",
-    "runtime/vendor/",
-    "third_party/",
-    "vendor/",
-)
 
 
 class TypedBoundaryTests(unittest.TestCase):
@@ -35,28 +25,41 @@ class TypedBoundaryTests(unittest.TestCase):
         )
 
     def make_root(self, destination: Path) -> None:
-        for source in ROOT.rglob("*.hx"):
-            relative = source.relative_to(ROOT).as_posix()
-            if any(relative.startswith(prefix) for prefix in EXCLUDED_PREFIXES):
-                continue
-            target = destination / relative
-            target.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copyfile(source, target)
+        """Build valid local occurrences for mutation tests; inventory stays separate.
 
+        Keep the real schema and manifest vocabulary so the CLI validates the
+        same policy. Two explicit occurrences cover production and test-only
+        allowances without copying unrelated repository sources for every case.
+        """
         manifest = json.loads((ROOT / MANIFEST).read_text(encoding="utf-8"))
-        evidence = {
-            Path(path)
-            for allowance in manifest["allowlist"]
-            for path in allowance["testEvidence"]
-        }
-        for relative in (
-            MANIFEST,
-            SCHEMA,
-            *sorted(evidence, key=lambda path: path.as_posix()),
+        evidence = Path("test/governance/test_typed_boundaries.py")
+        source_line = "var value:Dynamic;"
+        manifest["allowlist"] = []
+        for relative, name, boundary in (
+            ("src/Boundary.hx", "Boundary", "compiler-preview"),
+            ("test/Boundary.hx", "TestBoundary", "language-semantics-fixture"),
         ):
+            self.write_source(
+                destination, relative, f"class {name} {{\n{source_line}\n}}\n"
+            )
+            manifest["allowlist"].append({
+                "path": relative,
+                "line": 2,
+                "column": 11,
+                "construct": "dynamic-type",
+                "boundaryKind": boundary,
+                "symbol": f"{name}.value",
+                "typedModel": "Int after the test removes the boundary",
+                "sourceLine": source_line,
+                "justification": "Synthetic occurrence exercises exact allowance matching.",
+                "validation": "The governance tests check acceptance and targeted mutations.",
+                "testEvidence": [evidence.as_posix()],
+            })
+        for relative in (SCHEMA, evidence):
             target = destination / relative
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(ROOT / relative, target)
+        self.write_manifest(destination, manifest)
 
     def write_source(self, root: Path, relative: str, source: str) -> None:
         path = root / relative
@@ -77,6 +80,13 @@ class TypedBoundaryTests(unittest.TestCase):
     def test_repository_inventory_passes(self) -> None:
         result = self.run_guard()
         self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_synthetic_fixture_passes(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            self.make_root(root)
+            result = self.run_guard(root)
+            self.assertEqual(result.returncode, 0, result.stderr)
 
     def test_new_dynamic_semantic_state_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -186,7 +196,7 @@ class TypedBoundaryTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             self.make_root(root)
-            path = root / "test/hxc_ir/fixtures/IRCoverage.hx"
+            path = root / "test/Boundary.hx"
             source = path.read_text(encoding="utf-8")
             self.assertIn("value:Dynamic", source)
             path.write_text(source.replace("value:Dynamic", "value:Int"), encoding="utf-8")

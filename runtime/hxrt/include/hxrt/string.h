@@ -123,6 +123,19 @@ HXC_API hxc_status hxc_string_from_int32(
 );
 
 /**
+ * Format the complete unsigned 64-bit value as an owned decimal String.
+ *
+ * Zero is "0"; other values have no leading zeroes or sign. Conversion uses
+ * integer arithmetic without locale or floating-point rounding. The output
+ * slot must contain HXC_STRING_INITIALIZER; allocation failure leaves it empty.
+ */
+HXC_API hxc_status hxc_string_from_uint64(
+  uint64_t value,
+  hxc_allocator allocator,
+  hxc_string *out_string
+);
+
+/**
  * Concatenate two nullable-checked String values into one owned Haxe String.
  *
  * The output slot must contain HXC_STRING_INITIALIZER. Size overflow and

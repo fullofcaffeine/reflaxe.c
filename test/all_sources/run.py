@@ -180,6 +180,13 @@ def main() -> int:
         check_production_boundary()
     except (AllSourcesFailure, subprocess.TimeoutExpired) as error:
         print(f"all-sources: ERROR: {error}", file=sys.stderr)
+        if isinstance(error, subprocess.TimeoutExpired):
+            # The process owner retains partial output after cleanup. Keep the
+            # verbose typing evidence visible even when no phase marker exists.
+            for label, output in (("stdout", error.stdout), ("stderr", error.stderr)):
+                if isinstance(output, bytes):
+                    output = output.decode("utf-8", errors="replace")
+                print(f"partial {label}:\n{output if output is not None else ''}", file=sys.stderr)
         return 1
 
     print(

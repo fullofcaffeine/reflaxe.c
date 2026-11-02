@@ -51,14 +51,18 @@ typedef TypedFunctionSourcePlan = {
 **/
 class TypedFunctionSourceProvenance {
 	final sourcesByFile:Map<String, FunctionSourceIdentity> = [];
+	final contentDigests:Null<SourceContentDigest>;
 
 	/**
 		Own one request's file identities, separate from the persistent position cache.
 
 		An instance bounds reuse to one normalization pass. A new pass reads current
 		bytes again, including edits received by the same compilation server.
+		The optional digest owner shares equal-byte hashing, never file snapshots.
 	**/
-	public function new() {}
+	public function new(?contentDigests:SourceContentDigest) {
+		this.contentDigests = contentDigests;
+	}
 
 	static inline final CACHE_SCHEMA = 1;
 	static inline final MAX_CACHE_ENTRIES = 4096;
@@ -74,7 +78,7 @@ class TypedFunctionSourceProvenance {
 	static var cacheInsertionOrder:Array<String> = [];
 
 	/**
-		Return current-request positions indexed by the compiler positions they replace.
+		Return the position replacements needed for a reused typed tree.
 
 		The traversal is structural and deterministic. If one cached compiler shape
 		collapses distinct authored ranges onto the same current position, recovery
@@ -127,6 +131,11 @@ class TypedFunctionSourceProvenance {
 				continue;
 			if (remembered.min < 0 || remembered.max < remembered.min || remembered.max > source.length)
 				throw new haxe.Exception('typed function `$declarationPath.$fieldName` retained an invalid source-position offset');
+			// A first capture has already retained and checked these exact current ranges.
+			// The resolver uses current positions when no replacement exists; only warm
+			// recovery needs the map and its distinct-remembered-range collision check.
+			if (!hasPrevious)
+				continue;
 			// Preserve the current compiler value when its exact range already matches.
 			// Only a restored warm-server range needs a new Position allocation.
 			final position = currentInfo.min == remembered.min && currentInfo.max == remembered.max ? current : Context.makePosition({
@@ -163,7 +172,7 @@ class TypedFunctionSourceProvenance {
 		} catch (_:haxe.Exception) {
 			return null;
 		}
-		final source:FunctionSourceIdentity = {digest: sha256Hex(bytes), length: bytes.length};
+		final source:FunctionSourceIdentity = {digest: contentDigests == null ? sha256Hex(bytes) : contentDigests.digest(file, bytes), length: bytes.length};
 		sourcesByFile.set(file, source);
 		return source;
 	}

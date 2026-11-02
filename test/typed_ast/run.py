@@ -1908,6 +1908,47 @@ def check_source_identity_snapshot() -> None:
             )
 
 
+def check_source_digest_reuse() -> None:
+    """Keep independent file snapshots while sharing only equal-byte digests."""
+    with tempfile.TemporaryDirectory(prefix="hxc-source-digest-") as temporary:
+        source_root = Path(temporary)
+        (source_root / "SharedSource.hx").write_text(
+            "typedef SharedRecord = {value:Int};\n"
+            "class SharedSource {public static function value():Int return 1;}\n",
+            encoding="utf-8",
+        )
+        environment = os.environ.copy()
+        environment["HAXE_NO_SERVER"] = "1"
+        process = run_bounded_process(
+            [development_tool("haxe"), "-cp", str(ROOT / "src"),
+             "-cp", str(source_root), "-cp", str(FIXTURES / "provenance"),
+             "--macro", "SourceDigestProbe.run()", "--no-output"],
+            cwd=ROOT, env=environment, capture_output=True, text=True, timeout=30,
+        )
+        expected = [
+            "SOURCE_DIGEST unchanged", "SOURCE_DIGEST recovery-invalidated",
+            "SOURCE_DIGEST same-length-edit",
+            "SOURCE_DIGEST deleted", "SOURCE_DIGEST recreated",
+            "SOURCE_DIGEST invalid-new-bytes", "SOURCE_DIGEST new-owner",
+            "SOURCE_DIGEST private-bytes", "SOURCE_DIGEST lexical-aliases",
+            "SOURCE_DIGEST unequal-hint-collision", "SOURCE_DIGEST cwd-change",
+        ]
+        lines = process.stdout.splitlines()
+        permission_results = {
+            "SOURCE_DIGEST read-errors",
+            "SOURCE_DIGEST read-errors-skipped: POSIX permissions unavailable",
+            "SOURCE_DIGEST read-errors-skipped: chmod precondition unavailable",
+            "SOURCE_DIGEST read-errors-skipped: host can read mode-000 files",
+        }
+        if (process.returncode != 0 or lines[:-2] != expected
+                or len(lines) != len(expected) + 2 or lines[-2] not in permission_results
+                or lines[-1] != "HXC_SOURCE_DIGEST_OK"):
+            raise TypedAstProbeFailure(
+                f"source digest reuse failed\n{process.stdout}\n{process.stderr}"
+            )
+        print(lines[-2])
+
+
 def main() -> int:
     try:
         arguments = sys.argv[1:]
@@ -1917,20 +1958,26 @@ def main() -> int:
             check_function_source_anchor_server()
         elif arguments == ["--source-identity-only"]:
             check_source_identity_snapshot()
+        elif arguments == ["--source-digest-only"]:
+            check_source_digest_reuse()
         elif not arguments:
             check_source_identity_snapshot()
+            check_source_digest_reuse()
             check_expected_snapshot()
             check_compiler_server_isolation()
             check_compiler_server_rebuild_inventory()
         else:
             raise TypedAstProbeFailure(
-                "usage: test/typed_ast/run.py [--invalidation-matrix|--source-anchor-only|--source-identity-only]"
+                "usage: test/typed_ast/run.py [--invalidation-matrix|--source-anchor-only|--source-identity-only|--source-digest-only]"
             )
     except (OSError, json.JSONDecodeError, subprocess.TimeoutExpired, TypedAstProbeFailure) as error:
         print(f"typed-ast: ERROR: {error}", file=os.sys.stderr)
         return 1
     if sys.argv[1:] == ["--source-identity-only"]:
         print("typed-ast: OK: request-local file identity and changed-source positions")
+        return 0
+    if sys.argv[1:] == ["--source-digest-only"]:
+        print("typed-ast: OK: equal-byte digest reuse preserves independent source reads")
         return 0
     if sys.argv[1:] == ["--invalidation-matrix"]:
         print(

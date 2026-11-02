@@ -386,15 +386,26 @@ the same headless benchmark locally. See
 [Raylib 6.0 provisioning](raylib-provisioning.md#reviewed-macos-memory-clock-patch)
 for the patch and provenance contract.
 
-On Linux or macOS, `npm run benchmark:caxecraft-renderer` runs both admitted
-Haxe renderer variants, requires the same gameplay report and byte-identical
-final image, then runs a focused handwritten-C reference. It writes one
-generated comparison report under
-`examples/caxecraft/_build/benchmarks/`. The report records the scene and input
-hashes, viewport, pinned Raylib and native compiler, warmup and sampling method,
-terrain/update/preparation times, draw and rebuild counts, explicit cache
-payload, generated-source size, binary size, and zero generated allocator,
-`goto`, and `hxrt` references.
+On Linux or macOS, `npm run benchmark:caxecraft-renderer` requires separate
+timing and instrumented correctness builds for each Haxe renderer variant.
+The [comparison gate](../examples/caxecraft/benchmark_renderer.py) requires
+matching gameplay reports and byte-identical final images, plus the focused
+handwritten-C reference. It binds each build to the same source, tools, native
+inputs, and staged content, with only the declared renderer or observer change.
+
+Terrain acceptance requires valid native observations for all twelve measured
+frames and static call coverage from the same native build. The measured
+interval must contain zero allocation, reallocation, and collection attempts.
+The report preserves warmup counts and reports root push/pop API attempts
+separately; these counts do not prove successful or balanced root lifetimes.
+Instrumented correctness samples cannot supply timing results.
+
+The comparison report under `examples/caxecraft/_build/benchmarks/` retains
+scene/input hashes, viewport, native tool identities, warmup and sample details,
+terrain/update/preparation times, draw/rebuild counts, cache payload, and source/binary
+sizes. Whole-project allocator-call and `hxrt` reference counts remain static
+metrics; they do not measure runtime attempts within the terrain interval.
+The whole-project `goto` rejection remains required.
 
 The three comparison points answer different questions:
 
@@ -600,12 +611,18 @@ The target-neutral probe runs under pinned Haxe Eval in two installed locales.
 It proves exact repeated samples, every action/checkpoint, hotbar intent,
 permanent bounded quit, and absence of C/Raylib/untyped leakage.
 
-The native commands compile through production `--custom-target c`, require an
-empty `hxrt` plan, build and launch pinned Raylib, stage only hash-verified
-assets, inspect a real RGBA framebuffer, decode the versioned state record, run
-the same executable twice, and require equal reports plus clean process exits.
-The generated-C gate also rejects `goto`, allocation calls, and hidden `hxrt`,
-and checks exact texture load/validity/unload ownership counts.
+Native pilot tooling compiles through production `--custom-target c` and
+validates the declared selective `hxrt` plan. It builds pinned Raylib, stages
+hash-verified assets, and checks the real RGBA framebuffer and versioned state
+record. Ordinary native pilots require equal reports and clean exits across
+two runs. Generated-C checks retain texture load/validity/unload ownership rules.
+An empty runtime plan belongs to focused runtime-free fixtures, not the managed
+game as a whole.
+
+The renderer acceptance gate is implemented, but its latest full-game native
+observations and static coverage remain pending on `haxe_c-rl9u`. The normal
+120-second Haxe build budget remains pending on `haxe_c-xty2`. Focused host tests
+check the gate's acceptance logic; they do not establish these game results.
 
 The Linux desktop workflow runs the launch pilot through Xvfb, a small virtual
 display server used when CI has no physical monitor. It uploads the normalized

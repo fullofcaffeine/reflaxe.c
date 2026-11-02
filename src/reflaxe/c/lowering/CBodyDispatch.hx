@@ -194,6 +194,16 @@ class CBodyDispatchCatalog {
 	var selectedVersion = -1;
 	var selectedResult:Array<CBodyFunctionInput> = [];
 
+	/**
+		Remember each class/slot answer as discovery adds other classes and slots.
+		The normalized input already supplies typed hierarchy and field facts, and
+		`methodsById` is populated only during this catalog's construction. Those
+		facts keep each answer fixed for this catalog; they do not imply that any
+		arbitrary Haxe type reference is safe to cache. Presence distinguishes an
+		absent implementation from an unchecked pair. Failed checks are not stored.
+	**/
+	final implementationsByClassAndSlot:Map<String, Map<String, Null<CBodyFunctionInput>>> = [];
+
 	public function new(context:CompilationContext, program:TypedProgramInput) {
 		this.context = context;
 		indexProgram(program);
@@ -501,11 +511,22 @@ class CBodyDispatchCatalog {
 			return selectedResult.copy();
 		final result:Map<String, CBodyFunctionInput> = [];
 		for (classReference in constructedClasses) {
+			final classKey = classPath(classReference.get());
+			var bySlot = implementationsByClassAndSlot.get(classKey);
+			if (bySlot == null) {
+				bySlot = [];
+				implementationsByClassAndSlot.set(classKey, bySlot);
+			}
 			for (slot in slotsById) {
-				final applicable = slot.owner.get().isInterface ? implementsInterface(classReference, slot.owner) : isDescendant(classReference, slot.owner);
-				if (!applicable)
-					continue;
-				final implementation = effectiveMethod(classReference, slot);
+				var implementation:Null<CBodyFunctionInput>;
+				if (bySlot.exists(slot.id)) {
+					implementation = bySlot.get(slot.id);
+				} else {
+					final applicable = slot.owner.get()
+						.isInterface ? implementsInterface(classReference, slot.owner) : isDescendant(classReference, slot.owner);
+					implementation = applicable ? effectiveMethod(classReference, slot) : null;
+					bySlot.set(slot.id, implementation);
+				}
 				if (implementation == null)
 					continue;
 				final id = CBodyLowering.functionInputId(implementation);

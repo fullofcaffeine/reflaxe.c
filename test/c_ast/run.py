@@ -111,7 +111,7 @@ def macro_call(output: Path) -> str:
     return "ASTFixtureCompiler.run(" + json.dumps(str(output), ensure_ascii=True) + ")"
 
 
-def run_fixture_compiler(output: Path, *, label: str) -> None:
+def run_fixture_compiler(output: Path, *, label: str, profile: bool = False) -> None:
     environment = os.environ.copy()
     environment["HAXE_NO_SERVER"] = "1"
     result = run_bounded_process(
@@ -120,6 +120,7 @@ def run_fixture_compiler(output: Path, *, label: str) -> None:
             str(HXML),
             "--macro",
             macro_call(output),
+            *(["-D", "reflaxe_c_phase_timing"] if profile else []),
         ],
         cwd=ROOT,
         env=environment,
@@ -139,6 +140,25 @@ def run_fixture_compiler(output: Path, *, label: str) -> None:
             f"{label} emitted an invalid success envelope\n"
             f"stdout:\n{result.stdout}stderr:\n{result.stderr}"
         )
+
+
+def check_profile_typing(output: Path) -> None:
+    """Keep the global profiling define safe in ordinary Eval and active in macros."""
+    for hxml, expected in (("c_ast.hxml", "declarators.c"), ("expression.hxml", "expressions.c")):
+        result = run_bounded_process(
+            [development_tool("haxe"), str(HXML.with_name(hxml)), "-D", "reflaxe_c_phase_timing"],
+            cwd=ROOT,
+            env=dict(os.environ, HAXE_NO_SERVER="1"),
+            capture_output=True,
+            timeout=HAXE_TIMEOUT_SECONDS,
+        )
+        if result.returncode != 0 or result.stderr or result.stdout != (EXPECTED / expected).read_bytes():
+            raise CASTGoldenFailure(
+                f"profile-defined Eval golden {hxml} changed\nstdout:\n{result.stdout!r}\nstderr:\n{result.stderr!r}"
+            )
+    run_fixture_compiler(output, label="profiled macro fixture", profile=True)
+    validate_ownership(output)
+    check_expected(payload_tree(output))
 
 
 def output_files(output: Path) -> list[Path]:
@@ -318,6 +338,7 @@ def parse_args(argv: Iterable[str]) -> argparse.Namespace:
         action="store_true",
         help="compile the checked-in corpus without invoking the pinned Haxe renderer",
     )
+    parser.add_argument("--profile-typing-only", action="store_true", help="check profiling define typing and macro counters without native compilation")
     parser.add_argument(
         "--report",
         type=Path,
@@ -341,6 +362,13 @@ def main(argv: Iterable[str] = ()) -> int:
             prefix="reflaxe-c-ast-fixture-"
         ) as temporary:
             root = Path(temporary)
+            if not args.native_only:
+                check_profile_typing(root / "profile corpus")
+            if args.profile_typing_only:
+                if args.native_only:
+                    raise CASTGoldenFailure("profile typing requires Haxe")
+                print("c-ast-profile-typing: OK: Eval goldens, macro work counters, and corpus bytes")
+                return 0
             if args.native_only:
                 fixture_root = EXPECTED
                 check_expected(

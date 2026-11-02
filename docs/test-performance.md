@@ -103,6 +103,23 @@ race a pass against a failure or publish out of order. Performance/timing owners
 npm run --silent test:local-gate -- --cold test:hxc-ir
 ```
 
+To keep short tool-identity checks responsive while a compiler owner runs at
+background priority, start the local-gate runner normally and opt in explicitly:
+
+```sh
+npm run --silent test:local-gate -- --background-owner test:all-sources
+```
+
+This applies `taskpolicy -b nice -n 10` on macOS when both tools are available,
+or `nice -n 10` where `nice` is available, only to the package-owner process and
+its children. An explicit request fails if `nice` is unavailable. Identity
+checks, input hashing, and receipt validation keep the runner's inherited
+priority and original deadlines. Do not background this outer command as well:
+the option cannot raise a priority already lowered by its caller. It preserves
+the npm arguments and normalized environment, so exact correctness receipts
+remain reusable; it does not provide performance evidence or change hook
+defaults. The runner implementation change invalidates older receipts normally.
+
 The hook reuses only an exact duplicate R0/R1 owner. It does not let one focused
 test stand in for another owner, a full shard, native/platform evidence, or the
 hosted required check.
@@ -1693,9 +1710,13 @@ SHA-256 algorithm itself: Haxe's standard Eval implementation first expands
 the complete input into large boxed integer arrays. Hashing 4.49MB of generated
 C therefore allocated about 29.3GB cumulatively in the macro host.
 
-`CContentDigest` preserves the exact SHA-256 contract but uses a fixed-memory
-streaming implementation on Eval. It reads each complete 64-byte block
-directly, keeps one 64-word schedule, and allocates only the final padded block.
+`CContentDigest` preserves the exact SHA-256 contract with a streaming
+implementation on Eval. It reads each complete 64-byte block directly and
+keeps one 64-word schedule plus the final one or two padded blocks.
+This bounds the retained working buffers. Eval arithmetic still allocates
+temporary boxed integers. Cumulative allocation includes those temporary
+values, even after garbage collection releases them.
+
 Other Haxe targets retain the standard library. The registered
 `test:content-digest` gate checks public known vectors and compares binary
 payloads with Haxe's implementation around every one-block/two-block padding
@@ -1745,12 +1766,12 @@ above the actual formatter. Further work must follow those measurements rather
 than weakening hashing, collapsing output ownership, or adding speculative
 cross-request state.
 
-The follow-up profile found that the fixed-memory implementation still stored
+The follow-up profile found that the streaming implementation still stored
 its 64-word SHA-256 schedule and round constants in `haxe.io.Bytes`. Eval then
 called byte-buffer helpers for values that were already 32-bit host integers.
-Ordinary fixed-size integer arrays preserve the algorithm and memory bound while
-removing those repeated conversions. The focused gate now also checks the
-published SHA-256 vector for one million ASCII `a` bytes, in addition to the
+Ordinary fixed-size integer arrays preserve the algorithm and bounded retained
+working storage while removing those repeated conversions. The focused gate now
+also checks the published SHA-256 vector for one million ASCII `a` bytes, in addition to the
 standard-library padding-boundary differential.
 
 These follow-up values are again one-sample **contended diagnostics**. The
@@ -1774,7 +1795,7 @@ identity. `GeneratedFileDigestCache` retains one completed request's immutable
 path, artifact role, full Haxe string, UTF-8 byte length, and SHA-256 digest.
 The following request first compares path, role, and the complete text. Only an
 exact match reuses the byte length and digest; changed text still performs the
-normal UTF-8 conversion and fixed-memory SHA-256 calculation. This is output
+normal UTF-8 conversion and streaming SHA-256 calculation. This is output
 evidence, not a semantic backend cache: it retains no typed compiler objects,
 HxcIR, CAST, request context, output manager, or partial generation.
 

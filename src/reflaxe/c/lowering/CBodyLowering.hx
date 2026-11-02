@@ -1705,7 +1705,10 @@ class CBodyLowering {
 	/** Identify typed formatting inputs whose resulting text needs ownership. */
 	static function stdStringArgumentCreatesOwnedString(type:Type, profile:CProfile):Bool {
 		final primitiveCreates = switch CPrimitiveTypeMapper.map(type, profile) {
-			case CTPrimitive(mapping): (mapping.sourceType == CPHaxeInt || mapping.sourceType == CPHaxeFloat) && mapping.nullability == CPNonNullable;
+			case CTPrimitive(mapping): mapping.nullability == CPNonNullable && switch mapping.sourceType {
+					case CPHaxeInt | CPHaxeFloat | CPCExactInteger(64, false): true;
+					case _: false;
+				};
 			case _: false;
 		};
 		return primitiveCreates || isEnumStringPlanningType(type);
@@ -16648,7 +16651,7 @@ private class FunctionBuilder {
 		final argumentType = isConcreteStringSelection(arguments[0]) ? stringType : arguments[0].t;
 		final mapping = bodyValueType(argumentType, arguments[0].pos, "TCall(Sys.println:argument-type)");
 		switch mapping.irType {
-			case IRTString | IRTManagedString | IRTBool | IRTInt(32, true) | IRTFloat(64):
+			case IRTString | IRTManagedString | IRTBool | IRTInt(32, true) | IRTInt(64, false) | IRTFloat(64):
 			case _:
 				return unsupported(arguments[0], "TCall(Sys.println:format-not-yet-admitted:" + mapping.cSpelling + ")");
 		}
@@ -16916,6 +16919,22 @@ private class FunctionBuilder {
 				freshManagedStringValueIds.set(result.id, true);
 				freshManagedStringValueRoles.set(result.id, role);
 				runtimeRequirements.push(new CBodyRuntimeRequirement("string", "from-int", "ordinary Haxe Std.string(Int)", source, expression.pos));
+				{id: result.id, type: result.type, mapping: resultMapping};
+			case IRTInt(64, false):
+				if (resultMapping.irType != IRTManagedString)
+					unsupported(expression, 'TCall(Std.string:UInt64-result-requires-managed-String-plan)');
+				final argument = coerce(lowerValue(expression, argumentMapping), argumentMapping, expression.pos, '$role:argument');
+				final result:HxcIRResult = {id: nextValueId(), type: IRTManagedString};
+				appendInstruction(result, IRIOCall({
+					dispatch: IRCDRuntime("string", "from-uint64"),
+					arguments: [argument.id],
+					returnType: IRTManagedString,
+					failure: managedArrayFailure()
+				}), source, "std-string-uint64");
+				registerValueTemporary(result.id, "std-string-uint64-result");
+				freshManagedStringValueIds.set(result.id, true);
+				freshManagedStringValueRoles.set(result.id, role);
+				runtimeRequirements.push(new CBodyRuntimeRequirement("string", "from-uint64", "ordinary Haxe Std.string(c.UInt64)", source, expression.pos));
 				{id: result.id, type: result.type, mapping: resultMapping};
 			case IRTFloat(64):
 				if (resultMapping.irType != IRTManagedString)

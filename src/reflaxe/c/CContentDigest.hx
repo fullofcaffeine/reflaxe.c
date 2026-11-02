@@ -24,10 +24,11 @@ function sha256Hex(input:Bytes):String {
 
 #if eval
 /**
-	A fixed-memory SHA-256 worker specialized for Haxe's Eval macro runtime.
+	A streaming SHA-256 worker specialized for Haxe's Eval macro runtime.
 
-	The worker reads complete 64-byte input blocks directly and allocates only a
-	64-word schedule plus the final one or two padded blocks. The schedule and
+	The worker reads complete 64-byte input blocks directly. Its retained buffers
+	are a 64-word schedule and the final one or two padded blocks; Eval still
+	allocates temporary boxed integers during arithmetic. The schedule and
 	round constants use ordinary integer arrays because Eval can access an array
 	word directly; storing each word in `Bytes` made every round call byte-buffer
 	read/write helpers even though the data was already a host integer. Direct
@@ -167,10 +168,11 @@ private class EvalSha256 {
 		var h = h7;
 		for (index in 0...64) {
 			final sigma1 = rotateRight(e, 6) ^ rotateRight(e, 11) ^ rotateRight(e, 25);
-			final choose = (e & f) ^ (~e & g);
+			// Equivalent bitwise forms use fewer temporary integer results in Eval.
+			final choose = g ^ (e & (f ^ g));
 			final first = h + sigma1 + choose + ROUND_CONSTANTS[index] + schedule[index];
 			final sigma0 = rotateRight(a, 2) ^ rotateRight(a, 13) ^ rotateRight(a, 22);
-			final majority = (a & b) ^ (a & c) ^ (b & c);
+			final majority = (a & b) | (c & (a | b));
 			final second = sigma0 + majority;
 			h = g;
 			g = f;

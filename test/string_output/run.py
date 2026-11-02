@@ -707,7 +707,8 @@ def safe_project_directory(output: Path, value: str) -> Path:
 
 def compile_native(
     toolchain: NativeToolchain, rendered: RenderedProject, optimization: str, build: Path,
-    *, sanitize: bool = False,
+    *, sanitize: bool = False, extra_sources: tuple[Path, ...] = (),
+    extra_includes: tuple[Path, ...] = (),
 ) -> Path:
     build_plan = rendered.manifest.get("build")
     if not isinstance(build_plan, dict):
@@ -724,8 +725,8 @@ def compile_native(
         *STRICT_FLAGS,
         f"-{optimization}",
         *(["-g", "-fno-omit-frame-pointer", "-fsanitize=address,undefined"] if sanitize else []),
-        *(f"-I{include}" for include in includes),
-        *(str(source) for source in sources),
+        *(f"-I{include}" for include in [*includes, *extra_includes]),
+        *(str(source) for source in [*sources, *extra_sources]),
         "-o",
         str(executable),
     ]
@@ -978,20 +979,97 @@ def run_typed_values(toolchains: list[NativeToolchain], root: Path) -> None:
         raise StringOutputFailure(f"typed output bypassed runtime=none: {rejected.stderr}")
 
 
+def run_uint64_values(toolchains: list[NativeToolchain], root: Path) -> None:
+    """Keep native unsigned inputs exact through print, Std.string, and interpolation."""
+    fixture = FIXTURES / "uint64"
+    expected = b"0\n4294967297\n18446744073709551615\nprefix=18446744073709551615\n4\n"
+    output = root / "uint64" / "out"
+    result = compile_target(fixture, output, report=True)
+    if result.returncode != 0 or result.stderr:
+        raise StringOutputFailure(f"UInt64 output compile failed: {result.stderr}")
+    hxcir = extract_hxcir(result, "UInt64")
+    if hxcir.count('runtime(feature="string",operation="from-uint64")') != 4:
+        raise StringOutputFailure("UInt64 formatting lost one of its four exact conversions")
+    if "string-temporary" not in hxcir or "release place=" not in hxcir or "haxe-dynamic" in hxcir:
+        raise StringOutputFailure("UInt64 formatting lost managed cleanup or introduced Dynamic boxing")
+    plan = load_json(output / "hxc.runtime-plan.json", "UInt64 runtime plan")
+    features = set(text_list(plan.get("features"), "UInt64 runtime features"))
+    if features != set(EXPECTED_FEATURES) | {"alloc", "string-scalar", "string"}:
+        raise StringOutputFailure(f"UInt64 formatting selected an unexpected runtime closure: {features}")
+    manifest = load_json(output / "hxc.manifest.json", "UInt64 manifest")
+    artifacts = manifest.get("artifacts")
+    if not isinstance(artifacts, list) or not artifacts:
+        raise StringOutputFailure("UInt64 manifest lost its artifacts")
+    for artifact in artifacts:
+        if not isinstance(artifact, dict) or not isinstance(artifact.get("path"), str):
+            raise StringOutputFailure("UInt64 manifest has a malformed artifact")
+        contents = safe_project_path(output, artifact["path"]).read_bytes()
+        if hashlib.sha256(contents).hexdigest() != artifact.get("sha256"):
+            raise StringOutputFailure(f"UInt64 artifact hash drifted: {artifact['path']}")
+    rendered = RenderedProject(
+        output, hxcir, plan,
+        load_json(output / "hxc.stdlib-report.json", "UInt64 stdlib report"), manifest,
+    )
+    build = root / "uint64" / "native"
+    build.mkdir()
+    for toolchain in toolchains:
+        for optimization, sanitize in (("O0", False), ("O2", False), ("O1", True)):
+            executable = compile_native(
+                toolchain, rendered, optimization, build, sanitize=sanitize,
+                extra_sources=(CASE / "native/uint64_fixture.c",),
+                extra_includes=(CASE / "native",),
+            )
+            environment = os.environ.copy()
+            environment["ASAN_OPTIONS"] = ("detect_leaks=0" if sys.platform == "darwin" else "detect_leaks=1") + ":halt_on_error=1"
+            environment["UBSAN_OPTIONS"] = "halt_on_error=1:print_stacktrace=1"
+            native = run_bounded_process(
+                [str(executable)], cwd=build, env=environment,
+                check=False, capture_output=True, timeout=30,
+            )
+            if native.returncode != 0 or native.stdout != expected or native.stderr:
+                raise StringOutputFailure(
+                    f"UInt64 {toolchain.family} {optimization} sanitize={sanitize}: "
+                    f"exit={native.returncode} stdout={native.stdout!r} stderr={native.stderr!r}"
+                )
+            if optimization == "O0":
+                def close_stdout() -> None:
+                    os.close(1)
+
+                failed = run_bounded_process(
+                    [str(executable)], cwd=build, check=False, stderr=subprocess.PIPE,
+                    preexec_fn=close_stdout, timeout=30,
+                )
+                if failed.returncode != -signal.SIGABRT:
+                    raise StringOutputFailure(f"UInt64 output failure lost its abort edge: {failed.returncode}")
+    rejected_output = root / "uint64-runtime-none"
+    rejected = compile_target(fixture, rejected_output, runtime="none")
+    if rejected.returncode == 0 or "HXC2000:" not in rejected.stderr or plausible_output_exists(rejected_output):
+        raise StringOutputFailure(f"UInt64 formatting bypassed runtime=none: {rejected.stderr}")
+
+
 def parse_args(argv: Iterable[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--toolchain", choices=("auto", *TOOLCHAINS), default="auto")
     parser.add_argument("--typed-only", action="store_true", help="Check typed Sys.println values and rejection boundaries only.")
+    parser.add_argument("--uint64-only", action="store_true", help="Check exact UInt64 text conversion and native cleanup only.")
     return parser.parse_args(list(argv))
 
 
 def main(argv: Iterable[str] = ()) -> int:
     args = parse_args(argv)
     try:
+        if args.uint64_only:
+            if args.typed_only:
+                raise StringOutputFailure("--uint64-only and --typed-only cannot be combined")
+            with tempfile.TemporaryDirectory(prefix="reflaxe-c-uint64-output-") as temporary:
+                run_uint64_values(selected_toolchains(args.toolchain), Path(temporary))
+            print("uint64-output: OK: exact decimal bytes, single evaluation, cleanup, strict C11, sanitizers, and runtime policy passed")
+            return 0
         if args.typed_only:
             toolchains = selected_toolchains(args.toolchain)
             with tempfile.TemporaryDirectory(prefix="reflaxe-c-typed-output-") as temporary:
                 run_typed_values(toolchains, Path(temporary))
+                run_uint64_values(toolchains, Path(temporary))
             print("typed-output: OK: Eval bytes, single evaluation, cleanup, selective runtime, strict C11, sanitizers, and fail-closed boundaries passed")
             return 0
         run_eval_oracle()
@@ -1021,6 +1099,7 @@ def main(argv: Iterable[str] = ()) -> int:
             run_native(toolchains, [portable, metal], build)
             runtime_string = render_runtime_string_project(root / "runtime-string")
             run_runtime_string_native(toolchains, runtime_string, build)
+            run_uint64_values(toolchains, root)
     except (OSError, UnicodeError, ValueError, json.JSONDecodeError, subprocess.TimeoutExpired, StringOutputFailure) as error:
         print(f"string-output: ERROR: {error}", file=sys.stderr)
         return 1
