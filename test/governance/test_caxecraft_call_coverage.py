@@ -417,6 +417,25 @@ class CoverageHostTests(unittest.TestCase):
         self.assertNotIn('astSha256', record)
         self.assertEqual((self.root / 'evidence/ast.stderr').read_bytes(), b'error\n')
 
+    def test_dependency_failure_surfaces_bounded_stderr_and_retains_complete_bytes(self):
+        stderr = b"compiler rejected input: " + b"x" * 5000 + b"\xff"
+        def fail(argv, **kwargs):
+            self.assertEqual(kwargs["timeout"], 20)
+            self.assertIn("-M", argv)
+            return subprocess.CompletedProcess(argv, 2, b"partial dependencies", stderr)
+        with self.assertRaises(CoverageFailure) as failure:
+            self.invoke(fail)
+        message = str(failure.exception)
+        self.assertIn("C coverage dependencies failed", message)
+        self.assertIn("compiler rejected input:", message)
+        self.assertIn("[stderr truncated; complete stream retained]", message)
+        self.assertLess(len(message), 4500)
+        self.assertEqual((self.root / "evidence/dependencies.stderr").read_bytes(), stderr)
+        self.assertEqual((self.root / "evidence/dependencies.stdout").read_bytes(), b"partial dependencies")
+        record = json.loads((self.root / "evidence/receipt.json").read_text())
+        self.assertEqual(record["status"], "failed")
+        self.assertEqual(record["commands"][-1]["returncode"], 2)
+
     def test_timeout_retains_partial_streams_and_terminal_receipt(self):
         def timeout(argv, **kwargs):
             raise subprocess.TimeoutExpired(argv, 20, output=b'partial', stderr=b'diagnostic')

@@ -350,7 +350,13 @@ def extract_unit(source: Path, *, compiler: Path, flags: tuple[str, ...],
             record["commands"].append({"argv": arguments, "cwd": str(cwd), "timeout": 20,
                                        "returncode": code, "outcome": outcome})
         if outcome != "success":
-            raise CoverageFailure(f"C coverage {name} {outcome}; retained diagnostics: {evidence}")
+            # CI logs need the compiler's reason even when no report was produced.
+            # Keep the complete byte stream above; bound only its inline preview.
+            preview = stderr[:4096].decode("utf-8", errors="replace").strip()
+            if len(stderr) > 4096:
+                preview += "\n[stderr truncated; complete stream retained]"
+            detail = f"\n{preview}" if preview else ""
+            raise CoverageFailure(f"C coverage {name} {outcome}; retained diagnostics: {evidence}{detail}")
         return stdout.decode("utf-8")
 
     try:

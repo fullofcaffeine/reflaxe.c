@@ -453,6 +453,7 @@ jobs:
           path: |
             ${{ runner.temp }}/caxecraft-renderer-benchmark/variants/*/hxc-play-current-generation.json
             ${{ runner.temp }}/caxecraft-renderer-benchmark/variants/*/generations/
+            ${{ runner.temp }}/caxecraft-renderer-benchmark/variants/*/terrain-coverage-*/
           if-no-files-found: warn
           retention-days: 7
 
@@ -515,6 +516,7 @@ jobs:
           path: |
             ${{ runner.temp }}/caxecraft-renderer-observation/variants/*/hxc-play-current-generation.json
             ${{ runner.temp }}/caxecraft-renderer-observation/variants/*/generations/
+            ${{ runner.temp }}/caxecraft-renderer-observation/variants/*/terrain-coverage-*/
           if-no-files-found: warn
           retention-days: 7
 
