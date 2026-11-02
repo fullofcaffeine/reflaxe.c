@@ -17,7 +17,11 @@ class CBodyDateRecognition {
 
 	/** Return true only for the root standard-library Date declaration. */
 	public static function isCoreDate(reference:Ref<ClassType>):Bool {
-		final value = reference.get();
+		return isCoreDateClass(reference.get());
+	}
+
+	/** Recognize a declaration already read by a caller without repeating the compiler bridge. */
+	public static function isCoreDateClass(value:ClassType):Bool {
 		return value.pack.length == 0 && value.name == "Date";
 	}
 

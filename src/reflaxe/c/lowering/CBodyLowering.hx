@@ -5485,8 +5485,8 @@ private class FunctionBuilder {
 				// Concrete standard Array cursors are runtime Iterator carriers, not
 				// ordinary generic classes. Discover each element specialization before
 				// replay freezes so authoritative lowering cannot change the plan.
-				CBodyDateRecognition.isCoreDate(reference)
-				|| CBodyIteratorRecognition.arrayKind(reference) != null
+				CBodyDateRecognition.isCoreDateClass(value)
+				|| CBodyIteratorRecognition.arrayKindClass(value) != null
 				|| value.meta.has(":c.layout")
 				|| (packageName == "haxe.ds"
 					&& (value.name == "IntMap" || value.name == "StringMap")) // A local may be the program's first and only Bytes owner. Register

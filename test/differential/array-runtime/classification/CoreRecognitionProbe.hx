@@ -3,6 +3,8 @@ import haxe.macro.Context;
 import haxe.macro.Type;
 import reflaxe.c.lowering.CBodyArray.CBodyArrayRecognition;
 import reflaxe.c.lowering.CBodyDate.CBodyDateRecognition;
+import reflaxe.c.lowering.CBodyIterator.CBodyIteratorRecognition;
+import reflaxe.c.lowering.CBodyIterator.CBodyArrayIteratorKind;
 #end
 
 /** Aliases and ordinary abstracts must keep their different recognition rules. */
@@ -33,9 +35,60 @@ class CoreRecognitionProbe {
 			throw new haxe.Exception(message);
 	}
 
+	/** Genuine compiler declarations preserve identity through both public recognition APIs. */
+	static function checkClassDeclarations():Void {
+		function expect(name:String, date:Bool, iterator:Null<CBodyArrayIteratorKind>):Void {
+			final original = switch Context.getType(name) {
+				case TInst(reference, _): reference;
+				case _: throw new haxe.Exception('class required: $name');
+			};
+			var reads = 0;
+			final counted:Ref<ClassType> = {
+				get: () -> {
+					reads++;
+					return original.get();
+				},
+				toString: () -> original.toString()
+			};
+			require(CBodyDateRecognition.isCoreDate(counted) == date, '$name Date reference');
+			require(reads == 1, '$name Date reference read count');
+			require(CBodyIteratorRecognition.arrayKind(counted) == iterator, '$name iterator reference');
+			require(reads == 2, '$name iterator reference read count');
+			final declaration = counted.get();
+			require(CBodyDateRecognition.isCoreDateClass(declaration) == date, '$name Date declaration');
+			require(CBodyIteratorRecognition.arrayKindClass(declaration) == iterator, '$name iterator declaration');
+			require(reads == 3, '$name helpers reread reference');
+		}
+		expect("Date", true, null);
+		expect("other.Date", false, null);
+		expect("String", false, null);
+		expect("haxe.iterators.ArrayIterator", false, CBAIValues);
+		expect("haxe.iterators.ArrayKeyValueIterator", false, CBAIKeyValues);
+		expect("haxe.iterators.MapKeyValueIterator", false, null);
+		final failing:Ref<ClassType> = {
+			get: () -> {
+				throw new haxe.Exception("class-reference-sentinel");
+			},
+			toString: () -> "failing"
+		};
+		var failures = 0;
+		try
+			CBodyDateRecognition.isCoreDate(failing)
+		catch (error:haxe.Exception)
+			if (error.message == "class-reference-sentinel")
+				failures++;
+		try
+			CBodyIteratorRecognition.arrayKind(failing)
+		catch (error:haxe.Exception)
+			if (error.message == "class-reference-sentinel")
+				failures++;
+		require(failures == 2, "reference failure preserved");
+	}
+
 	/** Independently specify membership, arity, aliases, and lazy evaluation. */
 	static function check():Void {
 		MapRecognitionProbe.check();
+		checkClassDeclarations();
 		final arrayRef = switch Context.getType("Array") {
 			case TInst(reference, _): reference;
 			case _: throw "core Array fixture";

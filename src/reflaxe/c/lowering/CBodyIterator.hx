@@ -40,7 +40,11 @@ enum CBodyArrayIteratorKind {
 **/
 class CBodyIteratorRecognition {
 	public static function arrayKind(reference:Ref<ClassType>):Null<CBodyArrayIteratorKind> {
-		final definition = reference.get();
+		return arrayKindClass(reference.get());
+	}
+
+	/** Classify an already-read declaration using the same exact standard-library identity. */
+	public static function arrayKindClass(definition:ClassType):Null<CBodyArrayIteratorKind> {
 		if (definition.pack.length != 2 || definition.pack[0] != "haxe" || definition.pack[1] != "iterators")
 			return null;
 		return switch definition.name {
