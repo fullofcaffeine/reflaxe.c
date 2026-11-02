@@ -576,18 +576,23 @@ class CBodyLowering {
 		// Generic calls use specialized function IDs. Index their source IDs once
 		// for this discovery pass, so an intrinsic or external call cannot trigger
 		// a scan of every prepared function. Later adapters do not share this index.
+		final representationDynamicDiscoveryTimer = CPhaseTiming.startDetail(CDTHxcIRRepresentationDynamicDiscovery);
 		final specializationBases:Map<String, Bool> = [];
 		for (fn in preparedById)
 			if (fn.specialization != null)
 				specializationBases.set(fn.specialization.baseFunctionId, true);
 		for (builder in builders)
 			builder.discoverDynamicSemantics(specializationBases);
+		CPhaseTiming.stopDetail(representationDynamicDiscoveryTimer);
+		final representationManagedDiscoveryTimer = CPhaseTiming.startDetail(CDTHxcIRRepresentationManagedDiscovery);
 		for (builder in builders)
 			builder.discoverManagedRepresentations();
+		CPhaseTiming.stopDetail(representationManagedDiscoveryTimer);
 		// A returned class outlives its callee regardless of where its constructor
 		// appears in that body. Mark these signature-proven escape boundaries before
 		// the fixed point so a factory may validate input, allocate the object, and
 		// return it without ever exposing a pointer to automatic C storage.
+		final representationManagedCompletionTimer = CPhaseTiming.startDetail(CDTHxcIRRepresentationManagedCompletion);
 		for (fn in prepared)
 			aggregateRegistry.requireEscapingReturnClasses(fn.returnMapping);
 		final interfaceImplementations:Array<CBodyInterfaceImplementation> = [];
@@ -603,18 +608,22 @@ class CBodyLowering {
 		// implementation or call reachable. Complete that pair layout after all
 		// aggregate discovery and before the shared HxcIR snapshot is built.
 		preparedDispatch.completeInterfaceValueLayouts(aggregateRegistry.canonicalInterfaces(), context);
+		CPhaseTiming.stopDetail(representationManagedCompletionTimer);
 		// Function replay needs the shared representation and C-import plan to be
 		// settled before any individual body can be skipped. Discover the narrow
 		// body-only families here, in the same canonical function/source order as
 		// ordinary lowering. The post-build assertion below remains authoritative:
 		// if this prepass misses a family, compilation stops instead of publishing a
 		// cache entry whose replay would silently omit program semantics.
+		final representationSharedBodyDiscoveryTimer = CPhaseTiming.startDetail(CDTHxcIRRepresentationSharedBodyDiscovery);
 		for (builder in builders)
 			builder.discoverSharedBodySemantics();
+		CPhaseTiming.stopDetail(representationSharedBodyDiscoveryTimer);
 		// Materialize the shared type and global plan before any body lookup. The
 		// resulting function-free HxcIR snapshot is the program-wide half of the
 		// replay key: a layout, dispatch, global, profile, or callable-signature
 		// change makes every function take the ordinary construction path.
+		final representationCanonicalExportTimer = CPhaseTiming.startDetail(CDTHxcIRRepresentationCanonicalExport);
 		aggregateRegistry.completeClassLayouts();
 		final preparedGlobals = globalRegistry.canonicalGlobals();
 		final preparedAggregates = aggregateRegistry.canonicalAggregates();
@@ -631,7 +640,10 @@ class CBodyLowering {
 		final sharedProgram = buildProgram([], preparedGlobals, preparedAggregates, preparedEnums, preparedClasses, preparedInterfaces, preparedArrays,
 			preparedIterators, preparedIntMaps, preparedStringMaps, preparedTypedMaps, preparedBytes, preparedImports, preparedDispatch,
 			dynamicRegistry.plan());
+		CPhaseTiming.stopDetail(representationCanonicalExportTimer);
+		final representationReplayRevisionTimer = CPhaseTiming.startDetail(CDTHxcIRRepresentationReplayRevision);
 		CBodyFunctionReplayCache.settleProgramRevision(functionReplayProgramRevision(sharedProgram, preparedById, constructorSignaturesById));
+		CPhaseTiming.stopDetail(representationReplayRevisionTimer);
 		CPhaseTiming.stopDetail(representationTimer);
 		CPhaseTiming.stopProgressDetail(Std.string(CDTHxcIRRepresentationPlanning));
 		final settledFunctionBuildContributions = functionContributionSnapshot(aggregateRegistry, dynamicRegistry, enumConstructorAdapters, functionLiterals);

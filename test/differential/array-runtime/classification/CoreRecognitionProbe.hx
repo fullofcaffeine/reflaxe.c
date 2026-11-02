@@ -35,6 +35,7 @@ class CoreRecognitionProbe {
 
 	/** Independently specify membership, arity, aliases, and lazy evaluation. */
 	static function check():Void {
+		MapRecognitionProbe.check();
 		final arrayRef = switch Context.getType("Array") {
 			case TInst(reference, _): reference;
 			case _: throw "core Array fixture";

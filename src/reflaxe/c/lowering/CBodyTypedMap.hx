@@ -447,7 +447,12 @@ class CBodyTypedMapRecognition {
 	/** Return the standard map family, or null for an ordinary class. */
 	public static function family(reference:Ref<ClassType>):Null<CBodyTypedMapFamily> {
 		final value = reference.get();
-		if (value.pack.join(".") != "haxe.ds")
+		return familyForClass(value, value.pack.join("."));
+	}
+
+	/** Share family policy without reading the compiler declaration a second time. */
+	static function familyForClass(value:ClassType, packageName:String):Null<CBodyTypedMapFamily> {
+		if (packageName != "haxe.ds")
 			return null;
 		return switch value.name {
 			case "ObjectMap": CBTMObject;
@@ -474,11 +479,14 @@ class CBodyTypedMapRecognition {
 		return switch type {
 			case TAbstract(reference, parameters) if (reference.get().name == "Map" && parameters.length == 2):
 				familyForKeyType(parameters[0]);
-			case TInst(reference, parameters) if (family(reference) != null): family(reference);
-			case TInst(reference, parameters) if (reference.get().pack.join(".") == "haxe"
-				&& reference.get().name == "IMap"
-				&& parameters.length == 2):
-				familyForKeyType(parameters[0]);
+			case TInst(reference, parameters):
+				// Ref.get crosses the compiler bridge and rebuilds declaration metadata.
+				// Reuse this read locally; key following and its diagnostics stay unchanged.
+				final value = reference.get();
+				final packageName = value.pack.join(".");
+				final concreteFamily = familyForClass(value, packageName);
+				if (concreteFamily != null) concreteFamily; else if (packageName == "haxe" && value.name == "IMap" && parameters.length == 2)
+					familyForKeyType(parameters[0]); else null;
 			case TMono(reference):
 				final resolved = reference.get();
 				resolved == null ? null : familyForMapType(resolved);

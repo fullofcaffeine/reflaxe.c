@@ -73,6 +73,12 @@ PHASES = (
 DETAIL_PHASES = (
     "HxcIR function preparation",
     "HxcIR representation planning",
+    "HxcIR representation dynamic discovery",
+    "HxcIR representation managed discovery",
+    "HxcIR representation managed completion",
+    "HxcIR representation shared-body discovery",
+    "HxcIR representation canonical export",
+    "HxcIR representation replay revision",
     "HxcIR function construction",
     "HxcIR function build",
     "HxcIR typed-body lowering",

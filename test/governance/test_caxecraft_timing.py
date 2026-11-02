@@ -91,6 +91,21 @@ class CaxecraftTimingTests(unittest.TestCase):
         self.assertEqual(play.pilot_timeout_seconds("adventure-journey"), 35)
         self.assertEqual(play.pilot_timeout_seconds("launch-smoke"), 15)
 
+    def test_representation_owner_details_are_required(self) -> None:
+        profiler = load_module("representation_details_subject", ROOT / "examples/caxecraft/profile_compiler.py")
+        expected = ("dynamic discovery", "managed discovery", "managed completion",
+                    "shared-body discovery", "canonical export", "replay revision")
+        for suffix in expected:
+            detail = "HxcIR representation " + suffix
+            self.assertIn(detail, profiler.DETAIL_PHASES)
+            self.assertNotIn(detail, profiler.PHASES)
+            remaining = "\n".join(f"HXC_DETAIL_TIMING\t{name}\t1"
+                                  for name in profiler.DETAIL_PHASES if name != detail)
+            with self.assertRaisesRegex(profiler.CompilerProfileFailure, "omitted"):
+                profiler.parse_detail_records(remaining)
+        with self.assertRaises(profiler.CompilerProfileFailure):
+            profiler.parse_detail_records("HXC_DETAIL_TIMING\tHxcIR representation unknown\t1")
+
     def test_compiler_profile_parses_closed_phase_and_haxe_timer_records(self) -> None:
         profiler = load_module(
             "caxecraft_compiler_profile_subject",

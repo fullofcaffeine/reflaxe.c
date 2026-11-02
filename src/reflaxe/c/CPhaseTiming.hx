@@ -52,6 +52,12 @@ enum abstract CPhaseTimingId(String) to String {
 enum abstract CDetailTimingId(String) to String {
 	var CDTHxcIRFunctionPreparation = "HxcIR function preparation";
 	var CDTHxcIRRepresentationPlanning = "HxcIR representation planning";
+	var CDTHxcIRRepresentationDynamicDiscovery = "HxcIR representation dynamic discovery";
+	var CDTHxcIRRepresentationManagedDiscovery = "HxcIR representation managed discovery";
+	var CDTHxcIRRepresentationManagedCompletion = "HxcIR representation managed completion";
+	var CDTHxcIRRepresentationSharedBodyDiscovery = "HxcIR representation shared-body discovery";
+	var CDTHxcIRRepresentationCanonicalExport = "HxcIR representation canonical export";
+	var CDTHxcIRRepresentationReplayRevision = "HxcIR representation replay revision";
 	var CDTHxcIRFunctionConstruction = "HxcIR function construction";
 	var CDTHxcIRFunctionBuild = "HxcIR function build";
 	var CDTHxcIRTypedBodyLowering = "HxcIR typed-body lowering";
