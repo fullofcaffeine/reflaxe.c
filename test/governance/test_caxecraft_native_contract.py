@@ -82,6 +82,32 @@ class NativeTerrainContractTests(unittest.TestCase):
             entry["command"] = shlex.join(argv)
         self.assertEqual(self.verify(platform_name="linux").identity_report()["platform"], "linux")
 
+    def test_ninja_and_makefile_paths_name_the_same_owned_objects(self):
+        self.verify()  # Makefiles runs inside the library subdirectory.
+        for entry in self.entries:
+            entry["directory"] = str(self.build)
+            argv = shlex.split(entry["command"])
+            argv[argv.index("-o") + 1] = entry["output"]
+            entry["command"] = shlex.join(argv)
+        self.verify()  # Ninja runs from the build root.
+
+    def test_recipe_paths_cannot_escape_or_disagree(self):
+        original = copy.deepcopy(self.entries)
+        for mutation in ("cwd", "entry-output", "command-output", "source"):
+            with self.subTest(mutation=mutation):
+                self.entries = copy.deepcopy(original)
+                entry = self.entries[0]
+                if mutation == "cwd":
+                    entry["directory"] = str(self.root / "outside")
+                elif mutation == "entry-output":
+                    entry["output"] = "../outside.o"
+                else:
+                    argv = shlex.split(entry["command"])
+                    argv[argv.index("-o" if mutation == "command-output" else "-c") + 1] = "../outside.o"
+                    entry["command"] = shlex.join(argv)
+                with self.assertRaises(contract.NativeContractFailure):
+                    self.verify()
+
     def test_changed_defines_fail_even_with_updated_recipe_receipt(self):
         self.entries[0]["command"] = self.entries[0]["command"].replace("-DPLATFORM_MEMORY", "-DPLATFORM_DESKTOP")
         with self.assertRaisesRegex(contract.NativeContractFailure, "defines"):

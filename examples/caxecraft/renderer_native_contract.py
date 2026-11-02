@@ -147,8 +147,14 @@ def _recipe(entries: object, *, effective: Path, build: Path, platform: str,
             raise NativeContractFailure("native recipe has extra, missing or duplicate source")
         seen.add(source)
         name = expected[source]
-        if (entry["directory"] != str(build / "raylib")
-                or entry["output"] != f"raylib/CMakeFiles/raylib.dir/{name}.o"
+        directory = entry["directory"]
+        expected_output = (build / "raylib" / "CMakeFiles/raylib.dir" / f"{name}.o").resolve()
+        # CMake's Makefiles run in the target subdirectory; Ninja runs at the
+        # build root. Both must write the same owned object. The database's
+        # output field is build-relative, while command -o is cwd-relative.
+        if (directory not in (str(build), str(build / "raylib"))
+                or not isinstance(entry["output"], str)
+                or (build / entry["output"]).resolve() != expected_output
                 or not isinstance(entry["command"], str)):
             raise NativeContractFailure("native recipe source/output ownership differs")
         try:
@@ -182,7 +188,8 @@ def _recipe(entries: object, *, effective: Path, build: Path, platform: str,
             index += 1
         if (tuple(defines) != REVIEWED_DEFINES or tuple(flags) != ORDINARY_FLAGS
                 or include != [str(effective / "src")]
-                or sources != [source] or outputs != [f"CMakeFiles/raylib.dir/{name}.o"]):
+                or sources != [source] or len(outputs) != 1
+                or (Path(directory) / outputs[0]).resolve() != expected_output):
             raise NativeContractFailure("native recipe defines, flags or owned paths differ")
         if platform == "macos":
             if arch != [architecture] or len(sdk) != 1 or not Path(sdk[0]).is_absolute() or not sdk[0].endswith(".sdk"):
