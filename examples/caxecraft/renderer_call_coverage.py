@@ -363,7 +363,10 @@ def extract_unit(source: Path, *, compiler: Path, flags: tuple[str, ...],
         _flags(flags)
         initial = {str(path): _sha(path) for path in (source, compiler, preprocessor)}
         record["initialInputs"] = initial
-        prefix = [str(preprocessor), "-x", "c", *flags, "-Wsystem-headers", "-Werror=vla"]
+        # Preserve native warning policy while expanding headers: system headers
+        # may use preprocessing extensions accepted by the actual build. The
+        # diagnostic-neutral AST pass below owns mandatory VLA rejection.
+        prefix = [str(preprocessor), "-x", "c", *flags]
         dependencies = _dependencies(command([*prefix, "-M", "-MT", "coverage", str(source)], "dependencies"), cwd)
         if source not in dependencies:
             raise CoverageFailure("dependency record omitted the source")
@@ -390,8 +393,10 @@ def extract_unit(source: Path, *, compiler: Path, flags: tuple[str, ...],
                      (evidence / "preprocess.stdout", derived_path, ledger, depfile)}
         record["preprocessingArtifacts"] = artifacts
         record["removedDiagnosticDirectives"] = len(removed)
+        # Clang's own preprocessed line markers carry source/system-header identity.
+        # Accept that transport syntax without suppressing C or VLA diagnostics.
         ast_text = command([str(compiler), "-x", "cpp-output", *semantic,
-                            "-Werror=vla", "-Wsystem-headers", "-Xclang", "-ast-dump=json",
+                            "-Wno-gnu-line-marker", "-Werror=vla", "-Wsystem-headers", "-Xclang", "-ast-dump=json",
                             "-fsyntax-only", str(derived_path)], "ast")
         if any(_sha(Path(path)) != digest for path, digest in {**pins, **artifacts}.items()):
             raise CoverageFailure("extraction input changed during parsing")

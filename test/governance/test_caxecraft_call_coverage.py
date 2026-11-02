@@ -39,6 +39,36 @@ class ClosureContracts(unittest.TestCase):
             self.fail("actual C coverage controls require Clang")
         self.compiler = Path(compiler)
 
+    def test_system_include_next_uses_native_preprocessing_warning_policy(self):
+        first, second = self.root / "first", self.root / "second"
+        first.mkdir()
+        second.mkdir()
+        (first / "wrapper.h").write_text('#include_next <wrapper.h>\n')
+        (second / "wrapper.h").write_text('typedef int NativeValue;\n')
+        source = self.root / "main.c"
+        source.write_text(PREAMBLE + '#include <wrapper.h>\n'
+                          'void run(void) { observe_begin(); NativeValue x = 0; (void)x; observe_end(); }\n')
+        flags = ('-std=c11', '-Werror', '-pedantic', '-isystem', str(first), '-isystem', str(second))
+        # The ordinary native syntax check accepts its own system-header policy.
+        ordinary = coverage.run_bounded_process(
+            [str(self.compiler), *flags, '-fsyntax-only', str(source)],
+            cwd=self.root, capture_output=True, timeout=20)
+        (self.root / "native.stdout").write_bytes(ordinary.stdout)
+        (self.root / "native.stderr").write_bytes(ordinary.stderr)
+        self.assertEqual(ordinary.returncode, 0, ordinary.stderr.decode(errors="replace"))
+        # Reproduce the former extraction-only failure without changing acceptance.
+        extra_warnings = coverage.run_bounded_process(
+            [str(self.compiler), *flags, '-Wsystem-headers', '-Werror=vla', '-E', str(source)],
+            cwd=self.root, capture_output=True, timeout=20)
+        (self.root / "old-preprocess.stderr").write_bytes(extra_warnings.stderr)
+        self.assertNotEqual(extra_warnings.returncode, 0)
+        self.assertIn(b'-Wgnu-include-next', extra_warnings.stderr)
+        unit = coverage.extract_unit(source, compiler=self.compiler, flags=flags,
+                                     cwd=self.root, evidence=self.root / "extraction")
+        self.assertEqual(self.proof({'main': unit})['functions'], [])
+        receipt = json.loads(unit.receipt.read_text())
+        self.assertEqual([item['outcome'] for item in receipt['commands']], ['success'] * 3)
+
     def test_native_preprocessor_branch_is_preserved_for_clang_parser(self):
         source = self.root / 'native-branch.c'
         source.write_text(PREAMBLE + '''
@@ -276,8 +306,8 @@ void run(void) {
             'void helper(int a[extent()]) { (void)a; }\n')
         self.require_final_vla_rejection(
             'int extent(void) { allocate(); return 1; }\n#include <bounds.h>\n'
-            'void run(void) { int a[1]; observe_begin(); helper(a); observe_end(); }',
-            ('-std=c11', '-ffreestanding', '-Werror', '-isystem', str(headers)),
+            'void run(void) { int a[1]; observe_begin(); helper(a); observe_end(); }\n',
+            ('-std=c11', '-ffreestanding', '-Werror', '-pedantic', '-isystem', str(headers)),
         )
         raw = (self.root / 'main/preprocess.stdout').read_text()
         self.assertTrue(any('bounds.h"' in line and ' 3' in line for line in raw.splitlines()))
@@ -359,13 +389,18 @@ class CoverageHostTests(unittest.TestCase):
 
     def successful_command(self, argv, **kwargs):
         self.assertEqual(kwargs["timeout"], 20)
-        self.assertIn("-Werror=vla", argv)
+        if "-M" in argv or "-E" in argv:
+            self.assertNotIn("-Werror=vla", argv)
+            self.assertNotIn("-Wsystem-headers", argv)
+            self.assertNotIn("-Wno-gnu-line-marker", argv)
         if "-M" in argv:
             return subprocess.CompletedProcess(argv, 0, self.deptext.encode(), b"")
         if "-E" in argv:
             Path(argv[argv.index("-MF") + 1]).write_text(self.deptext)
             return subprocess.CompletedProcess(argv, 0, b"int value;\n", b"")
         self.assertIn("cpp-output", argv)
+        self.assertIn("-Wno-gnu-line-marker", argv)
+        self.assertIn("-Werror=vla", argv)
         self.assertIn("-Wsystem-headers", argv)
         return subprocess.CompletedProcess(argv, 0, json.dumps(self.ast).encode(), b"")
 
