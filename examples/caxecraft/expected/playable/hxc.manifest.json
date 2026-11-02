@@ -690,7 +690,7 @@
       "provenance": {
         "production": "compiler-sidecar"
       },
-      "sha256": "9a2de4347f7f0802429ca15157d10c2838b8fb3ed5ee259bff0195bc8c88583a",
+      "sha256": "6e62c845b11eb6c733d8eaa773e12658c8f697c3cf61ccee60d37f0d6753a502",
       "path": "hxc.dispatch.json",
       "kind": "dispatch-report"
     },
@@ -722,7 +722,7 @@
       "provenance": {
         "production": "compiler-sidecar"
       },
-      "sha256": "32d697da28daacc6d3253cb7c1a64c290ad0736b2139fb2a721dabccb177fa77",
+      "sha256": "ffadf22227d5ecc3c390767c0c2a2029a5d8647ef7cd99cf8b9fc2628aeeda11",
       "path": "hxc.runtime-plan.json",
       "kind": "runtime-plan"
     },
@@ -738,7 +738,7 @@
       "provenance": {
         "production": "compiler-sidecar"
       },
-      "sha256": "71ffb163909a8eef74aba952314b8805f313d6a704a2b62a6f2c995b293b9f81",
+      "sha256": "fd1b0cefae4fa14fe123b4f08e5976bc51b9b382bb3e39ebc1bea87b0b613d57",
       "path": "hxc.specializations.json",
       "kind": "specialization-report"
     },
@@ -4222,11 +4222,11 @@
         "projectCopyrightClaim": true
       },
       "provenance": {
-        "sourceSha256": "fe4b3130433bf6b64d27da5b1acf0bb477763acce0644a7882c15bb67226d77f",
+        "sourceSha256": "211b7c098119eebd0686eefe79592004937fdd4cf114f7a349975abfd5ef0d1f",
         "production": "repository-copy",
         "sourcePath": "runtime/hxrt/include/hxrt/string.h"
       },
-      "sha256": "fe4b3130433bf6b64d27da5b1acf0bb477763acce0644a7882c15bb67226d77f",
+      "sha256": "211b7c098119eebd0686eefe79592004937fdd4cf114f7a349975abfd5ef0d1f",
       "path": "runtime/include/hxrt/string.h",
       "kind": "runtime-header"
     },
@@ -4402,11 +4402,11 @@
         "projectCopyrightClaim": true
       },
       "provenance": {
-        "sourceSha256": "13385273c7c3d4a15785caa3095dd82d97bda8a026ebd9b6d54e2f531eb3b10e",
+        "sourceSha256": "77ca6241e529e789ed93089c95b6d0852052dbb75f0f878e93d77e07dae5bde6",
         "production": "repository-copy",
         "sourcePath": "runtime/hxrt/src/allocator.c"
       },
-      "sha256": "13385273c7c3d4a15785caa3095dd82d97bda8a026ebd9b6d54e2f531eb3b10e",
+      "sha256": "77ca6241e529e789ed93089c95b6d0852052dbb75f0f878e93d77e07dae5bde6",
       "path": "runtime/src/allocator.c",
       "kind": "runtime-source"
     },
@@ -4492,11 +4492,11 @@
         "projectCopyrightClaim": true
       },
       "provenance": {
-        "sourceSha256": "e15fbba1f99b7f951be64ffe5c54579218e06931d668692364872d56dfbeb64e",
+        "sourceSha256": "f361e114a9182416deee356098cd3226a206d0f3de95183528163873e880017f",
         "production": "repository-copy",
         "sourcePath": "runtime/hxrt/src/gc.c"
       },
-      "sha256": "e15fbba1f99b7f951be64ffe5c54579218e06931d668692364872d56dfbeb64e",
+      "sha256": "f361e114a9182416deee356098cd3226a206d0f3de95183528163873e880017f",
       "path": "runtime/src/gc.c",
       "kind": "runtime-source"
     },
@@ -4582,11 +4582,11 @@
         "projectCopyrightClaim": true
       },
       "provenance": {
-        "sourceSha256": "07fb06813ca533677bf00f8580f874bd3c05a41a5bd1b647f45598b0d3e3c8c1",
+        "sourceSha256": "9b7ceeb92fa7689df6f3fbb414a8429552176683e3f5fb11c36a1494d95372f6",
         "production": "repository-copy",
         "sourcePath": "runtime/hxrt/src/string.c"
       },
-      "sha256": "07fb06813ca533677bf00f8580f874bd3c05a41a5bd1b647f45598b0d3e3c8c1",
+      "sha256": "9b7ceeb92fa7689df6f3fbb414a8429552176683e3f5fb11c36a1494d95372f6",
       "path": "runtime/src/string.c",
       "kind": "runtime-source"
     },
