@@ -1,6 +1,8 @@
+import haxe.Int64;
 import haxe.crypto.Sha256;
 import haxe.io.Bytes;
 import reflaxe.c.CContentDigest.sha256Hex;
+import reflaxe.c.CContentDigest.hasCompleteSha256Block;
 import reflaxe.c.emit.GeneratedFile;
 import reflaxe.c.emit.GeneratedFile.GeneratedFileKind;
 
@@ -15,6 +17,7 @@ import reflaxe.c.emit.GeneratedFile.GeneratedFileKind;
 **/
 class ContentDigestProbe {
 	static function main():Void {
+		assertCompleteBlockBounds();
 		assertGeneratedByteLengths();
 		assertDigest("", "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855");
 		assertDigest("abc", "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad");
@@ -30,6 +33,29 @@ class ContentDigestProbe {
 			assertBytesDigest('$length-byte differential', input, expected);
 		}
 		Sys.println("content-digest: OK");
+	}
+
+	/**
+		Check large-input loop decisions without allocating a large byte buffer.
+		The independent 64-bit sum cannot wrap at the 32-bit input-length limit.
+	**/
+	static function assertCompleteBlockBounds():Void {
+		final lengths = [0, 1, 63, 64, 65, 127, 128, 129, 0x7fffff80, 0x7fffffbf, 0x7fffffc0, 0x7fffffff];
+		for (length in lengths) {
+			final lastAlignedOffset = length - length % 64;
+			final offsets = [0, lastAlignedOffset];
+			if (lastAlignedOffset >= 64)
+				offsets.push(lastAlignedOffset - 64);
+			for (offset in offsets) {
+				final blockEnd = Int64.ofInt(offset) + Int64.ofInt(64);
+				final expected = Int64.compare(blockEnd, Int64.ofInt(length)) <= 0;
+				final actual = hasCompleteSha256Block(offset, length);
+				if (actual != expected)
+					throw 'SHA-256 block bounds failed at offset $offset, length $length: expected $expected, got $actual';
+				if (actual && Int64.compare(Int64.ofInt(offset + 64), blockEnd) != 0)
+					throw 'SHA-256 admitted a block whose next offset wraps at $offset';
+			}
+		}
 	}
 
 	/**

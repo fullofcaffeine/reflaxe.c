@@ -24,6 +24,19 @@ function sha256Hex(input:Bytes):String {
 
 #if eval
 /**
+	Tests whether the next complete 64-byte block lies inside the input.
+
+	The digest loop supplies a nonnegative, 64-byte-aligned offset no greater
+	than the nonnegative byte length. Subtracting 64 from the length
+	avoids overflowing `offset + 64` near `IntMax`. Short inputs produce a
+	negative bound and admit no block. A true result guarantees that the next
+	offset, `offset + 64`, is at most the input length and cannot overflow.
+**/
+inline function hasCompleteSha256Block(offset:Int, byteLength:Int):Bool {
+	return offset <= byteLength - 64;
+}
+
+/**
 	A streaming SHA-256 worker specialized for Haxe's Eval macro runtime.
 
 	The worker reads complete 64-byte input blocks directly. Its retained buffers
@@ -120,7 +133,7 @@ private class EvalSha256 {
 	/** Hash one complete immutable byte sequence and return its 32-byte digest. */
 	public function digest(input:Bytes):Bytes {
 		var offset = 0;
-		while (offset + 64 <= input.length) {
+		while (hasCompleteSha256Block(offset, input.length)) {
 			compress(input, offset);
 			offset += 64;
 		}
