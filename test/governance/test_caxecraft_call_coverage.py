@@ -201,6 +201,32 @@ void run(void) {
         return coverage.prove_interval(units, begin="observe_begin", end="observe_end",
                                        forbidden={"allocate"}, reviewed_leaves={"clock_read"})
 
+    def test_unreachable_repeated_inline_header_body_is_outside_interval(self):
+        (self.root / 'shared.h').write_text('inline int unused_helper(void) { return 1; }\n')
+        units = self.program(main='#include "shared.h"\nvoid run(void) {observe_begin(); observe_end();}',
+                             other='#include "shared.h"\n')
+        self.assertEqual(self.proof(units)['functions'], [])
+
+    def test_reachable_duplicate_body_cannot_be_a_reviewed_leaf(self):
+        units = self.program(main='inline int clock_read(void) {return 1;} '
+                                  'void run(void) {observe_begin(); (void)clock_read(); observe_end();}',
+                             other='inline int clock_read(void) {return 1;}')
+        with self.assertRaisesRegex(CoverageFailure, 'ambiguous definition'):
+            self.proof(units)
+
+    def test_ambiguous_interval_owner_fails_even_when_other_body_has_no_markers(self):
+        units = self.program(main='inline void run(void) {observe_begin(); observe_end();}',
+                             other='inline void run(void) {}')
+        with self.assertRaisesRegex(CoverageFailure, 'ambiguous interval owner'):
+            self.proof(units)
+
+    def test_ambiguous_marker_implementation_fails_outside_closure(self):
+        units = self.program(main='inline void observe_begin(void) {} '
+                                  'void run(void) {observe_begin(); observe_end();}',
+                             other='inline void observe_begin(void) {}')
+        with self.assertRaisesRegex(CoverageFailure, 'ambiguous interval marker'):
+            self.proof(units)
+
     def test_startup_allocation_is_outside_interval(self):
         program = self.program(main="void run(void) { allocate(); observe_begin(); observe_end(); }")
         self.assertEqual(self.proof(program)["functions"], [])

@@ -96,7 +96,7 @@ class _Program:
     def __init__(self, units: dict[str, object]):
         self.units = {name: decode(ast) for name, ast in units.items()}
         self.declarations: dict[tuple[str, str], Key] = {}
-        self.bodies: dict[Key, tuple[str, Node]] = {}
+        self.bodies: dict[Key, list[tuple[str, Node]]] = {}
         self.unsafe_declarations: set[Key] = set()
         self.tls_variables: set[tuple[str, str]] = set()
         for unit, ast in self.units.items():
@@ -126,9 +126,9 @@ class _Program:
                     self.unsafe_declarations.add(key)
                 bodies = [child for child in node.children if child.kind == "CompoundStmt"]
                 if bodies:
-                    if len(bodies) != 1 or key in self.bodies:
+                    if len(bodies) != 1:
                         raise CoverageFailure(f"ambiguous definition: {key}")
-                    self.bodies[key] = (unit, bodies[0])
+                    self.bodies.setdefault(key, []).append((unit, bodies[0]))
 
     def callee(self, unit: str, call: Node) -> Key:
         if call.kind != "CallExpr" or not call.children:
@@ -156,40 +156,47 @@ class _Program:
         """
         markers: list[tuple[str, str]] = []
         matches: list[tuple[str, tuple[Node, ...]]] = []
-        for unit, body in self.bodies.values():
-            for node in walk(body):
-                if node.kind == "CallExpr":
-                    # An unrelated indirect call outside observation is allowed.
-                    try:
-                        target = self.callee(unit, node)
-                    except CoverageFailure:
-                        continue
-                    if target in {("", begin), ("", end)}:
-                        markers.append((unit, target[1]))
-                        if len(node.children) != 1:
-                            raise CoverageFailure("interval markers must have no arguments")
-                if node.kind == "CompoundStmt":
-                    positions: dict[str, int] = {}
-                    for index, statement in enumerate(node.children):
-                        if statement.kind == "CallExpr":
-                            try:
-                                target = self.callee(unit, statement)
-                            except CoverageFailure:
-                                continue
-                            if target in {("", begin), ("", end)}:
-                                positions[target[1]] = index
-                    if begin in positions and end in positions:
-                        if any(child.kind in {"GotoStmt", "IndirectGotoStmt", "AddrLabelExpr", "CleanupAttr"}
-                               for child in walk(body)):
-                            raise CoverageFailure("enclosing function has unproved control flow or cleanup")
-                        first, last = positions[begin], positions[end]
-                        if first >= last:
-                            raise CoverageFailure("interval markers are reversed")
-                        if any(child.kind in {"ReturnStmt", "BreakStmt", "ContinueStmt"}
-                               for statement in node.children[first + 1:last]
-                               for child in walk(statement)):
-                            raise CoverageFailure("control flow can leave the interval")
-                        matches.append((unit, node.children[first + 1:last]))
+        # Inspect every definition for markers, including unreachable header bodies.
+        # Only the measured owner and reachable calls need a unique body.
+        for owner, definitions in self.bodies.items():
+            for unit, body in definitions:
+                for node in walk(body):
+                    if node.kind == "CallExpr":
+                        # An unrelated indirect call outside observation is allowed.
+                        try:
+                            target = self.callee(unit, node)
+                        except CoverageFailure:
+                            continue
+                        if target in {("", begin), ("", end)}:
+                            if len(definitions) != 1:
+                                raise CoverageFailure(f"ambiguous interval owner: {owner}")
+                            if len(self.bodies.get(target, [])) > 1:
+                                raise CoverageFailure(f"ambiguous interval marker: {target}")
+                            markers.append((unit, target[1]))
+                            if len(node.children) != 1:
+                                raise CoverageFailure("interval markers must have no arguments")
+                    if node.kind == "CompoundStmt":
+                        positions: dict[str, int] = {}
+                        for index, statement in enumerate(node.children):
+                            if statement.kind == "CallExpr":
+                                try:
+                                    target = self.callee(unit, statement)
+                                except CoverageFailure:
+                                    continue
+                                if target in {("", begin), ("", end)}:
+                                    positions[target[1]] = index
+                        if begin in positions and end in positions:
+                            if any(child.kind in {"GotoStmt", "IndirectGotoStmt", "AddrLabelExpr", "CleanupAttr"}
+                                   for child in walk(body)):
+                                raise CoverageFailure("enclosing function has unproved control flow or cleanup")
+                            first, last = positions[begin], positions[end]
+                            if first >= last:
+                                raise CoverageFailure("interval markers are reversed")
+                            if any(child.kind in {"ReturnStmt", "BreakStmt", "ContinueStmt"}
+                                   for statement in node.children[first + 1:last]
+                                   for child in walk(statement)):
+                                raise CoverageFailure("control flow can leave the interval")
+                            matches.append((unit, node.children[first + 1:last]))
         if len(markers) != 2 or len(matches) != 1:
             raise CoverageFailure("need one complete interval in one block")
         return matches[0]
@@ -215,11 +222,14 @@ class _Program:
                 key = self.callee(unit, node)
                 if key[1] in forbidden:
                     raise CoverageFailure(f"prohibited call: {key[1]}")
+                definitions = self.bodies.get(key, [])
+                if len(definitions) > 1:
+                    raise CoverageFailure(f"ambiguous definition: {key}")
                 if key in visited:
                     continue
                 visited.add(key)
-                if key in self.bodies:
-                    pending.append(self.bodies[key])
+                if definitions:
+                    pending.append(definitions[0])
                 elif not key[0] and key[1] in reviewed_leaves:
                     leaves.add(key[1])
                 else:
