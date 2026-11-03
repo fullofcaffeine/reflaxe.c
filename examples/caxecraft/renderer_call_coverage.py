@@ -93,42 +93,50 @@ Key = tuple[str, str]
 
 
 class _Program:
-    def __init__(self, units: dict[str, object]):
-        self.units = {name: decode(ast) for name, ast in units.items()}
+    def __init__(self):
         self.declarations: dict[tuple[str, str], Key] = {}
         self.bodies: dict[Key, list[tuple[str, Node]]] = {}
         self.unsafe_declarations: set[Key] = set()
         self.tls_variables: set[tuple[str, str]] = set()
-        for unit, ast in self.units.items():
-            if ast.kind != "TranslationUnitDecl":
-                raise CoverageFailure("expected complete translation unit")
-            for node in walk(ast):
-                # Ordinary atomic loads/stores need not be CallExpr or AtomicExpr.
-                # Reject the TU until implicit helper effects have their own proof.
-                if node.atomic or node.kind == "AtomicExpr":
-                    raise CoverageFailure("atomic types or operations have no implicit-call proof")
-                if node.kind == "VarDecl" and node.tls:
-                    self.tls_variables.add((unit, node.identifier))
-                if node.kind != "FunctionDecl":
-                    continue
-                if not node.identifier or not node.name:
-                    raise CoverageFailure("function identity is missing")
-                key = (unit if node.storage == "static" else "", node.name)
-                self.declarations[unit, node.identifier] = key
-                # Name-only admission is invalid for linker aliases and weak or
-                # resolver-backed functions. Keep unknown attributes closed too;
-                # these admitted attributes affect optimization/diagnostics only.
-                harmless = {"BuiltinAttr", "NoThrowAttr", "NoReturnAttr",
-                            "WarnUnusedResultAttr", "AlwaysInlineAttr", "NoInlineAttr",
-                            "ConstAttr", "PureAttr", "VisibilityAttr"}
-                if any(child.kind.endswith("Attr") and child.kind not in harmless
-                       for child in node.children):
-                    self.unsafe_declarations.add(key)
-                bodies = [child for child in node.children if child.kind == "CompoundStmt"]
-                if bodies:
-                    if len(bodies) != 1:
-                        raise CoverageFailure(f"ambiguous definition: {key}")
-                    self.bodies.setdefault(key, []).append((unit, bodies[0]))
+
+    def add_unit(self, unit: str, raw_ast: object) -> None:
+        """Validate a whole unit, retaining only graph indices and function bodies.
+
+        Decode and inspect every node before releasing the translation-unit root.
+        Bodies remain available for global marker search, including unreachable
+        definitions; unrelated declarations need not keep the full tree alive.
+        The caller must add every unit before asking for interval coverage.
+        """
+        ast = decode(raw_ast)
+        if ast.kind != "TranslationUnitDecl":
+            raise CoverageFailure("expected complete translation unit")
+        for node in walk(ast):
+            # Ordinary atomic loads/stores need not be CallExpr or AtomicExpr.
+            # Reject the TU until implicit helper effects have their own proof.
+            if node.atomic or node.kind == "AtomicExpr":
+                raise CoverageFailure("atomic types or operations have no implicit-call proof")
+            if node.kind == "VarDecl" and node.tls:
+                self.tls_variables.add((unit, node.identifier))
+            if node.kind != "FunctionDecl":
+                continue
+            if not node.identifier or not node.name:
+                raise CoverageFailure("function identity is missing")
+            key = (unit if node.storage == "static" else "", node.name)
+            self.declarations[unit, node.identifier] = key
+            # Name-only admission is invalid for linker aliases and weak or
+            # resolver-backed functions. Keep unknown attributes closed too;
+            # these admitted attributes affect optimization/diagnostics only.
+            harmless = {"BuiltinAttr", "NoThrowAttr", "NoReturnAttr",
+                        "WarnUnusedResultAttr", "AlwaysInlineAttr", "NoInlineAttr",
+                        "ConstAttr", "PureAttr", "VisibilityAttr"}
+            if any(child.kind.endswith("Attr") and child.kind not in harmless
+                   for child in node.children):
+                self.unsafe_declarations.add(key)
+            bodies = [child for child in node.children if child.kind == "CompoundStmt"]
+            if bodies:
+                if len(bodies) != 1:
+                    raise CoverageFailure(f"ambiguous definition: {key}")
+                self.bodies.setdefault(key, []).append((unit, bodies[0]))
 
     def callee(self, unit: str, call: Node) -> Key:
         if call.kind != "CallExpr" or not call.children:
@@ -521,5 +529,7 @@ def prove_interval(units: dict[str, ExtractedUnit], *, begin: str, end: str,
     """Prove only the supplied units; reviewed leaf semantics remain caller-owned."""
     if diagnostic_tools is not None:
         diagnostic_tools.verify()
-    program = _Program({name: verified_ast(unit, diagnostic_tools) for name, unit in units.items()})
+    program = _Program()
+    for name, unit in units.items():
+        program.add_unit(name, verified_ast(unit, diagnostic_tools))
     return program.prove(begin, end, forbidden, reviewed_leaves)

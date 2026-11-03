@@ -15,6 +15,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+import weakref
 from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -506,6 +507,74 @@ class CoverageHostTests(unittest.TestCase):
         with mock.patch.object(coverage, "run_bounded_process", side_effect=fake):
             return coverage.extract_unit(self.source, compiler=self.compiler, flags=("-std=c11",),
                                          cwd=self.root, evidence=self.root / "evidence")
+
+    @staticmethod
+    def empty_interval_ast():
+        """A complete empty interval, with an unrelated file-scope declaration."""
+        def call(name):
+            return {"kind": "CallExpr", "inner": [{"kind": "DeclRefExpr",
+                    "referencedDecl": {"kind": "FunctionDecl", "id": name}}]}
+        return {"kind": "TranslationUnitDecl", "inner": [
+            {"kind": "FunctionDecl", "id": "begin", "name": "observe_begin"},
+            {"kind": "FunctionDecl", "id": "end", "name": "observe_end"},
+            {"kind": "VarDecl", "id": "unused", "name": "unused"},
+            {"kind": "FunctionDecl", "id": "run", "name": "run", "inner": [
+                {"kind": "CompoundStmt", "inner": [call("begin"), call("end")]}]},
+        ]}
+
+    def test_previous_unit_trees_are_released_before_next_verification(self):
+        class TrackedAst(dict):
+            pass
+
+        references = {}
+        decoded = coverage.decode
+
+        def track_decode(value):
+            node = decoded(value)
+            if node.kind == "TranslationUnitDecl" or node.name == "unused":
+                references[node.kind] = weakref.ref(node)
+            return node
+
+        first = coverage.ExtractedUnit(self.root / "first.json", "first")
+        second = coverage.ExtractedUnit(self.root / "second.json", "second")
+
+        def verify(unit, tools):
+            if unit == first:
+                raw = TrackedAst(self.empty_interval_ast())
+                references["raw"] = weakref.ref(raw)
+                return raw
+            self.assertEqual(unit, second)
+            self.assertIsNone(references["raw"](), "previous raw AST remains alive")
+            self.assertEqual(set(references), {"raw", "TranslationUnitDecl", "VarDecl"})
+            for name, reference in references.items():
+                self.assertIsNone(reference(), f"previous {name} remains alive")
+            return {"kind": "TranslationUnitDecl"}
+
+        with mock.patch.object(coverage, "verified_ast", side_effect=verify) as verifier, \
+                mock.patch.object(coverage, "decode", new=track_decode):
+            result = coverage.prove_interval({"first": first, "second": second},
+                begin="observe_begin", end="observe_end", forbidden=set(), reviewed_leaves=set())
+        self.assertEqual(verifier.call_count, 2)
+        self.assertEqual(result["functions"], [])
+        self.assertEqual(result["foreignLeaves"], [])
+
+    def test_late_unit_failure_cannot_admit_an_earlier_complete_interval(self):
+        first = coverage.ExtractedUnit(self.root / "first.json", "first")
+        second = coverage.ExtractedUnit(self.root / "second.json", "second")
+        failures = (
+            (CoverageFailure("late receipt changed"), "late receipt changed"),
+            ({"kind": "TranslationUnitDecl", "inner": [
+                {"kind": "VarDecl", "type": {"qualType": "_Atomic(int)"}}]}, "atomic"),
+            ({"kind": "TranslationUnitDecl", "inner": [
+                {"kind": "VarDecl", "type": {"qualType": "int[n]"}}]}, "array dimension"),
+            ({"kind": "TranslationUnitDecl", "inner": [False]}, "AST node"),
+        )
+        for late, message in failures:
+            with self.subTest(message=message), \
+                    mock.patch.object(coverage, "verified_ast", side_effect=[self.empty_interval_ast(), late]), \
+                    self.assertRaisesRegex(CoverageFailure, message):
+                coverage.prove_interval({"first": first, "second": second},
+                    begin="observe_begin", end="observe_end", forbidden=set(), reviewed_leaves=set())
 
     def successful_command(self, argv, **kwargs):
         self.assertEqual(kwargs["timeout"], 20)
