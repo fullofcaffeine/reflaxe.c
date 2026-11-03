@@ -35,7 +35,10 @@ class TerrainBuildCoverageTests(unittest.TestCase):
         for path in (self.main, self.helper, self.header, self.executable,
                      self.compiler, self.preprocessor, self.observer):
             path.write_text(path.name + " original bytes\n")
+        self.library = self.root / "libclang"
+        self.library.write_text("library original bytes")
         self.addCleanup(mock.patch.stopall)
+        mock.patch.object(build.coverage, "matching_library", return_value=self.library).start()
         mock.patch.dict(native.os.environ, {}, clear=True).start()
         mock.patch.object(build, "OBSERVER_SOURCE", self.observer).start()
         self.sources = (("main.c", self.main), ("helper.c", self.helper),
@@ -81,6 +84,12 @@ class TerrainBuildCoverageTests(unittest.TestCase):
     def digest(self, path):
         return hashlib.sha256(path.read_bytes()).hexdigest()
 
+    def test_library_change_invalidates_end_of_pilot_evidence(self):
+        proof, _, _ = self.invoke()
+        self.library.write_text("changed reader library")
+        with self.assertRaises(build.CoverageFailure):
+            proof.verify(native_contract=self.contract)
+
     def extract(self, source, **kwargs):
         self.calls.append((source, kwargs))
         evidence = kwargs["evidence"]
@@ -93,6 +102,8 @@ class TerrainBuildCoverageTests(unittest.TestCase):
         receipt.write_text(json.dumps({
             "inputs": {str(source): self.digest(source), str(self.header): self.digest(self.header)},
             "preprocessingArtifacts": {str(preprocessed): self.digest(preprocessed)},
+            "diagnosticTools": dict(kwargs["diagnostic_tools"].identities),
+            "diagnosticArtifacts": {str(preprocessed): self.digest(preprocessed)},
             "ast": str(ast), "astSha256": self.digest(ast), "status": "success",
         }))
         return build.coverage.ExtractedUnit(receipt, self.digest(receipt))
@@ -129,6 +140,7 @@ class TerrainBuildCoverageTests(unittest.TestCase):
             "forbidden": {"hxc_alloc", "hxc_realloc", "hxc_gc_allocate", "hxc_gc_collect",
                           "malloc", "calloc", "realloc", "aligned_alloc", "posix_memalign"},
             "reviewed_leaves": {"reviewed_draw"},
+            "diagnostic_tools": self.calls[0][1]["diagnostic_tools"],
         })
         with mock.patch.object(build.coverage, "extract_unit", side_effect=AssertionError("must not extract")), \
              mock.patch.object(build.coverage, "prove_interval", side_effect=AssertionError("must not rebuild AST")), \

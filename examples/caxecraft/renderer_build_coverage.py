@@ -175,17 +175,18 @@ def build_terrain_coverage(
             pin(path)
         record["initialInputs"] = {str(path): digest for path, digest in pins.items()}
         units = {}
+        diagnostic_tools = coverage.prepare_diagnostic_tools(compiler)
         for index, (name, path) in enumerate(sources):
             unit = coverage.extract_unit(
                 path, compiler=compiler, preprocessor=preprocessor, flags=flags,
-                cwd=cwd, evidence=evidence / f"unit-{index:04d}",
+                cwd=cwd, evidence=evidence / f"unit-{index:04d}", diagnostic_tools=diagnostic_tools,
             )
             units[name] = unit
             record["extractions"].append({"source": name, "receipt": str(unit.receipt),
                                           "sha256": unit.sha256})
         proof = coverage.prove_interval(
             units, begin="caxecraft_test_interval_begin", end="caxecraft_test_interval_end",
-            forbidden=set(FORBIDDEN), reviewed_leaves=set(native_contract.leaves),
+            forbidden=set(FORBIDDEN), reviewed_leaves=set(native_contract.leaves), diagnostic_tools=diagnostic_tools,
         )
         # prove_interval verified these extractor-owned receipts and ASTs. Freeze
         # their already checked file identities for cheap end-of-pilot rechecks.
@@ -198,7 +199,7 @@ def build_terrain_coverage(
             tools = {compiler.resolve(), preprocessor.resolve()}
             if extracted_paths - tools != built_paths - tools:
                 raise CoverageFailure("extraction dependencies differ from the compiled translation unit")
-            for field in ("inputs", "preprocessingArtifacts"):
+            for field in ("inputs", "preprocessingArtifacts", "diagnosticTools", "diagnosticArtifacts"):
                 for path, digest in extracted[field].items():
                     pin(Path(path), digest)
             pin(Path(extracted["ast"]), extracted["astSha256"])

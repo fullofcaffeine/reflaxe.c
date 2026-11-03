@@ -67,7 +67,98 @@ class ClosureContracts(unittest.TestCase):
                                      cwd=self.root, evidence=self.root / "extraction")
         self.assertEqual(self.proof({'main': unit})['functions'], [])
         receipt = json.loads(unit.receipt.read_text())
-        self.assertEqual([item['outcome'] for item in receipt['commands']], ['success'] * 3)
+        self.assertEqual([item['outcome'] for item in receipt['commands']], ['success'] * 4)
+
+    def test_unknown_semantic_pragma_fails_proof_diagnostics(self):
+        source = self.root / "main.c"
+        source.write_text(PREAMBLE + '#pragma unreviewed_semantic_effect\n'
+                          'void run(void) { observe_begin(); observe_end(); }\n')
+        with self.assertRaisesRegex(CoverageFailure, "unclassified coverage diagnostic"):
+            coverage.extract_unit(source, compiler=self.compiler, flags=('-std=c11',),
+                                  cwd=self.root, evidence=self.root / 'extraction')
+        receipt = json.loads((self.root / 'extraction/receipt.json').read_text())
+        self.assertEqual([item['outcome'] for item in receipt['commands']], ['success'] * 4)
+
+    def test_nested_header_access_context_notes_are_retained(self):
+        (self.root / 'outer.h').write_text('#include "inner.h"\n')
+        (self.root / 'inner.h').write_text('void helper(const char *p) __attribute__((access(read_only,1)));\n')
+        source = self.root / 'main.c'
+        source.write_text(PREAMBLE + '#include "outer.h"\n'
+                          'void helper(const char *p) {(void)p;}\n'
+                          'void run(void) {observe_begin(); helper("x"); observe_end();}\n')
+        unit = coverage.extract_unit(source, compiler=self.compiler, flags=('-std=c11',),
+                                     cwd=self.root, evidence=self.root / 'extraction')
+        self.proof({'main': unit})
+        decisions = json.loads((self.root / 'extraction/diagnostic-decisions.json').read_text())['decisions']
+        self.assertEqual(len(decisions), 1)
+        self.assertEqual(len(decisions[0]['contextNotes']), 2)
+
+    def test_access_metadata_extracts_but_does_not_authorize_effects(self):
+        declarations = 'void helper(const char *p) __attribute__((__access__(__read_only__, 1)));\n'
+        for name, body in (("plain", "(void)p;"), ("allocation", "(void)p; allocate();"),
+                           ("objectsize", "(void)__builtin_dynamic_object_size(p, 0);")):
+            units = self.program(**{name: declarations + 'void helper(const char *p) { ' + body + ' }\n'
+                                    'void run(void) { observe_begin(); helper("x"); observe_end(); }\n'})
+            record = json.loads(units[name].receipt.read_text())
+            self.assertEqual(record['status'], 'success')
+            ledger = json.loads((self.root / name / 'diagnostic-decisions.json').read_text())
+            self.assertEqual(len(ledger['decisions']), 1)
+            if name == "plain":
+                self.assertIn(("", "helper"), self.proof(units)['functions'])
+            else:
+                with self.assertRaises(CoverageFailure): self.proof(units)
+
+    def test_serialized_ranges_use_physical_bytes_under_repeated_line_markers(self):
+        units = self.program(main='# 100 "repeated.h" 3\n/* café */\n'
+            'void first(const char *p) __attribute__((__access__(\n __read_only__,1)));\n'
+            '# 100 "repeated.h" 3\n'
+            'void second(char *a, const char *b) __attribute__((__access__(__write_only__,1), __access__(__read_only__,2)));\n'
+            '# 100 "repeated.h" 3\n'
+            'void third(const char *p) __attribute__((__access__(__read_only__,1)));\n')
+        self.assertEqual(json.loads(units['main'].receipt.read_text())['status'], 'success')
+        data = (self.root / 'main/diagnostic-neutral.i').read_bytes()
+        expected = [index for index in range(len(data)) if data.startswith(b'__access__', index)]
+        ledger = json.loads((self.root / 'main/diagnostic-decisions.json').read_text())
+        self.assertEqual([item['start'] for item in ledger['decisions']], expected)
+        self.assertEqual(len(expected), 4)
+        for item in ledger['decisions']:
+            self.assertEqual(data[item['lastToken']:item['lastToken'] + 1], b')')
+
+    def test_corrupt_serialized_file_fails_reader(self):
+        malformed = self.root / 'corrupt.dia'
+        malformed.write_bytes(b'incomplete serialized diagnostics')
+        reader = Path(coverage.renderer_diagnostics.__file__)
+        result = coverage.run_bounded_process(
+            [sys.executable, str(reader), str(self.compiler),
+             str(coverage.matching_library(self.compiler)), str(malformed)],
+            cwd=self.root, capture_output=True, timeout=20)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn(b'invalid serialized diagnostics', result.stderr)
+
+    def test_unreviewed_ignored_attribute_fails_extraction(self):
+        with self.assertRaisesRegex(CoverageFailure, "unreviewed"):
+            self.program(main='void helper(void) __attribute__((unreviewed_effect));\n'
+                         'void run(void) { observe_begin(); helper(); observe_end(); }\n')
+        receipt = json.loads((self.root / 'main/receipt.json').read_text())
+        self.assertEqual(receipt['commands'][-1]['outcome'], 'success')
+        self.assertEqual(receipt['status'], 'failed')
+
+    def test_native_cast_quality_does_not_replace_proof_diagnostics(self):
+        header = self.root / 'native.h'
+        header.write_text('#pragma GCC system_header\n'
+                          'static inline void *pointer(const void *p) {\n'
+                          '#pragma GCC diagnostic push\n#pragma GCC diagnostic ignored "-Wcast-qual"\n'
+                          'return (void *)p;\n#pragma GCC diagnostic pop\n}\n')
+        source = self.root / 'cast.c'
+        source.write_text(PREAMBLE + '#include "native.h"\n'
+                          'void run(const void *p) { observe_begin(); (void)pointer(p); observe_end(); }\n')
+        flags = ('-std=c11', '-Werror', '-Wcast-qual', '-pedantic')
+        native = coverage.run_bounded_process([str(self.compiler), *flags, '-fsyntax-only', str(source)],
+                                             cwd=self.root, capture_output=True, timeout=20)
+        self.assertEqual(native.returncode, 0, native.stderr.decode(errors='replace'))
+        unit = coverage.extract_unit(source, compiler=self.compiler, flags=flags,
+                                     cwd=self.root, evidence=self.root / 'cast')
+        self.assertTrue(self.proof({'cast': unit}))
 
     def test_native_preprocessor_branch_is_preserved_for_clang_parser(self):
         source = self.root / 'native-branch.c'
@@ -346,7 +437,7 @@ void run(void) {
         receipt = json.loads(unit.receipt.read_text())
         self.assertIn(str(header), receipt["inputs"])
         self.assertNotIn("-include", receipt["semanticFlags"])
-        self.assertNotIn("-include", receipt["commands"][-1]["argv"])
+        self.assertNotIn("-include", next(item["argv"] for item in receipt["commands"] if "cpp-output" in item["argv"]))
         return unit, header
 
     def test_forced_header_macro_forbidden_call_is_checked(self):
@@ -379,6 +470,9 @@ class CoverageHostTests(unittest.TestCase):
         self.source.write_text('#include "header.h"\n')
         self.header.write_text("int value;\n")
         self.compiler.write_text("mock compiler identity\n")
+        self.library = self.root / "libclang"
+        self.library.write_text("mock library identity\n")
+        self.enterContext(mock.patch.object(coverage, "matching_library", return_value=self.library))
         self.ast = {"kind": "TranslationUnitDecl", "inner": []}
         self.deptext = f"coverage: {self.source} {self.header}\n"
 
@@ -398,7 +492,10 @@ class CoverageHostTests(unittest.TestCase):
         if "-E" in argv:
             Path(argv[argv.index("-MF") + 1]).write_text(self.deptext)
             return subprocess.CompletedProcess(argv, 0, b"int value;\n", b"")
+        if "renderer_diagnostics.py" in str(argv[1]):
+            return subprocess.CompletedProcess(argv, 0, json.dumps({"compilerVersion": "clang version 21.1.8", "libraryVersion": "clang version 21.1.8", "diagnostics": []}).encode(), b"")
         self.assertIn("cpp-output", argv)
+        Path(argv[argv.index("-serialize-diagnostics") + 1]).write_bytes(b"mock diagnostics")
         self.assertIn("-Wno-gnu-line-marker", argv)
         self.assertIn("-Werror=vla", argv)
         self.assertIn("-Wsystem-headers", argv)
@@ -415,8 +512,9 @@ class CoverageHostTests(unittest.TestCase):
         preprocessor = self.root / 'native-cc'
         preprocessor.write_text('independent native compiler identity\n')
         def command(argv, **kwargs):
-            expected = self.compiler if '-Xclang' in argv else preprocessor
-            self.assertEqual(argv[0], str(expected))
+            if "renderer_diagnostics.py" not in str(argv[1]):
+                expected = self.compiler if '-Xclang' in argv else preprocessor
+                self.assertEqual(argv[0], str(expected))
             return self.successful_command(argv, **kwargs)
         with mock.patch.object(coverage, 'run_bounded_process', side_effect=command):
             unit = coverage.extract_unit(self.source, compiler=self.compiler,
@@ -426,6 +524,63 @@ class CoverageHostTests(unittest.TestCase):
         preprocessor.write_text('changed compiler\n')
         with self.assertRaisesRegex(CoverageFailure, 'input identity'):
             coverage.verified_ast(unit)
+
+    def test_diagnostic_ledger_and_library_substitution_fail(self):
+        unit = self.invoke(self.successful_command)
+        ledger = self.root / 'evidence/diagnostic-decisions.json'
+        ledger.write_text('{}')
+        with self.assertRaisesRegex(CoverageFailure, 'diagnostic evidence'):
+            coverage.verified_ast(unit)
+
+    def test_parser_policy_is_required_and_closed(self):
+        unit = self.invoke(self.successful_command)
+        original = json.loads(unit.receipt.read_text())
+        for version in (None, "unreviewed"):
+            record = dict(original)
+            if version is None:
+                del record['parserPolicyVersion']
+            else:
+                record['parserPolicyVersion'] = version
+            unit.receipt.write_text(json.dumps(record))
+            current = coverage.ExtractedUnit(unit.receipt, coverage._sha(unit.receipt))
+            with self.assertRaisesRegex(CoverageFailure, 'parser diagnostic policy'):
+                coverage.verified_ast(current)
+
+    def test_proof_diagnostics_and_quality_projection_are_explicit(self):
+        flags = coverage.PROOF_FLAGS
+        for required in ('-Wunknown-pragmas', '-Wignored-pragmas',
+                         '-Werror=implicit-function-declaration',
+                         '-Werror=unknown-warning-option', '-Werror=unused-command-line-argument'):
+            self.assertIn(required, flags)
+        with self.assertRaises(CoverageFailure):
+            coverage._flags(('-Wwrite-strings',))
+        self.assertEqual(coverage._semantic_flags(('-Wwrite-strings',)), ('-Wwrite-strings',))
+
+    def test_reader_failure_cannot_publish_partial_parse(self):
+        def fail(argv, **kwargs):
+            if "renderer_diagnostics.py" in str(argv[1]):
+                return subprocess.CompletedProcess(argv, 1, b'{"diagnostics":[]}', b'corrupt serialized diagnostics')
+            return self.successful_command(argv, **kwargs)
+        with self.assertRaisesRegex(CoverageFailure, 'diagnostics failed'):
+            self.invoke(fail)
+        self.assertEqual(json.loads((self.root / 'evidence/receipt.json').read_text())['status'], 'failed')
+
+    def test_supplied_tool_identities_do_not_bypass_verification(self):
+        tools = coverage.prepare_diagnostic_tools(self.compiler)
+        with self.assertRaisesRegex(CoverageFailure, 'incomplete diagnostic tool'):
+            coverage.DiagnosticTools(tools.compiler, tools.library, tools.reader, tools.identities[:-1])
+        self.library.write_text('changed')
+        with self.assertRaisesRegex(CoverageFailure, 'tooling identity'):
+            tools.verify()
+
+    def test_prepared_tools_cannot_cross_compiler_installations(self):
+        tools = coverage.prepare_diagnostic_tools(self.compiler)
+        other = self.root / 'another-clang'
+        other.write_text('same version, different installation')
+        with mock.patch.object(coverage, 'run_bounded_process', side_effect=self.successful_command):
+            with self.assertRaisesRegex(CoverageFailure, 'another compiler installation'):
+                coverage.extract_unit(self.source, compiler=other, flags=('-std=c11',),
+                                      cwd=self.root, evidence=self.root / 'evidence', diagnostic_tools=tools)
 
     def test_ast_substitution_fails(self):
         unit = self.invoke(self.successful_command)
@@ -545,7 +700,7 @@ class CoverageHostTests(unittest.TestCase):
                     "-Wmissing-prototypes", "-Wundef", "-Wformat=2", "-Wimplicit-fallthrough",
                     "-Wcast-align", "-Wcast-qual")
         coverage._flags(expected + ("-include", "hooks.h"))
-        self.assertEqual(coverage._semantic_flags(expected + ("-include", "hooks.h")), expected)
+        self.assertEqual(coverage._semantic_flags(expected + ("-include", "hooks.h")), ("-std=c11",))
         for flags in (("-include",), ("-include", ""), ("-include", "-Werror"),
                       ("-includehooks.h",), ("@response",), ("-fplugin=x",),
                       ("-fsanitize=address,undefined",), ("-Wno-vla",), ("-Wunknown",)):

@@ -20,6 +20,10 @@ from pathlib import Path
 import re
 import shlex
 import subprocess
+import sys
+
+from renderer_diagnostics import PARSER_POLICY_VERSION, PROOF_FLAGS, matching_library, admit_diagnostics
+import renderer_diagnostics
 
 from scripts.test.bounded_process import run as run_bounded_process
 from scripts.test.c_fixture_harness import C11_STRICT_FLAGS
@@ -269,6 +273,12 @@ def _dependencies(text: str, cwd: Path) -> tuple[Path, ...]:
     return paths
 
 
+_NATIVE_QUALITY_FLAGS = frozenset(C11_STRICT_FLAGS) - {"-std=c11"} | frozenset({
+    "-pedantic-errors", "-Wall", "-Wextra", "-Werror", "-pedantic",
+    "-Werror=implicit-function-declaration", "-Werror=pointer-arith",
+})
+
+
 def _semantic_flags(flags: tuple[str, ...]) -> tuple[str, ...]:
     """Separate preprocessing-only options; retain dialect/target/codegen policy."""
     result = []
@@ -279,6 +289,11 @@ def _semantic_flags(flags: tuple[str, ...]) -> tuple[str, ...]:
             index += 2
             continue
         if flag.startswith(("-I", "-D", "-U")):
+            index += 1
+            continue
+        # Native compilation already owns these closed quality diagnostics.
+        # Parsing has its own proof profile; unclassified diagnostics still fail.
+        if flag in _NATIVE_QUALITY_FLAGS:
             index += 1
             continue
         result.append(flag)
@@ -308,8 +323,39 @@ def diagnostic_neutral_text(raw: str) -> tuple[str, list[dict[str, object]]]:
     return "\n".join(lines), removed
 
 
+@dataclass(frozen=True)
+class DiagnosticTools:
+    """Per-build immutable tool identities; standalone extraction prepares its own."""
+    compiler: Path
+    library: Path
+    reader: Path
+    identities: tuple[tuple[str, str], ...]
+
+    def __post_init__(self) -> None:
+        expected_reader = Path(renderer_diagnostics.__file__).resolve()
+        expected = {str(self.library.resolve()), str(expected_reader),
+                    str(Path(sys.executable).resolve()), str(Path(__file__).resolve())}
+        if (self.library != matching_library(self.compiler).resolve() or self.reader != expected_reader or len(self.identities) != len(expected)
+                or {path for path, _ in self.identities} != expected
+                or any(re.fullmatch(r"[0-9a-f]{64}", digest) is None for _, digest in self.identities)):
+            raise CoverageFailure("incomplete diagnostic tool identity")
+
+    def verify(self) -> None:
+        if any(_sha(Path(path)) != digest for path, digest in self.identities):
+            raise CoverageFailure("diagnostic tooling identity changed")
+
+
+def prepare_diagnostic_tools(compiler: Path) -> DiagnosticTools:
+    compiler = compiler.resolve()
+    library = matching_library(compiler).resolve()
+    reader = Path(renderer_diagnostics.__file__).resolve()
+    paths = (library, reader, Path(sys.executable).resolve(), Path(__file__).resolve())
+    return DiagnosticTools(compiler, library, reader, tuple((str(path), _sha(path)) for path in paths))
+
+
 def extract_unit(source: Path, *, compiler: Path, flags: tuple[str, ...],
-                 cwd: Path, evidence: Path, preprocessor: Path | None = None) -> ExtractedUnit:
+                 cwd: Path, evidence: Path, preprocessor: Path | None = None,
+                 diagnostic_tools: DiagnosticTools | None = None) -> ExtractedUnit:
     """Extract one C TU with 20-second tree-cleaned commands and immutable evidence.
 
     The native build's compiler owns preprocessing; Clang owns AST parsing.
@@ -393,11 +439,32 @@ def extract_unit(source: Path, *, compiler: Path, flags: tuple[str, ...],
                      (evidence / "preprocess.stdout", derived_path, ledger, depfile)}
         record["preprocessingArtifacts"] = artifacts
         record["removedDiagnosticDirectives"] = len(removed)
-        # Clang's own preprocessed line markers carry source/system-header identity.
-        # Accept that transport syntax without suppressing C or VLA diagnostics.
-        ast_text = command([str(compiler), "-x", "cpp-output", *semantic,
-                            "-Wno-gnu-line-marker", "-Werror=vla", "-Wsystem-headers", "-Xclang", "-ast-dump=json",
+        tools = diagnostic_tools or prepare_diagnostic_tools(compiler)
+        if tools.compiler != compiler.resolve():
+            raise CoverageFailure("diagnostic tools belong to another compiler installation")
+        library, reader = tools.library, tools.reader
+        record["diagnosticTools"] = dict(tools.identities)
+        record["proofDiagnosticFlags"] = list(PROOF_FLAGS)
+        record["parserPolicyVersion"] = PARSER_POLICY_VERSION
+        serialized = evidence / "ast.dia"
+        ast_text = command([str(compiler), "-x", "cpp-output", *semantic, *PROOF_FLAGS,
+                            "-serialize-diagnostics", str(serialized), "-Xclang", "-ast-dump=json",
                             "-fsyntax-only", str(derived_path)], "ast")
+        serialized_hash = _sha(serialized)
+        diagnostic_text = command([sys.executable, str(reader), str(compiler), str(library),
+                                   str(serialized)], "diagnostics")
+        try:
+            decisions = admit_diagnostics(json.loads(diagnostic_text), derived_path.read_bytes())
+        except (ValueError, TypeError) as error:
+            raise CoverageFailure(str(error)) from error
+        decisions_path = evidence / "diagnostic-decisions.json"
+        decisions_path.write_text(json.dumps({"inputSha256": _sha(derived_path), "decisions": decisions}, indent=2) + "\n")
+        if _sha(serialized) != serialized_hash:
+            raise CoverageFailure("serialized diagnostics changed during admission")
+        record["diagnosticArtifacts"] = {str(path): _sha(path) for path in
+                                         (serialized, evidence / "diagnostics.stdout", decisions_path)}
+        if diagnostic_tools is None:
+            tools.verify()
         if any(_sha(Path(path)) != digest for path, digest in {**pins, **artifacts}.items()):
             raise CoverageFailure("extraction input changed during parsing")
         ast = json.loads(ast_text)
@@ -414,17 +481,24 @@ def extract_unit(source: Path, *, compiler: Path, flags: tuple[str, ...],
     return ExtractedUnit(receipt, _sha(receipt))
 
 
-def verified_ast(unit: ExtractedUnit) -> object:
+def verified_ast(unit: ExtractedUnit, diagnostic_tools: DiagnosticTools | None = None) -> object:
     """Reject changed receipts, source/header/compiler bytes or AST bytes."""
     if _sha(unit.receipt) != unit.sha256:
         raise CoverageFailure("extraction receipt changed")
     record = json.loads(unit.receipt.read_text())
+    if record.get("parserPolicyVersion") != PARSER_POLICY_VERSION:
+        raise CoverageFailure("unsupported parser diagnostic policy")
     if record.get("status") != "success":
         raise CoverageFailure("extraction did not succeed")
     if any(_sha(Path(path)) != digest for path, digest in record["inputs"].items()):
         raise CoverageFailure("extraction input identity changed")
     if any(_sha(Path(path)) != digest for path, digest in record["preprocessingArtifacts"].items()):
         raise CoverageFailure("preprocessing artifact identity changed")
+    if diagnostic_tools is not None and record["diagnosticTools"] != dict(diagnostic_tools.identities):
+        raise CoverageFailure("diagnostic tooling differs between translation units")
+    for category in (("diagnosticArtifacts",) if diagnostic_tools is not None else ("diagnosticTools", "diagnosticArtifacts")):
+        if any(_sha(Path(path)) != digest for path, digest in record[category].items()):
+            raise CoverageFailure("diagnostic evidence identity changed")
     path = Path(record["ast"])
     if _sha(path) != record["astSha256"]:
         raise CoverageFailure("extracted AST identity changed")
@@ -432,7 +506,10 @@ def verified_ast(unit: ExtractedUnit) -> object:
 
 
 def prove_interval(units: dict[str, ExtractedUnit], *, begin: str, end: str,
-                   forbidden: set[str], reviewed_leaves: set[str]) -> dict[str, object]:
+                   forbidden: set[str], reviewed_leaves: set[str],
+                   diagnostic_tools: DiagnosticTools | None = None) -> dict[str, object]:
     """Prove only the supplied units; reviewed leaf semantics remain caller-owned."""
-    program = _Program({name: verified_ast(unit) for name, unit in units.items()})
+    if diagnostic_tools is not None:
+        diagnostic_tools.verify()
+    program = _Program({name: verified_ast(unit, diagnostic_tools) for name, unit in units.items()})
     return program.prove(begin, end, forbidden, reviewed_leaves)

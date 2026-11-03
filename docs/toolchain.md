@@ -146,6 +146,38 @@ The temporary package is a validation fixture, not authorization to publish a
 release. Generated-output, template, and runtime-slice licensing remains owned
 by Beads decision `haxe_c-od2.5`.
 
+## Renderer coverage test prerequisite
+
+Renderer call-coverage checks read Clang's serialized diagnostics through its
+matching `libclang` runtime library. Ordinary governance discovery includes
+these native controls, so this prerequisite also applies to local commit hooks.
+The coverage parser uses the selected `clang` on `PATH`; the native GCC matrix
+still preprocesses with GCC.
+
+The two Ubuntu CI jobs that run these checks use
+[`scripts/ci/require-coverage-clang.sh`](../scripts/ci/require-coverage-clang.sh).
+It requires the canonical `/usr/lib/llvm-21/bin` compiler pair and installs
+`libclang1-21` at the installed `clang-21` package version. It checks that the
+compiler bytes and package version stay unchanged, then selects that compiler
+through `GITHUB_PATH`. A missing compiler or unavailable matching package fails
+setup. This pairs the installed tools; it does not checksum-lock Ubuntu packages
+or extend the Haxe/Reflaxe/Lix lock to LLVM.
+
+On macOS, use an installed matching compiler/library pair for these checks.
+The tested Homebrew pair is LLVM 21.1.8, with `bin/clang` and
+`lib/libclang.dylib` under the same Cellar directory. A moving `opt/llvm` alias
+may select another version. Use a process-local `PATH`, for example:
+
+```sh
+PATH="/opt/homebrew/Cellar/llvm/21.1.8/bin:$PATH" \
+  python3 -m unittest discover -s test/governance -p 'test_caxecraft_call_coverage.py'
+```
+
+Use the same explicit process-local selection for `npm run test:governance` or
+ordinary `git commit` hooks. These commands do not install LLVM or change the
+user's shell configuration. The coverage reader checks its actual library;
+putting a directory on `PATH` alone does not prove a compatible pair.
+
 ## Native smoke matrix
 
 `npm test` also runs `python3 scripts/ci/runtime_smoke.py`. Local auto mode
