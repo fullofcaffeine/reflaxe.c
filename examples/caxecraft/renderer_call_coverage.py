@@ -178,6 +178,10 @@ class _Program:
                         if target in {("", begin), ("", end)}:
                             if len(definitions) != 1:
                                 raise CoverageFailure(f"ambiguous interval owner: {owner}")
+                            # The measured owner bypasses callee traversal, but
+                            # its declaration must satisfy the same effect policy.
+                            if owner in self.unsafe_declarations:
+                                raise CoverageFailure(f"unproved interval owner effects or linker identity: {owner}")
                             if len(self.bodies.get(target, [])) > 1:
                                 raise CoverageFailure(f"ambiguous interval marker: {target}")
                             markers.append((unit, target[1]))

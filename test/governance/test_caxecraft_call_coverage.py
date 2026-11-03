@@ -228,6 +228,22 @@ void run(void) {
         with self.assertRaisesRegex(CoverageFailure, 'ambiguous interval marker'):
             self.proof(units)
 
+    def test_interval_owner_obeys_declaration_effect_policy(self):
+        sources = [
+            {"weak_owner": "__attribute__((weak)) void run(void) {observe_begin(); observe_end();}"},
+            {"main": "void run(void) {observe_begin(); observe_end();}",
+             "other": "__attribute__((weak)) void run(void);"},
+        ]
+        for source in sources:
+            with self.subTest(sources=source):
+                with self.assertRaisesRegex(CoverageFailure, "unproved interval owner"):
+                    self.proof(self.program(**source))
+
+    def test_unreachable_unsafe_helper_does_not_reject_plain_owner(self):
+        units = self.program(main="__attribute__((weak)) void unused(void) {} "
+                                  "void run(void) {observe_begin(); observe_end();}")
+        self.assertEqual(self.proof(units)["functions"], [])
+
     def test_startup_allocation_is_outside_interval(self):
         program = self.program(main="void run(void) { allocate(); observe_begin(); observe_end(); }")
         self.assertEqual(self.proof(program)["functions"], [])
