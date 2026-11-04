@@ -214,6 +214,43 @@ def sha256_file(path: Path) -> str:
     return digest.hexdigest()
 
 
+def repository_text_sha256(path: Path) -> str:
+    """Hash one repository-owned UTF-8 file whose canonical checkout uses LF."""
+    try:
+        content = path.read_bytes()
+        content.decode("utf-8", errors="strict")
+    except (OSError, UnicodeError) as error:
+        raise ProvisionFailure(
+            f"cannot read canonical repository text {path}: {error}"
+        ) from error
+    if b"\r" in content:
+        raise ProvisionFailure(
+            f"canonical repository text must use LF line endings: {path}"
+        )
+    return sha256_bytes(content)
+
+
+def verify_repository_text_sha256(path: Path, expected: str, label: str) -> None:
+    """Distinguish checkout EOL drift from a genuine locked-content change."""
+    try:
+        content = path.read_bytes()
+    except OSError as error:
+        raise ProvisionFailure(f"cannot read {label} {path}: {error}") from error
+    actual = sha256_bytes(content)
+    if actual == expected:
+        return
+    try:
+        text = content.decode("utf-8", errors="strict")
+    except UnicodeError:
+        text = ""
+    normalized = text.replace("\r\n", "\n").replace("\r", "\n")
+    if normalized != text and sha256_bytes(normalized.encode("utf-8")) == expected:
+        raise ProvisionFailure(
+            f"{label} line-ending drift: {path}; the locked repository file requires an LF checkout"
+        )
+    raise ProvisionFailure(f"{label} content hash mismatch: {path}")
+
+
 def canonical_json(value: object) -> str:
     return json.dumps(value, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
 
@@ -423,8 +460,7 @@ def validate_lock(lock: Mapping[str, object]) -> None:
         recipe_path = ROOT.joinpath(*relative.parts)
         if recipe_path.is_symlink() or not recipe_path.is_file():
             raise ProvisionFailure(f"locked raylib patch recipe is missing: {relative.as_posix()}")
-        if sha256_file(recipe_path) != digest:
-            raise ProvisionFailure(f"locked raylib patch recipe hash mismatch: {relative.as_posix()}")
+        verify_repository_text_sha256(recipe_path, digest, "locked raylib patch recipe")
         upstream_commit = entry.get("upstreamCommit")
         if upstream_commit != PINNED_COMMIT:
             raise ProvisionFailure(f"patches[{index}].upstreamCommit drifted")
@@ -663,8 +699,7 @@ def load_patch_recipe(entry: Mapping[str, object]) -> dict[str, object]:
     path = ROOT.joinpath(*relative.parts)
     if path.is_symlink() or not path.is_file():
         raise ProvisionFailure(f"raylib patch recipe is missing: {relative.as_posix()}")
-    if sha256_file(path) != entry.get("sha256"):
-        raise ProvisionFailure(f"raylib patch recipe hash mismatch: {relative.as_posix()}")
+    verify_repository_text_sha256(path, str(entry.get("sha256")), "raylib patch recipe")
     try:
         value = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, UnicodeError, json.JSONDecodeError) as error:
@@ -1514,6 +1549,7 @@ def build_source(
                 "sha256": sha256_file(library_file),
                 "sizeBytes": library_file.stat().st_size,
             },
+            "compileCommandsSha256": sha256_file(compile_commands),
             "normalizedCompileCommandsSha256": sha256_bytes(
                 normalize_text(
                     compile_commands.read_text(encoding="utf-8"), replacements
@@ -1544,6 +1580,138 @@ def build_source(
         forbidden.append(cache_root.resolve())
     assert_report_redacted(report, forbidden)
     return SourceBuild(source_root, build_root, include_directory, library_file, report)
+
+
+def verify_compile_commands_receipt(
+    *,
+    report: Mapping[str, object],
+    compile_commands: Path,
+    original_replacements: Mapping[str, str] | None = None,
+) -> str:
+    """Verify recipe bytes against a trusted build receipt, without running tools.
+
+    New receipts retain the raw digest. Legacy receipts require the original
+    provisioning path substitutions; resolved CMake tool paths are not a substitute
+    for the original CLI arguments. Missing provenance fails closed. This checks
+    staleness only: callers still own source/library verification and review of
+    the recorded flags before admitting a foreign-call contract.
+    """
+    outputs = report.get("outputs")
+    if not isinstance(outputs, dict):
+        raise ProvisionFailure("raylib receipt omitted compile-command outputs")
+    if compile_commands.is_symlink() or not compile_commands.is_file():
+        raise ProvisionFailure("raylib compile commands are missing or not a real file")
+    try:
+        raw = compile_commands.read_bytes()
+        actual = sha256_bytes(raw)
+        if "compileCommandsSha256" in outputs:
+            if outputs["compileCommandsSha256"] != actual:
+                raise ProvisionFailure("raylib compile-command identity mismatch")
+        else:
+            if original_replacements is None:
+                raise ProvisionFailure("legacy raylib recipe needs original path substitutions")
+            normalized = sha256_bytes(normalize_text(
+                raw.decode("utf-8"), original_replacements
+            ).encode("utf-8"))
+            if outputs.get("normalizedCompileCommandsSha256") != normalized:
+                raise ProvisionFailure("raylib normalized compile-command identity mismatch")
+    except (OSError, UnicodeError) as error:
+        raise ProvisionFailure(f"cannot read raylib compile commands: {error}") from error
+    return actual
+
+
+def verify_source_build_receipt(
+    *,
+    lock: Mapping[str, object],
+    report: Mapping[str, object],
+    authority: str,
+    platform_name: str,
+    configuration: str,
+    effective_source_root: Path,
+    library_file: Path,
+) -> TreeIdentity:
+    """Reject stale native artifacts against an existing trusted source-build receipt.
+
+    The caller first verifies locked upstream source and selects its effective
+    (possibly patched) root. This check does not reapply patches, authenticate a
+    forged receipt, or prove compiler flags: normalized compile-command evidence
+    needs the original source/build/tool replacement mapping and separate review.
+    It verifies recorded lock/configuration/patch identities and successful build
+    claims, then hashes the complete current effective tree and library bytes.
+    No build, source mutation, or cache repair occurs here.
+    """
+    if authority not in ("pinned-source", "offline-source"):
+        raise ProvisionFailure("receipt verification requires a source-build authority")
+    if require_integer(report, "schemaVersion", "raylib report") != 1:
+        raise ProvisionFailure("unknown raylib source-build report schema")
+    if report.get("authority") != authority:
+        raise ProvisionFailure("raylib source-build report authority mismatch")
+
+    def section(key: str) -> Mapping[str, object]:
+        value = report.get(key)
+        if not isinstance(value, dict):
+            raise ProvisionFailure(f"raylib source-build report omitted {key}")
+        return value
+
+    def check_tree(value: object, expected: Mapping[str, object], label: str) -> None:
+        if not isinstance(value, dict):
+            raise ProvisionFailure(f"raylib {label} tree identity is missing")
+        require_integer(value, "fileCount", label)
+        require_integer(value, "sizeBytes", label)
+        if value != expected:
+            raise ProvisionFailure(f"raylib {label} tree identity mismatch")
+
+    if section("target").get("platform") != platform_name:
+        raise ProvisionFailure("raylib source-build report platform mismatch")
+    expected_configuration = {
+        "id": configuration,
+        "cmakeDefinitions": list(configuration_definitions(lock, platform_name, configuration)),
+    }
+    if section("configuration") != expected_configuration:
+        raise ProvisionFailure("raylib source-build report configuration mismatch")
+    upstream = lock.get("upstream")
+    if not isinstance(upstream, dict):
+        raise ProvisionFailure("validated lock lost upstream identity")
+    recorded_upstream = section("upstream")
+    expected_upstream = {key: upstream[key] for key in (
+        "name", "release", "packageVersion", "apiVersion", "commit"
+    )}
+    expected_upstream["archiveSha256"] = archive_expectation(lock)["sha256"]
+    expected_upstream["sourceTree"] = source_tree_expectation(lock)
+    check_tree(recorded_upstream.get("sourceTree"), source_tree_expectation(lock), "upstream")
+    if recorded_upstream != expected_upstream:
+        raise ProvisionFailure("raylib source-build report upstream mismatch")
+    if patch_report_identity(report) != patch_lock_identity(lock, platform_name, configuration):
+        raise ProvisionFailure("raylib source-build report patch identity mismatch")
+    claims = section("claims")
+    if (claims.get("sourceTreeVerified") is not True
+            or claims.get("raylibBuilt") is not True
+            or claims.get("archiveVerified") is not (authority == "pinned-source")):
+        raise ProvisionFailure("raylib source-build report lacks successful source/build claims")
+    commands = section("commands")
+    for name in ("configure", "build"):
+        command = commands.get(name)
+        if not isinstance(command, dict) or require_integer(command, "exitCode", name) != 0:
+            raise ProvisionFailure(f"raylib source-build report has unsuccessful {name}")
+    try:
+        actual = canonical_tree_identity(effective_source_root)
+        check_tree(report.get("effectiveSourceTree"), {
+            "algorithm": "hxc-path-size-content-sha256-v1",
+            "sha256": actual.sha256,
+            "fileCount": actual.file_count,
+            "sizeBytes": actual.size_bytes,
+        }, "effective source")
+        library = section("outputs").get("library")
+        if not isinstance(library, dict):
+            raise ProvisionFailure("raylib source-build report omitted its library")
+        if library_file.is_symlink() or not library_file.is_file():
+            raise ProvisionFailure("raylib receipt library is missing or not a real file")
+        if (require_integer(library, "sizeBytes", "library") != library_file.stat().st_size
+                or library.get("sha256") != sha256_file(library_file)):
+            raise ProvisionFailure("raylib receipt library identity mismatch")
+    except OSError as error:
+        raise ProvisionFailure(f"cannot read raylib receipt artifacts: {error}") from error
+    return actual
 
 
 def split_pkg_config_flags(value: str, label: str) -> tuple[str, ...]:
@@ -1804,6 +1972,14 @@ def parse_args(argv: Iterable[str]) -> argparse.Namespace:
 
     subparsers.add_parser("verify-lock", help="validate the repository lock without provisioning")
 
+    digest = subparsers.add_parser(
+        "patch-recipe-digest",
+        help="print the canonical LF-byte digest used to update one patch lock entry",
+    )
+    digest.add_argument(
+        "recipe", help="repository-relative path below scripts/raylib/patches"
+    )
+
     source = subparsers.add_parser("build-source", help="verify, configure, and build pinned source")
     source.add_argument("--authority", choices=("pinned-source", "offline-source"), required=True)
     source.add_argument("--configuration", choices=SUPPORTED_CONFIGURATIONS, required=True)
@@ -1830,6 +2006,17 @@ def parse_args(argv: Iterable[str]) -> argparse.Namespace:
 def main(argv: Iterable[str] = ()) -> int:
     try:
         args = parse_args(argv)
+        if args.command == "patch-recipe-digest":
+            relative = safe_relative_path(args.recipe, "raylib patch recipe path")
+            if relative.parts[:3] != ("scripts", "raylib", "patches"):
+                raise ProvisionFailure(
+                    "raylib patch recipe path must stay under scripts/raylib/patches"
+                )
+            path = ROOT.joinpath(*relative.parts)
+            if path.is_symlink() or not path.is_file():
+                raise ProvisionFailure(f"raylib patch recipe is missing: {relative.as_posix()}")
+            print(repository_text_sha256(path))
+            return 0
         lock = load_lock(args.lock)
         if args.command == "verify-lock":
             print("raylib-provision: OK: raylib 6.0 archive, tree, configuration, and platform lock")

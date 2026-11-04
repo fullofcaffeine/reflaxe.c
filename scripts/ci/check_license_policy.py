@@ -29,6 +29,7 @@ EXPECTED_RELEASE_FILES = {
     "THIRD_PARTY_NOTICES.md",
     "docs/specs/third-party-provenance.json",
     "LICENSES/HAXE-STDLIB-MIT.txt",
+    "LICENSES/HAXE-C-OUTPUT-SUPPORT-MIT.txt",
     "vendor/reflaxe/LICENSE",
 }
 SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
@@ -224,8 +225,8 @@ def validate_policy(root: Path, policy_relative: str) -> tuple[dict[str, Any] | 
     if not isinstance(data, dict):
         errors.append("policy root must be an object")
         return None, errors
-    if data.get("schemaVersion") != 1:
-        errors.append("schemaVersion must be 1")
+    if data.get("schemaVersion") != 2:
+        errors.append("schemaVersion must be 2")
     evidence_checked_at = data.get("evidenceCheckedAt")
     try:
         if not isinstance(evidence_checked_at, str):
@@ -258,6 +259,46 @@ def validate_policy(root: Path, policy_relative: str) -> tuple[dict[str, Any] | 
             errors.append("policy.unlistedReservedPaths must be reject")
         if policy.get("generatedOutputDecision") != "haxe_c-od2.5":
             errors.append("policy.generatedOutputDecision must retain the owning decision haxe_c-od2.5")
+
+    generated_output = data.get("generatedOutput")
+    if not isinstance(generated_output, dict):
+        errors.append("generatedOutput must be an object")
+    else:
+        support_expression = generated_output.get("outputSupportLicenseExpression")
+        support_file = generated_output.get("outputSupportLicenseFile")
+        support_hash = generated_output.get("outputSupportLicenseSha256")
+        compiled_rule = generated_output.get("compiledProgramWithoutUserAssertion")
+        sidecar_rule = generated_output.get("compilerSidecars")
+        copy_rule = generated_output.get("repositoryCopies")
+        for field in ("spdxLicenseListVersion", "outputSupportLicenseExpression", "copyrightNotice"):
+            if not isinstance(generated_output.get(field), str) or not generated_output[field]:
+                errors.append(f"generatedOutput.{field} must be non-empty text")
+        if not isinstance(compiled_rule, dict) or compiled_rule.get("licenseConcluded") != "NOASSERTION" or compiled_rule.get("projectCopyrightClaim") is not False:
+            errors.append("generatedOutput compiled-program rule must preserve explained NOASSERTION and no project claim")
+        if not isinstance(compiled_rule, dict) or not isinstance(compiled_rule.get("meaning"), str) or "grants no rights" not in compiled_rule["meaning"]:
+            errors.append("generatedOutput compiled-program rule must explain that NOASSERTION grants no rights")
+        for label, rule in (("compilerSidecars", sidecar_rule), ("repositoryCopies", copy_rule)):
+            if not isinstance(rule, dict) or rule.get("licenseConcluded") != support_expression or rule.get("projectCopyrightClaim") is not True:
+                errors.append(f"generatedOutput.{label} must use the output-support license and project claim")
+        if generated_output.get("outputSupportContributionLicense") != support_expression:
+            errors.append("output-support contributions must use the output-support license")
+        if generated_output.get("contributionBackRequired") is not False:
+            errors.append("generatedOutput.contributionBackRequired must be false")
+        if generated_output.get("thirdPartyInputs") != "retain-declared-component-license-and-provenance":
+            errors.append("generatedOutput must retain third-party terms and provenance")
+        if generated_output.get("mixedOriginSource") != "split-or-reject":
+            errors.append("generatedOutput must split or reject mixed-origin source")
+        if generated_output.get("qualifiedRightsChainReview") != "required-before-release":
+            errors.append("generatedOutput must require qualified rights-chain review before release")
+        require_file(
+            root,
+            {
+                "path": support_file,
+                "sha256": support_hash,
+            },
+            "generated output-support license",
+            errors,
+        )
 
     release = data.get("release")
     release_entries: list[Any] = []
@@ -538,6 +579,166 @@ def validate_package(
     return errors
 
 
+def validate_generated_package(
+    root: Path,
+    package_root: Path,
+    policy: dict[str, Any],
+) -> list[str]:
+    """Validate the license projection for one generated application tree."""
+    errors: list[str] = []
+    if package_root.is_symlink() or not package_root.is_dir():
+        return [f"generated package root is not a real directory: {package_root}"]
+    manifest_path = package_root / "hxc.manifest.json"
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError) as error:
+        return [f"cannot read generated package hxc.manifest.json: {error}"]
+    if not isinstance(manifest, dict) or manifest.get("schemaVersion") != 2:
+        errors.append("generated package manifest must use schemaVersion 2")
+        return errors
+
+    output_policy = policy.get("generatedOutput", {})
+    notice_path = output_policy.get("outputSupportLicenseFile")
+    notice_relative = safe_relative_path(notice_path, "generated package notice path", errors)
+    expected_manifest_license = {
+        "decision": policy.get("policy", {}).get("generatedOutputDecision"),
+        "spdxLicenseListVersion": output_policy.get("spdxLicenseListVersion"),
+        "licenseConcluded": output_policy.get("outputSupportLicenseExpression"),
+        "noticeFiles": [notice_path],
+    }
+    if manifest.get("licensing") != expected_manifest_license:
+        errors.append("generated package manifest licensing does not match the ratified policy")
+
+    if notice_relative is not None:
+        reviewed = local_path(root, notice_relative, "reviewed generated package notice", errors)
+        packaged = local_path(package_root, notice_relative, "generated package notice", errors)
+        if reviewed is None or not reviewed.is_file() or reviewed.is_symlink():
+            errors.append(f"reviewed generated package notice is missing or unsafe: {notice_relative.as_posix()}")
+        elif packaged is None or not packaged.is_file() or packaged.is_symlink():
+            errors.append(f"generated package is missing required notice: {notice_path}")
+        elif reviewed.read_bytes() != packaged.read_bytes():
+            errors.append(f"generated package notice differs from reviewed copy: {notice_path}")
+
+    artifacts = manifest.get("artifacts")
+    if not isinstance(artifacts, list):
+        errors.append("generated package manifest artifacts must be an array")
+        return errors
+    copy_policy = output_policy.get("repositoryCopies", {})
+    allowed_roots = copy_policy.get("allowedSourceRoots", [])
+    catalog_records: dict[str, dict[str, Any]] = {}
+    catalog_relative = safe_relative_path(copy_policy.get("artifactCatalog"), "generated output artifact catalog", errors)
+    if catalog_relative is not None:
+        catalog_path = local_path(root, catalog_relative, "generated output artifact catalog", errors)
+        try:
+            catalog = json.loads(catalog_path.read_text(encoding="utf-8")) if catalog_path is not None else {}
+        except (OSError, UnicodeError, json.JSONDecodeError) as error:
+            errors.append(f"cannot read generated output artifact catalog: {error}")
+            catalog = {}
+        for feature in catalog.get("features", []) if isinstance(catalog, dict) else []:
+            if not isinstance(feature, dict):
+                continue
+            for record in feature.get("artifacts", []):
+                if isinstance(record, dict) and isinstance(record.get("sourcePath"), str):
+                    catalog_records[record["sourcePath"]] = record
+    seen: set[str] = set()
+    for index, artifact in enumerate(artifacts):
+        label = f"generated artifact[{index}]"
+        if not isinstance(artifact, dict):
+            errors.append(f"{label} must be an object")
+            continue
+        relative = safe_relative_path(artifact.get("path"), f"{label}.path", errors)
+        digest = artifact.get("sha256")
+        provenance = artifact.get("provenance")
+        licensing = artifact.get("licensing")
+        if relative is None or not isinstance(digest, str) or not SHA256_RE.fullmatch(digest):
+            errors.append(f"{label}.sha256 must be a lowercase SHA-256 digest")
+            continue
+        path_text = relative.as_posix()
+        if path_text in seen:
+            errors.append(f"generated package repeats artifact path: {path_text}")
+            continue
+        seen.add(path_text)
+        packaged = local_path(package_root, relative, label, errors)
+        if packaged is None or not packaged.is_file() or packaged.is_symlink():
+            errors.append(f"generated package artifact is missing or unsafe: {path_text}")
+        elif sha256(packaged) != digest:
+            errors.append(f"generated package artifact hash mismatch: {path_text}")
+
+        production = provenance.get("production") if isinstance(provenance, dict) else None
+        if production == "compiled-program":
+            if (
+                artifact.get("kind") not in {"public-header", "private-header", "source"}
+                or provenance != {"production": "compiled-program"}
+            ):
+                errors.append(f"{label} provenance contradicts its compiled-program role")
+            rule = output_policy.get("compiledProgramWithoutUserAssertion", {})
+            expected_license = {
+                "licenseConcluded": rule.get("licenseConcluded"),
+                "projectCopyrightClaim": rule.get("projectCopyrightClaim"),
+                "rationale": "user-license-not-declared",
+                "noticeFiles": [],
+            }
+        elif production == "compiler-sidecar":
+            sidecar_kinds = {
+                "compiler-manifest", "runtime-plan", "abi-manifest", "symbol-table",
+                "stdlib-report", "specialization-report", "dispatch-report",
+                "initialization-plan", "typed-inventory", "hxcir", "c-ast",
+                "declaration-report", "cmake-adapter", "meson-adapter", "license-notice",
+            }
+            if (
+                artifact.get("kind") not in sidecar_kinds
+                or provenance != {"production": "compiler-sidecar"}
+            ):
+                errors.append(f"{label} provenance contradicts its compiler-sidecar role")
+            rule = output_policy.get("compilerSidecars", {})
+            expected_license = {
+                "licenseConcluded": rule.get("licenseConcluded"),
+                "projectCopyrightClaim": rule.get("projectCopyrightClaim"),
+                "rationale": "compiler-output-support",
+                "noticeFiles": [notice_path],
+            }
+        elif production == "repository-copy":
+            if (
+                artifact.get("kind") not in {"runtime-header", "runtime-source"}
+                or not isinstance(provenance, dict)
+                or set(provenance) != {"production", "sourcePath", "sourceSha256"}
+            ):
+                errors.append(f"{label} provenance contradicts its repository-copy role")
+            rule = output_policy.get("repositoryCopies", {})
+            expected_license = {
+                "licenseConcluded": rule.get("licenseConcluded"),
+                "projectCopyrightClaim": rule.get("projectCopyrightClaim"),
+                "rationale": "audited-output-support-copy",
+                "noticeFiles": [notice_path],
+            }
+            source_path = provenance.get("sourcePath") if isinstance(provenance, dict) else None
+            source_hash = provenance.get("sourceSha256") if isinstance(provenance, dict) else None
+            source_relative = safe_relative_path(source_path, f"{label}.provenance.sourcePath", errors)
+            if source_relative is not None:
+                source_text = source_relative.as_posix()
+                if not any(path_is_within(source_text, allowed) for allowed in allowed_roots):
+                    errors.append(f"{label} repository copy is outside the audited output-support set")
+                catalog_record = catalog_records.get(source_text)
+                if (
+                    catalog_record is None
+                    or catalog_record.get("outputPath") != path_text
+                    or catalog_record.get("sourceSha256") != source_hash
+                    or catalog_record.get("kind") != artifact.get("kind")
+                ):
+                    errors.append(f"{label} repository copy is absent from the reviewed runtime catalog")
+                source = local_path(root, source_relative, label, errors)
+                if source is None or not source.is_file() or sha256(source) != source_hash or source_hash != digest:
+                    errors.append(f"{label} repository copy does not match its reviewed source")
+        else:
+            errors.append(f"{label} has unsupported or mixed origin; split or reject it")
+            continue
+        if licensing != expected_license:
+            errors.append(f"{label} licensing does not match its validated origin")
+    if isinstance(notice_path, str) and notice_path not in seen:
+        errors.append("generated package manifest does not address its output-support notice")
+    return errors
+
+
 def parse_args(argv: Iterable[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     default_root = Path(__file__).resolve().parents[2]
@@ -552,6 +753,11 @@ def parse_args(argv: Iterable[str]) -> argparse.Namespace:
         type=Path,
         help="also verify required notices inside an assembled release tree",
     )
+    parser.add_argument(
+        "--generated-package-root",
+        type=Path,
+        help="also verify one generated application tree and its license projection",
+    )
     parser.add_argument("--quiet", action="store_true")
     return parser.parse_args(list(argv))
 
@@ -562,12 +768,16 @@ def main(argv: Iterable[str] = ()) -> int:
     policy, errors = validate_policy(root, args.policy)
     if policy is not None and args.package_root is not None:
         errors.extend(validate_package(root, args.package_root.resolve(), policy))
+    if policy is not None and args.generated_package_root is not None:
+        errors.extend(validate_generated_package(root, args.generated_package_root.resolve(), policy))
     if errors:
         for error in errors:
             print(f"license-policy: ERROR: {error}", file=sys.stderr)
         return 1
     if not args.quiet:
         suffix = f"; package={args.package_root.resolve()}" if args.package_root is not None else ""
+        if args.generated_package_root is not None:
+            suffix += f"; generated-package={args.generated_package_root.resolve()}"
         print(f"license-policy: OK: root={root}{suffix}")
     return 0
 

@@ -2,7 +2,17 @@ package reflaxe.c.ir;
 
 /** Deterministic JSON-string spelling for HxcIR dumps and sort keys. */
 class HxcJsonString {
+	#if (macro || eval)
+	/** Native scanning avoids interpreter calls for each character of ordinary IR names. */
+	static final needsEscapingOrUnicode = ~/[^\x20-\x21\x23-\x5B\x5D-\x7E]/;
+	#end
+
+	/** Preserve canonical escapes; compiler-host ASCII tokens need only surrounding quotes. */
 	public static function quote(value:String):String {
+		#if (macro || eval)
+		if (!needsEscapingOrUnicode.match(value))
+			return '"' + value + '"';
+		#end
 		final output = new StringBuf();
 		output.add('"');
 		for (index in 0...value.length) {

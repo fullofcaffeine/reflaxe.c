@@ -5,13 +5,16 @@ import haxe.io.Bytes;
 /**
 	Computes the package digest needed before runtime content can be published.
 
-	This private worker is a bounded bridge for `haxe_c-0h4.4`: the pinned
-	`haxe.crypto.Sha256` implementation uses definitely assigned local
-	declarations that haxe.c does not yet admit. Keeping the bridge in ordinary,
+	This private worker is a bounded bridge owned by `haxe_c-xge.8.1`. haxe.c
+	now admits the definitely assigned locals that the pinned
+	`haxe.crypto.Sha256` uses (`haxe_c-0h4.4`, closed), and
+	`test:caxecraft-sha256` proves the standard implementation's bytes. Its
+	generated C is still too slow for this path, though: with `Sha256.make` here,
+	the package-manifest native run exceeds its 120-second budget, which it
+	meets in about 40 seconds with this worker. Keeping the bridge in ordinary,
 	portable Haxe lets Eval and generated C verify the same bytes without a
 	target conditional or handwritten C boundary. Remove it in favor of
-	`haxe.crypto.Sha256.make` when that Bead closes and the standard worker passes
-	the same known vectors and package-to-generation tracer.
+	`haxe.crypto.Sha256.make` when `haxe_c-xge.8.1` lifts that lowering cost.
 **/
 function runtimeSha256(input:Bytes):Bytes
 	return new RuntimeSha256Worker().digest(input);

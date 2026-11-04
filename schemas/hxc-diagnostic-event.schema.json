@@ -1,0 +1,145 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://haxe-c.dev/schemas/hxc-diagnostic-event.schema.json",
+  "title": "hxc diagnostic event",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "id",
+    "severity",
+    "phase",
+    "profile",
+    "kind",
+    "message",
+    "remediation",
+    "source",
+    "context",
+    "notes",
+    "relatedLocations",
+    "commandContext",
+    "attachments"
+  ],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "id": {
+      "type": "string",
+      "pattern": "^(?:HXC[0-9]{4}|HXC-CLI-[0-9]{4})$"
+    },
+    "severity": { "enum": ["error", "warning", "info"] },
+    "phase": {
+      "enum": [
+        "bootstrap",
+        "configuration",
+        "lowering",
+        "runtime-analysis",
+        "abi",
+        "interop",
+        "target-contract",
+        "internal",
+        "cli",
+        "native-tool",
+        "bindgen",
+        "test"
+      ]
+    },
+    "profile": {
+      "type": ["string", "null"],
+      "enum": ["portable", "metal", "unresolved", null]
+    },
+    "kind": {
+      "type": ["string", "null"],
+      "enum": [
+        "dependency-failure",
+        "invalid-configuration",
+        "compiler-capability",
+        "unsupported-source",
+        "runtime-policy",
+        "runtime-selection",
+        "invalid-abi",
+        "unsafe-boundary",
+        "invalid-target-contract",
+        "internal-compiler-failure",
+        null
+      ]
+    },
+    "message": { "type": "string", "minLength": 1 },
+    "remediation": { "type": "string", "minLength": 1 },
+    "source": {
+      "oneOf": [
+        { "$ref": "#/$defs/source" },
+        { "type": "null" }
+      ]
+    },
+    "context": { "type": ["string", "null"], "minLength": 1 },
+    "notes": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "relatedLocations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["label", "source"],
+        "properties": {
+          "label": { "type": "string", "minLength": 1 },
+          "source": { "$ref": "#/$defs/source" }
+        }
+      }
+    },
+    "commandContext": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["command", "arguments"],
+      "properties": {
+        "command": { "type": "string", "minLength": 1 },
+        "arguments": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "attachments": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["source", "channel", "tool", "text"],
+        "properties": {
+          "source": {
+            "enum": ["compiler", "native-tool", "bindgen", "abi", "test"]
+          },
+          "channel": { "enum": ["stdout", "stderr", "report"] },
+          "tool": { "type": "string", "minLength": 1 },
+          "text": { "type": "string", "minLength": 1 }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["file", "start", "end"],
+      "properties": {
+        "file": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^(?!/)(?!~)(?![A-Za-z]:)(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*\\\\).+$"
+        },
+        "start": { "$ref": "#/$defs/point" },
+        "end": { "$ref": "#/$defs/point" }
+      }
+    },
+    "point": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["line", "column"],
+      "properties": {
+        "line": { "type": "integer", "minimum": 1 },
+        "column": { "type": "integer", "minimum": 1 }
+      }
+    }
+  }
+}

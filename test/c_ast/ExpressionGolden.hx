@@ -128,6 +128,10 @@ class ExpressionGolden {
 		for (test in binaryCases)
 			assertExpr('binary operator ${test.label}', test.expected, EBinary(test.op, a, b));
 
+		assertExpr("nested equality left", "(a != b) != c", EBinary(NotEqual, EBinary(NotEqual, a, b), c));
+		assertExpr("nested relational right", "a == (b < c)", EBinary(Equal, a, EBinary(Less, b, c)));
+		assertExpr("nested relational left", "(a < b) < c", EBinary(Less, EBinary(Less, a, b), c));
+
 		// Both directions at every adjacent C11 precedence boundary.
 		assertExpr("multiply above add", "a * b + c", EBinary(Add, EBinary(Multiply, a, b), c));
 		assertExpr("add below multiply", "(a + b) * c", EBinary(Multiply, EBinary(Add, a, b), c));
@@ -135,7 +139,7 @@ class ExpressionGolden {
 		assertExpr("shift below add", "(a << b) + c", EBinary(Add, EBinary(ShiftLeft, a, b), c));
 		assertExpr("shift above relational", "a << b < c", EBinary(Less, EBinary(ShiftLeft, a, b), c));
 		assertExpr("relational below shift", "(a < b) << c", EBinary(ShiftLeft, EBinary(Less, a, b), c));
-		assertExpr("relational above equality", "a < b == c", EBinary(Equal, EBinary(Less, a, b), c));
+		assertExpr("relational above equality", "(a < b) == c", EBinary(Equal, EBinary(Less, a, b), c));
 		assertExpr("equality below relational", "(a == b) < c", EBinary(Less, EBinary(Equal, a, b), c));
 		assertExpr("equality above bit-and", "a == b & c", EBinary(BitAnd, EBinary(Equal, a, b), c));
 		assertExpr("bit-and below equality", "(a & b) == c", EBinary(Equal, EBinary(BitAnd, a, b), c));
@@ -305,6 +309,8 @@ class ExpressionGolden {
 			SDecl(variable(i32(), name("b"), IExpr(integer("3")))),
 			SDecl(variable(i32(), name("c"), IExpr(integer("1")))),
 			SDecl(variable(i32(), name("scratch"), IExpr(integer("0")))),
+			SIf(EBinary(NotEqual, EBinary(NotEqual, a, integer("0")), c), SReturn(integer("30")), null),
+			SIf(EBinary(NotEqual, EBinary(Less, b, a), c), SReturn(integer("31")), null),
 			SDecl(variable(type(TStruct(id("hxc_pair"))), name("pair"),
 				IList([
 					{

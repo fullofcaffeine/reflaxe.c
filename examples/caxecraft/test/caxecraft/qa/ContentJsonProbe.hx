@@ -127,6 +127,33 @@ function checkArrayAndNegativeCorpus(root:ContentJsonNode, fields:Array<ContentJ
 		case ContentJsonReady(_):
 			return 15;
 	}
+	final prefixedMalformed = Bytes.alloc(8);
+	final asciiPrefix = Bytes.ofString('{"x":"');
+	prefixedMalformed.blit(0, asciiPrefix, 0, asciiPrefix.length);
+	prefixedMalformed.set(asciiPrefix.length, 0xc3);
+	prefixedMalformed.set(asciiPrefix.length + 1, 0x28);
+	switch ContentJson.read(prefixedMalformed) {
+		case ContentJsonRejected(diagnostic):
+			switch diagnostic.kind {
+				case JsonMalformedUtf8(offset) if (offset == asciiPrefix.length + 1):
+				case _:
+					return 45;
+			}
+		case ContentJsonReady(_):
+			return 46;
+	}
+	final prefixedNul = Bytes.alloc(asciiPrefix.length + 1);
+	prefixedNul.blit(0, asciiPrefix, 0, asciiPrefix.length);
+	switch ContentJson.read(prefixedNul) {
+		case ContentJsonRejected(diagnostic):
+			switch diagnostic.kind {
+				case JsonMalformedUtf8(offset) if (offset == asciiPrefix.length):
+				case _:
+					return 47;
+			}
+		case ContentJsonReady(_):
+			return 48;
+	}
 	if (!rejects(Bytes.ofString('{"number":01}'), JsonInvalidNumber))
 		return 16;
 	if (!rejects(Bytes.ofString('{"items":[1,]}'), JsonInvalidSeparator))
@@ -296,7 +323,8 @@ function arrayDocument(entries:Int):String {
 function nodeCountDocument(totalNodes:Int):String {
 	final output = new StringBuf();
 	output.add("[");
-	final groupCount = 8;
+	final groupCapacity = ContentJson.MAXIMUM_COLLECTION_ENTRIES;
+	final groupCount = Std.int((totalNodes - 2 + groupCapacity) / groupCapacity);
 	var remaining = totalNodes - 1 - groupCount;
 	for (group in 0...groupCount) {
 		if (group > 0)

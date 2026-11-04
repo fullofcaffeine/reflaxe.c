@@ -12,17 +12,28 @@ import reflaxe.c.frontend.TypedProgramInput.TypedAstField;
 import reflaxe.c.frontend.TypedProgramInput.TypedAstMetadata;
 import reflaxe.c.frontend.TypedProgramInput.TypedAstModule;
 import reflaxe.c.frontend.NamedRecordSourceProvenance;
+import reflaxe.c.frontend.TypedFunctionSourceProvenance;
 
 /** Converts Haxe compiler objects into a stable whole-program input model. */
 class TypedAstNormalizer {
 	public static function normalize(moduleTypes:Array<ModuleType>, mainModule:Null<ModuleType>, mainExpr:Null<TypedExpr>):TypedProgramInput {
-		final rawModules = moduleTypes.copy();
-		rawModules.sort(compareModuleTypes);
+		final contentDigests = new SourceContentDigest();
+		final functionSources = new TypedFunctionSourceProvenance(contentDigests);
+		// Ref.get() reconstructs declaration metadata on the Eval macro host.
+		// Read each immutable sort identity once instead of once per comparison.
+		// These keys live only for this capture; no compiler reference is cached
+		// across requests, and normalization still visits every declaration.
+		final keyedModules = [
+			for (moduleType in moduleTypes)
+				{value: moduleType, key: moduleTypeKey(moduleType)}
+		];
+		keyedModules.sort((left, right) -> compareStrings(left.key, right.key));
+		final rawModules = [for (entry in keyedModules) entry.value];
 
 		final declarations:Array<TypedAstDeclaration> = [];
 		final expressionRoots:Array<TypedAstExpressionRoot> = [];
 		for (moduleType in rawModules) {
-			final declaration = normalizeDeclaration(moduleType, expressionRoots);
+			final declaration = normalizeDeclaration(moduleType, expressionRoots, functionSources);
 			declarations.push(declaration);
 		}
 		declarations.sort((left, right) -> compareStrings(declarationKey(left), declarationKey(right)));
@@ -57,7 +68,7 @@ class TypedAstNormalizer {
 				modulePath: mainModulePath,
 				declarationPath: mainDeclarationPath,
 				expression: mainExpr,
-				target: captureEntryFunction(mainExpr)
+				target: captureEntryFunction(mainExpr, functionSources)
 			};
 			expressionRoots.push({
 				sourceOrder: 0,
@@ -70,10 +81,11 @@ class TypedAstNormalizer {
 			expressionRoots.sort(compareExpressionRoots);
 		}
 
-		return new TypedProgramInput(modules, declarations, expressionRoots, entryPoint, rawModules, NamedRecordSourceProvenance.plan(declarations));
+		return new TypedProgramInput(modules, declarations, expressionRoots, entryPoint, rawModules,
+			NamedRecordSourceProvenance.plan(declarations, contentDigests));
 	}
 
-	static function captureEntryFunction(expression:TypedExpr):Null<TypedAstEntryFunction> {
+	static function captureEntryFunction(expression:TypedExpr, functionSources:TypedFunctionSourceProvenance):Null<TypedAstEntryFunction> {
 		return switch expression.expr {
 			case TCall({expr: TField(_, FStatic(classReference, fieldReference))}, arguments) if (arguments.length == 0):
 				final owner = classReference.get();
@@ -82,6 +94,7 @@ class TypedAstNormalizer {
 				if (field.name != "main" || fieldExpression == null) {
 					null;
 				} else {
+					final sourcePlan = functionSources.plan(declarationPath(owner), field.name, field.pos, fieldExpression);
 					final staticFields = owner.statics.get();
 					var sourceOrder = 0;
 					for (index in 0...staticFields.length) {
@@ -101,15 +114,19 @@ class TypedAstNormalizer {
 						fieldName: field.name,
 						sourceOrder: sourceOrder,
 						fieldType: field.type,
-						expression: fieldExpression
+						expression: fieldExpression,
+						declarationPosition: field.pos,
+						sourcePositionOverrides: sourcePlan.positionOverrides,
+						functionSourcePlan: sourcePlan
 					};
 				}
-			case TParenthesis(inner) | TMeta(_, inner) | TCast(inner, _): captureEntryFunction(inner);
+			case TParenthesis(inner) | TMeta(_, inner) | TCast(inner, _): captureEntryFunction(inner, functionSources);
 			case _: null;
 		};
 	}
 
-	static function normalizeDeclaration(moduleType:ModuleType, expressionRoots:Array<TypedAstExpressionRoot>):TypedAstDeclaration {
+	static function normalizeDeclaration(moduleType:ModuleType, expressionRoots:Array<TypedAstExpressionRoot>,
+			functionSources:TypedFunctionSourceProvenance):TypedAstDeclaration {
 		final base = baseType(moduleType);
 		final path = declarationPath(base);
 		final fields:Array<TypedAstField> = [];
@@ -129,14 +146,14 @@ class TypedAstNormalizer {
 				isAbstract = classType.isAbstract;
 				final memberFields = classType.fields.get();
 				for (index in 0...memberFields.length) {
-					fields.push(normalizeClassField(memberFields[index], "member", index, base.module, path, expressionRoots));
+					fields.push(normalizeClassField(memberFields[index], "member", index, base.module, path, expressionRoots, functionSources));
 				}
 				final staticFields = classType.statics.get();
 				for (index in 0...staticFields.length) {
-					fields.push(normalizeClassField(staticFields[index], "static", index, base.module, path, expressionRoots));
+					fields.push(normalizeClassField(staticFields[index], "static", index, base.module, path, expressionRoots, functionSources));
 				}
 				if (classType.constructor != null) {
-					fields.push(normalizeClassField(classType.constructor.get(), "constructor", 0, base.module, path, expressionRoots));
+					fields.push(normalizeClassField(classType.constructor.get(), "constructor", 0, base.module, path, expressionRoots, functionSources));
 				}
 				if (classType.init != null) {
 					expressionRoots.push({
@@ -189,7 +206,7 @@ class TypedAstNormalizer {
 	}
 
 	static function normalizeClassField(field:ClassField, role:String, sourceOrder:Int, ownerModulePath:String, ownerDeclarationPath:String,
-			expressionRoots:Array<TypedAstExpressionRoot>):TypedAstField {
+			expressionRoots:Array<TypedAstExpressionRoot>, functionSources:TypedFunctionSourceProvenance):TypedAstField {
 		final expression = field.expr();
 		if (expression != null) {
 			expressionRoots.push({
@@ -201,6 +218,10 @@ class TypedAstNormalizer {
 				expression: expression
 			});
 		}
+		final functionSourcePlan = expression == null ? null : switch expression.expr {
+			case TFunction(_): functionSources.plan(ownerDeclarationPath, field.name, field.pos, expression);
+			case _: null;
+		};
 		return {
 			sourceOrder: sourceOrder,
 			name: field.name,
@@ -212,6 +233,8 @@ class TypedAstNormalizer {
 			isExtern: field.isExtern == true,
 			metadata: normalizeMetadata(field.meta.get()),
 			expression: expression,
+			sourcePositionOverrides: functionSourcePlan == null ? [] : functionSourcePlan.positionOverrides,
+			functionSourcePlan: functionSourcePlan,
 			rawClassField: field,
 			rawEnumField: null
 		};
@@ -229,6 +252,8 @@ class TypedAstNormalizer {
 			isExtern: false,
 			metadata: normalizeMetadata(field.meta.get()),
 			expression: null,
+			sourcePositionOverrides: [],
+			functionSourcePlan: null,
 			rawClassField: null,
 			rawEnumField: field
 		};
@@ -352,11 +377,10 @@ class TypedAstNormalizer {
 		return modulePath.split(".").join("/") + ".hx";
 	}
 
-	static function compareModuleTypes(left:ModuleType, right:ModuleType):Int {
-		final leftBase = baseType(left);
-		final rightBase = baseType(right);
-		return compareStrings('${leftBase.module}\u0000${declarationPath(leftBase)}\u0000${declarationKind(left)}',
-			'${rightBase.module}\u0000${declarationPath(rightBase)}\u0000${declarationKind(right)}');
+	/** Preserve module, declaration and kind ordering without decoding during comparison. */
+	static function moduleTypeKey(moduleType:ModuleType):String {
+		final base = baseType(moduleType);
+		return '${base.module}\u0000${declarationPath(base)}\u0000${declarationKind(moduleType)}';
 	}
 
 	static function declarationKey(declaration:TypedAstDeclaration):String {

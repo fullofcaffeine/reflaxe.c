@@ -30,6 +30,7 @@ if str(ROOT) not in sys.path:
 
 from scripts.raygui.core_binding import (
     IMPLEMENTATION_SOURCE_SHA256,
+    PINNED_HEADER_SHA256,
     PINNED_TREE,
     BindingFailure,
     load_lock,
@@ -81,6 +82,49 @@ def implementation_bytes() -> bytes:
         raise RayguiProvisionFailure("raygui implementation source template drifted")
     if IMPLEMENTATION_SOURCE.count("RAYGUI_IMPLEMENTATION") != 1:
         raise RayguiProvisionFailure("raygui implementation macro must have exactly one owner")
+    return content
+
+
+def implementation_header_bytes(original: bytes) -> bytes:
+    """Repair the pinned style reader in a build copy without changing its ABI.
+
+    raygui 5.0 scans an unsigned version with %d, falls through into property
+    parsing, and ignores short reads. These fixes belong to the external C
+    implementation, not to the generated Haxe binding. Remove this patch when
+    a reviewed upstream update includes the repairs (integration owner haxe_c-br44).
+    The immutable input digest makes each replacement specific to this release.
+    """
+    if hashlib.sha256(original).hexdigest() != PINNED_HEADER_SHA256:
+        raise RayguiProvisionFailure("raygui style-reader patch requires the locked header")
+    replacements = (
+        (
+            b"        fgets(buffer, MAX_LINE_BUFFER_SIZE, rgsFile);",
+            b"        if (fgets(buffer, MAX_LINE_BUFFER_SIZE, rgsFile) == NULL) { fclose(rgsFile); return; }",
+        ),
+        (
+            b"            while (!feof(rgsFile))",
+            b"            while (true)",
+        ),
+        (
+            b'                        sscanf(buffer, "v %d", &version);\n                    }',
+            b'                        sscanf(buffer, "v %u", &version);\n                    } break;',
+        ),
+        (
+            b"                fgets(buffer, MAX_LINE_BUFFER_SIZE, rgsFile);",
+            b"                if (fgets(buffer, MAX_LINE_BUFFER_SIZE, rgsFile) == NULL) break;",
+        ),
+        (
+            b"                    fread(fileData, sizeof(unsigned char), fileDataSize, rgsFile);\n\n                    GuiLoadStyleFromMemory(fileData, fileDataSize);",
+            b"                    if (fread(fileData, sizeof(unsigned char), fileDataSize, rgsFile) == (size_t)fileDataSize)\n                        GuiLoadStyleFromMemory(fileData, fileDataSize);",
+        ),
+    )
+    content = original
+    for before, after in replacements:
+        # Include the preceding newline so indentation identifies the two reads.
+        before, after = b"\n" + before, b"\n" + after
+        if content.count(before) != 1:
+            raise RayguiProvisionFailure("raygui style-reader patch context drifted")
+        content = content.replace(before, after, 1)
     return content
 
 
@@ -275,8 +319,9 @@ def compiler_warning_flags(identity: str) -> tuple[str, ...]:
     if "clang" in identity.lower():
         # Clang separates this conversion from -Wconversion; GCC has no option
         # with this name and must not receive an unknown -Wno-error switch.
-        return ("-Wno-error=shorten-64-to-32",)
-    return ()
+        return ("-Wno-error=shorten-64-to-32", "-Wno-error=implicit-int-float-conversion")
+    # GCC groups the upstream pixel-coordinate int/float conversions together.
+    return ("-Wno-error=conversion",)
 
 
 def normalize_archive_headers(path: Path) -> None:
@@ -327,6 +372,9 @@ def build_static(
         raise RayguiProvisionFailure(f"raygui build root must be an empty real directory: {build_root}")
     build_root.mkdir(parents=True, exist_ok=True)
     implementation = build_root / "raygui_implementation.c"
+    # Quoted includes resolve this private build copy before the immutable tree.
+    patched_header = build_root / "raygui.h"
+    patched_header.write_bytes(implementation_header_bytes((include_directory / "raygui.h").read_bytes()))
     object_file = build_root / "raygui_implementation.o"
     library = build_root / "libraygui.a"
     implementation.write_bytes(implementation_bytes())
@@ -366,13 +414,14 @@ def build_static(
             "sign-conversion",
             "unused-parameter",
             "unused-function",
-        ] + (["shorten-64-to-32"] if compiler_warning_flags(compiler_version) else []),
+        ] + [flag.removeprefix("-Wno-error=") for flag in compiler_warning_flags(compiler_version)],
         "tools": {
             "compiler": compiler_version,
             "archiver": tool_file_identity(archiver),
         },
         "inputs": {
             "rayguiHeaderSha256": sha256_file(include_directory / "raygui.h"),
+            "patchedImplementationHeaderSha256": sha256_file(patched_header),
             "raylibHeaderSha256": sha256_file(raylib_include / "raylib.h"),
             "implementationSha256": sha256_file(implementation),
         },

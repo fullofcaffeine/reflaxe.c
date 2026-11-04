@@ -1,0 +1,6 @@
+-cp .
+-cp ../../src
+-lib reflaxe.c
+-main ReportingMain
+-D hxc_runtime=auto
+-D caxecraft_observe_terrain

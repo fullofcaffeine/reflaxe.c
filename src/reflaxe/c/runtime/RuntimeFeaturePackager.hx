@@ -10,6 +10,7 @@ import sys.io.File;
 #end
 import reflaxe.c.CDiagnostic.CDiagnosticId;
 import reflaxe.c.emit.GeneratedFile;
+import reflaxe.c.emit.GeneratedFile.GeneratedFileProduction;
 import reflaxe.c.runtime.RuntimeFeatureModel.RuntimeArtifactRecord;
 import reflaxe.c.runtime.RuntimeFeatureModel.RuntimeFeatureAvailability;
 import reflaxe.c.runtime.RuntimeFeatureModel.RuntimeFeatureDefinition;
@@ -95,7 +96,11 @@ class RuntimeFeaturePackager {
 				throw new RuntimeFeatureError(CDiagnosticId.InternalCompilerError,
 					'selected runtime artifact `${artifact.sourcePath}` failed its registered SHA-256 provenance check', [artifact.featureId]);
 			}
-			files.push(new GeneratedFile(artifact.outputPath, contents, artifact.kind));
+			files.push(new GeneratedFile(artifact.outputPath, contents, artifact.kind, {
+				production: GeneratedFileProduction.RepositoryCopy,
+				sourcePath: artifact.sourcePath,
+				sourceSha256: actualSha256
+			}));
 		}
 		files.sort((left, right) -> RuntimeFeatureRegistry.compareUtf8(left.relativePath, right.relativePath));
 		if (files.map(file -> file.relativePath).join("\n") != plan.artifacts.join("\n")) {

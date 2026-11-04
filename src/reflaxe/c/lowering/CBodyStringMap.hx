@@ -38,6 +38,9 @@ enum CBodyStringMapValueLifecycle {
 	/** The value and every nested field can be copied and relocated as bytes. */
 	CBSMVLTrivial;
 
+	/** One direct managed carrier needs its shared retain/release operations. */
+	CBSMVLManagedValue;
+
 	/** A closed record owns one or more reference-counted nested values. */
 	CBSMVLAggregate(value:CPreparedBodyAggregate);
 }
@@ -270,10 +273,12 @@ class CBodyStringMapRegistry {
 		Admit only value families whose complete slot semantics are owned here.
 
 		Bool and Haxe `Int` use their already-validated direct C scalar
-		representations. A closed record is admitted only when every nested value
-		already has a finite, byte-relocatable direct representation and no
-		collector tracing is required. Managed records use the record's proven
-		retain/destroy plan.
+		representations. A nominal abstract over String keeps its nominal identity
+		while reusing the selected immutable String carrier: static bytes copy
+		trivially, while a runtime-backed view uses the shared String retain/release
+		contract. A closed record is admitted only when every nested value already
+		has a finite, byte-relocatable direct representation and no collector tracing
+		is required. Managed records use the record's proven retain/destroy plan.
 
 		A payload-free Haxe enum is also a direct value: its prepared enum plan
 		selects one native C `enum`, so copying or moving a slot copies only that
@@ -289,6 +294,8 @@ class CBodyStringMapRegistry {
 					case IRTBool | IRTInt(32, true): CBSMVLTrivial;
 					case _: null;
 				}
+			case CBVKStaticString(_): CBSMVLTrivial;
+			case CBVKManagedString(_): CBSMVLManagedValue;
 			case CBVKEnum(enumeration) if (enumeration.representation == CBERNativeEnum): CBSMVLTrivial;
 			case CBVKAggregate(aggregate) if (aggregateIsStorable(aggregate)):
 				aggregate.managedLifetime ? CBSMVLAggregate(aggregate) : CBSMVLTrivial;
@@ -302,34 +309,101 @@ class CBodyStringMapRegistry {
 		Every real field must pass the same recursive rule before the map is
 		allowed to store the enclosing record by value.
 	**/
-	static function aggregateIsStorable(value:CPreparedBodyAggregate):Bool {
+	static function aggregateIsStorable(value:CPreparedBodyAggregate, collector:Bool = false):Bool {
 		if (value.fields.length == 0)
 			return false;
 		for (field in value.fields)
-			if (!nestedValueIsStorable(field.type))
+			if (!nestedValueIsStorable(field.type, collector))
 				return false;
 		return true;
 	}
 
 	/**
-		Reject nested values whose lifetime needs a tracing collector or borrow.
+		Admit only fields whose chosen map can own their complete lifetime.
 
-		The accepted cases already own complete direct copy/destroy semantics.
-		This recursive proof is intentionally narrower than “the compiler knows
-		this type”: knowing a class or StringMap carrier is not enough to make it
-		safe as an unboxed record field inside another StringMap slot.
+		The plain map requires complete direct copy/destroy semantics. A collector
+		map also admits exact traced Array, enum, and class references.
+		Knowing a carrier is not sufficient: nested maps and borrowed values stay
+		outside this bounded record contract.
 	**/
-	static function nestedValueIsStorable(value:CBodyValueType):Bool
+	static function nestedValueIsStorable(value:CBodyValueType, collector:Bool = false):Bool
 		return switch value.kind {
 			case CBVKPrimitive(mapping): mapping.irType != IRTVoid && mapping.irType != IRTString && mapping.irType != IRTManagedString;
 			case CBVKStaticString(_) | CBVKManagedString(_) | CBVKImport(_): true;
-			case CBVKAggregate(aggregate): aggregateIsStorable(aggregate);
-			case CBVKArray(array): !array.managedByCollector;
+			case CBVKAggregate(aggregate): aggregateIsStorable(aggregate, collector);
+			case CBVKArray(array): collector || !array.managedByCollector;
 			case CBVKBytes(_): true;
-			case CBVKEnum(enumeration): !enumeration.collectorPayload;
-			case CBVKOptional(optional): nestedValueIsStorable(optional.payload);
+			case CBVKEnum(enumeration): collector || !enumeration.collectorPayload;
+			case CBVKOptional(optional): nestedValueIsStorable(optional.payload, collector);
+			case CBVKClass(_, _): collector;
 			case _: false;
 		};
+
+	/** Select tracing only for an admitted record that can reach a collector object. */
+	public static function collectorRecord(value:CBodyValueType, sourceType:Type):Bool {
+		final record = value.aggregateValue();
+		return record != null && aggregateIsStorable(record, true) && sourceReachesCollector(sourceType, [], 0);
+	}
+
+	/**
+		Select the map carrier from complete source types, before layout preparation.
+		A prepared recursive enum can still have no payloads when first visited.
+		Using that provisional layout would give the same map two incompatible ABIs.
+		A repeated type needs collection only when the cycle crosses an Array.
+	**/
+	static function sourceReachesCollector(type:Type, visited:Map<String, Int>, arrayDepth:Int):Bool {
+		if (reflaxe.c.lowering.CBodyAggregate.CBodyAggregateRegistry.staticStringIdentity(type) != null)
+			return false;
+		return switch type {
+			case TMono(reference): final resolved = reference.get(); resolved != null && sourceReachesCollector(resolved, visited, arrayDepth);
+			case TLazy(resolve): sourceReachesCollector(resolve(), visited, arrayDepth);
+			case TType(reference, parameters):
+				final definition = reference.get();
+				final key = TypeTools.toString(type);
+				final previous = visited.get(key);
+				if (previous != null) arrayDepth > previous; else {
+					visited.set(key, arrayDepth);
+					final result = sourceReachesCollector(TypeTools.applyTypeParameters(definition.type, definition.params, parameters), visited, arrayDepth);
+					visited.remove(key);
+					result;
+				}
+			case TAbstract(reference, parameters):
+				final definition = reference.get();
+				if (definition.name == "Null" && parameters.length == 1) sourceReachesCollector(parameters[0], visited,
+					arrayDepth); else if (definition.meta.has(":coreType")) false; else sourceReachesCollector(TypeTools.applyTypeParameters(definition.type,
+					definition.params, parameters), visited, arrayDepth);
+			case TInst(reference, parameters):
+				final definition = reference.get();
+				if (definition.pack.length == 0 && definition.name == "Array" && parameters.length == 1) sourceReachesCollector(parameters[0], visited,
+					arrayDepth + 1); else !(definition.pack.join(".") == "haxe.io" && definition.name == "Bytes") && !definition.isExtern;
+			case TAnonymous(reference):
+				var found = false;
+				for (field in reference.get().fields)
+					if (sourceReachesCollector(field.type, visited, arrayDepth))
+						found = true;
+				found;
+			case TEnum(reference, parameters):
+				final key = TypeTools.toString(type);
+				final previous = visited.get(key);
+				if (previous != null) arrayDepth > previous; else {
+					visited.set(key, arrayDepth);
+					final definition = reference.get();
+					var found = false;
+					for (constructor in definition.constructs) {
+						final constructorType = TypeTools.applyTypeParameters(constructor.type, definition.params, parameters);
+						switch constructorType {
+							case TFun(arguments, _): for (argument in arguments)
+									if (sourceReachesCollector(argument.t, visited, arrayDepth))
+										found = true;
+							case _:
+						}
+					}
+					visited.remove(key);
+					found;
+				}
+			case _: false;
+		};
+	}
 
 	/** Request one internal callback name under the exact specialization key. */
 	function lifecycleRequest(digest:String, operation:String, ordinal:Int):CSymbolRequest
@@ -384,7 +458,7 @@ class CBodyStringMapRegistry {
 	}
 
 	/** Recover the exact key/value arguments from Map or concrete StringMap typing. */
-	static function mapParameters(type:Type):Null<Array<Type>>
+	public static function mapParameters(type:Type):Null<Array<Type>>
 		return switch type {
 			case TAbstract(reference, parameters) if (isMapAbstract(reference.get())):
 				parameters.length == 1 ? [ContextStringType.value(), parameters[0]] : parameters;

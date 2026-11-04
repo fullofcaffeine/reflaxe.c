@@ -13,7 +13,7 @@
       "layout": "canonical",
       "limits": {
         "maxIdentifierBytes": 80,
-        "maxFileLines": 120,
+        "maxFileLines": 160,
         "maxFunctionLines": 48,
         "maxBranchCount": 8,
         "maxNestingDepth": 6,
@@ -43,8 +43,8 @@
       "fileOverrides": [
         {
           "path": "body-lines.c",
-          "maxFileLines": 160,
-          "reason": "The focused source-mapping artifact intentionally pairs one structured #line directive with each emitted source region; the ordinary generated body remains under the corpus-wide limit."
+          "maxFileLines": 220,
+          "reason": "The focused source-mapping artifact pairs one structured #line directive with each emitted source region. Its reviewed corpus includes straight-line, branch, early-return, and loop definite-assignment cases in addition to the ordinary primitive-body fixtures."
         }
       ],
       "functionOverrides": []

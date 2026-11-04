@@ -1,0 +1,11 @@
+{
+  "$schema": "https://reflaxe-c.dev/schemas/hxc.schema.json",
+  "schemaVersion": 1,
+  "hxml": "build.hxml",
+  "output": "build/c",
+  "profile": "portable",
+  "runtime": "auto",
+  "environment": "hosted",
+  "projectLayout": "split",
+  "artifact": "static-library"
+}

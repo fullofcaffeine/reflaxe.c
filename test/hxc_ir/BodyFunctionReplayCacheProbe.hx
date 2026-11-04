@@ -54,6 +54,14 @@ class BodyFunctionReplayCacheProbe {
 		final identical = CBodyFunctionReplayCache.resolve("function.demo", identity("input-a"), () -> build("unexpected"));
 		require(identical.reused && builds == 1, "identical shared and function inputs did not replay");
 		require(identical.data.ir.blocks.length == 1, "replayed function lost its block");
+		final replayedBorrowParameters = identical.data.ir.mutableAggregateBorrowParameterIds;
+		final replayedBorrowLocals = identical.data.ir.mutableAggregateBorrowLocalIds;
+		if (replayedBorrowParameters == null || replayedBorrowLocals == null)
+			throw new haxe.Exception("replayed function lost its mutable-record borrow ledgers");
+		require(replayedBorrowParameters.length == 0, "replayed function changed its mutable-record parameter ledger");
+		require(replayedBorrowLocals.length == 0, "replayed function changed its mutable-record local ledger");
+		replayedBorrowParameters.push("caller.mutation");
+		replayedBorrowLocals.push("caller.mutation");
 		identical.data.ir.blocks.resize(0);
 		CBodyFunctionReplayCache.completeRequest();
 
@@ -62,6 +70,11 @@ class BodyFunctionReplayCacheProbe {
 		final afterMutation = CBodyFunctionReplayCache.resolve("function.demo", identity("input-a"), () -> build("unexpected"));
 		require(afterMutation.reused
 			&& afterMutation.data.ir.blocks.length == 1, "caller mutation escaped into the persistent generation");
+		require(afterMutation.data.ir.mutableAggregateBorrowParameterIds != null
+			&& afterMutation.data.ir.mutableAggregateBorrowParameterIds.length == 0
+			&& afterMutation.data.ir.mutableAggregateBorrowLocalIds != null
+			&& afterMutation.data.ir.mutableAggregateBorrowLocalIds.length == 0,
+			"caller mutation escaped into the persistent mutable-record borrow ledgers");
 		CBodyFunctionReplayCache.completeRequest();
 
 		CBodyFunctionReplayCache.beginRequest(true);
@@ -232,8 +245,10 @@ class BodyFunctionReplayCacheProbe {
 			parameters: [],
 			borrowedClassParameterIds: [],
 			borrowedInterfaceParameterIds: [],
+			mutableAggregateBorrowParameterIds: [],
 			borrowedClassLocalIds: [],
 			borrowedInterfaceLocalIds: [],
+			mutableAggregateBorrowLocalIds: [],
 			managedRoots: [],
 			locals: [],
 			returnType: IRTVoid,

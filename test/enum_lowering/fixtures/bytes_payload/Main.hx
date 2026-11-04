@@ -389,6 +389,14 @@ final class Main {
 			case ValidationPassed(canonical): canonical.get(0) + canonical.get(1) + canonical.get(2);
 		};
 
+	/** Exercise a fresh managed enum only when the right side of `&&` runs. */
+	static function freshShortCircuitAnd(runRight:Bool):Bool
+		return runRight && score(ValidationFailed) == -1;
+
+	/** Exercise a fresh managed enum only when the right side of `||` runs. */
+	static function freshShortCircuitOr(skipRight:Bool):Bool
+		return skipRight || score(ValidationFailed) == -1;
+
 	/** Keep Eval and native C silent; a semantic mismatch remains observable as a loop. */
 	static function main():Void {
 		final original = validate();
@@ -464,6 +472,10 @@ final class Main {
 			|| scoreWideFreshSwitchSubjectEarly(1) != 15
 			|| scoreFreshSwitchSubjectEarly(false) != -1
 			|| scoreFreshSwitchSubjectEarly(true) != 15
+			|| freshShortCircuitAnd(false)
+			|| !freshShortCircuitAnd(true)
+			|| !freshShortCircuitOr(false)
+			|| !freshShortCircuitOr(true)
 			|| score(failed) != -1) {}
 	}
 }

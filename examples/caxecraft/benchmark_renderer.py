@@ -19,6 +19,8 @@ import tempfile
 from pathlib import Path
 
 import play as play_tool
+from dev_generation import GenerationFailure, current_generation
+from renderer_interval import IntervalEvidenceFailure, PREFIX, parse_interval_evidence
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -90,7 +92,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
-def run_renderer(args: argparse.Namespace, renderer: str) -> Path:
+def run_renderer(args: argparse.Namespace, renderer: str, *, observed: bool = False) -> Path:
     command = [
         sys.executable,
         str(PLAY),
@@ -122,6 +124,8 @@ def run_renderer(args: argparse.Namespace, renderer: str) -> Path:
         "--authority",
         args.authority,
     ]
+    if observed:
+        command.append("--observe-renderer-interval")
     if args.allow_network:
         command.append("--allow-network")
     if args.source is not None:
@@ -148,7 +152,8 @@ def run_renderer(args: argparse.Namespace, renderer: str) -> Path:
     variant = (
         args.output_root.resolve()
         / "variants"
-        / f"{platform_name}-memory-software-split-pilot-{SCRIPT_ID}{renderer_part}-benchmark"
+        / (f"{platform_name}-memory-software-split-pilot-{SCRIPT_ID}{renderer_part}-benchmark"
+           + ("-interval-observer" if observed else ""))
     )
     report = variant / "bin/caxecraft-pilot-report.json"
     if not report.is_file():
@@ -462,7 +467,13 @@ def require_number(value: object, label: str) -> int | float:
 
 
 def source_evidence(variant: Path) -> dict[str, object]:
-    generated = variant / "generated"
+    """Inspect the verified generation selected for this benchmark variant."""
+    try:
+        generated = current_generation(variant).generated
+    except GenerationFailure as error:
+        raise BenchmarkFailure(
+            f"cannot inspect the published generated project: {error}"
+        ) from error
     sources = sorted(generated.rglob("*.c"))
     headers = sorted(generated.rglob("*.h"))
     if not sources or not headers:
@@ -487,9 +498,11 @@ def source_evidence(variant: Path) -> dict[str, object]:
         allocation_count += len(ALLOCATOR_CALL.findall(text))
         hxrt_count += len(HXRT_REFERENCE.findall(text))
 
-    if goto_count != 0 or allocation_count != 0 or hxrt_count != 0:
+    # Allocation and runtime references remain visible whole-project metrics.
+    # Separate native observations and static coverage own terrain acceptance.
+    if goto_count != 0:
         raise BenchmarkFailure(
-            "generated renderer project violated the steady-state structural budget: "
+            "generated renderer project violated the whole-project structural budget: "
             f"goto={goto_count}, allocation calls={allocation_count}, hxrt references={hxrt_count}"
         )
     executable = variant / "bin/caxecraft"
@@ -508,11 +521,187 @@ def source_evidence(variant: Path) -> dict[str, object]:
     }
 
 
-def renderer_record(report: dict[str, object], variant: Path) -> dict[str, object]:
+def benchmark_request_args(args: argparse.Namespace, renderer: str, observed: bool) -> argparse.Namespace:
+    """Use the exact fixed benchmark request for both build and evidence checks."""
+    values = dict(vars(args))
+    values.update(renderer=renderer, observe_renderer_interval=observed,
+        layout="split", optimization="2", sanitizers=False, benchmark_renderer=True,
+        raylib_configuration=RAYLIB_CONFIGURATION, raygui_source=None,
+        ar=os.environ.get("AR", "ar"))
+    return argparse.Namespace(**values)
+
+
+def verify_build_binding(report: dict[str, object], variant: Path, *,
+                         args: argparse.Namespace, renderer: str, observed: bool) -> dict[str, object]:
+    """Recheck the supplied build through its existing input and native owners.
+
+    Serialized plan operands are evidence to compare, never authority to select
+    flags or sources. Reconstruct the plan from the selected generation, current
+    benchmark request and verified external headers before checking object metadata.
+    """
+    from dev_build_state import (BuildStateFailure, InputPath, inventory_inputs,
+                                 sha256_file, validate_reuse)
+    from dev_native_cache import NativeCacheFailure, NativeObject, verify_native_objects
+
+    try:
+        binding_path = variant / "renderer-benchmark-binding.json"
+        if report.get("benchmarkBindingSha256") != sha256_file(binding_path):
+            raise BenchmarkFailure("renderer benchmark binding digest changed or is missing")
+        binding = read_json_object(binding_path)
+        if type(binding.get("schemaVersion")) is not int or binding["schemaVersion"] != 1:
+            raise BenchmarkFailure("unsupported renderer benchmark binding schema")
+        state_path = variant / play_tool.PLAY_BUILD_STATE
+        if binding.get("buildStateSha256") != sha256_file(state_path):
+            raise BenchmarkFailure("renderer benchmark build state changed")
+        state = read_json_object(state_path)
+        request_args = benchmark_request_args(args, renderer, observed)
+        expected_request = play_tool.play_request_snapshot(
+            request_args, platform_name=PLATFORM_NAMES[platform.system()],
+            selected_pilot=SCRIPT_ID, native_sanitizer_flags=(),
+        )
+        generated = current_generation(variant).generated
+        executable = variant / "bin/caxecraft"
+        decision = validate_reuse(state_path=state_path, current_request=expected_request,
+                                  generated=generated, executable=executable)
+        if not decision.hit:
+            raise BenchmarkFailure(f"renderer benchmark build is stale: {decision.reason}")
+        content = inventory_inputs((InputPath("runtime-content", executable.parent / "content"),))
+        if not content or binding.get("runtimeContent") != content:
+            raise BenchmarkFailure("renderer benchmark runtime content changed or is missing")
+        external = state["externalNativeFiles"]
+
+        def include_directory(family: str) -> Path:
+            roots = {Path(item["source"]).parent for item in external
+                     if item["path"].startswith(family + "/")}
+            if len(roots) != 1:
+                raise BenchmarkFailure(f"renderer benchmark omitted exact {family} headers")
+            return roots.pop()
+
+        raylib_include = include_directory("raylib/include")
+        raygui_include = include_directory("raygui/include")
+        manifest_path = generated / "hxc.manifest.json"
+        plan = play_tool.native_compile_plan(
+            generated, read_json_object(manifest_path), include_directory=raylib_include,
+            raygui_include_directory=raygui_include,
+            platform_name=PLATFORM_NAMES[platform.system()], optimization="2",
+            native_sanitizer_flags=(), observe_renderer_interval=observed,
+        )
+        native = require_dict(binding.get("nativeBuild"), "native build binding")
+        expected_plan = {
+            "sources": [[name, str(path.resolve())] for name, path in plan.sources],
+            "compileFlags": list(plan.compile_flags),
+            "includeRoots": [[root.logical_name, str(root.path.resolve())] for root in plan.include_roots],
+            "dependencyRoots": [[root.logical_name, str(root.path.resolve())] for root in plan.dependency_roots],
+        }
+        if {key: native.get(key) for key in expected_plan} != expected_plan:
+            raise BenchmarkFailure("renderer benchmark native plan differs from its owner")
+        objects = native.get("objects")
+        if not isinstance(objects, list) or any(
+            not isinstance(item, dict) or set(item) != {"source", "key", "path", "sha256"}
+            or any(not isinstance(value, str) or not value for value in item.values())
+            for item in objects
+        ):
+            raise BenchmarkFailure("renderer benchmark native object records are malformed")
+        pins = verify_native_objects(
+            objects=tuple(NativeObject(item["source"], item["key"], Path(item["path"]),
+                                       item["sha256"], False) for item in objects),
+            sources=plan.sources, compiler=args.cc, compile_flags=plan.compile_flags,
+            include_roots=plan.include_roots, dependency_roots=plan.dependency_roots,
+        )
+        pins.verify()
+        if not observed:
+            if binding.get("staticCoverageReceipt") is not None or any(
+                name in report for name in ("terrainInterval", "staticTerrainCoverage")
+            ):
+                raise BenchmarkFailure("timing build contains observer evidence")
+        else:
+            receipt_ref = require_dict(binding.get("staticCoverageReceipt"), "static coverage receipt")
+            relative = Path(str(receipt_ref.get("path", "")))
+            if relative.is_absolute() or ".." in relative.parts or relative.name != "receipt.json":
+                raise BenchmarkFailure("renderer benchmark static receipt path escapes its variant")
+            receipt_path = variant / relative
+            receipt_hash = sha256_file(receipt_path)
+            summary = require_dict(report.get("staticTerrainCoverage"), "static terrain coverage")
+            if receipt_ref.get("sha256") != receipt_hash or summary.get("receiptSha256") != receipt_hash:
+                raise BenchmarkFailure("renderer benchmark static coverage receipt changed")
+            receipt = read_json_object(receipt_path)
+            if (receipt.get("status") != "success"
+                    or receipt.get("summary") != {key: value for key, value in summary.items()
+                                                  if key != "receiptSha256"}
+                    or summary.get("executableSha256") != sha256_file(executable)
+                    or summary.get("manifestSha256") != sha256_file(manifest_path)
+                    or receipt.get("executable") != str(executable.absolute())
+                    or receipt.get("manifest") != str(manifest_path.absolute())
+                    or receipt.get("sources") != [{"name": name, "path": str(path.absolute())}
+                                                   for name, path in plan.sources]
+                    or receipt.get("flags") != list(pins.flags)
+                    or receipt.get("nativeObjects") != [
+                        {"source": item.source, "key": item.key, "sha256": item.sha256,
+                         "path": str(item.path), "metadata": str(item.path.parent / "metadata.json")}
+                        for item in pins.objects]):
+                raise BenchmarkFailure("renderer benchmark static coverage belongs to another build")
+            source = args.source.resolve() if args.source is not None else play_tool.provision.pinned_source(
+                (args.prebuilt_raylib_cache.resolve() if args.prebuilt_raylib_cache is not None
+                 else args.cache_root.resolve() / "source"),
+                play_tool.provision.load_lock(), allow_network=False,
+            )
+            library = next(Path(item["source"]) for item in external if item["path"] == "raylib/library")
+            contract = play_tool.terrain_native_contract(
+                request_args, platform_name=PLATFORM_NAMES[platform.system()], source=source,
+                include_directory=raylib_include, library=library,
+            )
+            if receipt.get("nativeContract") != {"identity": contract.identity_report(),
+                                                 "leaves": sorted(contract.leaves)}:
+                raise BenchmarkFailure("renderer benchmark native contract changed")
+            inputs = require_dict(receipt.get("inputs"), "static coverage pinned inputs")
+            if not inputs or any(not isinstance(path, str) or not isinstance(digest, str)
+                                 or sha256_file(Path(path)) != digest for path, digest in inputs.items()):
+                raise BenchmarkFailure("renderer benchmark static coverage input changed")
+            interval = require_dict(report.get("terrainInterval"), "terrain interval")
+            parsed = parse_interval_evidence(
+                "\n".join(PREFIX + json.dumps(interval.get(name)) for name in ("warmup", "total")),
+                measured_frames=12,
+            )
+            if interval != parsed:
+                raise BenchmarkFailure("renderer benchmark interval summary differs from its snapshots")
+        return {"request": expected_request, "externalNativeFiles": external,
+                "runtimeContent": content, "bindingSha256": report["benchmarkBindingSha256"]}
+    except (OSError, UnicodeError, ValueError, KeyError, TypeError, StopIteration,
+            GenerationFailure, BuildStateFailure, NativeCacheFailure, IntervalEvidenceFailure,
+            play_tool.PlayFailure, play_tool.NativeContractFailure,
+            play_tool.provision.ProvisionFailure) as error:
+        if isinstance(error, BenchmarkFailure):
+            raise
+        raise BenchmarkFailure(f"cannot verify renderer benchmark evidence: {error}") from error
+
+
+def require_observer_pair(timing: dict[str, object], correctness: dict[str, object]) -> None:
+    """Permit exactly the observer flag to differ between paired requests."""
+    before = copy.deepcopy(timing)
+    after = copy.deepcopy(correctness)
+    before.pop("bindingSha256", None)
+    after.pop("bindingSha256", None)
+    for evidence, expected in ((before, False), (after, True)):
+        request = require_dict(evidence.get("request"), "bound benchmark request")
+        configuration = require_dict(request.get("configuration"), "bound benchmark configuration")
+        if configuration.get("observeRendererInterval") is not expected:
+            raise BenchmarkFailure("renderer benchmark observer configuration is invalid")
+        configuration.pop("observeRendererInterval")
+        request.pop("sha256", None)
+    if before != after:
+        raise BenchmarkFailure("renderer benchmark timing and correctness inputs differ beyond observer configuration")
+
+
+def renderer_record(report: dict[str, object], variant: Path,
+                    correctness: dict[str, object]) -> dict[str, object]:
     return {
         "timing": require_dict(report.get("benchmark"), "benchmark object"),
         "render": require_dict(report.get("render"), "render object"),
         "artifacts": source_evidence(variant),
+        "terrainInterval": correctness["terrainInterval"],
+        "staticTerrainCoverage": correctness["staticTerrainCoverage"],
+        "rootBookkeeping": {name: correctness["terrainInterval"]["measured"][name]
+                            for name in ("rootPushAttempts", "rootPopAttempts")},
     }
 
 
@@ -528,8 +717,53 @@ def build_comparison(
     cache_variant: Path,
     baseline_variant: Path,
     handwritten_c: dict[str, object],
+    *, cache_correctness: dict[str, object] | None = None,
+    baseline_correctness: dict[str, object] | None = None,
+    cache_correctness_variant: Path | None = None,
+    baseline_correctness_variant: Path | None = None,
+    args: argparse.Namespace | None = None,
 ) -> dict[str, object]:
-    require_semantic_parity(cache_report, baseline_report)
+    for report in (cache_report, baseline_report):
+        timing = require_dict(report.get("benchmark"), "renderer benchmark")
+        if timing.get("measurementKind") != "timing":
+            raise BenchmarkFailure("renderer comparison requires uninstrumented timing samples")
+    if (cache_correctness is None or baseline_correctness is None or args is None
+            or cache_correctness_variant is None or baseline_correctness_variant is None):
+        raise BenchmarkFailure("renderer comparison requires real-game interval and static coverage evidence")
+    timing_bindings = []
+    for timing, correctness, timing_variant, correctness_variant, renderer in (
+        (cache_report, cache_correctness, cache_variant, cache_correctness_variant, "chunk-cache"),
+        (baseline_report, baseline_correctness, baseline_variant, baseline_correctness_variant, "immediate-baseline"),
+    ):
+        if require_dict(correctness.get("benchmark"), "correctness benchmark").get("measurementKind") != "instrumented-correctness":
+            raise BenchmarkFailure("renderer correctness evidence must be instrumented")
+        timing_binding = verify_build_binding(timing, timing_variant, args=args, renderer=renderer, observed=False)
+        correctness_binding = verify_build_binding(correctness, correctness_variant, args=args, renderer=renderer, observed=True)
+        require_observer_pair(timing_binding, correctness_binding)
+        timing_bindings.append(copy.deepcopy(timing_binding))
+        # Validate evidence independently before removing only its metadata from
+        # gameplay parity. Root counts and proof hashes may differ by renderer.
+        projected = copy.deepcopy(correctness)
+        for name in ("terrainInterval", "staticTerrainCoverage", "benchmarkBindingSha256"):
+            projected.pop(name)
+        timing_projected = copy.deepcopy(timing)
+        timing_projected.pop("benchmarkBindingSha256")
+        require_semantic_parity(timing_projected, projected)
+        if correctness["benchmark"].get("reviewScreenshotSha256") != timing["benchmark"].get("reviewScreenshotSha256"):
+            raise BenchmarkFailure("instrumented renderer changed the byte-exact review screenshot")
+    for binding, renderer in zip(timing_bindings, ("chunk-cache", "immediate-baseline")):
+        binding.pop("bindingSha256")
+        request = binding["request"]
+        if request["configuration"].pop("renderer") != renderer:
+            raise BenchmarkFailure("renderer benchmark request selected another renderer")
+        request.pop("sha256")
+    if timing_bindings[0] != timing_bindings[1]:
+        raise BenchmarkFailure("renderer variants used different source, toolchain, native or content inputs")
+    cache_semantics = copy.deepcopy(cache_report)
+    baseline_semantics = copy.deepcopy(baseline_report)
+    cache_semantics.pop("benchmarkBindingSha256")
+    baseline_semantics.pop("benchmarkBindingSha256")
+    require_semantic_parity(cache_semantics, baseline_semantics)
     cache_benchmark = require_dict(cache_report.get("benchmark"), "chunk-cache benchmark")
     baseline_benchmark = require_dict(baseline_report.get("benchmark"), "immediate benchmark")
     cache_hash = cache_benchmark.get("reviewScreenshotSha256")
@@ -580,6 +814,7 @@ def build_comparison(
                 "compiler, optimization, Raylib build, and monotonic clock"
             ),
             "performanceClaim": "measurement evidence only; no general optimized or faster-than-C claim",
+            "runtimeAcceptance": "measured terrain intervals require zero allocation, reallocation and collection attempts; root API attempts are reported separately",
         },
         "workload": {
             "scene": "first-playable authored CaxeMap",
@@ -605,10 +840,10 @@ def build_comparison(
             "explicitPayloadBytes": sum(CHUNK_CACHE_PAYLOAD.values()),
             "breakdown": CHUNK_CACHE_PAYLOAD,
             "allocationCount": 0,
-            "qualification": "excludes compiler-dependent enclosing-struct padding; no sizeof probe is claimed",
+            "qualification": "fixed carrier storage only; excludes compiler-dependent enclosing-struct padding; measured runtime attempts are reported per renderer",
         },
-        "immediateBaseline": renderer_record(baseline_report, baseline_variant),
-        "chunkCache": renderer_record(cache_report, cache_variant),
+        "immediateBaseline": renderer_record(baseline_report, baseline_variant, baseline_correctness),
+        "chunkCache": renderer_record(cache_report, cache_variant, cache_correctness),
         "handwrittenCReference": handwritten_c,
         "comparison": {
             "terrainMedianMicrosecondsPerFrameDelta": cache_terrain - baseline_terrain,
@@ -652,6 +887,8 @@ def main(argv: list[str]) -> int:
 
         cache_variant = run_renderer(args, "chunk-cache")
         baseline_variant = run_renderer(args, "immediate-baseline")
+        cache_correctness_variant = run_renderer(args, "chunk-cache", observed=True)
+        baseline_correctness_variant = run_renderer(args, "immediate-baseline", observed=True)
         print("caxecraft benchmark: running handwritten-c reference", flush=True)
         handwritten_c = run_handwritten_c_reference(args)
         cache_report = read_json_object(cache_variant / "bin/caxecraft-pilot-report.json")
@@ -662,6 +899,10 @@ def main(argv: list[str]) -> int:
             cache_variant,
             baseline_variant,
             handwritten_c,
+            cache_correctness=read_json_object(cache_correctness_variant / "bin/caxecraft-pilot-report.json"),
+            baseline_correctness=read_json_object(baseline_correctness_variant / "bin/caxecraft-pilot-report.json"),
+            cache_correctness_variant=cache_correctness_variant,
+            baseline_correctness_variant=baseline_correctness_variant, args=args,
         )
 
         report_path = args.report.resolve()

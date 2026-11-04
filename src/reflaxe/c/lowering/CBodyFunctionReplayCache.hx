@@ -27,7 +27,7 @@ import reflaxe.c.naming.CSymbolRequest;
 @:noCompletion
 class CBodyFunctionReplayCache {
 	/** Bump this whenever the retained payload or canonical key contract changes. */
-	public static inline final SCHEMA_VERSION = 1;
+	public static inline final SCHEMA_VERSION = 3;
 
 	/** Disable replay while keeping ordinary function construction authoritative. */
 	public static inline final DISABLE_DEFINE = "reflaxe_c_test_disable_body_function_replay_cache";
@@ -61,6 +61,8 @@ class CBodyFunctionReplayCache {
 			misses: 0,
 			missingFunctionMisses: 0,
 			changedFunctionInputMisses: 0,
+			frontendSourcePlanHits: 0,
+			frontendSourcePlanFallbacks: 0,
 			programDecision: BRPDUnsettled
 		};
 	}
@@ -120,6 +122,10 @@ class CBodyFunctionReplayCache {
 			throw new haxe.Exception("body-function replay requires a function identity and canonical typed input");
 		if (request.candidateByFunction.exists(functionId))
 			throw new haxe.Exception('body-function replay received duplicate function `$functionId`');
+		if (identity.frontendSourcePlanReused)
+			request.frontendSourcePlanHits++;
+		else
+			request.frontendSourcePlanFallbacks++;
 
 		if (!request.enabled) {
 			return new CBodyFunctionReplayResolution(build(), false);
@@ -185,6 +191,8 @@ class CBodyFunctionReplayCache {
 			misses: request.misses,
 			missingFunctionMisses: request.missingFunctionMisses,
 			changedFunctionInputMisses: request.changedFunctionInputMisses,
+			frontendSourcePlanHits: request.frontendSourcePlanHits,
+			frontendSourcePlanFallbacks: request.frontendSourcePlanFallbacks,
 			retainedFunctions: retainedFunctions,
 			retainedProgramRevisionCodeUnits: retainedProgramRevisionCodeUnits,
 			retainedInputCodeUnits: retainedInputCodeUnits
@@ -266,6 +274,20 @@ class CBodyFunctionReplayCache {
 			projections: root.projections.copy(),
 			source: root.source
 		});
+		final exceptionRegions = value.exceptionRegions == null ? null : value.exceptionRegions.map(region -> {
+			id: region.id,
+			frameStorageId: region.frameStorageId,
+			payloadValueId: region.payloadValueId,
+			source: region.source
+		});
+		final exceptionCleanups = value.exceptionCleanups == null ? null : value.exceptionCleanups.map(cleanup -> {
+			id: cleanup.id,
+			storageId: cleanup.storageId,
+			actionId: cleanup.actionId,
+			place: cleanup.place,
+			implementation: cleanup.implementation,
+			source: cleanup.source
+		});
 		return {
 			id: value.id,
 			displayName: value.displayName,
@@ -273,10 +295,15 @@ class CBodyFunctionReplayCache {
 			borrowedClassParameterIds: value.borrowedClassParameterIds.copy(),
 			borrowedInterfaceParameterIds: value.borrowedInterfaceParameterIds == null ? null : value.borrowedInterfaceParameterIds.copy(),
 			borrowedAggregateParameterIds: value.borrowedAggregateParameterIds == null ? null : value.borrowedAggregateParameterIds.copy(),
+			mutableAggregateBorrowParameterIds: value.mutableAggregateBorrowParameterIds == null ? null : value.mutableAggregateBorrowParameterIds.copy(),
 			borrowedClassLocalIds: value.borrowedClassLocalIds.copy(),
 			borrowedInterfaceLocalIds: value.borrowedInterfaceLocalIds == null ? null : value.borrowedInterfaceLocalIds.copy(),
 			borrowedAggregateLocalIds: value.borrowedAggregateLocalIds == null ? null : value.borrowedAggregateLocalIds.copy(),
+			mutableAggregateBorrowLocalIds: value.mutableAggregateBorrowLocalIds == null ? null : value.mutableAggregateBorrowLocalIds.copy(),
 			managedRoots: managedRoots,
+			exceptionStrategy: value.exceptionStrategy,
+			exceptionRegions: exceptionRegions,
+			exceptionCleanups: exceptionCleanups,
 			locals: value.locals.copy(),
 			returnType: value.returnType,
 			borrowedSpanReturn: value.borrowedSpanReturn,
@@ -326,14 +353,19 @@ class CBodyFunctionReplayCache {
 **/
 @:noCompletion
 class CBodyFunctionReplayIdentity {
+	/** Complete text that must match before the cache can replay a function. */
 	public final canonicalInput:String;
+
+	/** True when the frontend supplied the typed text and position order for this request. */
+	public final frontendSourcePlanReused:Bool;
 
 	final positionsBySource:Map<String, Position>;
 
 	/** Keep exact reusable text beside current-request positions used only for diagnostics. */
-	public function new(canonicalInput:String, positionsBySource:Map<String, Position>) {
+	public function new(canonicalInput:String, positionsBySource:Map<String, Position>, frontendSourcePlanReused:Bool = false) {
 		this.canonicalInput = canonicalInput;
 		this.positionsBySource = positionsBySource;
+		this.frontendSourcePlanReused = frontendSourcePlanReused;
 	}
 
 	/**
@@ -403,6 +435,8 @@ typedef CBodyFunctionReplayCacheStats = {
 	final misses:Int;
 	final missingFunctionMisses:Int;
 	final changedFunctionInputMisses:Int;
+	final frontendSourcePlanHits:Int;
+	final frontendSourcePlanFallbacks:Int;
 	final retainedFunctions:Int;
 	final retainedProgramRevisionCodeUnits:Float;
 	final retainedInputCodeUnits:Float;
@@ -450,6 +484,8 @@ private typedef BodyFunctionReplayRequest = {
 	var misses:Int;
 	var missingFunctionMisses:Int;
 	var changedFunctionInputMisses:Int;
+	var frontendSourcePlanHits:Int;
+	var frontendSourcePlanFallbacks:Int;
 	var programDecision:CBodyFunctionReplayProgramDecision;
 }
 

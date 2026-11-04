@@ -20,6 +20,9 @@ class ASTFixtureCompiler {
 	public static function run(outputDirectory:String):Void {
 		CASTGolden.verifyModelGuards();
 		ExpressionGolden.verifyModelGuards();
+		#if reflaxe_c_phase_timing
+		verifyProfileWork();
+		#end
 
 		final strict = new CASTPrinter();
 		final extensions = new CASTPrinter("  ", GnuC11);
@@ -32,6 +35,42 @@ class ASTFixtureCompiler {
 			new GeneratedFile("src/main.c", strict.printTranslationUnit(buildConsumerUnit()), GeneratedFileKind.Source)
 		];
 
+		writeFiles(outputDirectory, files);
+		Sys.println("c-ast-fixture-macro: OK");
+	}
+
+	#if reflaxe_c_phase_timing
+	/** Checks that macro profiling counts real syntax without changing text or leaking work between calls. */
+	static function verifyProfileWork():Void {
+		final printer = new CASTPrinter();
+		final unit = new CTranslationUnit();
+		unit.declarations.push(DStaticAssert(integer("1"), "profile"));
+		final expected = '_Static_assert(1, "profile");\n';
+		final printed = printer.printTranslationUnitWithWork(unit);
+		if (printed.text != expected
+			|| printed.text != printer.printTranslationUnit(unit)
+			|| printed.work.declarationCount != 1
+			|| printed.work.expressionCount != 1
+			|| printed.work.statementCount != 0
+			|| printed.work.outputBytes != haxe.io.Bytes.ofString(expected).length)
+			throw "profiled source text or structural work changed";
+		final header = new CHeaderUnit(id("PROFILE_H"), unit);
+		final printedHeader = printer.printHeaderWithWork(header);
+		if (printedHeader.text != printer.printHeader(header)
+			|| printedHeader.work.declarationCount != 1
+			|| printedHeader.work.expressionCount != 1
+			|| printedHeader.work.statementCount != 0
+			|| printedHeader.work.outputBytes != haxe.io.Bytes.ofString(printedHeader.text).length)
+			throw "profiled header text or per-call work reset changed";
+		final empty = printer.printTranslationUnitWithWork(new CTranslationUnit());
+		if (empty.text != "\n" || empty.work.declarationCount != 0 || empty.work.expressionCount != 0 || empty.work.statementCount != 0
+			|| empty.work.outputBytes != 1)
+			throw "profiled empty unit retained earlier work";
+	}
+	#end
+
+	/** Writes owned generated files through the same Reflaxe lifecycle as production output. */
+	public static function writeFiles(outputDirectory:String, files:Array<GeneratedFile>):Void {
 		final compiler = new ASTFixtureOutputCompiler(files);
 		compiler.setOptions({
 			fileOutputType: BaseCompilerFileOutputType.Manual,
@@ -41,7 +80,6 @@ class ASTFixtureCompiler {
 		});
 		compiler.setOutputDir(outputDirectory);
 		compiler.generateFiles();
-		Sys.println("c-ast-fixture-macro: OK");
 	}
 
 	static function buildAttributeUnit():CTranslationUnit {

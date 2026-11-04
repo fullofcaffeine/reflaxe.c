@@ -2,9 +2,12 @@
 #define HXC_CAXECRAFT_GAMEPLAY_MINING_H_INCLUDED
 
 #include "hxc/detail/program_types.h"
+#include "hxc/modules/caxecraft/gameplay/ItemKind.h"
 
 struct hxc_caxecraft_gameplay_MiningResult hxc_caxecraft_gameplay_Mining_attempt(uint8_t *hxc_l_cells, size_t hxc_l_length, struct hxc_caxecraft_scenario_VoxelPoint hxc_l_coordinate, struct hxc_caxecraft_gameplay_InventoryState hxc_l_inventory);
 
 struct hxc_caxecraft_gameplay_MiningResult hxc_caxecraft_gameplay_Mining_collect(uint8_t *hxc_l_cells, size_t hxc_l_length, struct hxc_caxecraft_scenario_VoxelPoint hxc_l_coordinate, struct hxc_caxecraft_gameplay_InventoryState hxc_l_inventory, enum hxc_caxecraft_domain_BlockKind hxc_l_kind, enum hxc_caxecraft_gameplay_ItemKind hxc_l_item);
+
+struct hxc_optional_caxecraft_gameplay_ItemKind hxc_caxecraft_gameplay_Mining_itemForCollectableBlock(enum hxc_caxecraft_domain_BlockKind hxc_l_kind);
 
 #endif /* HXC_CAXECRAFT_GAMEPLAY_MINING_H_INCLUDED */

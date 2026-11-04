@@ -8,7 +8,9 @@
 
 ## Context
 
-Haxe permits arbitrary thrown values, nested catch/rethrow, and `finally`.
+Haxe permits arbitrary thrown values and nested catch/rethrow. The pinned Haxe
+frontend has no source-level `finally` syntax; haxe.c nevertheless needs
+finally-style cleanup regions for compiler-owned resource and ownership exits.
 Strict C has no native exception facility, and `setjmp`/`longjmp` does not run
 cleanup or preserve every automatic local value by itself. Exported C code also
 needs an ordinary, stable failure contract that can be consumed without sharing
@@ -23,20 +25,22 @@ choose the narrowest legal lowering after cleanup and boundary analysis.
 ### HxcIR always models failure and cleanup explicitly
 
 Throwing operations, calls that may fail, catches, rethrows, and every exit from
-a `finally` or ownership region have explicit normal and exceptional successors
-in HxcIR. Cleanup actions are ordered, idempotence-checked, and associated with
-region checkpoints before C lowering chooses a mechanism.
+a compiler-owned finally-style or ownership region have explicit normal and
+exceptional successors in HxcIR. Cleanup actions are ordered,
+idempotence-checked, and associated with region checkpoints before C lowering
+chooses a mechanism.
 
 For a statically closed region, the compiler may lower exceptional edges to
 ordinary result/status branches when it can prove that thrown-value matching,
-rethrow, `finally`, return/break/continue behavior, cleanup order, and observable
+rethrow, finally-style return/break/continue behavior, cleanup order, and observable
 stack behavior are unchanged. This is the preferred runtime-free lowering and
 is reported per function/region. `c.Result<T,E>` and explicit status-returning
 APIs always use this ordinary C control-flow contract.
 
 ### General portable exceptions use a contained runtime slice
 
-Reachable general Haxe throw/catch/finally behavior that cannot be proven safe
+Reachable general Haxe throw/catch/rethrow behavior and finally-style compiler
+cleanup that cannot be proven safe
 for result lowering selects the separate `exception` runtime feature. Its
 strict-C11 implementation uses an encapsulated exception-frame chain and
 `setjmp`/`longjmp`:
@@ -45,7 +49,7 @@ strict-C11 implementation uses an encapsulated exception-frame chain and
   rooted thrown value, and cleanup-stack checkpoint;
 - a throw finds the target frame, executes registered cleanups down to its
   checkpoint exactly once, keeps the payload live, and only then transfers;
-- `finally` is compiled as an explicit cleanup/control-flow region so normal
+- finally-style cleanup is compiled as an explicit control-flow region so normal
   completion, return, loop exits, throw, and rethrow each execute it once;
 - state live across `setjmp` is stored in explicit frame slots or otherwise
   emitted according to C's `volatile` rules; lowering never reads an

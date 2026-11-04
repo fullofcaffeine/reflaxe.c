@@ -182,6 +182,94 @@ jobs:
       - name: Verify generated Caxecraft domain at O0, O2, and under sanitizers
         run: python3 examples/caxecraft/run.py --native-only --toolchain "${{ matrix.toolchain }}"
 
+  platform-matrix-plan:
+    name: Plan release-blocking platform matrix
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      matrix: ${{ steps.plan.outputs.matrix }}
+    steps:
+      - name: Check out source
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+
+      - name: Validate and plan every Tier-1 tuple
+        id: plan
+        run: python3 scripts/ci/platform_matrix.py plan --github-output "$GITHUB_OUTPUT"
+
+  platform-matrix:
+    name: Tier 1 (${{ matrix.id }})
+    needs: platform-matrix-plan
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.platform-matrix-plan.outputs.matrix) }}
+    steps:
+      - name: Check out source
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+
+      - name: Install the Cortex-M cross compiler and emulator
+        if: matrix.environment == 'freestanding'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            binutils-arm-none-eabi \
+            gcc-arm-none-eabi \
+            qemu-system-arm
+
+      - name: Execute the exact planned lane
+        shell: bash
+        run: >-
+          python3 scripts/ci/platform_matrix.py execute
+          --lane "${{ matrix.id }}"
+          --report "$RUNNER_TEMP/${{ matrix.id }}.json"
+
+      - name: Preserve normalized lane evidence
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: platform-matrix-${{ matrix.id }}
+          path: ${{ runner.temp }}/${{ matrix.id }}.json
+          if-no-files-found: error
+          retention-days: 90
+
+  platform-matrix-aggregate:
+    name: Require complete Tier-1 platform evidence
+    needs: platform-matrix
+    if: always()
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Check out source
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+
+      - name: Reject an incomplete platform matrix
+        run: |
+          set -euo pipefail
+          if [ "${{ needs.platform-matrix.result }}" != success ]; then
+            echo "one or more release-blocking platform lanes did not succeed" >&2
+            exit 1
+          fi
+
+      - name: Download every platform report
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          pattern: platform-matrix-*
+          path: ${{ runner.temp }}/platform-reports
+
+      - name: Aggregate reports for release metadata
+        run: >-
+          python3 scripts/ci/platform_matrix.py aggregate
+          --reports "$RUNNER_TEMP/platform-reports"
+          --output "$RUNNER_TEMP/hxc-platform-matrix.json"
+
+      - name: Archive the complete release matrix
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: hxc-platform-matrix
+          path: ${{ runner.temp }}/hxc-platform-matrix.json
+          if-no-files-found: error
+          retention-days: 90
+
   build-adapters:
     name: Build adapters (${{ matrix.toolchain }})
     runs-on: ubuntu-latest
@@ -253,6 +341,9 @@ jobs:
       - name: Resolve exact Haxe and Lix tools
         run: npm ci
 
+      - name: Require matched Clang 21 coverage tools
+        run: bash scripts/ci/require-coverage-clang.sh
+
       - name: Require native build tools
         run: |
           "${{ matrix.cc }}" --version
@@ -292,7 +383,7 @@ jobs:
           raygui_cache="$RUNNER_TEMP/raygui-headless-cache"
           raygui_native="$RUNNER_TEMP/raygui-headless-native"
           python3 test/raygui_binding/native.py \
-            --raygui-cache-root "$raygui_cache" \
+            --raygui-cache-root "$raygui_cache/source" \
             --allow-network \
             --raylib-source "$raylib_cache/sources/raylib-dbc56a87da87d973a9c5baa4e7438a9d20121d28" \
             --raylib-library "$raylib_build/raylib/libraylib.a" \
@@ -337,6 +428,7 @@ jobs:
             --report "$RUNNER_TEMP/caxecraft-renderer-comparison-${{ matrix.name }}.json"
 
       - name: Preserve normalized Raylib headless evidence
+        if: ${{ !cancelled() }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: raylib-headless-${{ matrix.name }}
@@ -352,6 +444,84 @@ jobs:
             ${{ runner.temp }}/caxecraft-renderer-benchmark/variants/linux-memory-software-split-pilot-move-jump-edit-immediate-baseline-benchmark/bin/caxecraft-pilot-move.png
           if-no-files-found: error
           retention-days: 14
+
+      # A failed comparison must retain the exact published C and its integrity
+      # inventory. Unpublished transactions, native caches, and binaries are
+      # excluded; haxe_c-rl9u needs both complete generations to audit rendering.
+      - name: Preserve generated renderer projects for budget diagnosis
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: caxecraft-renderer-projects-${{ matrix.name }}
+          path: |
+            ${{ runner.temp }}/caxecraft-renderer-benchmark/variants/*/hxc-play-current-generation.json
+            ${{ runner.temp }}/caxecraft-renderer-benchmark/variants/*/generations/
+            ${{ runner.temp }}/caxecraft-renderer-benchmark/variants/*/terrain-coverage-*/
+          if-no-files-found: warn
+          retention-days: 7
+
+      # Keep correctness instrumentation separate from the timing comparison.
+      # Run after a failed comparison too, so the existing whole-project guard
+      # cannot hide the evidence needed to resolve its measured boundary.
+      - name: Observe measured terrain runtime entries
+        if: ${{ !cancelled() }}
+        timeout-minutes: 10
+        shell: bash
+        run: |
+          python3 examples/caxecraft/play.py \
+            --raylib-configuration memory-software \
+            --pilot move-jump-edit \
+            --benchmark-renderer \
+            --observe-renderer-interval \
+            --optimization 2 \
+            --cc "${{ matrix.cc }}" \
+            --cxx "${{ matrix.cxx }}" \
+            --prebuilt-raylib-cache "$RUNNER_TEMP/raylib-headless-cache" \
+            --prebuilt-raylib-build "$RUNNER_TEMP/raylib-headless-build" \
+            --prebuilt-raylib-report "$RUNNER_TEMP/raylib-headless-report.json" \
+            --raygui-cache-root "$RUNNER_TEMP/raygui-headless-cache" \
+            --output-root "$RUNNER_TEMP/caxecraft-renderer-observation"
+
+      - name: Require portal rendering in the reloadable journey
+        if: ${{ !cancelled() }}
+        timeout-minutes: 10
+        shell: bash
+        run: |
+          python3 examples/caxecraft/play.py \
+            --raylib-configuration memory-software \
+            --pilot adventure-journey \
+            --observe-renderer-interval \
+            --optimization 2 \
+            --cc "${{ matrix.cc }}" \
+            --cxx "${{ matrix.cxx }}" \
+            --prebuilt-raylib-cache "$RUNNER_TEMP/raylib-headless-cache" \
+            --prebuilt-raylib-build "$RUNNER_TEMP/raylib-headless-build" \
+            --prebuilt-raylib-report "$RUNNER_TEMP/raylib-headless-report.json" \
+            --raygui-cache-root "$RUNNER_TEMP/raygui-headless-cache" \
+            --output-root "$RUNNER_TEMP/caxecraft-renderer-observation"
+
+      - name: Preserve terrain observer reports and screenshots
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: caxecraft-renderer-observation-${{ matrix.name }}
+          path: |
+            ${{ runner.temp }}/caxecraft-renderer-observation/variants/*/bin/caxecraft-pilot-report.json
+            ${{ runner.temp }}/caxecraft-renderer-observation/variants/*/bin/*.png
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Preserve generated terrain observer projects
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: caxecraft-renderer-observer-projects-${{ matrix.name }}
+          path: |
+            ${{ runner.temp }}/caxecraft-renderer-observation/variants/*/hxc-play-current-generation.json
+            ${{ runner.temp }}/caxecraft-renderer-observation/variants/*/generations/
+            ${{ runner.temp }}/caxecraft-renderer-observation/variants/*/terrain-coverage-*/
+          if-no-files-found: warn
+          retention-days: 7
 
   raylib-desktop:
     name: Raylib 6.0 desktop (${{ matrix.name }})
@@ -467,6 +637,13 @@ jobs:
             --run \
             --report "$raylib_report"
 
+      - name: Verify Windows process identity and owned server lifecycle
+        if: matrix.platform == 'windows'
+        shell: bash
+        run: |
+          python3 -m unittest discover -s test/governance -p test_windows_process_identity.py
+          python3 -m unittest discover -s test/governance -p test_caxecraft_haxe_server.py
+
       - name: Compile Windows Caxecraft with explicit unsupported package capability
         if: matrix.platform == 'windows'
         shell: bash
@@ -475,7 +652,7 @@ jobs:
             --compile-only \
             --output-root "$RUNNER_TEMP/caxecraft-playable-c"
 
-      - name: Compile and link first Caxecraft playable at O0 and O2
+      - name: Compile cold Caxecraft and link at O0
         if: matrix.platform != 'windows'
         shell: bash
         run: |
@@ -484,6 +661,9 @@ jobs:
           raylib_build="$RUNNER_TEMP/raylib-desktop-build"
           raylib_report="$RUNNER_TEMP/raylib-desktop-report.json"
           raygui_cache="$RUNNER_TEMP/raygui-desktop-cache"
+          python3 examples/caxecraft/play.py \
+            --compile-only \
+            --output-root "$RUNNER_TEMP/caxecraft-playable-o0"
           python3 examples/caxecraft/play.py \
             --build-only \
             --optimization 0 \
@@ -495,6 +675,31 @@ jobs:
             --prebuilt-raylib-report "$raylib_report" \
             --raygui-cache-root "$raygui_cache" \
             --output-root "$RUNNER_TEMP/caxecraft-playable-o0"
+
+      # Capture O0 before the same variant's executable is replaced by O2.
+      # Native metadata binds each binary to object flags and library hashes.
+      - name: Preserve macOS Caxecraft O0 native evidence
+        if: matrix.platform == 'macos'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: caxecraft-native-o0-${{ matrix.name }}
+          path: |
+            ${{ runner.temp }}/caxecraft-playable-o0/variants/macos-split-interactive/bin
+            ${{ runner.temp }}/caxecraft-playable-o0/variants/macos-split-interactive/hxc-play-current-generation.json
+            ${{ runner.temp }}/caxecraft-playable-o0/variants/macos-split-interactive/generations
+            ${{ runner.temp }}/caxecraft-playable-o0/variants/macos-split-interactive/native-cache/**/metadata.json
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Link Caxecraft at O2 and run the Linux desktop pilot
+        if: matrix.platform != 'windows'
+        shell: bash
+        run: |
+          set -euo pipefail
+          raylib_cache="$RUNNER_TEMP/raylib-desktop-cache"
+          raylib_build="$RUNNER_TEMP/raylib-desktop-build"
+          raylib_report="$RUNNER_TEMP/raylib-desktop-report.json"
+          raygui_cache="$RUNNER_TEMP/raygui-desktop-cache"
           if [ "${{ matrix.platform }}" = linux ]; then
             # The O2 compile/link proof is also the graphical proof. This
             # title-screen pilot performs a real desktop resize, preserving
@@ -511,6 +716,8 @@ jobs:
                 --raygui-cache-root "$raygui_cache" \
                 --output-root "$RUNNER_TEMP/caxecraft-playable-o2"
           else
+            # Optimization changes native flags, not Haxe inputs. Revalidate
+            # the one cold generation through the existing build-only path.
             python3 examples/caxecraft/play.py \
               --build-only \
               --optimization 2 \
@@ -520,8 +727,21 @@ jobs:
               --prebuilt-raylib-build "$raylib_build" \
               --prebuilt-raylib-report "$raylib_report" \
               --raygui-cache-root "$raygui_cache" \
-              --output-root "$RUNNER_TEMP/caxecraft-playable-o2"
+              --output-root "$RUNNER_TEMP/caxecraft-playable-o0"
           fi
+
+      - name: Preserve macOS Caxecraft O2 native evidence
+        if: matrix.platform == 'macos'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: caxecraft-native-o2-${{ matrix.name }}
+          path: |
+            ${{ runner.temp }}/caxecraft-playable-o0/variants/macos-split-interactive/bin
+            ${{ runner.temp }}/caxecraft-playable-o0/variants/macos-split-interactive/hxc-play-current-generation.json
+            ${{ runner.temp }}/caxecraft-playable-o0/variants/macos-split-interactive/generations
+            ${{ runner.temp }}/caxecraft-playable-o0/variants/macos-split-interactive/native-cache/**/metadata.json
+          if-no-files-found: error
+          retention-days: 14
 
       - name: Preserve normalized Raylib desktop evidence
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
@@ -557,6 +777,18 @@ jobs:
     steps:
       - name: Check out source
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Resolve exact Haxe and Lix tools
+        run: npm ci
+
+      - name: Require matched Clang 21 coverage tools
+        run: bash scripts/ci/require-coverage-clang.sh
 
       - name: Validate license and provenance policy
         run: python3 scripts/ci/check_license_policy.py

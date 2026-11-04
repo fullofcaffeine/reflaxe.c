@@ -1,0 +1,108 @@
+/*
+ * Observe generated Haxe ownership through the existing private collector ABI.
+ * Including the generated translation unit exposes its fixture entry function
+ * without editing generated code or adding a production test hook. Only direct
+ * generated GC allocations are intercepted; Array runtime allocation remains
+ * unchanged. The failure variant checks the compiler's explicit abort policy.
+ */
+#include <signal.h>
+#include <stdlib.h>
+#include "hxrt/gc.h"
+
+#ifndef FIXTURE_FAIL_NODE_ALLOCATION
+#define FIXTURE_FAIL_NODE_ALLOCATION 0
+#endif
+
+static volatile sig_atomic_t fixture_failed_allocation = 0;
+static size_t fixture_node_allocations = 0u;
+static size_t fixture_live_allocations = 0u;
+extern const hxc_type_descriptor @NODE_DESCRIPTOR@;
+
+static hxc_status fixture_allocate(void *context, size_t size, size_t alignment, void **out_memory) {
+  hxc_allocator base = hxc_default_allocator();
+  hxc_status status;
+  (void)context;
+  status = base.allocate(base.context, size, alignment, out_memory);
+  if (status == HXC_STATUS_OK) {
+    fixture_live_allocations += 1u;
+  }
+  return status;
+}
+
+static void fixture_release(void *context, void *memory, size_t size, size_t alignment) {
+  hxc_allocator base = hxc_default_allocator();
+  (void)context;
+  if (fixture_live_allocations == 0u) {
+    abort();
+  }
+  fixture_live_allocations -= 1u;
+  base.release(base.context, memory, size, alignment);
+}
+
+static hxc_allocator fixture_allocator(void) {
+  hxc_allocator allocator = { NULL, fixture_allocate, NULL, fixture_release };
+  return allocator;
+}
+
+static hxc_status fixture_allocate_node(
+  hxc_gc *collector,
+  const hxc_type_descriptor *descriptor,
+  void **out_object
+) {
+  if (descriptor == &@NODE_DESCRIPTOR@) {
+    fixture_node_allocations += 1u;
+    if (FIXTURE_FAIL_NODE_ALLOCATION) {
+      fixture_failed_allocation = 1;
+      return HXC_STATUS_OUT_OF_MEMORY;
+    }
+  }
+  return hxc_gc_allocate(collector, descriptor, out_object);
+}
+
+int fixture_unobserved_main(void);
+#define main fixture_unobserved_main
+#define hxc_gc_allocate fixture_allocate_node
+#define hxc_default_allocator fixture_allocator
+#include "../generated/src/program.c"
+#undef hxc_default_allocator
+#undef hxc_gc_allocate
+#undef main
+
+static void fixture_aborted(int signal_number) {
+  (void)signal_number;
+  _Exit(fixture_failed_allocation ? 77 : 78);
+}
+
+int main(void) {
+  hxc_gc_config config = { fixture_allocator(), 256u, NULL, NULL };
+  hxc_gc_stats stats = HXC_GC_STATS_INITIALIZER;
+  if (signal(SIGABRT, fixture_aborted) == SIG_ERR) {
+    return 1;
+  }
+  if (hxc_gc_init(&config, &@COLLECTOR@) != HXC_STATUS_OK
+      || hxc_gc_thread_register(&@COLLECTOR@, &@THREAD@) != HXC_STATUS_OK) {
+    return 2;
+  }
+  @ENTRY@();
+  if (FIXTURE_FAIL_NODE_ALLOCATION || fixture_node_allocations == 0u) {
+    return 3;
+  }
+  if (hxc_gc_get_stats(&@COLLECTOR@, &stats) != HXC_STATUS_OK
+      || stats.pressure_collection_count == 0u) {
+    return 4;
+  }
+  /* All Haxe frames have returned. Reclaim the remaining graph, including cycles. */
+  if (hxc_gc_collect(&@COLLECTOR@) != HXC_STATUS_OK
+      || hxc_gc_get_stats(&@COLLECTOR@, &stats) != HXC_STATUS_OK
+      || stats.current_object_count != 0u) {
+    return 5;
+  }
+  if (hxc_gc_thread_unregister(&@THREAD@) != HXC_STATUS_OK
+      || hxc_gc_dispose(&@COLLECTOR@) != HXC_STATUS_OK) {
+    return 6;
+  }
+  if (fixture_live_allocations != 0u) {
+    return 7;
+  }
+  return 0;
+}

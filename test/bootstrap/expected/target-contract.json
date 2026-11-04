@@ -3,6 +3,8 @@
   "haxeVersion": "5.0.0-preview.1",
   "carrier": "c",
   "environment": "hosted",
+  "atomicBackend": "none",
+  "threadBackend": "none",
   "platform": {
     "staticTypeSystem": true,
     "sys": true,

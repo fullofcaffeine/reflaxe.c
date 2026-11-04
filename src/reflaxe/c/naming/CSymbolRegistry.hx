@@ -3,6 +3,7 @@ package reflaxe.c.naming;
 import haxe.Json;
 import haxe.crypto.Sha256;
 import haxe.io.Bytes;
+import reflaxe.c.CContentDigest.sha256Hex;
 #if (macro || reflaxe_runtime)
 import reflaxe.c.CPhaseTiming;
 import reflaxe.c.CPhaseTiming.CDetailTimingId;
@@ -329,7 +330,7 @@ class CSymbolRegistry {
 		final requestOrderingTimer = CPhaseTiming.startDetail(CDTSymbolRequestOrdering);
 		#end
 		final requests = [for (request in requestsByKey) request];
-		#if reflaxe_c_phase_timing
+		#if (reflaxe_c_phase_timing && (macro || reflaxe_runtime))
 		var primaryRequestSortComparisons = 0;
 		requests.sort((left, right) -> {
 			primaryRequestSortComparisons++;
@@ -394,7 +395,19 @@ class CSymbolRegistry {
 		for (state in generatedStates) {
 			addGeneratedCandidate(generatedByCandidate, namespacedCandidate(state.draft.request.namespace, generatedName(state)), state);
 		}
-		#if reflaxe_c_phase_timing
+		var candidateKeys = candidateKeysFor(generatedByCandidate, exactByCandidate);
+		final initialCandidateCount = candidateKeys.length;
+		/*
+			Only colliding groups can change names in this round. Sort that subset
+			in the same order as before, while retaining every group in the maps:
+			a later hash suffix can still collide with an initially unique name.
+		 */
+		candidateKeys = candidateKeys.filter(key -> {
+			final generatedGroup = generatedByCandidate.get(key);
+			final exactGroup = exactByCandidate.get(key);
+			return (generatedGroup == null ? 0 : generatedGroup.length) + (exactGroup == null ? 0 : exactGroup.length) >= 2;
+		});
+		#if (reflaxe_c_phase_timing && (macro || reflaxe_runtime))
 		var candidateSortComparisons = 0;
 		var candidateSortUtf8Encodings = 0;
 		var candidateSortUtf8CodeUnits = 0;
@@ -406,11 +419,10 @@ class CSymbolRegistry {
 			#end
 			return compareUtf8(left, right);
 		};
-		var candidateKeys = candidateKeysFor(generatedByCandidate, exactByCandidate, compareCandidateKeys);
+		candidateKeys.sort(compareCandidateKeys);
 		#else
-		var candidateKeys = candidateKeysFor(generatedByCandidate, exactByCandidate, compareUtf8);
+		candidateKeys.sort(compareUtf8);
 		#end
-		final initialCandidateCount = candidateKeys.length;
 		var collisionCandidatesRechecked = 0;
 		var collisionStatesMoved = 0;
 		var rounds = 0;
@@ -435,7 +447,7 @@ class CSymbolRegistry {
 				registerCollisionEvent(events, key, colliding, exactGroup);
 				for (state in colliding) {
 					if (state.hash == null)
-						state.hash = Sha256.encode(state.draft.request.stableKey());
+						state.hash = symbolKeyDigest(state.draft.request.stableKey());
 					state.hashLength = state.hashLength == 0 ? 12 : state.hashLength + 4;
 					if (state.hashLength > 64) {
 						internalFailure("SHA-256 could not disambiguate distinct C semantic symbol keys", collisionSources(colliding, exactGroup));
@@ -474,7 +486,7 @@ class CSymbolRegistry {
 				nextCandidateSet.set(nextCandidate, true);
 			}
 			candidateKeys = [for (key in nextCandidateSet.keys()) key];
-			#if reflaxe_c_phase_timing
+			#if (reflaxe_c_phase_timing && (macro || reflaxe_runtime))
 			candidateKeys.sort(compareCandidateKeys);
 			#else
 			candidateKeys.sort(compareUtf8);
@@ -491,7 +503,7 @@ class CSymbolRegistry {
 		CPhaseTiming.setCounter(CPCounterSymbolCollisionRounds, rounds);
 		CPhaseTiming.setCounter(CPCounterSymbolCollisionCandidatesRechecked, collisionCandidatesRechecked);
 		CPhaseTiming.setCounter(CPCounterSymbolCollisionStatesMoved, collisionStatesMoved);
-		#if reflaxe_c_phase_timing
+		#if (reflaxe_c_phase_timing && (macro || reflaxe_runtime))
 		CPhaseTiming.setCounter(CPCounterSymbolCandidateSortComparisons, candidateSortComparisons);
 		CPhaseTiming.setCounter(CPCounterSymbolCandidateSortUtf8Encodings, candidateSortUtf8Encodings);
 		CPhaseTiming.setCounter(CPCounterSymbolCandidateSortUtf8CodeUnits, candidateSortUtf8CodeUnits);
@@ -528,7 +540,7 @@ class CSymbolRegistry {
 				[request.sourceSymbol()]);
 			assigned.push(item);
 		}
-		#if reflaxe_c_phase_timing
+		#if (reflaxe_c_phase_timing && (macro || reflaxe_runtime))
 		CPhaseTiming.setCounter(CPCounterSymbolAssignedSortComparisons, 0);
 		CPhaseTiming.setCounter(CPCounterSymbolTableRecords, assigned.length);
 		#end
@@ -595,7 +607,7 @@ class CSymbolRegistry {
 		finalizedSnapshot = prior.snapshot;
 		request.staged = prior;
 		request.hits++;
-		#if reflaxe_c_phase_timing
+		#if (reflaxe_c_phase_timing && (macro || reflaxe_runtime))
 		// Keep the profile's counter inventory stable while reporting that the
 		// corresponding algorithms performed no work on this exact cache hit.
 		CPhaseTiming.setCounter(CPCounterSymbolAssignedSortComparisons, 0);
@@ -736,7 +748,7 @@ class CSymbolRegistry {
 		}
 		if (baseName.length > MAX_GENERATED_LENGTH) {
 			addUnique(reasons, "length-limit");
-			baseName = appendHash(baseName, Sha256.encode(request.stableKey()), 16);
+			baseName = appendHash(baseName, symbolKeyDigest(request.stableKey()), 16);
 		}
 		reasons.sort(compareUtf8);
 		return {request: request, baseName: baseName, escapeReasons: reasons};
@@ -773,8 +785,7 @@ class CSymbolRegistry {
 		group.push(state);
 	}
 
-	static function candidateKeysFor(generated:Map<String, Array<GeneratedState>>, exact:Map<String, Array<AssignedDraft>>,
-			compare:(String, String) -> Int):Array<String> {
+	static function candidateKeysFor(generated:Map<String, Array<GeneratedState>>, exact:Map<String, Array<AssignedDraft>>):Array<String> {
 		final present:Map<String, Bool> = [];
 		for (key in generated.keys()) {
 			present.set(key, true);
@@ -782,9 +793,7 @@ class CSymbolRegistry {
 		for (key in exact.keys()) {
 			present.set(key, true);
 		}
-		final keys = [for (key in present.keys()) key];
-		keys.sort(compare);
-		return keys;
+		return [for (key in present.keys()) key];
 	}
 
 	static function registerCollisionEvent(events:Map<String, CollisionEvent>, key:String, generated:Array<GeneratedState>,
@@ -865,6 +874,24 @@ class CSymbolRegistry {
 			}
 			byCandidate.set(key, item);
 		}
+	}
+
+	/**
+		Hash ASCII symbol keys faster while preserving existing Unicode names.
+
+		The pinned string-hash implementation mixes character and UTF-8 byte
+		lengths for non-ASCII input. Its suffixes are part of naming algorithm v3,
+		so replacing them with standard byte hashes would rename existing symbols.
+		Eval can use the streaming worker only when the two lengths agree, which
+		proves the key is ASCII. Other keys and hosts retain the original path.
+	**/
+	static function symbolKeyDigest(key:String):String {
+		#if eval
+		final encoded = Bytes.ofString(key);
+		if (encoded.length == key.length)
+			return sha256Hex(encoded);
+		#end
+		return Sha256.encode(key);
 	}
 
 	static function appendHash(baseName:String, hash:String, hashLength:Int):String {

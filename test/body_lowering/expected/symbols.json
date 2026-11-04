@@ -250,6 +250,492 @@
       "sourceSymbol": "BodyFixture.chooseOrThrow.switch-result#1"
     },
     {
+      "overloadSignature": [
+        "bool"
+      ],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": null,
+      "readableName": [
+        "BodyFixture",
+        "definitelyAssignedAfterReturn"
+      ],
+      "requestedName": null,
+      "cName": "hxc_BodyFixture_definitelyAssignedAfterReturn",
+      "semanticKey": "6:method|28:ordinary:16:translation-unit|2:11:BodyFixture29:definitelyAssignedAfterReturn|1:4:bool|0:|0:",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "method",
+      "specializationArguments": [],
+      "baseName": "hxc_BodyFixture_definitelyAssignedAfterReturn",
+      "sourceSymbol": "BodyFixture.definitelyAssignedAfterReturn(bool)"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 1,
+      "readableName": [
+        "tmp",
+        "if-false"
+      ],
+      "requestedName": null,
+      "cName": "hxc_tmp_if_false_n1",
+      "semanticKey": "9:temporary|114:label:104:6:method|28:ordinary:16:translation-unit|2:11:BodyFixture29:definitelyAssignedAfterReturn|1:4:bool|0:|0:|4:11:BodyFixture29:definitelyAssignedAfterReturn11:block-label8:if-false|0:|0:|1:1",
+      "escapeReasons": [
+        "non-c-identifier-byte",
+        "separator-normalized"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:BodyFixture29:definitelyAssignedAfterReturn|1:4:bool|0:|0:",
+        "kind": "label"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_tmp_if_false_n1",
+      "sourceSymbol": "BodyFixture.definitelyAssignedAfterReturn.block-label.if-false#1"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 2,
+      "readableName": [
+        "tmp",
+        "if-join"
+      ],
+      "requestedName": null,
+      "cName": "hxc_tmp_if_join_n2",
+      "semanticKey": "9:temporary|114:label:104:6:method|28:ordinary:16:translation-unit|2:11:BodyFixture29:definitelyAssignedAfterReturn|1:4:bool|0:|0:|4:11:BodyFixture29:definitelyAssignedAfterReturn11:block-label7:if-join|0:|0:|1:2",
+      "escapeReasons": [
+        "non-c-identifier-byte",
+        "separator-normalized"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:BodyFixture29:definitelyAssignedAfterReturn|1:4:bool|0:|0:",
+        "kind": "label"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_tmp_if_join_n2",
+      "sourceSymbol": "BodyFixture.definitelyAssignedAfterReturn.block-label.if-join#2"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "readableName": [
+        "tmp",
+        "if-true"
+      ],
+      "requestedName": null,
+      "cName": "hxc_tmp_if_true_n0",
+      "semanticKey": "9:temporary|114:label:104:6:method|28:ordinary:16:translation-unit|2:11:BodyFixture29:definitelyAssignedAfterReturn|1:4:bool|0:|0:|4:11:BodyFixture29:definitelyAssignedAfterReturn11:block-label7:if-true|0:|0:|1:0",
+      "escapeReasons": [
+        "non-c-identifier-byte",
+        "separator-normalized"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:BodyFixture29:definitelyAssignedAfterReturn|1:4:bool|0:|0:",
+        "kind": "label"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_tmp_if_true_n0",
+      "sourceSymbol": "BodyFixture.definitelyAssignedAfterReturn.block-label.if-true#0"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "readableName": [
+        "choice"
+      ],
+      "requestedName": null,
+      "cName": "hxc_l_choice",
+      "semanticKey": "5:local|117:ordinary:104:6:method|28:ordinary:16:translation-unit|2:11:BodyFixture29:definitelyAssignedAfterReturn|1:4:bool|0:|0:|3:11:BodyFixture29:definitelyAssignedAfterReturn6:choice|0:|0:|1:0",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:BodyFixture29:definitelyAssignedAfterReturn|1:4:bool|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_l_choice",
+      "sourceSymbol": "BodyFixture.definitelyAssignedAfterReturn.choice#0"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 1,
+      "readableName": [
+        "value"
+      ],
+      "requestedName": null,
+      "cName": "hxc_l_value",
+      "semanticKey": "5:local|117:ordinary:104:6:method|28:ordinary:16:translation-unit|2:11:BodyFixture29:definitelyAssignedAfterReturn|1:4:bool|0:|0:|3:11:BodyFixture29:definitelyAssignedAfterReturn5:value|0:|0:|1:1",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:BodyFixture29:definitelyAssignedAfterReturn|1:4:bool|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_l_value",
+      "sourceSymbol": "BodyFixture.definitelyAssignedAfterReturn.value#1"
+    },
+    {
+      "overloadSignature": [
+        "bool"
+      ],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": null,
+      "readableName": [
+        "BodyFixture",
+        "definitelyAssignedBranches"
+      ],
+      "requestedName": null,
+      "cName": "hxc_BodyFixture_definitelyAssignedBranches",
+      "semanticKey": "6:method|28:ordinary:16:translation-unit|2:11:BodyFixture26:definitelyAssignedBranches|1:4:bool|0:|0:",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "method",
+      "specializationArguments": [],
+      "baseName": "hxc_BodyFixture_definitelyAssignedBranches",
+      "sourceSymbol": "BodyFixture.definitelyAssignedBranches(bool)"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 1,
+      "readableName": [
+        "tmp",
+        "if-false"
+      ],
+      "requestedName": null,
+      "cName": "hxc_tmp_if_false_n1",
+      "semanticKey": "9:temporary|111:label:101:6:method|28:ordinary:16:translation-unit|2:11:BodyFixture26:definitelyAssignedBranches|1:4:bool|0:|0:|4:11:BodyFixture26:definitelyAssignedBranches11:block-label8:if-false|0:|0:|1:1",
+      "escapeReasons": [
+        "non-c-identifier-byte",
+        "separator-normalized"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:BodyFixture26:definitelyAssignedBranches|1:4:bool|0:|0:",
+        "kind": "label"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_tmp_if_false_n1",
+      "sourceSymbol": "BodyFixture.definitelyAssignedBranches.block-label.if-false#1"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 2,
+      "readableName": [
+        "tmp",
+        "if-join"
+      ],
+      "requestedName": null,
+      "cName": "hxc_tmp_if_join_n2",
+      "semanticKey": "9:temporary|111:label:101:6:method|28:ordinary:16:translation-unit|2:11:BodyFixture26:definitelyAssignedBranches|1:4:bool|0:|0:|4:11:BodyFixture26:definitelyAssignedBranches11:block-label7:if-join|0:|0:|1:2",
+      "escapeReasons": [
+        "non-c-identifier-byte",
+        "separator-normalized"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:BodyFixture26:definitelyAssignedBranches|1:4:bool|0:|0:",
+        "kind": "label"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_tmp_if_join_n2",
+      "sourceSymbol": "BodyFixture.definitelyAssignedBranches.block-label.if-join#2"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "readableName": [
+        "tmp",
+        "if-true"
+      ],
+      "requestedName": null,
+      "cName": "hxc_tmp_if_true_n0",
+      "semanticKey": "9:temporary|111:label:101:6:method|28:ordinary:16:translation-unit|2:11:BodyFixture26:definitelyAssignedBranches|1:4:bool|0:|0:|4:11:BodyFixture26:definitelyAssignedBranches11:block-label7:if-true|0:|0:|1:0",
+      "escapeReasons": [
+        "non-c-identifier-byte",
+        "separator-normalized"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:BodyFixture26:definitelyAssignedBranches|1:4:bool|0:|0:",
+        "kind": "label"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_tmp_if_true_n0",
+      "sourceSymbol": "BodyFixture.definitelyAssignedBranches.block-label.if-true#0"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "readableName": [
+        "choice"
+      ],
+      "requestedName": null,
+      "cName": "hxc_l_choice",
+      "semanticKey": "5:local|114:ordinary:101:6:method|28:ordinary:16:translation-unit|2:11:BodyFixture26:definitelyAssignedBranches|1:4:bool|0:|0:|3:11:BodyFixture26:definitelyAssignedBranches6:choice|0:|0:|1:0",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:BodyFixture26:definitelyAssignedBranches|1:4:bool|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_l_choice",
+      "sourceSymbol": "BodyFixture.definitelyAssignedBranches.choice#0"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 1,
+      "readableName": [
+        "value"
+      ],
+      "requestedName": null,
+      "cName": "hxc_l_value",
+      "semanticKey": "5:local|114:ordinary:101:6:method|28:ordinary:16:translation-unit|2:11:BodyFixture26:definitelyAssignedBranches|1:4:bool|0:|0:|3:11:BodyFixture26:definitelyAssignedBranches5:value|0:|0:|1:1",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:BodyFixture26:definitelyAssignedBranches|1:4:bool|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_l_value",
+      "sourceSymbol": "BodyFixture.definitelyAssignedBranches.value#1"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": null,
+      "readableName": [
+        "BodyFixture",
+        "definitelyAssignedInteger"
+      ],
+      "requestedName": null,
+      "cName": "hxc_BodyFixture_definitelyAssignedInteger",
+      "semanticKey": "6:method|28:ordinary:16:translation-unit|2:11:BodyFixture25:definitelyAssignedInteger|0:|0:|0:",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "method",
+      "specializationArguments": [],
+      "baseName": "hxc_BodyFixture_definitelyAssignedInteger",
+      "sourceSymbol": "BodyFixture.definitelyAssignedInteger"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "readableName": [
+        "value"
+      ],
+      "requestedName": null,
+      "cName": "hxc_l_value",
+      "semanticKey": "5:local|106:ordinary:94:6:method|28:ordinary:16:translation-unit|2:11:BodyFixture25:definitelyAssignedInteger|0:|0:|0:|3:11:BodyFixture25:definitelyAssignedInteger5:value|0:|0:|1:0",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:BodyFixture25:definitelyAssignedInteger|0:|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_l_value",
+      "sourceSymbol": "BodyFixture.definitelyAssignedInteger.value#0"
+    },
+    {
+      "overloadSignature": [
+        "i32"
+      ],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": null,
+      "readableName": [
+        "BodyFixture",
+        "definitelyAssignedLoop"
+      ],
+      "requestedName": null,
+      "cName": "hxc_BodyFixture_definitelyAssignedLoop",
+      "semanticKey": "6:method|28:ordinary:16:translation-unit|2:11:BodyFixture22:definitelyAssignedLoop|1:3:i32|0:|0:",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "method",
+      "specializationArguments": [],
+      "baseName": "hxc_BodyFixture_definitelyAssignedLoop",
+      "sourceSymbol": "BodyFixture.definitelyAssignedLoop(i32)"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 1,
+      "readableName": [
+        "tmp",
+        "while-body"
+      ],
+      "requestedName": null,
+      "cName": "hxc_tmp_while_body_n1",
+      "semanticKey": "9:temporary|105:label:96:6:method|28:ordinary:16:translation-unit|2:11:BodyFixture22:definitelyAssignedLoop|1:3:i32|0:|0:|4:11:BodyFixture22:definitelyAssignedLoop11:block-label10:while-body|0:|0:|1:1",
+      "escapeReasons": [
+        "non-c-identifier-byte",
+        "separator-normalized"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:BodyFixture22:definitelyAssignedLoop|1:3:i32|0:|0:",
+        "kind": "label"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_tmp_while_body_n1",
+      "sourceSymbol": "BodyFixture.definitelyAssignedLoop.block-label.while-body#1"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "readableName": [
+        "tmp",
+        "while-condition"
+      ],
+      "requestedName": null,
+      "cName": "hxc_tmp_while_condition_n0",
+      "semanticKey": "9:temporary|105:label:96:6:method|28:ordinary:16:translation-unit|2:11:BodyFixture22:definitelyAssignedLoop|1:3:i32|0:|0:|4:11:BodyFixture22:definitelyAssignedLoop11:block-label15:while-condition|0:|0:|1:0",
+      "escapeReasons": [
+        "non-c-identifier-byte",
+        "separator-normalized"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:BodyFixture22:definitelyAssignedLoop|1:3:i32|0:|0:",
+        "kind": "label"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_tmp_while_condition_n0",
+      "sourceSymbol": "BodyFixture.definitelyAssignedLoop.block-label.while-condition#0"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 2,
+      "readableName": [
+        "tmp",
+        "while-exit"
+      ],
+      "requestedName": null,
+      "cName": "hxc_tmp_while_exit_n2",
+      "semanticKey": "9:temporary|105:label:96:6:method|28:ordinary:16:translation-unit|2:11:BodyFixture22:definitelyAssignedLoop|1:3:i32|0:|0:|4:11:BodyFixture22:definitelyAssignedLoop11:block-label10:while-exit|0:|0:|1:2",
+      "escapeReasons": [
+        "non-c-identifier-byte",
+        "separator-normalized"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:BodyFixture22:definitelyAssignedLoop|1:3:i32|0:|0:",
+        "kind": "label"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_tmp_while_exit_n2",
+      "sourceSymbol": "BodyFixture.definitelyAssignedLoop.block-label.while-exit#2"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "readableName": [
+        "limit"
+      ],
+      "requestedName": null,
+      "cName": "hxc_l_limit",
+      "semanticKey": "5:local|108:ordinary:96:6:method|28:ordinary:16:translation-unit|2:11:BodyFixture22:definitelyAssignedLoop|1:3:i32|0:|0:|3:11:BodyFixture22:definitelyAssignedLoop5:limit|0:|0:|1:0",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:BodyFixture22:definitelyAssignedLoop|1:3:i32|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_l_limit",
+      "sourceSymbol": "BodyFixture.definitelyAssignedLoop.limit#0"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 1,
+      "readableName": [
+        "value"
+      ],
+      "requestedName": null,
+      "cName": "hxc_l_value",
+      "semanticKey": "5:local|108:ordinary:96:6:method|28:ordinary:16:translation-unit|2:11:BodyFixture22:definitelyAssignedLoop|1:3:i32|0:|0:|3:11:BodyFixture22:definitelyAssignedLoop5:value|0:|0:|1:1",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:BodyFixture22:definitelyAssignedLoop|1:3:i32|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_l_value",
+      "sourceSymbol": "BodyFixture.definitelyAssignedLoop.value#1"
+    },
+    {
       "overloadSignature": [],
       "collisionResolved": false,
       "naming": "generated",

@@ -18,6 +18,11 @@ from typing import Iterable
 
 
 ROOT = Path(__file__).resolve().parents[3]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from scripts.test.bounded_process import run as run_bounded_process  # noqa: E402
+
 CASE = Path(__file__).resolve().parent
 GENERATED = CASE / "generated"
 NEGATIVE = CASE / "negative"
@@ -25,7 +30,11 @@ NATIVE_FIXTURE = CASE / "int_map_runtime.c"
 RUNTIME_INCLUDE = ROOT / "runtime/hxrt/include"
 RUNTIME_SOURCES = (
     ROOT / "runtime/hxrt/src/allocator.c",
+    ROOT / "runtime/hxrt/src/array.c",
+    ROOT / "runtime/hxrt/src/iterator.c",
     ROOT / "runtime/hxrt/src/int_map.c",
+    ROOT / "runtime/hxrt/src/string.c",
+    ROOT / "runtime/hxrt/src/string_scalar.c",
 )
 TOOLCHAINS = ("gcc", "clang")
 LAYOUTS = ("split", "package", "unity")
@@ -90,7 +99,7 @@ def resolve_toolchains(selected: str) -> list[Toolchain]:
                 raise IntMapFailure(f"required C compiler is missing: {family}")
             print(f"int-map: SKIP optional {family}: missing command")
             continue
-        identity = subprocess.run(
+        identity = run_bounded_process(
             [compiler, "--version"],
             cwd=ROOT,
             check=False,
@@ -114,7 +123,7 @@ def resolve_toolchains(selected: str) -> list[Toolchain]:
 def run_eval_oracle() -> None:
     results: list[tuple[int, str, str]] = []
     for _ in range(2):
-        execution = subprocess.run(
+        execution = run_bounded_process(
             [development_tool("haxe"), "oracle.hxml"],
             cwd=GENERATED,
             env=haxe_environment(),
@@ -160,7 +169,7 @@ def compile_haxe(
     for define in defines:
         command.extend(["-D", define])
     command.extend(["--custom-target", f"c={output}"])
-    return subprocess.run(
+    return run_bounded_process(
         command,
         cwd=ROOT,
         env=haxe_environment(server=connect is not None),
@@ -201,6 +210,14 @@ def validate_generated_project(output: Path, hxcir: str) -> None:
         'runtime(feature="int-map",operation="create")',
         'runtime(feature="int-map",operation="set")',
         'runtime(feature="int-map",operation="exists")',
+        'runtime(feature="int-map",operation="get")',
+        'runtime(feature="int-map",operation="remove")',
+        'runtime(feature="int-map",operation="clear")',
+        'runtime(feature="int-map",operation="copy")',
+		'runtime(feature="int-map",operation="iterator")',
+		'runtime(feature="int-map",operation="keys")',
+		'runtime(feature="int-map",operation="key-value-iterator")',
+		'runtime(feature="int-map",operation="to-string")',
         "retain place=local(",
         "release place=local(",
     ):
@@ -210,7 +227,11 @@ def validate_generated_project(output: Path, hxcir: str) -> None:
         raise IntMapFailure("IntMap HxcIR used raw syntax or leaked the checkout path")
 
     plan = json.loads((output / "hxc.runtime-plan.json").read_text(encoding="utf-8"))
-    if plan.get("features") != ["runtime-base", "status", "alloc", "int-map"]:
+    # Iterator runtime code depends on Array storage even for map snapshots.
+    if plan.get("features") != [
+        "runtime-base", "status", "alloc", "array", "iterator", "string-literal",
+        "string-scalar", "string", "int-map",
+    ]:
         raise IntMapFailure("generated IntMap program selected the wrong runtime closure")
     operations = {
         reason.get("operationId")
@@ -221,30 +242,49 @@ def validate_generated_project(output: Path, hxcir: str) -> None:
         "cleanup-release",
         "create",
         "exists",
+        "get",
+        "remove",
+        "clear",
+        "copy",
         "managed-type-representation",
         "retain",
         "set",
+		"iterator",
+		"keys",
+		"key-value-iterator",
+		"to-string",
     }:
         raise IntMapFailure(f"generated IntMap operations drifted: {sorted(operations)!r}")
     decisions = plan.get("directDecisions", [])
     if "managed-haxe-int-maps" not in decisions:
         raise IntMapFailure("runtime plan omitted the IntMap representation decision")
     if any(
-        decision.startswith("managed-haxe-") and decision != "managed-haxe-int-maps"
+        decision.startswith("managed-haxe-") and decision not in {"managed-haxe-int-maps", "managed-haxe-iterators"}
         for decision in decisions
     ):
         raise IntMapFailure("runtime plan selected an unrelated managed Haxe family")
     stdlib = json.loads((output / "hxc.stdlib-report.json").read_text(encoding="utf-8"))
     if (
-        stdlib.get("modules") != ["int-map"]
+        stdlib.get("modules") != ["String", "int-map", "iterator", "string"]
         or stdlib.get("capabilities")
         != [
             "cleanup-release",
+            "clear",
+            "copy",
             "create",
             "exists",
+            "get",
+			"has-next",
+			"iterator",
+			"key-value-iterator",
+			"keys",
             "managed-type-representation",
-            "retain",
-            "set",
+            "next",
+			"remove",
+			"retain",
+			"set",
+			"static-value",
+			"to-string",
         ]
     ):
         raise IntMapFailure("stdlib report did not name the exact admitted IntMap closure")
@@ -258,6 +298,14 @@ def validate_generated_project(output: Path, hxcir: str) -> None:
         "hxc_int_bool_map_ref_create",
         "hxc_int_bool_map_ref_set",
         "hxc_int_bool_map_ref_exists",
+        "hxc_int_bool_map_ref_get",
+        "hxc_int_bool_map_ref_remove",
+        "hxc_int_bool_map_ref_clear",
+        "hxc_int_bool_map_ref_copy",
+		"hxc_int_bool_map_ref_value_iterator",
+		"hxc_int_bool_map_ref_key_iterator",
+		"hxc_int_bool_map_ref_pair_iterator",
+		"hxc_int_bool_map_ref_to_string",
         "hxc_int_bool_map_ref_retain",
         "hxc_int_bool_map_ref_release",
         "hxc_default_allocator()",
@@ -345,10 +393,7 @@ def render_projects(root: Path) -> dict[str, Path]:
 
 
 def run_negative_cases(root: Path) -> None:
-    expected = {
-        "value_type": "IntMap-value-not-yet-admitted:int32_t",
-        "get": "TCall(IntMap.get:not-yet-admitted)",
-    }
+    expected = {"value_type": "IntMap-value-not-yet-admitted:int32_t"}
     for name, marker in expected.items():
         output = root / f"negative-{name}"
         result = compile_haxe(NEGATIVE / name, output)
@@ -381,7 +426,7 @@ def compile_and_run(
         "-o",
         str(executable),
     ]
-    compiled = subprocess.run(
+    compiled = run_bounded_process(
         command,
         cwd=ROOT,
         check=False,
@@ -394,7 +439,7 @@ def compile_and_run(
             f"strict native compile failed\ncommand={command!r}\n"
             f"stdout={compiled.stdout!r}\nstderr={compiled.stderr!r}"
         )
-    executed = subprocess.run(
+    executed = run_bounded_process(
         [str(executable)],
         cwd=ROOT,
         check=False,
@@ -413,7 +458,7 @@ def inspect_symbols(executable: Path, family: str) -> None:
     nm = shutil.which("nm")
     if nm is None:
         raise IntMapFailure(f"{family} IntMap evidence requires nm")
-    result = subprocess.run(
+    result = run_bounded_process(
         [nm, str(executable)],
         check=False,
         capture_output=True,
@@ -426,6 +471,10 @@ def inspect_symbols(executable: Path, family: str) -> None:
         "hxc_int_bool_map_ref_create",
         "hxc_int_bool_map_ref_set",
         "hxc_int_bool_map_ref_exists",
+        "hxc_int_bool_map_ref_get",
+        "hxc_int_bool_map_ref_remove",
+        "hxc_int_bool_map_ref_clear",
+        "hxc_int_bool_map_ref_copy",
         "hxc_int_bool_map_ref_release",
     ):
         if required not in result.stdout:
@@ -524,7 +573,8 @@ def main(argv: Iterable[str] = ()) -> int:
     print(
         "int-map: OK: "
         f"{families}; {mode} construction, set, exists, aliases, growth rollback, "
-        "layouts, determinism, sanitizers, runtime-none, negative diagnostics, and selective symbols passed"
+        "lookup, removal, clear, copy independence and rollback, snapshot values/keys/pairs, toString, layouts, determinism, "
+        "sanitizers, runtime-none, negative diagnostics, and selective symbols passed"
     )
     return 0
 

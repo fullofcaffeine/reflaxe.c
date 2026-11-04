@@ -174,6 +174,8 @@ final class ScenarioWorldValidator {
 						context.addAtCoordinate(UnresolvedContent(kind), objectCoordinate);
 					if (!context.registry.hasState(state))
 						context.addAtCoordinate(UnresolvedContent(state), objectCoordinate);
+					else if (context.registry.hasStatefulObject(kind) && !context.registry.statefulObjectHasState(kind, state))
+						context.addAtCoordinate(ImpossiblePlacement(object.id), objectCoordinate);
 					validateTransform(object.id, position, objectCoordinate);
 			}
 		}

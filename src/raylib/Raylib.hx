@@ -9,9 +9,9 @@ package raylib;
 /** Direct raylib aliases whose text borrow is checked at the Haxe/C boundary. */
 @:c.include("raylib.h", c.IncludeKind.System)
 private extern class RaylibRuntimeText {
-	/** Draw one runtime-owned String without retaining its UTF-8 pointer. */
+	/** Draw one runtime-owned String without retaining its prepared UTF-8 pointer. */
 	@:c.name("DrawText")
-	public static function drawText(text:c.CStringRef, x:c.Int32, y:c.Int32, fontSize:c.Int32, color:Color):Void;
+	public static function drawText(text:c.CStringArg, x:c.Int32, y:c.Int32, fontSize:c.Int32, color:Color):Void;
 }
 
 /**
@@ -19,8 +19,8 @@ private extern class RaylibRuntimeText {
  *
  * Names stay aligned with raylib's C cheatsheet. Most methods below are inline
  * zero-cost forwards to `raylib.raw.Raylib`. `DrawTextString` is the deliberate
- * exception: it copies arbitrary Haxe text into terminated storage before C
- * observes it. Static text can use `DrawText` without that allocation.
+ * exception: it borrows already terminated Haxe text and copies only an
+ * interior view before C observes it. Static text can use `DrawText` directly.
  * Window, input, and drawing calls remain main/render-thread operations.
  * `c.CString` parameters accept embedded-NUL-free static literals and closed
  * selections composed only from those literals. Resource, pointer, callback,
@@ -229,18 +229,13 @@ class Raylib {
 	/**
 	 * Draw arbitrary Haxe text through one checked, non-retaining C call.
 	 *
-	 * Use `DrawText` for static literals. A Haxe substring can end before its
-	 * owner's NUL terminator, so it is not always safe to lend directly as a C
-	 * string. `StringBuf` makes one terminated managed copy. The call-scoped
-	 * `CStringRef` then validates it and keeps it alive until raylib returns.
-	 * Embedded NUL still fails before C observes truncated text.
+	 * Use `DrawText` for static literals. `CStringArg` keeps a terminated Haxe
+	 * String allocation-free and creates temporary storage only when a substring
+	 * ends before its owner's NUL byte. Embedded NUL still fails before C observes
+	 * truncated text, and lowering releases any temporary after raylib returns.
 	 */
-	public static inline function DrawTextString(text:String, x:Int, y:Int, fontSize:Int, color:Color):Void {
-		final buffer = new StringBuf();
-		buffer.add(text);
-		final terminated = buffer.toString();
-		RaylibRuntimeText.drawText(c.CStringRef.to(terminated), c.IntConvert.exact(x), c.IntConvert.exact(y), c.IntConvert.exact(fontSize), color);
-	}
+	public static inline function DrawTextString(text:String, x:Int, y:Int, fontSize:Int, color:Color):Void
+		RaylibRuntimeText.drawText(c.CStringArg.to(text), c.IntConvert.exact(x), c.IntConvert.exact(y), c.IntConvert.exact(fontSize), color);
 
 	public static inline function DrawFPS(x:Int, y:Int):Void
 		raylib.raw.Raylib.DrawFPS(c.IntConvert.exact(x), c.IntConvert.exact(y));

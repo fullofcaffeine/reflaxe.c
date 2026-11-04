@@ -174,6 +174,17 @@ AFFECTED_OWNER_RULES = (
         AffectedOwner("test:primitive-semantics", "primitive semantic planning changed"),
     ),
     (
+        re.compile(
+            r"^(?:src/reflaxe/c/(?:ir/HxcIR|lowering/CBodyDynamic|lowering/CBodyEmitter|lowering/CBodyLowering|runtime/RuntimeRequirementAnalyzer)\.hx"
+            r"|runtime/hxrt/(?:include/hxrt/dynamic\.h|src/dynamic\.c|test/dynamic_(?:contract\.c|header_cpp\.cpp))"
+            r"|test/(?:differential/dynamic-runtime|runtime/dynamic)/)"
+        ),
+        AffectedOwner(
+            "test:dynamic-lowering",
+            "exact Dynamic carriers, adapters, roots, or fail-closed boundaries changed",
+        ),
+    ),
+    (
         re.compile(r"^src/reflaxe/c/runtime/|^runtime/hxrt/"),
         AffectedOwner("test:runtime-features", "runtime requirement or packaging logic changed"),
     ),

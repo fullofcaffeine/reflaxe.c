@@ -18,6 +18,11 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from scripts.test.bounded_process import run as run_bounded_process  # noqa: E402
+
 HXML = Path(__file__).with_name("body_lowering.hxml")
 POSITIVE = Path(__file__).with_name("fixtures") / "positive"
 UNSUPPORTED = Path(__file__).with_name("fixtures") / "unsupported"
@@ -28,6 +33,10 @@ REPORT_PREFIX = "HXC_BODY_LOWERING="
 FIELDS = {
     "booleanValue",
     "chooseOrThrow",
+    "definitelyAssignedAfterReturn",
+    "definitelyAssignedBranches",
+    "definitelyAssignedInteger",
+    "definitelyAssignedLoop",
     "directInteger",
     "explicitVoid",
     "floatingValue",
@@ -37,6 +46,9 @@ FIELDS = {
     "unsignedValue",
 }
 IDENTIFIER = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+BODY_METHOD_SOURCE = re.compile(
+    r"^BodyFixture\.(?P<field>[A-Za-z_][A-Za-z0-9_]*)(?:\([A-Za-z0-9_,.* ]*\))?$"
+)
 HXCIR_FUNCTION_SOURCE = re.compile(
     r'^  function "(?P<function_id>[^"]+)" name="[^"]+"[^\n]* '
     r'@"(?P<path>[^"]+)":(?P<start_line>[0-9]+):(?P<start_column>[0-9]+)-'
@@ -87,7 +99,7 @@ def render(
         raise BodyLoweringFailure(f"unknown body-lowering profile {profile!r}")
     environment = os.environ.copy()
     environment["HAXE_NO_SERVER"] = "1"
-    result = subprocess.run(
+    result = run_bounded_process(
         command,
         cwd=ROOT,
         env=environment,
@@ -137,13 +149,38 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
         not isinstance(missing, str)
         or "HXC1001" not in missing
         or "unreachable TVar(value)" not in missing
-        or "test/body_lowering/fixtures/positive/BodyFixture.hx:3:" not in missing
+        or "test/body_lowering/fixtures/positive/BodyFixture.hx:39:" not in missing
         or f"[profile={profile}]" not in missing
         or str(ROOT) in missing
     ):
         raise BodyLoweringFailure(
             "unreachable control flow lost its stable HXC1001 diagnostic"
         )
+    diagnostics = report.get("definiteAssignmentDiagnostics")
+    expected_diagnostics = {
+        "unsafeEarlyReturnFallthrough",
+        "unsafeLoopOnlyAssignment",
+        "unsafePartialBranch",
+        "unsafeReadBeforeAssignment",
+    }
+    if not isinstance(diagnostics, list) or {
+        item.get("field") for item in diagnostics if isinstance(item, dict)
+    } != expected_diagnostics:
+        raise BodyLoweringFailure("definite-assignment negative inventory drifted")
+    for item in diagnostics:
+        if not isinstance(item, dict):
+            raise BodyLoweringFailure("definite-assignment diagnostic is not an object")
+        diagnostic = item.get("diagnostic")
+        if (
+            not isinstance(diagnostic, str)
+            or "HXC1001" not in diagnostic
+            or "TVar(value:uninitialized)" not in diagnostic
+            or f"[profile={profile}]" not in diagnostic
+            or str(ROOT) in diagnostic
+        ):
+            raise BodyLoweringFailure(
+                f"unsafe local {item.get('field')!r} lost its stable HXC1001 diagnostic"
+            )
 
     functions = report.get("functions")
     if not isinstance(functions, list):
@@ -192,6 +229,25 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
         raise BodyLoweringFailure("shadowed Haxe locals did not receive distinct C names")
 
     hxcir = required_text(report, "hxcir")
+    definite_assignment_markers = {
+        "definitelyAssignedAfterReturn": "flow-carrier-direct-declare",
+        "definitelyAssignedBranches": "flow-carrier-direct-declare",
+        "definitelyAssignedInteger": "definitely-assigned-primitive-declare",
+        "definitelyAssignedLoop": "definitely-assigned-primitive-declare",
+    }
+    for field, marker in definite_assignment_markers.items():
+        start = hxcir.find(f'function "function.BodyFixture.{field}"')
+        end = hxcir.find(f'end function "function.BodyFixture.{field}"')
+        section = hxcir[start:end]
+        if (
+            start == -1
+            or end == -1
+            or section.count(f'{marker}\" result=- declare-uninitialized place=local') != 1
+            or "flow-carrier-default" in section
+        ):
+            raise BodyLoweringFailure(
+                f"{field} lost its proof-backed uninitialized primitive local"
+            )
     ordered = (
         'instruction "instruction.0.constant"',
         'instruction "instruction.1.initialize"',
@@ -226,16 +282,16 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
             "uncaught throw did not evaluate its payload before the explicit fail-stop edge"
         )
     for source_marker in (
-        'BodyFixture.hx":3:3-3:22',
-        'BodyFixture.hx":6:4-6:23',
-        'BodyFixture.hx":7:4-7:16',
+        'BodyFixture.hx":39:3-39:22',
+        'BodyFixture.hx":42:4-42:23',
+        'BodyFixture.hx":43:4-43:16',
     ):
         if source_marker not in hxcir:
             raise BodyLoweringFailure(f"HxcIR lost exact source span {source_marker}")
 
     c_source = required_text(report, "cSource")
     mapped = required_text(report, "lineMappedCSource")
-    if "#line" in c_source or '#line 3 "test/body_lowering/' not in mapped:
+    if "#line" in c_source or '#line 39 "test/body_lowering/' not in mapped:
         raise BodyLoweringFailure("optional structured #line mode drifted")
     if "#include <stdint.h>" not in c_source or "#include <stdbool.h>" not in c_source:
         raise BodyLoweringFailure("primitive body C omitted its exact standard headers")
@@ -524,6 +580,10 @@ def native_harness(report: dict[str, object], *, fail: bool = False) -> str:
 int main(void)
 {{
   (void)&{names['booleanValue']};
+  (void)&{names['definitelyAssignedAfterReturn']};
+  (void)&{names['definitelyAssignedBranches']};
+  (void)&{names['definitelyAssignedInteger']};
+  (void)&{names['definitelyAssignedLoop']};
   (void)&{names['directInteger']};
   (void)&{names['explicitVoid']};
   (void)&{names['floatingValue']};
@@ -540,19 +600,25 @@ int main(void)
   {names['explicitVoid']}();
   {names['implicitVoid']}();
   if ({names['integerValue']}() != INT32_C(42)) return 1;
-  if ({names['directInteger']}() != INT32_C(23)) return 2;
-  if ({names['unsignedValue']}() != UINT32_C(29)) return 3;
-  if ({names['floatingValue']}() != 1.5) return 4;
-  if ({names['booleanValue']}() != true) return 5;
-  if ({names['chooseOrThrow']}(INT32_C(0)) != INT32_C(41)) return 6;
-  if ({names['chooseOrThrow']}(INT32_C(2)) != INT32_C(43)) return 7;
+  if ({names['definitelyAssignedInteger']}() != INT32_C(31)) return 2;
+  if ({names['definitelyAssignedBranches']}(true) != INT32_C(7)) return 3;
+  if ({names['definitelyAssignedBranches']}(false) != INT32_C(11)) return 4;
+  if ({names['definitelyAssignedAfterReturn']}(true) != INT32_C(13)) return 5;
+  if ({names['definitelyAssignedAfterReturn']}(false) != INT32_C(17)) return 6;
+  if ({names['definitelyAssignedLoop']}(INT32_C(4)) != INT32_C(4)) return 7;
+  if ({names['directInteger']}() != INT32_C(23)) return 8;
+  if ({names['unsignedValue']}() != UINT32_C(29)) return 9;
+  if ({names['floatingValue']}() != 1.5) return 10;
+  if ({names['booleanValue']}() != true) return 11;
+  if ({names['chooseOrThrow']}(INT32_C(0)) != INT32_C(41)) return 12;
+  if ({names['chooseOrThrow']}(INT32_C(2)) != INT32_C(43)) return 13;
   return 0;
 }}
 """
 
 
 def compiler_identity(executable: str) -> tuple[str, str]:
-    result = subprocess.run(
+    result = run_bounded_process(
         [executable, "--version"],
         cwd=ROOT,
         check=False,
@@ -636,7 +702,7 @@ def check_native(report: dict[str, object], selected: str | None = None) -> None
                             root
                             / f"{source_key}-{mode}-{toolchain.family}-{optimization[1:]}"
                         )
-                        compile_result = subprocess.run(
+                        compile_result = run_bounded_process(
                             [
                                 toolchain.compiler,
                                 "-std=c11",
@@ -668,7 +734,7 @@ def check_native(report: dict[str, object], selected: str | None = None) -> None
                                 f"stdout:\n{compile_result.stdout}"
                                 f"stderr:\n{compile_result.stderr}"
                             )
-                        run_result = subprocess.run(
+                        run_result = run_bounded_process(
                             [str(executable)],
                             cwd=ROOT,
                             check=False,
@@ -708,7 +774,7 @@ def custom_target(
     command.extend(["-D", "hxc_project_layout=unity", "--custom-target", f"c={output}"])
     environment = os.environ.copy()
     environment["HAXE_NO_SERVER"] = "1"
-    return subprocess.run(
+    return run_bounded_process(
         command,
         cwd=ROOT,
         env=environment,
@@ -763,7 +829,7 @@ def check_throw_cleanup(root: Path) -> None:
             ),
         ):
             executable = root / f"throw-cleanup-{toolchain.family}-{mode}"
-            compiled = subprocess.run(
+            compiled = run_bounded_process(
                 [
                     toolchain.compiler,
                     "-std=c11",
@@ -794,7 +860,7 @@ def check_throw_cleanup(root: Path) -> None:
                     f"{toolchain.family} {mode} rejected throw cleanup fixture\n"
                     f"stdout:\n{compiled.stdout}\nstderr:\n{compiled.stderr}"
                 )
-            ran = subprocess.run(
+            ran = run_bounded_process(
                 [str(executable)],
                 cwd=ROOT,
                 check=False,
@@ -821,8 +887,8 @@ def check_production_boundaries() -> None:
             if (
                 unsupported.returncode != 1
                 or "HXC1001" not in combined
-                or "Unsupported typed Haxe node `TTry`" not in combined
-                or "Main.hx:3: lines 3-7" not in combined
+                or "Unsupported typed Haxe node `TFunction(capturing-closure:outer-local:message)`" not in combined
+                or "Main.hx:4: characters 20-52" not in combined
                 or f"[profile={profile}]" not in combined
             ):
                 raise BodyLoweringFailure(
@@ -841,6 +907,7 @@ def check_production_boundaries() -> None:
                 f"stdout:\n{supported.stdout}\nstderr:\n{supported.stderr}"
             )
         required = {
+            "LICENSES/HAXE-C-OUTPUT-SUPPORT-MIT.txt",
             "_GeneratedFiles.json",
             "cmake/CMakeLists.txt",
             "hxc.abi.json",
@@ -911,7 +978,7 @@ def check_production_boundaries() -> None:
 
         compiler = available_compilers()[0]
         executable = root / "supported-program"
-        compiled = subprocess.run(
+        compiled = run_bounded_process(
             [
                 compiler.compiler,
                 "-std=c11",
@@ -938,7 +1005,7 @@ def check_production_boundaries() -> None:
                 "strict compiler rejected supported production project\n"
                 f"stdout:\n{compiled.stdout}\nstderr:\n{compiled.stderr}"
             )
-        ran = subprocess.run(
+        ran = run_bounded_process(
             [str(executable)],
             cwd=ROOT,
             check=False,
@@ -952,28 +1019,84 @@ def check_production_boundaries() -> None:
             )
 
 
-def snapshot_native_report() -> dict[str, object]:
-    symbols = json.loads(expected_text("symbols.json"))
+def fixture_functions_from_symbols(symbols: object) -> list[dict[str, str]]:
+    """Select exact BodyFixture methods from a complete symbol snapshot."""
     if not isinstance(symbols, dict) or not isinstance(symbols.get("symbols"), list):
         raise BodyLoweringFailure("body symbol snapshot cannot drive the native matrix")
-    functions = []
+    by_field: dict[str, str] = {}
     for entry in symbols["symbols"]:
-        if (
-            isinstance(entry, dict)
-            and entry.get("kind") == "method"
-            and isinstance(entry.get("sourceSymbol"), str)
-            and isinstance(entry.get("cName"), str)
-        ):
-            functions.append(
-                {
-                    "field": entry["sourceSymbol"].rsplit(".", 1)[-1],
-                    "cName": entry["cName"],
-                }
+        if not isinstance(entry, dict):
+            raise BodyLoweringFailure(f"body symbol snapshot has a malformed record: {entry!r}")
+        kind = entry.get("kind")
+        source_symbol = entry.get("sourceSymbol")
+        c_name = entry.get("cName")
+        if not isinstance(kind, str) or not isinstance(source_symbol, str) or not isinstance(c_name, str):
+            raise BodyLoweringFailure(f"body symbol snapshot has a malformed record: {entry!r}")
+        if kind != "method" or not source_symbol.startswith("BodyFixture."):
+            continue
+        matched = BODY_METHOD_SOURCE.fullmatch(source_symbol)
+        if matched is None:
+            raise BodyLoweringFailure(f"body symbol snapshot has a malformed owned method: {source_symbol!r}")
+        field = matched.group("field")
+        if field not in FIELDS:
+            raise BodyLoweringFailure(f"body symbol snapshot has an unexpected owned method: {source_symbol!r}")
+        if field in by_field:
+            raise BodyLoweringFailure(f"body symbol snapshot has a duplicate owned method: {field}")
+        expected_c_name = f"hxc_BodyFixture_{field}"
+        if c_name != expected_c_name:
+            raise BodyLoweringFailure(
+                f"body symbol snapshot has an invalid C name for {field}: {c_name!r}"
             )
+        by_field[field] = c_name
+    missing = FIELDS - set(by_field)
+    if missing:
+        raise BodyLoweringFailure(f"body symbol snapshot is missing owned methods: {sorted(missing)!r}")
+    return [{"field": field, "cName": by_field[field]} for field in sorted(by_field)]
+
+
+def check_snapshot_symbol_parser() -> None:
+    """Exercise the native-only selector without invoking a C toolchain."""
+    records = [
+        {
+            "kind": "method",
+            "sourceSymbol": (
+                "BodyFixture.chooseOrThrow(i32)" if field == "chooseOrThrow" else f"BodyFixture.{field}"
+            ),
+            "cName": f"hxc_BodyFixture_{field}",
+        }
+        for field in sorted(FIELDS)
+    ]
+    records.append({"kind": "method", "sourceSymbol": "c-standard-library.abort", "cName": "abort"})
+    parsed = fixture_functions_from_symbols({"symbols": records})
+    if {entry["field"] for entry in parsed} != FIELDS:
+        raise BodyLoweringFailure("body symbol parser lost an owned fixture method")
+
+    def expect_failure(mutated: list[dict[str, str]], fragment: str) -> None:
+        try:
+            fixture_functions_from_symbols({"symbols": mutated})
+        except BodyLoweringFailure as error:
+            if fragment not in str(error):
+                raise BodyLoweringFailure(f"body symbol parser failed unclearly: {error}") from error
+        else:
+            raise BodyLoweringFailure(f"body symbol parser admitted {fragment}")
+
+    expect_failure(records + [dict(records[0])], "duplicate owned method")
+    expect_failure(records[1:], "missing owned methods")
+    expect_failure(
+        records + [{"kind": "method", "sourceSymbol": "BodyFixture.surprise", "cName": "hxc_BodyFixture_surprise"}],
+        "unexpected owned method",
+    )
+    malformed = [dict(entry) for entry in records]
+    malformed[0]["sourceSymbol"] = "BodyFixture.booleanValue(i32"
+    expect_failure(malformed, "malformed owned method")
+
+
+def snapshot_native_report() -> dict[str, object]:
+    symbols = json.loads(expected_text("symbols.json"))
     return {
         "cSource": expected_text("body.c"),
         "lineMappedCSource": expected_text("body-lines.c"),
-        "functions": functions,
+        "functions": fixture_functions_from_symbols(symbols),
     }
 
 
@@ -986,6 +1109,7 @@ def parse_args(arguments: Iterable[str]) -> argparse.Namespace:
 
 def main(arguments: Iterable[str] = ()) -> int:
     args = parse_args(arguments)
+    check_snapshot_symbol_parser()
     if not args.native_only and shutil.which(development_tool("haxe")) is None:
         print("body-lowering: ERROR: pinned Haxe executable is unavailable", file=sys.stderr)
         return 1
@@ -1012,6 +1136,16 @@ def main(arguments: Iterable[str] = ()) -> int:
             "unreachableDiagnostic": str(first["unreachableDiagnostic"]).replace(
                 "[profile=portable]", "[profile=<profile>]"
             ),
+            "definiteAssignmentDiagnostics": [
+                {
+                    **item,
+                    "diagnostic": str(item["diagnostic"]).replace(
+                        "[profile=portable]", "[profile=<profile>]"
+                    ),
+                }
+                for item in first["definiteAssignmentDiagnostics"]
+                if isinstance(item, dict)
+            ],
         }
         metal_without_profile = {
             **metal,
@@ -1019,6 +1153,16 @@ def main(arguments: Iterable[str] = ()) -> int:
             "unreachableDiagnostic": str(metal["unreachableDiagnostic"]).replace(
                 "[profile=metal]", "[profile=<profile>]"
             ),
+            "definiteAssignmentDiagnostics": [
+                {
+                    **item,
+                    "diagnostic": str(item["diagnostic"]).replace(
+                        "[profile=metal]", "[profile=<profile>]"
+                    ),
+                }
+                for item in metal["definiteAssignmentDiagnostics"]
+                if isinstance(item, dict)
+            ],
         }
         if portable_without_profile != metal_without_profile:
             raise BodyLoweringFailure("portable and metal primitive body lowering diverged")

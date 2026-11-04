@@ -12,6 +12,10 @@ void hxc_caxecraft_app_Main_main(void)
     abort();
   }
   hxc_caxecraft_app_CaxecraftApp_run(hxc_l_tmp_load_result_n1);
+  if (hxc_array_ref_release(hxc_l_tmp_object_storage_n1.hxc_portalWaterRenderer.hxc_faces) != HXC_STATUS_OK)
+  {
+    abort();
+  }
   if (hxc_array_ref_release(hxc_l_tmp_object_storage_n1.hxc_waterRenderer.hxc_faces) != HXC_STATUS_OK)
   {
     abort();

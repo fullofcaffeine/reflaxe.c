@@ -24,6 +24,14 @@ int main(void)
   int32_t b = 3;
   int32_t c = 1;
   int32_t scratch = 0;
+  if ((a != 0) != c)
+  {
+    return 30;
+  }
+  if ((b < a) != c)
+  {
+    return 31;
+  }
   struct hxc_pair pair = { .left = 2, .right = 4 };
   struct hxc_pair *pair_ptr = &pair;
   int32_t values[2] = { 1, 2 };

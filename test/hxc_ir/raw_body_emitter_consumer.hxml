@@ -1,0 +1,6 @@
+# Compile-time boundary: raw HxcIR cannot reach structural C body emission.
+
+-cp test/hxc_ir/fixtures
+-cp src
+-main RawBodyEmitterConsumer
+--no-output

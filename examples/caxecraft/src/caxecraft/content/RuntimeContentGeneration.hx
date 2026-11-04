@@ -18,7 +18,7 @@ import caxecraft.content.RuntimeLevelLoader.rebuildRuntimeLevelForPublicationTes
 import caxecraft.content.RuntimeSchema.RuntimeSchemaDiagnostic;
 import caxecraft.content.RuntimeSchema.RuntimeSchemaReader;
 import caxecraft.content.RuntimeContentDigest.runtimeSha256;
-import caxecraft.content.RuntimeContentReceiptWriter.runtimeGenerationInput;
+import caxecraft.content.RuntimeContentReceiptWriter.runtimeGenerationSha256;
 import caxecraft.domain.EntityId;
 import caxecraft.localization.RuntimeUiCatalog;
 import caxecraft.localization.RuntimeUiCatalog.RuntimeUiCatalogResult;
@@ -515,12 +515,12 @@ private function readSha256(reader:RuntimeSchemaReader, node:ContentJson.Content
 	return value;
 }
 
-/** Recompute the ordered package generation identity from parsed receipts. */
+/** Recompute and compare the canonical lowercase generation identity. */
 private function generationMatches(receipt:ParsedRuntimeContentReceipt):Bool {
 	final content = new ContentReceipt(receipt.content.logicalPath, receipt.content.byteLength, receipt.content.sha256);
 	final ui = new ContentReceipt(receipt.ui.logicalPath, receipt.ui.byteLength, receipt.ui.sha256);
 	final map = new ContentReceipt(receipt.map.logicalPath, receipt.map.byteLength, receipt.map.sha256);
-	return sha256Matches(runtimeGenerationInput(receipt.assetManifestId, receipt.assetManifestSha256, content, ui, map), receipt.generationSha256);
+	return runtimeGenerationSha256(receipt.assetManifestId, receipt.assetManifestSha256, content, ui, map) == receipt.generationSha256;
 }
 
 /** Compare SHA-256 bytes directly so validation does not require hex output APIs. */

@@ -19,6 +19,11 @@ from typing import Iterable
 
 
 ROOT = Path(__file__).resolve().parents[3]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from scripts.test.bounded_process import run as run_bounded_process  # noqa: E402
+
 CASE = Path(__file__).resolve().parent
 HXML = CASE / "runtime_feature_graph.hxml"
 CATALOG_EXPECTED = ROOT / "runtime/hxrt/features.json"
@@ -29,11 +34,17 @@ ALLOC_CONSUMER = CASE / "alloc_consumer.c"
 ARRAY_CONSUMER = CASE / "array_consumer.c"
 INT_MAP_CONSUMER = ROOT / "test/differential/int-map/int_map_runtime.c"
 STRING_MAP_CONSUMER = ROOT / "test/differential/string-map/string_map_runtime.c"
+TYPED_MAP_CONSUMER = ROOT / "test/differential/object-enum-map/typed_map_runtime.c"
 BYTES_CONSUMER = CASE / "bytes_consumer.c"
 BYTES_STRING_CONSUMER = CASE / "bytes_string_consumer.c"
+DYNAMIC_CONSUMER = ROOT / "runtime/hxrt/test/dynamic_contract.c"
+EXCEPTION_CONSUMER = ROOT / "runtime/hxrt/test/exception_contract.c"
 OBJECT_CONSUMER = CASE / "object_consumer.c"
 GC_CONSUMER = ROOT / "runtime/hxrt/test/gc_contract.c"
+THREAD_CONSUMER = ROOT / "runtime/hxrt/test/thread_contract.c"
+THREAD_GC_CONSUMER = ROOT / "runtime/hxrt/test/thread_gc_contract.c"
 STRING_CONSUMER = CASE / "string_consumer.c"
+STRING_LOWER_CASE_CONSUMER = CASE / "string_lower_case_consumer.c"
 STRING_SCALAR_CONSUMER = CASE / "string_scalar_consumer.c"
 IO_CONSUMER = CASE / "io_consumer.c"
 CATALOG_PREFIX = "HXC_RUNTIME_FEATURE_CATALOG="
@@ -81,6 +92,8 @@ class Toolchain:
 
 
 def development_tool(name: str) -> str:
+    if name == "haxe" and os.environ.get("HXC_TEST_HAXE"):
+        return os.environ["HXC_TEST_HAXE"]
     local = ROOT / "node_modules/.bin" / name
     return str(local) if local.is_file() else name
 
@@ -102,9 +115,16 @@ def extract_record(stdout: str, prefix: str, label: str) -> tuple[str, dict[str,
 
 def render(label: str) -> RuntimeRender:
     environment = os.environ.copy()
-    environment["HAXE_NO_SERVER"] = "1"
-    result = subprocess.run(
-        [development_tool("haxe"), str(HXML)],
+    connect = environment.get("HXC_TEST_HAXE_CONNECT")
+    command = [development_tool("haxe")]
+    if connect is None:
+        environment["HAXE_NO_SERVER"] = "1"
+    else:
+        environment.pop("HAXE_NO_SERVER", None)
+        command.extend(["--connect", connect])
+    command.append(str(HXML))
+    result = run_bounded_process(
+        command,
         cwd=ROOT,
         env=environment,
         check=False,
@@ -176,18 +196,29 @@ def validate_catalog(catalog: dict[str, object]) -> None:
         "array-join",
         "bytes",
         "bytes-string",
+        "date-time",
+        "dynamic",
+        "enum-value-map",
+        "exception",
         "gc",
+        "gc-string-map",
         "int-map",
         "io",
+        "iterator",
         "object",
+        "object-map",
         "runtime-base",
         "status",
         "string",
         "string-float",
         "string-literal",
+        "string-lower-case",
         "string-map",
         "string-scalar",
         "string-split",
+        "thread",
+        "thread-gc",
+        "typed-map",
     ]:
         raise RuntimeFeatureFailure("catalog compiler-selectable feature inventory drifted")
     runtime_abi = record(catalog.get("runtimeAbi"), "runtime ABI contract")
@@ -196,7 +227,7 @@ def validate_catalog(catalog: dict[str, object]) -> None:
     provenance = record(runtime_abi.get("releaseProvenance"), "runtime release provenance")
     if (
         runtime_abi.get("stability") != "internal-versioned"
-        or version != {"major": 0, "minor": 15, "patch": 0}
+        or version != {"major": 0, "minor": 20, "patch": 0}
         or runtime_abi.get("generatedCodeCompatibility") != "same-major"
         or runtime_abi.get("generatedCodeCheck") != "c11-static-assert"
         or runtime_abi.get("runtimeMajorMacro") != "HXC_RUNTIME_ABI_MAJOR"
@@ -234,17 +265,28 @@ def validate_catalog(catalog: dict[str, object]) -> None:
         "array",
         "array-join",
         "int-map",
+        "iterator",
         "string-map",
+        "typed-map",
+        "gc-string-map",
+        "object-map",
+        "enum-value-map",
+        "string-lower-case",
         "string-float",
         "string-split",
         "bytes",
         "bytes-string",
+        "date-time",
+        "dynamic",
+        "exception",
         "gc",
         "object",
         "string-literal",
         "string-scalar",
         "string",
         "io",
+        "thread",
+        "thread-gc",
     }:
         raise RuntimeFeatureFailure(f"selective feature set drifted: {sorted(features)!r}")
     expected_dependencies = {
@@ -255,18 +297,29 @@ def validate_catalog(catalog: dict[str, object]) -> None:
         "alloc": ["status"],
         "array": ["alloc"],
         "array-join": ["array", "string"],
-        "int-map": ["alloc"],
-        "string-map": ["alloc", "string-literal"],
+        "exception": ["dynamic"],
+        "int-map": ["alloc", "iterator", "string"],
+        "iterator": ["alloc", "array"],
+        "string-map": ["alloc", "iterator", "string", "string-literal"],
+        "typed-map": ["gc", "iterator"],
+        "gc-string-map": ["string", "typed-map"],
+        "object-map": ["typed-map"],
+        "enum-value-map": ["typed-map"],
+        "string-lower-case": ["string"],
         "string-float": ["string"],
         "string-split": ["array", "string"],
         "bytes": ["alloc", "string-literal"],
         "bytes-string": ["bytes", "string"],
+        "date-time": ["status"],
+        "dynamic": ["status"],
         "gc": ["alloc", "object"],
         "object": ["runtime-base"],
         "string-literal": ["runtime-base"],
         "string-scalar": ["status", "string-literal"],
         "string": ["alloc", "string-scalar"],
         "io": ["status", "string-literal"],
+        "thread": ["status"],
+        "thread-gc": ["gc", "thread"],
     }
     expected_availability = {
         "runtime-base": "compiler-selectable",
@@ -277,17 +330,28 @@ def validate_catalog(catalog: dict[str, object]) -> None:
         "array": "compiler-selectable",
         "array-join": "compiler-selectable",
         "int-map": "compiler-selectable",
+        "iterator": "compiler-selectable",
         "string-map": "compiler-selectable",
+        "typed-map": "compiler-selectable",
+        "gc-string-map": "compiler-selectable",
+        "object-map": "compiler-selectable",
+        "enum-value-map": "compiler-selectable",
+        "string-lower-case": "compiler-selectable",
         "string-float": "compiler-selectable",
         "string-split": "compiler-selectable",
         "bytes": "compiler-selectable",
         "bytes-string": "compiler-selectable",
+        "date-time": "compiler-selectable",
+        "dynamic": "compiler-selectable",
+        "exception": "compiler-selectable",
         "gc": "compiler-selectable",
         "object": "compiler-selectable",
         "string-literal": "compiler-selectable",
         "string-scalar": "compiler-selectable",
         "string": "compiler-selectable",
         "io": "compiler-selectable",
+        "thread": "compiler-selectable",
+        "thread-gc": "compiler-selectable",
     }
     source_records: list[tuple[str, str]] = []
     registered_sources: set[str] = set()
@@ -296,8 +360,9 @@ def validate_catalog(catalog: dict[str, object]) -> None:
         feature = features[identifier]
         if feature.get("availability") != expected_availability[identifier] or feature.get("dependencies") != dependencies:
             raise RuntimeFeatureFailure(f"feature {identifier} availability/dependencies drifted")
-        if feature.get("minimalAllowed") is not True:
-            raise RuntimeFeatureFailure(f"seed feature {identifier} left the narrow allowlist")
+        expected_minimal = identifier != "exception"
+        if feature.get("minimalAllowed") is not expected_minimal:
+            raise RuntimeFeatureFailure(f"feature {identifier} minimal-policy admission drifted")
         documentation = record(feature.get("documentation"), f"feature {identifier} documentation")
         expected_documentation_fields = {
             "contract",
@@ -420,11 +485,11 @@ def validate_catalog(catalog: dict[str, object]) -> None:
         str(record(value, "reserved feature").get("id"))
         for value in records(catalog.get("reservedFeatures"), "reserved features")
     }
-    for required in ("dynamic", "reflection", "exception", "thread"):
+    for required in ("reflection",):
         if required not in reserved:
             raise RuntimeFeatureFailure(f"catalog omitted reserved independent feature {required}")
-    if "io" in reserved:
-        raise RuntimeFeatureFailure("compiler-selectable io remains reserved")
+    if "dynamic" in reserved or "exception" in reserved or "io" in reserved or "thread" in reserved:
+        raise RuntimeFeatureFailure("a compiler-selectable feature remains reserved")
     serialized = json.dumps(catalog, sort_keys=True, ensure_ascii=False)
     if str(ROOT) in serialized or "/Users/" in serialized or "\\" in serialized:
         raise RuntimeFeatureFailure("runtime feature catalog leaked a host path")
@@ -520,12 +585,20 @@ def validate_plans(plans: dict[str, object]) -> None:
     array = record(plans.get("array"), "array plan")
     int_map = record(plans.get("intMap"), "IntMap plan")
     string_map = record(plans.get("stringMap"), "StringMap plan")
+    typed_map = record(plans.get("typedMap"), "typed-map plan")
+    object_map = record(plans.get("objectMap"), "ObjectMap plan")
+    enum_value_map = record(plans.get("enumValueMap"), "EnumValueMap plan")
+    string_lower_case = record(plans.get("stringLowerCase"), "String lower case plan")
     string_float = record(plans.get("stringFloat"), "Float String plan")
     string_split = record(plans.get("stringSplit"), "String split plan")
     bytes_plan = record(plans.get("bytes"), "bytes plan")
     bytes_string = record(plans.get("bytesString"), "Bytes-to-String plan")
+    dynamic = record(plans.get("dynamicCarrier"), "Dynamic plan")
+    exception = record(plans.get("exception"), "exception plan")
     object_plan = record(plans.get("object"), "object plan")
     gc_plan = record(plans.get("gc"), "gc plan")
+    thread = record(plans.get("thread"), "thread plan")
+    thread_gc = record(plans.get("threadGc"), "thread-gc plan")
     string_scalar = record(plans.get("stringScalar"), "string scalar plan")
     string = record(plans.get("string"), "string plan")
     minimal = record(plans.get("minimalString"), "minimal string plan")
@@ -534,16 +607,39 @@ def validate_plans(plans: dict[str, object]) -> None:
         raise RuntimeFeatureFailure("alloc closure is incomplete or nondeterministic")
     if array.get("features") != ["runtime-base", "status", "alloc", "array"]:
         raise RuntimeFeatureFailure("array closure is incomplete or nondeterministic")
-    if int_map.get("features") != ["runtime-base", "status", "alloc", "int-map"]:
+    if int_map.get("features") != [
+        "runtime-base", "status", "alloc", "array", "iterator", "string-literal",
+        "string-scalar", "string", "int-map",
+    ]:
         raise RuntimeFeatureFailure("IntMap closure is incomplete or nondeterministic")
     if string_map.get("features") != [
         "runtime-base",
         "status",
         "alloc",
+        "array",
+        "iterator",
         "string-literal",
+        "string-scalar",
+        "string",
         "string-map",
     ]:
         raise RuntimeFeatureFailure("StringMap closure is incomplete or nondeterministic")
+    typed_map_closure = [
+        "runtime-base",
+        "status",
+        "alloc",
+        "array",
+        "object",
+        "gc",
+        "iterator",
+        "typed-map",
+    ]
+    if typed_map.get("features") != typed_map_closure:
+        raise RuntimeFeatureFailure("typed-map closure is incomplete or nondeterministic")
+    if object_map.get("features") != [*typed_map_closure, "object-map"]:
+        raise RuntimeFeatureFailure("ObjectMap closure is incomplete or nondeterministic")
+    if enum_value_map.get("features") != [*typed_map_closure, "enum-value-map"]:
+        raise RuntimeFeatureFailure("EnumValueMap closure is incomplete or nondeterministic")
     if string_float.get("features") != [
         "runtime-base",
         "status",
@@ -554,6 +650,16 @@ def validate_plans(plans: dict[str, object]) -> None:
         "string-float",
     ]:
         raise RuntimeFeatureFailure("Float String closure is incomplete or nondeterministic")
+    if string_lower_case.get("features") != [
+        "runtime-base",
+        "status",
+        "alloc",
+        "string-literal",
+        "string-scalar",
+        "string",
+        "string-lower-case",
+    ]:
+        raise RuntimeFeatureFailure("String lower case closure is incomplete or nondeterministic")
     if string_split.get("features") != [
         "runtime-base",
         "status",
@@ -578,10 +684,24 @@ def validate_plans(plans: dict[str, object]) -> None:
         "bytes-string",
     ]:
         raise RuntimeFeatureFailure("Bytes-to-String closure is incomplete or nondeterministic")
+    if dynamic.get("features") != ["runtime-base", "status", "dynamic"]:
+        raise RuntimeFeatureFailure("scalar Dynamic closure is incomplete or retained managed dependencies")
+    if exception.get("features") != ["runtime-base", "status", "dynamic", "exception"]:
+        raise RuntimeFeatureFailure("exception closure is incomplete or nondeterministic")
     if object_plan.get("features") != ["runtime-base", "object"]:
         raise RuntimeFeatureFailure("object descriptor closure is incomplete or nondeterministic")
     if gc_plan.get("features") != ["runtime-base", "status", "alloc", "object", "gc"]:
         raise RuntimeFeatureFailure("collector closure is incomplete or nondeterministic")
+    if thread.get("features") != ["runtime-base", "status", "thread"]:
+        raise RuntimeFeatureFailure("thread closure is incomplete or nondeterministic")
+    if thread.get("libraries") != ["pthread"]:
+        raise RuntimeFeatureFailure("thread plan omitted its isolated pthread linkage")
+    if thread_gc.get("features") != [
+        "runtime-base", "status", "alloc", "object", "gc", "thread", "thread-gc",
+    ]:
+        raise RuntimeFeatureFailure("thread-gc closure is incomplete or nondeterministic")
+    if thread_gc.get("libraries") != ["pthread"]:
+        raise RuntimeFeatureFailure("thread-gc plan omitted transitive pthread linkage")
     if string_scalar.get("features") != [
         "runtime-base",
         "status",
@@ -602,11 +722,19 @@ def validate_plans(plans: dict[str, object]) -> None:
     validate_selected_reasons(array, "array")
     validate_selected_reasons(int_map, "IntMap")
     validate_selected_reasons(string_map, "StringMap")
+    validate_selected_reasons(typed_map, "typed-map")
+    validate_selected_reasons(object_map, "ObjectMap")
+    validate_selected_reasons(enum_value_map, "EnumValueMap")
+    validate_selected_reasons(string_lower_case, "String lower case")
     validate_selected_reasons(string_split, "String.split")
     validate_selected_reasons(bytes_plan, "Bytes")
     validate_selected_reasons(bytes_string, "Bytes-to-String")
+    validate_selected_reasons(dynamic, "Dynamic")
+    validate_selected_reasons(exception, "exception")
     validate_selected_reasons(object_plan, "object")
     validate_selected_reasons(gc_plan, "gc")
+    validate_selected_reasons(thread, "thread")
+    validate_selected_reasons(thread_gc, "thread-gc")
     validate_selected_reasons(string_scalar, "string scalar")
     validate_selected_reasons(string, "string")
     validate_selected_reasons(minimal, "minimal string")
@@ -628,6 +756,10 @@ def validate_plans(plans: dict[str, object]) -> None:
         raise RuntimeFeatureFailure("alloc build plan retained an unselected string artifact or symbol")
     if "runtime/src/string.c" not in text_list(string.get("artifacts"), "string artifacts"):
         raise RuntimeFeatureFailure("string build plan omitted its selected source")
+    if "runtime/src/string_lower_case.c" not in text_list(
+        string_lower_case.get("artifacts"), "String lower case artifacts"
+    ):
+        raise RuntimeFeatureFailure("String lower case build plan omitted its selected source")
     string_scalar_artifacts = text_list(string_scalar.get("artifacts"), "string scalar artifacts")
     if (
         "runtime/src/string_scalar.c" not in string_scalar_artifacts
@@ -643,20 +775,50 @@ def validate_plans(plans: dict[str, object]) -> None:
         string_map.get("artifacts"), "StringMap artifacts"
     ):
         raise RuntimeFeatureFailure("StringMap build plan omitted its selected source")
+    if "runtime/src/typed_map.c" not in text_list(
+        typed_map.get("artifacts"), "typed-map artifacts"
+    ):
+        raise RuntimeFeatureFailure("typed-map build plan omitted its selected source")
+    if "hxc_typed_map_ref_set_copy" not in text_list(
+        typed_map.get("symbols"), "typed-map symbols"
+    ):
+        raise RuntimeFeatureFailure("typed-map build plan omitted its selected mutation symbol")
     if "runtime/src/bytes.c" not in text_list(bytes_plan.get("artifacts"), "Bytes artifacts"):
         raise RuntimeFeatureFailure("Bytes build plan omitted its selected source")
     if "runtime/src/bytes_string.c" not in text_list(
         bytes_string.get("artifacts"), "Bytes-to-String artifacts"
     ):
         raise RuntimeFeatureFailure("Bytes-to-String build plan omitted its selected source")
+    dynamic_artifacts = text_list(dynamic.get("artifacts"), "Dynamic artifacts")
+    dynamic_symbols = text_list(dynamic.get("symbols"), "Dynamic symbols")
+    if (
+        dynamic_artifacts
+        != [
+            "runtime/include/hxrt/base.h",
+            "runtime/include/hxrt/dynamic.h",
+            "runtime/include/hxrt/status.h",
+            "runtime/src/dynamic.c",
+        ]
+        or "hxc_value_managed_payload" not in dynamic_symbols
+        or any(token in "\n".join([*dynamic_artifacts, *dynamic_symbols]) for token in ("alloc", "array", "gc", "object"))
+    ):
+        raise RuntimeFeatureFailure("scalar Dynamic packaging selected allocation, object, or collector support")
     if "runtime/src/object.c" not in text_list(object_plan.get("artifacts"), "object artifacts"):
         raise RuntimeFeatureFailure("object build plan omitted its selected source")
     if "runtime/src/gc.c" not in text_list(gc_plan.get("artifacts"), "gc artifacts"):
         raise RuntimeFeatureFailure("collector build plan omitted its selected source")
+    if "runtime/src/thread.c" not in text_list(thread.get("artifacts"), "thread artifacts"):
+        raise RuntimeFeatureFailure("thread build plan omitted its selected source")
+    if "runtime/src/thread_gc.c" not in text_list(thread_gc.get("artifacts"), "thread-gc artifacts"):
+        raise RuntimeFeatureFailure("thread-gc build plan omitted its selected source")
     if "hxc_array_resize" not in text_list(array.get("symbols"), "array symbols"):
         raise RuntimeFeatureFailure("array build plan omitted its selected symbol")
     if "hxc_string_copy" not in text_list(string.get("symbols"), "string symbols"):
         raise RuntimeFeatureFailure("string build plan omitted its selected symbol")
+    if "hxc_string_to_lower_case" not in text_list(
+        string_lower_case.get("symbols"), "String lower case symbols"
+    ):
+        raise RuntimeFeatureFailure("String lower case build plan omitted its selected symbol")
     if "hxc_bytes_ref_get_string_utf8" not in text_list(
         bytes_string.get("symbols"), "Bytes-to-String symbols"
     ):
@@ -741,16 +903,22 @@ def validate_package(package: dict[str, object], plans: dict[str, object]) -> No
         "array",
         "intMap",
         "stringMap",
+        "typedMap",
+        "stringLowerCase",
         "stringSplit",
         "bytes",
         "bytesString",
+        "dynamicCarrier",
+        "exception",
         "object",
         "gc",
+        "thread",
+        "threadGc",
         "stringScalar",
         "string",
         "io",
     ):
-        plan_key = "compilerIo" if name == "io" else name
+        plan_key = "compilerIo" if name == "io" else "threadGc" if name == "threadGc" else name
         plan = record(plans.get(plan_key), f"{name} plan")
         expected_paths = text_list(plan.get("artifacts"), f"{name} plan artifacts")
         values = records(package.get(name), f"{name} package")
@@ -788,7 +956,7 @@ def semantic_snapshot(path: Path, actual: dict[str, object], label: str) -> None
 
 
 def compiler_identity(executable: str) -> tuple[str, str]:
-    result = subprocess.run(
+    result = run_bounded_process(
         [executable, "--version"], cwd=ROOT, check=False, capture_output=True, text=True, timeout=30
     )
     if result.returncode != 0:
@@ -953,16 +1121,22 @@ def package_from_snapshots(
         "array",
         "intMap",
         "stringMap",
+        "typedMap",
+        "stringLowerCase",
         "stringSplit",
         "bytes",
         "bytesString",
+        "dynamicCarrier",
+        "exception",
         "object",
         "gc",
+        "thread",
+        "threadGc",
         "stringScalar",
         "string",
         "io",
     ):
-        plan_key = "compilerIo" if name == "io" else name
+        plan_key = "compilerIo" if name == "io" else "threadGc" if name == "threadGc" else name
         plan = record(plans.get(plan_key), f"{name} plan")
         files: list[dict[str, object]] = []
         for artifact in selected_artifacts_from_snapshot(catalog, plan, name):
@@ -998,7 +1172,15 @@ def materialize_package(root: Path, values: list[object]) -> tuple[Path, ...]:
     return tuple(sorted(sources))
 
 
-def run_native_case(toolchain: Toolchain, name: str, package: list[object], consumer: Path, expected: str, build: Path) -> None:
+def run_native_case(
+    toolchain: Toolchain,
+    name: str,
+    package: list[object],
+    consumer: Path,
+    expected: str,
+    build: Path,
+    link_flags: tuple[str, ...] = (),
+) -> None:
     package_root = build / name
     sources = materialize_package(package_root, package)
     executable = package_root / f"{name}-consumer"
@@ -1008,16 +1190,17 @@ def run_native_case(toolchain: Toolchain, name: str, package: list[object], cons
         f"-I{package_root / 'runtime/include'}",
         *(str(source) for source in sources),
         str(consumer),
+        *link_flags,
         "-o",
         str(executable),
     ]
-    compile_result = subprocess.run(command, cwd=ROOT, check=False, capture_output=True, text=True, timeout=60)
+    compile_result = run_bounded_process(command, cwd=ROOT, check=False, capture_output=True, text=True, timeout=60)
     if compile_result.returncode != 0 or compile_result.stdout or compile_result.stderr:
         raise RuntimeFeatureFailure(
             f"{toolchain.family} {name} package compile failed\ncommand={command!r}\n"
             f"stdout:\n{compile_result.stdout}\nstderr:\n{compile_result.stderr}"
         )
-    run_result = subprocess.run([str(executable)], cwd=ROOT, check=False, capture_output=True, text=True, timeout=30)
+    run_result = run_bounded_process([str(executable)], cwd=ROOT, check=False, capture_output=True, text=True, timeout=30)
     if run_result.returncode != 0 or run_result.stdout != expected or run_result.stderr:
         raise RuntimeFeatureFailure(
             f"{toolchain.family} {name} package execution drifted\n"
@@ -1026,7 +1209,7 @@ def run_native_case(toolchain: Toolchain, name: str, package: list[object], cons
     if name == "alloc":
         nm = shutil.which("nm")
         if nm is not None:
-            symbols = subprocess.run([nm, str(executable)], cwd=ROOT, check=False, capture_output=True, text=True, timeout=30)
+            symbols = run_bounded_process([nm, str(executable)], cwd=ROOT, check=False, capture_output=True, text=True, timeout=30)
             if (
                 symbols.returncode != 0
                 or "hxc_array_" in symbols.stdout
@@ -1040,7 +1223,7 @@ def run_native_case(toolchain: Toolchain, name: str, package: list[object], cons
     if name == "array":
         nm = shutil.which("nm")
         if nm is not None:
-            symbols = subprocess.run([nm, str(executable)], cwd=ROOT, check=False, capture_output=True, text=True, timeout=30)
+            symbols = run_bounded_process([nm, str(executable)], cwd=ROOT, check=False, capture_output=True, text=True, timeout=30)
             if (
                 symbols.returncode != 0
                 or "hxc_bytes_" in symbols.stdout
@@ -1057,12 +1240,18 @@ def run_native(package: dict[str, object], toolchains: list[Toolchain]) -> None:
     array = records(package.get("array"), "array package")
     int_map = records(package.get("intMap"), "IntMap package")
     string_map = records(package.get("stringMap"), "StringMap package")
+    typed_map = records(package.get("typedMap"), "typed-map package")
     bytes_package = records(package.get("bytes"), "Bytes package")
     bytes_string_package = records(package.get("bytesString"), "Bytes-to-String package")
+    dynamic_package = records(package.get("dynamicCarrier"), "Dynamic package")
+    exception_package = records(package.get("exception"), "exception package")
     object_package = records(package.get("object"), "object package")
     gc_package = records(package.get("gc"), "gc package")
+    thread = records(package.get("thread"), "thread package")
+    thread_gc = records(package.get("threadGc"), "thread-gc package")
     string_scalar = records(package.get("stringScalar"), "string scalar package")
     string = records(package.get("string"), "string package")
+    string_lower_case = records(package.get("stringLowerCase"), "String lower case package")
     io = records(package.get("io"), "io package")
     with tempfile.TemporaryDirectory(prefix="reflaxe-c-runtime-feature-") as temporary:
         root = Path(temporary)
@@ -1072,6 +1261,7 @@ def run_native(package: dict[str, object], toolchains: list[Toolchain]) -> None:
             run_native_case(toolchain, "array", array, ARRAY_CONSUMER, "runtime-feature-array: OK\n", family_root)
             run_native_case(toolchain, "int-map", int_map, INT_MAP_CONSUMER, "", family_root)
             run_native_case(toolchain, "string-map", string_map, STRING_MAP_CONSUMER, "", family_root)
+            run_native_case(toolchain, "typed-map", typed_map, TYPED_MAP_CONSUMER, "", family_root)
             run_native_case(toolchain, "bytes", bytes_package, BYTES_CONSUMER, "runtime-feature-bytes: OK\n", family_root)
             run_native_case(
                 toolchain,
@@ -1081,15 +1271,26 @@ def run_native(package: dict[str, object], toolchains: list[Toolchain]) -> None:
                 "runtime-feature-bytes-string: OK\n",
                 family_root,
             )
+            run_native_case(
+                toolchain,
+                "dynamic",
+                dynamic_package,
+                DYNAMIC_CONSUMER,
+                "dynamic-runtime-contract: OK\n",
+                family_root,
+            )
+            run_native_case(toolchain, "exception", exception_package, EXCEPTION_CONSUMER, "", family_root)
             run_native_case(toolchain, "object", object_package, OBJECT_CONSUMER, "runtime-feature-object: OK\n", family_root)
             run_native_case(
                 toolchain,
                 "gc",
                 gc_package,
                 GC_CONSUMER,
-                "gc-contract: OK allocations=265 collections=137 reclaimed=265 pause_ticks=973\n",
+                "gc-contract: OK allocations=265 collections=137 reclaimed=265 pause_ticks=980\n",
                 family_root,
             )
+            run_native_case(toolchain, "thread", thread, THREAD_CONSUMER, "", family_root, ("-pthread",))
+            run_native_case(toolchain, "thread-gc", thread_gc, THREAD_GC_CONSUMER, "", family_root, ("-pthread",))
             run_native_case(
                 toolchain,
                 "string-scalar",
@@ -1099,6 +1300,14 @@ def run_native(package: dict[str, object], toolchains: list[Toolchain]) -> None:
                 family_root,
             )
             run_native_case(toolchain, "string", string, STRING_CONSUMER, "runtime-feature-string: OK\n", family_root)
+            run_native_case(
+                toolchain,
+                "string-lower-case",
+                string_lower_case,
+                STRING_LOWER_CASE_CONSUMER,
+                "runtime-feature-string-lower-case: OK\n",
+                family_root,
+            )
             run_native_case(toolchain, "io", io, IO_CONSUMER, "runtime-feature-io\n", family_root)
 
 

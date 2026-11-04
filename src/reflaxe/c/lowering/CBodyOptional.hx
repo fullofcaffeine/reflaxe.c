@@ -37,7 +37,18 @@ class CPreparedBodyOptional {
 	public final typeRequest:CSymbolRequest;
 	public final presenceRequest:CSymbolRequest;
 	public final payloadRequest:CSymbolRequest;
-	public final managedLifetime:Bool;
+
+	/**
+		Whether copying or dropping the present payload needs retain/destroy work.
+
+		This starts from the payload's lifetime when the optional is first prepared,
+		but whole-program representation planning can later decide that a record or
+		enum payload is traced by the collector instead of reference-counted.
+		`CBodyOptionalRegistry.recomputeManagedLifetimes` re-settles it in the same
+		fixed point as records and enums, before any function body is built.
+	**/
+	public var managedLifetime:Bool;
+
 	public var retainRequest:Null<CSymbolRequest> = null;
 	public var destroyRequest:Null<CSymbolRequest> = null;
 	public var retainParameterRequest:Null<CSymbolRequest> = null;
@@ -166,20 +177,62 @@ class CBodyOptionalRegistry {
 		return count;
 	}
 
+	/**
+		Re-settle every optional's lifetime from its payload's current lifetime.
+
+		Returns whether any optional changed, so the representation fixed point can
+		run another round: a record field of optional type depends on this answer.
+		An optional that becomes managed gets its lifecycle names here. One that
+		stops being managed keeps any names it already reserved, but the emitter
+		writes lifecycle code only for managed optionals.
+	**/
+	public function recomputeManagedLifetimes():Bool {
+		var changed = false;
+		for (value in canonicalOptionals()) {
+			final managed = payloadHasManagedLifetime(value.payload);
+			if (value.managedLifetime != managed) {
+				value.managedLifetime = managed;
+				changed = true;
+			}
+			if (managed && value.retainRequest == null)
+				registerLifecycle(value);
+		}
+		return changed;
+	}
+
+	static function payloadHasManagedLifetime(payload:CBodyValueType):Bool {
+		final payloadAggregate = payload.aggregateValue();
+		final payloadEnum = payload.enumValue();
+		return (payloadAggregate != null && payloadAggregate.managedLifetime)
+			|| (payloadEnum != null && payloadEnum.managedLifetime)
+			|| payload.bytesValue() != null;
+	}
+
 	public function canonicalOptionals():Array<CPreparedBodyOptional> {
 		final values = [for (value in bySemanticKey) value];
 		values.sort((left, right) -> compareUtf8(left.semanticKey, right.semanticKey));
 		return values;
 	}
 
+	/**
+		Lower every optional to final C names.
+
+		Lifecycle names are exposed only for optionals that are still managed after
+		representation planning. An optional that stopped needing retain/destroy may
+		have reserved names earlier; leaving them null here makes "no lifecycle code"
+		structural instead of relying on every emitter check.
+	**/
 	public function finalize(symbols:CSymbolRegistry):Array<CLoweredBodyOptional>
-		return canonicalOptionals().map(value -> new CLoweredBodyOptional(value, symbols.identifierFor(value.typeRequest),
-			symbols.identifierFor(value.presenceRequest), symbols.identifierFor(value.payloadRequest),
-			value.retainRequest == null ? null : symbols.identifierFor(value.retainRequest),
-			value.destroyRequest == null ? null : symbols.identifierFor(value.destroyRequest),
-			value.retainParameterRequest == null ? null : symbols.identifierFor(value.retainParameterRequest),
-			value.destroyParameterRequest == null ? null : symbols.identifierFor(value.destroyParameterRequest),
-			value.retainStatusRequest == null ? null : symbols.identifierFor(value.retainStatusRequest)));
+		return canonicalOptionals().map(value -> {
+			final managed = value.managedLifetime;
+			new CLoweredBodyOptional(value, symbols.identifierFor(value.typeRequest), symbols.identifierFor(value.presenceRequest),
+				symbols.identifierFor(value.payloadRequest), !managed
+				|| value.retainRequest == null ? null : symbols.identifierFor(value.retainRequest), !managed || value.destroyRequest == null ? null : symbols.identifierFor(value.destroyRequest),
+				!managed
+				|| value.retainParameterRequest == null ? null : symbols.identifierFor(value.retainParameterRequest), !managed || value.destroyParameterRequest == null ? null : symbols.identifierFor(value.destroyParameterRequest),
+				!managed
+				|| value.retainStatusRequest == null ? null : symbols.identifierFor(value.retainStatusRequest));
+		});
 
 	function registerLifecycle(value:CPreparedBodyOptional):Void {
 		final root = ["compiler", "optional", value.digest, "lifecycle"];
@@ -210,11 +263,29 @@ class CBodyOptionalRegistry {
 			case CBVKAggregate(aggregate):
 				var direct = aggregate.fields.length > 0;
 				for (field in aggregate.fields)
-					if (!isDirectUnmanaged(field.type))
+					if (!isDirectRecordField(field.type))
 						direct = false;
 				direct;
+			case CBVKOptional(optional): !optional.managedLifetime;
 			case _:
 				false;
+		};
+	}
+
+	/**
+		Whether one record field keeps the record copyable without retain/destroy.
+
+		Besides direct unmanaged values, a field may hold a collector-traced Array
+		or class: copying the record copies the pointer, and the collector (through
+		the record's exact roots and trace) keeps the object alive. Accepting these
+		here keeps admission independent of when the optional is first required,
+		before or after whole-program planning hands such Arrays to the collector.
+	**/
+	static function isDirectRecordField(value:CBodyValueType):Bool {
+		return switch value.kind {
+			case CBVKArray(array): array.managedByCollector;
+			case CBVKClass(classValue, _): classValue.managedByCollector;
+			case _: isDirectUnmanaged(value);
 		};
 	}
 

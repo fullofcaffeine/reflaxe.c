@@ -40,4 +40,5 @@ final class ScenarioLimits {
 	public static inline final MAX_SPAWNED_OBJECTS_PER_TICK:Int = 512;
 	public static inline final MAX_SCHEDULED_WORK_PER_TICK:Int = 1024;
 	public static inline final MAX_PREDICATE_EVALUATIONS_PER_TICK:Int = 8192;
+	public static inline final MAX_FLOW_TRACE_ENTRIES_PER_TICK:Int = 18432;
 }

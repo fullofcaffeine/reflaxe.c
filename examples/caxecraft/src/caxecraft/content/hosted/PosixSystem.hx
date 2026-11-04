@@ -1,7 +1,7 @@
 package caxecraft.content.hosted;
 
 /**
-	Declares the exact POSIX calls used by the Haxe-authored package reader.
+	Declares the exact POSIX calls used by Haxe-authored package I/O.
 
 	This is a typed metal boundary, not a platform implementation: Haxe owns path
 	traversal, descriptor cleanup, size checks, exact reads, and diagnostics.
@@ -11,6 +11,7 @@ package caxecraft.content.hosted;
 **/
 @:c.include("fcntl.h", c.IncludeKind.System)
 @:c.include("errno.h", c.IncludeKind.System)
+@:c.include("stdio.h", c.IncludeKind.System)
 @:c.include("sys/stat.h", c.IncludeKind.System)
 @:c.include("unistd.h", c.IncludeKind.System)
 extern class PosixSystem {
@@ -45,10 +46,30 @@ extern class PosixSystem {
 	@:c.name("EINTR")
 	public static var interruptedError(default, never):Int;
 
+	/** Error number reported when exclusive creation finds an existing entry. */
+	@:c.constant
+	@:c.name("EEXIST")
+	public static var entryExistsError(default, never):Int;
+
 	/** Open for reading only. */
 	@:c.constant
 	@:c.name("O_RDONLY")
 	public static var readOnly(default, never):Int;
+
+	/** Open for writing only. */
+	@:c.constant
+	@:c.name("O_WRONLY")
+	public static var writeOnly(default, never):Int;
+
+	/** Create the final component when it does not exist. */
+	@:c.constant
+	@:c.name("O_CREAT")
+	public static var create(default, never):Int;
+
+	/** Reject creation when the final component already exists. */
+	@:c.constant
+	@:c.name("O_EXCL")
+	public static var exclusive(default, never):Int;
 
 	/** Mark a descriptor close-on-exec. */
 	@:c.constant
@@ -132,4 +153,20 @@ extern class PosixSystem {
 	**/
 	@:c.name("read")
 	public static function readBytes(descriptor:Int, output:c.Ref<c.UInt8>, count:c.UInt64):c.Int64;
+
+	/** Write at most `count` bytes from one fixed-array element address. */
+	@:c.name("write")
+	public static function writeBytes(descriptor:Int, input:c.Ref<c.UInt8>, count:c.UInt64):c.Int64;
+
+	/** Atomically rename one child while both names remain under one directory. */
+	@:c.name("renameat")
+	public static function renameAt(oldDirectoryDescriptor:Int, oldPath:c.CStringBufferRef, newDirectoryDescriptor:Int, newPath:c.CStringBufferRef):Int;
+
+	/** Remove one non-directory child relative to a confined directory. */
+	@:c.name("unlinkat")
+	public static function unlinkAt(directoryDescriptor:Int, path:c.CStringBufferRef, flags:Int):Int;
+
+	/** Return the current process identifier for collision-resistant stage names. */
+	@:c.name("getpid")
+	public static function processId():Int;
 }

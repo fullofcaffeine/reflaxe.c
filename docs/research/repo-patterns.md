@@ -1,22 +1,24 @@
 # Extracted repository patterns
 
-This document records the concrete patterns extracted from the supplied Repomix
-snapshots and inspected sibling checkouts. It is descriptive evidence for the
-scaffold; `docs/PRD.md` is the normative product contract.
+This document records concrete patterns from reviewed repository revisions.
+The reproducible source list is
+[`cross-target-research-bundle.json`](../specs/cross-target-research-bundle.json).
+It records each revision, license, selected path, and deliberate omission.
+This document describes evidence. `docs/PRD.md` is the product contract.
 
 ## Inputs inspected
 
-- Haxe-to-Rust target snapshot
-- Haxe-to-Elixir target snapshot
-- Haxe-to-OCaml/HxHx snapshot
-- Haxe-to-Ruby target snapshot
-- Haxe-to-Go target snapshot (additional family evidence)
+- Haxe-to-Rust target revision
+- Haxe-to-Elixir target revision
+- Haxe-to-OCaml/HxHx target revision
+- Haxe-to-Ruby target revision
+- Haxe-to-Go target revision (additional family evidence)
 - Genes Haxe-to-TypeScript/classic-JavaScript checkout (additional dual-output
   evidence; local `origin/main` at
   `f0d917ccd54e97075de874993d32253212114fe5` was inspected without modifying
   its dirty working tree)
-- Reflaxe framework snapshot
-- Haxe compiler snapshot, especially the C++ generator and `std/cpp`
+- Reflaxe framework revision
+- Haxe compiler revisions, especially the C++ generator and `std/cpp`
 
 ## Family-level conventions
 

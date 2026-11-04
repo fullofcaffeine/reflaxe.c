@@ -113,6 +113,7 @@ enum CPrimitiveHelperKind {
 	CPHI32BitwiseNot;
 	CPHF64Divide;
 	CPHF64Modulo;
+	CPHF64SquareRoot;
 	CPHF64ToI32Saturating;
 }
 

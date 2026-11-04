@@ -8,7 +8,7 @@ Status: accepted product and technical direction; implementation is staged.
 The deterministic domain, first original art pack, and first native Raylib
 feasibility slice exist today. That slice can move, collide, jump, select,
 remove, and place colored blocks; it now has the textured title, a typed
-eight-slot inventory/hotbar, reviewed item/HUD art, and deterministic native
+nine-slot inventory/hotbar, reviewed item/HUD art, and deterministic native
 input pilots. A small authored spawn meadow now introduces Nia through
 content-owned dialogue and berries, and renders Nia and one fixed-step Mossling from
 their reviewed original entity-atlas cells, with code-drawn fallbacks if the
@@ -412,9 +412,9 @@ and covered by C-versus-Eval traces.
 
 | System | First complete scope | Explicit first-version limit |
 | --- | --- | --- |
-| Movement | first-person walk, step, jump, swim, collision, safe respawn | no vehicles, mounts, climbing system, or physics sandbox |
+| Movement | first-person and collision-safe behind-player cameras; walk, step, jump, swim, collision, safe respawn | no front-facing camera, vehicles, mounts, climbing system, or physics sandbox |
 | Building | pick, remove, place, selection preview, finite world bounds | no infinite terrain, automation machines, or multiplayer edits |
-| Inventory | eight-slot hotbar, bounded backpack, stackable blocks/items, clear full state | no large crafting tree or arbitrary item scripting |
+| Inventory | nine-slot hotbar, bounded backpack, stackable blocks/items, clear full state | no large crafting tree or arbitrary item scripting |
 | Tools | Haxeforge mining, combat, and interaction forms | no durability grind or dozens of weapon tiers |
 | Survival | health, bounded stamina/air where relevant, consumable recovery, checkpoints | no hunger treadmill unless playtesting proves it improves the short campaign |
 | Enemies | Mossling, Ember Wisp, biome-justified additions, Browser | no unbounded spawn ecology or general pathfinding engine |
@@ -582,8 +582,9 @@ an encounter, change weather, update a quest, call a reusable sequence, start
 a cutscene, or combine several compatible actions in a declared order.
 
 The admitted first-version events cover entering/leaving a zone, interaction,
-block change, item use, entity defeat, signal receipt, timer expiry, objective
-change, and fixed-tick state change. Predicates cover typed flags/counters,
+block change, item use or collection, entity defeat, signal receipt, timer
+expiry, objective or fixed-tick state change, level entry, and campaign-exit
+requests. Predicates cover typed flags/counters,
 entity or object state, inventory, quest state, proximity, mode, and bounded
 comparisons. Actions cover state updates, dialogue/journal, give/take,
 spawn/despawn, door/bridge/object state, checkpoint/objective changes, effects,
@@ -600,19 +601,23 @@ semantics.
 
 #### Event sources and spatial trigger volumes
 
-CAXEMAP 1 already has axis-aligned `trigger-zone` placements and the executor
-already handles `enter-zone` and `leave-zone`. The generalized event/editor
-work under `haxe_c-xge.19.10` extends that real foundation; it is planned work,
-not a claim that every event below is currently implemented.
+CAXEMAP 1 has axis-aligned `trigger-zone` placements, closed enter/leave event
+context, and deterministic spatial delivery in the game session. The shared
+event, predicate, and action registries now drive parser, validator, runtime,
+trace, and card metadata. The native editor provides a compact canonical edit
+path for spatial WHEN/IF/DO cards and retains the latest bounded Test Play
+trace. The polished child-facing card library and live in-play overlay remain
+owned by the editor stages below.
 
-Each emitted event has a closed typed context. Depending on its family, that
-context can identify the source volume or object, the subject actor, a stable
-position, an item or block kind, and the old/new state. It is not a dynamic
-string-to-value map. Conditions and actions may read only the fields declared
-for that event family, and the editor offers only compatible choices. Adding a
-vehicle-entered event, for example, requires one typed Haxe adapter, registry
-schema, validator/executor handling, editor copy, and focused tests; a content
-file cannot install an arbitrary callback.
+Each emitted event has a closed typed source and context. The source carries its
+declared zone, object, item, block, timer, objective, variable, level, or exit
+identity. Context is one of no context, actor context, or spatial actor context
+with stable previous/current positions and a swept-crossing flag. It is not a
+dynamic string-to-value map. Conditions and actions may read only the fields
+declared for that event family, and the editor offers only compatible choices.
+Adding a vehicle-entered event, for example, requires one typed Haxe adapter,
+registry schema, validator/executor handling, editor copy, and focused tests; a
+content file cannot install an arbitrary callback.
 
 Spatial volumes use visible stable IDs and explicit actor filters. They define
 global or per-actor once/repeat/cooldown policy, enabled state, and half-open
@@ -696,7 +701,7 @@ card. Canonical formatting and comment-preservation behavior are part of the
 format contract rather than editor guesswork.
 
 The first action-catalog foundation is now executable under the pinned Eval
-oracle, with a deliberately narrow scope. Each of the 18 existing `FlowAction`
+oracle, with a deliberately narrow scope. Each of the 19 existing `FlowAction`
 constructors has one stable CAXEMAP ID, a closed ordered argument schema, a
 world/presentation/control family, editor label/help message IDs, and an
 explicit consumer-authority record. Parsing, canonical writing, registry

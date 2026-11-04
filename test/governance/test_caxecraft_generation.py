@@ -23,6 +23,7 @@ from dev_generation import (  # noqa: E402
     incomplete_transactions,
     publish_pointer,
 )
+from benchmark_renderer import BenchmarkFailure, source_evidence  # noqa: E402
 
 
 class CaxecraftGenerationTests(unittest.TestCase):
@@ -102,6 +103,31 @@ class CaxecraftGenerationTests(unittest.TestCase):
         ]
         self.assertEqual(generations, [first.root])
         self.assertEqual(second.sequence, 2)
+
+    def test_benchmark_reads_the_published_generation_and_rejects_corruption(self) -> None:
+        transaction = begin_transaction(self.variant)
+        source = "int current(void) { return 7; }\n"
+        (transaction.generated / "current.c").write_text(source, encoding="utf-8")
+        (transaction.generated / "current.h").write_text("int current(void);\n", encoding="utf-8")
+        generation = publish_pointer(
+            self.variant, finalize_transaction(self.variant, transaction)
+        )
+        binary = self.variant / "bin/caxecraft"
+        binary.parent.mkdir()
+        binary.write_bytes(b"native-size-fixture")
+        stale = self.variant / "generated"
+        stale.mkdir()
+        (stale / "stale.c").write_text("goto stale;\n", encoding="utf-8")
+        (stale / "stale.h").write_text("/* stale */\n", encoding="utf-8")
+
+        evidence = source_evidence(self.variant)
+        self.assertEqual(evidence["generatedCFileCount"], 1)
+        self.assertEqual(evidence["generatedCBytes"], len(source.encode("utf-8")))
+        self.assertEqual(evidence["generatedGotoStatements"], 0)
+
+        (generation.generated / "current.c").write_text("corrupt\n", encoding="utf-8")
+        with self.assertRaisesRegex(BenchmarkFailure, "missing or corrupt"):
+            source_evidence(self.variant)
 
 
 if __name__ == "__main__":

@@ -1,0 +1,3 @@
+-cp fixtures/oracle
+-main Main
+--interp
