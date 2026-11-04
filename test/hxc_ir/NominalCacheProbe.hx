@@ -1,5 +1,6 @@
 #if macro
 import haxe.macro.Context;
+import haxe.macro.Type;
 import reflaxe.c.CompilationContext;
 import reflaxe.c.CProfile;
 import reflaxe.c.lowering.CBodyAggregate.CBodyAggregateRegistry;
@@ -16,9 +17,26 @@ class NominalCacheProbe {
 			final position = Context.currentPos();
 			final fail = (position, message) -> Context.error(message, position);
 			final first = registry.valueType(type, position, "NominalCacheFixture", "NominalCacheFixture.hx", fail, "first");
+			// Observe an already classified reference without changing the class it
+			// resolves to. A hit must not encode its full description again.
+			var repeatedDescriptions = 0;
+			final observedType = switch type {
+				case TInst(reference, parameters):
+					final observedReference:Ref<ClassType> = {
+						get: () -> {
+							repeatedDescriptions++;
+							return reference.get();
+						},
+						toString: () -> reference.toString()
+					};
+					TInst(observedReference, parameters);
+				case _: throw "nominal fixture is not a class instance type";
+			};
 			for (_ in 0...100)
-				if (registry.valueType(type, position, "OtherCaller", "OtherCaller.hx", fail, "repeat") != first)
+				if (registry.valueType(observedType, position, "OtherCaller", "OtherCaller.hx", fail, "repeat") != first)
 					throw "nominal cache lost wrapper identity across use sites";
+			if (repeatedDescriptions != 0)
+				throw "nominal cache rebuilt a class description on a hit";
 			if (registry.exactNominalHits() != 100 || registry.exactNominalMisses() != 1)
 				throw "nominal cache changed first-use or repeat accounting";
 			final string = registry.valueType(Context.getType("String"), position, "NominalCacheFixture", "NominalCacheFixture.hx", fail, "string");

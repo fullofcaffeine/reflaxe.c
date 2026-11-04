@@ -1074,10 +1074,16 @@ class CBodyAggregateRegistry {
 	function cachedExactNominalValueType(type:Type):Null<CBodyValueType> {
 		return switch type {
 			case TInst(reference, parameters) if (parameters.length == 0):
-				final definition = reference.get();
-				final cached = exactNominalValues.get(definition.pack.concat([definition.name]).join("."));
-				if (cached != null)
+				// Compiler-owned class references expose the same declaration path without
+				// encoding the full class (including its initializer) on every cache hit.
+				final cached = exactNominalValues.get(reference.toString());
+				if (cached != null) {
 					exactNominalCacheHits++;
+				} else {
+					// Ref.get also builds a not-yet-built declaration. Preserve that first-use
+					// effect before the complete classifier examines imports and other families.
+					reference.get();
+				}
 				cached;
 			case _: null;
 		};
