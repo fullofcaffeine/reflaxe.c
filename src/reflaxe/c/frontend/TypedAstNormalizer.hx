@@ -19,8 +19,16 @@ class TypedAstNormalizer {
 	public static function normalize(moduleTypes:Array<ModuleType>, mainModule:Null<ModuleType>, mainExpr:Null<TypedExpr>):TypedProgramInput {
 		final contentDigests = new SourceContentDigest();
 		final functionSources = new TypedFunctionSourceProvenance(contentDigests);
-		final rawModules = moduleTypes.copy();
-		rawModules.sort(compareModuleTypes);
+		// Ref.get() reconstructs declaration metadata on the Eval macro host.
+		// Read each immutable sort identity once instead of once per comparison.
+		// These keys live only for this capture; no compiler reference is cached
+		// across requests, and normalization still visits every declaration.
+		final keyedModules = [
+			for (moduleType in moduleTypes)
+				{value: moduleType, key: moduleTypeKey(moduleType)}
+		];
+		keyedModules.sort((left, right) -> compareStrings(left.key, right.key));
+		final rawModules = [for (entry in keyedModules) entry.value];
 
 		final declarations:Array<TypedAstDeclaration> = [];
 		final expressionRoots:Array<TypedAstExpressionRoot> = [];
@@ -369,11 +377,10 @@ class TypedAstNormalizer {
 		return modulePath.split(".").join("/") + ".hx";
 	}
 
-	static function compareModuleTypes(left:ModuleType, right:ModuleType):Int {
-		final leftBase = baseType(left);
-		final rightBase = baseType(right);
-		return compareStrings('${leftBase.module}\u0000${declarationPath(leftBase)}\u0000${declarationKind(left)}',
-			'${rightBase.module}\u0000${declarationPath(rightBase)}\u0000${declarationKind(right)}');
+	/** Preserve module, declaration and kind ordering without decoding during comparison. */
+	static function moduleTypeKey(moduleType:ModuleType):String {
+		final base = baseType(moduleType);
+		return '${base.module}\u0000${declarationPath(base)}\u0000${declarationKind(moduleType)}';
 	}
 
 	static function declarationKey(declaration:TypedAstDeclaration):String {

@@ -1949,10 +1949,30 @@ def check_source_digest_reuse() -> None:
         print(lines[-2])
 
 
+def check_capture_sort_reads() -> None:
+    """Bound declaration decoding while preserving complete deterministic capture."""
+    environment = os.environ.copy()
+    environment["HAXE_NO_SERVER"] = "1"
+    process = run_bounded_process(
+        [development_tool("haxe"), "-cp", str(FIXTURES / "capture_sort"),
+         "-cp", str(ROOT / "src"), "-cp", str(ROOT / "std"),
+         "-cp", str(ROOT / "std/c/_std"), "-cp", str(ROOT / "vendor/reflaxe/src"),
+         "--macro", 'nullSafety("reflaxe.c")',
+         "--macro", "CaptureSortProbe.run()", "-main", "SortFixture", "--interp"],
+        cwd=ROOT, env=environment, capture_output=True, text=True, timeout=30,
+    )
+    if process.returncode != 0 or process.stdout.strip() != "HXC_CAPTURE_SORT_OK":
+        raise TypedAstProbeFailure(
+            f"capture sort read contract failed\n{process.stdout}\n{process.stderr}"
+        )
+
+
 def main() -> int:
     try:
         arguments = sys.argv[1:]
-        if arguments == ["--invalidation-matrix"]:
+        if arguments == ["--capture-sort-only"]:
+            check_capture_sort_reads()
+        elif arguments == ["--invalidation-matrix"]:
             check_backend_invalidation_catalog()
         elif arguments == ["--source-anchor-only"]:
             check_function_source_anchor_server()
@@ -1961,6 +1981,7 @@ def main() -> int:
         elif arguments == ["--source-digest-only"]:
             check_source_digest_reuse()
         elif not arguments:
+            check_capture_sort_reads()
             check_source_identity_snapshot()
             check_source_digest_reuse()
             check_expected_snapshot()
@@ -1968,11 +1989,14 @@ def main() -> int:
             check_compiler_server_rebuild_inventory()
         else:
             raise TypedAstProbeFailure(
-                "usage: test/typed_ast/run.py [--invalidation-matrix|--source-anchor-only|--source-identity-only|--source-digest-only]"
+                "usage: test/typed_ast/run.py [--capture-sort-only|--invalidation-matrix|--source-anchor-only|--source-identity-only|--source-digest-only]"
             )
     except (OSError, json.JSONDecodeError, subprocess.TimeoutExpired, TypedAstProbeFailure) as error:
         print(f"typed-ast: ERROR: {error}", file=os.sys.stderr)
         return 1
+    if sys.argv[1:] == ["--capture-sort-only"]:
+        print("typed-ast: OK: linear declaration reads and deterministic capture order")
+        return 0
     if sys.argv[1:] == ["--source-identity-only"]:
         print("typed-ast: OK: request-local file identity and changed-source positions")
         return 0

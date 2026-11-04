@@ -16,6 +16,14 @@ report byte for byte.
 Run `npm run test:typed-ast`. Refresh its reviewed JSON only through
 `npm run snapshots:update -- --suite typed-ast`.
 
+Run `python3 test/typed_ast/run.py --capture-sort-only` to check declaration-read
+cost during normalization. The fixture passes 32 real class declarations through
+the normalizer and counts reads of their compiler metadata. It requires at most
+three reads per declaration, checks the expected order, then repeats with reversed
+input. Sort keys belong to one capture call; the second capture must read current
+declarations again. This count-based regression does not measure full-build time
+or replace the rich inventory and compiler-server checks.
+
 Run `python3 test/typed_ast/run.py --source-identity-only` for the focused
 source-file identity check. It verifies reuse within one normalization request,
 fresh identities after edits, retry after a failed read, and exact recovered
