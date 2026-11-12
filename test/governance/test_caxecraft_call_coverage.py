@@ -202,6 +202,27 @@ void run(void) {
         return coverage.prove_interval(units, begin="observe_begin", end="observe_end",
                                        forbidden={"allocate"}, reviewed_leaves={"clock_read"})
 
+    def test_cold_attribute_preserves_body_and_reviewed_leaf_checks(self):
+        units = self.program(main='int clock_read(void) __attribute__((cold)); '
+                             'void helper(void) __attribute__((cold)); void helper(void) {} '
+                             'void run(void) {observe_begin(); helper(); (void)clock_read(); observe_end();}')
+        result = self.proof(units)
+        self.assertEqual(result['functions'], [('', 'clock_read'), ('', 'helper')])
+        self.assertEqual(result['foreignLeaves'], ['clock_read'])
+
+    def test_cold_body_cannot_hide_a_forbidden_call(self):
+        units = self.program(main='void helper(void) __attribute__((cold)); '
+                             'void helper(void) {allocate();} '
+                             'void run(void) {observe_begin(); helper(); observe_end();}')
+        with self.assertRaisesRegex(CoverageFailure, 'prohibited call: allocate'):
+            self.proof(units)
+
+    def test_cold_attribute_does_not_authorize_weak_leaf(self):
+        units = self.program(main='int clock_read(void) __attribute__((cold, weak)); '
+                             'void run(void) {observe_begin(); (void)clock_read(); observe_end();}')
+        with self.assertRaisesRegex(CoverageFailure, 'unproved declaration'):
+            self.proof(units)
+
     def test_unreachable_repeated_inline_header_body_is_outside_interval(self):
         (self.root / 'shared.h').write_text('inline int unused_helper(void) { return 1; }\n')
         units = self.program(main='#include "shared.h"\nvoid run(void) {observe_begin(); observe_end();}',
@@ -538,6 +559,23 @@ class CoverageHostTests(unittest.TestCase):
                 {"kind": "CompoundStmt", "inner": [call("begin"), call("end")]}]},
         ]}
 
+    def test_malformed_compatibility_exclusions_fail_at_receipt_boundary(self):
+        self.ast = self.empty_interval_ast()
+        unit = self.invoke(self.successful_command)
+        record = json.loads(unit.receipt.read_text())
+        malformed = (None, {}, [None],
+                     [{"name": [], "storage": "", "declarationId": "run"}],
+                     [{"name": "run", "storage": "unknown", "declarationId": "run"}],
+                     [{"name": "run", "storage": "", "declarationId": ""}])
+        for exclusions in malformed:
+            with self.subTest(exclusions=exclusions):
+                record["compatibilityExclusions"] = exclusions
+                unit.receipt.write_text(json.dumps(record))
+                changed = coverage.ExtractedUnit(unit.receipt, coverage._sha(unit.receipt))
+                with self.assertRaisesRegex(CoverageFailure, "invalid compatibility exclusion"):
+                    coverage.prove_interval({"unit": changed}, begin="observe_begin",
+                        end="observe_end", forbidden=set(), reviewed_leaves=set())
+
     def test_previous_unit_trees_are_released_before_next_verification(self):
         class TrackedAst(dict):
             pass
@@ -551,8 +589,12 @@ class CoverageHostTests(unittest.TestCase):
                 references[node.kind] = weakref.ref(node)
             return node
 
-        first = coverage.ExtractedUnit(self.root / "first.json", "first")
-        second = coverage.ExtractedUnit(self.root / "second.json", "second")
+        # The AST is mocked below, but the separate compatibility record still
+        # travels through its real hashed receipt boundary.
+        for name in ("first", "second"):
+            (self.root / f"{name}.json").write_text(json.dumps({"compatibilityExclusions": []}))
+        first = coverage.ExtractedUnit(self.root / "first.json", coverage._sha(self.root / "first.json"))
+        second = coverage.ExtractedUnit(self.root / "second.json", coverage._sha(self.root / "second.json"))
 
         def verify(unit, tools):
             if unit == first:
@@ -575,8 +617,12 @@ class CoverageHostTests(unittest.TestCase):
         self.assertEqual(result["foreignLeaves"], [])
 
     def test_late_unit_failure_cannot_admit_an_earlier_complete_interval(self):
-        first = coverage.ExtractedUnit(self.root / "first.json", "first")
-        second = coverage.ExtractedUnit(self.root / "second.json", "second")
+        # The AST is mocked below, but the separate compatibility record still
+        # travels through its real hashed receipt boundary.
+        for name in ("first", "second"):
+            (self.root / f"{name}.json").write_text(json.dumps({"compatibilityExclusions": []}))
+        first = coverage.ExtractedUnit(self.root / "first.json", coverage._sha(self.root / "first.json"))
+        second = coverage.ExtractedUnit(self.root / "second.json", coverage._sha(self.root / "second.json"))
         failures = (
             (CoverageFailure("late receipt changed"), "late receipt changed"),
             ({"kind": "TranslationUnitDecl", "inner": [
@@ -776,6 +822,27 @@ class CoverageHostTests(unittest.TestCase):
                         coverage.decode(node)
                 for accepted in ("int[4]", "int[]", "int[4][12]", "int[ 2 ]"):
                     coverage.decode({"kind": "VarDecl", owner: {spelling: accepted}})
+
+    def test_absent_type_records_do_not_admit_malformed_present_records(self):
+        self.assertFalse(coverage.decode({"kind": "VarDecl"}).atomic)
+        for owner in ("type", "argType"):
+            for invalid in (None, [], "", 0, False):
+                with self.subTest(owner=owner, invalid=invalid):
+                    with self.assertRaisesRegex(CoverageFailure, "AST type must be an object"):
+                        coverage.decode({"kind": "VarDecl", owner: invalid})
+            for spelling in ("qualType", "desugaredQualType"):
+                with self.subTest(owner=owner, spelling=spelling):
+                    with self.assertRaisesRegex(CoverageFailure, "must be text"):
+                        coverage.decode({"kind": "VarDecl", owner: {spelling: None}})
+
+    def test_atomic_type_detection_preserves_word_boundaries(self):
+        for owner in ("type", "argType"):
+            for spelling in ("qualType", "desugaredQualType"):
+                for value, expected in (("_Atomic(int)", True), ("const _Atomic int", True),
+                                        ("My_AtomicValue", False), ("_AtomicAlias", False)):
+                    with self.subTest(owner=owner, spelling=spelling, value=value):
+                        node = coverage.decode({"kind": "VarDecl", owner: {spelling: value}})
+                        self.assertEqual(node.atomic, expected)
 
     def test_only_diagnostic_directives_are_blanked_without_changing_lines(self):
         raw = ('# 1 "header.h" 1 3\n#pragma pack(push, 1)\n'

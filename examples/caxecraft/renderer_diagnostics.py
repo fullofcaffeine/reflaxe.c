@@ -1,9 +1,10 @@
 """Bind proof diagnostics to exact preprocessed bytes and a matching Clang reader.
 
-Native compilation owns quality warnings. Coverage admits only literal GNU access
-metadata ignored by Clang; this is explicit-call compatibility, not object-size,
-optimization or ABI equivalence. The graph still checks every body and callee.
-The ctypes reader runs as a bounded subprocess, never inside the proof process.
+Native compilation owns quality warnings. This module admits only literal GNU
+access metadata; renderer_compatibility separately certifies excluded declarations.
+Neither rule proves object-size, optimization or ABI equivalence. The graph still
+checks every body and callee that can enter the measured interval. The ctypes
+reader runs as a bounded subprocess, never inside the proof process.
 """
 from __future__ import annotations
 
@@ -12,7 +13,7 @@ import json
 import re
 import sys
 
-PARSER_POLICY_VERSION = "literal-gnu-access-clang-21.1.8-v2"
+PARSER_POLICY_VERSION = "excluded-gnu-forwarding-clang-21.1.8-v3"
 
 PROOF_FLAGS = ("-Wunknown-pragmas", "-Wignored-pragmas",
                "-Werror=implicit-function-declaration", "-Werror=unknown-warning-option",
@@ -199,6 +200,7 @@ def read_serialized(compiler: Path, library: Path, diagnostics: Path) -> dict[st
             ranges = [get_range(diagnostic, number) for number in range(range_count(diagnostic))]
             child_set = children(diagnostic)
             entries.append({"severity": severity(diagnostic), "option": text(option(diagnostic, None)),
+                            "category": category(diagnostic), "fixits": fixits(diagnostic),
                             "offset": offset(location(diagnostic)),
                             "ranges": [[offset(start(value)), offset(end(value))] for value in ranges],
                             "children": [context_note(get(child_set, j)) for j in range(count(child_set))] if child_set else []})

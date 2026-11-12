@@ -2,9 +2,11 @@
 
 Clang owns C parsing. Extraction rejects variable-length types and binds the
 source, transitive headers, compiler, command and AST before graph traversal.
-Compiler-owned preprocessing expands pragma operators; only emitted diagnostic
-control directives are blanked before parsing the retained preprocessed input.
-All semantic pragmas and line markers are preserved.
+Compiler-owned preprocessing expands pragma operators. Diagnostic control
+instructions are blanked in a retained copy; semantic pragmas and line markers
+stay visible. A separate parser input can omit a certified GNU forwarding tail,
+but its declaration is excluded from every graph role before traversal.
+Native compilation continues to use the original source and warning policy.
 Unknown calls, indirect dispatch, atomic operations and implicit cleanup fail.
 Callers still own complete project/native input selection and reviewed foreign
 contracts. This module does not establish C ABI compatibility, library identity,
@@ -22,8 +24,9 @@ import shlex
 import subprocess
 import sys
 
-from renderer_diagnostics import PARSER_POLICY_VERSION, PROOF_FLAGS, matching_library, admit_diagnostics
+from renderer_diagnostics import PARSER_POLICY_VERSION, PROOF_FLAGS, matching_library
 import renderer_diagnostics
+import renderer_compatibility
 
 from scripts.test.bounded_process import run as run_bounded_process
 from scripts.test.c_fixture_harness import C11_STRICT_FLAGS
@@ -64,15 +67,21 @@ def decode(value: object) -> Node:
     # This defense cannot see adjusted parameter bounds; extraction additionally
     # strips diagnostic controls after preprocessing and requires Clang's VLA error.
     for owner in ("type", "argType"):
-        raw_type = value.get(owner, {})
+        # An absent record has no spelling to inspect. Present records, including
+        # malformed null/empty values, still pass through the same typed boundary.
+        if owner not in value:
+            continue
+        raw_type = value[owner]
         if not isinstance(raw_type, dict):
             raise CoverageFailure("AST type must be an object")
         for name in ("qualType", "desugaredQualType"):
             spelling = field(raw_type, name)
-            atomic = atomic or re.search(r"\b_Atomic\b", spelling) is not None
-            remainder = re.sub(r"\[\s*[0-9]*\s*\]", "", spelling)
-            if "[" in remainder or "]" in remainder:
-                raise CoverageFailure("array dimension is not a decimal constant or incomplete")
+            if "_Atomic" in spelling:
+                atomic = atomic or re.search(r"\b_Atomic\b", spelling) is not None
+            if "[" in spelling or "]" in spelling:
+                remainder = re.sub(r"\[\s*[0-9]*\s*\]", "", spelling)
+                if "[" in remainder or "]" in remainder:
+                    raise CoverageFailure("array dimension is not a decimal constant or incomplete")
     if value.get("isVariablyModified") is True or field(value, "kind") == "VariableArrayType":
         raise CoverageFailure("variably modified AST type is unsupported")
     atomic = atomic or field(value, "castKind") in {"AtomicToNonAtomic", "NonAtomicToAtomic"}
@@ -126,9 +135,12 @@ class _Program:
             # Name-only admission is invalid for linker aliases and weak or
             # resolver-backed functions. Keep unknown attributes closed too;
             # these admitted attributes affect optimization/diagnostics only.
+            # ColdAttr selects infrequent-code optimization in LLVM 21.1.8
+            # CodeGenModule::SetLLVMFunctionAttributesForDefinition. It neither
+            # changes linker identity nor grants a leaf: bodies are still walked.
             harmless = {"BuiltinAttr", "NoThrowAttr", "NoReturnAttr",
                         "WarnUnusedResultAttr", "AlwaysInlineAttr", "NoInlineAttr",
-                        "ConstAttr", "PureAttr", "VisibilityAttr"}
+                        "ConstAttr", "PureAttr", "VisibilityAttr", "ColdAttr"}
             if any(child.kind.endswith("Attr") and child.kind not in harmless
                    for child in node.children):
                 self.unsafe_declarations.add(key)
@@ -356,7 +368,8 @@ class DiagnosticTools:
     def __post_init__(self) -> None:
         expected_reader = Path(renderer_diagnostics.__file__).resolve()
         expected = {str(self.library.resolve()), str(expected_reader),
-                    str(Path(sys.executable).resolve()), str(Path(__file__).resolve())}
+                    str(Path(sys.executable).resolve()), str(Path(__file__).resolve()),
+                    str(Path(renderer_compatibility.__file__).resolve())}
         if (self.library != matching_library(self.compiler).resolve() or self.reader != expected_reader or len(self.identities) != len(expected)
                 or {path for path, _ in self.identities} != expected
                 or any(re.fullmatch(r"[0-9a-f]{64}", digest) is None for _, digest in self.identities)):
@@ -371,7 +384,8 @@ def prepare_diagnostic_tools(compiler: Path) -> DiagnosticTools:
     compiler = compiler.resolve()
     library = matching_library(compiler).resolve()
     reader = Path(renderer_diagnostics.__file__).resolve()
-    paths = (library, reader, Path(sys.executable).resolve(), Path(__file__).resolve())
+    paths = (library, reader, Path(sys.executable).resolve(), Path(__file__).resolve(),
+             Path(renderer_compatibility.__file__).resolve())
     return DiagnosticTools(compiler, library, reader, tuple((str(path), _sha(path)) for path in paths))
 
 
@@ -387,8 +401,9 @@ def extract_unit(source: Path, *, compiler: Path, flags: tuple[str, ...],
     A dependency pass pins headers before preprocessing. The -E pass emits a
     second dependency list; additions/removals or byte changes fail. Paired
     -include is applied by the native preprocessor during these passes and its resolved headers
-    join the same pinned dependency set; it is not reapplied to cpp-output. Only warning
-    controls are blanked before parsing exact retained cpp-output bytes. This
+    join the same pinned dependency set; it is not reapplied to cpp-output. Warning controls are blanked before parsing. Closed GNU forwarding tails may
+    also be blanked in a separate parser input, but their declarations must be
+    certified and excluded from the graph. Original preprocessing stays retained. This
     detects stale inputs, not malicious concurrent mutation.
     Evidence must be a new directory; callers retain it after failures.
     """
@@ -457,8 +472,20 @@ def extract_unit(source: Path, *, compiler: Path, flags: tuple[str, ...],
         derived_path.write_bytes(derived.encode("utf-8"))
         ledger = evidence / "removed-diagnostics.json"
         ledger.write_text(json.dumps(removed, indent=2) + "\n")
+        try:
+            parser_bytes, forwarding = renderer_compatibility.prepare_parser_input(derived_path.read_bytes())
+        except ValueError as error:
+            raise CoverageFailure(str(error)) from error
+        parser_path = evidence / "parser-input.i"
+        parser_path.write_bytes(parser_bytes)
+        forwarding_path = evidence / "forwarding-edits.json"
+        forwarding_path.write_text(json.dumps([
+            {"bodyRange": [edit.body_start, edit.body_end],
+             "removedRange": [edit.start, edit.end]} for edit in forwarding
+        ], indent=2) + "\n")
         artifacts = {str(path): _sha(path) for path in
-                     (evidence / "preprocess.stdout", derived_path, ledger, depfile)}
+                     (evidence / "preprocess.stdout", derived_path, ledger, depfile,
+                      parser_path, forwarding_path)}
         record["preprocessingArtifacts"] = artifacts
         record["removedDiagnosticDirectives"] = len(removed)
         tools = diagnostic_tools or prepare_diagnostic_tools(compiler)
@@ -471,16 +498,22 @@ def extract_unit(source: Path, *, compiler: Path, flags: tuple[str, ...],
         serialized = evidence / "ast.dia"
         ast_text = command([str(compiler), "-x", "cpp-output", *semantic, *PROOF_FLAGS,
                             "-serialize-diagnostics", str(serialized), "-Xclang", "-ast-dump=json",
-                            "-fsyntax-only", str(derived_path)], "ast")
+                            "-fsyntax-only", str(parser_path)], "ast")
         serialized_hash = _sha(serialized)
         diagnostic_text = command([sys.executable, str(reader), str(compiler), str(library),
                                    str(serialized)], "diagnostics")
         try:
-            decisions = admit_diagnostics(json.loads(diagnostic_text), derived_path.read_bytes())
-        except (ValueError, TypeError) as error:
+            ast = json.loads(ast_text)
+            if not isinstance(ast, dict) or ast.get("kind") != "TranslationUnitDecl":
+                raise CoverageFailure("compiler output is not a complete translation unit")
+            decisions, exclusions = renderer_compatibility.certify_diagnostics(
+                derived_path.read_bytes(), parser_bytes, ast, json.loads(diagnostic_text))
+        except (ValueError, TypeError, KeyError, IndexError) as error:
             raise CoverageFailure(str(error)) from error
+        record["compatibilityExclusions"] = exclusions
         decisions_path = evidence / "diagnostic-decisions.json"
-        decisions_path.write_text(json.dumps({"inputSha256": _sha(derived_path), "decisions": decisions}, indent=2) + "\n")
+        decisions_path.write_text(json.dumps({"inputSha256": _sha(parser_path), "decisions": decisions,
+                                              "exclusions": exclusions}, indent=2) + "\n")
         if _sha(serialized) != serialized_hash:
             raise CoverageFailure("serialized diagnostics changed during admission")
         record["diagnosticArtifacts"] = {str(path): _sha(path) for path in
@@ -489,9 +522,6 @@ def extract_unit(source: Path, *, compiler: Path, flags: tuple[str, ...],
             tools.verify()
         if any(_sha(Path(path)) != digest for path, digest in {**pins, **artifacts}.items()):
             raise CoverageFailure("extraction input changed during parsing")
-        ast = json.loads(ast_text)
-        if not isinstance(ast, dict) or ast.get("kind") != "TranslationUnitDecl":
-            raise CoverageFailure("compiler output is not a complete translation unit")
         record["ast"] = str(evidence / "ast.stdout")
         record["astSha256"] = _sha(evidence / "ast.stdout")
         record["status"] = "success"
@@ -536,4 +566,22 @@ def prove_interval(units: dict[str, ExtractedUnit], *, begin: str, end: str,
     program = _Program()
     for name, unit in units.items():
         program.add_unit(name, verified_ast(unit, diagnostic_tools))
+        # All units and exclusions are installed before any traversal. Bind the
+        # certificate's AST declaration ID again to the graph's linkage identity;
+        # an external declaration remains excluded across translation units.
+        if _sha(unit.receipt) != unit.sha256:
+            raise CoverageFailure("extraction receipt changed")
+        exclusions = json.loads(unit.receipt.read_text()).get("compatibilityExclusions")
+        if not isinstance(exclusions, list):
+            raise CoverageFailure("invalid compatibility exclusion list")
+        for excluded in exclusions:
+            if (not isinstance(excluded, dict)
+                    or any(not isinstance(excluded.get(field), str) or not excluded[field]
+                           for field in ("name", "declarationId"))
+                    or excluded.get("storage") not in ("", "static", "extern")):
+                raise CoverageFailure("invalid compatibility exclusion identity")
+            key = (name if excluded["storage"] == "static" else "", excluded["name"])
+            if program.declarations.get((name, excluded["declarationId"])) != key:
+                raise CoverageFailure("compatibility declaration identity changed")
+            program.unsafe_declarations.add(key)
     return program.prove(begin, end, forbidden, reviewed_leaves)
