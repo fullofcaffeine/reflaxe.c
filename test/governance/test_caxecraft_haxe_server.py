@@ -10,6 +10,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from contextlib import nullcontext
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
@@ -32,6 +33,219 @@ from dev_haxe_server import (  # noqa: E402
 )
 
 
+def stop_cookie(pid):
+    body = {"schemaVersion": server.COOKIE_SCHEMA_VERSION, "kind": server.COOKIE_KIND,
+            "pid": pid, "processStartIdentity": "fixture", "processCommandIdentity": "fixture"}
+    return {**body, "sha256": server.canonical_digest(body)}
+
+
+class PlayActiveLeaseFailureTests(unittest.TestCase):
+    """Exercise the real launcher retry and transaction cleanup with host edges mocked."""
+
+    def exercise_retry_failure(self, failure, *, uncertain_stop=False, original_stop=False, publication_failure=False):
+        import play
+        from contextlib import redirect_stdout, redirect_stderr
+        import io
+
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            installation = HaxeInstallation("test", root / "haxe", root, root, None)
+            owner = OwnedHaxeServer(root / "server", installation=installation,
+                                    compatibility={"test": "active-lease"})
+            def lease(pid):
+                process = server.OwnedHaxeServerProcess(
+                    f"127.0.0.1:{pid}", pid, f"start-{pid}", f"command-{pid}",
+                    owner.compatibility_sha256, str(installation.compiler), f"cookie-{pid}",
+                )
+                return server.HaxeServerLease(
+                    server.HaxeServerConnection(process.endpoint, installation), True,
+                    owner.compatibility_sha256, process,
+                )
+            original, replacement = lease(10001), lease(10002)
+            alive = {10001, 10002}
+            events = []
+            discard = play.discard_transaction
+            compile_haxe = play.compile_haxe
+            def compile_request(*args, **kwargs):
+                if publication_failure:
+                    publish = kwargs["publish_server_lease"]
+                    def interrupted(lease):
+                        if publication_failure == "after":
+                            publish(lease)
+                        raise KeyboardInterrupt()
+                    kwargs["publish_server_lease"] = interrupted
+                return compile_haxe(*args, **kwargs)
+            def terminate(cookie):
+                pid = cookie["pid"]
+                events.append(("stop", pid))
+                if original_stop and pid == 10001:
+                    return False
+                if uncertain_stop and pid == 10002:
+                    if uncertain_stop == "false":
+                        return False
+                    raise OSError("termination denied")
+                if pid not in alive:
+                    return True  # Positive absence now permits already-dead recovery.
+                alive.remove(pid)
+                return True
+            def dispose(transaction):
+                events.append(("discard", tuple(sorted(alive))))
+                discard(transaction)
+            with (
+                patch.dict(os.environ, {"HAXE_NO_SERVER": "0"}),
+                patch.object(play, "pinned_haxe_installation", return_value=installation),
+                patch.object(play, "verify_pinned_haxe"),
+                patch.object(play, "haxe_server_compatibility", return_value={}),
+                patch.object(play, "OwnedHaxeServer", return_value=owner),
+                patch.object(owner, "connect", side_effect=[original, replacement]) as connection,
+                patch.object(server, "_terminate_owned", side_effect=terminate),
+                patch.object(play, "resolve_haxe_arguments", return_value=("fixture.hxml",)),
+                patch.object(play, "pinned_haxe_environment", return_value={}),
+                patch.object(play, "transport_failed", return_value=True),
+                patch.object(play.subprocess, "run", side_effect=[
+                    subprocess.CompletedProcess([], 1, "", "connection reset"), failure,
+                ]),
+                patch.object(play, "discard_transaction", side_effect=dispose),
+                patch.object(play, "compile_haxe", side_effect=compile_request),
+                redirect_stdout(io.StringIO()), redirect_stderr(io.StringIO()),
+            ):
+                status = play.main(["--compile-only", "--output-root", str(root / "output")])
+            if original_stop:
+                connection.assert_called_once_with()
+            return status, events, alive
+
+    def test_retried_timeout_stops_replacement_before_discard(self):
+        status, events, alive = self.exercise_retry_failure(
+            subprocess.TimeoutExpired("connected Haxe retry", 120)
+        )
+        self.assertEqual(status, 1)
+        self.assertEqual(events, [("stop", 10001), ("stop", 10002), ("discard", ())])
+        self.assertEqual(alive, set())
+
+    def test_retried_interrupt_stops_replacement_before_discard(self):
+        status, events, alive = self.exercise_retry_failure(KeyboardInterrupt())
+        self.assertEqual(status, 130)
+        self.assertEqual(events, [("stop", 10001), ("stop", 10002), ("discard", ())])
+        self.assertEqual(alive, set())
+
+
+    def test_uncertain_stop_retains_failed_generation(self):
+        status, events, alive = self.exercise_retry_failure(
+            subprocess.TimeoutExpired("connected Haxe retry", 120), uncertain_stop=True
+        )
+        self.assertEqual(status, 1)
+        self.assertEqual(events, [("stop", 10001), ("stop", 10002)])
+        self.assertEqual(alive, {10002})
+
+    def test_unconfirmed_original_stop_prevents_retry_and_discard(self):
+        status, events, alive = self.exercise_retry_failure(
+            subprocess.TimeoutExpired("must not retry", 120), original_stop=True
+        )
+        self.assertEqual(status, 1)
+        self.assertEqual(events, [("stop", 10001), ("stop", 10001)])
+        self.assertEqual(alive, {10001, 10002})
+
+    def test_publication_interrupt_and_failed_stop_retain_transaction(self):
+        for publication in ("before", "after"):
+            for uncertain in (True, "false"):
+                with self.subTest(publication=publication, uncertain=uncertain):
+                    status, events, alive = self.exercise_retry_failure(
+                        AssertionError("retry must not run"), uncertain_stop=uncertain,
+                        publication_failure=publication,
+                    )
+                    self.assertEqual(status, 130)
+                    self.assertEqual(events, [("stop", 10001), ("stop", 10002)])
+                    self.assertEqual(alive, {10002})
+
+    def test_publication_interrupt_discards_only_after_replacement_exit(self):
+        for publication in ("before", "after"):
+            with self.subTest(publication=publication):
+                status, events, alive = self.exercise_retry_failure(
+                    AssertionError("retry must not run"), publication_failure=publication,
+                )
+                self.assertEqual(status, 130)
+                self.assertEqual(events, [("stop", 10001), ("stop", 10002), ("discard", ())])
+                self.assertEqual(alive, set())
+
+    def test_attached_timeout_retains_output_without_stopping_owner(self):
+        import play
+        import io
+        from contextlib import redirect_stdout, redirect_stderr
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            installation = HaxeInstallation("test", root / "haxe", root, root, None)
+            lease = server.HaxeServerLease(
+                server.HaxeServerConnection("127.0.0.1:12345", installation), False, None, None,
+            )
+            with (
+                patch.dict(os.environ, {"HAXE_NO_SERVER": "0"}),
+                patch.object(play, "pinned_haxe_installation", return_value=installation),
+                patch.object(play, "verify_pinned_haxe"),
+                patch.object(play, "attached_server", return_value=lease),
+                patch.object(play, "OwnedHaxeServer") as owner,
+                patch.object(play, "resolve_haxe_arguments", return_value=("unused.hxml",)),
+                patch.object(play, "pinned_haxe_environment", return_value={}),
+                patch.object(play.subprocess, "run", side_effect=subprocess.TimeoutExpired("attached", 120)),
+                patch.object(play, "discard_transaction") as discard,
+                redirect_stdout(io.StringIO()), redirect_stderr(io.StringIO()) as errors,
+            ):
+                status = play.main(["--compile-only", "--haxe-server", "attach",
+                                    "--haxe-server-endpoint", lease.connection.endpoint,
+                                    "--output-root", str(root / "output")])
+            self.assertEqual(status, 1)
+            owner.assert_not_called()
+            discard.assert_not_called()
+            self.assertIn("retained failed generation", errors.getvalue())
+
+    def test_publication_interrupt_stops_replacement_before_propagating(self):
+        import play
+        from contextlib import redirect_stdout
+        import io
+        installation = HaxeInstallation("test", Path("haxe"), Path("std"), Path("libs"), None)
+        first = server.HaxeServerLease(server.HaxeServerConnection("127.0.0.1:1", installation), True, "same", None)
+        replacement = server.HaxeServerLease(server.HaxeServerConnection("127.0.0.1:2", installation), True, "same", None)
+        owner = Mock()
+        owner.restart_after_transport_failure.return_value = replacement
+        with (
+            patch.object(play, "resolve_haxe_arguments", return_value=("unused.hxml",)),
+            patch.object(play, "pinned_haxe_environment", return_value={}),
+            patch.object(play.subprocess, "run", return_value=subprocess.CompletedProcess([], 1, "", "reset")) as request,
+            patch.object(play, "transport_failed", return_value=True),
+            redirect_stdout(io.StringIO()),
+        ):
+            with self.assertRaises(play._LeasePublicationFailure) as caught:
+                play.compile_haxe(Path("unused"), layout="split", platform_name="macos",
+                                  raylib_configuration="desktop", server_lease=first,
+                                  server_owner=owner, publish_server_lease=Mock(side_effect=KeyboardInterrupt()))
+        self.assertIs(caught.exception.lease, replacement)
+        self.assertIsInstance(caught.exception.failure, KeyboardInterrupt)
+        owner.stop_lease.assert_not_called()
+        self.assertEqual(request.call_count, 1)
+
+
+class HaxeServerStopEvidenceTests(unittest.TestCase):
+    """An unavailable identity lookup is not proof that a failed signal worked."""
+
+    def test_oversized_signed_cookie_never_reaches_process_api(self):
+        with patch.object(server.os, "kill") as kill:
+            self.assertFalse(server._terminate_owned(stop_cookie(1 << 100)))
+        kill.assert_not_called()
+
+    @unittest.skipIf(os.name == "nt", "POSIX signal evidence")
+    def test_missing_identity_and_denied_signal_are_not_success(self):
+        with patch.object(server, "_owned_cookie", return_value=True), patch.object(
+            server, "process_start_identity", return_value=None
+        ), patch.object(server.os, "kill", side_effect=PermissionError("denied")):
+            self.assertFalse(server._terminate_owned(stop_cookie(12345)))
+
+    @unittest.skipIf(os.name == "nt", "POSIX positive absence")
+    def test_kernel_confirmed_absence_is_success(self):
+        with patch.object(server, "_owned_cookie", return_value=True), patch.object(
+            server.os, "kill", side_effect=ProcessLookupError("absent")
+        ):
+            self.assertTrue(server._terminate_owned(stop_cookie(12345)))
+
+
 class HaxeServerWindowsStopTests(unittest.TestCase):
     """A rejected graceful stop must still reach the guarded force fallback."""
 
@@ -49,14 +263,14 @@ class HaxeServerWindowsStopTests(unittest.TestCase):
 
         windows_os = Mock(wraps=os)
         windows_os.name = "nt"
-        with patch.object(server, "os", windows_os), patch.object(
+        with patch.object(server, "windows_process_absent", return_value=False), patch.object(server, "process_exit_observer", return_value=nullcontext(lambda ms: not alive)), patch.object(server, "os", windows_os), patch.object(
             server, "_owned_cookie", side_effect=[True, still_owned]
         ) as ownership, patch.object(server.subprocess, "run", side_effect=taskkill), patch.object(
             server, "process_start_identity", side_effect=lambda pid: "live" if alive else None
         ), patch.object(server.time, "monotonic", return_value=0), patch.object(
             server.time, "sleep", side_effect=AssertionError("rejected or completed stop must not wait")
         ):
-            result = server._terminate_owned({"pid": 123})
+            result = server._terminate_owned(stop_cookie(123))
         return result, commands, ownership.call_count
 
     def test_rejected_graceful_stop_revalidates_before_forcing(self) -> None:
@@ -234,6 +448,94 @@ class CaxecraftHaxeServerTests(unittest.TestCase):
         )
         self.owners.append(value)
         return value
+
+    def test_launcher_retry_reaps_replacement_before_disposal(self) -> None:
+        self.exercise_launcher_retry(original_died=False)
+
+    def test_launcher_retries_after_original_already_exited(self) -> None:
+        self.exercise_launcher_retry(original_died=True)
+
+    def exercise_launcher_retry(self, *, original_died: bool) -> None:
+        import play
+        import io
+        from contextlib import redirect_stdout, redirect_stderr
+
+        owner = self.owner("launcher-retry")
+        unrelated = OwnedHaxeServer(
+            Path(self.temporary.name) / "unrelated", installation=self.installation,
+            compatibility={"test": "unrelated"},
+        )
+        self.owners.append(unrelated)
+        foreign = unrelated.connect()
+        output = play.prepare_output_root(Path(self.temporary.name) / "output")
+        (output / "variants").mkdir()
+        variant = play.prepare_output_root(
+            output / "variants" / f"{play.host_platform()}-split-interactive"
+        )
+        previous = play.begin_transaction(variant)
+        (previous.generated / "main.c").write_text("last-good-output\n")
+        selected = play.publish_pointer(variant, play.finalize_transaction(variant, previous))
+        pointer = variant / "hxc-play-current-generation.json"
+        previous_pointer = pointer.read_bytes()
+        leases = []
+        connect = owner.connect
+        def connected():
+            lease = connect()
+            leases.append(lease)
+            return lease
+        real_run = subprocess.run
+        requests = 0
+        def transport(command, **kwargs):
+            nonlocal requests
+            if "--connect" not in command:
+                return real_run(command, **kwargs)
+            requests += 1
+            if requests == 1:
+                if original_died:
+                    self.assertTrue(owner.stop_lease(leases[-1]))
+                return subprocess.CompletedProcess(command, 1, "", "connection reset")
+            raise subprocess.TimeoutExpired(command, kwargs["timeout"])
+        discard = play.discard_transaction
+        disposed = []
+        def dispose(transaction):
+            self.assertEqual(len(leases), 2)
+            for lease in leases:
+                with self.assertRaises(ProcessLookupError):
+                    os.kill(lease.process.pid, 0)
+            self.assertIsNotNone(process_start_identity(foreign.process.pid))
+            disposed.append(transaction.root)
+            discard(transaction)
+        with (
+            patch.dict(os.environ, {"HAXE_NO_SERVER": "0"}),
+            patch.object(play, "pinned_haxe_installation", return_value=self.installation),
+            patch.object(play, "verify_pinned_haxe"),
+            patch.object(play, "haxe_server_compatibility", return_value={}),
+            patch.object(play, "OwnedHaxeServer", return_value=owner),
+            patch.object(owner, "connect", side_effect=connected),
+            patch.object(play, "resolve_haxe_arguments", return_value=("unused.hxml",)),
+            patch.object(play, "transport_failed", return_value=True),
+            patch.object(play.subprocess, "run", side_effect=transport),
+            patch.object(play, "discard_transaction", side_effect=dispose),
+            redirect_stdout(io.StringIO()), redirect_stderr(io.StringIO()) as diagnostics,
+        ):
+            status = play.main(["--compile-only", "--output-root", str(output)])
+        self.assertEqual(status, 1)
+        self.assertEqual(requests, 2, diagnostics.getvalue())
+        self.assertEqual(len(disposed), 1)
+        self.assertFalse(disposed[0].exists())
+        self.assertEqual(pointer.read_bytes(), previous_pointer)
+        self.assertEqual(play.current_generation(variant).generation_id, selected.generation_id)
+        self.assertEqual((selected.generated / "main.c").read_text(), "last-good-output\n")
+
+    def test_already_dead_original_allows_one_replacement(self) -> None:
+        owner = self.owner("already-dead-retry")
+        original = owner.connect()
+        self.assertTrue(owner.stop_lease(original))
+        with patch.object(owner, "connect", wraps=owner.connect) as connect:
+            replacement = owner.restart_after_transport_failure(original)
+        connect.assert_called_once_with()
+        self.assertNotEqual(original.process.pid, replacement.process.pid)
+        self.assertIsNotNone(process_start_identity(replacement.process.pid))
 
     def test_auto_reuses_one_exact_compatible_process(self) -> None:
         owner = self.owner("same")

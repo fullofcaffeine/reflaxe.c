@@ -19,6 +19,7 @@ import sys
 import tempfile
 import time
 import zlib
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 
@@ -336,6 +337,20 @@ PILOT_TELEMETRY_COLORS = tuple(
     )
     for nibble in range(16)
 )
+class _LeasePublicationFailure(Exception):
+    """Hand exact retry ownership back when publication itself is interrupted.
+
+    The transaction owner must clean this replacement, not its positively dead
+    predecessor. The original exception is rethrown after that cleanup so a
+    cancellation remains status130 and ordinary failures retain their status.
+    """
+
+    def __init__(self, lease: HaxeServerLease, failure: BaseException):
+        super().__init__("replacement Haxe lease publication failed")
+        self.lease = lease
+        self.failure = failure
+
+
 class PlayFailure(RuntimeError):
     """The playable could not be built without weakening its contracts."""
 
@@ -2304,6 +2319,7 @@ def compile_haxe(
     observe_renderer_interval: bool = False,
     server_lease: HaxeServerLease | None = None,
     server_owner: OwnedHaxeServer | None = None,
+    publish_server_lease: Callable[[HaxeServerLease], None] | None = None,
     haxe_timeout_seconds: int = 120,
 ) -> dict[str, object]:
     if raylib_configuration not in RAYLIB_CONFIGURATIONS:
@@ -2410,6 +2426,11 @@ def compile_haxe(
             server_lease = server_owner.restart_after_transport_failure(
                 server_lease
             )
+            if publish_server_lease is not None:
+                try:
+                    publish_server_lease(server_lease)
+                except BaseException as failure:
+                    raise _LeasePublicationFailure(server_lease, failure) from failure
             result = request(server_lease)
         if result.returncode != 0:
             detail = compiler_process_detail(result.stdout, result.stderr)
@@ -4324,6 +4345,13 @@ def main(argv: list[str]) -> int:
     variant_lock: VariantLock | None = None
     server_owner: OwnedHaxeServer | None = None
     server_lease: HaxeServerLease | None = None
+    server_failure_handled = False
+
+    def publish_server_lease(lease: HaxeServerLease) -> None:
+        # Retry cleanup must retain the replacement's immutable process identity.
+        nonlocal server_lease
+        server_lease = lease
+
     try:
         args = parse_args(argv)
         if args.cold:
@@ -4588,13 +4616,30 @@ def main(argv: list[str]) -> int:
                     observe_renderer_interval=args.observe_renderer_interval,
                     server_lease=server_lease,
                     server_owner=server_owner,
+                    publish_server_lease=publish_server_lease,
                     haxe_timeout_seconds=args.haxe_timeout_seconds,
                 )
                 generation = finalize_transaction(output_root, transaction)
                 generation = publish_pointer(output_root, generation)
                 generated = generation.generated
-            except BaseException:
-                discard_transaction(transaction)
+            except BaseException as failure:
+                if isinstance(failure, _LeasePublicationFailure):
+                    server_lease = failure.lease
+                # A connected compiler may still write after its client exits.
+                # Dispose only after exact owned termination is confirmed; an
+                # attachment or uncertain stop keeps its output for diagnosis.
+                stopped = stop_owned_server_after_failure(server_owner, server_lease)
+                server_failure_handled = True
+                if server_lease is None or stopped:
+                    discard_transaction(transaction)
+                else:
+                    print(
+                        f"caxecraft: WARNING: retained failed generation at {transaction.generated}; "
+                        "server termination could not be confirmed",
+                        file=sys.stderr,
+                    )
+                if isinstance(failure, _LeasePublicationFailure):
+                    raise failure.failure.with_traceback(failure.failure.__traceback__)
                 raise
             print(f"caxecraft: generated {args.layout} C project at {generated}")
         if args.compile_only:
@@ -4879,7 +4924,8 @@ def main(argv: list[str]) -> int:
         print("caxecraft: launching; press Q to quit")
         return subprocess.run([str(executable)], cwd=executable.parent, check=False).returncode
     except KeyboardInterrupt:
-        stopped = stop_owned_server_after_failure(server_owner, server_lease)
+        stopped = (False if server_failure_handled else
+                   stop_owned_server_after_failure(server_owner, server_lease))
         suffix = "; stopped the owned Haxe server" if stopped else ""
         print(f"caxecraft: interrupted{suffix}", file=sys.stderr)
         return 130
@@ -4895,7 +4941,8 @@ def main(argv: list[str]) -> int:
         provision.ProvisionFailure,
         PlayFailure,
     ) as error:
-        stop_owned_server_after_failure(server_owner, server_lease)
+        if not server_failure_handled:
+            stop_owned_server_after_failure(server_owner, server_lease)
         print(f"caxecraft: ERROR: {error}", file=sys.stderr)
         return 1
     finally:

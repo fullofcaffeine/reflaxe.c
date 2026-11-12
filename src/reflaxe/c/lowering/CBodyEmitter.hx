@@ -1619,7 +1619,7 @@ class CBodyEmitter {
 			final result = requireResult(instruction, fn.id);
 			final name = state.temporaryNames.get(result.id);
 			if (name == null)
-				return fail('atomic $role result `${result.id}` in `${fn.id}` has no finalized temporary');
+				return fail(("atomic " + (role) + " result `" + (result.id) + "` in `" + (fn.id) + "` has no finalized temporary"));
 			return {result: result, name: name};
 		}
 		function declareResult(initializer:CExpr, role:String):CIdentifier {
@@ -8276,10 +8276,10 @@ class CBodyEmitter {
 				return;
 			case "set-grow":
 				if (call.arguments.length != 3)
-					return fail('Array set-grow `${instruction.id}` in `${fn.id}` lost its three arguments');
+					return fail(("Array set-grow `" + (instruction.id) + "` in `" + (fn.id) + "` lost its three arguments"));
 				final receiverType = valueType(fn, call.arguments[0]);
 				if (receiverType == null)
-					return fail('Array set-grow `${instruction.id}` in `${fn.id}` lost its receiver type');
+					return fail(("Array set-grow `" + (instruction.id) + "` in `" + (fn.id) + "` lost its receiver type"));
 				final instanceId = requireArrayInstanceId(receiverType, instruction.id, fn.id);
 				final elementType = requireArrayElementType(instanceId);
 				requireArrayPlan(instanceId);
@@ -9520,7 +9520,7 @@ class CBodyEmitter {
 			case IRTInt(width, signed): ("int:" + width + ":" + (signed ? "signed" : "unsigned"));
 			case IRTAbiInteger(kind): 'abi-int:$kind';
 			case IRTFloat(width): 'float:$width';
-			case IRTAtomic(element): 'atomic<${typeKey(element)}>';
+			case IRTAtomic(element): ("atomic<" + (typeKey(element)) + ">");
 			case IRTString: "string-utf8";
 			case IRTManagedString: "managed-string-utf8";
 			case IRTCString: "cstring-borrowed-literal";
@@ -9544,7 +9544,7 @@ class CBodyEmitter {
 			case IRTInt(width, signed): ("int:" + width + ":" + (signed ? "signed" : "unsigned"));
 			case IRTAbiInteger(kind): 'abi-int:$kind';
 			case IRTFloat(width): 'float:$width';
-			case IRTAtomic(element): 'atomic<${exactTypeKey(element)}>';
+			case IRTAtomic(element): ("atomic<" + (exactTypeKey(element)) + ">");
 			case IRTString: "string-utf8";
 			case IRTManagedString: "managed-string-utf8";
 			case IRTCString: "cstring";

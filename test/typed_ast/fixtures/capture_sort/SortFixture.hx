@@ -98,3 +98,16 @@ class Item30 {}
 
 /** Independent ordering input. */
 class Item31 {}
+
+/** Exercise enum metadata through the same captured declaration boundary. */
+enum CaptureEnum {
+	Only;
+}
+
+/** Exercise a structural alias without forcing it into a class representation. */
+typedef CaptureTypedef = {
+	final value:Int;
+}
+
+/** Exercise abstract metadata without introducing constructor expression roots. */
+abstract CaptureAbstract(Int) {}

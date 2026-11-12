@@ -11,7 +11,6 @@ import haxe.macro.Type;
 import haxe.macro.Type.AnonStatus;
 import haxe.macro.Type.AnonType;
 import haxe.macro.Type.Ref;
-import reflaxe.c.frontend.TypedProgramInput.TypedAstDeclaration;
 import sys.FileSystem;
 import sys.io.File;
 
@@ -58,22 +57,21 @@ class NamedRecordSourceProvenance {
 		typedefs must find an exact content-keyed record captured by an earlier
 		request in this Haxe process. A missing record fails before HxcIR is built
 		instead of silently attaching a plausible but wrong source location.
+		The capture owner supplies decoded typedefs in deterministic declaration
+		order. Reusing those request-local values avoids another macro bridge read;
+		this planner still owns all source-file and position validation.
 		An optional digest owner can reuse hashing after this plan reads equal bytes;
 		it cannot replace the plan's own file checks or snapshots.
 	**/
-	public static function plan(declarations:Array<TypedAstDeclaration>, ?contentDigests:SourceContentDigest):NamedRecordSourcePlan {
+	public static function plan(definitions:Array<DefType>, ?contentDigests:SourceContentDigest):NamedRecordSourcePlan {
 		final records:Map<String, Map<String, Position>> = [];
 		final sourcesByPath:Map<String, NamedRecordSourceInput> = [];
 		final defineDigest = currentDefineDigest();
-		for (declaration in declarations) {
-			switch declaration.raw {
-				case TTypeDecl(reference):
-					final definition = reference.get();
-					final anonymous = directAnonymous(definition.type);
-					if (anonymous != null && hasClosedFieldSet(anonymous)) {
-						records.set(declaration.path, resolveRecord(declaration.path, definition.pos, anonymous, defineDigest, sourcesByPath, contentDigests));
-					}
-				case TClassDecl(_) | TEnumDecl(_) | TAbstract(_):
+		for (definition in definitions) {
+			final anonymous = directAnonymous(definition.type);
+			if (anonymous != null && hasClosedFieldSet(anonymous)) {
+				final path = TypedAstNormalizer.declarationPath(definition);
+				records.set(path, resolveRecord(path, definition.pos, anonymous, defineDigest, sourcesByPath, contentDigests));
 			}
 		}
 		return new NamedRecordSourcePlan(records);

@@ -22,6 +22,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from scripts.test.bounded_process import run as run_bounded_process  # noqa: E402
+from scripts.test.compiler_discovery import sanitizer_execution_environment  # noqa: E402
 from scripts.test.compiler_discovery import resolve_compiler  # noqa: E402
 
 CASE = Path(__file__).resolve().parent
@@ -498,6 +499,7 @@ def project_build_inputs(project: Path) -> tuple[list[Path], list[Path]]:
 
 def compile_and_run(
     compiler: str,
+    family: str,
     project: Path,
     executable: Path,
     flags: tuple[str, ...],
@@ -527,6 +529,7 @@ def compile_and_run(
         )
     executed = run_bounded_process(
         [str(executable)],
+        env=sanitizer_execution_environment(compiler, family, flags),
         cwd=ROOT,
         check=False,
         capture_output=True,
@@ -608,15 +611,15 @@ def run_native(toolchains: list[Toolchain]) -> None:
             for layout, project in projects.items():
                 executable = build / layout
                 compile_and_run(
-                    toolchain.compiler,
+                    toolchain.compiler, toolchain.family,
                     project,
                     executable,
                     ("-O2" if layout == "unity" else "-O0",),
                 )
                 inspect_symbols(executable, toolchain.family)
-            compile_and_run(toolchain.compiler, metal, build / "metal", ("-O0",))
+            compile_and_run(toolchain.compiler, toolchain.family, metal, build / "metal", ("-O0",))
             compile_and_run(
-                toolchain.compiler,
+                toolchain.compiler, toolchain.family,
                 projects["split"],
                 build / "sanitized",
                 SANITIZER_FLAGS,

@@ -24,11 +24,12 @@ import sys
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Mapping, Sequence
+from typing import Callable, Mapping, Sequence
 
 from dev_build_state import atomic_write_state, canonical_digest
 from dev_generation import VariantLock
 from dev_windows_process import process_identity as windows_process_identity
+from dev_windows_process import process_exit_observer, process_absent as windows_process_absent
 
 
 COOKIE_KIND = "caxecraft-owned-haxe-server"
@@ -457,10 +458,58 @@ def _owned_process(cookie: Mapping[str, object]) -> OwnedHaxeServerProcess:
 def _terminate_owned(cookie: Mapping[str, object]) -> bool:
     """Stop only the exact process named by a still-valid ownership cookie."""
 
+    # A previously validated lease may already be dead. Validate its stored
+    # identity before checking absence; an unavailable observation is not death.
+    pid = cookie.get("pid")
+    if (
+        cookie.get("schemaVersion") != COOKIE_SCHEMA_VERSION
+        or cookie.get("kind") != COOKIE_KIND
+        or not _cookie_digest(cookie)
+        or not isinstance(pid, int) or isinstance(pid, bool) or pid < 1
+        or pid > (0xFFFFFFFF if os.name == "nt" else 0x7FFFFFFF)
+        or not isinstance(cookie.get("processStartIdentity"), str)
+        or not isinstance(cookie.get("processCommandIdentity"), str)
+    ):
+        return False
+    if os.name == "nt":
+        if windows_process_absent(pid):
+            return True
+    else:
+        try:
+            os.kill(pid, 0)
+        except ProcessLookupError:
+            return True
+        except OSError:
+            return False
     if not _owned_cookie(cookie):
         return False
+    if os.name == "nt":
+        with process_exit_observer(int(cookie["pid"]), str(cookie["processStartIdentity"])) as exited:
+            if exited is None:
+                return False
+            return _terminate_verified(cookie, exited)
+    return _terminate_verified(cookie)
+
+
+def _terminate_verified(
+    cookie: Mapping[str, object], windows_exited: Callable[[int], bool] | None = None,
+) -> bool:
+    """Terminate an ownership-checked process, retaining positive exit evidence."""
     pid = int(cookie["pid"])
     wait_for_graceful_exit = True
+
+    def positively_absent() -> bool:
+        # Missing identity can mean observation failure. Only ESRCH proves
+        # absence here; permission errors and Windows uncertainty retain output.
+        if os.name == "nt":
+            return windows_exited is not None and windows_exited(0)
+        try:
+            os.kill(pid, 0)
+        except ProcessLookupError:
+            return True
+        except OSError:
+            pass
+        return False
     try:
         if os.name == "nt":
             result = subprocess.run(
@@ -476,7 +525,7 @@ def _terminate_owned(cookie: Mapping[str, object]) -> bool:
         else:
             os.kill(pid, signal.SIGTERM)
     except (OSError, subprocess.TimeoutExpired):
-        return process_start_identity(pid) is None
+        return positively_absent()
 
     def reaped_or_gone() -> bool:
         if os.name != "nt":
@@ -486,7 +535,7 @@ def _terminate_owned(cookie: Mapping[str, object]) -> bool:
                     return True
             except ChildProcessError:
                 pass
-        return process_start_identity(pid) is None
+        return positively_absent()
 
     deadline = time.monotonic() + 5.0
     while wait_for_graceful_exit and time.monotonic() < deadline:
@@ -494,10 +543,10 @@ def _terminate_owned(cookie: Mapping[str, object]) -> bool:
             return True
         time.sleep(0.05)
     if not _owned_cookie(cookie):
-        return process_start_identity(pid) is None
+        return positively_absent()
     try:
         if os.name == "nt":
-            subprocess.run(
+            result = subprocess.run(
                 ["taskkill", "/F", "/PID", str(pid), "/T"],
                 check=False,
                 capture_output=True,
@@ -784,7 +833,10 @@ class OwnedHaxeServer:
 
         if not lease.owned:
             raise HaxeServerFailure("an explicitly attached Haxe server is not owned")
-        self.stop_lease(lease)
+        if not self.stop_lease(lease):
+            raise HaxeServerFailure(
+                "cannot retry while the original Haxe server termination is unconfirmed"
+            )
         return self.connect()
 
 

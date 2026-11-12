@@ -23,6 +23,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from scripts.test.bounded_process import run as run_bounded_process  # noqa: E402
+from scripts.test.compiler_discovery import sanitizer_execution_environment  # noqa: E402
 
 CASE = Path(__file__).resolve().parent
 FIXTURES = CASE / "fixtures"
@@ -945,7 +946,10 @@ def run_typed_values(toolchains: list[NativeToolchain], root: Path) -> None:
                 environment["ASAN_OPTIONS"] = ("detect_leaks=0" if sys.platform == "darwin" else "detect_leaks=1") + ":halt_on_error=1"
                 environment["UBSAN_OPTIONS"] = "halt_on_error=1:print_stacktrace=1"
                 native = run_bounded_process(
-                    [str(executable)], cwd=build, env=environment,
+                    [str(executable)], cwd=build, env=sanitizer_execution_environment(
+                        toolchain.compiler, toolchain.family,
+                        ("-fsanitize=address,undefined",) if sanitize else (), environment=environment
+                    ),
                     check=False, capture_output=True, timeout=30,
                 )
                 if native.returncode != 0 or native.stdout != expected or native.stderr:
@@ -1023,7 +1027,10 @@ def run_uint64_values(toolchains: list[NativeToolchain], root: Path) -> None:
             environment["ASAN_OPTIONS"] = ("detect_leaks=0" if sys.platform == "darwin" else "detect_leaks=1") + ":halt_on_error=1"
             environment["UBSAN_OPTIONS"] = "halt_on_error=1:print_stacktrace=1"
             native = run_bounded_process(
-                [str(executable)], cwd=build, env=environment,
+                [str(executable)], cwd=build, env=sanitizer_execution_environment(
+                        toolchain.compiler, toolchain.family,
+                        ("-fsanitize=address,undefined",) if sanitize else (), environment=environment
+                    ),
                 check=False, capture_output=True, timeout=30,
             )
             if native.returncode != 0 or native.stdout != expected or native.stderr:

@@ -23,6 +23,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from scripts.test.bounded_process import run as run_bounded_process  # noqa: E402
+from scripts.test.compiler_discovery import sanitizer_execution_environment  # noqa: E402
 
 CASE = Path(__file__).resolve().parent
 GENERATED = CASE / "generated"
@@ -561,6 +562,7 @@ def run_negative_cases(
 
 def compile_and_run(
     compiler: str,
+    family: str,
     sources: list[Path],
     include_roots: list[Path],
     executable: Path,
@@ -590,6 +592,7 @@ def compile_and_run(
         )
     executed = run_bounded_process(
         [str(executable)],
+        env=sanitizer_execution_environment(compiler, family, flags),
         cwd=ROOT,
         check=False,
         capture_output=True,
@@ -675,7 +678,7 @@ def run_native(toolchains: list[Toolchain], *, generated_haxe: bool) -> None:
             for optimization in ("-O0", "-O2"):
                 native = build / f"native-{optimization[1:].lower()}"
                 compile_and_run(
-                    toolchain.compiler,
+                    toolchain.compiler, toolchain.family,
                     [*RUNTIME_SOURCES, NATIVE_FIXTURE],
                     [RUNTIME_INCLUDE],
                     native,
@@ -690,7 +693,7 @@ def run_native(toolchains: list[Toolchain], *, generated_haxe: bool) -> None:
                     )
                     executable = build / f"generated-{layout}"
                     compile_and_run(
-                        toolchain.compiler,
+                        toolchain.compiler, toolchain.family,
                         sources,
                         [project / "include", project / "runtime/include"],
                         executable,
@@ -699,7 +702,7 @@ def run_native(toolchains: list[Toolchain], *, generated_haxe: bool) -> None:
                     inspect_symbols(executable, toolchain.family)
             if toolchain.family == "clang":
                 compile_and_run(
-                    toolchain.compiler,
+                    toolchain.compiler, toolchain.family,
                     [*RUNTIME_SOURCES, NATIVE_FIXTURE],
                     [RUNTIME_INCLUDE],
                     build / "native-sanitized",
@@ -711,7 +714,7 @@ def run_native(toolchains: list[Toolchain], *, generated_haxe: bool) -> None:
                         (project / "src").rglob("*.c")
                     )
                     compile_and_run(
-                        toolchain.compiler,
+                        toolchain.compiler, toolchain.family,
                         sources,
                         [project / "include", project / "runtime/include"],
                         build / "generated-sanitized",
@@ -773,7 +776,7 @@ def run_to_string_only(toolchains: list[Toolchain]) -> None:
             for optimization in ("-O0", "-O2"):
                 executable = build / f"generated-{optimization[1:].lower()}"
                 compile_and_run(
-                    toolchain.compiler,
+                    toolchain.compiler, toolchain.family,
                     sources,
                     includes,
                     executable,
@@ -783,7 +786,7 @@ def run_to_string_only(toolchains: list[Toolchain]) -> None:
             if toolchain.family == "clang":
                 sanitized = build / "generated-sanitized"
                 compile_and_run(
-                    toolchain.compiler,
+                    toolchain.compiler, toolchain.family,
                     sources,
                     includes,
                     sanitized,

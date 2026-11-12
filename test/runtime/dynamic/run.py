@@ -17,6 +17,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from scripts.test.bounded_process import run as run_bounded_process  # noqa: E402
+from scripts.test.compiler_discovery import sanitizer_execution_environment  # noqa: E402
 
 INCLUDE = ROOT / "runtime/hxrt/include"
 SOURCE = ROOT / "runtime/hxrt/src/dynamic.c"
@@ -70,10 +71,11 @@ class Toolchain:
     cxx: str
 
 
-def run(command: list[str]) -> subprocess.CompletedProcess[str]:
+def run(command: list[str], environment: dict[str, str] | None = None) -> subprocess.CompletedProcess[str]:
     return run_bounded_process(
         command,
         cwd=ROOT,
+        env=environment,
         check=False,
         capture_output=True,
         text=True,
@@ -159,7 +161,9 @@ def run_contract(
         )
     command.extend((str(SOURCE), str(CONTRACT), "-o", str(executable)))
     require_success(run(command), f"{toolchain.family} {suffix} Dynamic build")
-    result = run([str(executable)])
+    result = run([str(executable)], environment=sanitizer_execution_environment(
+            toolchain.cc, toolchain.family, command
+        ))
     require_success(result, f"{toolchain.family} {suffix} Dynamic run")
     if result.stdout != EXPECTED_CONTRACT or result.stderr:
         raise DynamicRuntimeFailure(

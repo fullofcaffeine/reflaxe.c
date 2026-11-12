@@ -491,6 +491,22 @@
       ]
     },
     {
+      "path": "test/hxc_ir/fixtures/borrow_parameter_summary/BorrowSummarySubject.hx",
+      "line": 117,
+      "column": 35,
+      "construct": "unchecked-cast",
+      "boundaryKind": "language-semantics-fixture",
+      "symbol": "BorrowSummarySubject.wrapped",
+      "typedModel": "BorrowBox parameter and typed TCast wrapper",
+      "sourceLine": "return (@:borrowSummaryWrapper (cast a : BorrowBox));",
+      "justification": "The fixture needs a real cast node to prove that cast and metadata wrappers do not hide a returned parameter. The operand already has type BorrowBox, and the cast names that same type. No foreign value enters the test.",
+      "validation": "BorrowParameterSummaryProbe independently expects false for wrapped: the returned parameter cannot use a call-bounded borrow. Both the summary and the frozen old traversal must match that verdict.",
+      "testEvidence": [
+        "test/hxc_ir/BorrowParameterSummaryProbe.hx",
+        "test/hxc_ir/run.py"
+      ]
+    },
+    {
       "path": "test/virtual_dispatch/fixtures/interface_downcast/Main.hx",
       "line": 44,
       "column": 29,

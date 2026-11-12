@@ -16,6 +16,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
+from scripts.test.compiler_discovery import sanitizer_execution_environment  # noqa: E402
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
 from scripts.test.c_fixture_harness import (  # noqa: E402
     C11_STRICT_FLAGS,
@@ -226,6 +229,9 @@ def sanitizer_supported(
         [str(executable)],
         config=config,
         phase=name + ":probe",
+        environment=sanitizer_execution_environment(
+            config.toolchain.compiler, config.toolchain.family, flags
+        ),
     )
     return True
 
@@ -294,7 +300,10 @@ def run_toolchain(build: Path, config: RunConfig) -> tuple[str, ...]:
             executable,
             config=config,
             phase="address-undefined",
-            environment=sanitizer_environment,
+            environment=sanitizer_execution_environment(
+                config.toolchain.compiler, config.toolchain.family, address_undefined_flags,
+                environment=sanitizer_environment,
+            ),
         )
     )
 

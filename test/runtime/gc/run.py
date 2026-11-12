@@ -21,6 +21,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from scripts.test.bounded_process import run as run_bounded_process  # noqa: E402
+from scripts.test.compiler_discovery import sanitizer_execution_environment  # noqa: E402
 
 INCLUDE = ROOT / "runtime/hxrt/include"
 SOURCES = (
@@ -84,10 +85,11 @@ class Toolchain:
     cxx: str
 
 
-def run(command: list[str], *, timeout: int = 30) -> subprocess.CompletedProcess[str]:
+def run(command: list[str], *, timeout: int = 30, environment: dict[str, str] | None = None) -> subprocess.CompletedProcess[str]:
     return run_bounded_process(
         command,
         cwd=ROOT,
+        env=environment,
         check=False,
         capture_output=True,
         text=True,
@@ -356,7 +358,9 @@ def compile_and_run(
     command.extend(str(path) for path in (*SOURCES, CONTRACT))
     command.extend(("-o", str(executable)))
     require_success(run(command), f"{toolchain.family} {suffix} collector build")
-    result = run([str(executable)])
+    result = run([str(executable)], environment=sanitizer_execution_environment(
+            toolchain.cc, toolchain.family, command
+        ))
     require_success(result, f"{toolchain.family} {suffix} collector run")
     if result.stderr or result.stdout.strip() != (
         "gc-contract: OK allocations=265 collections=137 reclaimed=265 pause_ticks=980"
@@ -385,7 +389,9 @@ def interval_observer_lanes(toolchain: Toolchain, build: Path) -> None:
         command.extend(str(path) for path in (*SOURCES, INTERVAL_OBSERVER, INTERVAL_CONTRACT))
         command.extend(("-o", str(executable)))
         require_success(run(command), f"{toolchain.family} {suffix} interval observer build")
-        result = run([str(executable)])
+        result = run([str(executable)], environment=sanitizer_execution_environment(
+            toolchain.cc, toolchain.family, command
+        ))
         require_success(result, f"{toolchain.family} {suffix} interval observer run")
         if result.stderr or result.stdout != "interval-observer: OK\n":
             raise GcTestFailure(

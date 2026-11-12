@@ -13,6 +13,8 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
+from git_fixture import git_fixture_environment
+
 
 ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
@@ -87,6 +89,7 @@ def run_ready_tree(
     command: list[str], pid_path: Path, *, setup_timeout: float = 15,
     expected_pids: int = 3, command_timeout: float = 3,
     phase: str = "nested compiler fixture", compiler_progress: bool = False,
+    on_ready=None, honor_timeout_scale: bool = True,
 ) -> None:
     """Start the cleanup clock only after this real process tree is ready.
 
@@ -132,6 +135,8 @@ def run_ready_tree(
                     if time.monotonic() >= deadline:
                         raise AssertionError(timeout_message)
                     if ready:
+                        if on_ready is not None:
+                            on_ready(process)
                         return process
                 time.sleep(0.01)
         except BaseException as failure:
@@ -153,6 +158,7 @@ def run_ready_tree(
             capture_output=True,
             text=True,
             compiler_progress=compiler_progress,
+            honor_timeout_scale=honor_timeout_scale,
         )
 
 
@@ -175,6 +181,145 @@ def direct_bounded_subprocess_lines(path: Path) -> tuple[int, ...]:
 
 class BoundedProcessTest(unittest.TestCase):
     """Protect successful results, timeout diagnostics, and platform cleanup."""
+
+    def test_fixed_deadline_preserves_environment_and_scalable_default(self) -> None:
+        child_environment = {"HXC_TEST_TIMEOUT_SCALE": "30", "CONTRACT": "retained"}
+        for fixed, expected in ((False, 450), (True, 15)):
+            with self.subTest(fixed=fixed):
+                process = mock.MagicMock()
+                process.__enter__.return_value = process
+                process.communicate.return_value = ("out", "err")
+                process.poll.return_value = 7
+                process.stdin = process.stdout = process.stderr = None
+                with mock.patch.dict(os.environ, {"HXC_TEST_TIMEOUT_SCALE": "30"}):
+                    with mock.patch.object(bounded_process.subprocess, "Popen", return_value=process) as start:
+                        result = bounded_process.run(
+                            ["fixture"], timeout=15, capture_output=True,
+                            honor_timeout_scale=not fixed, env=child_environment,
+                        )
+                process.communicate.assert_called_once_with(None, timeout=expected)
+                self.assertEqual(start.call_args.kwargs["env"], child_environment)
+                self.assertEqual(result.returncode, 7)
+
+    def test_cleanup_expiration_keeps_primary_timeout_and_partial_output(self) -> None:
+        process = mock.MagicMock()
+        process.__enter__.return_value = process
+        process.communicate.side_effect = [
+            subprocess.TimeoutExpired("fixture", 15, output=b"first"),
+            subprocess.TimeoutExpired("fixture", 0.75, output=b"first\nlast", stderr=b"detail"),
+        ]
+        process.wait.side_effect = subprocess.TimeoutExpired("fixture", 0)
+        with mock.patch.object(bounded_process.subprocess, "Popen", return_value=process):
+            with mock.patch.object(bounded_process, "_terminate_process_tree", return_value="") as terminate:
+                with mock.patch.object(bounded_process.time, "monotonic", side_effect=[10, 10.25, 11]):
+                    with self.assertRaises(bounded_process.ProcessTreeTimeout) as caught:
+                        bounded_process.run(
+                            ["fixture"], timeout=15, honor_timeout_scale=False,
+                            cleanup_timeout=1, phase="transport",
+                        )
+        self.assertEqual(caught.exception.timeout, 15)
+        self.assertEqual(caught.exception.output, b"first\nlast")
+        self.assertEqual(caught.exception.stderr, b"detail")
+        self.assertIn("cleanup incomplete", str(caught.exception))
+        self.assertIn("immediate child was not reaped", str(caught.exception))
+        self.assertEqual(process.communicate.call_args_list[-1], mock.call(timeout=0.75))
+        process.wait.assert_called_once_with(timeout=0)
+        process.__exit__.assert_not_called()
+        terminate.assert_called_once_with(process, timeout=1)
+
+    def test_cleanup_decode_error_preserves_timeout_or_interruption(self) -> None:
+        for original in (
+            subprocess.TimeoutExpired("fixture", 15, output=b"partial\xff"),
+            KeyboardInterrupt(),
+        ):
+            with self.subTest(failure=type(original).__name__):
+                process = mock.MagicMock()
+                process.communicate.side_effect = [
+                    original, UnicodeDecodeError("utf-8", b"\xff", 0, 1, "invalid"),
+                ]
+                process.wait.return_value = -9
+                with mock.patch.object(bounded_process.subprocess, "Popen", return_value=process):
+                    with mock.patch.object(bounded_process, "_terminate_process_tree", return_value=""):
+                        expected = (
+                            bounded_process.ProcessTreeTimeout
+                            if isinstance(original, subprocess.TimeoutExpired)
+                            else KeyboardInterrupt
+                        )
+                        with self.assertRaises(expected) as caught:
+                            bounded_process.run(
+                                ["fixture"], timeout=15, honor_timeout_scale=False,
+                                capture_output=True, text=True,
+                            )
+                if isinstance(original, subprocess.TimeoutExpired):
+                    self.assertEqual(caught.exception.output, b"partial\xff")
+                    self.assertEqual(caught.exception.timeout, 15)
+                    self.assertIn("UnicodeDecodeError", str(caught.exception))
+                else:
+                    self.assertIs(caught.exception, original)
+                    self.assertIn("UnicodeDecodeError", original.__notes__[0])
+                self.assertLessEqual(process.wait.call_args.kwargs["timeout"], 5)
+                process.__exit__.assert_not_called()
+
+    @unittest.skipIf(os.name == "nt", "POSIX process groups survive an exited leader")
+    def test_exited_git_hook_pipe_holder_is_stopped_without_touching_sibling(self) -> None:
+        """A failed hook must not leave its child holding Git's captured pipe."""
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            environment = git_fixture_environment()
+
+            def git(*arguments):
+                return subprocess.run(
+                    ["git", *arguments], cwd=root, env=environment,
+                    capture_output=True, text=True, check=True, timeout=15,
+                )
+
+            git("init", "-q")
+            git("config", "user.name", "Hook fixture")
+            git("config", "user.email", "hook@example.invalid")
+            hooks = root / ".git/hooks"
+            git("config", "core.hooksPath", str(hooks))
+            git("commit", "--allow-empty", "-m", "seed")
+            head = git("rev-parse", "HEAD").stdout
+            pids = root / "owned.pids"
+            release = root / "release"
+            hook = hooks / "pre-commit"
+            hook.write_text(
+                f"#!{sys.executable}\n"
+                "import os, subprocess, sys, time\nfrom pathlib import Path\n"
+                f"pids=Path({str(pids)!r}); release=Path({str(release)!r})\n"
+                "pids.write_text(str(os.getppid())+'\\n'+str(os.getpid())+'\\n')\n"
+                "child=subprocess.Popen([sys.executable,'-c',"
+                "\"import os,sys,time; open(sys.argv[1],'a').write(str(os.getpid())+'\\\\n'); time.sleep(60)\",str(pids)])\n"
+                "print('HOOK_PARTIAL',flush=True)\n"
+                "while not release.exists(): time.sleep(0.01)\n"
+                "sys.exit(7)\n",
+                encoding="utf-8",
+            )
+            hook.chmod(0o755)
+            command = ["git", "-C", str(root), "commit", "--allow-empty", "-m", "must fail"]
+
+            def release_hook(process):
+                release.touch()
+                self.assertNotEqual(process.wait(timeout=5), 0)
+
+            sibling = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(60)"])
+            try:
+                with mock.patch.dict(os.environ, environment, clear=True):
+                    with self.assertRaises(bounded_process.ProcessTreeTimeout) as caught:
+                        run_ready_tree(
+                            command, pids, command_timeout=1,
+                            on_ready=release_hook, honor_timeout_scale=False,
+                        )
+                # Git can forward hook stdout to its own stderr. Both captured
+                # channels belong to the transport contract.
+                self.assertIn("HOOK_PARTIAL", caught.exception.stdout + caught.exception.stderr)
+                self.assertNotIn("cleanup incomplete", str(caught.exception))
+                self.assertTrue(process_is_active(sibling.pid))
+                self.assertFalse(any(process_is_active(int(pid)) for pid in pids.read_text().splitlines()))
+                self.assertEqual(git("rev-parse", "HEAD").stdout, head)
+            finally:
+                sibling.kill()
+                sibling.wait(timeout=5)
 
     def test_timeout_scale_is_bounded_and_opt_in(self) -> None:
         with mock.patch.dict(os.environ, {}, clear=True):

@@ -26,6 +26,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from scripts.test.bounded_process import run as run_bounded_process  # noqa: E402
+from scripts.test.compiler_discovery import sanitizer_execution_environment  # noqa: E402
 
 HXML = Path(__file__).with_name("span_lowering.hxml")
 FIXTURE = Path(__file__).with_name("fixtures")
@@ -1266,7 +1267,9 @@ def check_native_artifacts(
                 run_command(
                     [str(executable)],
                     f"{toolchain.family} {lane} span behavior",
-                    environment=run_environment,
+                    environment=sanitizer_execution_environment(
+                        toolchain.compiler, toolchain.family, link_flags, environment=run_environment
+                    ),
                 )
                 check_no_hxrt_symbols(executable, f"{toolchain.family} {lane}")
 

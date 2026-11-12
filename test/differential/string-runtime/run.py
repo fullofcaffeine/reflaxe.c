@@ -24,6 +24,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from scripts.test.bounded_process import run as run_bounded_process  # noqa: E402
+from scripts.test.compiler_discovery import sanitizer_execution_environment  # noqa: E402
 
 CASE = Path(__file__).resolve().parent
 ORACLE_HXML = CASE / "oracle.hxml"
@@ -343,6 +344,7 @@ def compile_native_fixture(
         )
     executed = run_bounded_process(
         [str(executable)],
+        env=sanitizer_execution_environment(toolchain.compiler, toolchain.family, flags),
         cwd=ROOT,
         check=False,
         capture_output=True,
@@ -1490,7 +1492,7 @@ def compile_generated_and_run(
     executed = run_bounded_process(
         [str(executable)],
         cwd=ROOT,
-        env=environment,
+        env=sanitizer_execution_environment(toolchain.compiler, toolchain.family, flags, environment=environment),
         check=False,
         capture_output=True,
         text=True,

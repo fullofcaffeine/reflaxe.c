@@ -360,7 +360,8 @@ def check_nominal_cache() -> None:
     """Check request-local type reuse without starting the target compiler."""
     command = [development_tool("haxe"), "-cp", str(ROOT / "src"),
                "-cp", str(ROOT / "vendor/reflaxe/src"), "-cp", str(Path(__file__).parent),
-               "--macro", "NominalCacheProbe.install()", "-main", "NominalCacheFixture", "--interp"]
+               "--macro", "NominalCacheProbe.install()",
+               "--macro", "ManagedTypeDiscoveryProbe.install()", "-main", "NominalCacheFixture", "--interp"]
     environment = os.environ.copy()
     environment["HAXE_NO_SERVER"] = "1"
     result = run_bounded_process(command, cwd=ROOT, env=environment, check=False,
@@ -394,13 +395,41 @@ def check_managed_root_paths() -> None:
         raise HxcIRFailure(f"managed root path check failed\n{result.stdout}\n{result.stderr}")
 
 
+def check_borrow_parameter_summary() -> None:
+    """Keep initial reference-escape verdicts while bounding each body's traversal."""
+    result = run_bounded_process(
+        [development_tool("haxe"), "test/hxc_ir/borrow_parameter_summary.hxml"],
+        cwd=ROOT, env={**os.environ, "HAXE_NO_SERVER": "1"},
+        check=False, capture_output=True, text=True, timeout=30,
+    )
+    lines = result.stdout.splitlines()
+    if (result.returncode or result.stderr or len(lines) != 2
+            or not lines[0].startswith("BORROW_SUMMARY_COUNTS=")
+            or lines[1] != "borrow parameter summary contracts passed"):
+        raise HxcIRFailure(f"parameter borrow summary check failed\n{result.stdout}\n{result.stderr}")
+    counts = json.loads(lines[0].split("=", 1)[1])
+    if not isinstance(counts, list) or len(counts) != 3:
+        raise HxcIRFailure("parameter borrow summary omitted its three count cases")
+    for parameters, row in zip((1, 8, 32), counts):
+        if (not isinstance(row, dict) or row.get("parameters") != parameters
+                or not isinstance(row.get("nodes"), int) or row["nodes"] <= 0
+                or row.get("visits") != row["nodes"]
+                or row.get("oldVisits") != parameters * row["nodes"]):
+            raise HxcIRFailure("parameter borrow summary traversal counts drifted")
+
+
 def main() -> int:
     if shutil.which(development_tool("haxe")) is None:
         print("hxc-ir: ERROR: pinned Haxe executable is unavailable", file=sys.stderr)
         return 1
     try:
-        if sys.argv[1:] not in ([], ["--json-strings-only"], ["--nominal-cache-only"], ["--carrier-declarations-only"], ["--managed-root-paths-only"]):
-            raise HxcIRFailure("usage: test/hxc_ir/run.py [--json-strings-only | --nominal-cache-only | --carrier-declarations-only | --managed-root-paths-only]")
+        if sys.argv[1:] not in ([], ["--json-strings-only"], ["--nominal-cache-only"], ["--carrier-declarations-only"], ["--managed-root-paths-only"], ["--borrow-parameter-summary-only"]):
+            raise HxcIRFailure("usage: test/hxc_ir/run.py [--json-strings-only | --nominal-cache-only | --carrier-declarations-only | --managed-root-paths-only | --borrow-parameter-summary-only]")
+        if not sys.argv[1:] or sys.argv[1:] == ["--borrow-parameter-summary-only"]:
+            check_borrow_parameter_summary()
+        if sys.argv[1:] == ["--borrow-parameter-summary-only"]:
+            print("hxc-ir: OK: one-pass initial parameter borrowing and authored escape verdicts")
+            return 0
         if not sys.argv[1:] or sys.argv[1:] == ["--managed-root-paths-only"]:
             check_managed_root_paths()
         if sys.argv[1:] == ["--managed-root-paths-only"]:

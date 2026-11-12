@@ -22,6 +22,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from scripts.test.bounded_process import run as run_bounded_process  # noqa: E402
+from scripts.test.compiler_discovery import sanitizer_execution_environment  # noqa: E402
 
 
 CASE = Path(__file__).resolve().parent
@@ -419,10 +420,11 @@ def compile_generated(
 
 
 def run_executable(
-    executable: Path, *, timezone: str | None = None, sanitizer: bool = False
+    executable: Path, *, timezone: str | None = None, sanitizer: bool = False,
+    environment: dict[str, str] | None = None
 ) -> str:
     """Run one native probe with deterministic locale and optional timezone."""
-    environment = os.environ.copy()
+    environment = dict(os.environ if environment is None else environment)
     environment["LC_ALL"] = "C"
     if timezone is not None:
         environment["TZ"] = timezone
@@ -477,7 +479,8 @@ def compile_runtime_contract(
             f"{result.stdout!r} {result.stderr!r}"
         )
     if run_executable(
-        executable, timezone=CENTRAL_TZ, sanitizer=sanitizer
+        executable, timezone=CENTRAL_TZ, sanitizer=sanitizer,
+        environment=sanitizer_execution_environment(compiler, family, SANITIZER_FLAGS if sanitizer else ()),
     ) != "date-time-runtime-ok\n":
         raise DateTimeFailure(f"{family} runtime contract output drifted")
 
@@ -636,7 +639,8 @@ def run_generated_native(
                 compiler, projects["local"], executable, sanitizer=True
             )
             if run_executable(
-                executable, timezone=CENTRAL_TZ, sanitizer=True
+                executable, timezone=CENTRAL_TZ, sanitizer=True,
+                environment=sanitizer_execution_environment(compiler, family, SANITIZER_FLAGS),
             ) != expected["local"]:
                 raise DateTimeFailure("sanitized generated local Date output drifted")
             compile_runtime_contract(

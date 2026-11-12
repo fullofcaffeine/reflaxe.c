@@ -21,6 +21,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from scripts.test.bounded_process import run as run_bounded_process  # noqa: E402
+from scripts.test.compiler_discovery import sanitizer_execution_environment  # noqa: E402
 
 CASE = Path(__file__).resolve().parent
 GENERATED = CASE / "generated"
@@ -873,6 +874,7 @@ def run_negative_cases(root: Path) -> None:
 
 def compile_and_run(
     compiler: str,
+    family: str,
     sources: list[Path],
     include_roots: list[Path],
     executable: Path,
@@ -903,6 +905,7 @@ def compile_and_run(
         )
     execution = run_bounded_process(
         [str(executable)],
+        env=sanitizer_execution_environment(compiler, family, flags),
         cwd=ROOT,
         check=False,
         capture_output=True,
@@ -1044,7 +1047,7 @@ def run_native(toolchains: list[Toolchain], *, generated_haxe: bool) -> None:
             build.mkdir()
             native = build / "bytes-native"
             compile_and_run(
-                toolchain.compiler,
+                toolchain.compiler, toolchain.family,
                 [*RUNTIME_SOURCES, FIXTURE],
                 [INCLUDE],
                 native,
@@ -1052,7 +1055,7 @@ def run_native(toolchains: list[Toolchain], *, generated_haxe: bool) -> None:
                 ("HXC_FREESTANDING=1",),
             )
             compile_and_run(
-                toolchain.compiler,
+                toolchain.compiler, toolchain.family,
                 [*RUNTIME_SOURCES, FIXTURE],
                 [INCLUDE],
                 build / "bytes-native-o2",
@@ -1066,7 +1069,7 @@ def run_native(toolchains: list[Toolchain], *, generated_haxe: bool) -> None:
                 ) + sorted((generated / "src").rglob("*.c"))
                 for optimization in ("-O0", "-O2"):
                     compile_and_run(
-                        toolchain.compiler,
+                        toolchain.compiler, toolchain.family,
                         generated_sources,
                         [generated / "include", generated / "runtime/include"],
                         build
@@ -1085,7 +1088,7 @@ def run_native(toolchains: list[Toolchain], *, generated_haxe: bool) -> None:
                 ) + sorted((mutable_buffer / "src").rglob("*.c"))
                 for optimization in ("-O0", "-O2"):
                     compile_and_run(
-                        toolchain.compiler,
+                        toolchain.compiler, toolchain.family,
                         [*mutable_sources, NATIVE_BUFFER_SOURCE],
                         [
                             mutable_buffer / "include",
@@ -1102,7 +1105,7 @@ def run_native(toolchains: list[Toolchain], *, generated_haxe: bool) -> None:
                 )
             if toolchain.family == "clang":
                 compile_and_run(
-                    toolchain.compiler,
+                    toolchain.compiler, toolchain.family,
                     [*RUNTIME_SOURCES, FIXTURE],
                     [INCLUDE],
                     build / "bytes-sanitized",
@@ -1117,7 +1120,7 @@ def run_native(toolchains: list[Toolchain], *, generated_haxe: bool) -> None:
                         (generated / "runtime/src").glob("*.c")
                     ) + sorted((generated / "src").rglob("*.c"))
                     compile_and_run(
-                        toolchain.compiler,
+                        toolchain.compiler, toolchain.family,
                         generated_sources,
                         [generated / "include", generated / "runtime/include"],
                         build / f"bytes-generated-{project_name}-sanitized",
@@ -1128,7 +1131,7 @@ def run_native(toolchains: list[Toolchain], *, generated_haxe: bool) -> None:
                         (mutable_buffer / "runtime/src").glob("*.c")
                     ) + sorted((mutable_buffer / "src").rglob("*.c"))
                     compile_and_run(
-                        toolchain.compiler,
+                        toolchain.compiler, toolchain.family,
                         [*mutable_sources, NATIVE_BUFFER_SOURCE],
                         [
                             mutable_buffer / "include",

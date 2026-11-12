@@ -22,6 +22,10 @@ from git_fixture import git_fixture_environment
 ROOT = Path(__file__).resolve().parents[2]
 SCRIPT_DIR = ROOT / "scripts/ci"
 RUNNER = SCRIPT_DIR / "run_local_gate.py"
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from scripts.test.bounded_process import ProcessTreeTimeout, run as run_bounded_process
 
 
 def load_runner():
@@ -403,11 +407,26 @@ class LocalGateEvidenceTests(unittest.TestCase):
         environment["_"] = "/fixture/previous-command"
         environment["PWD"] = str(repository)
 
+        operation = 0
+
         def run(command: list[str], selected: dict[str, str] = environment):
-            return subprocess.run(
-                command, cwd=repository, env=selected, text=True,
-                capture_output=True, timeout=15,
-            )
+            nonlocal operation
+            operation += 1
+            try:
+                return run_bounded_process(
+                    command, cwd=repository, env=selected, text=True,
+                    capture_output=True, timeout=15, honor_timeout_scale=False,
+                    phase=f"Git/npm transport operation {operation}",
+                )
+            except ProcessTreeTimeout as error:
+                # Keep the timeout primary; its full output remains on the
+                # exception while unittest also displays the last hook stages.
+                for name, output in (("stdout", error.stdout), ("stderr", error.stderr)):
+                    if output:
+                        if isinstance(output, bytes):
+                            output = output.decode("utf-8", errors="replace")
+                        error.add_note(f"{name} (last 8192 characters):\n{output[-8192:]}")
+                raise
 
         self.assertEqual(run(["git", "init", "-q"]).returncode, 0)
         for key, value in (

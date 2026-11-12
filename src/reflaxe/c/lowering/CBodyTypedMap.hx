@@ -445,10 +445,12 @@ class CBodyTypedMapRegistry {
 /** Exact concrete owner recognition shared by reachability and body lowering. */
 class CBodyTypedMapRecognition {
 	/** Return the standard map family, or null for an ordinary class. */
-	public static function family(reference:Ref<ClassType>):Null<CBodyTypedMapFamily> {
-		final value = reference.get();
+	public static function family(reference:Ref<ClassType>):Null<CBodyTypedMapFamily>
+		return familyForDeclaration(reference.get());
+
+	/** Read concrete map identity from a declaration already decoded by the caller. */
+	public static function familyForDeclaration(value:ClassType):Null<CBodyTypedMapFamily>
 		return familyForClass(value, value.pack.join("."));
-	}
 
 	/** Share family policy without reading the compiler declaration a second time. */
 	static function familyForClass(value:ClassType, packageName:String):Null<CBodyTypedMapFamily> {

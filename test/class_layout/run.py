@@ -73,6 +73,8 @@ if str(ROOT) not in sys.path:
 from scripts.test.bounded_process import run as run_bounded_process  # noqa: E402
 
 
+from scripts.test.compiler_discovery import sanitizer_execution_environment  # noqa: E402
+
 from scripts.test.c_fixture_harness import (  # noqa: E402
     C11_STRICT_FLAGS,
     CFixtureFailure,
@@ -710,7 +712,10 @@ def compiler_identity(executable: str) -> str:
     return "unknown"
 
 
-def require_silent_success(command: list[str], *, label: str, cwd: Path = ROOT) -> None:
+def require_silent_success(
+    command: list[str], *, label: str, cwd: Path = ROOT,
+    environment: dict[str, str] | None = None,
+) -> None:
     result = run_bounded_process(
         command,
         cwd=cwd,
@@ -718,6 +723,7 @@ def require_silent_success(command: list[str], *, label: str, cwd: Path = ROOT) 
         capture_output=True,
         text=True,
         timeout=30,
+        env=environment,
     )
     if result.returncode != 0 or result.stdout or result.stderr:
         raise ClassLayoutFailure(
@@ -853,6 +859,95 @@ def static_hxcir(result: subprocess.CompletedProcess[str]) -> str:
     return hxcir
 
 
+def check_owned_child_nonnull(*, requested_toolchain: str) -> None:
+    """Remove only child-address guards; preserve scalar behavior and nullable fail-stop."""
+    fixture = FIXTURES / "owned_child_nonnull"
+    oracle = run_bounded_process(
+        [development_tool("haxe"), "-cp", str(fixture), "-main", "Positive", "--interp"],
+        cwd=ROOT, env=haxe_environment(), capture_output=True, text=True, timeout=30,
+    )
+    if oracle.returncode or oracle.stdout or oracle.stderr:
+        raise ClassLayoutFailure("owned-child independent scalar42 Eval assertion failed")
+    with tempfile.TemporaryDirectory(prefix="hxc-owned-child-nonnull-") as temporary:
+        root = Path(temporary)
+        for main, exit_code in (("Positive", 0), ("NullableFailStop", -signal.SIGABRT)):
+            output = root / main
+            generated = custom_target(fixture, output, main=main, report=True)
+            if generated.returncode or generated.stderr or "[ERROR]" in generated.stdout:
+                raise ClassLayoutFailure(f"{main} generation failed\n{generated.stdout}\n{generated.stderr}")
+            hxcir = static_hxcir(generated)
+            start = hxcir.find('  function "method.OwnedCounter.total"')
+            end = hxcir.find('  end function "method.OwnedCounter.total"', start)
+            section = hxcir[start:end]
+            source = (output / "src/program.c").read_text()
+            body = c_function_section(source, "hxc_OwnedCounter_total")
+            if start < 0 or end < 0 or null_check_count(section) != 1 or body.count("abort();") != 1:
+                raise ClassLayoutFailure("owned-child total must keep parent guard and remove two child guards")
+            if 'null-check value="parameter.self"' not in section or "borrow-class-field" not in section:
+                raise ClassLayoutFailure("owned-child borrow lost its checked-parent origin")
+            manifest = json.loads((output / "hxc.manifest.json").read_text())
+            project = CFixtureProject(
+                main.lower(), tuple(manifest["build"]["sources"]),
+                tuple(sorted(path.relative_to(output).as_posix() for path in output.rglob("*.h"))),
+                tuple(path for path in ("include", "runtime/include") if (output / path).is_dir()),
+                "", ("owned-child-nonnull",), expected_exit=exit_code,
+            )
+            for optimization in ("-O0", "-O2"):
+                report = run_c_fixture_corpus(
+                    suite="owned-child-nonnull", projects=(project,), fixture_root=output,
+                    build_root=root / (main + optimization), repository_root=ROOT,
+                    requested_toolchain=requested_toolchain,
+                    strict_flags=(*C11_STRICT_FLAGS, optimization), timeout_seconds=30,
+                )
+                validate_report(report, required_coverage=frozenset({"owned-child-nonnull"}))
+
+
+def check_owned_child_branches(*, requested_toolchain: str) -> None:
+    """Keep one parent guard across a diamond, including a diamond inside a loop."""
+    for directory, expected in (
+        ("owned_child_branches", "38/42"),
+        ("owned_child_branch_loop", "76/84"),
+        ("owned_child_comparison_loop", "76/84"),
+    ):
+        fixture = FIXTURES / directory
+        oracle = run_bounded_process(
+            [development_tool("haxe"), "-cp", str(fixture), "-main", "Positive", "--interp"],
+            cwd=ROOT, env=haxe_environment(), capture_output=True, text=True, timeout=30,
+        )
+        if oracle.returncode or oracle.stdout or oracle.stderr:
+            raise ClassLayoutFailure(f"{directory} independent scalar {expected} Eval assertion failed")
+        with tempfile.TemporaryDirectory(prefix=f"hxc-{directory}-") as temporary:
+            root = Path(temporary)
+            output = root / "generated"
+            generated = custom_target(fixture, output, main="Positive", report=True)
+            if generated.returncode or generated.stderr or "[ERROR]" in generated.stdout:
+                raise ClassLayoutFailure(f"{directory} generation failed\n{generated.stdout}\n{generated.stderr}")
+            hxcir = static_hxcir(generated)
+            start = hxcir.find('  function "method.OwnedBranch.total"')
+            end = hxcir.find('  end function "method.OwnedBranch.total"', start)
+            section = hxcir[start:end]
+            body = c_function_section((output / "src/program.c").read_text(), "hxc_OwnedBranch_total")
+            if start < 0 or end < 0 or null_check_count(section) != 1 or body.count("abort();") != 1:
+                raise ClassLayoutFailure(f"{directory} must retain its parent guard and remove all three child guards")
+            if 'null-check value="parameter.self"' not in section or "borrow-class-field" not in section:
+                raise ClassLayoutFailure(f"{directory} lost its checked-parent borrow origin")
+            manifest = json.loads((output / "hxc.manifest.json").read_text())
+            project = CFixtureProject(
+                directory.replace("_", "-"), tuple(manifest["build"]["sources"]),
+                tuple(sorted(path.relative_to(output).as_posix() for path in output.rglob("*.h"))),
+                tuple(path for path in ("include", "runtime/include") if (output / path).is_dir()),
+                "", ("owned-child-branches",), expected_exit=0,
+            )
+            for optimization in ("-O0", "-O2"):
+                report = run_c_fixture_corpus(
+                    suite="owned-child-branches", projects=(project,), fixture_root=output,
+                    build_root=root / optimization[1:].lower(), repository_root=ROOT,
+                    requested_toolchain=requested_toolchain,
+                    strict_flags=(*C11_STRICT_FLAGS, optimization), timeout_seconds=30,
+                )
+                validate_report(report, required_coverage=frozenset({"owned-child-branches"}))
+
+
 def check_borrowed_child(*, requested_toolchain: str) -> None:
     """Prove bounded child borrows and collector-managed child returns."""
 
@@ -878,8 +973,10 @@ def check_borrowed_child(*, requested_toolchain: str) -> None:
         second_output = root / "second"
         first = custom_target(BORROWED_CHILD, first_output, main="Main", report=True)
         second = custom_target(BORROWED_CHILD, second_output, main="Main", report=True)
+        # Count typed requirements before runtime-plan reason deduplication:
+        # 21 exact root slots + 5 representation/header + 9 operation requirements.
         expected_summary = (
-            "HXC2001: hxrt selected 7 dependency-closed feature(s) for 34 typed "
+            "HXC2001: hxrt selected 7 dependency-closed feature(s) for 35 typed "
             "runtime root(s): runtime-base, status, alloc, array, object, gc, string-literal."
         )
         for label, result in (("first", first), ("second", second)):
@@ -899,6 +996,43 @@ def check_borrowed_child(*, requested_toolchain: str) -> None:
             raise ClassLayoutFailure("borrowed-child production output was not deterministic")
 
         hxcir = static_hxcir(first)
+        # Resolve nominal declarations before checking fields: a matching fragment
+        # elsewhere must not let the escaping and embedded witnesses trade places.
+        class_instances: dict[str, str] = {}
+        class_layouts: dict[str, str] = {}
+        for name, representation in (("ChildCounter", 'managed("gc")'),
+                                     ("EmbeddedCounter", "direct"),
+                                     ("CounterOwner", 'managed("gc")')):
+            declaration = re.search(
+                rf'^  type "([^"]+)" name="_Main\.{name}" kind=class[^\n]*\n'
+                r'((?:    [^\n]*\n)*)', hxcir, re.MULTILINE,
+            )
+            if declaration is None:
+                raise ClassLayoutFailure(f"borrowed-child missing {name} declaration")
+            instance = re.search(
+                rf'^  instance "([^"]+)" declaration="{re.escape(declaration[1])}" '
+                rf'arguments=\[\] representation={re.escape(representation)} ',
+                hxcir, re.MULTILINE,
+            )
+            if instance is None:
+                raise ClassLayoutFailure(f"borrowed-child {name} representation drifted")
+            class_instances[name] = instance[1]
+            class_layouts[name] = declaration[2]
+        owner_layout = class_layouts["CounterOwner"]
+        if (
+            f'field "child" type=pointer(nullable,instance("{class_instances["ChildCounter"]}"))'
+            not in owner_layout
+            or f'field "embedded" type=instance("{class_instances["EmbeddedCounter"]}")'
+            not in owner_layout
+            or 'header=runtime("gc")' in class_layouts["EmbeddedCounter"]
+        ):
+            raise ClassLayoutFailure("borrowed-child fields lost distinct storage ownership")
+        embedded_constructor = re.search(
+            r'^  function "constructor\._Main\.EmbeddedCounter"[^\n]*\n'
+            r'((?:(?!  function ).*\n)*)', hxcir, re.MULTILINE,
+        )
+        if embedded_constructor is None or "managed-root " in embedded_constructor[1]:
+            raise ClassLayoutFailure("embedded-child constructor acquired a managed root")
         main_start = hxcir.find('function "function.Main.main"')
         main_end = hxcir.find("\n  function ", main_start + 1)
         main_text = hxcir[main_start : None if main_end < 0 else main_end]
@@ -956,7 +1090,7 @@ def check_borrowed_child(*, requested_toolchain: str) -> None:
         if (
             function_start < 0
             or "ownership=borrowed-class" not in function_text
-            or "borrow-class-field" not in function_text
+            or not re.search(r'borrow-class-field[^\n]*"embedded"', function_text)
             or " retain " in function_text
             or " allocate " in function_text
             or function_text.count("managed-root ") != 1
@@ -1027,6 +1161,9 @@ def check_borrowed_child(*, requested_toolchain: str) -> None:
                     [str(executable)],
                     label=f"{toolchain.family} borrowed-child sanitizer run",
                     cwd=build,
+                    environment=sanitizer_execution_environment(
+                        toolchain.compiler, toolchain.family, SANITIZER_FLAGS
+                    ),
                 )
 
 
@@ -1182,6 +1319,8 @@ def parse_args(arguments: Iterable[str]) -> argparse.Namespace:
     parser.add_argument("--toolchain", choices=("auto", "gcc", "clang"), default="auto")
     parser.add_argument("--native-only", action="store_true")
     parser.add_argument("--borrowed-child-only", action="store_true")
+    parser.add_argument("--owned-child-nonnull-only", action="store_true")
+    parser.add_argument("--owned-child-branches-only", action="store_true")
     return parser.parse_args(list(arguments))
 
 
@@ -1191,6 +1330,14 @@ def main(arguments: Iterable[str] = ()) -> int:
         print("class-layout: ERROR: pinned Haxe executable is unavailable", file=sys.stderr)
         return 1
     try:
+        if args.owned_child_branches_only:
+            check_owned_child_branches(requested_toolchain=args.toolchain)
+            print("class-layout: OK: branch and loop child guards removed; independent scalar results preserved")
+            return 0
+        if args.owned_child_nonnull_only:
+            check_owned_child_nonnull(requested_toolchain=args.toolchain)
+            print("class-layout: OK: owned-child guards removed; nullable receiver still aborts")
+            return 0
         if args.borrowed_child_only:
             check_borrowed_child(requested_toolchain=args.toolchain)
             print(
@@ -1220,6 +1367,8 @@ def main(arguments: Iterable[str] = ()) -> int:
         check_snapshots(first)
         check_native(first, requested_toolchain=args.toolchain)
         check_production()
+        check_owned_child_nonnull(requested_toolchain=args.toolchain)
+        check_owned_child_branches(requested_toolchain=args.toolchain)
         check_negative_cases()
     except (
         ClassLayoutFailure,

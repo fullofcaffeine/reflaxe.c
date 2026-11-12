@@ -14,26 +14,49 @@ import reflaxe.c.frontend.TypedProgramInput.TypedAstModule;
 import reflaxe.c.frontend.NamedRecordSourceProvenance;
 import reflaxe.c.frontend.TypedFunctionSourceProvenance;
 
+/**
+	Keeps one decoded declaration during a single input capture.
+
+	An enum preserves each concrete macro type without casts. Sorting and field
+	capture share this value because Eval reconstructs metadata on every Ref.get.
+	The snapshot never survives normalize(), so a later request reads fresh data.
+**/
+private enum CapturedDeclaration {
+	CapturedClass(value:ClassType);
+	CapturedEnum(value:EnumType);
+	CapturedTypedef(value:DefType);
+	CapturedAbstract(value:AbstractType);
+}
+
 /** Converts Haxe compiler objects into a stable whole-program input model. */
 class TypedAstNormalizer {
 	public static function normalize(moduleTypes:Array<ModuleType>, mainModule:Null<ModuleType>, mainExpr:Null<TypedExpr>):TypedProgramInput {
 		final contentDigests = new SourceContentDigest();
 		final functionSources = new TypedFunctionSourceProvenance(contentDigests);
 		// Ref.get() reconstructs declaration metadata on the Eval macro host.
-		// Read each immutable sort identity once instead of once per comparison.
-		// These keys live only for this capture; no compiler reference is cached
-		// across requests, and normalization still visits every declaration.
+		// Decode once for both ordering and normalization. These typed snapshots
+		// live only for this capture; no compiler reference is cached across
+		// requests, and normalization still visits every declaration.
 		final keyedModules = [
-			for (moduleType in moduleTypes)
-				{value: moduleType, key: moduleTypeKey(moduleType)}
+			for (moduleType in moduleTypes) {
+				final captured = captureDeclaration(moduleType);
+				final base = capturedBaseType(captured);
+				{value: moduleType, captured: captured, key: '${base.module}\u0000${declarationPath(base)}\u0000${declarationKind(moduleType)}'};
+			}
 		];
 		keyedModules.sort((left, right) -> compareStrings(left.key, right.key));
 		final rawModules = [for (entry in keyedModules) entry.value];
 
 		final declarations:Array<TypedAstDeclaration> = [];
+		final capturedTypedefs:Array<DefType> = [];
 		final expressionRoots:Array<TypedAstExpressionRoot> = [];
-		for (moduleType in rawModules) {
-			final declaration = normalizeDeclaration(moduleType, expressionRoots, functionSources);
+		for (entry in keyedModules) {
+			switch entry.captured {
+				case CapturedTypedef(definition):
+					capturedTypedefs.push(definition);
+				case _: // Other declarations do not own named-record source positions.
+			}
+			final declaration = normalizeDeclaration(entry.value, entry.captured, expressionRoots, functionSources);
 			declarations.push(declaration);
 		}
 		declarations.sort((left, right) -> compareStrings(declarationKey(left), declarationKey(right)));
@@ -82,7 +105,7 @@ class TypedAstNormalizer {
 		}
 
 		return new TypedProgramInput(modules, declarations, expressionRoots, entryPoint, rawModules,
-			NamedRecordSourceProvenance.plan(declarations, contentDigests));
+			NamedRecordSourceProvenance.plan(capturedTypedefs, contentDigests));
 	}
 
 	static function captureEntryFunction(expression:TypedExpr, functionSources:TypedFunctionSourceProvenance):Null<TypedAstEntryFunction> {
@@ -125,9 +148,9 @@ class TypedAstNormalizer {
 		};
 	}
 
-	static function normalizeDeclaration(moduleType:ModuleType, expressionRoots:Array<TypedAstExpressionRoot>,
+	static function normalizeDeclaration(moduleType:ModuleType, captured:CapturedDeclaration, expressionRoots:Array<TypedAstExpressionRoot>,
 			functionSources:TypedFunctionSourceProvenance):TypedAstDeclaration {
-		final base = baseType(moduleType);
+		final base = capturedBaseType(captured);
 		final path = declarationPath(base);
 		final fields:Array<TypedAstField> = [];
 		var classKind:Null<String> = null;
@@ -137,9 +160,8 @@ class TypedAstNormalizer {
 		var representedTypeKind:Null<String> = null;
 		var representedTypeDisplay:Null<String> = null;
 
-		switch moduleType {
-			case TClassDecl(classRef):
-				final classType = classRef.get();
+		switch captured {
+			case CapturedClass(classType):
 				classKind = classKindName(classType.kind);
 				isInterface = classType.isInterface;
 				isFinal = classType.isFinal;
@@ -165,20 +187,19 @@ class TypedAstNormalizer {
 						expression: classType.init
 					});
 				}
-			case TEnumDecl(enumRef):
-				final enumType = enumRef.get();
+			case CapturedEnum(enumType):
 				for (name in enumType.names) {
 					final field = enumType.constructs.get(name);
 					if (field != null) {
 						fields.push(normalizeEnumField(field));
 					}
 				}
-			case TTypeDecl(typeRef):
-				final target = typeRef.get().type;
+			case CapturedTypedef(type):
+				final target = type.type;
 				representedTypeKind = typeKind(target);
 				representedTypeDisplay = TypeTools.toString(target);
-			case TAbstract(abstractRef):
-				final underlying = abstractRef.get().type;
+			case CapturedAbstract(type):
+				final underlying = type.type;
 				representedTypeKind = typeKind(underlying);
 				representedTypeDisplay = TypeTools.toString(underlying);
 		}
@@ -377,10 +398,24 @@ class TypedAstNormalizer {
 		return modulePath.split(".").join("/") + ".hx";
 	}
 
-	/** Preserve module, declaration and kind ordering without decoding during comparison. */
-	static function moduleTypeKey(moduleType:ModuleType):String {
-		final base = baseType(moduleType);
-		return '${base.module}\u0000${declarationPath(base)}\u0000${declarationKind(moduleType)}';
+	/** Decode each inventory input once, in the caller's original order. */
+	static function captureDeclaration(moduleType:ModuleType):CapturedDeclaration {
+		return switch moduleType {
+			case TClassDecl(reference): CapturedClass(reference.get());
+			case TEnumDecl(reference): CapturedEnum(reference.get());
+			case TTypeDecl(reference): CapturedTypedef(reference.get());
+			case TAbstract(reference): CapturedAbstract(reference.get());
+		};
+	}
+
+	/** View shared declaration metadata through its typed macro base. */
+	static function capturedBaseType(captured:CapturedDeclaration):BaseType {
+		return switch captured {
+			case CapturedClass(value): value;
+			case CapturedEnum(value): value;
+			case CapturedTypedef(value): value;
+			case CapturedAbstract(value): value;
+		};
 	}
 
 	static function declarationKey(declaration:TypedAstDeclaration):String {

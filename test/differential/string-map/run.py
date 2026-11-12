@@ -23,6 +23,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from scripts.test.bounded_process import run as run_bounded_process  # noqa: E402
+from scripts.test.compiler_discovery import sanitizer_execution_environment  # noqa: E402
 
 CASE = Path(__file__).resolve().parent
 GENERATED = CASE / "generated"
@@ -215,7 +216,7 @@ def check_dispatch_owned_map(toolchains: list[Toolchain]) -> None:
             build.mkdir()
             for optimization in ("-O0", "-O2"):
                 compile_and_run(
-                    toolchain.compiler,
+                    toolchain.compiler, toolchain.family,
                     sources,
                     include_roots,
                     build / f"dispatch-owned-{optimization[1:].lower()}",
@@ -223,7 +224,7 @@ def check_dispatch_owned_map(toolchains: list[Toolchain]) -> None:
                 )
             if toolchain.family == "clang":
                 compile_and_run(
-                    toolchain.compiler,
+                    toolchain.compiler, toolchain.family,
                     sources,
                     include_roots,
                     build / "dispatch-owned-sanitized",
@@ -250,7 +251,7 @@ def check_collector_minimal(toolchains: list[Toolchain]) -> None:
         sources = [*sorted((output / "runtime/src").glob("*.c")), *sorted((output / "src").rglob("*.c"))]
         includes = [output / "include", output / "runtime/include"]
         for toolchain in toolchains:
-            compile_and_run(toolchain.compiler, sources, includes, root / toolchain.family, ("-O2",))
+            compile_and_run(toolchain.compiler, toolchain.family, sources, includes, root / toolchain.family, ("-O2",))
 
 
 def check_collector_record(toolchains: list[Toolchain]) -> None:
@@ -279,9 +280,9 @@ def check_collector_record(toolchains: list[Toolchain]) -> None:
         includes = [output / "include", output / "runtime/include"]
         for toolchain in toolchains:
             for label, flags in (("o0", ("-O0",)), ("o2", ("-O2",))):
-                compile_and_run(toolchain.compiler, sources, includes, root / f"{toolchain.family}-{label}", flags)
+                compile_and_run(toolchain.compiler, toolchain.family, sources, includes, root / f"{toolchain.family}-{label}", flags)
             if toolchain.family == "clang":
-                compile_and_run(toolchain.compiler, sources, includes, root / "sanitized", SANITIZER_FLAGS)
+                compile_and_run(toolchain.compiler, toolchain.family, sources, includes, root / "sanitized", SANITIZER_FLAGS)
         check_collector_observer(root, output, toolchains)
 
 
@@ -650,6 +651,7 @@ def run_negative_cases(root: Path) -> None:
 
 def compile_and_run(
     compiler: str,
+    family: str,
     sources: list[Path],
     include_roots: list[Path],
     executable: Path,
@@ -681,6 +683,7 @@ def compile_and_run(
         )
     executed = run_bounded_process(
         [str(executable)],
+        env=sanitizer_execution_environment(compiler, family, flags),
         cwd=ROOT,
         check=False,
         capture_output=True,
@@ -846,7 +849,7 @@ def check_direct_runtime_decisions(toolchains: list[Toolchain]) -> None:
             build.mkdir()
             for optimization in ("-O0", "-O2"):
                 compile_and_run(
-                    toolchain.compiler,
+                    toolchain.compiler, toolchain.family,
                     sources,
                     include_roots,
                     build / f"direct-decisions-{optimization[1:].lower()}",
@@ -854,7 +857,7 @@ def check_direct_runtime_decisions(toolchains: list[Toolchain]) -> None:
                 )
             if toolchain.family == "clang":
                 compile_and_run(
-                    toolchain.compiler,
+                    toolchain.compiler, toolchain.family,
                     sources,
                     include_roots,
                     build / "direct-decisions-sanitized",
@@ -926,14 +929,14 @@ def run_native(toolchains: list[Toolchain], *, generated_haxe: bool) -> None:
             build.mkdir()
             native = build / "native-o0"
             compile_and_run(
-                toolchain.compiler,
+                toolchain.compiler, toolchain.family,
                 [*RUNTIME_SOURCES, FIXTURE],
                 [INCLUDE],
                 native,
                 ("-O0",),
             )
             compile_and_run(
-                toolchain.compiler,
+                toolchain.compiler, toolchain.family,
                 [*RUNTIME_SOURCES, FIXTURE],
                 [INCLUDE],
                 build / "native-o2",
@@ -947,7 +950,7 @@ def run_native(toolchains: list[Toolchain], *, generated_haxe: bool) -> None:
                     )
                     generated_executable = build / f"generated-{layout}"
                     compile_and_run(
-                        toolchain.compiler,
+                        toolchain.compiler, toolchain.family,
                         sources,
                         [project / "include", project / "runtime/include"],
                         generated_executable,
@@ -957,7 +960,7 @@ def run_native(toolchains: list[Toolchain], *, generated_haxe: bool) -> None:
                 validate_cpp_headers(projects["split"], toolchain.family, build)
             if toolchain.family == "clang":
                 compile_and_run(
-                    toolchain.compiler,
+                    toolchain.compiler, toolchain.family,
                     [*RUNTIME_SOURCES, FIXTURE],
                     [INCLUDE],
                     build / "native-sanitized",
@@ -969,7 +972,7 @@ def run_native(toolchains: list[Toolchain], *, generated_haxe: bool) -> None:
                         (project / "src").rglob("*.c")
                     )
                     compile_and_run(
-                        toolchain.compiler,
+                        toolchain.compiler, toolchain.family,
                         sources,
                         [project / "include", project / "runtime/include"],
                         build / "generated-sanitized",

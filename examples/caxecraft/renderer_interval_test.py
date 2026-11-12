@@ -18,7 +18,7 @@ from dev_haxe_server import pinned_haxe_environment, pinned_haxe_installation
 from renderer_interval import PREFIX, parse_interval_evidence
 from scripts.test.bounded_process import run as run_bounded_process
 from scripts.test.c_fixture_harness import C11_STRICT_FLAGS
-from scripts.test.compiler_discovery import compiler_family, resolve_compiler
+from scripts.test.compiler_discovery import compiler_family, resolve_compiler, sanitizer_execution_environment
 
 ROOT = Path(__file__).resolve().parents[2]
 FIXTURE = ROOT / "examples/caxecraft/test/renderer_interval"
@@ -174,5 +174,7 @@ def run_renderer_interval_tests(requested_cc: str | None, layout: str) -> None:
                         "ASAN_OPTIONS": ("detect_leaks=0" if sys.platform == "darwin" else "detect_leaks=1") + ":halt_on_error=1",
                         "UBSAN_OPTIONS": "halt_on_error=1:print_stacktrace=1",
                     }
-                    result = _run([str(executable)], timeout=30, environment=native_environment, label=f"{label} execution")
+                    result = _run([str(executable)], timeout=30, environment=sanitizer_execution_environment(
+                        compiler, family, flags, environment=native_environment
+                    ), label=f"{label} execution")
                     validate_output(result.stdout, reporting=reporting)

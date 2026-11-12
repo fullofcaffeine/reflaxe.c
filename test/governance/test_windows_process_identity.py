@@ -45,6 +45,57 @@ class WindowsProcessBoundaryTests(unittest.TestCase):
         kernel.QueryFullProcessImageNameW.side_effect = image
         return kernel
 
+    def test_absence_requires_complete_valid_pid_snapshot(self) -> None:
+        for case, expected in (("absent", True), ("present", False), ("full", False),
+                               ("malformed", False), ("failed", False), ("empty", False),
+                               ("missing", False)):
+            with self.subTest(case=case):
+                kernel = self.kernel()
+                def enumerate_processes(buffer, capacity, used):
+                    buffer[0], buffer[1] = 0, (123 if case == "present" else 456)
+                    used._obj.value = {"full": capacity, "malformed": 3, "empty": 0}.get(case, 8)
+                    return 0 if case == "failed" else 1
+                kernel.K32EnumProcesses.side_effect = enumerate_processes
+                if case == "missing":
+                    del kernel.K32EnumProcesses
+                with patch.object(windows, "_kernel32", return_value=kernel):
+                    self.assertEqual(windows.process_absent(123), expected)
+
+    def test_exit_observer_requires_signaled_creation_verified_handle(self) -> None:
+        for wait, expected in ((0, True), (258, False), (0xFFFFFFFF, False)):
+            with self.subTest(wait=wait):
+                kernel = self.kernel()
+                kernel.WaitForSingleObject.return_value = wait
+                with patch.object(windows, "_kernel32", return_value=kernel):
+                    with windows.process_exit_observer(123, "windows-start-ticks:586896761216486895") as exited:
+                        self.assertIsNotNone(exited)
+                        self.assertEqual(exited(50), expected)
+                        kernel.CloseHandle.assert_not_called()
+                kernel.CloseHandle.assert_called_once_with(0x123456789)
+                kernel.WaitForSingleObject.assert_called_once_with(0x123456789, 50)
+
+    def test_exit_observer_access_identity_and_cleanup_fail_closed(self) -> None:
+        for failure in ("access", "identity", "times", "body"):
+            with self.subTest(failure=failure):
+                kernel = self.kernel()
+                if failure == "access":
+                    kernel.OpenProcess.return_value = 0
+                if failure == "times":
+                    kernel.GetProcessTimes.side_effect = OSError("unavailable")
+                expected = "wrong" if failure == "identity" else "windows-start-ticks:586896761216486895"
+                with patch.object(windows, "_kernel32", return_value=kernel):
+                    if failure == "body":
+                        with self.assertRaisesRegex(RuntimeError, "primary"):
+                            with windows.process_exit_observer(123, expected):
+                                raise RuntimeError("primary")
+                    else:
+                        with windows.process_exit_observer(123, expected) as exited:
+                            self.assertIsNone(exited)
+                if failure == "access":
+                    kernel.CloseHandle.assert_not_called()
+                else:
+                    kernel.CloseHandle.assert_called_once_with(0x123456789)
+
     def test_exact_identity_uses_one_read_only_handle_without_a_shell(self) -> None:
         kernel = self.kernel()
         with patch.object(windows, "_kernel32", return_value=kernel), patch.object(
@@ -119,10 +170,19 @@ class WindowsProcessNativeTests(unittest.TestCase):
                 unix_ns = (ticks - 621355968000000000) * 100
                 self.assertGreaterEqual(unix_ns, before - 1_000_000_000)
                 self.assertLessEqual(unix_ns, time.time_ns())
+                self.assertFalse(windows.process_absent(child.pid))
+                with windows.process_exit_observer(child.pid, first.start) as exited:
+                    self.assertIsNotNone(exited)
+                    self.assertFalse(exited(0))
+                    child.stdin.close()
+                    child.wait(timeout=5)
+                    self.assertTrue(exited(1000))
             finally:
-                child.stdin.close()
+                if not child.stdin.closed:
+                    child.stdin.close()
                 child.wait(timeout=5)
             self.assertIsNone(windows.process_identity(child.pid))
+            self.assertTrue(windows.process_absent(child.pid))
 
 
 if __name__ == "__main__":

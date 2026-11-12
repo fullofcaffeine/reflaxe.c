@@ -33,6 +33,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from scripts.test.bounded_process import run as run_bounded_process  # noqa: E402
+from scripts.test.compiler_discovery import compiler_family, sanitizer_execution_environment  # noqa: E402
 from scripts.test.compiler_progress import compiler_process_detail  # noqa: E402
 
 STRICT_FLAGS = (
@@ -2560,15 +2561,24 @@ def execute(
                 support_include_roots=support_include_roots,
                 native_defines=test_case.native_defines,
             )
+            family = compiler_family(compiler) if sys.platform == "darwin" else "other"
+            if family is None:
+                raise HaxeCTestFailure("cannot identify selected sanitizer compiler")
             sanitized_output = run(
                 [str(sanitized)],
                 cwd=CASE_ROOT if test_case.native_runs_from_case_root else ROOT,
                 timeout=test_case.native_timeout_seconds,
                 label=f"{test_case.case_id} sanitized native test",
-                environment={
-                    "ASAN_OPTIONS": "halt_on_error=1:abort_on_error=1",
-                    "UBSAN_OPTIONS": "halt_on_error=1:print_stacktrace=1",
-                },
+                environment=sanitizer_execution_environment(
+                    compiler, family, SANITIZER_FLAGS,
+                    environment={
+                        **os.environ,
+                        "HAXE_NO_SERVER": "1",
+                        "LC_ALL": "C",
+                        "ASAN_OPTIONS": "halt_on_error=1:abort_on_error=1",
+                        "UBSAN_OPTIONS": "halt_on_error=1:print_stacktrace=1",
+                    },
+                ),
             ).stdout
             if sanitized_output != oracle:
                 raise HaxeCTestFailure(

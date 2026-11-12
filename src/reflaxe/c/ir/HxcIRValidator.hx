@@ -73,6 +73,7 @@ private typedef HxcIRDominanceProofs = {
 	final controlFlow:HxcIRControlFlowFacts;
 	final proofsByBlock:Map<String, Map<String, Bool>>;
 	final nullProofsByBlock:Map<String, Map<String, Bool>>;
+	final ownedChildren:HxcIROwnedChildFlow;
 }
 
 /** Whether one dispatch layout is embedded in a class or carried by an interface value. */
@@ -151,6 +152,39 @@ class ValidatedHxcIRProgram {
 class HxcIRValidator {
 	public static inline final SCHEMA_VERSION = 27;
 
+	/** Operand-use query shared with optimizers; cleanup involvement remains conservative. */
+	public static function valuesNeedingExplicitNullChecks(fn:HxcIRFunction):Map<String, Bool>
+		return HxcIRValidationState.valuesNeedingExplicitNullChecks(fn);
+
+	/**
+		Recognize the one primitive comparison that can preserve a borrowed local.
+
+		Signed Int less-than reads two scalar values and produces a Bool without a
+		helper, mutation or failure edge. Check the exact operation and types before
+		optimization, then check them again during ordinary validation. The node
+		stays in the program, so identity, dominance and source diagnostics remain
+		independently validated. Other binary operations grant no proof here.
+	**/
+	public static function isStaticI32Less(instruction:HxcIRInstruction, available:Map<String, HxcIRTypeRef>):Bool {
+		final result = instruction.result;
+		if (result == null)
+			return false;
+		if (result.type != IRTBool
+			|| !isStableId(result.id)
+			|| !isStableId(instruction.id)
+			|| !HxcSourceSpan.isNormalizedFile(instruction.source.file)
+			|| !hasOneBasedCoordinates(instruction.source)
+			|| !hasOrderedCoordinates(instruction.source))
+			return false;
+		return switch instruction.kind {
+			case IRIOBinary("haxe.i32.less", left, right, IRIStatic): isStableId(left) && isStableId(right) && switch [available.get(left), available.get(right)] {
+					case [IRTInt(32, true), IRTInt(32, true)]: true;
+					case _: false;
+				};
+			case _: false;
+		};
+	}
+
 	var latestWork:HxcIRValidationWorkReport;
 
 	public function new() {
@@ -180,6 +214,37 @@ class HxcIRValidator {
 			throw new HxcIRValidationError(diagnostics);
 		}
 		return new ValidatedHxcIRProgram(program);
+	}
+
+	/** Same identifier grammar used by validation and pre-validation check removal. */
+	public static function isStableId(value:String):Bool
+		return value != "" && StringTools.trim(value) == value && !hasControlCharacters(value);
+
+	/** Preserve one-based source diagnostics when a check could be discarded. */
+	public static function hasOneBasedCoordinates(span:HxcSourceSpan):Bool
+		return span.startLine >= 1 && span.startColumn >= 1 && span.endLine >= 1 && span.endColumn >= 1;
+
+	/** Preserve source-range ordering diagnostics before optimization. */
+	public static function hasOrderedCoordinates(span:HxcSourceSpan):Bool
+		return span.endLine > span.startLine || span.endLine == span.startLine && span.endColumn >= span.startColumn;
+
+	/** Check only metadata that would disappear with a removed null-check node. */
+	public static function canDiscardNullCheckEnvelope(instruction:HxcIRInstruction, uniqueId:Bool):Bool
+		return instruction.result == null
+			&& uniqueId
+			&& isStableId(instruction.id)
+			&& HxcSourceSpan.isNormalizedFile(instruction.source.file)
+			&& hasOneBasedCoordinates(instruction.source)
+			&& hasOrderedCoordinates(instruction.source);
+
+	/** The validator's existing control-character rule, shared without a second grammar. */
+	public static function hasControlCharacters(value:String):Bool {
+		for (index in 0...value.length) {
+			final code = value.charCodeAt(index);
+			if (code == null || code < 0x20 || code == 0x7F)
+				return true;
+		}
+		return false;
 	}
 
 	static function emptyWorkReport():HxcIRValidationWorkReport
@@ -2097,6 +2162,40 @@ private class HxcIRValidationState {
 		}
 	}
 
+	/**
+		Keep guards whose immutable operand escapes the block-local proof domain.
+		Reuse validation's exhaustive operand queries, including nested places and
+		failure arguments. Terminator operands are retained conservatively, including
+		arguments renamed by a successor block. Cleanup actions require a separate
+		lifetime analysis; callers retain guards whenever cleanup regions are present.
+	**/
+	public static function valuesNeedingExplicitNullChecks(fn:HxcIRFunction):Map<String, Bool> {
+		final firstBlock:Map<String, String> = [];
+		final retained:Map<String, Bool> = [];
+		function use(id:String, block:String):Void {
+			final previous = firstBlock.get(id);
+			if (previous != null && previous != block)
+				retained.set(id, true);
+			else
+				firstBlock.set(id, block);
+		}
+		for (block in fn.blocks) {
+			for (instruction in block.instructions) {
+				final ids = switch instruction.kind {
+					case IRIOCall(call): call.arguments.concat(dispatchValueUses(call.dispatch))
+							.concat(call.failure == null ? [] : call.failure.arguments);
+					case _: nonCallInstructionValueUses(instruction.kind);
+				};
+				for (id in ids)
+					use(id, block.id);
+			}
+			if (block.terminator != null)
+				for (id in terminatorValueUses(block.terminator.kind))
+					retained.set(id, true);
+		}
+		return retained;
+	}
+
 	static function dispatchValueUses(dispatch:HxcIRCallDispatch):Array<String>
 		return switch dispatch {
 			case IRCDVirtual(_, receiver) | IRCDInterface(_, _, receiver) | IRCDClosure(receiver): [receiver];
@@ -2245,7 +2344,12 @@ private class HxcIRValidationState {
 			proofsByBlock.set(block.id, proofs);
 			nullProofsByBlock.set(block.id, nullProofs);
 		}
-		return {controlFlow: controlFlow, proofsByBlock: proofsByBlock, nullProofsByBlock: nullProofsByBlock};
+		return {
+			controlFlow: controlFlow,
+			proofsByBlock: proofsByBlock,
+			nullProofsByBlock: nullProofsByBlock,
+			ownedChildren: new HxcIROwnedChildFlow(fn, controlFlow)
+		};
 	}
 
 	function validateParameter(parameter:HxcIRParameter, path:String):Void {
@@ -2644,6 +2748,7 @@ private class HxcIRValidationState {
 				case _:
 			}
 
+		final ownedChildProofs = dominanceProofs.ownedChildren.forBlock(block.id);
 		final boundsProofs:Map<String, Bool> = [];
 		final nullProofs:Map<String, Bool> = [];
 		for (dominator in dominanceProofs.controlFlow.strictDominatorsOf(block.id)) {
@@ -2654,10 +2759,13 @@ private class HxcIRValidationState {
 		}
 		for (index => instruction in block.instructions) {
 			final instructionPath = ("" + path + ".instruction:" + index + ":" + instruction.id);
+			final instructionNullProofs = ownedChildProofs == null ? nullProofs : ownedChildProofs.forUse(instruction, nullProofs);
 			validateInstruction(instruction, instructionPath, block, available, locals, blocks, regions, exceptionRegions, exceptionCleanups,
-				instructionSites, valueSites, boundsProofs, nullProofs, dominanceProofs);
+				instructionSites, valueSites, boundsProofs, instructionNullProofs, dominanceProofs);
 			validateBorrowedReferenceInstruction(instruction, instructionPath, available, locals, borrowedReferenceValues, borrowedReferenceLocals);
 			validateBorrowedSpanInstruction(instruction, instructionPath, available, locals, returnedSpanValues);
+			if (ownedChildProofs != null)
+				ownedChildProofs.observe(instruction, available);
 			if (instruction.result != null) {
 				available.set(instruction.result.id, instruction.result.type);
 				if (instructionResultBorrowsReference(instruction, borrowedReferenceValues, borrowedReferenceLocals, mutableAggregateBorrowValueUses))
@@ -3265,7 +3373,11 @@ private class HxcIRValidationState {
 				final leftType = requireValue(leftValueId, '$path.left', instruction.source, available);
 				final rightType = requireValue(rightValueId, '$path.right', instruction.source, available);
 				validateImplementation(implementation, '$path.implementation', instruction.source);
-				if (operationId == "haxe.i32.divide.positive-constant") {
+				if (operationId == "haxe.i32.less") {
+					if (!HxcIRValidator.isStaticI32Less(instruction, available))
+						add(path, "signed Int less-than requires two signed i32 operands, a static Bool result, and valid instruction metadata",
+							instruction.source);
+				} else if (operationId == "haxe.i32.divide.positive-constant") {
 					final validTypes = isSignedI32(leftType)
 						&& isSignedI32(rightType)
 						&& isSignedI32(instruction.result == null ? null : instruction.result.type);
@@ -7097,15 +7209,15 @@ private class HxcIRValidationState {
 			final stableSource = span.stableForDiagnostic();
 			add(path, "source path must be normalized, repository-relative UTF-8 with `/` separators; the unstable spelling was redacted", stableSource);
 		}
-		if (span.startLine < 1 || span.startColumn < 1 || span.endLine < 1 || span.endColumn < 1) {
+		if (!HxcIRValidator.hasOneBasedCoordinates(span)) {
 			add(path, "source line and column values must be one-based", span);
-		} else if (span.endLine < span.startLine || span.endLine == span.startLine && span.endColumn < span.startColumn) {
+		} else if (!HxcIRValidator.hasOrderedCoordinates(span)) {
 			add(path, "source span end precedes its start", span);
 		}
 	}
 
 	function validateStableId(value:String, path:String, source:HxcSourceSpan):Void {
-		if (value == "" || StringTools.trim(value) != value || hasControl(value)) {
+		if (!HxcIRValidator.isStableId(value)) {
 			add(path, ("stable identifier `" + (escaped(value)) + "` is empty, padded, or contains control characters"), source);
 		}
 	}
@@ -7116,15 +7228,8 @@ private class HxcIRValidationState {
 		}
 	}
 
-	function hasControl(value:String):Bool {
-		for (index in 0...value.length) {
-			final code = value.charCodeAt(index);
-			if (code == null || code < 0x20 || code == 0x7F) {
-				return true;
-			}
-		}
-		return false;
-	}
+	function hasControl(value:String):Bool
+		return HxcIRValidator.hasControlCharacters(value);
 
 	function add(path:String, message:String, source:HxcSourceSpan):Void
 		diagnostics.push(HxcIRDiagnostic.invalidIR(profile, path, message, source));

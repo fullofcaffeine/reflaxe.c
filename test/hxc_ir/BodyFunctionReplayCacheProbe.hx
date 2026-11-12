@@ -4,8 +4,7 @@ import haxe.macro.Context;
 import haxe.macro.TypedExprTools;
 import reflaxe.c.ir.HxcIR;
 import reflaxe.c.ir.HxcSourceSpan;
-import reflaxe.c.lowering.CBodyLowering;
-import reflaxe.c.lowering.CBodyLowering.CBodyRuntimeRequirement;
+import reflaxe.c.frontend.TypedFunctionSourceProvenance;
 import reflaxe.c.lowering.CBodyFunctionReplayCache;
 import reflaxe.c.lowering.CBodyFunctionReplayCache.CBodyFunctionReplayData;
 import reflaxe.c.lowering.CBodyFunctionReplayCache.CBodyFunctionReplayIdentity;
@@ -214,7 +213,11 @@ class BodyFunctionReplayCacheProbe {
 		}
 	}
 
-	/** Prove variable allocation is ignored while a real expression edit is kept. */
+	/**
+		Prove variable allocation is ignored while a real expression edit is kept.
+		Call the canonicalization owner directly: the lowering facade delegates to
+		it, but importing that facade also types the entire function builder.
+	**/
 	static function testCanonicalTypedExpressions():Void {
 		final typedFirst = Context.typeExpr(macro {
 			final value = 1;
@@ -226,13 +229,13 @@ class BodyFunctionReplayCacheProbe {
 		});
 		require(TypedExprTools.toString(typedFirst, false) != TypedExprTools.toString(typedSecond, false),
 			"probe did not receive distinct request-local variable IDs");
-		require(CBodyLowering.canonicalTypedExpressionText(typedFirst) == CBodyLowering.canonicalTypedExpressionText(typedSecond),
+		require(TypedFunctionSourceProvenance.canonicalTypedExpressionText(typedFirst) == TypedFunctionSourceProvenance.canonicalTypedExpressionText(typedSecond),
 			"request-local variable allocation changed the canonical function input");
 		final typedChanged = Context.typeExpr(macro {
 			final value = 1;
 			value + 3;
 		});
-		require(CBodyLowering.canonicalTypedExpressionText(typedFirst) != CBodyLowering.canonicalTypedExpressionText(typedChanged),
+		require(TypedFunctionSourceProvenance.canonicalTypedExpressionText(typedFirst) != TypedFunctionSourceProvenance.canonicalTypedExpressionText(typedChanged),
 			"semantic expression change disappeared from the canonical function input");
 	}
 
@@ -282,10 +285,21 @@ class BodyFunctionReplayCacheProbe {
 		};
 	}
 
-	/** Add one diagnostic-bearing runtime requirement to exercise position recovery. */
+	/**
+		Exercise position recovery with the replay API's runtime-requirement record.
+		The lowering class adds a sorting key that this cache neither stores nor
+		restores; constructing the exact record keeps this test focused on replay.
+	**/
 	static function positionedData(id:String):CBodyFunctionReplayData {
 		final result = data(id);
-		result.runtimeRequirements.push(new CBodyRuntimeRequirement("gc", "probe", "position recovery probe", result.ir.source, Context.currentPos()));
+		result.runtimeRequirements.push({
+			featureId: "gc",
+			operationId: "probe",
+			surface: "position recovery probe",
+			source: result.ir.source,
+			position: Context.currentPos(),
+			kind: "runtime-operation"
+		});
 		return result;
 	}
 

@@ -23,6 +23,8 @@ if str(ROOT) not in sys.path:
 
 from scripts.test.bounded_process import run as run_bounded_process  # noqa: E402
 
+from scripts.test.compiler_discovery import sanitizer_execution_environment  # noqa: E402
+
 HXML = Path(__file__).with_name("body_lowering.hxml")
 POSITIVE = Path(__file__).with_name("fixtures") / "positive"
 UNSUPPORTED = Path(__file__).with_name("fixtures") / "unsupported"
@@ -867,6 +869,7 @@ def check_throw_cleanup(root: Path) -> None:
                 capture_output=True,
                 text=True,
                 timeout=10,
+                env=sanitizer_execution_environment(toolchain.compiler, toolchain.family, flags),
             )
             if ran.returncode == 0 or ran.stdout or ran.stderr:
                 raise BodyLoweringFailure(

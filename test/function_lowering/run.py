@@ -30,6 +30,7 @@ from scripts.test.c_fixture_harness import (  # noqa: E402
     validate_report,
 )
 from scripts.test.bounded_process import run as run_bounded_process  # noqa: E402
+from scripts.test.compiler_discovery import sanitizer_execution_environment  # noqa: E402
 
 
 HXML = Path(__file__).with_name("function_lowering.hxml")
@@ -826,6 +827,9 @@ def check_native(
                 )
             sanitized_run = run_bounded_process(
                 [str(sanitized)],
+                env=sanitizer_execution_environment(
+                    toolchain.compiler, toolchain.family, ("-fsanitize=address,undefined",)
+                ),
                 cwd=ROOT,
                 check=False,
                 capture_output=True,
@@ -1557,6 +1561,9 @@ def check_direct_argument_defaults(selected: str | None) -> None:
                 )
             sanitized_run = run_bounded_process(
                 [str(sanitized)],
+                env=sanitizer_execution_environment(
+                    toolchain.compiler, toolchain.family, ("-fsanitize=address,undefined",)
+                ),
                 cwd=ROOT,
                 check=False,
                 capture_output=True,

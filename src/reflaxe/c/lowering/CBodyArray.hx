@@ -671,10 +671,12 @@ class CBodyArrayRecognition {
 		};
 	}
 
-	public static function isCoreArray(reference:Ref<ClassType>):Bool {
-		final value = reference.get();
+	public static function isCoreArray(reference:Ref<ClassType>):Bool
+		return isCoreArrayClass(reference.get());
+
+	/** Recognize an already read declaration without decoding its fields again. */
+	public static function isCoreArrayClass(value:ClassType):Bool
 		return value.pack.length == 0 && value.name == "Array";
-	}
 }
 #else
 class CBodyArray {

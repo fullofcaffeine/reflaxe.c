@@ -9,6 +9,8 @@ query and synchronization rights; this module cannot terminate the process.
 from __future__ import annotations
 
 import ctypes
+from collections.abc import Callable, Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass
 from functools import lru_cache
 
@@ -99,3 +101,83 @@ def process_identity(pid: int) -> WindowsProcessIdentity | None:
         return None
     finally:
         kernel.CloseHandle(handle)
+
+
+@contextmanager
+def process_exit_observer(
+    pid: int, expected_start: str,
+) -> Iterator[Callable[[int], bool] | None]:
+    """Hold one creation-verified process handle across a stop request.
+
+    A successful taskkill request is not exit evidence. Only a signaled handle
+    proves that this exact process exited, even if its PID is later reused.
+    Access or identity failures yield no observer; every opened handle closes.
+    """
+    if pid < 1 or pid > 0xFFFFFFFF:
+        yield None
+        return
+    try:
+        kernel = _kernel32()
+    except (OSError, AttributeError):
+        yield None
+        return
+    try:
+        handle = kernel.OpenProcess(0x101000, False, pid)
+    except OSError:
+        yield None
+        return
+    if not handle:
+        yield None
+        return
+    try:
+        creation, exit_time, kernel_time, user_time = (_FileTime() for _ in range(4))
+        try:
+            read = kernel.GetProcessTimes(
+                handle, ctypes.byref(creation), ctypes.byref(exit_time),
+                ctypes.byref(kernel_time), ctypes.byref(user_time),
+            )
+            ticks = ((creation.high << 32) | creation.low) + 504911232000000000
+            valid = read and expected_start == f"windows-start-ticks:{ticks}"
+        except OSError:
+            valid = False
+        if not valid:
+            yield None
+            return
+        def exited(timeout_ms: int) -> bool:
+            if timeout_ms < 0 or timeout_ms > 5000:
+                raise ValueError("process exit observation must stay within five seconds")
+            try:
+                return kernel.WaitForSingleObject(handle, timeout_ms) == 0
+            except OSError:
+                return False
+        yield exited
+    finally:
+        kernel.CloseHandle(handle)
+
+
+def process_absent(pid: int) -> bool:
+    """Prove absence only from a complete successful native PID snapshot.
+
+    A full buffer may be truncated, so neither it nor an API/access failure
+    authorizes cleanup. This bounded observation never matches names or signals
+    a process. K32EnumProcesses documents completeness through returned byte size:
+    https://learn.microsoft.com/windows/win32/api/psapi/nf-psapi-enumprocesses
+    """
+    if pid < 1 or pid > 0xFFFFFFFF:
+        return False
+    try:
+        kernel = _kernel32()
+        enumerate_processes = kernel.K32EnumProcesses
+        enumerate_processes.argtypes = [ctypes.POINTER(ctypes.c_uint32), ctypes.c_uint32,
+                                       ctypes.POINTER(ctypes.c_uint32)]
+        enumerate_processes.restype = ctypes.c_int32
+        processes = (ctypes.c_uint32 * 65536)()
+        capacity = ctypes.sizeof(processes)
+        used = ctypes.c_uint32()
+        if not enumerate_processes(processes, capacity, ctypes.byref(used)):
+            return False
+        if used.value == 0 or used.value >= capacity or used.value % ctypes.sizeof(ctypes.c_uint32):
+            return False
+        return pid not in processes[:used.value // ctypes.sizeof(ctypes.c_uint32)]
+    except (OSError, AttributeError):
+        return False

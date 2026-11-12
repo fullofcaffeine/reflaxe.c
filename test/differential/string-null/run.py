@@ -20,6 +20,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from scripts.test.bounded_process import run as run_bounded_process  # noqa: E402
+from scripts.test.compiler_discovery import sanitizer_execution_environment  # noqa: E402
 
 CASE = Path(__file__).resolve().parent
 GENERATED = CASE / "generated"
@@ -396,6 +397,7 @@ def compile_and_run(
         )
     execution = run_bounded_process(
         [str(executable)],
+        env=sanitizer_execution_environment(toolchain.compiler, toolchain.family, flags),
         cwd=ROOT,
         check=False,
         capture_output=True,

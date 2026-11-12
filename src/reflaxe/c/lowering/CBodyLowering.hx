@@ -23,6 +23,7 @@ import reflaxe.c.frontend.TypedProgramInput;
 import reflaxe.c.frontend.TypedFunctionSourceProvenance;
 import reflaxe.c.frontend.TypedFunctionSourceProvenance.TypedFunctionSourcePlan;
 import reflaxe.c.ir.HxcIR;
+import reflaxe.c.lowering.CBodyManagedTypeDiscovery.directManagedTypeFacts;
 import reflaxe.c.ir.HxcIRFixedArrayPolicy;
 import reflaxe.c.ir.HxcIRFixedArrayPolicy.HxcIRFixedArrayStorageDecision;
 import reflaxe.c.ir.HxcIRDiagnostic;
@@ -652,7 +653,7 @@ class CBodyLowering {
 		final built:Array<BuiltBodyFunction> = [];
 		for (builder in builders) {
 			#if reflaxe_c_phase_progress_functions
-			final functionProgress = '${Std.string(CDTHxcIRFunctionBuild)}: ${builder.profileId()}';
+			final functionProgress = ("" + (Std.string(CDTHxcIRFunctionBuild)) + ": " + (builder.profileId()));
 			CPhaseTiming.startProgressDetail(functionProgress);
 			#end
 			if (!CPhaseTiming.collectsWork()) {
@@ -3668,6 +3669,7 @@ private class FunctionPreparer {
 
 		final parameters:Array<PreparedParameter> = [];
 		final parameterRequests:Map<String, CSymbolRequest> = [];
+		final borrowSummary = new CBodyParameterBorrowSummary(functionValue);
 		for (index in 0...functionValue.args.length) {
 			final argument = functionValue.args[index];
 			final declared = declaredArguments[index];
@@ -3726,7 +3728,7 @@ private class FunctionPreparer {
 				// proves the reference never leaves the call. This lets ordinary
 				// Haxe pass a stack-constructed final object through an interface
 				// without pretending the callee owns or retains it.
-				borrowedReference: callBoundedReference && parameterCanBorrow(functionValue.expr, argument.v.id),
+				borrowedReference: callBoundedReference && borrowSummary.canBorrow(argument.v.id),
 				defaultValue: argument.value
 			});
 		}
@@ -3878,48 +3880,6 @@ private class FunctionPreparer {
 			case TLazy(resolve): borrowedSpanIsMutable(resolve());
 			case _: false;
 		};
-	}
-
-	/**
-		Decide whether one class or interface parameter can borrow caller-owned storage.
-
-		Returning, storing, aliasing, throwing, or constructor-capturing the exact
-		reference would let it outlive the call, so those uses keep the ordinary
-		owned-or-value function contract. Field reads/mutation and receiver calls do
-		not copy the reference. Explicit call arguments are checked later against the
-		known target parameter, which permits safe direct borrow forwarding while
-		virtual, native, and otherwise unproven forwarding remains closed.
-	**/
-	public static function parameterCanBorrow(body:TypedExpr, compilerId:Int):Bool {
-		var safe = true;
-		function visit(expression:TypedExpr):Void {
-			if (!safe)
-				return;
-			switch expression.expr {
-				case TVar(_, initializer) if (initializer != null && isDirectParameterValue(initializer, compilerId)):
-					safe = false;
-				case TBinop(OpAssign, _, right) if (isDirectParameterValue(right, compilerId)):
-					safe = false;
-				case TReturn(value) if (value != null && isDirectParameterValue(value, compilerId)):
-					safe = false;
-				case TThrow(value) if (isDirectParameterValue(value, compilerId)):
-					safe = false;
-				case TNew(_, _, arguments):
-					for (argument in arguments)
-						if (isDirectParameterValue(argument, compilerId)) {
-							safe = false;
-							break;
-						}
-				case TFunction(_) if (referencesParameter(expression, compilerId)):
-					// A nested function can run after its enclosing call returns.
-					safe = false;
-				case _:
-			}
-			if (safe)
-				TypedExprTools.iter(expression, visit);
-		}
-		visit(body);
-		return safe;
 	}
 
 	/**
@@ -4261,6 +4221,7 @@ private class ConstructorPreparer {
 			return unsupported(input.expression.pos, "TFunction(constructor-owner-not-concrete-class)");
 		final selfMapping = CBodyValueType.classReference(classValue, false);
 		final arguments:Array<PreparedParameter> = [];
+		final borrowSummary = new CBodyParameterBorrowSummary(functionValue);
 		for (index in 0...functionValue.args.length) {
 			final argument = functionValue.args[index];
 			final declared = declaredSignature.arguments[index];
@@ -4274,8 +4235,7 @@ private class ConstructorPreparer {
 			if (mapping.spanElement() != null)
 				unsupported(input.expression.pos, ("TFunction(constructor-argument:" + argument.v.name + ":borrowed-span-constructor-not-admitted)"));
 			final borrowedInterface = mapping.interfaceValue() != null;
-			final interfaceRemainsCallBounded = borrowedInterface
-				&& FunctionPreparer.parameterCanBorrow(functionValue.expr, argument.v.id);
+			final interfaceRemainsCallBounded = borrowedInterface && borrowSummary.canBorrow(argument.v.id);
 			final interfaceRetainedBySelf = borrowedInterface
 				&& !interfaceRemainsCallBounded
 				&& FunctionPreparer.parameterRetainedOnlyBySelfField(functionValue.expr, argument.v.id);
@@ -5576,9 +5536,10 @@ private class FunctionBuilder {
 				return;
 			case _:
 		}
-		if (CBodyArrayRecognition.isCoreArrayType(expressionType))
+		final direct = directManagedTypeFacts(expressionType);
+		if (direct == null ? CBodyArrayRecognition.isCoreArrayType(expressionType) : direct.array)
 			bodyValueType(expressionType, expression.pos, "managed-representation-discovery:Array");
-		if (CBodyTypedMapRecognition.familyForMapType(expressionType) != null) {
+		if ((direct == null ? CBodyTypedMapRecognition.familyForMapType(expressionType) : direct.mapFamily) != null) {
 			final knownLocal = switch expression.expr {
 				case TLocal(variable): discoveryTypedMapsByCompilerId.get(variable.id);
 				case _: null;
@@ -5590,23 +5551,24 @@ private class FunctionBuilder {
 			if (knownLocal == null && !deferredInterfaceLocal)
 				bodyValueType(expressionType, expression.pos, "managed-representation-discovery:typed-map");
 		}
-		if (CBodyDateRecognition.isCoreDateType(expressionType)) {
+		if (direct == null ? CBodyDateRecognition.isCoreDateType(expressionType) : direct.date) {
 			final dateType = bodyValueType(expressionType, expression.pos, "managed-representation-discovery:Date");
 			aggregateRegistry.requireEscapingReturnClasses(dateType);
 		}
 		switch expression.expr {
 			case TVar(variable, initializer):
 				final variableType = applyCurrentSpecialization(variable.t);
-				if (CBodyArrayRecognition.isCoreArrayType(variableType))
+				final directVariable = directManagedTypeFacts(variableType);
+				if (directVariable == null ? CBodyArrayRecognition.isCoreArrayType(variableType) : directVariable.array)
 					bodyValueType(variableType, expression.pos, ("managed-representation-discovery:local:" + variable.name));
-				if (CBodyTypedMapRecognition.familyForMapType(variableType) != null) {
+				if ((directVariable == null ? CBodyTypedMapRecognition.familyForMapType(variableType) : directVariable.mapFamily) != null) {
 					final mapping = CBodyTypedMapRecognition.isIMapType(variableType)
 						&& initializer != null ? discoveryTypedMapInitializerMapping(initializer,
 							("managed-representation-discovery:typed-map-local:" + variable.name)) : bodyValueType(variableType, expression.pos,
 							("managed-representation-discovery:typed-map-local:" + variable.name));
 					discoveryTypedMapsByCompilerId.set(variable.id, mapping);
 				}
-				if (CBodyDateRecognition.isCoreDateType(variableType)) {
+				if (directVariable == null ? CBodyDateRecognition.isCoreDateType(variableType) : directVariable.date) {
 					final dateType = bodyValueType(variableType, expression.pos, ("managed-representation-discovery:Date-local:" + variable.name));
 					aggregateRegistry.requireEscapingReturnClasses(dateType);
 				}
@@ -6957,7 +6919,7 @@ private class FunctionBuilder {
 						pendingManagedCarriers.push(variable.id);
 				case TVar(variable, null) if (sequenceDefinitelyAssignsPrimitiveLocal(expressions, index + 1, endExclusive, variable, nested.pos)):
 					if (currentBlock.terminator != null) {
-						unsupported(nested, 'unreachable ${nodeName(nested)}');
+						unsupported(nested, ("unreachable " + (nodeName(nested))));
 					}
 					lowerVariable(variable, null, nested.pos, false, true);
 				case _:
@@ -6980,7 +6942,7 @@ private class FunctionBuilder {
 	 * graph before C exists.
 	 */
 	function sequenceDefinitelyAssignsPrimitiveLocal(expressions:Array<TypedExpr>, start:Int, endExclusive:Int, variable:TVar, position:Position):Bool {
-		final mapping = localStorageValueType(variable, null, position, 'TVar(${variable.name}:definite-assignment-type)');
+		final mapping = localStorageValueType(variable, null, position, ("TVar(" + (variable.name) + ":definite-assignment-type)"));
 		if (mapping.primitiveMapping() == null)
 			return false;
 		return new CBodyDefiniteAssignment(variable.id,
@@ -11814,20 +11776,20 @@ private class FunctionBuilder {
 		};
 		final object = stackConstructedObjectsByCompilerId.get(variable.id);
 		if (object == null)
-			throw new CBodyEmissionError('stack-constructed local `${variable.name}` lost its backing object');
+			throw new CBodyEmissionError(("stack-constructed local `" + (variable.name) + "` lost its backing object"));
 		final localMapping = localTypesByCompilerId.get(variable.id);
 		if (localMapping == null)
-			throw new CBodyEmissionError('stack-constructed local `${variable.name}` lost its admitted type');
-		final constructedMapping = bodyValueType(right.t, right.pos, 'TNew(reconstructed-local:${variable.name})');
+			throw new CBodyEmissionError(("stack-constructed local `" + (variable.name) + "` lost its admitted type"));
+		final constructedMapping = bodyValueType(right.t, right.pos, ("TNew(reconstructed-local:" + (variable.name) + ")"));
 		final constructedClass = constructedMapping.classValue();
 		final localClass = localMapping.classValue();
 		if (constructedClass == null || localClass == null || constructedClass.instanceId != localClass.instanceId)
-			return unsupported(right, 'TNew(stack-local-replacement-requires-exact-class:${variable.name})');
+			return unsupported(right, ("TNew(stack-local-replacement-requires-exact-class:" + (variable.name) + ")"));
 		if (constructedClass.managedByCollector)
 			return null;
 		final signature = constructorSignatureForClass(constructedClass);
 		if (signature == null)
-			return unsupported(right, 'TNew(unavailable-constructor:${CBodyConstructor.id(constructedClass.haxePath)})');
+			return unsupported(right, ("TNew(unavailable-constructor:" + (CBodyConstructor.id(constructedClass.haxePath)) + ")"));
 		final targetId = signature.input.id;
 		final argumentExpressions = completeDirectCallArguments(right, construction.arguments, signature.arguments, 0, targetId, "constructor-argument");
 		final arguments:Array<String> = [];
@@ -11856,7 +11818,7 @@ private class FunctionBuilder {
 					switch implementation {
 						case IRIRuntime(feature):
 							runtimeRequirements.push(new CBodyRuntimeRequirement(feature, "cleanup-release",
-								'managed field cleanup before `${constructedClass.haxePath}` local reconstruction', source, expression.pos));
+								("managed field cleanup before `" + (constructedClass.haxePath) + "` local reconstruction"), source, expression.pos));
 						case _:
 					}
 				case _:
@@ -11904,7 +11866,7 @@ private class FunctionBuilder {
 		for (action in constructionCleanupActions)
 			if (action.id == actionId)
 				return action;
-		throw new CBodyEmissionError('cleanup action `$actionId` is not registered in `${prepared.irId}`');
+		throw new CBodyEmissionError(("cleanup action `" + (actionId) + "` is not registered in `" + (prepared.irId) + "`"));
 	}
 
 	/**
@@ -18460,7 +18422,8 @@ private class FunctionBuilder {
 			return unsupported(arguments[0], 'TCall(c.Atomic.$method:receiver-not-atomic)');
 		final resultMapping = bodyValueType(expression.t, expression.pos, 'TCall(c.Atomic.$method:result-type)');
 		if (typeKey(resultMapping.irType) != typeKey(element.irType))
-			return unsupported(expression, 'TCall(c.Atomic.$method:result-type=${resultMapping.cSpelling},expected=${element.cSpelling})');
+			return unsupported(expression,
+				("TCall(c.Atomic." + (method) + ":result-type=" + (resultMapping.cSpelling) + ",expected=" + (element.cSpelling) + ")"));
 		final values:Array<String> = [];
 		var successOrder = IRMO_SequentiallyConsistent;
 		var failureOrder = IRMO_SequentiallyConsistent;
@@ -18533,7 +18496,7 @@ private class FunctionBuilder {
 			case IRTInt(width, signed): ("" + (signed ? "i" : "u") + width);
 			case IRTAbiInteger(kind): 'abi:$kind';
 			case IRTFloat(width): 'f$width';
-			case IRTAtomic(element): 'atomic<${typeKey(element)}>';
+			case IRTAtomic(element): ("atomic<" + (typeKey(element)) + ">");
 			case IRTString: "string-utf8";
 			case IRTManagedString: "managed-string-utf8";
 			case IRTCString: "cstring-borrowed-literal";

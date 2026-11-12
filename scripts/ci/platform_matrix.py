@@ -16,6 +16,9 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+from scripts.test.compiler_discovery import sanitizer_execution_environment  # noqa: E402
 MATRIX_PATH = ROOT / "docs/specs/platform-support-matrix.json"
 EXPECTED_LANES = (
     "linux-x86_64-gcc",
@@ -135,12 +138,13 @@ def lane_by_id(identifier: str) -> tuple[dict[str, object], Lane]:
     raise MatrixFailure(f"unsupported platform lane: {identifier}")
 
 
-def run(command: list[str], *, cwd: Path = ROOT, timeout: int = 180) -> str:
+def run(command: list[str], *, cwd: Path = ROOT, timeout: int = 180, environment: dict[str, str] | None = None) -> str:
     print(f"platform-matrix: RUN {' '.join(command)}")
     try:
         result = subprocess.run(
             command,
             cwd=cwd,
+            env=environment,
             check=False,
             capture_output=True,
             text=True,
@@ -220,7 +224,9 @@ def execute_unix(lane: Lane) -> None:
                 str(expected / "src/program.c"), str(ROOT / "runtime/hxrt/src/io.c"),
                 "-o", str(executable),
             ], cwd=build)
-            output = run([str(executable)], cwd=build)
+            output = run([str(executable)], cwd=build, environment=sanitizer_execution_environment(
+                compiler, family, ("-fsanitize=address,undefined",)
+            ))
             if output != "Hello from hxc\n":
                 raise MatrixFailure("sanitized generated hello emitted unexpected output")
 

@@ -15,6 +15,9 @@ from typing import Iterable
 
 
 ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+from scripts.test.compiler_discovery import sanitizer_execution_environment  # noqa: E402
 RUNTIME_INCLUDE = ROOT / "runtime/hxrt/include"
 RUNTIME_SOURCES = tuple(sorted((ROOT / "runtime/hxrt/src").glob("*.c")))
 RUNTIME_SMOKE = ROOT / "runtime/hxrt/test/runtime_smoke.c"
@@ -109,10 +112,11 @@ class Toolchain:
     cxx_version: str
 
 
-def command_result(command: list[str]) -> subprocess.CompletedProcess[str]:
+def command_result(command: list[str], *, environment: dict[str, str] | None = None) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
         command,
         cwd=ROOT,
+        env=environment,
         check=False,
         capture_output=True,
         text=True,
@@ -227,9 +231,9 @@ def link_executable(
     )
 
 
-def run_executable(executable: Path, sentinel: str, *, label: str) -> None:
+def run_executable(executable: Path, sentinel: str, *, label: str, environment: dict[str, str] | None = None) -> None:
     print(f"native-smoke: RUN {label}: {executable}")
-    result = command_result([str(executable)])
+    result = command_result([str(executable)], environment=environment)
     if result.returncode != 0 or result.stdout.strip() != sentinel or result.stderr:
         raise NativeSmokeFailure(
             f"{label} produced unexpected results\n"
@@ -567,6 +571,7 @@ def run_toolchain(toolchain: Toolchain, build: Path) -> tuple[str, ...]:
         allocator_sanitizer_executable,
         "runtime-smoke: OK",
         label=f"{family} hosted allocator address/undefined sanitizer execution",
+        environment=sanitizer_execution_environment(toolchain.cc, family, ("-fsanitize=address,undefined",)),
     )
     lanes.append("allocator-address-undefined-sanitizer-run")
 
