@@ -3112,8 +3112,12 @@ def validate_generated_playable(
             )
 
 
-def snapshot_values() -> dict[str, object]:
-    with tempfile.TemporaryDirectory(prefix="hxc-caxecraft-playable-snapshot-") as temporary:
+def snapshot_values(*, evidence_dir: Path | None = None) -> dict[str, object]:
+    from scripts.test.snapshots import snapshot_project_root
+
+    with snapshot_project_root("hxc-caxecraft-playable-snapshot-", None if evidence_dir is None else evidence_dir / "playable",
+                               request={"layout": "split", "platform": SNAPSHOT_PLATFORM,
+                                        "raylibConfiguration": "desktop", "runtimeReport": "full"}) as temporary:
         generated = Path(temporary) / "generated"
         compile_haxe(
             generated,

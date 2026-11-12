@@ -1056,7 +1056,15 @@ REQUIRED_SNAPSHOT_AUDIT_SNIPPETS = (
     "actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0",
     "actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38",
     "        run: npm ci\n",
-    "        run: npm run snapshots:check\n",
+    '        run: npm run snapshots:check -- --evidence-dir "${{ runner.temp }}/snapshot-evidence"\n',
+    "      - name: Retain failed snapshot evidence\n"
+    "        if: failure()\n"
+    "        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2\n"
+    "        with:\n"
+    "          name: cold-snapshot-evidence\n"
+    "          path: ${{ runner.temp }}/snapshot-evidence\n"
+    "          if-no-files-found: error\n"
+    "          retention-days: 7\n",
 )
 
 

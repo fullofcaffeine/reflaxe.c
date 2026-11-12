@@ -1462,8 +1462,11 @@ def check_determinism(
                 )
 
 
-def snapshot_values() -> dict[str, object]:
-    with tempfile.TemporaryDirectory(prefix="hxc-caxecraft-snapshot-") as temporary:
+def snapshot_values(*, evidence_dir: Path | None = None) -> dict[str, object]:
+    from scripts.test.snapshots import snapshot_project_root
+
+    with snapshot_project_root("hxc-caxecraft-snapshot-", None if evidence_dir is None else evidence_dir / "domain",
+                               request={"layouts": "split,package,unity", "owner": "domain snapshot"}) as temporary:
         root = Path(temporary)
         split = render_project(
             root / "split",
@@ -1499,7 +1502,7 @@ def snapshot_values() -> dict[str, object]:
             unity.maintainability_report,
         )
         oracle = run_oracle().decode("ascii")
-        playable = playable_snapshot_values()
+        playable = playable_snapshot_values(evidence_dir=evidence_dir)
         return {
             **{
                 path: (split.output / path).read_text(encoding="utf-8")
