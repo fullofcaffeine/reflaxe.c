@@ -5,7 +5,9 @@ The server caches Haxe's parsing and typing work between requests. It does not
 cache haxe.c's ``CompilationContext``, HxcIR, CAST, or generated project: those
 remain fresh for every request. This module owns only process lifecycle and a
 small compatibility cookie so a stale or foreign process can never be mistaken
-for the compiler selected by this checkout.
+for the compiler selected by this checkout. A separate exact-process source
+snapshot lets the caller invalidate content changes even when timestamps are
+unchanged; an interrupted request removes that snapshot until proven successful.
 
 Automatic mode may start, reuse, restart, and stop a process whose exact PID
 and process-start identity still match its cookie. Explicit-attach mode is
@@ -610,6 +612,8 @@ class OwnedHaxeServer:
             "canonicalServerStateRoot": str(state_root.resolve()),
         }
         self.compatibility_sha256 = canonical_digest(self.compatibility)
+        self.source_snapshot_path = state_root / "hxc-haxe-sources.json"
+        self._fresh_process_sha: str | None = None
         self.cookie_path = state_root / "hxc-haxe-server.json"
         self.lock_path = state_root / "hxc-haxe-server.lock"
 
@@ -737,6 +741,7 @@ class OwnedHaxeServer:
             }
             cookie = {**body, "sha256": canonical_digest(body)}
             atomic_write_state(self.cookie_path, cookie)
+            self._fresh_process_sha = str(cookie["sha256"])
         except BaseException:
             # Startup has not published an ownership cookie yet. Kill only the
             # exact process we just observed; a reused PID or changed command
@@ -825,6 +830,62 @@ class OwnedHaxeServer:
             if current is not None and current.get("sha256") == process.cookie_sha256:
                 self.cookie_path.unlink(missing_ok=True)
             return True
+
+    def prepare_source_request(
+        self, lease: HaxeServerLease, sources: Mapping[str, str]
+    ) -> tuple[HaxeServerLease, tuple[str, ...]]:
+        """Consume the last exact-server snapshot before a request may type files.
+
+        The caller holds the shared request lock, separate from the cookie lock.
+        An absent snapshot after a failed or interrupted attempt is uncertainty,
+        not evidence that the server still contains the last successful build.
+        """
+        self._validate_sources(sources)
+        process = lease.process
+        if (not lease.owned or process is None or lease.compatibility_sha256 != self.compatibility_sha256
+                or process.compatibility_sha256 != self.compatibility_sha256
+                or not _owned_cookie(process.cookie())):
+            raise HaxeServerFailure("source freshness requires an exact owned server")
+        old = None
+        try:
+            value = json.loads(self.source_snapshot_path.read_text(encoding="utf-8"))
+            if (isinstance(value, dict) and value.get("schemaVersion") == 1
+                    and value.get("process") == process.cookie()
+                    and isinstance(value.get("sources"), dict)):
+                self._validate_sources(value["sources"])
+                old = value["sources"]
+        except (OSError, UnicodeError, ValueError, HaxeServerFailure):
+            pass
+        self.source_snapshot_path.unlink(missing_ok=True)
+        fresh = self._fresh_process_sha == process.cookie_sha256
+        self._fresh_process_sha = None
+        if fresh:
+            return lease, ()
+        if old is None or set(old) != set(sources):
+            replacement = self.restart_after_transport_failure(lease)
+            self._fresh_process_sha = None
+            return replacement, ()
+        return lease, tuple(sorted(path for path, digest in sources.items() if old[path] != digest))
+
+    def finish_source_request(self, lease: HaxeServerLease, sources: Mapping[str, str]) -> None:
+        """Publish only after the caller proves successful, unchanged request inputs."""
+        self._validate_sources(sources)
+        process = lease.process
+        if (not lease.owned or process is None or lease.compatibility_sha256 != self.compatibility_sha256
+                or process.compatibility_sha256 != self.compatibility_sha256
+                or not _owned_cookie(process.cookie())):
+            raise HaxeServerFailure("cannot publish source freshness for an unverified server")
+        atomic_write_state(self.source_snapshot_path, {
+            "schemaVersion": 1, "process": process.cookie(), "sources": dict(sources),
+        })
+        self._fresh_process_sha = None
+
+    @staticmethod
+    def _validate_sources(sources: Mapping[str, str]) -> None:
+        for path, digest in sources.items():
+            if (not isinstance(path, str) or not Path(path).is_absolute()
+                    or not isinstance(digest, str) or re.fullmatch(r"[0-9a-f]{64}", digest) is None):
+                raise HaxeServerFailure("malformed exact-path source freshness snapshot")
 
     def restart_after_transport_failure(
         self, lease: HaxeServerLease

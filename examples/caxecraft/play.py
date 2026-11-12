@@ -2044,9 +2044,9 @@ def haxe_server_compatibility(
 ) -> dict[str, object]:
     """Identify infrastructure that may persist inside the Haxe server.
 
-    Ordinary game-module bytes are intentionally absent: Haxe's server checks
-    and invalidates edits inside those modules, which is the work we want it to
-    reuse. Their relative `.hx` paths are present because add/remove/rename
+    Ordinary game-module bytes are intentionally absent: the owned request's
+    source snapshot supplies exact changed-file invalidations without replacing
+    the server, preserving reuse of unchanged modules. Their relative `.hx` paths are present because add/remove/rename
     changes need a fresh server under the pinned preview. Compiler macros,
     Reflaxe, the Haxe binary/standard library, package resolution, and base HXML
     also define the machinery interpreting a request, so changing any of them
@@ -2082,6 +2082,49 @@ def haxe_server_compatibility(
         "files": files,
     }
     return {**body, "sha256": canonical_digest(body)}
+
+
+def haxe_game_source_snapshot(request: dict[str, object] | None = None) -> dict[str, str]:
+    """Reuse build-input hashes for ordinary modules; infrastructure uses compatibility."""
+    prefix = "repo/caxecraft/src/"
+    records = request["files"] if request is not None else inventory_inputs([
+        InputPath("repo/caxecraft/src", CASE / "src"),
+    ])
+    result: dict[str, str] = {}
+    for record in records:
+        logical = record["path"]
+        if logical.startswith(prefix) and logical.endswith(".hx"):
+            result[str((CASE / "src" / logical[len(prefix):]).resolve())] = record["sha256"]
+    return result
+
+
+def validate_haxe_source_roots(arguments: tuple[str, ...], installation: HaxeInstallation) -> None:
+    """Refuse a server request whose source roots escape the hashed input closure.
+
+    The bootstrap also admits vendored Reflaxe, already covered by compatibility.
+    A new library or externally reading macro needs an explicit inventory owner;
+    this boundary must not quietly promise freshness for unknown dependencies.
+    """
+    known = {(CASE / "src").resolve(), (ROOT / "src").resolve(),
+             (ROOT / "std").resolve(), (ROOT / "std/c/_std").resolve(),
+             (ROOT / "vendor/reflaxe/src").resolve(), installation.standard_library.resolve()}
+    cwd = CASE
+    index = 0
+    while index < len(arguments):
+        argument = arguments[index]
+        if argument in ("--next", "--each"):
+            raise PlayFailure("owned server freshness requires one compilation request")
+        if argument in ("--cwd", "-C", "-cp", "--class-path", "-p"):
+            index += 1
+            if index >= len(arguments):
+                raise PlayFailure("resolved Haxe path argument is incomplete")
+            path = Path(arguments[index])
+            path = (cwd / path).resolve() if not path.is_absolute() else path.resolve()
+            if argument in ("--cwd", "-C"):
+                cwd = path
+            elif path not in known:
+                raise PlayFailure(f"owned server source root has no freshness inventory: {path}")
+        index += 1
 
 
 def play_request_snapshot(
@@ -2321,6 +2364,7 @@ def compile_haxe(
     server_owner: OwnedHaxeServer | None = None,
     publish_server_lease: Callable[[HaxeServerLease], None] | None = None,
     haxe_timeout_seconds: int = 120,
+    source_request_snapshot: dict[str, object] | None = None,
 ) -> dict[str, object]:
     if raylib_configuration not in RAYLIB_CONFIGURATIONS:
         raise PlayFailure(f"unknown Raylib configuration {raylib_configuration!r}")
@@ -2379,7 +2423,32 @@ def compile_haxe(
             label="Caxecraft Haxe-to-C compile",
         )
     else:
+        source_inputs = None
+        compatibility_before = None
+        invalidated: tuple[str, ...] = ()
+
+        def adopt_lease(replacement: HaxeServerLease) -> None:
+            nonlocal server_lease
+            server_lease = replacement
+            if publish_server_lease is not None:
+                try:
+                    publish_server_lease(replacement)
+                except BaseException as failure:
+                    raise _LeasePublicationFailure(replacement, failure) from failure
+
+        if server_owner is not None and server_lease.owned:
+            source_inputs = haxe_game_source_snapshot(source_request_snapshot)
+            compatibility_before = haxe_server_compatibility(server_lease.connection.installation)
+            if server_owner.compatibility != {
+                **compatibility_before, "canonicalServerStateRoot": str(server_owner.state_root.resolve()),
+            }:
+                raise PlayFailure("Haxe infrastructure changed after server selection")
+            replacement, invalidated = server_owner.prepare_source_request(server_lease, source_inputs)
+            if replacement != server_lease:
+                adopt_lease(replacement)
         resolved = resolve_haxe_arguments(arguments, locale="C")
+        if source_inputs is not None:
+            validate_haxe_source_roots(resolved, server_lease.connection.installation)
 
         def request(lease: HaxeServerLease) -> subprocess.CompletedProcess[str]:
             try:
@@ -2388,6 +2457,8 @@ def compile_haxe(
                         str(lease.connection.installation.compiler),
                         "--connect",
                         lease.connection.endpoint,
+                        *(["--macro", "haxe.macro.CompilationServer.invalidateFiles("
+                           + json.dumps(list(invalidated)) + ")"] if invalidated else []),
                         *resolved,
                     ],
                     cwd=CASE,
@@ -2423,14 +2494,11 @@ def compile_haxe(
                 "caxecraft: owned Haxe server transport failed; "
                 "restarting it once and retrying the same request"
             )
-            server_lease = server_owner.restart_after_transport_failure(
-                server_lease
-            )
-            if publish_server_lease is not None:
-                try:
-                    publish_server_lease(server_lease)
-                except BaseException as failure:
-                    raise _LeasePublicationFailure(server_lease, failure) from failure
+            adopt_lease(server_owner.restart_after_transport_failure(server_lease))
+            if source_inputs is not None:
+                replacement, invalidated = server_owner.prepare_source_request(server_lease, source_inputs)
+                if replacement != server_lease:
+                    adopt_lease(replacement)
             result = request(server_lease)
         if result.returncode != 0:
             detail = compiler_process_detail(result.stdout, result.stderr)
@@ -2447,6 +2515,11 @@ def compile_haxe(
         renderer=renderer,
     )
     validate_content_platform_output(generated, manifest, platform_name)
+    if server_lease is not None and server_owner is not None and server_lease.owned:
+        if (haxe_game_source_snapshot() != source_inputs
+                or haxe_server_compatibility(server_lease.connection.installation) != compatibility_before):
+            raise PlayFailure("Haxe inputs changed during the request; generation was not published")
+        server_owner.finish_source_request(server_lease, source_inputs)
     return manifest
 
 
@@ -4343,9 +4416,18 @@ def stop_owned_server_after_failure(
 
 def main(argv: list[str]) -> int:
     variant_lock: VariantLock | None = None
+    server_request_lock: VariantLock | None = None
     server_owner: OwnedHaxeServer | None = None
     server_lease: HaxeServerLease | None = None
     server_failure_handled = False
+
+    def stop_server_for_failure() -> bool:
+        # Native work runs outside the shared Haxe lock. Reacquire it before
+        # stopping an older lease so another variant's request cannot be cut off.
+        if server_owner is not None and server_request_lock is None:
+            with VariantLock(server_owner.state_root / "hxc-haxe-request.lock"):
+                return stop_owned_server_after_failure(server_owner, server_lease)
+        return stop_owned_server_after_failure(server_owner, server_lease)
 
     def publish_server_lease(lease: HaxeServerLease) -> None:
         # Retry cleanup must retain the replacement's immutable process identity.
@@ -4474,7 +4556,8 @@ def main(argv: list[str]) -> int:
                 installation=installation,
                 compatibility={"operation": "stop-only"},
             )
-            stopped = server_owner.stop()
+            with VariantLock(server_state_root / "hxc-haxe-request.lock"):
+                stopped = server_owner.stop()
             print(
                 "caxecraft: stopped the exact owned Haxe server"
                 if stopped
@@ -4581,6 +4664,11 @@ def main(argv: list[str]) -> int:
             )
             print(f"caxecraft: reusing validated {args.layout} C project at {generated}")
         else:
+            if args.haxe_server == "auto":
+                # Variants share one compiler. Serialize connect/restart and
+                # input history through failure cleanup, but not native builds.
+                server_request_lock = VariantLock(server_state_root / "hxc-haxe-request.lock")
+                server_request_lock.__enter__()
             if args.haxe_server != "off":
                 installation = pinned_haxe_installation()
                 verify_pinned_haxe(installation)
@@ -4618,6 +4706,7 @@ def main(argv: list[str]) -> int:
                     server_owner=server_owner,
                     publish_server_lease=publish_server_lease,
                     haxe_timeout_seconds=args.haxe_timeout_seconds,
+                    source_request_snapshot=requested_snapshot,
                 )
                 generation = finalize_transaction(output_root, transaction)
                 generation = publish_pointer(output_root, generation)
@@ -4641,6 +4730,11 @@ def main(argv: list[str]) -> int:
                 if isinstance(failure, _LeasePublicationFailure):
                     raise failure.failure.with_traceback(failure.failure.__traceback__)
                 raise
+            if server_request_lock is not None:
+                try:
+                    server_request_lock.__exit__(None, None, None)
+                finally:
+                    server_request_lock = None
             print(f"caxecraft: generated {args.layout} C project at {generated}")
         if args.compile_only:
             print("caxecraft: compile-only proof passed (direct C with reviewed selective hxrt plan)")
@@ -4925,7 +5019,7 @@ def main(argv: list[str]) -> int:
         return subprocess.run([str(executable)], cwd=executable.parent, check=False).returncode
     except KeyboardInterrupt:
         stopped = (False if server_failure_handled else
-                   stop_owned_server_after_failure(server_owner, server_lease))
+                   stop_server_for_failure())
         suffix = "; stopped the owned Haxe server" if stopped else ""
         print(f"caxecraft: interrupted{suffix}", file=sys.stderr)
         return 130
@@ -4942,10 +5036,12 @@ def main(argv: list[str]) -> int:
         PlayFailure,
     ) as error:
         if not server_failure_handled:
-            stop_owned_server_after_failure(server_owner, server_lease)
+            stop_server_for_failure()
         print(f"caxecraft: ERROR: {error}", file=sys.stderr)
         return 1
     finally:
+        if server_request_lock is not None:
+            server_request_lock.__exit__(None, None, None)
         if variant_lock is not None:
             variant_lock.__exit__(None, None, None)
 

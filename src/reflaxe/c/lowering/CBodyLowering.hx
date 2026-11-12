@@ -9,6 +9,9 @@ import haxe.macro.Expr.Unop;
 import haxe.macro.Type;
 import haxe.macro.TypeTools;
 import haxe.macro.TypedExprTools;
+import reflaxe.c.lowering.CBodyBorrowRefinement.CBodyBorrowFunction;
+import reflaxe.c.lowering.CBodyBorrowRefinement.refineBorrowing;
+import reflaxe.c.lowering.CBodyBorrowRefinement.isDirectParameterValue as directBorrowParameterValue;
 import reflaxe.c.CProfile;
 import reflaxe.c.CompilationContext;
 import reflaxe.c.CPhaseTiming;
@@ -3985,22 +3988,7 @@ private class FunctionPreparer {
 
 	/** True when this expression's value is the parameter itself, not a field/call result. */
 	public static function isDirectParameterValue(expression:TypedExpr, compilerId:Int):Bool {
-		return switch expression.expr {
-			case TLocal(variable): variable.id == compilerId;
-			case TParenthesis(inner) | TMeta(_, inner) | TCast(inner, _): isDirectParameterValue(inner, compilerId);
-			case TIf(_, whenTrue, whenFalse): isDirectParameterValue(whenTrue,
-					compilerId) || whenFalse != null && isDirectParameterValue(whenFalse, compilerId);
-			case TBlock(expressions): expressions.length > 0 && isDirectParameterValue(expressions[expressions.length - 1], compilerId);
-			case TSwitch(_, cases, defaultExpression):
-				var direct = defaultExpression != null && isDirectParameterValue(defaultExpression, compilerId);
-				for (item in cases)
-					if (isDirectParameterValue(item.expr, compilerId)) {
-						direct = true;
-						break;
-					}
-				direct;
-			case _: false;
-		};
+		return directBorrowParameterValue(expression, compilerId);
 	}
 
 	static function referencesParameter(expression:TypedExpr, compilerId:Int):Bool {
@@ -4060,76 +4048,50 @@ private typedef BorrowForwardTarget = {
 private class BorrowContractRefiner {
 	/** Settle all direct function and method parameters before representation planning. */
 	public static function refine(functions:Array<PreparedBodyFunction>, byId:Map<String, PreparedBodyFunction>):Void {
-		var changed = true;
-		var remaining = 1;
+		final inputs:Array<CBodyBorrowFunction> = [];
 		for (fn in functions)
-			remaining += fn.parameters.length;
-		while (changed) {
-			if (remaining-- <= 0)
-				throw new CBodyEmissionError("borrow-contract refinement did not converge");
-			changed = false;
-			final replacements:Map<String, PreparedBodyFunction> = [];
-			for (fn in functions) {
-				if (fn.role != PBRFunction)
-					continue;
-				var parameterChanged = false;
-				final parameters:Array<PreparedParameter> = [];
-				for (parameter in fn.parameters) {
-					final borrowed = parameter.borrowedReference
-						&& forwardsOnlyToBorrowingTargets(fn.bodyExpression, parameter.compilerId, byId);
-					if (borrowed != parameter.borrowedReference)
-						parameterChanged = true;
-					parameters.push({
-						compilerId: parameter.compilerId,
-						ir: parameter.ir,
-						mapping: parameter.mapping,
-						passing: parameter.passing,
-						borrowedReference: borrowed,
-						defaultValue: parameter.defaultValue
-					});
-				}
-				if (parameterChanged) {
+			inputs.push({
+				id: fn.irId,
+				body: fn.bodyExpression,
+				parameters: [
+					for (parameter in fn.parameters)
+						{compilerId: parameter.compilerId, borrowed: parameter.borrowedReference}
+				],
+				refinable: fn.role == PBRFunction
+			});
+		final result = refineBorrowing(inputs, callee -> {
+			final target = directForwardTarget(callee, byId);
+			return target == null ? null : {functionId: target.target.irId, parameterOffset: target.explicitParameterOffset};
+		});
+		for (index in 0...functions.length) {
+			final fn = functions[index];
+			final flags = result.borrowedByFunction.get(fn.irId);
+			if (flags == null)
+				throw new CBodyEmissionError("borrow-contract refinement lost a prepared function");
+			var changed = false;
+			for (parameterIndex in 0...fn.parameters.length)
+				if (flags[parameterIndex] != fn.parameters[parameterIndex].borrowedReference) {
 					changed = true;
-					replacements.set(fn.irId, copyWithParameters(fn, parameters));
+					break;
 				}
+			if (!changed)
+				continue;
+			final parameters:Array<PreparedParameter> = [];
+			for (parameterIndex in 0...fn.parameters.length) {
+				final parameter = fn.parameters[parameterIndex];
+				parameters.push({
+					compilerId: parameter.compilerId,
+					ir: parameter.ir,
+					mapping: parameter.mapping,
+					passing: parameter.passing,
+					borrowedReference: flags[parameterIndex],
+					defaultValue: parameter.defaultValue
+				});
 			}
-			if (changed)
-				for (index in 0...functions.length) {
-					final replacement = replacements.get(functions[index].irId);
-					if (replacement != null) {
-						functions[index] = replacement;
-						byId.set(replacement.irId, replacement);
-					}
-				}
+			final replacement = copyWithParameters(fn, parameters);
+			functions[index] = replacement;
+			byId.set(replacement.irId, replacement);
 		}
-	}
-
-	/** Keep one borrow only when each exact forwarding target also borrows it. */
-	static function forwardsOnlyToBorrowingTargets(body:TypedExpr, compilerId:Int, byId:Map<String, PreparedBodyFunction>):Bool {
-		var safe = true;
-		function visit(expression:TypedExpr):Void {
-			if (!safe)
-				return;
-			switch expression.expr {
-				case TCall(callee, arguments):
-					for (index in 0...arguments.length)
-						if (FunctionPreparer.isDirectParameterValue(arguments[index], compilerId)) {
-							final forwarding = directForwardTarget(callee, byId);
-							final parameterIndex = forwarding == null ? -1 : index + forwarding.explicitParameterOffset;
-							if (forwarding == null
-								|| parameterIndex >= forwarding.target.parameters.length
-								|| !forwarding.target.parameters[parameterIndex].borrowedReference) {
-								safe = false;
-								return;
-							}
-						}
-				case _:
-			}
-			if (safe)
-				TypedExprTools.iter(expression, visit);
-		}
-		visit(body);
-		return safe;
 	}
 
 	/**

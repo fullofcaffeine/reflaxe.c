@@ -418,13 +418,30 @@ def check_borrow_parameter_summary() -> None:
             raise HxcIRFailure("parameter borrow summary traversal counts drifted")
 
 
+def check_borrow_refinement() -> None:
+    """Preserve forwarding ownership while replacing later body scans with dependency propagation."""
+    result = run_bounded_process(
+        [development_tool("haxe"), "test/hxc_ir/borrow_refinement.hxml"],
+        cwd=ROOT, env={**os.environ, "HAXE_NO_SERVER": "1"},
+        check=False, capture_output=True, text=True, timeout=30,
+    )
+    expected = "borrow-refinement: OK 1:false:3:2 1:true:3:2 8:false:45:9 8:true:45:9 32:false:561:33 32:true:561:33\n"
+    if result.returncode or result.stderr or result.stdout != expected:
+        raise HxcIRFailure(f"borrow refinement check failed\n{result.stdout}\n{result.stderr}")
+
+
 def main() -> int:
     if shutil.which(development_tool("haxe")) is None:
         print("hxc-ir: ERROR: pinned Haxe executable is unavailable", file=sys.stderr)
         return 1
     try:
-        if sys.argv[1:] not in ([], ["--json-strings-only"], ["--nominal-cache-only"], ["--carrier-declarations-only"], ["--managed-root-paths-only"], ["--borrow-parameter-summary-only"]):
-            raise HxcIRFailure("usage: test/hxc_ir/run.py [--json-strings-only | --nominal-cache-only | --carrier-declarations-only | --managed-root-paths-only | --borrow-parameter-summary-only]")
+        if sys.argv[1:] not in ([], ["--json-strings-only"], ["--nominal-cache-only"], ["--carrier-declarations-only"], ["--managed-root-paths-only"], ["--borrow-parameter-summary-only"], ["--borrow-refinement-only"]):
+            raise HxcIRFailure("usage: test/hxc_ir/run.py [--json-strings-only | --nominal-cache-only | --carrier-declarations-only | --managed-root-paths-only | --borrow-parameter-summary-only | --borrow-refinement-only]")
+        if not sys.argv[1:] or sys.argv[1:] == ["--borrow-refinement-only"]:
+            check_borrow_refinement()
+        if sys.argv[1:] == ["--borrow-refinement-only"]:
+            print("hxc-ir: OK: exact borrowing refinement and bounded dependency propagation")
+            return 0
         if not sys.argv[1:] or sys.argv[1:] == ["--borrow-parameter-summary-only"]:
             check_borrow_parameter_summary()
         if sys.argv[1:] == ["--borrow-parameter-summary-only"]:

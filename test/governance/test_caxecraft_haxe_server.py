@@ -39,6 +39,274 @@ def stop_cookie(pid):
     return {**body, "sha256": server.canonical_digest(body)}
 
 
+def assert_process_absent(test: unittest.TestCase, pid: int) -> None:
+    """Require positive exit evidence without signaling Windows process groups.
+
+    Windows maps signal zero to CTRL_C_EVENT, unlike the POSIX existence probe.
+    A failed or incomplete native PID snapshot must therefore fail this assertion.
+    """
+    if os.name == "nt":
+        test.assertTrue(server.windows_process_absent(pid),
+                        f"Windows process {pid} absence could not be confirmed")
+    else:
+        with test.assertRaises(ProcessLookupError):
+            os.kill(pid, 0)
+
+
+class ProcessAbsenceAssertionTests(unittest.TestCase):
+    """Check the observer's platform choice without starting or signaling children."""
+
+    def test_windows_requires_positive_snapshot_without_signaling(self) -> None:
+        fake_os = SimpleNamespace(name="nt", kill=Mock(side_effect=AssertionError("must not signal")))
+        with patch.dict(assert_process_absent.__globals__, {"os": fake_os}):
+            with patch.object(server, "windows_process_absent", return_value=True) as absent:
+                assert_process_absent(self, 123)
+                absent.assert_called_once_with(123)
+            with patch.object(server, "windows_process_absent", return_value=False):
+                with self.assertRaises(AssertionError):
+                    assert_process_absent(self, 123)
+        fake_os.kill.assert_not_called()
+
+    def test_posix_keeps_esrch_requirement(self) -> None:
+        fake_os = SimpleNamespace(name="posix", kill=Mock(side_effect=ProcessLookupError()))
+        with patch.dict(assert_process_absent.__globals__, {"os": fake_os}):
+            assert_process_absent(self, 123)
+            fake_os.kill.assert_called_once_with(123, 0)
+            fake_os.kill.side_effect = PermissionError("unconfirmed")
+            with self.assertRaises(PermissionError):
+                assert_process_absent(self, 123)
+
+
+class HaxeSourceFreshnessTests(unittest.TestCase):
+    """A live server remembers its latest typed inputs, never a variant's binary."""
+
+    def setUp(self):
+        self.temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temporary.cleanup)
+        root = Path(self.temporary.name)
+        self.source = str(root / "Worker.hx")
+        self.installation = HaxeInstallation("test", root / "haxe", root, root, None)
+        self.owner = OwnedHaxeServer(root / "server", installation=self.installation, compatibility={})
+        self.owner.state_root.mkdir()
+        self.lease = self.make_lease(10001)
+        self.replacement = self.make_lease(10002)
+        self.identity = patch.object(server, "_owned_cookie", return_value=True)
+        self.identity.start()
+        self.addCleanup(self.identity.stop)
+
+    def make_lease(self, pid):
+        process = server.OwnedHaxeServerProcess(
+            str(pid), pid, f"start-{pid}", f"command-{pid}",
+            self.owner.compatibility_sha256, str(self.installation.compiler), f"cookie-{pid}",
+        )
+        return server.HaxeServerLease(server.HaxeServerConnection(str(pid), self.installation),
+                                     True, self.owner.compatibility_sha256, process)
+
+    def test_successful_variants_share_latest_source_not_last_binary(self):
+        a, b = {self.source: "a" * 64}, {self.source: "b" * 64}
+        self.owner.finish_source_request(self.lease, a)
+        lease, changed = self.owner.prepare_source_request(self.lease, b)
+        self.assertEqual(lease, self.lease)
+        self.assertEqual(changed, (self.source,))
+        self.assertFalse(self.owner.source_snapshot_path.exists())
+        self.owner.finish_source_request(lease, b)
+        _, changed = self.owner.prepare_source_request(lease, a)
+        self.assertEqual(changed, (self.source,))
+
+    def test_failed_attempt_leaves_unknown_history_and_requires_restart(self):
+        a, b = {self.source: "a" * 64}, {self.source: "b" * 64}
+        self.owner.finish_source_request(self.lease, a)
+        self.owner.prepare_source_request(self.lease, b)
+        with patch.object(self.owner, "restart_after_transport_failure", return_value=self.replacement) as restart:
+            lease, changed = self.owner.prepare_source_request(self.lease, a)
+        restart.assert_called_once_with(self.lease)
+        self.assertEqual((lease, changed), (self.replacement, ()))
+
+    def test_unchanged_success_needs_no_invalidation(self):
+        sources = {self.source: "a" * 64}
+        self.owner.finish_source_request(self.lease, sources)
+        self.assertEqual(self.owner.prepare_source_request(self.lease, sources), (self.lease, ()))
+
+    def test_malformed_foreign_or_changed_path_history_restarts(self):
+        sources = {self.source: "a" * 64}
+        for fault in ("malformed", "foreign", "removed"):
+            with self.subTest(fault=fault):
+                self.owner.finish_source_request(self.lease, sources)
+                if fault == "malformed":
+                    self.owner.source_snapshot_path.write_text("{")
+                elif fault == "foreign":
+                    self.owner.finish_source_request(self.replacement, sources)
+                current = {} if fault == "removed" else sources
+                with patch.object(self.owner, "restart_after_transport_failure", return_value=self.replacement) as restart:
+                    self.assertEqual(self.owner.prepare_source_request(self.lease, current), (self.replacement, ()))
+                restart.assert_called_once_with(self.lease)
+                self.assertFalse(self.owner.source_snapshot_path.exists())
+
+    def test_foreign_compatibility_cannot_read_or_publish_frontier(self):
+        from dataclasses import replace
+        foreign = replace(self.lease, compatibility_sha256="foreign")
+        for action in (self.owner.prepare_source_request, self.owner.finish_source_request):
+            with self.assertRaises(HaxeServerFailure):
+                action(foreign, {self.source: "a" * 64})
+
+    def compile_fixture(self, before, after, *, resolver_error=None, attached=False, compatibility=None):
+        import play
+        from contextlib import redirect_stdout
+        import io
+        source_calls = Mock(side_effect=[before, after])
+        lease = (server.HaxeServerLease(self.lease.connection, False, None, None)
+                 if attached else self.lease)
+        commands = []
+        def dispatch(command, **kwargs):
+            if not attached:
+                self.assertFalse(self.owner.source_snapshot_path.exists())
+            commands.append(command)
+            return subprocess.CompletedProcess(command, 0, "", "")
+        with (
+            patch.object(play, "haxe_game_source_snapshot", source_calls),
+            patch.object(play, "haxe_server_compatibility", return_value=compatibility or {}),
+            patch.object(play, "resolve_haxe_arguments", side_effect=resolver_error,
+                         return_value=("-cp", str(play.CASE / "src"))),
+            patch.object(play, "pinned_haxe_environment", return_value={}),
+            patch.object(play.subprocess, "run", side_effect=dispatch),
+            patch.object(play, "validate_compiled_haxe", return_value={}),
+            patch.object(play, "validate_content_platform_output"),
+            redirect_stdout(io.StringIO()),
+        ):
+            play.compile_haxe(Path(self.temporary.name) / "generated", layout="split",
+                              platform_name="macos", raylib_configuration="desktop",
+                              server_lease=lease, server_owner=None if attached else self.owner)
+        if attached:
+            source_calls.assert_not_called()
+        return commands
+
+    def test_real_request_boundary_notifies_before_typing_then_publishes(self):
+        before, edited = {self.source: "a" * 64}, {self.source: "b" * 64}
+        self.owner.finish_source_request(self.lease, before)
+        commands = self.compile_fixture(edited, edited)
+        self.assertEqual(commands[0][3:5], ["--macro",
+            "haxe.macro.CompilationServer.invalidateFiles(" + json.dumps([self.source]) + ")"])
+        self.assertEqual(json.loads(self.owner.source_snapshot_path.read_text())["sources"], edited)
+        commands = self.compile_fixture(edited, edited)
+        self.assertNotIn("--macro", commands[0])
+
+    def test_compile_only_boundary_rejects_changed_inputs_before_publication(self):
+        import play
+        a, b = {self.source: "a" * 64}, {self.source: "b" * 64}
+        self.owner.finish_source_request(self.lease, a)
+        with self.assertRaisesRegex(play.PlayFailure, "inputs changed"):
+            self.compile_fixture(a, b)
+        self.assertFalse(self.owner.source_snapshot_path.exists())
+
+    def test_resolver_failure_leaves_no_trusted_frontier(self):
+        sources = {self.source: "a" * 64}
+        self.owner.finish_source_request(self.lease, sources)
+        with self.assertRaisesRegex(HaxeServerFailure, "resolver failed"):
+            self.compile_fixture(sources, sources, resolver_error=HaxeServerFailure("resolver failed"))
+        self.assertFalse(self.owner.source_snapshot_path.exists())
+
+    def test_attachment_has_no_frontier_authority(self):
+        commands = self.compile_fixture({}, {}, attached=True)
+        self.assertNotIn("--macro", commands[0])
+        self.assertFalse(self.owner.source_snapshot_path.exists())
+
+    def test_unknown_resolved_root_is_rejected(self):
+        import play
+        with self.assertRaisesRegex(play.PlayFailure, "no freshness inventory"):
+            play.validate_haxe_source_roots(("-cp", "/unreviewed/library"), self.installation)
+
+
+    def test_infrastructure_change_after_connect_prevents_dispatch(self):
+        import play
+        sources = {self.source: "a" * 64}
+        self.owner.finish_source_request(self.lease, sources)
+        with self.assertRaisesRegex(play.PlayFailure, "infrastructure changed"):
+            self.compile_fixture(sources, sources, compatibility={"changed": True})
+
+    def test_shared_request_lock_owns_connect_cleanup_and_explicit_stop(self):
+        for stage in ("generation-failure", "native-failure", "release-interrupt", "explicit-stop"):
+            with self.subTest(stage=stage):
+                self.exercise_main_lock(stage)
+
+    def exercise_main_lock(self, stage):
+        import play
+        import io
+        from contextlib import redirect_stdout, redirect_stderr
+        held = False
+        interrupted = False
+        events = []
+        class RecordingLock:
+            def __init__(inner, path):
+                inner.shared = Path(path).name == "hxc-haxe-request.lock"
+            def __enter__(inner):
+                nonlocal held
+                if inner.shared:
+                    self.assertFalse(held)
+                    held = True
+                    events.append("acquire")
+                return inner
+            def __exit__(inner, *args):
+                nonlocal held, interrupted
+                if inner.shared:
+                    self.assertTrue(held)
+                    held = False
+                    events.append("release")
+                    if stage == "release-interrupt" and not interrupted:
+                        interrupted = True
+                        raise KeyboardInterrupt()
+        owner = Mock()
+        owner.state_root = Path(self.temporary.name) / "lock-owner"
+        def connect():
+            self.assertTrue(held)
+            events.append("connect")
+            return self.lease
+        def stop(*args):
+            self.assertTrue(held)
+            events.append("stop")
+            return True
+        def compile_request(generated, **kwargs):
+            self.assertTrue(held)
+            events.append("compile")
+            if stage == "generation-failure":
+                raise play.PlayFailure("fixture generation failure")
+            return {}
+        def native_failure(**kwargs):
+            self.assertFalse(held)
+            events.append("native")
+            raise play.PlayFailure("fixture native failure")
+        owner.connect.side_effect = connect
+        owner.stop.side_effect = stop
+        owner.stop_lease.side_effect = stop
+        with (
+            patch.dict(os.environ, {"HAXE_NO_SERVER": "0"}),
+            patch.object(play, "VariantLock", RecordingLock),
+            patch.object(play, "pinned_haxe_installation", return_value=self.installation),
+            patch.object(play, "verify_pinned_haxe"),
+            patch.object(play, "haxe_server_compatibility", return_value={}),
+            patch.object(play, "OwnedHaxeServer", return_value=owner),
+            patch.object(play, "play_request_snapshot", return_value={"files": []}),
+            patch.object(play, "compile_haxe", side_effect=compile_request),
+            patch.object(play, "finalize_transaction", side_effect=lambda root, txn: SimpleNamespace(generated=txn.generated)),
+            patch.object(play, "publish_pointer", side_effect=lambda root, generation: generation),
+            patch.object(play, "provision_raylib", side_effect=native_failure),
+            redirect_stdout(io.StringIO()), redirect_stderr(io.StringIO()),
+        ):
+            args = ["--output-root", str(Path(self.temporary.name) / ("output-" + stage)), "--no-build-cache"]
+            if stage == "explicit-stop":
+                args.append("--stop-haxe-server")
+            status = play.main(args)
+        self.assertFalse(held)
+        expected = {
+            "generation-failure": ["acquire", "connect", "compile", "stop", "release"],
+            "native-failure": ["acquire", "connect", "compile", "release", "native", "acquire", "stop", "release"],
+            "release-interrupt": ["acquire", "connect", "compile", "release", "acquire", "stop", "release"],
+            "explicit-stop": ["acquire", "stop", "release"],
+        }
+        self.assertEqual(events, expected[stage])
+        self.assertEqual(status, 130 if stage == "release-interrupt" else 0 if stage == "explicit-stop" else 1)
+
+
+
 class PlayActiveLeaseFailureTests(unittest.TestCase):
     """Exercise the real launcher retry and transaction cleanup with host edges mocked."""
 
@@ -95,9 +363,12 @@ class PlayActiveLeaseFailureTests(unittest.TestCase):
                 patch.dict(os.environ, {"HAXE_NO_SERVER": "0"}),
                 patch.object(play, "pinned_haxe_installation", return_value=installation),
                 patch.object(play, "verify_pinned_haxe"),
-                patch.object(play, "haxe_server_compatibility", return_value={}),
+                patch.object(play, "haxe_server_compatibility", return_value={k: v for k, v in owner.compatibility.items() if k != "canonicalServerStateRoot"}),
+                patch.object(play, "haxe_game_source_snapshot", return_value={}),
                 patch.object(play, "OwnedHaxeServer", return_value=owner),
                 patch.object(owner, "connect", side_effect=[original, replacement]) as connection,
+                # These cases isolate retry/disposal; source freshness has its own controls.
+                patch.object(owner, "prepare_source_request", side_effect=lambda lease, sources: (lease, ())),
                 patch.object(server, "_terminate_owned", side_effect=terminate),
                 patch.object(play, "resolve_haxe_arguments", return_value=("fixture.hxml",)),
                 patch.object(play, "pinned_haxe_environment", return_value={}),
@@ -183,7 +454,9 @@ class PlayActiveLeaseFailureTests(unittest.TestCase):
                 patch.object(play, "verify_pinned_haxe"),
                 patch.object(play, "attached_server", return_value=lease),
                 patch.object(play, "OwnedHaxeServer") as owner,
-                patch.object(play, "resolve_haxe_arguments", return_value=("unused.hxml",)),
+                patch.object(play, "haxe_game_source_snapshot", return_value={}),
+            patch.object(play, "haxe_server_compatibility", return_value={}),
+            patch.object(play, "resolve_haxe_arguments", return_value=("unused.hxml",)),
                 patch.object(play, "pinned_haxe_environment", return_value={}),
                 patch.object(play.subprocess, "run", side_effect=subprocess.TimeoutExpired("attached", 120)),
                 patch.object(play, "discard_transaction") as discard,
@@ -205,8 +478,13 @@ class PlayActiveLeaseFailureTests(unittest.TestCase):
         first = server.HaxeServerLease(server.HaxeServerConnection("127.0.0.1:1", installation), True, "same", None)
         replacement = server.HaxeServerLease(server.HaxeServerConnection("127.0.0.1:2", installation), True, "same", None)
         owner = Mock()
+        owner.state_root = Path("unused-server")
+        owner.compatibility = {"canonicalServerStateRoot": str(owner.state_root.resolve())}
+        owner.prepare_source_request.side_effect = lambda lease, sources: (lease, ())
         owner.restart_after_transport_failure.return_value = replacement
         with (
+            patch.object(play, "haxe_game_source_snapshot", return_value={}),
+            patch.object(play, "haxe_server_compatibility", return_value={}),
             patch.object(play, "resolve_haxe_arguments", return_value=("unused.hxml",)),
             patch.object(play, "pinned_haxe_environment", return_value={}),
             patch.object(play.subprocess, "run", return_value=subprocess.CompletedProcess([], 1, "", "reset")) as request,
@@ -500,8 +778,7 @@ class CaxecraftHaxeServerTests(unittest.TestCase):
         def dispose(transaction):
             self.assertEqual(len(leases), 2)
             for lease in leases:
-                with self.assertRaises(ProcessLookupError):
-                    os.kill(lease.process.pid, 0)
+                assert_process_absent(self, lease.process.pid)
             self.assertIsNotNone(process_start_identity(foreign.process.pid))
             disposed.append(transaction.root)
             discard(transaction)
@@ -509,7 +786,8 @@ class CaxecraftHaxeServerTests(unittest.TestCase):
             patch.dict(os.environ, {"HAXE_NO_SERVER": "0"}),
             patch.object(play, "pinned_haxe_installation", return_value=self.installation),
             patch.object(play, "verify_pinned_haxe"),
-            patch.object(play, "haxe_server_compatibility", return_value={}),
+            patch.object(play, "haxe_server_compatibility", return_value={k: v for k, v in owner.compatibility.items() if k != "canonicalServerStateRoot"}),
+            patch.object(play, "haxe_game_source_snapshot", return_value={}),
             patch.object(play, "OwnedHaxeServer", return_value=owner),
             patch.object(owner, "connect", side_effect=connected),
             patch.object(play, "resolve_haxe_arguments", return_value=("unused.hxml",)),
@@ -521,7 +799,7 @@ class CaxecraftHaxeServerTests(unittest.TestCase):
             status = play.main(["--compile-only", "--output-root", str(output)])
         self.assertEqual(status, 1)
         self.assertEqual(requests, 2, diagnostics.getvalue())
-        self.assertEqual(len(disposed), 1)
+        self.assertEqual(len(disposed), 1, diagnostics.getvalue())
         self.assertFalse(disposed[0].exists())
         self.assertEqual(pointer.read_bytes(), previous_pointer)
         self.assertEqual(play.current_generation(variant).generation_id, selected.generation_id)

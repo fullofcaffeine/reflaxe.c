@@ -1,0 +1,7 @@
+-cp test/hxc_ir
+-cp src
+--macro nullSafety("reflaxe.c")
+-cp test/hxc_ir/fixtures/borrow_refinement
+--macro BorrowRefinementProbe.install()
+-main BorrowRefinementSubject
+--interp
