@@ -753,7 +753,17 @@ def run_owner(
                 flush=True,
             )
             return returncode
-        inputs_after = collect_inputs(script, command, owner_environment)
+        try:
+            inputs_after = collect_inputs(script, command, owner_environment)
+        except LocalGateFailure as error:
+            print(
+                f"local-gate: WARNING: {script}: passed, but could not verify "
+                "reusable input identity; no reusable evidence was published: "
+                f"{error}",
+                file=sys.stderr,
+                flush=True,
+            )
+            return 0
         if inputs_after != inputs_before:
             print(
                 f"local-gate: {script}: passed, but inputs changed during "

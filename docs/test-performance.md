@@ -97,6 +97,13 @@ cache miss and runs the owner. A failing command or a command whose inputs
 change while it runs publishes nothing. One operating-system lock serializes
 each owner's read, run, and publish transaction, so simultaneous agents cannot
 race a pass against a failure or publish out of order. Performance/timing owners are never reused.
+If input collection fails after the owner passes, the wrapper warns and returns
+the owner's success without publishing a reusable receipt. For example, a tool
+version query can time out after the tests finish. The prior receipt is already
+removed, so the next hook must run the owner again. This result does not verify
+stable input identity. Input collection before execution, owner failures, and
+receipt safety or publication errors still fail the command.
+
 `CI` and the explicit cold form always execute:
 
 ```sh

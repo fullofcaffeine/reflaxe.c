@@ -180,6 +180,7 @@ def build_terrain_coverage(
             unit = coverage.extract_unit(
                 path, compiler=compiler, preprocessor=preprocessor, flags=flags,
                 cwd=cwd, evidence=evidence / f"unit-{index:04d}", diagnostic_tools=diagnostic_tools,
+                native_build_pins=native_build_pins,
             )
             units[name] = unit
             record["extractions"].append({"source": name, "receipt": str(unit.receipt),

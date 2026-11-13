@@ -52,7 +52,8 @@ class TerrainBuildCoverageTests(unittest.TestCase):
     def build_pins(self):
         """Produce real owner metadata with a mocked compiler identity only."""
         facts = {"path": str(self.preprocessor), "sha256": self.digest(self.preprocessor),
-                 "command": str(self.preprocessor), "environment": {}}
+                 "command": str(self.preprocessor), "environment": {},
+                 "target": "fixture-target", "version": "fixture compiler"}
         roots = (native.DependencyRoot("project", self.root),)
         includes = (native.IncludeRoot("headers", self.include),)
         objects = []
@@ -129,7 +130,10 @@ class TerrainBuildCoverageTests(unittest.TestCase):
         self.assertEqual([source for source, _ in self.calls],
                          [self.main, self.helper, self.observer])
         self.assertEqual(extract.call_count, 3)
+        self.assertEqual(self.native_pins.compiler_target, "fixture-target")
+        self.assertEqual(self.native_pins.compiler_version, "fixture compiler")
         for _, kwargs in self.calls:
+            self.assertIs(kwargs["native_build_pins"], self.native_pins)
             self.assertEqual(kwargs["flags"], self.flags)
             self.assertEqual(kwargs["compiler"], self.compiler)
             self.assertEqual(kwargs["preprocessor"], self.preprocessor)

@@ -13,7 +13,7 @@ import json
 import re
 import sys
 
-PARSER_POLICY_VERSION = "excluded-gnu-forwarding-clang-21.1.8-v3"
+PARSER_POLICY_VERSION = "excluded-gnu-forwarding-float128-clang-21.1.8-v4"
 
 PROOF_FLAGS = ("-Wunknown-pragmas", "-Wignored-pragmas",
                "-Werror=implicit-function-declaration", "-Werror=unknown-warning-option",
@@ -37,6 +37,110 @@ def matching_library(compiler: Path) -> Path:
     if len(found) != 1:
         raise ValueError("coverage requires one matched libclang beside the selected Clang installation")
     return found.pop()
+
+
+def main_buffer_origins(source: bytes, main: Path, header: Path) -> tuple[str, ...]:
+    """Bound presumed filenames before adding the sole parser-only header.
+
+    Serialized diagnostics preserve #line names, not physical file identity. A
+    main marker can impersonate an injected header. Support only plain ASCII
+    GCC line markers here; reject escapes, other directives and any spelling
+    with the reserved header basename. Basename comparison is a conservative
+    rejection, never a claim that two paths identify the same file. Ordinary
+    extraction without this header does not use this narrower grammar.
+    """
+    def ordinary(name: str) -> bool:
+        return (bool(name) and all(32 <= ord(c) < 127 for c in name)
+                and not any(c in name for c in ('\\', '"', '<', '>'))
+                and not name.startswith("//"))
+
+    def add(name: str) -> None:
+        if not ordinary(name):
+            raise ValueError("ambiguous main diagnostic origin")
+        # #line names remain literal in the tested reader. Reserving the final
+        # component also rejects relative, case and sub/../header aliases.
+        import posixpath
+        if posixpath.basename(posixpath.normpath(name)).casefold() == header.name.casefold():
+            raise ValueError("main diagnostic origin collides with injected header")
+        names.add(name)
+
+    names: set[str] = set()
+    add(str(main.absolute()))
+    # Native preprocessing has already expanded these operators. Do not let a
+    # residual operator or alternate directive spelling reopen input loading.
+    previous = []
+    for token in _TOKEN.finditer(source):
+        if token.lastgroup == "skip":
+            continue
+        previous = (previous + [token])[-3:]
+        spelling = token.group()
+        alternate = any(len(previous) >= count
+                        and b"".join(item.group() for item in previous[-count:]) == marker
+                        and previous[-1].end() - previous[-count].start() == len(marker)
+                        for count, marker in ((2, b"%:"), (3, b"??=")))
+        if spelling in (b"_Pragma", b"__pragma") or alternate:
+            raise ValueError("unsupported directive spelling in multi-buffer parser input")
+    marker = re.compile(rb'[ \t]*#[ \t]+[0-9]+[ \t]+"([^"\\]*)"(?:[ \t]+[1-4])*[ \t]*')
+    for line in source.splitlines():
+        if not line.lstrip().startswith(b"#"):
+            continue
+        match = marker.fullmatch(line)
+        if match is None:
+            raise ValueError("unsupported directive in multi-buffer parser input")
+        try:
+            name = match[1].decode("ascii")
+        except UnicodeDecodeError as error:
+            raise ValueError("ambiguous main diagnostic origin encoding") from error
+        # GCC emits these markers even when no source token belongs to them.
+        # They never authorize a diagnostic from a compiler-generated buffer.
+        if name not in ("<built-in>", "<command-line>"):
+            add(name)
+    return tuple(sorted(names))
+
+
+def main_buffer_diagnostics(value: object, origins: tuple[str, ...], length: int) -> dict[str, object]:
+    """Check every origin before returning the existing scalar-offset schema.
+
+    The caller has pinned one directive-free header and preflighted all main
+    markers. Unknown, header and pseudo-buffer points fail even when their
+    offsets fit inside the main file. Preserve every diagnostic and context
+    field; the existing occurrence and note rules still decide admission.
+    """
+    if not isinstance(value, dict) or set(value) != {"compilerVersion", "libraryVersion", "diagnostics"}:
+        raise ValueError("invalid structured diagnostic record")
+    require_matching_version(value["compilerVersion"], value["libraryVersion"])
+
+    def point(item):
+        if (not isinstance(item, dict) or set(item) != {"file", "offset", "line", "column"}
+                or not isinstance(item["file"], str) or item["file"] not in origins
+                or item["file"].startswith("<")
+                or any(type(item[key]) is not int or item[key] < 0 for key in ("offset", "line", "column"))
+                or item["offset"] >= length):
+            raise ValueError("unproved diagnostic origin")
+        return {key: item[key] for key in ("offset", "line", "column")}
+
+    def entry(item, *, context=False):
+        location_key = "location" if context else "offset"
+        expected = {"severity", "option", "category", "fixits", location_key, "ranges", "children"}
+        if not isinstance(item, dict) or set(item) != expected:
+            raise ValueError("invalid origin-bearing diagnostic entry")
+        result = dict(item)
+        location = point(item[location_key])
+        result[location_key] = location if context else location["offset"]
+        if not isinstance(item["ranges"], list) or not isinstance(item["children"], list):
+            raise ValueError("invalid origin-bearing diagnostic ranges or context")
+        ranges = []
+        for pair in item["ranges"]:
+            if not isinstance(pair, list) or len(pair) != 2:
+                raise ValueError("invalid origin-bearing diagnostic range")
+            ranges.append([point(endpoint)["offset"] for endpoint in pair])
+        result["ranges"] = ranges
+        result["children"] = [entry(child, context=True) for child in item["children"]]
+        return result
+
+    if not isinstance(value["diagnostics"], list):
+        raise ValueError("invalid diagnostic list")
+    return dict(value, diagnostics=[entry(item) for item in value["diagnostics"]])
 
 
 # Token positions are byte offsets, including UTF-8 bytes before an occurrence.
@@ -137,7 +241,7 @@ def admit_diagnostics(value: object, source: bytes) -> list[dict[str, object]]:
     return decisions
 
 
-def read_serialized(compiler: Path, library: Path, diagnostics: Path) -> dict[str, object]:
+def read_serialized(compiler: Path, library: Path, diagnostics: Path, *, retain_origins: bool = False) -> dict[str, object]:
     """Read one completed parse with the installation-matched libclang C ABI."""
     import ctypes as c
     import subprocess
@@ -170,16 +274,21 @@ def read_serialized(compiler: Path, library: Path, diagnostics: Path) -> dict[st
     end = bind("clang_getRangeEnd", [Range], Location)
     file_location = bind("clang_getFileLocation", [Location, c.POINTER(c.c_void_p), c.POINTER(c.c_uint),
                                                   c.POINTER(c.c_uint), c.POINTER(c.c_uint)], None)
-    # Serialized filenames follow presumed #line names. Physical offsets are
-    # meaningful because the owning parse has one retained cpp-output operand,
-    # no module inputs, and no preprocessing that could load a second buffer.
+    file_name = bind("clang_getFileName", [c.c_void_p], String)
+    # The ordinary path has one retained cpp-output operand. The optional
+    # typedef header changes that premise: retain all filenames until the
+    # caller rejects foreign origins, including range endpoints and notes.
     def located(value):
         file = c.c_void_p(); line = c.c_uint(); column = c.c_uint(); position = c.c_uint()
         file_location(value, c.byref(file), c.byref(line), c.byref(column), c.byref(position))
         if not file: raise ValueError("diagnostic lacks a physical offset")
-        return {"offset": position.value, "line": line.value, "column": column.value}
+        result = {"offset": position.value, "line": line.value, "column": column.value}
+        if retain_origins:
+            result["file"] = text(file_name(file))
+        return result
     def offset(value):
-        return located(value)["offset"]
+        result = located(value)
+        return result if retain_origins else result["offset"]
     error = c.c_int(); detail = String()
     result = load(str(diagnostics).encode(), c.byref(error), c.byref(detail))
     detail_text = text(detail)
@@ -210,5 +319,9 @@ def read_serialized(compiler: Path, library: Path, diagnostics: Path) -> dict[st
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 4: raise SystemExit("expected compiler, matched library, serialized diagnostics")
-    print(json.dumps(read_serialized(*(Path(value) for value in sys.argv[1:]))))
+    arguments = sys.argv[1:]
+    retain = arguments[:1] == ["--retain-origins"]
+    if retain:
+        arguments = arguments[1:]
+    if len(arguments) != 3: raise SystemExit("expected compiler, matched library, serialized diagnostics")
+    print(json.dumps(read_serialized(*(Path(value) for value in arguments), retain_origins=retain)))

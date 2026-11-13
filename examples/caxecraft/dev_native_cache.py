@@ -435,6 +435,10 @@ class NativeBuildPins:
     include_inventory_sha256: str
     environment: tuple[tuple[str, str], ...]
     source_dependencies: tuple[tuple[str, tuple[Path, ...]], ...]
+    # Preserve facts already compared with every native object's metadata.
+    # Parser compatibility must use this target, never the parser host target.
+    compiler_target: str
+    compiler_version: str
 
     def verify(self) -> None:
         """Recheck files and include resolution without invoking a compiler."""
@@ -518,7 +522,8 @@ def verify_native_objects(
         result = NativeBuildPins(selected, flags, native_compiler, items, tuple(pins.items()),
                                  tuple(include_roots), str(inventory["sha256"]),
                                  tuple((key, facts["environment"][key]) for key in ENVIRONMENT_KEYS
-                                       if key in facts["environment"]), tuple(source_dependencies))
+                                       if key in facts["environment"]), tuple(source_dependencies),
+                                 str(facts["target"]), str(facts["version"]))
         result.verify()
         return result
     except (OSError, ValueError, KeyError, TypeError) as error:

@@ -27,6 +27,7 @@ import sys
 from renderer_diagnostics import PARSER_POLICY_VERSION, PROOF_FLAGS, matching_library
 import renderer_diagnostics
 import renderer_compatibility
+from dev_native_cache import NativeBuildPins
 
 from scripts.test.bounded_process import run as run_bounded_process
 from scripts.test.c_fixture_harness import C11_STRICT_FLAGS
@@ -391,7 +392,8 @@ def prepare_diagnostic_tools(compiler: Path) -> DiagnosticTools:
 
 def extract_unit(source: Path, *, compiler: Path, flags: tuple[str, ...],
                  cwd: Path, evidence: Path, preprocessor: Path | None = None,
-                 diagnostic_tools: DiagnosticTools | None = None) -> ExtractedUnit:
+                 diagnostic_tools: DiagnosticTools | None = None,
+                 native_build_pins: NativeBuildPins | None = None) -> ExtractedUnit:
     """Extract one C TU with 20-second tree-cleaned commands and immutable evidence.
 
     The native build's compiler owns preprocessing; Clang owns AST parsing.
@@ -495,19 +497,59 @@ def extract_unit(source: Path, *, compiler: Path, flags: tuple[str, ...],
         record["diagnosticTools"] = dict(tools.identities)
         record["proofDiagnosticFlags"] = list(PROOF_FLAGS)
         record["parserPolicyVersion"] = PARSER_POLICY_VERSION
+        float128_header = None
+        parser_extra: list[str] = []
+        origins: tuple[str, ...] = ()
+        # Only the verified GCC native build can request this parser-only alias.
+        # Standalone/Clang extraction keeps its prior no-extra-header behavior.
+        if native_build_pins is not None and not isinstance(native_build_pins, NativeBuildPins):
+            raise CoverageFailure("Float128 requires verified native build evidence")
+        if (native_build_pins is not None
+                and renderer_compatibility.float128_offsets(parser_bytes)
+                and "clang" not in native_build_pins.compiler_version.lower()):
+            if (native_build_pins.compiler != preprocessor.resolve()
+                    or source.resolve() not in {path for _, path in native_build_pins.sources}
+                    or native_build_pins.flags != flags):
+                raise CoverageFailure("Float128 requires the selected verified native build")
+            target = renderer_compatibility.float128_target(
+                native_build_pins.compiler_target, native_build_pins.compiler_version, semantic)
+            float128_header = Path(renderer_compatibility.__file__).with_name("renderer_float128.h").resolve()
+            header_bytes = float128_header.read_bytes()
+            renderer_compatibility.require_float128_header(header_bytes)
+            origins = renderer_diagnostics.main_buffer_origins(parser_bytes, parser_path, float128_header)
+            artifacts[str(float128_header)] = hashlib.sha256(header_bytes).hexdigest()
+            parser_extra = ["-target", target, "-Xclang", "-include", "-Xclang", str(float128_header)]
+            record["float128Compatibility"] = {
+                "header": str(float128_header), "headerSha256": artifacts[str(float128_header)],
+                "nativeTarget": native_build_pins.compiler_target,
+                "nativeVersion": native_build_pins.compiler_version,
+                "parserTarget": target, "mainOrigins": list(origins),
+            }
+        else:
+            record["float128Compatibility"] = None
         serialized = evidence / "ast.dia"
-        ast_text = command([str(compiler), "-x", "cpp-output", *semantic, *PROOF_FLAGS,
+        ast_text = command([str(compiler), "-x", "cpp-output", *semantic, *PROOF_FLAGS, *parser_extra,
                             "-serialize-diagnostics", str(serialized), "-Xclang", "-ast-dump=json",
                             "-fsyntax-only", str(parser_path)], "ast")
         serialized_hash = _sha(serialized)
-        diagnostic_text = command([sys.executable, str(reader), str(compiler), str(library),
+        diagnostic_text = command([sys.executable, str(reader),
+                                   *(["--retain-origins"] if float128_header is not None else []),
+                                   str(compiler), str(library),
                                    str(serialized)], "diagnostics")
         try:
             ast = json.loads(ast_text)
             if not isinstance(ast, dict) or ast.get("kind") != "TranslationUnitDecl":
                 raise CoverageFailure("compiler output is not a complete translation unit")
+            diagnostic_value = json.loads(diagnostic_text)
+            if float128_header is not None:
+                # Version admission is still enforced by the reader and the
+                # unchanged diagnostic certificate, including an empty list.
+                diagnostic_value = renderer_diagnostics.main_buffer_diagnostics(
+                    diagnostic_value, origins, len(parser_bytes))
+                record["float128Compatibility"]["certificate"] = renderer_compatibility.certify_float128(
+                    parser_bytes, ast, float128_header)
             decisions, exclusions = renderer_compatibility.certify_diagnostics(
-                derived_path.read_bytes(), parser_bytes, ast, json.loads(diagnostic_text))
+                derived_path.read_bytes(), parser_bytes, ast, diagnostic_value)
         except (ValueError, TypeError, KeyError, IndexError) as error:
             raise CoverageFailure(str(error)) from error
         record["compatibilityExclusions"] = exclusions
@@ -554,7 +596,33 @@ def verified_ast(unit: ExtractedUnit, diagnostic_tools: DiagnosticTools | None =
     path = Path(record["ast"])
     if _sha(path) != record["astSha256"]:
         raise CoverageFailure("extracted AST identity changed")
-    return json.loads(path.read_text())
+    ast = json.loads(path.read_text())
+    if "float128Compatibility" not in record:
+        raise CoverageFailure("missing Float128 parser policy record")
+    compatibility = record["float128Compatibility"]
+    expected_header = Path(renderer_compatibility.__file__).with_name("renderer_float128.h").resolve()
+    if (str(expected_header) in record["preprocessingArtifacts"]) != (compatibility is not None):
+        raise CoverageFailure("missing or unexpected Float128 certificate")
+    if compatibility is not None:
+        try:
+            header = Path(compatibility["header"])
+            parser = Path(unit.receipt.parent / "parser-input.i")
+            if (header != expected_header
+                    or record["preprocessingArtifacts"].get(str(header)) != compatibility["headerSha256"]):
+                raise CoverageFailure("Float128 header identity changed")
+            renderer_compatibility.require_float128_header(header.read_bytes())
+            source = parser.read_bytes()
+            origins = renderer_diagnostics.main_buffer_origins(source, parser, header)
+            if (list(origins) != compatibility["mainOrigins"]
+                    or renderer_compatibility.float128_target(compatibility["nativeTarget"],
+                        compatibility["nativeVersion"], _semantic_flags(tuple(record["flags"]))) != compatibility["parserTarget"]
+                    or renderer_compatibility.certify_float128(source, ast, header) != compatibility["certificate"]):
+                raise CoverageFailure("Float128 certificate changed")
+            renderer_diagnostics.main_buffer_diagnostics(
+                json.loads((unit.receipt.parent / "diagnostics.stdout").read_text()), origins, len(source))
+        except (ValueError, KeyError, TypeError, OSError) as error:
+            raise CoverageFailure("invalid Float128 parser certificate: " + str(error)) from error
+    return ast
 
 
 def prove_interval(units: dict[str, ExtractedUnit], *, begin: str, end: str,

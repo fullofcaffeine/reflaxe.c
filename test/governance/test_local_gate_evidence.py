@@ -741,6 +741,57 @@ class LocalGateEvidenceTests(unittest.TestCase):
             self.runner.owner_record_path(drift_directory, self.script).exists()
         )
 
+    def test_input_collection_failures_preserve_owner_result_without_receipt(self):
+        cases = (
+            ("preflight", ["error"], 0, 2, 0, True),
+            ("owner", ["before"], 17, 17, 1, False),
+            ("owner-timeout", ["before"], 124, 124, 1, False),
+            ("postflight", ["before", "error"], 0, 0, 1, False),
+            ("drift", ["before", "drift"], 0, 0, 1, False),
+        )
+        for name, collection, owner_status, expected_status, owner_calls, old_remains in cases:
+            with self.subTest(case=name):
+                directory = self.temporary_root / name
+                self.runner.prepare_evidence_directory(directory)
+                record_path = self.runner.owner_record_path(directory, self.script)
+                self.runner.write_timing_report(record_path, self.record())
+                old_bytes = record_path.read_bytes()
+                values = {"before": self.inputs(), "drift": self.inputs("-drift"),
+                          "error": self.runner.LocalGateFailure("fixture identity collection failed")}
+                def execute(*args, **kwargs):
+                    self.assertFalse(record_path.exists(), "old receipt must be invalidated before owner execution")
+                    return owner_status, 12
+                output, errors = io.StringIO(), io.StringIO()
+                with mock.patch.dict(os.environ, self.environment, clear=True), \
+                     mock.patch.object(self.runner, "load_scripts", return_value={self.script: self.command}), \
+                     mock.patch.object(self.runner, "collect_inputs", side_effect=[values[key] for key in collection]) as collect, \
+                     mock.patch.object(self.runner, "execute_package_owner", side_effect=execute) as owner, \
+                     mock.patch.object(self.runner, "write_timing_report") as publish, \
+                     mock.patch.object(self.runner.subprocess, "run", side_effect=AssertionError("no subprocess allowed")) as process, \
+                     redirect_stdout(output), redirect_stderr(errors):
+                    result = self.runner.main(["--evidence-dir", str(directory), self.script])
+                self.assertEqual(result, expected_status)
+                self.assertEqual(owner.call_count, owner_calls)
+                self.assertEqual(collect.call_count, len(collection))
+                publish.assert_not_called()
+                process.assert_not_called()
+                self.assertEqual(record_path.exists(), old_remains)
+                if old_remains:
+                    self.assertEqual(record_path.read_bytes(), old_bytes)
+                if "error" in collection:
+                    self.assertIn("fixture identity collection failed", output.getvalue() + errors.getvalue())
+                if name == "postflight":
+                    self.assertIn("passed", errors.getvalue())
+                    self.assertIn("could not verify reusable input identity", errors.getvalue())
+                    self.assertIn("no reusable evidence was published", errors.getvalue())
+                    with mock.patch.object(self, "evidence_dir", directory):
+                        hook_result, hook_process = self.run_with(
+                            [self.inputs(), self.inputs()], hook_mode=True, now=101
+                        )
+                    self.assertEqual(hook_result, 0)
+                    self.assertEqual(hook_process.call_count, 1)
+                    self.assertTrue(record_path.is_file())
+
     def test_cold_ci_corruption_and_incomplete_records_never_hit(self) -> None:
         baseline = self.inputs()
         result, _ = self.run_with([baseline, baseline])

@@ -16,6 +16,7 @@ object-size or arbitrary format-string equivalence. haxe_c-rl9u owns integration
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import Path
 import re
 
 from renderer_diagnostics import admit_diagnostics, require_matching_version
@@ -109,6 +110,91 @@ def _tokens(data):
             i += 1
         result.append(_Token(data[start:i], start, i))
     return result
+
+
+def float128_offsets(source: bytes) -> tuple[int, ...]:
+    """Return real type-spelling occurrences; comments and literals cannot opt in."""
+    if b"_Float128" not in source:
+        return ()
+    return tuple(token.start for token in _tokens(source) if token.text == b"_Float128")
+
+
+def require_float128_header(header: bytes) -> None:
+    """Require the sole effect-free alias, with no directive or hidden declaration.
+
+    The checked-in header owns its bytes. This grammar check constrains its
+    authority; extraction separately hashes the actual file before and after use.
+    """
+    tokens = _tokens(header)
+    _require([token.text for token in tokens] == [b"typedef", b"__float128", b"_Float128", b";"],
+             "unsupported Float128 compatibility header")
+    cursor = 0
+    for token in tokens:
+        _require(not header[cursor:token.start].strip(), "non-whitespace in Float128 header")
+        cursor = token.end
+    _require(not header[cursor:].strip(), "trailing Float128 header content")
+
+
+def float128_target(target: str, version: str, semantic_flags: tuple[str, ...]) -> str:
+    """Select only the native GCC x86_64 GNU/Linux C11 profile already verified.
+
+    These facts come from native object verification, not the machine running
+    the parser. Return an explicit parser target rather than use its host default.
+    """
+    _require(target in ("x86_64-linux-gnu", "x86_64-pc-linux-gnu")
+             and re.match(r"(?:gcc(?:-[0-9]+)?|[^\n ]*gcc(?:-[0-9]+)?) ", version) is not None
+             and "clang" not in version.lower(), "unsupported native Float128 profile")
+    _require("-std=c11" in semantic_flags
+             and not any(flag.startswith("-std=") and flag != "-std=c11" for flag in semantic_flags)
+             and not any(flag in ("-arch", "-isysroot") for flag in semantic_flags),
+             "unsupported Float128 parser dialect or target flags")
+    return "x86_64-linux-gnu"
+
+
+def certify_float128(source: bytes, ast: dict, header: Path) -> dict[str, object]:
+    """Bind every original token to a plain external prototype parameter.
+
+    The injected alias must denote Clang's __float128 builtin. No variable,
+    expression, cast, body parameter or unmatched occurrence is admitted. This
+    certificate grants no call permission or graph exclusion.
+    """
+    _require(ast.get("kind") == "TranslationUnitDecl", "Float128 requires complete AST")
+    aliases = [node for node in _walk(ast) if node.get("kind") == "TypedefDecl"
+               and node.get("name") == "_Float128"]
+    _require(len(aliases) == 1, "Float128 alias conflict or missing declaration")
+    alias = aliases[0]
+    _require(alias.get("loc", {}).get("file") == str(header.resolve())
+             and alias.get("type", {}).get("qualType") == "__float128"
+             and [(node.get("kind"), node.get("type", {}).get("qualType"))
+                  for node in alias.get("inner", [])] == [("BuiltinType", "__float128")]
+             and _extent(alias) == (0, 28)
+             and isinstance(alias.get("id"), str) and bool(alias["id"]),
+             "unproved Float128 header alias")
+    uses = []
+    for function in ast.get("inner", []):
+        if function.get("kind") != "FunctionDecl":
+            continue
+        for param in function.get("inner", []):
+            if param.get("kind") != "ParmVarDecl" or param.get("type", {}).get("qualType") != "_Float128":
+                continue
+            _require(function.get("storageClass", "") in ("", "extern")
+                     and not any(child.get("kind") == "CompoundStmt" for child in function.get("inner", [])),
+                     "Float128 requires external bodyless prototype")
+            type_info = param["type"]
+            _require(type_info.get("desugaredQualType") == "__float128"
+                     and type_info.get("typeAliasDeclId") == alias["id"], "Float128 parameter alias changed")
+            first, end = _extent(param)
+            _require(0 <= first < end <= len(source), "Float128 parameter range")
+            location = param["range"]["begin"]
+            _require(not any(key in location for key in ("spellingLoc", "expansionLoc")),
+                     "expanded Float128 parameter")
+            spelling = [token.text for token in _tokens(source[first:end])]
+            expected = [b"_Float128"] + ([param["name"].encode("ascii")] if param.get("name") else [])
+            _require(spelling == expected, "non-plain Float128 parameter")
+            uses.append(first)
+    _require(bool(uses) and sorted(uses) == list(float128_offsets(source)),
+             "unbound or duplicate Float128 occurrence")
+    return {"canonicalType": "__float128", "aliasId": alias["id"], "parameterOffsets": sorted(uses)}
 
 
 def _require_decimal_expression(xs):
