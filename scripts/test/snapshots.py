@@ -1869,6 +1869,11 @@ def main(argv: Iterable[str] = ()) -> int:
         audit["errorType"] = type(error).__name__
         print(f"snapshots: ERROR: {error}", file=sys.stderr)
         return 1
+    except BaseException as error:
+        # Record generator-owned failures; their original traceback still escapes.
+        audit["status"] = "failed"
+        audit["errorType"] = type(error).__name__
+        raise
     finally:
         if evidence is not None:
             primary_failure = sys.exc_info()[0] is not None or audit["status"] in ("failed", "drift")

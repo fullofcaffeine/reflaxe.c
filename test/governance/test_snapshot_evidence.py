@@ -171,6 +171,81 @@ class SnapshotEvidenceTests(unittest.TestCase):
             self.assertEqual(report["errorType"], "SnapshotFailure")
             self.assertTrue((evidence / "first/artifacts.json").exists())
 
+    def test_unhandled_generator_failure_is_reported_without_replacing_exception(self):
+        class GeneratorFailure(RuntimeError):
+            pass
+
+        for fail_report_write in (False, True):
+            with self.subTest(fail_report_write=fail_report_write), tempfile.TemporaryDirectory() as temporary:
+                evidence = Path(temporary).resolve() / "evidence"
+                failure = GeneratorFailure("original generator failure")
+                real_write = snapshots.evidence_json
+
+                def fail():
+                    with snapshots.snapshot_project_root("snapshot-test-", evidence / "second") as generated:
+                        (generated / "partial.c").write_text("partial output")
+                        raise failure
+
+                def write(path, value):
+                    if (fail_report_write and path == evidence / "report.json"
+                            and isinstance(value, dict) and value.get("status") == "failed"):
+                        raise PermissionError("report destination unavailable")
+                    real_write(path, value)
+
+                diagnostics = io.StringIO()
+                with (patch.object(snapshots, "read_catalog", return_value={}),
+                      patch.object(snapshots, "managed_entries", return_value={"first": {}, "second": {}}),
+                      patch.object(snapshots, "evidence_provenance", return_value={}),
+                      patch.dict(snapshots.GENERATORS, {"first": lambda: [], "second": fail}),
+                      patch.object(snapshots, "collect_changes", return_value=[]),
+                      patch.object(snapshots, "evidence_json", side_effect=write),
+                      patch.object(snapshots, "write_artifact", side_effect=AssertionError("unexpected snapshot write")),
+                      redirect_stderr(diagnostics)):
+                    try:
+                        snapshots.main(["--check", "--evidence-dir", str(evidence)])
+                    except GeneratorFailure as observed:
+                        self.assertIs(observed, failure)
+                        frames = []
+                        traceback = observed.__traceback__
+                        while traceback is not None:
+                            frames.append(traceback.tb_frame.f_code)
+                            traceback = traceback.tb_next
+                        self.assertIn(fail.__code__, frames)
+                    else:
+                        self.fail("the original generator exception must propagate")
+
+                self.assertTrue((evidence / "first/artifacts.json").exists())
+                self.assertEqual((evidence / "second/project/partial.c").read_text(), "partial output")
+                capture = json.loads((evidence / "second/capture.json").read_text())
+                self.assertEqual(capture["renderStatus"], "failed")
+                self.assertEqual(capture["captureStatus"], "complete")
+                self.assertEqual(capture["errorType"], "GeneratorFailure")
+                report = json.loads((evidence / "report.json").read_text())
+                self.assertEqual(report["suites"], ["first"])
+                self.assertEqual(report["activeSuite"], "second")
+                self.assertNotIn("original generator failure", json.dumps(report))
+                if fail_report_write:
+                    self.assertIn("primary failure preserved", diagnostics.getvalue())
+                else:
+                    self.assertEqual(report["status"], "failed")
+                    self.assertEqual(report["errorType"], "GeneratorFailure")
+
+    def test_success_report_ignores_callers_handled_exception(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            evidence = Path(temporary).resolve() / "evidence"
+            with (patch.object(snapshots, "read_catalog", return_value={}),
+                  patch.object(snapshots, "managed_entries", return_value={"fixture": {}}),
+                  patch.object(snapshots, "evidence_provenance", return_value={}),
+                  patch.dict(snapshots.GENERATORS, {"fixture": lambda: []}),
+                  patch.object(snapshots, "collect_changes", return_value=[])):
+                try:
+                    raise RuntimeError("unrelated handled caller error")
+                except RuntimeError:
+                    self.assertEqual(snapshots.main(["--check", "--evidence-dir", str(evidence)]), 0)
+            report = json.loads((evidence / "report.json").read_text())
+            self.assertEqual(report["status"], "matched")
+            self.assertNotIn("errorType", report)
+
 
 if __name__ == "__main__":
     unittest.main()
