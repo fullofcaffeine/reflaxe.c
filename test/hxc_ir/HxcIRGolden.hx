@@ -2697,8 +2697,178 @@ class HxcIRGolden {
 		}
 	}
 
+	/** Add terminal cleanup to the same independently validated child-borrow fixture. */
+	static function ownedChildCleanupProgram(?strategy:HxcIRExceptionStrategy):HxcIRProgram {
+		final seed = ownedChildProofProgram();
+		final original = seed.modules[0].functions[0];
+		final file = "test/hxc_ir/fixtures/OwnedChildProof.hx";
+		final program = minimalProgram("valid.OwnedChildCleanup", original.blocks[0].instructions,
+			terminator(IRTReturn(null, [{regionId: "cleanup.tail", actionId: "release"}]), file, 5), original.locals, [
+			{
+				id: "cleanup.tail",
+				parentId: null,
+				actions: [
+					cleanupAction("release", IRCARelease(IRPLocal("scratch"), IRIProgramLocal("helper.release")), file, 5)
+				],
+				source: span(file, 5)
+			}
+		], file, null, null, strategy);
+		for (type in seed.modules[0].types)
+			program.modules[0].types.push(type);
+		for (instance in seed.modules[0].typeInstances)
+			program.modules[0].typeInstances.push(instance);
+		final fn = program.modules[0].functions[0];
+		for (parameter in original.parameters)
+			fn.parameters.push(parameter);
+		fn.borrowedClassLocalIds.push("selected");
+		fn.locals.push(local("scratch", IRTPointer(IRTVoid, true), IRLSAutomatic, IRISInitialized, file, 1));
+		return program;
+	}
+
+	/** Cleanup follows the last use; it never grants a new lifetime or alias proof. */
+	static function verifyOwnedChildCleanup(validator:HxcIRValidator):Void {
+		final file = "test/hxc_ir/fixtures/OwnedChildProof.hx";
+		final positive = ownedChildCleanupProgram();
+		final fn = positive.modules[0].functions[0];
+		final action = fn.cleanupRegions[0].actions[0];
+		final tail = fn.blocks[0].terminator;
+		validator.requireValid(positive, PROFILE);
+		for (_ in 0...2) {
+			new CBodyNullCheckCoalescing().run(positive);
+			validator.requireValid(positive, PROFILE);
+			final nodes = fn.blocks[0].instructions;
+			if (nodes.length != 6
+				|| nodes[0].id != "parent.check"
+				|| fn.cleanupRegions[0].actions[0] != action
+				|| fn.blocks[0].terminator != tail)
+				throw "terminal cleanup must preserve the parent witness and exact cleanup while removing the child guard";
+		}
+		// These are admission controls, not claims that each deliberately unsupported
+		// or malformed exception shape is itself a valid executable program.
+		for (variant in [
+			"finally",
+			"inline-cleanup",
+			"failure-cleanup",
+			"failure-propagate",
+			"borrowed",
+			"multiple-blocks",
+			"non-return",
+			"exception",
+			"field-place"
+		]) {
+			final guarded = ownedChildCleanupProgram(variant == "exception" ? IRESContainedRuntime : null);
+			final target = guarded.modules[0].functions[0];
+			final nodes = target.blocks[0].instructions;
+			switch variant {
+				case "finally":
+					target.cleanupRegions[0].actions[0] = cleanupAction("release", IRCAFinally("entry"), file, 5);
+				case "inline-cleanup":
+					nodes.insert(0, instruction("inline.cleanup", null, IRIOException(IRECleanupRun("cleanup.tail")), file, 1));
+				case "failure-cleanup" | "failure-propagate":
+					nodes.insert(0, instruction("may.fail", result("allocated", IRTPointer(IRTVoid, true)), IRIOAllocate(IRTVoid, IRAOwned, IRIStatic, {
+						kind: IRFAllocationFailure,
+						target: variant == "failure-propagate" ? IRFTPropagate : IRFTAbort,
+						arguments: [],
+						cleanup: variant == "failure-cleanup" ? [
+							{
+								regionId: "cleanup.tail",
+								actionId: "release"
+							}
+						] : []
+					}), file, 1));
+				case "borrowed":
+					target.cleanupRegions[0].actions[0] = cleanupAction("release", IRCARelease(IRPLocal("selected"), IRIStatic), file, 5);
+				case "multiple-blocks":
+					target.blocks.push(block("other", [], IRTReturn(null, []), file, 6));
+				case "non-return":
+					target.blocks[0] = block("entry", nodes, IRTUnreachable, file, 5);
+				case "exception":
+				case "field-place":
+					target.cleanupRegions[0].actions[0] = cleanupAction("release", IRCARelease(IRPField(IRPLocal("scratch"), "field"), IRIStatic), file, 5);
+				case _:
+					throw "unknown cleanup boundary";
+			}
+			new CBodyNullCheckCoalescing().run(guarded);
+			if (nodes.filter(node -> node.id == "child.check").length != 1)
+				throw 'owned-child cleanup admission crossed $variant';
+		}
+		for (barrier in ["call", "lifetime", "alias"]) {
+			final guarded = ownedChildCleanupProgram();
+			final target = guarded.modules[0].functions[0];
+			final nodes = target.blocks[0].instructions;
+			final child = IRTPointer(IRTInstance("instance.class.root"), true);
+			switch barrier {
+				case "call":
+					guarded.modules[0].functions.push(constantFunction("fn.barrier", "barrier", "0", 1));
+					nodes.insert(4,
+						instruction("effect.call", result("effect.result", IRTInt(32, true)), IRIOCall(call(IRCDDirect("fn.barrier"), [], IRTInt(32, true))),
+							file, 4));
+				case "lifetime":
+					nodes.insert(4, instruction("effect.lifetime", null, IRIOLifetime(IRPLocal("selected"), IRISInitialized, IRISMoved, "move"), file, 4));
+				case "alias":
+					nodes.insert(4, instruction("alias.address", result("alias", IRTPointer(child, false)), IRIOAddress(IRPLocal("selected")), file, 4));
+					nodes.insert(5, instruction("alias.null", result("nothing", child), IRIOConstant(IRCNull), file, 4));
+					nodes.insert(6, instruction("alias.store", null, IRIOStore(IRPDereference("alias"), "nothing"), file, 4));
+				case _:
+					throw "unknown cleanup proof barrier";
+			}
+			if (barrier != "lifetime")
+				validator.requireValid(guarded, PROFILE);
+			new CBodyNullCheckCoalescing().run(guarded);
+			final checks = nodes.filter(node -> node.id == "child.check");
+			if (checks.length != 1)
+				throw 'terminal cleanup incorrectly proved a fresh load after $barrier';
+			nodes.remove(checks[0]);
+			requireInvalidMarker(guarded, "requires a preceding dominating null check", 'terminal cleanup after $barrier');
+		}
+
+		for (variant in ["place", "reference", "state", "type", "span", "id", "order"]) {
+			final bad = ownedChildCleanupProgram();
+			final target = bad.modules[0].functions[0];
+			final actions = target.cleanupRegions[0].actions;
+			final marker = switch variant {
+				case "place":
+					actions[0] = cleanupAction("release", IRCARelease(IRPDereference("child.loaded"), IRIStatic), file, 5);
+					"cleanup actions require a stable local/global place";
+				case "reference":
+					target.blocks[0] = block("entry", target.blocks[0].instructions, IRTReturn(null, [{regionId: "cleanup.tail", actionId: "missing"}]), file,
+						5);
+					"cleanup step refers to unknown action";
+				case "state":
+					actions[0] = cleanupAction("release", IRCADestroy(IRPLocal("scratch"), IRISInitialized, IRISMoved), file, 5);
+					"destroy cleanup must end in destroyed state";
+				case "type":
+					actions[0] = cleanupAction("release", IRCARelease(IRPLocal("scratch"), IRIRuntime("array")), file, 5);
+					"array release cleanup requires a managed Array place";
+				case "span":
+					actions[0] = {
+						id: "release",
+						idempotence: IRCExactlyOnce,
+						kind: actions[0].kind,
+						source: new HxcSourceSpan(file, 0, 1, 0, 1)
+					};
+					"source line and column values must be one-based";
+				case "id":
+					actions[0] = cleanupAction(" bad ", actions[0].kind, file, 5);
+					"stable identifier";
+				case "order":
+					actions.push(cleanupAction("second", IRCARelease(IRPLocal("scratch"), IRIStatic), file, 5));
+					target.blocks[0] = block("entry", target.blocks[0].instructions, IRTReturn(null, [
+						{regionId: "cleanup.tail", actionId: "release"},
+						{regionId: "cleanup.tail", actionId: "second"}
+					]), file, 5);
+					"must execute in reverse registration order";
+				case _: throw "unknown malformed cleanup";
+			};
+			requireInvalidMarker(bad, marker, 'guarded malformed cleanup $variant');
+			new CBodyNullCheckCoalescing().run(bad);
+			requireInvalidMarker(bad, marker, 'owned-child malformed cleanup $variant');
+		}
+	}
+
 	/** Reject malformed discarded nodes and stop inferred facts at aliasing boundaries. */
 	static function verifyOwnedChildProofs(validator:HxcIRValidator):Void {
+		verifyOwnedChildCleanup(validator);
 		verifyOwnedChildBranches(validator);
 		verifyOwnedChildComparisons(validator);
 		final program = ownedChildProofProgram();

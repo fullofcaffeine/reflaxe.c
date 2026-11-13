@@ -2166,8 +2166,9 @@ private class HxcIRValidationState {
 		Keep guards whose immutable operand escapes the block-local proof domain.
 		Reuse validation's exhaustive operand queries, including nested places and
 		failure arguments. Terminator operands are retained conservatively, including
-		arguments renamed by a successor block. Cleanup actions require a separate
-		lifetime analysis; callers retain guards whenever cleanup regions are present.
+		arguments renamed by a successor block. Cleanup is outside this SSA query:
+		callers must separately prove terminal-only stable-local cleanup or retain
+		the guards. This query does not grant lifetime or cleanup-order authority.
 	**/
 	public static function valuesNeedingExplicitNullChecks(fn:HxcIRFunction):Map<String, Bool> {
 		final firstBlock:Map<String, String> = [];

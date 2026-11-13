@@ -902,6 +902,87 @@ def check_owned_child_nonnull(*, requested_toolchain: str) -> None:
                 validate_report(report, required_coverage=frozenset({"owned-child-nonnull"}))
 
 
+def check_owned_child_managed_project(output: Path, *, main: str) -> Path:
+    """Generate once and inspect the exact project later used by native checks."""
+    fixture = FIXTURES / "owned_child_managed"
+    project_root = output / main
+    try:
+        generated = custom_target(fixture, project_root, main=main, report=True)
+    except subprocess.TimeoutExpired as error:
+        for suffix, stream in (("stdout", error.stdout), ("stderr", error.stderr)):
+            data = stream if isinstance(stream, bytes) else (stream or "").encode()
+            (output / (main + "." + suffix)).write_bytes(data)
+        raise
+    (output / (main + ".stdout")).write_text(generated.stdout)
+    (output / (main + ".stderr")).write_text(generated.stderr)
+    if generated.returncode or generated.stderr or "[ERROR]" in generated.stdout:
+        raise ClassLayoutFailure(f"managed-child {main} generation failed; evidence: {output}")
+    hxcir = static_hxcir(generated)
+    (output / (main + ".hxcir")).write_text(hxcir)
+    begin = hxcir.find('  function "method.OwnedCounter.total"')
+    end = hxcir.find('  end function "method.OwnedCounter.total"', begin)
+    if begin < 0 or end < 0:
+        raise ClassLayoutFailure("managed-child total function absent")
+    section = hxcir[begin:end]
+    (output / (main + "-total.hxcir")).write_text(section)
+    cleanup = [line for line in section.splitlines() if line.startswith("    cleanup ")]
+    borrows = re.findall(r'instruction "[^"\n]+" result="([^"\n]+)":[^\n]+ borrow-class-field ', section)
+    if not cleanup or len(borrows) != 1:
+        raise ClassLayoutFailure(f"managed-child requires actual cleanup and one child borrow; evidence: {output}")
+    # Follow only explicit nullable injection of this exact borrowed value.
+    child_values = set(borrows)
+    conversions = re.findall(
+        r'instruction "[^"\n]+" result="([^"\n]+)":[^\n]+ convert value="([^"\n]+)" kind=nullable-inject ', section)
+    for _ in range(len(conversions) + 1):
+        child_values.update(result for result, source in conversions if source in child_values)
+    guarded = re.findall(r' result=- null-check value="([^"\n]+)"', section)
+    child_guards = sorted(child_values.intersection(guarded))
+    (output / (main + "-proof.json")).write_text(json.dumps({
+        "cleanupDeclarations": cleanup, "borrowResults": borrows,
+        "childValues": sorted(child_values), "remainingChildGuards": child_guards,
+        "parentGuards": guarded.count("parameter.self"),
+    }, indent=2) + "\n")
+    if guarded != ["parameter.self"]:
+        raise ClassLayoutFailure(f"managed-child must retain one parent guard and remove child guards; evidence: {output}")
+    return project_root
+
+
+def check_owned_child_managed(output: Path) -> None:
+    """Retain one structural capture without running the authored programs."""
+    output.mkdir(parents=True, exist_ok=False)
+    check_owned_child_managed_project(output, main="Positive")
+
+
+def check_owned_child_managed_native(*, requested_toolchain: str) -> None:
+    """Prove scalar47 and exact POSIX null-parent fail-stop with terminal cleanup."""
+    fixture = FIXTURES / "owned_child_managed"
+    oracle = run_bounded_process(
+        [development_tool("haxe"), "-cp", str(fixture), "-main", "Positive", "--interp"],
+        cwd=ROOT, env=haxe_environment(), capture_output=True, text=True, timeout=30,
+    )
+    if oracle.returncode or oracle.stdout or oracle.stderr:
+        raise ClassLayoutFailure("managed-child independent scalar47 Eval assertion failed")
+    with tempfile.TemporaryDirectory(prefix="hxc-owned-child-managed-") as temporary:
+        root = Path(temporary)
+        for main, exit_code in (("Positive", 0), ("NullableFailStop", -signal.SIGABRT)):
+            output = check_owned_child_managed_project(root, main=main)
+            manifest = json.loads((output / "hxc.manifest.json").read_text())
+            project = CFixtureProject(
+                main.lower(), tuple(manifest["build"]["sources"]),
+                tuple(sorted(path.relative_to(output).as_posix() for path in output.rglob("*.h"))),
+                tuple(path for path in ("include", "runtime/include") if (output / path).is_dir()),
+                "", ("owned-child-managed",), expected_exit=exit_code,
+            )
+            for optimization in ("-O0", "-O2"):
+                report = run_c_fixture_corpus(
+                    suite="owned-child-managed", projects=(project,), fixture_root=output,
+                    build_root=root / (main + optimization), repository_root=ROOT,
+                    requested_toolchain=requested_toolchain,
+                    strict_flags=(*C11_STRICT_FLAGS, optimization), timeout_seconds=30,
+                )
+                validate_report(report, required_coverage=frozenset({"owned-child-managed"}))
+
+
 def check_owned_child_branches(*, requested_toolchain: str) -> None:
     """Keep one parent guard across a diamond, including a diamond inside a loop."""
     for directory, expected in (
@@ -1321,6 +1402,8 @@ def parse_args(arguments: Iterable[str]) -> argparse.Namespace:
     parser.add_argument("--borrowed-child-only", action="store_true")
     parser.add_argument("--owned-child-nonnull-only", action="store_true")
     parser.add_argument("--owned-child-branches-only", action="store_true")
+    parser.add_argument("--owned-child-managed-output", type=Path)
+    parser.add_argument("--owned-child-managed-only", action="store_true")
     return parser.parse_args(list(arguments))
 
 
@@ -1330,6 +1413,14 @@ def main(arguments: Iterable[str] = ()) -> int:
         print("class-layout: ERROR: pinned Haxe executable is unavailable", file=sys.stderr)
         return 1
     try:
+        if args.owned_child_managed_output is not None:
+            check_owned_child_managed(args.owned_child_managed_output)
+            print("class-layout: OK: managed-child structural capture passed; native scalar/fail-stop checks remain pending")
+            return 0
+        if args.owned_child_managed_only:
+            check_owned_child_managed_native(requested_toolchain=args.toolchain)
+            print("class-layout: OK: managed child scalar47 and nullable-parent fail-stop preserved")
+            return 0
         if args.owned_child_branches_only:
             check_owned_child_branches(requested_toolchain=args.toolchain)
             print("class-layout: OK: branch and loop child guards removed; independent scalar results preserved")
@@ -1368,6 +1459,7 @@ def main(arguments: Iterable[str] = ()) -> int:
         check_native(first, requested_toolchain=args.toolchain)
         check_production()
         check_owned_child_nonnull(requested_toolchain=args.toolchain)
+        check_owned_child_managed_native(requested_toolchain=args.toolchain)
         check_owned_child_branches(requested_toolchain=args.toolchain)
         check_negative_cases()
     except (
