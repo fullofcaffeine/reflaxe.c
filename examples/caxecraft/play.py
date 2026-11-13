@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import base64
 import difflib
 import hashlib
 import json
@@ -22,6 +23,7 @@ import zlib
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
+from typing import TextIO
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -735,12 +737,75 @@ def development_tool(name: str) -> str:
     return str(local) if local.is_file() else name
 
 
+def retain_compiler_streams(
+    log: TextIO | None,
+    *,
+    command: list[str],
+    cwd: Path,
+    timeout: int,
+    result: subprocess.CompletedProcess[str] | subprocess.TimeoutExpired,
+    attempt: int = 1,
+    lease: HaxeServerLease | None = None,
+) -> None:
+    """Retain each compiler attempt before retry or publication can hide it.
+
+    Completed streams are text; TimeoutExpired may instead carry raw bytes.
+    Keep those bytes losslessly beside a readable projection. A compiler exit
+    of zero proves only that attempt, not project validation or publication.
+    """
+    if log is None:
+        return
+    timed_out = isinstance(result, subprocess.TimeoutExpired)
+    record: dict[str, object] = {
+        "attempt": attempt,
+        "command": command,
+        "cwd": str(cwd),
+        "configuredTimeoutSeconds": timeout,
+        "expiredTimeoutSeconds": result.timeout if timed_out else None,
+        "timedOut": timed_out,
+        "returncode": None if timed_out else result.returncode,
+        "server": None,
+    }
+    if lease is not None:
+        process = lease.process
+        record["server"] = {
+            "endpoint": lease.connection.endpoint,
+            "owned": lease.owned,
+            "compatibilitySha256": lease.compatibility_sha256,
+            "process": None if process is None else {
+                "pid": process.pid,
+                "startIdentity": process.start_identity,
+                "commandIdentity": process.command_identity,
+                "cookieSha256": process.cookie_sha256,
+            },
+        }
+    for name, value in (("stdout", result.stdout), ("stderr", result.stderr)):
+        record[name + "Kind"] = "bytes" if isinstance(value, bytes) else "none" if value is None else "text"
+        record[name] = value.decode("utf-8", errors="replace") if isinstance(value, bytes) else value or ""
+        record[name + "Base64"] = base64.b64encode(value).decode("ascii") if isinstance(value, bytes) else None
+    try:
+        log.write(json.dumps(record) + "\n")
+        log.flush()
+    except OSError as error:
+        # An incomplete observation must not become a successful retried run.
+        # Keep the compiler failure first when both operations failed.
+        primary = ""
+        if timed_out:
+            primary = (f"Caxecraft Haxe-to-C compile could not run: {result}"
+                       + compiler_timeout_suffix(result.stdout, result.stderr) + "\n")
+        elif result.returncode != 0:
+            primary = (f"Caxecraft Haxe-to-C compile failed with exit {result.returncode}\n"
+                       + compiler_process_detail(result.stdout, result.stderr) + "\n")
+        raise PlayFailure(f"{primary}could not retain compiler log: {error}") from error
+
+
 def run(
     arguments: list[str],
     *,
     cwd: Path,
     timeout: int,
     label: str,
+    compiler_log: TextIO | None = None,
 ) -> subprocess.CompletedProcess[str]:
     """Run one checked tool without changing the developer's Haxe-server policy.
 
@@ -763,6 +828,7 @@ def run(
             timeout=timeout,
         )
     except subprocess.TimeoutExpired as error:
+        retain_compiler_streams(compiler_log, command=arguments, cwd=cwd, timeout=timeout, result=error)
         suffix = compiler_timeout_suffix(
             error.stdout,
             error.stderr,
@@ -775,6 +841,7 @@ def run(
         raise PlayFailure(f"{label} could not run: {error}{suffix}") from error
     except OSError as error:
         raise PlayFailure(f"{label} could not run: {error}") from error
+    retain_compiler_streams(compiler_log, command=arguments, cwd=cwd, timeout=timeout, result=result)
     if result.returncode != 0:
         detail = compiler_process_detail(result.stdout, result.stderr)
         suffix = f"\n{detail}" if detail else ""
@@ -2365,7 +2432,11 @@ def compile_haxe(
     publish_server_lease: Callable[[HaxeServerLease], None] | None = None,
     haxe_timeout_seconds: int = 120,
     source_request_snapshot: dict[str, object] | None = None,
+    compiler_log: TextIO | None = None,
+    compiler_cache_report: bool = False,
 ) -> dict[str, object]:
+    if compiler_cache_report and compiler_log is None:
+        raise PlayFailure("--compiler-cache-report requires --compiler-log")
     if raylib_configuration not in RAYLIB_CONFIGURATIONS:
         raise PlayFailure(f"unknown Raylib configuration {raylib_configuration!r}")
     if runtime_report not in ("full", "summary"):
@@ -2387,6 +2458,11 @@ def compile_haxe(
         "-D",
         "reflaxe_c_phase_progress",
     ]
+    if compiler_cache_report:
+        arguments.extend([
+            "-D", "reflaxe_c_body_function_replay_cache_report",
+            "-D", "reflaxe_c_control_flow_plan_cache_report",
+        ])
     for define in hosted_content_haxe_defines(platform_name):
         arguments.extend(["-D", define])
     if layout != "split":
@@ -2421,6 +2497,7 @@ def compile_haxe(
             cwd=ROOT,
             timeout=haxe_timeout_seconds,
             label="Caxecraft Haxe-to-C compile",
+            **({"compiler_log": compiler_log} if compiler_log is not None else {}),
         )
     else:
         source_inputs = None
@@ -2450,17 +2527,22 @@ def compile_haxe(
         if source_inputs is not None:
             validate_haxe_source_roots(resolved, server_lease.connection.installation)
 
+        attempt = 0
+
         def request(lease: HaxeServerLease) -> subprocess.CompletedProcess[str]:
+            nonlocal attempt
+            attempt += 1
+            command = [
+                str(lease.connection.installation.compiler),
+                "--connect",
+                lease.connection.endpoint,
+                *(["--macro", "haxe.macro.CompilationServer.invalidateFiles("
+                   + json.dumps(list(invalidated)) + ")"] if invalidated else []),
+                *resolved,
+            ]
             try:
-                return subprocess.run(
-                    [
-                        str(lease.connection.installation.compiler),
-                        "--connect",
-                        lease.connection.endpoint,
-                        *(["--macro", "haxe.macro.CompilationServer.invalidateFiles("
-                           + json.dumps(list(invalidated)) + ")"] if invalidated else []),
-                        *resolved,
-                    ],
+                result = subprocess.run(
+                    command,
                     cwd=CASE,
                     env=pinned_haxe_environment(
                         "C", lease.connection.installation
@@ -2471,6 +2553,8 @@ def compile_haxe(
                     timeout=haxe_timeout_seconds,
                 )
             except subprocess.TimeoutExpired as error:
+                retain_compiler_streams(compiler_log, command=command, cwd=CASE, timeout=haxe_timeout_seconds,
+                                        result=error, attempt=attempt, lease=lease)
                 suffix = compiler_timeout_suffix(
                     error.stdout,
                     error.stderr,
@@ -2483,6 +2567,10 @@ def compile_haxe(
                 raise PlayFailure(
                     f"Caxecraft Haxe-to-C server request could not run: {error}"
                 ) from error
+
+            retain_compiler_streams(compiler_log, command=command, cwd=CASE, timeout=haxe_timeout_seconds,
+                                    result=result, attempt=attempt, lease=lease)
+            return result
 
         result = request(server_lease)
         if (
@@ -2515,6 +2603,9 @@ def compile_haxe(
         renderer=renderer,
     )
     validate_content_platform_output(generated, manifest, platform_name)
+    # A close failure must precede both trusted source history and publication.
+    if compiler_log is not None:
+        compiler_log.close()
     if server_lease is not None and server_owner is not None and server_lease.owned:
         if (haxe_game_source_snapshot() != source_inputs
                 or haxe_server_compatibility(server_lease.connection.installation) != compatibility_before):
@@ -4266,6 +4357,10 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--check-snapshots", action="store_true", help="compile once and compare the registered playable snapshots")
     parser.add_argument("--compile-only", action="store_true", help="emit and validate C without provisioning or linking Raylib")
+    parser.add_argument("--compiler-log", type=Path,
+                        help="create a new JSONL file outside --output-root with each compiler attempt; empty if no compile runs")
+    parser.add_argument("--compiler-cache-report", action="store_true",
+                        help="with --compiler-log, request body/control-flow cache counts; changes compiler defines, not full profiling")
     parser.add_argument("--build-only", action="store_true", help="link the native executable without opening a window")
     parser.add_argument("--smoke", action="store_true", help="render three real frames, require timely exit, and do not wait for input")
     parser.add_argument(
@@ -4419,6 +4514,36 @@ def stop_owned_server_after_failure(
 
 
 def main(argv: list[str]) -> int:
+    """Reserve optional evidence before any compiler or server work starts."""
+    compiler_log: TextIO | None = None
+    code = 1
+    try:
+        args = parse_args(argv)
+        if args.compiler_cache_report and args.compiler_log is None:
+            raise PlayFailure("--compiler-cache-report requires --compiler-log")
+        if args.compiler_log is not None and args.check_snapshots:
+            raise PlayFailure("--compiler-log observes ordinary play builds, not --check-snapshots")
+        if args.compiler_log is not None:
+            destination = args.compiler_log.resolve()
+            if destination.is_relative_to(args.output_root.resolve()):
+                raise PlayFailure("--compiler-log must be outside --output-root so generation cleanup cannot remove it")
+            compiler_log = destination.open("x", encoding="utf-8")
+        code = run_play(args, compiler_log=compiler_log)
+    except (OSError, PlayFailure) as error:
+        print(f"caxecraft: ERROR: {error}", file=sys.stderr)
+    finally:
+        if compiler_log is not None and not compiler_log.closed:
+            try:
+                compiler_log.close()
+            except OSError as error:
+                print(f"caxecraft: ERROR: could not close compiler log: {error}", file=sys.stderr)
+                if code == 0:
+                    code = 1
+    return code
+
+
+def run_play(args: argparse.Namespace, *, compiler_log: TextIO | None = None) -> int:
+    """Run the ordinary launcher after optional evidence ownership is settled."""
     variant_lock: VariantLock | None = None
     server_request_lock: VariantLock | None = None
     server_owner: OwnedHaxeServer | None = None
@@ -4439,7 +4564,6 @@ def main(argv: list[str]) -> int:
         server_lease = lease
 
     try:
-        args = parse_args(argv)
         if args.cold:
             os.environ["HAXE_NO_SERVER"] = "1"
             args.haxe_server = "off"
@@ -4711,6 +4835,8 @@ def main(argv: list[str]) -> int:
                     publish_server_lease=publish_server_lease,
                     haxe_timeout_seconds=args.haxe_timeout_seconds,
                     source_request_snapshot=requested_snapshot,
+                    **({"compiler_log": compiler_log, "compiler_cache_report": args.compiler_cache_report}
+                       if compiler_log is not None else {}),
                 )
                 generation = finalize_transaction(output_root, transaction)
                 generation = publish_pointer(output_root, generation)

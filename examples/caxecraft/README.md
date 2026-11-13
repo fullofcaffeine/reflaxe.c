@@ -388,6 +388,22 @@ object hit/miss count and whether the link was reused. `--native-jobs` adjusts
 the bounded worker count, while `--native-cache off` remains the clean native
 reference.
 
+To retain compiler diagnostics from an ordinary play build, add
+`--compiler-log /path/to/new-compiler.jsonl`. The file must be new and outside
+`--output-root`; each compiler attempt records its command, streams, exit or
+timeout, and available server identity. Raw timeout bytes are also kept as
+Base64. Successful compiler output stays quiet on the console. A compiler exit
+of zero does not prove that project validation or publication succeeded; an
+empty log means no compiler attempt ran. The separate snapshot-check mode does
+not accept this option.
+
+Add `--compiler-cache-report` with that log to request the existing body-replay
+and control-flow cache counts. This changes compiler defines, so keep it enabled
+throughout a cold/warm/edit comparison. It does not enable full profiling or
+report digest/symbol cache counts. Phase progress is retained with either mode;
+it does not measure phase CPU time or allocations. Neither option changes the
+compiler deadline or the launcher's server and publication rules.
+
 Useful non-interactive forms are:
 
 ```sh
