@@ -1,7 +1,6 @@
 package reflaxe.c.lowering;
 
 import reflaxe.c.ir.HxcIR;
-import reflaxe.c.ir.HxcIRTraversal.instructionFailureEdge;
 import reflaxe.c.ir.HxcIROwnedChildProofs;
 import reflaxe.c.ir.HxcIROwnedChildFlow;
 import reflaxe.c.ir.HxcIRValidator;
@@ -70,75 +69,6 @@ class CBodyNullCheckCoalescing {
 	}
 
 	/**
-		Admit terminal local cleanup without treating non-nullness as a lifetime proof.
-		In this narrow shape, all ordinary uses finish before cleanup can execute.
-		Other cleanup shapes retain their guards until their execution order has a
-		separate proof. Validation still owns action types, states, IDs and ordering.
-	**/
-	static function admitsOwnedChildCleanup(fn:HxcIRFunction):Bool {
-		if (fn.cleanupRegions.length == 0)
-			return true;
-		if (fn.blocks.length != 1
-			|| fn.blocks[0].id != fn.entryBlockId
-			|| fn.exceptionStrategy != null
-			|| (fn.exceptionRegions != null && fn.exceptionRegions.length != 0)
-			|| (fn.exceptionCleanups != null && fn.exceptionCleanups.length != 0))
-			return false;
-		final block = fn.blocks[0];
-		if (block.terminator == null)
-			return false;
-		switch block.terminator.kind {
-			case IRTReturn(_, _):
-			case _:
-				return false;
-		}
-		for (instruction in block.instructions) {
-			switch instruction.kind {
-				case IRIOException(_):
-					return false;
-				case _:
-			}
-			final failure = instructionFailureEdge(instruction.kind);
-			if (failure != null) {
-				if (failure.cleanup.length != 0)
-					return false;
-				switch failure.target {
-					case IRFTAbort:
-					case _:
-						return false;
-				}
-			}
-		}
-		final borrowed:Map<String, Bool> = [];
-		for (ids in [
-			fn.borrowedClassLocalIds,
-			fn.borrowedInterfaceLocalIds,
-			fn.borrowedAggregateLocalIds,
-			fn.mutableAggregateBorrowLocalIds
-		])
-			if (ids != null)
-				for (id in ids)
-					borrowed.set(id, true);
-		final automatic:Map<String, Bool> = [];
-		for (local in fn.locals)
-			if (local.storage == IRLSAutomatic && !borrowed.exists(local.id))
-				automatic.set(local.id, true);
-		for (region in fn.cleanupRegions)
-			for (action in region.actions) {
-				final place = switch action.kind {
-					case IRCADestroy(place, _, _) | IRCARelease(place, _) | IRCADeallocate(place, _): place;
-					case IRCAFinally(_): return false;
-				};
-				switch place {
-					case IRPLocal(id) if (automatic.exists(id)):
-					case _:
-						return false;
-				}
-			}
-		return true;
-	}
-
-	/**
 		Remove child guards only from independently reconstructed branch-local facts.
 		The shared transfer analysis intersects exact retained origins across every
 		predecessor and cuts cycle/failure/cleanup edges. Its local-content facts never
@@ -148,7 +78,7 @@ class CBodyNullCheckCoalescing {
 	function removeOwnedChildChecks(fn:HxcIRFunction, controlFlow:HxcIRControlFlowFacts):Map<String, Bool> {
 		final flow = new HxcIROwnedChildFlow(fn, controlFlow);
 		final witnesses = flow.retainedWitnesses();
-		if (!witnesses.iterator().hasNext() || !admitsOwnedChildCleanup(fn))
+		if (!witnesses.iterator().hasNext())
 			return witnesses;
 		final retainedValues = HxcIRValidator.valuesNeedingExplicitNullChecks(fn);
 		final counts:Map<String, Int> = [];

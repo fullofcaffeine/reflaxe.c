@@ -130,6 +130,13 @@ class HxcIRGolden {
 	static inline final COVERAGE_SOURCE = "test/hxc_ir/fixtures/IRCoverage.hx";
 
 	static function main():Void {
+		#if hxc_owned_child_cleanup_flow_only
+		final cleanupValidator = new HxcIRValidator();
+		verifyOwnedChildCleanup(cleanupValidator);
+		verifyOwnedChildCleanupFlow(cleanupValidator);
+		Sys.println("owned-child cleanup-flow contracts passed");
+		return;
+		#end
 		#if hxc_owned_child_proof_only
 		verifyOwnedChildProofs(new HxcIRValidator());
 		Sys.println("owned-child proof contracts passed");
@@ -261,6 +268,7 @@ class HxcIRGolden {
 		validator.requireValid(interfaceUpcastProgram(null), PROFILE);
 		verifyReceiverReassignmentCoalescing(validator);
 		verifyOwnedChildProofs(validator);
+		verifyOwnedChildCleanupFlow(validator);
 		final coverageDump = coverageBeforeTraversal;
 
 		Sys.println(REPORT_PREFIX + Json.stringify({
@@ -2697,6 +2705,179 @@ class HxcIRGolden {
 		}
 	}
 
+	/** Find one authored block without depending on optimizer traversal order. */
+	static function cleanupFlowBlock(fn:HxcIRFunction, id:String):HxcIRBlock {
+		for (node in fn.blocks)
+			if (node.id == id)
+				return node;
+		throw 'missing cleanup-flow block $id';
+	}
+
+	/** A terminal cleanup outside the loop does not execute inside its child-use interval. */
+	static function ownedChildCleanupFlowProgram():HxcIRProgram {
+		final program = ownedChildDiamond(true);
+		final fn = program.modules[0].functions[0];
+		final file = "test/hxc_ir/fixtures/OwnedChildCleanupFlow.hx";
+		fn.locals.push(local("cleanup.scratch", IRTInt(32, true), IRLSAutomatic, IRISInitialized, file, 1));
+		fn.cleanupRegions.push({
+			id: "cleanup.tail",
+			parentId: null,
+			source: span(file, 5),
+			actions: [
+				cleanupAction("destroy", IRCADestroy(IRPLocal("cleanup.scratch"), IRISInitialized, IRISDestroyed), file, 5)
+			]
+		});
+		final exit = cleanupFlowBlock(fn, "exit");
+		fn.blocks[fn.blocks.indexOf(exit)] = block("exit", [], IRTReturn(null, [{regionId: "cleanup.tail", actionId: "destroy"}]), file, 5);
+		return program;
+	}
+
+	/** Cleanup and failure routes each contribute an empty fact set to their join. */
+	static function verifyOwnedChildCleanupEdgeCuts(validator:HxcIRValidator):Void {
+		final file = "test/hxc_ir/fixtures/OwnedChildCleanupFlow.hx";
+		for (kind in ["cleanup", "failure"]) {
+			final program = kind == "cleanup" ? ownedChildDiamond(false) : ownedChildCleanupFlowProgram();
+			final fn = program.modules[0].functions[0];
+			final right = cleanupFlowBlock(fn, "right");
+			if (kind == "cleanup") {
+				fn.locals.push(local("cleanup.scratch", IRTInt(32, true), IRLSAutomatic, IRISInitialized, file, 1));
+				fn.cleanupRegions.push({
+					id: "cleanup.tail",
+					parentId: null,
+					source: span(file, 3),
+					actions: [
+						cleanupAction("destroy", IRCADestroy(IRPLocal("cleanup.scratch"), IRISInitialized, IRISDestroyed), file, 3)
+					]
+				});
+				// The clean and cleanup routes deliberately share the same target.
+				fn.blocks[fn.blocks.indexOf(right)] = block("right", right.instructions, IRTBranch("choose", edge("join"), {
+					targetBlockId: "join",
+					arguments: [],
+					cleanup: [{regionId: "cleanup.tail", actionId: "destroy"}]
+				}), file, 3);
+			} else {
+				program.modules[0].functions.push(voidFunction("fn.cleanup-flow.effect", "cleanupFlowEffect", file, 6, IRFCStatus(IRFException)));
+				right.instructions.push(instruction("right.failure", null, IRIOCall(call(IRCDDirect("fn.cleanup-flow.effect"), [], IRTVoid, {
+					kind: IRFException,
+					target: IRFTBlock("join"),
+					arguments: [],
+					cleanup: []
+				})), file, 3));
+			}
+			validator.requireValid(program, PROFILE);
+			final join = cleanupFlowBlock(fn, "join");
+			final required = [for (node in join.instructions) if (node.id == "join.check") node][0];
+			for (_ in 0...2) {
+				new CBodyNullCheckCoalescing().run(program);
+				validator.requireValid(program, PROFILE);
+				if (join.instructions.indexOf(required) < 0)
+					throw 'owned-child proof crossed $kind edge';
+			}
+			join.instructions.remove(required);
+			requireInvalidMarker(program, "requires a preceding dominating null check", 'cleanup-flow omitted check after $kind');
+		}
+	}
+
+	/**
+		Finally entry can bypass a checked predecessor, including through another block.
+		The fallback route installs an independently borrowed, possibly null pointer.
+		Ordinary reachability omits this cleanup route, so its checked normal neighbor
+		must never supply the missing proof.
+	**/
+	static function ownedChildFinallyJoin(descendant:Bool):HxcIRProgram {
+		final program = ownedChildProofProgram();
+		final fn = program.modules[0].functions[0];
+		final file = "test/hxc_ir/fixtures/OwnedChildFinallyJoin.hx";
+		final child = IRTPointer(IRTInstance("instance.class.root"), true);
+		final original = fn.blocks[0].instructions;
+		fn.parameters.push(parameter("choose", IRTBool, file, 1));
+		fn.parameters.push(parameter("fallback", child, file, 1));
+		fn.borrowedClassParameterIds.push("fallback");
+		fn.cleanupRegions.push({
+			id: "cleanup.finally",
+			parentId: null,
+			source: span(file, 5),
+			actions: [
+				cleanupAction("run", IRCAFinally(descendant ? "finally.entry" : "join"), file, 5)
+			]
+		});
+		fn.blocks.splice(0, fn.blocks.length);
+		fn.blocks.push(block("entry", [], IRTBranch("choose", edge("checked"), edge("fallback")), file, 1));
+		fn.blocks.push(block("checked", original.slice(0, 4), IRTJump(edge("join")), file, 2));
+		fn.blocks.push(block("fallback", [
+			instruction("fallback.initialize", null, IRIOInitialize(IRPLocal("selected"), "fallback", IRISUninitialized, IRISInitialized), file, 3)
+		], IRTReturn(null, [
+			{
+				regionId: "cleanup.finally",
+				actionId: "run"
+			}
+			]), file, 3));
+		if (descendant)
+			fn.blocks.push(block("finally.entry", [], IRTJump(edge("join")), file, 4));
+		fn.blocks.push(block("join", original.slice(4), IRTReturn(null, []), file, 5));
+		return program;
+	}
+
+	/** Guarded Finally shapes must validate; omitting their join guard must fail independently. */
+	static function verifyOwnedChildFinallyCuts(validator:HxcIRValidator):Void {
+		for (descendant in [false, true]) {
+			final program = ownedChildFinallyJoin(descendant);
+			validator.requireValid(program, PROFILE);
+			final join = cleanupFlowBlock(program.modules[0].functions[0], "join");
+			final required = [for (node in join.instructions) if (node.id == "child.check") node][0];
+			for (_ in 0...2) {
+				new CBodyNullCheckCoalescing().run(program);
+				validator.requireValid(program, PROFILE);
+				if (join.instructions.indexOf(required) < 0)
+					throw "Finally route lost its explicit child check";
+			}
+			join.instructions.remove(required);
+			final diagnostics = validator.validate(program, PROFILE);
+			if (diagnostics.length == 0)
+				throw 'OWNED_CHILD_FINALLY_JOIN_REQUIRES_GUARD descendant=$descendant';
+			requireInvalidMarker(program, "requires a preceding dominating null check", 'implicit Finally join descendant=$descendant');
+		}
+	}
+
+	/** Only child checks disappear; every other instruction, branch and cleanup stays identical. */
+	static function verifyOwnedChildCleanupFlow(validator:HxcIRValidator):Void {
+		verifyOwnedChildCleanupEdgeCuts(validator);
+		verifyOwnedChildFinallyCuts(validator);
+		final program = ownedChildCleanupFlowProgram();
+		final fn = program.modules[0].functions[0];
+		validator.requireValid(program, PROFILE);
+		final removals = ["left.check", "right.check", "join.check"];
+		final before = [
+			for (node in fn.blocks)
+				{node: node, instructions: node.instructions.copy(), tail: node.terminator}
+		];
+		final cleanup = fn.cleanupRegions[0];
+		final action = cleanup.actions[0];
+		for (_ in 0...2) {
+			new CBodyNullCheckCoalescing().run(program);
+			validator.requireValid(program, PROFILE);
+			for (saved in before) {
+				final expected = saved.instructions.filter(node -> removals.indexOf(node.id) == -1);
+				if (saved.node.instructions.length != expected.length)
+					throw "OWNED_CHILD_CLEANUP_FLOW_EXPECTED_ONLY_PARENT_GUARD";
+				for (index in 0...expected.length)
+					if (saved.node.instructions[index] != expected[index])
+						throw "cleanup flow changed a retained instruction";
+				if (saved.node.terminator != saved.tail)
+					throw "cleanup flow changed a branch or cleanup edge";
+			}
+			if (fn.cleanupRegions[0] != cleanup || cleanup.actions[0] != action)
+				throw "cleanup flow changed cleanup metadata";
+		}
+		// Check validator authority without relying on the optimizer to remove nodes.
+		final independent = ownedChildCleanupFlowProgram();
+		for (node in independent.modules[0].functions[0].blocks)
+			for (instruction in node.instructions.copy())
+				if (removals.indexOf(instruction.id) != -1)
+					node.instructions.remove(instruction);
+		validator.requireValid(independent, PROFILE);
+	}
+
 	/** Add terminal cleanup to the same independently validated child-borrow fixture. */
 	static function ownedChildCleanupProgram(?strategy:HxcIRExceptionStrategy):HxcIRProgram {
 		final seed = ownedChildProofProgram();
@@ -2743,8 +2924,11 @@ class HxcIRGolden {
 				|| fn.blocks[0].terminator != tail)
 				throw "terminal cleanup must preserve the parent witness and exact cleanup while removing the child guard";
 		}
-		// These are admission controls, not claims that each deliberately unsupported
-		// or malformed exception shape is itself a valid executable program.
+		// Metadata alone does not invalidate a borrow before terminal cleanup.
+		// Inline effects below occur before the parent check and fresh borrow.
+		// Implicit finally/setjmp entries remain excluded from the shared proof.
+		// These shape controls do not claim that malformed metadata is executable;
+		// the independent malformed-cleanup assertions below retain that boundary.
 		for (variant in [
 			"finally",
 			"inline-cleanup",
@@ -2754,6 +2938,7 @@ class HxcIRGolden {
 			"multiple-blocks",
 			"non-return",
 			"exception",
+			"setjmp",
 			"field-place"
 		]) {
 			final guarded = ownedChildCleanupProgram(variant == "exception" ? IRESContainedRuntime : null);
@@ -2783,14 +2968,21 @@ class HxcIRGolden {
 				case "non-return":
 					target.blocks[0] = block("entry", nodes, IRTUnreachable, file, 5);
 				case "exception":
+				case "setjmp":
+					nodes.insert(0,
+						instruction("unmodeled.setjmp", result("jump.result", IRTInt(32, true)), IRIOException(IREFrameSetJmp("unmodeled.region")), file, 1));
 				case "field-place":
 					target.cleanupRegions[0].actions[0] = cleanupAction("release", IRCARelease(IRPField(IRPLocal("scratch"), "field"), IRIStatic), file, 5);
 				case _:
 					throw "unknown cleanup boundary";
 			}
 			new CBodyNullCheckCoalescing().run(guarded);
-			if (nodes.filter(node -> node.id == "child.check").length != 1)
-				throw 'owned-child cleanup admission crossed $variant';
+			final expectedChecks = switch variant {
+				case "finally" | "exception" | "setjmp": 1;
+				case _: 0;
+			};
+			if (nodes.filter(node -> node.id == "child.check").length != expectedChecks)
+				throw 'owned-child cleanup proof disagrees with effect order for $variant';
 		}
 		for (barrier in ["call", "lifetime", "alias"]) {
 			final guarded = ownedChildCleanupProgram();

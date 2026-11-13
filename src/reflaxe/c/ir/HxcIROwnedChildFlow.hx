@@ -17,6 +17,8 @@ import reflaxe.c.ir.HxcIRTraversal.instructionFailureEdge;
 	This analysis retains candidate evidence only. The validator reconstructs it
 	from retained instructions and still validates every producer and lifetime.
 	Loaded immutable values never cross an edge or enter legacy dominance maps.
+	Cleanup edges clear transferred facts. Functions with implicit finally or
+	setjmp entry paths keep embedded-child guards until this analysis models those paths.
 **/
 class HxcIROwnedChildFlow {
 	final fn:HxcIRFunction;
@@ -27,6 +29,19 @@ class HxcIROwnedChildFlow {
 	/** Inspect only functions containing an embedded-child borrow; unrelated bodies stay cheap. */
 	public function new(fn:HxcIRFunction, flow:HxcIRControlFlowFacts) {
 		this.fn = fn;
+		// The ordinary graph omits implicit entries into finally blocks. Such a
+		// block can also reach a normal join, so clearing only its entry is unsafe.
+		// Keep this exclusion shared with validation: an omitted guard must fail
+		// validation even when no optimizer produced the input.
+		for (region in fn.cleanupRegions)
+			for (action in region.actions)
+				switch action.kind {
+					case IRCAFinally(_):
+						return;
+					case _:
+				}
+		if (fn.exceptionStrategy == IRESContainedRuntime)
+			return;
 		var hasBorrow = false;
 		final blocks:Map<String, HxcIRBlock> = [];
 		final instructions:Map<String, Bool> = [];
@@ -36,6 +51,11 @@ class HxcIROwnedChildFlow {
 				switch instruction.kind {
 					case IRIOBorrowClassField(_):
 						hasBorrow = true;
+					// C emission can defer setjmp until its result is consumed.
+					// Until validation fixes that placement, the IR instruction is
+					// not a sufficient boundary for facts after runtime re-entry.
+					case IRIOException(IREFrameSetJmp(_)):
+						return;
 					case _:
 				}
 		if (!hasBorrow)
