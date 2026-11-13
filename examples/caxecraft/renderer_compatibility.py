@@ -1,9 +1,11 @@
 """Certify parser-only GNU forwarding compatibility outside the measured interval.
 
 GCC headers can contain va_arg_pack forwarding bodies that Clang cannot parse.
-Blank only the final pack operand of a closed direct-return call, preserving all
-byte offsets and every other node. The successful AST must independently bind
-that edit to an explicit declaration and its parameter identities. Every affected
+Blank only the final pack operand of a closed direct-return call. A separate
+conditional grammar also replaces exact pack-length calls with zero placeholders.
+These placeholders do not model the native argument count. Every original branch,
+statement and non-pack call must remain in the successful AST at its byte offset.
+The AST must independently bind each edit to a declaration and parameter identities. Every affected
 declaration is excluded from roots, calls, markers and reviewed leaves by the
 owning graph before traversal. Native compilation always uses the original bytes.
 
@@ -30,6 +32,7 @@ from renderer_diagnostics import admit_diagnostics, require_matching_version
 PRINTF_FIXED_PARAMETERS = {"__builtin___sprintf_chk": 4, "__builtin___snprintf_chk": 5}
 
 PACK = b"__builtin_va_arg_pack"
+PACK_LENGTH = b"__builtin_va_arg_pack_len"
 OBJECT_SIZE = {b"__builtin_object_size", b"__builtin_dynamic_object_size"}
 IDENT = re.compile(b"[A-Za-z_][A-Za-z_0-9]*\\Z")
 DECIMAL = re.compile(b"(?:0|[1-9][0-9]*)\\Z")
@@ -65,6 +68,8 @@ class ForwardingEdit:
     arguments: tuple[tuple[bytes, ...], ...]
     start: int
     end: int
+    conditional: bool = False
+    length_ranges: tuple[tuple[int, int], ...] = ()
 
 
 def _tokens(data):
@@ -245,6 +250,320 @@ def _argument_parameters(xs):
     return set()
 
 
+@dataclass(frozen=True)
+class _ConditionalStatement:
+    """An original statement inventory; a later AST must reproduce every node."""
+
+    kind: str
+    start: int
+    end: int
+    children: tuple = ()
+    expression: tuple = ()
+    callee: str = ""
+    arguments: tuple = ()
+    call_start: int = 0
+    call_end: int = 0
+    pack: tuple = ()
+
+
+def _conditional_integer(token):
+    """Only unsuffixed signed-int decimal/octal tokens; bind AST values later."""
+    _require(re.fullmatch(b"(?:0|[1-9][0-9]*|0[0-7]+)", token) is not None,
+             "unsupported conditional integer token")
+    value = int(token, 8 if token.startswith(b"0") else 10)
+    _require(value <= 2147483647, "conditional integer outside signed int")
+    return value
+
+
+def _conditional_body(ts):
+    """Parse the closed source statement tree without granting graph authority.
+
+    There are no locals, writes, loops, labels or indirect calls. A bare call is
+    provisional: only an explicit bodyless void ErrorAttr declaration can later
+    certify it. Conditions are independently checked against the successful AST.
+    """
+    position = 0
+    lengths = []
+
+    def take(text):
+        nonlocal position
+        _require(position < len(ts) and ts[position].text == text,
+                 "unsupported conditional statement")
+        token = ts[position]
+        position += 1
+        return token
+
+    def arguments():
+        nonlocal position
+        take(b"(")
+        first = position
+        depth = 0
+        result = []
+        while position < len(ts):
+            text = ts[position].text
+            if text == b")" and depth == 0:
+                if position != first:
+                    result.append(tuple(ts[first:position]))
+                take(b")")
+                return tuple(result)
+            if text == b"," and depth == 0:
+                _require(position != first, "empty conditional operand")
+                result.append(tuple(ts[first:position]))
+                position += 1
+                first = position
+                continue
+            _require(text not in (b";", b"{", b"}"), "unclosed conditional operands")
+            depth += (text == b"(") - (text == b")")
+            _require(depth >= 0, "unbalanced conditional operands")
+            position += 1
+        raise CompatibilityFailure("unclosed conditional call")
+
+    def condition(tokens):
+        _require(bool(tokens), "empty conditional expression")
+        for index, token in enumerate(tokens):
+            text = token.text
+            if text == PACK_LENGTH:
+                _require([t.text for t in tokens[index:index + 3]] == [PACK_LENGTH, b"(", b")"],
+                         "pack length must be an empty direct call")
+                lengths.append((token.start, tokens[index + 2].end))
+            elif text[:1].isdigit():
+                _conditional_integer(text)
+            else:
+                _require(IDENT.fullmatch(text) is not None or text in
+                         (b"(", b")", b"&", b"|", b"=", b"!", b"<", b">"),
+                         "unsupported conditional expression token")
+
+    def statement():
+        nonlocal position
+        _require(position < len(ts), "conditional statement absent")
+        first = ts[position]
+        if first.text == b"{":
+            take(b"{")
+            children = []
+            while position < len(ts) and ts[position].text != b"}":
+                children.append(statement())
+            last = take(b"}")
+            return _ConditionalStatement("CompoundStmt", first.start, last.end, tuple(children))
+        if first.text == b"if":
+            take(b"if")
+            expressions = arguments()
+            _require(len(expressions) == 1, "one conditional expression required")
+            condition(expressions[0])
+            children = [statement()]
+            if position < len(ts) and ts[position].text == b"else":
+                take(b"else")
+                children.append(statement())
+            return _ConditionalStatement("IfStmt", first.start, children[-1].end,
+                                         tuple(children), expressions[0])
+        returned = first.text == b"return"
+        if returned:
+            take(b"return")
+        _require(position < len(ts) and IDENT.fullmatch(ts[position].text) is not None,
+                 "direct conditional call required")
+        callee = ts[position]
+        position += 1
+        args = arguments()
+        call_end = ts[position - 1].end
+        take(b";")
+        pack = ()
+        if returned:
+            if args and [t.text for t in args[-1]] == [PACK, b"(", b")"]:
+                _require(len(args) > 1, "fixed forwarding operand absent")
+                pack = (args[-2][-1].end, args[-1][0].start, args[-1][-1].end)
+                args = args[:-1]
+            for arg in args:
+                _require(len(arg) == 1 and (IDENT.fullmatch(arg[0].text) is not None
+                                           or arg[0].text[:1].isdigit()),
+                         "conditional return operand must be a parameter or integer")
+                if arg[0].text[:1].isdigit():
+                    _conditional_integer(arg[0].text)
+        else:
+            _require(not args, "diagnostic helper must take no arguments")
+        _require(not callee.text.startswith(b"__builtin_"), "conditional return/helper builtin")
+        return _ConditionalStatement("ReturnStmt" if returned else "CallExpr", first.start,
+                                     call_end, callee=callee.text.decode(), arguments=args,
+                                     call_start=callee.start, call_end=call_end, pack=pack)
+
+    tree = statement()
+    _require(position == len(ts), "trailing conditional body tokens")
+    return tree, tuple(lengths)
+
+
+def _prepare_conditional(ts):
+    tree, lengths = _conditional_body(ts)
+    _require(bool(lengths), "conditional forwarding needs pack-length evidence")
+    edits = []
+
+    def visit(node):
+        if node.pack:
+            comma, start, last = node.pack
+            # The comma must be its own token; no preceding source byte changes.
+            between = [t for t in ts if comma <= t.start < start]
+            _require([t.text for t in between] == [b","], "forwarding comma absent")
+            edits.append(ForwardingEdit(tree.start, tree.end, node.call_start, node.call_end,
+                                        node.callee, tuple(tuple(t.text for t in a) for a in node.arguments),
+                                        between[0].start, last, True, lengths))
+        for child in node.children:
+            visit(child)
+
+    visit(tree)
+    _require(bool(edits), "conditional forwarding pack absent")
+    return edits
+
+
+def _original_condition_extent(node, lengths):
+    first, last = _extent(node)
+    for start, end in lengths:
+        if last == start + 1:
+            last = end
+    return first, last
+
+
+def _certify_condition(node, spelling, params, declarations, original, derived, lengths):
+    """Bind the entire original expression to AST nodes, not only placeholders."""
+    _require(bool(spelling), "condition spelling absent")
+    first, last = spelling[0].start, spelling[-1].end
+    _require(_original_condition_extent(node, lengths) == (first, last), "condition extent mismatch")
+    _require(node.get("type", {}).get("qualType") in ("int", "const int"),
+             "condition must have nonvolatile signed-int type")
+    kind = node.get("kind")
+    children = node.get("inner", [])
+    texts = [t.text for t in spelling]
+    if kind == "ImplicitCastExpr":
+        _require(node.get("castKind") in ("LValueToRValue", "NoOp") and len(children) == 1,
+                 "unsupported condition conversion")
+        return _certify_condition(children[0], spelling, params, declarations, original, derived, lengths)
+    if kind == "ParenExpr":
+        _require(len(children) == 1 and texts[0] == b"(" and texts[-1] == b")", "condition parentheses")
+        return _certify_condition(children[0], spelling[1:-1], params, declarations, original, derived, lengths)
+    if kind == "IntegerLiteral":
+        _require(not children, "literal children")
+        if (first, last) in lengths:
+            _require(texts == [PACK_LENGTH, b"(", b")"] and node.get("value") == "0"
+                     and _extent(node) == (first, first + 1), "pack length placeholder mismatch")
+        else:
+            _require(len(spelling) == 1 and str(_conditional_integer(texts[0])) == node.get("value"),
+                     "integer source/AST value mismatch")
+        return
+    if kind == "DeclRefExpr":
+        ref = node.get("referencedDecl", {})
+        _require(len(spelling) == 1 and not children and ref.get("kind") == "ParmVarDecl"
+                 and params.get(ref.get("name")) == ref.get("id")
+                 and ref.get("name", "").encode() == texts[0], "condition parameter identity mismatch")
+        return
+    if kind == "BinaryOperator":
+        op = node.get("opcode")
+        _require(op in ("&&", "||", "&", "|", "==", "!=", "<", ">", "<=", ">=") and len(children) == 2,
+                 "unsupported condition operator")
+        left, right = children
+        a, b = _original_condition_extent(left, lengths)
+        c, d = _original_condition_extent(right, lengths)
+        _require(a == first and d == last and b <= c
+                 and [t.text for t in _tokens(original[b:c])] == [bytes([x]) for x in op.encode()],
+                 "condition operator/source mismatch")
+        for child, begin, end in ((left, a, b), (right, c, d)):
+            child_spelling = tuple(t for t in spelling if begin <= t.start and t.end <= end)
+            _certify_condition(child, child_spelling, params, declarations, original, derived, lengths)
+        return
+    if kind == "CallExpr":
+        _require(len(children) == 2 and len(spelling) == 4 and texts[0] == b"__builtin_constant_p"
+                 and texts[1] == b"(" and texts[3] == b")", "unreviewed condition call")
+        target = _strip_expression_wrappers(children[0])
+        ref = target.get("referencedDecl", {})
+        callee = declarations.get(ref.get("id"), {})
+        _require(ref.get("kind") == "FunctionDecl" and ref.get("name") == "__builtin_constant_p"
+                 and callee.get("isImplicit") is True and _children_of_kind(callee, "BuiltinAttr"),
+                 "constant predicate is not the compiler builtin")
+        _require(target.get("kind") == "DeclRefExpr" and not target.get("inner")
+                 and _extent(target) == (first, first + len(texts[0])), "constant predicate token mismatch")
+        _certify_condition(children[1], spelling[2:3], params, declarations, original, derived, lengths)
+        return
+    raise CompatibilityFailure("unsupported conditional AST " + str(kind))
+
+
+def _certify_conditional(owner, body, edits, declarations, original, derived, params, marker_names):
+    """Require a source/AST bijection for every branch, statement and direct call.
+
+    Pack-length zero is parser scaffolding, never a claim about native argument
+    count. The owner stays excluded by linkage before any graph traversal.
+    """
+    tokens = [t for t in _tokens(original) if edits[0].body_start <= t.start < edits[0].body_end]
+    tree, lengths = _conditional_body(tokens)
+    _require(all(e.conditional and e.length_ranges == lengths for e in edits), "conditional edit group mismatch")
+    for node in _walk(body):
+        if node.get("kind") == "CallExpr" and node.get("inner"):
+            target = _strip_expression_wrappers(node["inner"][0]).get("referencedDecl", {})
+            _require(target.get("name") not in marker_names, "marker conditional call")
+    observed = []
+
+    def visit(expected, actual):
+        _require(actual.get("kind") == expected.kind and _extent(actual) == (expected.start, expected.end),
+                 "conditional statement structure/extent mismatch")
+        children = actual.get("inner", [])
+        if expected.kind == "CompoundStmt":
+            _require(len(children) == len(expected.children), "conditional block inventory mismatch")
+            for a, b in zip(expected.children, children):
+                visit(a, b)
+            return
+        if expected.kind == "IfStmt":
+            _require(len(children) == 1 + len(expected.children)
+                     and not any(actual.get(key) for key in ("hasInit", "hasVar", "isConstexpr")),
+                     "conditional branch inventory mismatch")
+            _certify_condition(children[0], expected.expression, params, declarations, original, derived, lengths)
+            for a, b in zip(expected.children, children[1:]):
+                visit(a, b)
+            return
+        if expected.kind == "ReturnStmt":
+            _require(len(children) == 1, "conditional return inventory mismatch")
+            call = _strip_expression_wrappers(children[0])
+        else:
+            call = actual
+        _require(call.get("kind") == "CallExpr" and _extent(call) == (expected.call_start, expected.call_end),
+                 "conditional direct call extent mismatch")
+        args = call.get("inner", [])
+        _require(len(args) == len(expected.arguments) + 1, "conditional call argument inventory mismatch")
+        target = _strip_expression_wrappers(args[0])
+        ref = target.get("referencedDecl", {})
+        callee = declarations.get(ref.get("id"), {})
+        _require(ref.get("kind") == "FunctionDecl" and ref.get("name") == expected.callee
+                 and callee.get("name") == expected.callee
+                 and not callee.get("isImplicit") and callee.get("storageClass") == "extern"
+                 and not _children_of_kind(callee, "CompoundStmt"), "conditional explicit external callee required")
+        _require(target.get("kind") == "DeclRefExpr" and not target.get("inner")
+                 and _extent(target) == (expected.call_start, expected.call_start + len(expected.callee)),
+                 "conditional callee token mismatch")
+        first, last = _extent(callee)
+        _require(last < _extent(owner)[0] and original[first:last] == derived[first:last],
+                 "conditional callee must be a prior unchanged prototype")
+        fixed = _parameters(callee)
+        _require(len(fixed) == len(expected.arguments), "conditional fixed parameter count mismatch")
+        if expected.kind == "CallExpr":
+            _require(not callee.get("variadic") and callee.get("type", {}).get("qualType") == "void (void)"
+                     and len(_children_of_kind(callee, "ErrorAttr")) == 1,
+                     "only an explicit void error helper is a conditional statement")
+            attr = _children_of_kind(callee, "ErrorAttr")[0]
+            _require(not attr.get("implicit"), "implicit diagnostic helper attribute")
+            xs = _gnu_attribute_tokens(original, attr)
+            _require(len(xs) == 4 and xs[0] in (b"error", b"__error__")
+                     and xs[1] == b"(" and xs[2].startswith(b'"') and xs[3] == b")",
+                     "diagnostic helper attribute source mismatch")
+        else:
+            _require(callee.get("type", {}).get("qualType", "").startswith("int (")
+                     and bool(callee.get("variadic")) == bool(expected.pack), "conditional return signature mismatch")
+            for node, spelling in zip(args[1:], expected.arguments):
+                if IDENT.fullmatch(spelling[0].text):
+                    _certify_operand(node, (spelling[0].text,), params, derived)
+                else:
+                    _certify_condition(node, spelling, params, declarations, original, derived, ())
+            _require(all(arg.get("type") == parameter.get("type")
+                         for arg, parameter in zip(args[1:], fixed)),
+                     "conditional fixed argument types differ")
+            if expected.pack:
+                observed.append(expected.call_start)
+    visit(tree, body)
+    _require(observed == [e.call_start for e in edits], "conditional pack occurrence inventory mismatch")
+
+
 def prepare_parser_input(original: bytes) -> tuple[bytes, tuple[ForwardingEdit, ...]]:
     """Propose offset-preserving edits; this step grants no coverage authority."""
     ts = _tokens(original)
@@ -259,13 +578,16 @@ def prepare_parser_input(original: bytes) -> tuple[bytes, tuple[ForwardingEdit, 
             left = stack.pop()
             pairs[left] = n
         elif t.text == PACK:
-            _require(len(stack) == 1, "pack must be in one top-level body")
-            owners.setdefault(stack[-1], []).append(n)
+            _require(bool(stack), "pack must be in one top-level body")
+            owners.setdefault(stack[0], []).append(n)
     _require(not stack, "unbalanced brace")
     edits = []
     for left, occurrences in owners.items():
-        _require(len(occurrences) == 1, "multiple pack occurrences in body")
         right = pairs[left]
+        if any(t.text == b"if" for t in ts[left + 1:right]):
+            edits.extend(_prepare_conditional(ts[left:right + 1]))
+            continue
+        _require(len(occurrences) == 1, "multiple pack occurrences in body")
         body = ts[left + 1 : right]
         xs = [t.text for t in body]
         _require(
@@ -313,6 +635,11 @@ def prepare_parser_input(original: bytes) -> tuple[bytes, tuple[ForwardingEdit, 
         for i in range(edit.start, edit.end):
             if result[i] not in (10, 13):
                 result[i] = 32
+    lengths = {r for edit in edits for r in edit.length_ranges}
+    _require(len(lengths) == sum(t.text == PACK_LENGTH for t in ts), "unmapped pack length occurrence")
+    for first, last in lengths:
+        result[first:last] = bytes(48 if i == first else (original[i] if original[i] in (10, 13) else 32)
+                                   for i in range(first, last))
     return (bytes(result), tuple(edits))
 
 
@@ -425,8 +752,15 @@ def _certify_forwarding(original, derived, edits, ast, *, parse_returncode, mark
         for node in _walk(ast)
         if node.get("kind") == "FunctionDecl" and "id" in node
     }
+    if any(edit.conditional for edit in edits):
+        _require(len(decls) == sum(node.get("kind") == "FunctionDecl" for node in _walk(ast)),
+                 "conditional function declaration identities ambiguous")
     excluded = []
+    conditional_done = set()
     for edit in edits:
+        body_key = (edit.body_start, edit.body_end)
+        if edit.conditional and body_key in conditional_done:
+            continue
         matches = [
             (f, b)
             for f in decls.values()
@@ -460,6 +794,18 @@ def _certify_forwarding(original, derived, edits, ast, *, parse_returncode, mark
             for n in owner.get("inner", [])
             if n.get("kind") == "ParmVarDecl"
         }
+        if edit.conditional:
+            _require(len(params) == len(_parameters(owner))
+                     and all(type(name) is str and type(identity) is str for name, identity in params.items()),
+                     "conditional owner parameter identities ambiguous")
+            _require(all(not re.search(r"\b(?:volatile|_Atomic)\b", p.get("type", {}).get("qualType", ""))
+                         for p in _parameters(owner)), "conditional volatile or atomic parameter")
+            group = [e for e in edits if (e.body_start, e.body_end) == body_key]
+            _certify_conditional(owner, body, group, decls, original, derived, params, marker_names)
+            excluded.append({"name": owner["name"], "storage": owner.get("storageClass", ""),
+                             "declarationId": owner["id"], "bodyRange": list(body_key)})
+            conditional_done.add(body_key)
+            continue
         _require(
             all((_argument_parameters(a) <= params.keys() for a in edit.arguments)),
             "operand is not owner parameter",
@@ -660,6 +1006,7 @@ def _format_certificate(source, derived, functions, edits, excluded, diagnostic)
     matches = [e for e in edits if e.call_start <= offset < e.call_end]
     _require(len(matches) == 1, "format warning outside unique edited call")
     edit = matches[0]
+    _require(not edit.conditional, "conditional format diagnostic unsupported")
     owners = [x for x in excluded if x.get("bodyRange") == [edit.body_start, edit.body_end]]
     _require(len(owners) == 1, "edited owner certificate absent")
     owner = byid[owners[0]["declarationId"]]

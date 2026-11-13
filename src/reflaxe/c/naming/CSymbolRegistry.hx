@@ -131,6 +131,11 @@ private typedef AssignedDraft = {
 	hash-map iteration cannot change output names.
  */
 class CSymbolRegistry {
+	#if eval
+	/** Match any byte that requires the readable-name encoder; no end-anchor exception applies. */
+	static final readableNonAlphanumeric = ~/[^A-Za-z0-9]/;
+	#end
+
 	public static inline final SCHEMA_VERSION = 2;
 	public static inline final ALGORITHM = "hxc-c-symbol-v3";
 	public static inline final MAX_GENERATED_LENGTH = 120;
@@ -914,6 +919,12 @@ class CSymbolRegistry {
 		same base are safely resolved by the ordinary collision pass.
 	**/
 	static function encodeReadablePart(value:String):String {
+		#if eval
+		// Plain ASCII letters and digits already have their final spelling.
+		// Keep punctuation and Unicode on the existing byte-wise encoder.
+		if (value.length > 0 && !readableNonAlphanumeric.match(value))
+			return value;
+		#end
 		final bytes = Bytes.ofString(value);
 		final output = new StringBuf();
 		var separatorPending = false;

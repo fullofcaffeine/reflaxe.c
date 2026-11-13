@@ -105,6 +105,7 @@ class EvaluationOrderProbe {
 
 	static function run():Void {
 		verifyValueTypeLookup();
+		verifySpanLengthLookup();
 		final fixture = switch Context.getType("EvaluationFixture") {
 			case TInst(reference, _): reference.get();
 			case _: fatal("EvaluationFixture must remain a class", Context.currentPos());
@@ -1175,6 +1176,107 @@ class EvaluationOrderProbe {
 		equal('zero-query', emit(emitter, unused), "{\n  (void)same;\n  return;\n}");
 		mutable.parameters[0] = param('same', IRTString);
 		equal('string', emit(emitter, mutable), "{\n  if (same.data == NULL)\n  {\n    abort();\n  }\n  return;\n}");
+	}
+
+	/**
+		Protect span-length discovery through exact C from the existing emission seam.
+
+		Raw duplicate and missing locals check precedence and diagnostic order only;
+		they are not valid native programs. No helper counter or private access is
+		added: these checks observe semantics, not the cost of building the index.
+	**/
+	static function verifySpanLengthLookup():Void {
+		final source = new HxcSourceSpan("test/evaluation_order/span-length-lookup.hx", 1, 1, 1, 2);
+		final i32:HxcIRTypeRef = IRTInt(32, true);
+		final emitter = new CBodyEmitter();
+		function equal(label:String, actual:String, expected:String):Void {
+			if (actual != expected)
+				throw new haxe.Exception(label + " mismatch\nactual=" + haxe.Json.stringify(actual) + "\nexpected=" + haxe.Json.stringify(expected));
+		}
+		function emit(fn:HxcIRFunction):String {
+			final parameters:Map<String, CIdentifier> = [];
+			final locals:Map<String, CIdentifier> = [];
+			final lengths:Map<String, CIdentifier> = [];
+			for (parameter in fn.parameters) {
+				parameters.set(parameter.id, new CIdentifier(parameter.id));
+				lengths.set(parameter.id, new CIdentifier(parameter.id + "_length"));
+			}
+			for (local in fn.locals) {
+				locals.set(local.id, new CIdentifier(local.id));
+				lengths.set(local.id, new CIdentifier(local.id + "_length"));
+			}
+			return new CASTPrinter().printStmt(emitter.emitBody(fn, parameters, locals, [], [], [], [], false, [], ["entry" => new CIdentifier("entry")],
+				null, lengths, new CIdentifier("abort")));
+		}
+		function fn(id:String, parameters:Array<HxcIRParameter>, locals:Array<HxcIRLocal>, instructions:Array<HxcIRInstruction>):HxcIRFunction
+			return syntheticValueFunction(id, IRTVoid, parameters, locals, [syntheticBlock("entry", IRTReturn(null, []), source, instructions)], source);
+		function load(id:String, localId:String, type:HxcIRTypeRef):HxcIRInstruction
+			return valueInstruction(id, id + "_value", type, IRIOLoad(IRPLocal(localId)), source);
+		function error(fn:HxcIRFunction):String {
+			try {
+				emit(fn);
+			} catch (failure:CBodyEmissionError) {
+				return failure.detail;
+			}
+			return "no error";
+		}
+
+		// Each finite family uses every scalar local once, then repeats the first.
+		// Scalars still pass through span discovery; unused loads need no C temporary.
+		for (count in [4, 8, 32]) {
+			final locals:Array<HxcIRLocal> = [];
+			final instructions:Array<HxcIRInstruction> = [];
+			var expected = "{\n";
+			for (i in 0...count) {
+				locals.push(syntheticLocal('local$i', i32, source));
+				instructions.push(load('load$i', 'local$i', i32));
+				expected += '  (void)local$i;\n';
+			}
+			instructions.push(load("repeat", "local0", i32));
+			equal('scalar$count', emit(fn('scalar$count', [], locals, instructions)), expected + "  (void)local0;\n  return;\n}");
+		}
+		for (mutable in [false, true]) {
+			final span:HxcIRTypeRef = IRTSpan(i32, mutable);
+			final local:HxcIRLocal = {
+				id: "view",
+				type: span,
+				storage: IRLSAutomatic,
+				initialState: IRISUninitialized,
+				source: source
+			};
+			final parameters:Array<HxcIRParameter> = [{id: "input", type: span, source: source}];
+			final initialize = effectInstruction("initialize", IRIOInitialize(IRPLocal("view"), "input", IRISUninitialized, IRISInitialized), source);
+			final prefix = "{\n  " + (mutable ? "" : "const ") + "int32_t *view = input;\n  size_t view_length = input_length;\n";
+			equal("unused-span", emit(fn("unused-span", parameters, [local], [initialize])), prefix + "  (void)view;\n  (void)view_length;\n  return;\n}");
+			final loads = [initialize, load("first", "view", span), load("again", "view", span)];
+			final used = prefix + "  (void)view;\n  (void)view_length;\n  (void)view;\n  (void)view_length;\n  return;\n}";
+			equal("repeated-span", emit(fn("repeated-span", parameters, [local], loads)), used);
+			// A later scalar duplicate must not hide the first span's used length.
+			equal("first-span-wins", emit(fn("first-span-wins", parameters, [local, syntheticLocal("view", i32, source)], loads)), used);
+			equal("first-scalar-wins", error(fn("first-scalar-wins", parameters, [syntheticLocal("view", i32, source), local], loads)),
+				"function `first-scalar-wins` requested a length for non-collection local `view`");
+			final zero = valueInstruction("zero", "zero_value", i32, IRIOConstant(IRCInt("0")), source);
+			final indexed = valueInstruction("indexed", "indexed_value", i32, IRIOLoad(IRPIndex(IRPLocal("view"), "zero_value")), source);
+			equal("nested-index-does-not-use-length", emit(fn("nested", parameters, [local], [initialize, zero, indexed])),
+				prefix + "  (void)view_length;\n  (void)view[(size_t)0];\n  return;\n}");
+			final proven = effectInstruction("proven", IRIOBoundsCheck(IRPLocal("view"), "zero_value", IRBPStaticProof(4, 0)), source);
+			equal("static-bounds-do-not-use-length", emit(fn("proven", parameters, [local], [initialize, zero, proven])),
+				prefix + "  (void)view_length;\n  return;\n}");
+			final bounds = effectInstruction("bounds", IRIOBoundsCheck(IRPLocal("view"), "zero_value", IRBPCheckedAbort("portable", "debug")), source);
+			equal("checked-bounds-use-length", emit(fn("bounds", parameters, [local], [initialize, zero, bounds])),
+				prefix + "  if (0 < 0 || (size_t)0 >= view_length)\n  {\n    abort();\n  }\n  return;\n}");
+		}
+		final present = syntheticLocal("present", i32, source);
+		for (boundsFirst in [false, true]) {
+			final first = boundsFirst ? effectInstruction("missing-check",
+				IRIOBoundsCheck(IRPLocal("missing_first"), "absent_index", IRBPCheckedAbort("portable", "debug")),
+				source) : load("missing-load", "missing_first", i32);
+			equal("first-missing-query",
+				error(fn("missing", [], [present], [load("present-load", "present", i32), first, load("later", "missing_later", i32)])),
+				"function `missing` cannot resolve HxcIR local `missing_first`");
+		}
+		// Reuse the emitter after failed queries. Unqueried duplicates remain inert.
+		equal("no-query", emit(fn("no-query", [], [present, syntheticLocal("present", IRTSpan(i32, false), source)], [])), "{\n  return;\n}");
 	}
 
 	static function syntheticFunction(id:String, parameters:Array<HxcIRParameter>, entryBlockId:String, blocks:Array<HxcIRBlock>,

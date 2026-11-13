@@ -124,6 +124,24 @@ class CaxecraftCompilerProgressTests(unittest.TestCase):
             "last active compiler phase: semantic lowering (portable/debug)",
         )
 
+    def test_capture_region_completion_restores_parent_before_abort(self) -> None:
+        lines = [
+            progress_line("request-started"),
+            progress_line("phase-started", phase="typed input capture"),
+            progress_line("phase-started", phase="typed input: declaration normalization"),
+        ]
+        _, records = self.progress.partition_compiler_progress("\n".join(lines))
+        self.assertEqual(self.progress.summarize_compiler_progress(records),
+                         "last active compiler phase: typed input: declaration normalization")
+        lines.append(progress_line("phase-completed", phase="typed input: declaration normalization"))
+        _, records = self.progress.partition_compiler_progress("\n".join(lines))
+        self.assertEqual(self.progress.summarize_compiler_progress(records),
+                         "last active compiler phase: typed input capture")
+        lines.append(progress_line("request-aborted", status="failed"))
+        _, records = self.progress.partition_compiler_progress("\n".join(lines))
+        self.assertEqual(self.progress.summarize_compiler_progress(records),
+                         "compiler request aborted: failed")
+
     def test_process_detail_strips_records_and_preserves_diagnostic(self) -> None:
         stdout = "\n".join(
             (

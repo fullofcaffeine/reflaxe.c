@@ -42,6 +42,7 @@ class ASTFixtureCompiler {
 	#if reflaxe_c_phase_timing
 	/** Checks that macro profiling counts real syntax without changing text or leaking work between calls. */
 	static function verifyProfileWork():Void {
+		StatementGolden.verifyWork();
 		final printer = new CASTPrinter();
 		final unit = new CTranslationUnit();
 		unit.declarations.push(DStaticAssert(integer("1"), "profile"));

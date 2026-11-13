@@ -3,6 +3,8 @@ name: Governance
 on:
   pull_request:
   push:
+    branches:
+      - main
   workflow_dispatch:
 
 permissions:
@@ -83,6 +85,8 @@ jobs:
         run: npm ci
 
       - name: Run exact isolated toolchain shard
+        env:
+          HXC_CAXECRAFT_PHASE_REPORT_DIR: ${{ runner.temp }}/toolchain-${{ matrix.shard }}-phases
         run: >-
           npm run test:toolchain:shard -- "${{ matrix.shard }}"
           --timing-report "$RUNNER_TEMP/toolchain-${{ matrix.shard }}-timing.json"
@@ -94,6 +98,15 @@ jobs:
           name: toolchain-${{ matrix.shard }}-timings
           path: ${{ runner.temp }}/toolchain-${{ matrix.shard }}-timing.json
           if-no-files-found: error
+          retention-days: 14
+
+      - name: Preserve focused case phase timings
+        if: ${{ always() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: toolchain-${{ matrix.shard }}-phases
+          path: ${{ runner.temp }}/toolchain-${{ matrix.shard }}-phases/
+          if-no-files-found: ignore
           retention-days: 14
 
   pinned-toolchain:

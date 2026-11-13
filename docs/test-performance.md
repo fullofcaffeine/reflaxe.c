@@ -127,6 +127,25 @@ the npm arguments and normalized environment, so exact correctness receipts
 remain reusable; it does not provide performance evidence or change hook
 defaults. The runner implementation change invalidates older receipts normally.
 
+For an independently required all-sources diagnosis, retain the verbose compiler
+streams without printing successful requests to the terminal:
+
+```sh
+python3 test/all_sources/run.py --compiler-log /path/to/new/compiler.jsonl
+```
+
+The parent directory must exist; the log file must not exist. Each JSON line
+records one finished child request, its exact arguments, exit code, and streams.
+A timeout records the available partial streams and no exit code. The configured
+30-second bound remains unchanged; any expired effective bound is recorded
+separately. This direct owner command does not publish a local-gate receipt.
+Normal runs remain quiet. The production request already enables phase progress:
+typed-input capture now reports four fixed regions for declaration ordering,
+declaration normalization, module/entry assembly, and named-record provenance.
+These markers locate unfinished work; they do not measure its duration.
+Declaration normalization still includes function-source provenance in its
+original order. There are no per-node markers or source filtering.
+
 The hook reuses only an exact duplicate R0/R1 owner. It does not let one focused
 test stand in for another owner, a full shard, native/platform evidence, or the
 hosted required check.

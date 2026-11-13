@@ -12,8 +12,9 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
 import zipfile
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from pathlib import Path, PurePosixPath
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -1443,6 +1444,73 @@ def native_compiler(requested: str | None) -> str:
     return resolved
 
 
+@dataclass
+class TestPhaseReceipt:
+    """One command's elapsed time, not compiler CPU or per-source attribution."""
+
+    sequence: int
+    label: str
+    timeoutSeconds: int
+    cSourceCount: int
+    outcome: str = "running"
+    elapsedMs: float | None = None
+    exitCode: int | None = None
+
+
+class TestPhaseReceipts:
+    """Keep opt-in, path-free phase evidence after a failed focused test.
+
+    Each case owns one new file outside the checkout. Atomic replacement keeps
+    the last complete record readable if the process stops during a write.
+    A running record is incomplete evidence, never a successful command.
+    """
+
+    def __init__(self, directory: str, case: str, layout: str):
+        destination = Path(directory).absolute()
+        if any(part == ".." for part in destination.parts) or any(
+            part.is_symlink() for part in (destination, *destination.parents)
+        ):
+            raise HaxeCTestFailure("phase report directory must not contain traversal or symlinks")
+        if destination.resolve().is_relative_to(ROOT.resolve()):
+            raise HaxeCTestFailure("phase reports must stay outside the checkout")
+        if case not in CASES or layout not in ("split", "package", "unity"):
+            raise HaxeCTestFailure("invalid phase report case or layout")
+        destination.mkdir(parents=True, exist_ok=True)
+        self.path = destination / f"{case}-{layout}.json"
+        self.case = case
+        self.layout = layout
+        self.phases: list[TestPhaseReceipt] = []
+        # Exclusive creation prevents a second invocation from replacing evidence.
+        with self.path.open("x", encoding="utf-8") as output:
+            output.write(self.payload())
+
+    def payload(self) -> str:
+        return json.dumps({"schemaVersion": 1, "case": self.case, "layout": self.layout,
+                           "phases": [asdict(phase) for phase in self.phases]}, indent=2) + "\n"
+
+    def write(self) -> None:
+        descriptor, temporary = tempfile.mkstemp(prefix=".phase-", dir=self.path.parent)
+        try:
+            with os.fdopen(descriptor, "w", encoding="utf-8") as output:
+                output.write(self.payload())
+            os.replace(temporary, self.path)
+        finally:
+            Path(temporary).unlink(missing_ok=True)
+
+    def start(self, arguments: list[str], label: str, timeout: int) -> TestPhaseReceipt:
+        # Labels come from this module, not command arguments or error strings.
+        if re.fullmatch(r"[A-Za-z0-9 -]{1,160}", label) is None:
+            raise HaxeCTestFailure("phase report label is not a portable phase name")
+        phase = TestPhaseReceipt(len(self.phases) + 1, label, timeout,
+                                 sum(argument.endswith(".c") for argument in arguments))
+        self.phases.append(phase)
+        self.write()
+        return phase
+
+
+_phase_receipts: TestPhaseReceipts | None = None
+
+
 def run(
     arguments: list[str],
     *,
@@ -1454,35 +1522,62 @@ def run(
 ) -> subprocess.CompletedProcess[str]:
     """Run one bounded process and preserve stdout and stderr on failure."""
 
+    collector = _phase_receipts
+    phase = collector.start(arguments, label, timeout) if collector is not None else None
+    started = time.monotonic() if phase is not None else None
+    result: subprocess.CompletedProcess[str] | None = None
+    failure: BaseException | None = None
     try:
-        result = run_bounded_process(
-            arguments,
-            cwd=cwd,
-            env={
-                **os.environ,
-                "HAXE_NO_SERVER": "1",
-                "LC_ALL": "C",
-                **(environment or {}),
-            },
-            check=False,
-            capture_output=True,
-            text=True,
-            encoding="utf-8",
-            timeout=timeout,
-            compiler_progress=compiler_progress,
-        )
-    except subprocess.TimeoutExpired as error:
-        detail = compiler_process_detail(error.output, error.stderr)
-        suffix = f"\n{detail}" if detail else ""
-        raise HaxeCTestFailure(f"{label} could not run: {error}{suffix}") from error
-    except OSError as error:
-        raise HaxeCTestFailure(f"{label} could not run: {error}") from error
-    if result.returncode != 0:
-        raise HaxeCTestFailure(
-            f"{label} failed with exit {result.returncode}\n"
-            f"stdout:\n{result.stdout}stderr:\n{result.stderr}"
-        )
-    return result
+        try:
+            result = run_bounded_process(
+                arguments,
+                cwd=cwd,
+                env={
+                    **os.environ,
+                    "HAXE_NO_SERVER": "1",
+                    "LC_ALL": "C",
+                    **(environment or {}),
+                },
+                check=False,
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                timeout=timeout,
+                compiler_progress=compiler_progress,
+            )
+        except subprocess.TimeoutExpired as error:
+            detail = compiler_process_detail(error.output, error.stderr)
+            suffix = f"\n{detail}" if detail else ""
+            raise HaxeCTestFailure(f"{label} could not run: {error}{suffix}") from error
+        except OSError as error:
+            raise HaxeCTestFailure(f"{label} could not run: {error}") from error
+        if result.returncode != 0:
+            raise HaxeCTestFailure(
+                f"{label} failed with exit {result.returncode}\n"
+                f"stdout:\n{result.stdout}stderr:\n{result.stderr}"
+            )
+        return result
+    except BaseException as error:
+        failure = error
+        raise
+    finally:
+        if collector is not None and phase is not None and started is not None:
+            cause = failure.__cause__ if failure is not None else None
+            phase.elapsedMs = (time.monotonic() - started) * 1000
+            phase.exitCode = result.returncode if result is not None else None
+            phase.outcome = (
+                "timeout" if isinstance(cause, subprocess.TimeoutExpired) else
+                "spawn-error" if isinstance(cause, OSError) else
+                "nonzero" if result is not None and result.returncode != 0 else
+                "interrupted" if failure is not None else "passed"
+            )
+            try:
+                collector.write()
+            except BaseException:
+                if failure is None:
+                    raise
+                # Evidence failure cannot replace the command's primary failure.
+                print("caxecraft: phase report could not be saved; primary failure retained", file=sys.stderr)
 
 
 def checked_case_path(spelling: str, label: str) -> Path:
@@ -2618,6 +2713,7 @@ def parse_args() -> argparse.Namespace:
 
 
 def main() -> int:
+    global _phase_receipts
     args = parse_args()
     if args.case == "renderer-interval":
         # Native hooks observe C runtime calls; this boundary has no Eval path.
@@ -2657,6 +2753,9 @@ def main() -> int:
     test_case = CASES[args.case]
     transient_fixture: Path | None = None
     try:
+        report_directory = os.environ.get("HXC_CAXECRAFT_PHASE_REPORT_DIR")
+        _phase_receipts = (TestPhaseReceipts(report_directory, args.case, args.layout)
+                           if report_directory is not None else None)
         transient_fixture = create_transient_fixture(test_case)
         sanitizer_ran = execute(test_case, args.cc, args.layout)
     except (HaxeCTestFailure, OSError, UnicodeError, json.JSONDecodeError) as error:
@@ -2666,6 +2765,7 @@ def main() -> int:
         )
         return 1
     finally:
+        _phase_receipts = None
         if transient_fixture is not None:
             transient_fixture.unlink(missing_ok=True)
     sanitizer_status = "ran" if sanitizer_ran else "unavailable"

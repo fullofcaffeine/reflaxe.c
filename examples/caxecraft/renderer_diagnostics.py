@@ -13,7 +13,7 @@ import json
 import re
 import sys
 
-PARSER_POLICY_VERSION = "excluded-gnu-forwarding-float128-clang-21.1.8-v4"
+PARSER_POLICY_VERSION = "excluded-gnu-conditional-forwarding-float128-clang-21.1.8-v5"
 
 PROOF_FLAGS = ("-Wunknown-pragmas", "-Wignored-pragmas",
                "-Werror=implicit-function-declaration", "-Werror=unknown-warning-option",

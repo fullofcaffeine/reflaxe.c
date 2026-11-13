@@ -4,6 +4,7 @@ package reflaxe.c.frontend;
 import haxe.macro.ExprTools;
 import haxe.macro.Type;
 import haxe.macro.TypeTools;
+import reflaxe.c.CPhaseTiming;
 import reflaxe.c.frontend.TypedProgramInput.TypedAstDeclaration;
 import reflaxe.c.frontend.TypedProgramInput.TypedAstEntryFunction;
 import reflaxe.c.frontend.TypedProgramInput.TypedAstEntryPoint;
@@ -31,6 +32,9 @@ private enum CapturedDeclaration {
 /** Converts Haxe compiler objects into a stable whole-program input model. */
 class TypedAstNormalizer {
 	public static function normalize(moduleTypes:Array<ModuleType>, mainModule:Null<ModuleType>, mainExpr:Null<TypedExpr>):TypedProgramInput {
+		// Fixed region markers localize a stalled capture without logging each node.
+		// Existing progress helpers stay quiet unless this request opted in.
+		CPhaseTiming.startProgressDetail("typed input: declaration capture and ordering");
 		final contentDigests = new SourceContentDigest();
 		final functionSources = new TypedFunctionSourceProvenance(contentDigests);
 		// Ref.get() reconstructs declaration metadata on the Eval macro host.
@@ -47,6 +51,8 @@ class TypedAstNormalizer {
 		keyedModules.sort((left, right) -> compareStrings(left.key, right.key));
 		final rawModules = [for (entry in keyedModules) entry.value];
 
+		CPhaseTiming.stopProgressDetail("typed input: declaration capture and ordering");
+		CPhaseTiming.startProgressDetail("typed input: declaration normalization");
 		final declarations:Array<TypedAstDeclaration> = [];
 		final capturedTypedefs:Array<DefType> = [];
 		final expressionRoots:Array<TypedAstExpressionRoot> = [];
@@ -62,6 +68,8 @@ class TypedAstNormalizer {
 		declarations.sort((left, right) -> compareStrings(declarationKey(left), declarationKey(right)));
 		expressionRoots.sort(compareExpressionRoots);
 
+		CPhaseTiming.stopProgressDetail("typed input: declaration normalization");
+		CPhaseTiming.startProgressDetail("typed input: module and entry assembly");
 		final grouped:Map<String, Array<TypedAstDeclaration>> = [];
 		for (declaration in declarations) {
 			final existing = grouped.get(declaration.ownerModulePath);
@@ -104,8 +112,12 @@ class TypedAstNormalizer {
 			expressionRoots.sort(compareExpressionRoots);
 		}
 
-		return new TypedProgramInput(modules, declarations, expressionRoots, entryPoint, rawModules,
+		CPhaseTiming.stopProgressDetail("typed input: module and entry assembly");
+		CPhaseTiming.startProgressDetail("typed input: named-record provenance and input construction");
+		final result = new TypedProgramInput(modules, declarations, expressionRoots, entryPoint, rawModules,
 			NamedRecordSourceProvenance.plan(capturedTypedefs, contentDigests));
+		CPhaseTiming.stopProgressDetail("typed input: named-record provenance and input construction");
+		return result;
 	}
 
 	static function captureEntryFunction(expression:TypedExpr, functionSources:TypedFunctionSourceProvenance):Null<TypedAstEntryFunction> {

@@ -932,6 +932,7 @@ REQUIRED_GATE_FILES = (
 )
 
 REQUIRED_WORKFLOW_SNIPPETS = (
+    "on:\n  pull_request:\n  push:\n    branches:\n      - main\n  workflow_dispatch:\n\npermissions:\n",
     "concurrency:\n  group: governance-${{ github.workflow }}-${{ github.ref }}\n  cancel-in-progress: true\n",
     "  secret-scan:\n",
     "  haxe-format:\n",

@@ -1835,18 +1835,33 @@ class CBodyEmitter {
 		}
 	}
 
+	/**
+		Find the hidden span lengths used by direct local loads and checked bounds.
+
+		Build the local index only when one of those instructions needs it. Repeated
+		queries then share one local-list traversal. First entries win, just as in
+		requireLocal; missing locals still fail at their first selected instruction.
+		The index belongs to this call and is never retained by the emitter.
+	**/
 	static function referencedSpanLengthIds(fn:HxcIRFunction):Map<String, Bool> {
 		final referenced:Map<String, Bool> = [];
+		var localIndex:Null<Map<String, HxcIRLocal>> = null;
 		for (block in fn.blocks) {
 			for (instruction in block.instructions) {
 				switch instruction.kind {
-					case IRIOLoad(IRPLocal(localId)):
-						switch requireLocal(fn, localId).type {
-							case IRTSpan(_, _): referenced.set(localId, true);
-							case _:
+					case IRIOLoad(IRPLocal(localId)) | IRIOBoundsCheck(IRPLocal(localId), _, IRBPCheckedAbort(_, _)):
+						var index = localIndex;
+						if (index == null) {
+							index = [];
+							for (local in fn.locals)
+								if (!index.exists(local.id))
+									index.set(local.id, local);
+							localIndex = index;
 						}
-					case IRIOBoundsCheck(IRPLocal(localId), _, IRBPCheckedAbort(_, _)):
-						switch requireLocal(fn, localId).type {
+						final local = index.get(localId);
+						if (local == null)
+							throw new CBodyEmissionError("function `" + fn.id + "` cannot resolve HxcIR local `" + localId + "`");
+						switch local.type {
 							case IRTSpan(_, _): referenced.set(localId, true);
 							case _:
 						}
