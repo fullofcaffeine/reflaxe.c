@@ -5,6 +5,7 @@ import json
 import os
 from pathlib import Path
 import re
+import shlex
 import subprocess
 import sys
 import tempfile
@@ -68,6 +69,35 @@ class NativeWorkflowContract(unittest.TestCase):
                     self.assertNotIn("--build-only", commands[2])
                     self.assertNotEqual(roots[0], roots[2])
                 self.assertFalse(any("--haxe-timeout-seconds" in command for command in commands))
+
+    def test_windows_retains_compiler_log_outside_output_even_on_failure(self) -> None:
+        all_steps = steps()
+        bodies = dict(all_steps)
+        compile_name = "Compile Windows Caxecraft with explicit unsupported package capability"
+        upload_name = "Preserve Windows Caxecraft compiler evidence"
+        compile_step = bodies[compile_name]
+        self.assertIn("if: matrix.platform == 'windows'", compile_step)
+        self.assertIn("shell: bash", compile_step)
+        script = compile_step.split("        run: |\n", 1)[1]
+        command = shlex.split(script.replace("\\\n", ""))
+        self.assertEqual(command, [
+            "python3", "examples/caxecraft/play.py", "--compile-only",
+            "--output-root", "$RUNNER_TEMP/caxecraft-playable-c",
+            "--compiler-log", "$RUNNER_TEMP/caxecraft-windows-compiler.jsonl",
+        ])
+        output = Path(command[command.index("--output-root") + 1])
+        log = Path(command[command.index("--compiler-log") + 1])
+        self.assertNotEqual(log, output)
+        self.assertNotIn(output, log.parents)
+        upload = bodies[upload_name]
+        self.assertIn("if: always() && matrix.platform == 'windows'", upload)
+        self.assertIn("uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02", upload)
+        self.assertIn("name: caxecraft-compiler-${{ matrix.name }}", upload)
+        self.assertIn("path: ${{ runner.temp }}/caxecraft-windows-compiler.jsonl\n", upload)
+        self.assertIn("if-no-files-found: warn", upload)
+        self.assertIn("retention-days: 14", upload)
+        names = [name for name, _ in all_steps]
+        self.assertEqual(names.index(upload_name), names.index(compile_name) + 1)
 
     def test_native_evidence_is_captured_before_each_overwrite(self) -> None:
         all_steps = steps()

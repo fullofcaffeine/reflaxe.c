@@ -663,7 +663,17 @@ jobs:
         run: |
           python3 examples/caxecraft/play.py \
             --compile-only \
-            --output-root "$RUNNER_TEMP/caxecraft-playable-c"
+            --output-root "$RUNNER_TEMP/caxecraft-playable-c" \
+            --compiler-log "$RUNNER_TEMP/caxecraft-windows-compiler.jsonl"
+
+      - name: Preserve Windows Caxecraft compiler evidence
+        if: always() && matrix.platform == 'windows'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: caxecraft-compiler-${{ matrix.name }}
+          path: ${{ runner.temp }}/caxecraft-windows-compiler.jsonl
+          if-no-files-found: warn
+          retention-days: 14
 
       - name: Compile cold Caxecraft and link at O0
         if: matrix.platform != 'windows'
