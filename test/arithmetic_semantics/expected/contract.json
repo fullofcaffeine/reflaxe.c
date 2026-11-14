@@ -4,6 +4,7 @@
   "helpers": [
     "hxc.f64.divide.zero-safe",
     "hxc.f64.modulo",
+    "hxc.f64.sqrt",
     "hxc.f64.to.i32.saturating",
     "hxc.i32.add.wrapping",
     "hxc.i32.bit-and",

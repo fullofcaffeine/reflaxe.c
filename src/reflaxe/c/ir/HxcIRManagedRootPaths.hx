@@ -8,9 +8,10 @@ import reflaxe.c.ir.HxcIR;
 	A direct managed class or Array contributes one empty path. Direct records,
 	tagged enums, and tagged optionals contribute one path per embedded managed
 	reference. The result is finite because ordinary by-value layouts must already
-	be finite; recursive enum payloads use a pointer and are deliberately not
-	followed here. A recursive owned graph that also contains collector references
-	needs its own recursive trace owner and remains rejected by enum preparation.
+	be finite. A collector-owned recursive enum node contributes its exact base
+	pointer; its descriptor traces further children at collection time. Ordinary
+	uniquely owned recursive nodes contain no collector references and are not
+	followed here. Thus stack-root planning never expands an unbounded graph.
 
 	Both root planning and validation use this class. That prevents the validator
 	from accepting a path that the planner would never produce, or vice versa.
@@ -18,8 +19,13 @@ import reflaxe.c.ir.HxcIR;
 class HxcIRManagedRootPaths {
 	final declarations:Map<String, HxcIRTypeDeclaration> = [];
 	final instances:Map<String, HxcIRTypeInstance> = [];
+	final dynamicHasManagedPayload:Bool;
 
 	public function new(program:HxcIRProgram) {
+		this.dynamicHasManagedPayload = Lambda.exists(program.dynamicPlan.types, type -> switch type.storage {
+			case IRDSManagedReference | IRDSManagedWrapper: true;
+			case IRDSInlineNull | IRDSInlineBool | IRDSInlineInt32 | IRDSInlineFloat64 | IRDSStaticToken: false;
+		});
 		for (module in program.modules) {
 			for (declaration in module.types)
 				declarations.set(declaration.id, declaration);
@@ -41,6 +47,10 @@ class HxcIRManagedRootPaths {
 			return;
 		}
 		switch type {
+			case IRTDynamic if (dynamicHasManagedPayload):
+				final nested = path.copy();
+				nested.push(IRMRPDynamicPayload);
+				result.push(nested);
 			case IRTNullable(payload, IRNTagged):
 				final nested = path.copy();
 				nested.push(IRMRPNullablePayload);
@@ -105,5 +115,6 @@ class HxcIRManagedRootPaths {
 			case IRMRPAggregateField(instanceId, fieldName): 'field($instanceId,$fieldName)';
 			case IRMRPTagPayload(instanceId, tagName, payloadIndex): 'tag($instanceId,$tagName,$payloadIndex)';
 			case IRMRPNullablePayload: "nullable-payload";
+			case IRMRPDynamicPayload: "dynamic-payload";
 		};
 }

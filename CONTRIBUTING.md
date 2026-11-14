@@ -148,9 +148,18 @@ and lifecycle evidence.
   machine-readable inventory whenever distribution facts change.
 - Run `python3 scripts/ci/check_license_policy.py`; release assembly must also
   run it with `--package-root <assembled-tree>`.
-- Repository-owned source is `GPL-3.0-only`. Do not infer terms for generated
-  C, headers, templates, or emitted runtime slices: decision `haxe_c-od2.5`
-  remains a release blocker until ratified.
+- Repository-owned compiler source remains `GPL-3.0-only`. Output-support
+  contributions are accepted under the MIT terms in
+  `LICENSES/HAXE-C-OUTPUT-SUPPORT-MIT.txt`. Decision `haxe_c-od2.5` records
+  this accepted boundary and its owner approval.
+- The project does not require assignment or contribution-back. Contributors
+  must have the right to provide their output-support change under MIT.
+- Generated-package checks use
+  `--generated-package-root <generated-tree>`. They reject missing notices,
+  changed source copies, mixed origins, and license conclusions that conflict
+  with provenance.
+- A qualified rights-chain review remains required before the first release.
+  Development package checks do not claim that this review is complete.
 
 ## Security-sensitive changes
 

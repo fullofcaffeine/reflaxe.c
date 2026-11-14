@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import copy
 import json
 import os
 import re
@@ -16,6 +17,11 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from scripts.test.bounded_process import run as run_bounded_process  # noqa: E402
+
 FIXTURE = Path(__file__).resolve().parent
 EXPECTED_TARGET_CONTRACT = FIXTURE / "expected/target-contract.json"
 PROBE_DEFINE = "reflaxe_c_lifecycle_probe"
@@ -54,7 +60,7 @@ def run(
         environment["HAXE_NO_SERVER"] = "1"
     else:
         environment.pop("HAXE_NO_SERVER", None)
-    result = subprocess.run(
+    result = run_bounded_process(
         command,
         cwd=cwd,
         env=environment,
@@ -335,6 +341,83 @@ def check_target_conflicts() -> None:
         freestanding, expected_freestanding, "freestanding capability-clean probe"
     )
 
+    # Atomics are selected by an explicit C backend fact. They do not imply
+    # pthreads, target.sys, or a hosted environment.
+    expected_atomics = json.loads(
+        EXPECTED_TARGET_CONTRACT.read_text(encoding="utf-8")
+    )
+    expected_atomics["atomicBackend"] = "c11"
+    expected_atomics["platform"]["supportsAtomics"] = True
+    expected_atomics["defines"]["targetAtomics"] = True
+    atomics = run(
+        source_command(
+            c_build=True,
+            direct_defines=("hxc_atomic_backend=c11",),
+            target_report=True,
+        ),
+        cwd=FIXTURE,
+        label="explicit C11 atomic backend probe",
+    )
+    assert_target_contract(atomics, expected_atomics, "explicit C11 atomic backend probe")
+
+    expected_posix = copy.deepcopy(expected_atomics)
+    expected_posix["threadBackend"] = "posix"
+    expected_posix["platform"]["supportsThreads"] = True
+    expected_posix["defines"]["targetThreaded"] = True
+    posix = run(
+        source_command(
+            c_build=True,
+            direct_defines=(
+                "hxc_atomic_backend=c11",
+                "hxc_thread_backend=posix",
+            ),
+            target_report=True,
+        ),
+        cwd=FIXTURE,
+        label="explicit POSIX thread backend probe",
+    )
+    assert_target_contract(posix, expected_posix, "explicit POSIX thread backend probe")
+
+    assert_configuration_conflict(
+        source_command(
+            c_build=True,
+            direct_defines=("hxc_thread_backend=posix",),
+        ),
+        "POSIX thread backend requires `hxc_atomic_backend=c11`",
+        "POSIX backend without C11 atomics probe",
+    )
+
+    assert_configuration_conflict(
+        source_command(
+            c_build=True,
+            direct_defines=(
+                "hxc_environment=freestanding",
+                "hxc_atomic_backend=c11",
+                "hxc_thread_backend=posix",
+            ),
+        ),
+        "POSIX thread backend requires the hosted C environment",
+        "freestanding POSIX backend probe",
+    )
+
+    assert_configuration_conflict(
+        source_command(
+            c_build=True,
+            direct_defines=("hxc_atomic_backend=invalid",),
+        ),
+        "unsupported C atomic backend `invalid`",
+        "invalid atomic backend probe",
+    )
+
+    assert_configuration_conflict(
+        source_command(
+            c_build=True,
+            direct_defines=("hxc_thread_backend=invalid",),
+        ),
+        "unsupported C thread backend `invalid`",
+        "invalid thread backend probe",
+    )
+
     for define in ("target.name=c", "target.utf16", "target.atomics"):
         reserved = run(
             [
@@ -375,7 +458,7 @@ def check_reversed_order_fails() -> None:
         "--custom-target",
         "c=bootstrap-probe-output",
     ]
-    result = subprocess.run(
+    result = run_bounded_process(
         command,
         cwd=FIXTURE,
         env={**os.environ, "HAXE_NO_SERVER": "1"},

@@ -22,7 +22,7 @@ import haxe.io.Bytes;
 /**
  * Proves one complete authored directory becomes one reproducible shared ZIP.
  *
- * The package data selects eleven real PNG assets in addition to the semantic
+ * The package data selects its runtime assets in addition to the semantic
  * campaign, levels, packs, localization, and asset inventory. Two independent
  * exports must match byte-for-byte, and the existing ZIP reader must recover
  * the same verified package identity and receipts from those bytes.
@@ -30,7 +30,7 @@ import haxe.io.Bytes;
 /** First failed export or round-trip invariant, or zero after success. */
 var observed:Int = 0;
 
-/** Stable package identity including all twenty directly owned payloads. */
+/** Stable package identity including every directly owned payload. */
 var traceIdentity:Int = 0;
 
 /** Sum of all verified semantic and selected-asset payload bytes. */
@@ -219,7 +219,7 @@ function unselectedAssetRejects(source:ContentPackageSource):Bool {
 		case PackageBytesRead(content): content.bytes;
 	};
 	final inventoryText = inventoryBytes.toString();
-	final withoutTerrain = replaceOnce(inventoryText, '      "entities",\n      "terrain"', '      "entities"');
+	final withoutTerrain = replaceOnce(inventoryText, ',\n      "terrain"\n    ],', '\n    ],');
 	if (withoutTerrain == inventoryText)
 		return false;
 	return switch verifyContentPackageAssetClosure(manifest, Bytes.ofString(withoutTerrain)) {

@@ -1,0 +1,12 @@
+-cp fixtures/cleanup
+-cp ../../src
+-cp ../../std
+-cp ../../std/c/_std
+-cp ../../vendor/reflaxe/src
+-D reflaxe=4.0.0-beta
+-D reflaxe.c=0.0.0-development
+--macro nullSafety("reflaxe.c")
+--macro reflaxe.c.CompilerBootstrap.Start()
+--macro reflaxe.c.CompilerInit.Start()
+-main Main
+-D hxc_runtime=auto

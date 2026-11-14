@@ -6,6 +6,14 @@ static bool hxc_BodyFixture_booleanValue(void);
 
 static int32_t hxc_BodyFixture_chooseOrThrow(int32_t hxc_l_choice);
 
+static int32_t hxc_BodyFixture_definitelyAssignedAfterReturn(bool hxc_l_choice);
+
+static int32_t hxc_BodyFixture_definitelyAssignedBranches(bool hxc_l_choice);
+
+static int32_t hxc_BodyFixture_definitelyAssignedInteger(void);
+
+static int32_t hxc_BodyFixture_definitelyAssignedLoop(int32_t hxc_l_limit);
+
 static int32_t hxc_BodyFixture_directInteger(void);
 
 static void hxc_BodyFixture_explicitVoid(void);
@@ -48,6 +56,53 @@ static int32_t hxc_BodyFixture_chooseOrThrow(int32_t hxc_l_choice)
       }
   }
   return hxc_l_tmp_switch_result_n1;
+}
+
+static int32_t hxc_BodyFixture_definitelyAssignedAfterReturn(bool hxc_l_choice)
+{
+  int32_t hxc_l_value = { 0 };
+  if (!hxc_l_choice)
+  {
+    return 17;
+  }
+  hxc_l_value = 13;
+  return hxc_l_value;
+}
+
+static int32_t hxc_BodyFixture_definitelyAssignedBranches(bool hxc_l_choice)
+{
+  int32_t hxc_l_value = { 0 };
+  if (hxc_l_choice)
+  {
+    hxc_l_value = 7;
+  }
+  else
+  {
+    hxc_l_value = 11;
+  }
+  return hxc_l_value;
+}
+
+static int32_t hxc_BodyFixture_definitelyAssignedInteger(void)
+{
+  int32_t hxc_l_value = { 0 };
+  hxc_l_value = 31;
+  return hxc_l_value;
+}
+
+static int32_t hxc_BodyFixture_definitelyAssignedLoop(int32_t hxc_l_limit)
+{
+  int32_t hxc_l_value = { 0 };
+  hxc_l_value = 0;
+  while (1)
+  {
+    if (!(hxc_l_value < hxc_l_limit))
+    {
+      break;
+    }
+    hxc_l_value = hxc_l_limit;
+  }
+  return hxc_l_value;
 }
 
 static int32_t hxc_BodyFixture_directInteger(void)

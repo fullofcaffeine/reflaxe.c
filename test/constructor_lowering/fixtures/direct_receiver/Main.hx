@@ -35,8 +35,20 @@ final class NumberReader {
 		return values[0] + prefix + label.length;
 
 	/** Stage `this` and one scalar before joining a managed String branch. */
-	public function readChosenLabel(chooseShort:Bool):Int
-		return labelScore(1, chooseShort ? "aa" : "long");
+	public function readChosenLabel(chooseShort:Bool):Int {
+		var result = labelScore(1, chooseShort ? "aa" : "long");
+		var index = 0;
+		while (index < 3) {
+			if (index > 0)
+				result += privateContribution(index, chooseShort ? 2 : 4);
+			index++;
+		}
+		return result;
+	}
+
+	/** Supply one private direct-call result from inside a loop branch. */
+	function privateContribution(index:Int, adjustment:Int):Int
+		return values[0] + index + adjustment;
 }
 
 /** Executes the direct-receiver shape and checks its observable result. */
@@ -92,6 +104,6 @@ final class Main {
 		final nestedConditionalSecond = parseNestedConditional(input, false);
 		final thisStringConditional = parseThisStringConditional(input, true);
 		while (result.length != 1 || result[0] != 42 || input[0] != 41 || nested.length != 1 || nested[0] != 10 || conditional.length != 1
-			|| conditional[0] != 44 || nestedConditionalFirst[0] != 82 || nestedConditionalSecond[0] != 48 || thisStringConditional != 44) {}
+			|| conditional[0] != 44 || nestedConditionalFirst[0] != 82 || nestedConditionalSecond[0] != 48 || thisStringConditional != 133) {}
 	}
 }

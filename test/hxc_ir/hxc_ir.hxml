@@ -1,7 +1,15 @@
 # Dedicated E1.T05 target-owned semantic IR invariant and golden test.
 
 -cp test/hxc_ir/
--lib reflaxe.c
+# These host-side IR checks need compiler modules, not target registration.
+# Keep the library classpath order and null-safety policy; test/bootstrap owns
+# activation and non-C isolation. Loading CompilerInit here types the backend
+# even though initialization immediately returns for the Eval target.
+-cp src
+-cp std
+-cp std/c/_std
+-cp vendor/reflaxe/src
+--macro nullSafety("reflaxe.c")
 
 --macro ControlFlowPlanCacheProbe.run()
 --macro BodyFunctionReplayCacheProbe.run()

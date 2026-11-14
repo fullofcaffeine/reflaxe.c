@@ -1,3 +1,9 @@
+/** One by-value Array element whose class references need tracing, not retain/release. */
+private typedef ManagedNodePair = {
+	final first:ManagedNode;
+	final second:ManagedNode;
+}
+
 /** Generated-program probe for exact traced classes stored in ordinary Haxe Arrays. */
 final class Main {
 	static function main():Void {
@@ -10,6 +16,8 @@ final class Main {
 		nodes.push(second);
 		nodes.push(null);
 		final copied = nodes.copy();
+		final pairs:Array<ManagedNodePair> = [{first: first, second: second}];
+		pairs.push({first: second, second: first});
 		copied[0] = second;
 		copied.push(first);
 		final found = findNode(nodes, 20);
@@ -33,7 +41,8 @@ final class Main {
 		first.connect(first);
 		nodes[1] = first;
 
-		while (nodes.length != 40003 || copied.length != 4 || copied[0] != second || copied[3] != first || nodes[0].value != 15 || nodes[1] != first
+		while (nodes.length != 40003 || copied.length != 4 || copied[0] != second || copied[3] != first || pairs.length != 2 || pairs[0].first != first
+			|| pairs[0].second != second || pairs[1].first != second || pairs[1].second != first || nodes[0].value != 15 || nodes[1] != first
 			|| nodes[2] != null || first.value != 15 || originalFirstLinks.length != 1 || originalFirstLinks[0] != second
 			|| replacementFirstLinks.length != 2 || first.linkCount() != 2 || second.linkCount() != 1 || first.sampleCount() != 1 || absent != null
 			|| present == null || present.length != 1 || present[0] != first || found != second || missing != null || stackOwner.count() != 2

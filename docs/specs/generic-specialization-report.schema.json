@@ -62,13 +62,7 @@
     "source": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "file",
-        "startLine",
-        "startColumn",
-        "endLine",
-        "endColumn"
-      ],
+      "required": ["file", "startLine", "startColumn", "endLine", "endColumn"],
       "properties": {
         "file": {
           "type": "string",
@@ -84,12 +78,7 @@
     "argument": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "parameter",
-        "key",
-        "displayName",
-        "representation"
-      ],
+      "required": ["parameter", "key", "displayName", "representation"],
       "properties": {
         "parameter": { "$ref": "#/$defs/logicalText" },
         "key": { "$ref": "#/$defs/logicalText" },
@@ -98,7 +87,11 @@
           "enum": [
             "direct-primitive",
             "direct-enum",
-            "direct-record"
+            "managed-class",
+            "managed-array",
+            "direct-record",
+            "immutable-string",
+            "nullable-value"
           ]
         }
       }
@@ -106,10 +99,7 @@
     "reachabilityReason": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "callerInstanceId",
-        "source"
-      ],
+      "required": ["callerInstanceId", "source"],
       "properties": {
         "callerInstanceId": { "$ref": "#/$defs/logicalText" },
         "source": { "$ref": "#/$defs/source" }
@@ -152,7 +142,7 @@
         "baseFunctionId": { "$ref": "#/$defs/logicalText" },
         "instanceId": {
           "type": "string",
-          "pattern": "^function\\.specialization\\.[0-9a-f]{64}$"
+          "pattern": "^(?:function|constructor)\\.specialization\\.[0-9a-f]{64}$"
         },
         "specializationKey": { "$ref": "#/$defs/logicalText" },
         "semanticDigestSha256": { "$ref": "#/$defs/sha256" },
@@ -221,10 +211,7 @@
         "displayName": { "$ref": "#/$defs/logicalText" },
         "cName": { "$ref": "#/$defs/logicalText" },
         "representation": {
-          "enum": [
-            "native-enum",
-            "tagged-union"
-          ]
+          "enum": ["native-enum", "tagged-union"]
         },
         "arguments": {
           "type": "array",
@@ -276,7 +263,10 @@
         "mergedFunctionReasons": { "type": "integer", "minimum": 0 },
         "mergedTypeReasons": { "type": "integer", "minimum": 0 },
         "recursiveSpecializations": { "type": "integer", "minimum": 0 },
-        "specializedFunctionDefinitionBytes": { "type": "integer", "minimum": 0 },
+        "specializedFunctionDefinitionBytes": {
+          "type": "integer",
+          "minimum": 0
+        },
         "specializedEnumDefinitionBytes": { "type": "integer", "minimum": 0 },
         "estimatedSpecializationCBytes": { "type": "integer", "minimum": 1 },
         "generatedPayloadArtifacts": { "type": "integer", "minimum": 1 },

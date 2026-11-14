@@ -112,6 +112,20 @@ HXC_API hxc_status hxc_string_substring(
 );
 
 /**
+ * Apply Haxe String.substr bounds and return a borrowed UTF-8 slice.
+ *
+ * A negative start counts from the scalar end and then clamps to zero. An
+ * omitted or oversized length selects the remaining suffix.
+ */
+HXC_API hxc_status hxc_string_substr(
+  hxc_string source,
+  int32_t position,
+  bool has_length,
+  int32_t length,
+  hxc_string *out_slice
+);
+
+/**
  * Find the first exact String occurrence at or after one scalar index.
  *
  * Both values use canonical UTF-8, so the implementation can compare bytes

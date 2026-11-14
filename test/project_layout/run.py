@@ -19,6 +19,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
+from scripts.test.bounded_process import run as run_bounded_process  # noqa: E402
+
 
 from scripts.test.c_fixture_harness import (  # noqa: E402
     CFixtureFailure,
@@ -36,6 +38,7 @@ PLANNER_HXML = CASE / "planner.hxml"
 NATIVE = CASE / "native"
 REPORT_PREFIX = "HXC_STATIC_INITIALIZATION="
 COMMON_FILES = {
+    "LICENSES/HAXE-C-OUTPUT-SUPPORT-MIT.txt",
     "_GeneratedFiles.json",
     "cmake/CMakeLists.txt",
     "hxc.abi.json",
@@ -199,7 +202,7 @@ def compile_target(
             ]
         )
     command.extend(["--custom-target", f"c={output}"])
-    return subprocess.run(
+    return run_bounded_process(
         command,
         cwd=ROOT,
         env=environment(locale, server=connect is not None),
@@ -426,7 +429,7 @@ def assert_equal(left: Rendered, right: Rendered, label: str) -> None:
 
 
 def alternate_locale() -> str:
-    result = subprocess.run(
+    result = run_bounded_process(
         ["locale", "-a"], check=False, capture_output=True, text=True, timeout=10
     )
     available = set(result.stdout.splitlines())
@@ -567,7 +570,7 @@ def native(rendered: Rendered, oracle: str, root: Path, requested: str) -> None:
     runtime_include = fixture / "generated/runtime/include"
     for toolchain in resolve_toolchains(requested, repository_root=ROOT):
         for header in HEADERS_BY_LAYOUT[rendered.layout]:
-            check = subprocess.run(
+            check = run_bounded_process(
                 [
                     toolchain.compiler,
                     *STRICT_FLAGS,
@@ -652,7 +655,7 @@ def native(rendered: Rendered, oracle: str, root: Path, requested: str) -> None:
 
 
 def oracle() -> str:
-    result = subprocess.run(
+    result = run_bounded_process(
         [tool("haxe"), "--cwd", str(CASE), ORACLE_HXML.name],
         cwd=ROOT,
         env=environment("C", server=False),
@@ -667,7 +670,7 @@ def oracle() -> str:
 
 
 def planner_probe() -> None:
-    result = subprocess.run(
+    result = run_bounded_process(
         [tool("haxe"), "--cwd", str(CASE), PLANNER_HXML.name],
         cwd=ROOT,
         env=environment("C", server=False),
@@ -703,7 +706,7 @@ def check_invalid_direct_defines(root: Path) -> None:
     )
     for label, define, expected in fixtures:
         output = root / label
-        result = subprocess.run(
+        result = run_bounded_process(
             [
                 tool("haxe"),
                 "--cwd",

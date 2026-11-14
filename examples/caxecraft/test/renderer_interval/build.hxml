@@ -1,0 +1,5 @@
+-cp .
+-cp ../../src
+-lib reflaxe.c
+-main Main
+-D hxc_runtime=none

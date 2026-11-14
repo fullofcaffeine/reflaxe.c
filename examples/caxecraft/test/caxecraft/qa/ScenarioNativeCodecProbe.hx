@@ -1,5 +1,6 @@
 package caxecraft.qa;
 
+import caxecraft.content.ContentPackageStore;
 import caxecraft.scenario.ContentId;
 import caxecraft.scenario.LocaleId;
 import caxecraft.scenario.MessageId;
@@ -10,6 +11,7 @@ import caxecraft.scenario.ScenarioDiagnostic.ScenarioDiagnosticKind;
 import caxecraft.scenario.ScenarioDiagnostic.ScenarioExpectedRecord;
 import caxecraft.scenario.ScenarioId;
 import caxecraft.scenario.ScenarioLexer;
+import caxecraft.scenario.ScenarioLimits;
 import caxecraft.scenario.ScenarioMessages.resolveScenarioMessage;
 import caxecraft.scenario.ScenarioParser;
 import caxecraft.scenario.ScenarioValidator;
@@ -18,11 +20,9 @@ import haxe.io.Bytes;
 /**
 	Proves that the production CAXEMAP reader can run on Eval and generated C.
 
-	The checked-in first-playable text is repeated here as an in-memory fixture so
-	the first compiler probe measures only `Bytes`, parsing, and validation. A
-	separate staleness check keeps these bytes equal to the authored map. Runtime
-	file access remains owned by `haxe_c-xge.20.4.3.4`; this module does not claim
-	that the game can load a path yet.
+	The probe reads one checked-in synthetic map through the same bounded content
+	store used by the game. The reloadable `.caxemap` file stays the sole source
+	of fixture facts; no compiled Haxe copy can drift from it.
 **/
 var observed:Int = 0;
 
@@ -53,23 +53,20 @@ var traceDialogues:Int = 0;
 /** Validated objective count recorded by the successful semantic trace. */
 var traceObjectives:Int = 0;
 
-/** Assemble the exact fixture from C-portable literal chunks. */
-function firstPlayableBytes():Bytes {
-	final first = Bytes.ofString(firstPlayablePrefix());
-	final second = Bytes.ofString(firstPlayableSuffix());
-	final result = Bytes.alloc(first.length + second.length);
-	result.blit(0, first, 0, first.length);
-	result.blit(first.length, second, 0, second.length);
-	return result;
+/** Load the canonical synthetic map through the bounded package store. */
+function fixtureBytes():Bytes {
+	final store = switch ContentPackageStore.open(".", "caxecraft-scenario-native-codec", ScenarioLimits.MAX_FILE_BYTES) {
+		case PackageStoreOpened(value): value;
+		case PackageStoreRejected(_): return Bytes.alloc(0);
+	};
+	return switch store.read("test/fixtures/caxemap/runtime-presentation.caxemap") {
+		case PackageBytesRead(value):
+			final result = Bytes.alloc(value.bytes.length);
+			result.blit(0, value.bytes, 0, value.bytes.length);
+			result;
+		case PackageBytesRejected(_): Bytes.alloc(0);
+	};
 }
-
-/** Return the first 3,225 bytes, below C11's portable string-literal limit. */
-function firstPlayablePrefix():String
-	return "CAXEMAP 1\nfeature required caxecraft:core\nmap adventure.first-playable\nasset-pack packs/caxecraft/base\ndefault-locale en\nlocale en\n  message adventure_progress \"ADVENTURE: PROLOGUE IN PROGRESS\"\n  message adventure_tagline \"SAVE CEESH. FIND IVVY. STOP BROWSER.\"\n  message berry_pickup_one \"+1 BERRY\"\n  message berry_pickup_two \"+2 BERRIES\"\n  message berry_recovery \"BERRIES: +1 HEART\"\n  message berry_stack_full \"BERRIES FULL: USE ONE FIRST\"\n  message block_stack_full \"BLOCK STACK FULL: USE ONE FIRST\"\n  message copper_strike \"COPPER STRIKE\"\n  message haxirio_fallen \"HAXIRIO HAS FALLEN\"\n  message mossling_alert \"MOSSLING ALERT\"\n  message mossling_dropped_berries \"MOSSLING DROPPED BERRIES\"\n  message mossling_windup \"MOSSLING WINDUP: DODGE\"\n  message nia_gift \"NIA: BERRIES FOR THE ROAD, HAXIRIO\"\n  message nia_talk \"E  TALK TO NIA\"\n  message nia_welcome \"NIA: THE GROVE LISTENS. E: A SMALL GIFT\"\n  message no_berries \"NO BERRIES LEFT\"\n  message return_to_meadow \"E  RETURN TO THE MEADOW\"\n  message scenario_title \"Caxecraft: Evergrove Prologue\"\n  message telegraphed_hit \"TELEGRAPHED HIT: DODGE THE NEXT\"\nend locale\nlocale es-mx\n  message adventure_progress \"AVENTURA: PROLOGO EN CONSTRUCCION\"\n  message adventure_tagline \"SALVA A CEESH. ENCUENTRA A IVVY. DETEN A BROWSER.\"\n  message berry_pickup_one \"+1 BAYA\"\n  message berry_pickup_two \"+2 BAYAS\"\n  message berry_recovery \"BAYAS: +1 CORAZON\"\n  message berry_stack_full \"BAYAS LLENAS: USA UNA PRIMERO\"\n  message block_stack_full \"PILA DE BLOQUES LLENA: USA UNO\"\n  message copper_strike \"GOLPE DE COBRE\"\n  message haxirio_fallen \"HAXIRIO HA CAIDO\"\n  message mossling_alert \"MUSGUITO ALERTA\"\n  message mossling_dropped_berries \"EL MUSGUITO SOLTO BAYAS\"\n  message mossling_windup \"MUSGUITO CARGANDO: ESQUIVA\"\n  message nia_gift \"NIA: BAYAS PARA EL CAMINO, HAXIRIO\"\n  message nia_talk \"E  HABLAR CON NIA\"\n  message nia_welcome \"NIA: EL BOSQUE TE ESCUCHA. E: REGALO\"\n  message no_berries \"NO QUEDAN BAYAS\"\n  message return_to_meadow \"E  VOLVER AL PRADO\"\n  message scenario_title \"Caxecraft: Prologo de la Arboleda Eterna\"\n  message telegraphed_hit \"ATAQUE AVISADO: ESQUIVA EL PROXIMO\"\nend locale\ntitle message scenario_title\nmode adventure\nworld 32 16 32\npalette 0 caxecraft:air\npalette 1 caxecraft:bedrock\npalette 2 caxecraft:dirt\npalette 3 caxecraft:grass\npalette 4 caxecraft:sand\npalette 5 caxecraft:wood\npalette 6 caxecraft:leaves\npalette 7 caxecraft:snow\npalette 8 caxecraft:ash\nchunk world.base 0 0 0 32 16 32\n  run 1 32\n  run 2 96\n  run 3 32\n  run 0 352\n  run 1 32\n  run 2 96\n  run 3 1\n  run 4 6\n  run 3 25\n  run 0 352\n  run 1 32\n  run 2 96\n  run 4 2\n  run 0 4\n  run 4 2\n  run 3 24\n  run 0 352\n  run 1 32\n  run 2 96\n  run 4 2\n  run 0 4\n  run 4 2\n  run 3 24\n  run 0 352\n  run 1 32\n  run 2 96\n  run 4 2\n  run 0 4\n  run 4 2\n  run 3 24\n  run 0 352\n  run 1 32\n  run 2 96\n  run 4 2\n  run 0 4\n  run 4 2\n  run 3 24\n  run 0 352\n  run 1 32\n  run 2 96\n  run 3 1\n  run 4 6\n  run 3 25\n  run 0 352\n  run 1 32\n  run 2 96\n  run 3 32\n  run 0 352\n  run 1 32\n  run 2 96\n  run 3 32\n  run 0 352\n  run 1 32\n  run 2 96\n  run 3 32\n  run 0 89\n  run 6 3\n  run 0 260\n  run 1 32\n  run 2 96\n  run 3 32\n  run 0 26\n  run 5 1\n  run 0 31\n  run 5 1\n  run 0 30\n  run 6 3\n  run 0 30\n  run 6 1\n  run 0 229\n";
-
-/** Return the remaining 1,873 bytes of the exact fixture. */
-function firstPlayableSuffix():String
-	return "  run 1 32\n  run 2 96\n  run 3 32\n  run 0 89\n  run 6 3\n  run 0 260\n  run 1 32\n  run 2 96\n  run 3 32\n  run 0 352\n  run 1 32\n  run 2 96\n  run 3 32\n  run 0 352\n  run 1 32\n  run 2 96\n  run 3 32\n  run 0 352\n  run 1 32\n  run 2 96\n  run 3 32\n  run 0 352\n  run 1 32\n  run 2 96\n  run 3 32\n  run 0 352\n  run 1 32\n  run 2 96\n  run 3 32\n  run 0 352\n  run 1 32\n  run 2 96\n  run 3 32\n  run 0 352\n  run 1 32\n  run 2 96\n  run 3 32\n  run 0 352\n  run 1 32\n  run 2 96\n  run 3 32\n  run 0 352\n  run 1 32\n  run 2 96\n  run 3 32\n  run 0 352\n  run 1 32\n  run 2 96\n  run 3 32\n  run 0 352\n  run 1 32\n  run 2 96\n  run 3 32\n  run 0 352\n  run 1 32\n  run 2 96\n  run 7 10\n  run 3 12\n  run 8 10\n  run 0 352\n  run 1 32\n  run 2 96\n  run 7 10\n  run 3 12\n  run 8 10\n  run 0 352\n  run 1 32\n  run 2 96\n  run 7 10\n  run 3 12\n  run 8 10\n  run 0 352\n  run 1 32\n  run 2 96\n  run 7 10\n  run 3 12\n  run 8 10\n  run 0 352\n  run 1 32\n  run 2 96\n  run 7 10\n  run 3 12\n  run 8 10\n  run 0 352\n  run 1 32\n  run 2 96\n  run 7 10\n  run 3 12\n  run 8 10\n  run 0 352\n  run 1 32\n  run 2 96\n  run 7 10\n  run 3 12\n  run 8 10\n  run 0 352\n  run 1 32\n  run 2 96\n  run 7 10\n  run 3 12\n  run 8 10\n  run 0 352\nend chunk\nfluid water.pool caxecraft:water volume 2 4 2 4 1 4\nfluid water.spring caxecraft:water source 3 4 3\nobject enemy.mossling\n  tag enemy\n  placement entity caxecraft:mossling 15500 5000 13800 0\nend object\nobject guide.nia\n  tag friend\n  placement npc caxecraft:nia dialogue.nia.welcome 17500 5000 13500 270\nend object\nobject item.tideweave\n  tag quest\n  placement item caxecraft:tideweave-suit 1 4500 5000 4500 0\nend object\nobject player.start\n  tag player\n  placement player-spawn 16500 5000 16500 0\nend object\ndialogue dialogue.nia.welcome\n  line speaker guide.nia message nia_welcome\nend dialogue\nobjective objective.prologue active title message adventure_progress\n  body message adventure_tagline\nend objective\nend-map\n";
 
 /**
 	Run the same semantic checks on both hosts.
@@ -103,26 +100,26 @@ function main():Void {
 	host-specific exception or diagnostic string.
 **/
 function selfCheck():Int {
-	final source = firstPlayableBytes();
-	if (source.length != 5098)
+	final source = fixtureBytes();
+	if (source.length == 0)
 		return 1;
 	final scenario = readValid(source);
 	if (scenario == null)
 		return 2;
 	if (scenario.formatVersion != 1
-		|| scenario.id.text() != "adventure.first-playable"
+		|| scenario.id.text() != "qa.runtime-presentation"
 		|| scenario.assetPack.text() != "packs/caxecraft/base"
 		|| scenario.world.size.width != 32
 		|| scenario.world.size.height != 16
 		|| scenario.world.size.depth != 32
-		|| scenario.world.palette.length != 9
+		|| scenario.world.palette.length != 2
 		|| scenario.world.chunks.length != 1
-		|| scenario.world.fluids.length != 2
-		|| scenario.objects.length != 4
+		|| scenario.world.fluids.length != 1
+		|| scenario.objects.length != 8
 		|| scenario.story.dialogues.length != 1
-		|| scenario.story.objectives.length != 1)
+		|| scenario.story.objectives.length != 5)
 		return 3;
-	if (resolveScenarioMessage(scenario.messages, new LocaleId("es-mx"), new MessageId("nia_welcome")) != "NIA: EL BOSQUE TE ESCUCHA. E: REGALO")
+	if (resolveScenarioMessage(scenario.messages, new LocaleId("es-mx"), new MessageId("speaker.guide")) != "Guia de prueba")
 		return 4;
 	traceBytes = source.length;
 	traceWidth = scenario.world.size.width;
@@ -167,7 +164,7 @@ function selfCheck():Int {
 		case _:
 			return 8;
 	}
-	switch firstDiagnosticKind(replaceFirst(source, "dialogue.nia.welcome 17500", "dialogue.missing 17500")) {
+	switch firstDiagnosticKind(replaceFirst(source, "dialogue.guide 2500", "dialogue.missing 2500")) {
 		case UnresolvedReference(id) if (id.text() == "dialogue.missing"):
 		case _:
 			return 9;
@@ -246,7 +243,7 @@ function replaceFirst(source:Bytes, needle:String, replacement:String):Bytes {
 }
 
 /**
-	Supplies only the content identities needed to validate the embedded map.
+	Supplies only the content identities needed to validate the synthetic map.
 
 	This test double is intentionally private and contains no gameplay behavior.
 	The later runtime-loader vertical resolves the same authored IDs through the
@@ -271,11 +268,14 @@ private final class NativeProbeContentRegistry implements ScenarioContentRegistr
 	public function blockStorageCode(id:ContentId):Int
 		return hasBlock(id) ? 0 : -1;
 
+	public function blockContentIdForStorageCode(code:Int):Null<ContentId>
+		return code == 0 ? new ContentId("caxecraft:air") : null;
+
 	public function hasFluid(id:ContentId):Bool
 		return id.text() == "caxecraft:water";
 
 	public function hasItem(id:ContentId):Bool
-		return id.text() == "caxecraft:tideweave-suit";
+		return id.text() == "caxecraft:bread" || id.text() == "caxecraft:tideweave-suit";
 
 	public function itemStorageCode(id:ContentId):Int
 		return hasItem(id) ? 0 : -1;
@@ -290,10 +290,13 @@ private final class NativeProbeContentRegistry implements ScenarioContentRegistr
 		return false;
 
 	public function hasStatefulObject(id:ContentId):Bool
-		return false;
+		return id.text() == "caxecraft:glyph-control";
 
 	public function hasState(id:ContentId):Bool
-		return false;
+		return id.text() == "caxecraft:active" || id.text() == "caxecraft:idle";
+
+	public function statefulObjectHasState(objectType:ContentId, state:ContentId):Bool
+		return hasStatefulObject(objectType) && hasState(state);
 
 	public function hasEffect(id:ContentId):Bool
 		return false;

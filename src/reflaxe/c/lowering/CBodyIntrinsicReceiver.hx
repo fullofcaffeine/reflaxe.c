@@ -7,7 +7,9 @@ import reflaxe.c.lowering.CBodyArray.CBodyArrayRecognition;
 import reflaxe.c.lowering.CBodyBytes.CBodyBytesRecognition;
 import reflaxe.c.lowering.CBodyDispatch.CBodyInstanceCallAccess;
 import reflaxe.c.lowering.CBodyIntMap.CBodyIntMapRecognition;
+import reflaxe.c.lowering.CBodyIterator.CBodyIteratorRecognition;
 import reflaxe.c.lowering.CBodyStringMap.CBodyStringMapRecognition;
+import reflaxe.c.lowering.CBodyTypedMap.CBodyTypedMapRecognition;
 
 /**
 	Names the compiler-owned receiver families that bypass ordinary class dispatch.
@@ -21,6 +23,8 @@ enum CBodyIntrinsicReceiverFamily {
 	CBIRArray;
 	CBIRIntMap;
 	CBIRStringMap;
+	CBIRTypedMap;
+	CBIRIterator;
 	CBIRBytes;
 	CBIRString;
 	CBIROrdinaryClass;
@@ -45,6 +49,14 @@ class CBodyIntrinsicReceiver {
 			return CBIRIntMap;
 		if (CBodyStringMapRecognition.isStringMap(access.owner))
 			return CBIRStringMap;
+		if (CBodyTypedMapRecognition.family(access.owner) != null)
+			return CBIRTypedMap;
+		if (CBodyTypedMapRecognition.familyForMapType(access.receiver.t) != null)
+			return CBIRTypedMap;
+		if (CBodyIteratorRecognition.arrayKind(access.owner) != null)
+			return CBIRIterator;
+		if (CBodyIteratorRecognition.isMapKeyValue(access.owner))
+			return CBIRIterator;
 		if (CBodyBytesRecognition.isCoreBytes(access.owner))
 			return CBIRBytes;
 		if (isCoreString(access.owner))

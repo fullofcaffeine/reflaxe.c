@@ -65,3 +65,42 @@ hxc_status hxc_bytes_ref_get_string_utf8(
   }
   return HXC_STATUS_OK;
 }
+
+hxc_status hxc_bytes_ref_to_hex(
+  const hxc_bytes_ref *bytes,
+  hxc_allocator allocator,
+  hxc_string *out_string
+) {
+  static const uint8_t digits[] = "0123456789abcdef";
+  hxc_string_buffer buffer = HXC_STRING_BUFFER_INITIALIZER;
+  size_t index;
+  hxc_status status;
+
+  if (!hxc_bytes_ref_is_valid(bytes)
+    || !hxc_allocator_is_valid(&allocator)
+    || out_string == NULL
+    || out_string->data != NULL
+    || out_string->byte_length != 0u
+    || out_string->has_trailing_nul
+    || out_string->owner != NULL) {
+    return HXC_STATUS_INVALID_ARGUMENT;
+  }
+  status = hxc_string_buffer_init(&allocator, &buffer);
+  if (status != HXC_STATUS_OK) {
+    return status;
+  }
+  for (index = 0u; index < bytes->length; index++) {
+    const uint8_t value = ((const uint8_t *)bytes->storage.memory)[index];
+    const uint8_t pair[] = {digits[value >> 4u], digits[value & UINT8_C(15)]};
+    const hxc_byte_view view = {pair, 2u};
+    status = hxc_string_buffer_append_utf8_checked(&buffer, view);
+    if (status != HXC_STATUS_OK) {
+      return hxc_bytes_string_fail(&buffer, status);
+    }
+  }
+  status = hxc_string_buffer_finish_ref(&buffer, out_string);
+  if (status != HXC_STATUS_OK) {
+    return hxc_bytes_string_fail(&buffer, status);
+  }
+  return HXC_STATUS_OK;
+}

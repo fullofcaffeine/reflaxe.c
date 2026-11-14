@@ -1,6 +1,7 @@
 package reflaxe.c.ir;
 
 import reflaxe.c.ir.HxcIR;
+import reflaxe.c.ir.HxcIRTraversal.instructionFailureEdge;
 
 /**
 	Immutable control-flow facts for one HxcIR function.
@@ -13,11 +14,26 @@ class HxcIRControlFlowFacts {
 	final blockIndices:Map<String, Int>;
 	final strictDominators:Array<Array<String>>;
 	final instructionFailureJumps:Map<String, Bool>;
+	final order:Array<String>;
+	final predecessors:Map<String, Array<String>>;
 
-	public function new(blockIndices:Map<String, Int>, strictDominators:Array<Array<String>>, instructionFailureJumps:Map<String, Bool>) {
+	public function new(blockIndices:Map<String, Int>, strictDominators:Array<Array<String>>, instructionFailureJumps:Map<String, Bool>, order:Array<String>,
+			predecessors:Map<String, Array<String>>) {
 		this.blockIndices = blockIndices;
 		this.strictDominators = strictDominators;
 		this.instructionFailureJumps = instructionFailureJumps;
+		this.order = order;
+		this.predecessors = predecessors;
+	}
+
+	/** Reachable reverse postorder; a copy prevents callers from changing graph facts. */
+	public function orderedBlockIds():Array<String>
+		return order.copy();
+
+	/** All reachable predecessor IDs, including predecessors later in the order. */
+	public function predecessorsOf(blockId:String):Array<String> {
+		final values = predecessors.get(blockId);
+		return values == null ? [] : values.copy();
 	}
 
 	/** True when `candidateBlockId` lies on every route to `blockId`. */
@@ -125,7 +141,7 @@ class HxcIRControlFlowAnalysis {
 
 		final entryIndex = allBlockIndices.get(fn.entryBlockId);
 		if (entryIndex == null)
-			return new HxcIRControlFlowFacts([], [for (_ in blocks) []], instructionFailureJumps);
+			return new HxcIRControlFlowFacts([], [for (_ in blocks) []], instructionFailureJumps, [], []);
 
 		final reversePostorder = computeReversePostorder(entryIndex, successors);
 		final immediateDominators = computeImmediateDominators(entryIndex, reversePostorder, predecessors, blocks.length);
@@ -142,7 +158,14 @@ class HxcIRControlFlowAnalysis {
 			insertUtf8(values, blockIds[immediate]);
 			strictDominators[blockIndex] = values;
 		}
-		return new HxcIRControlFlowFacts(reachableIndices, strictDominators, instructionFailureJumps);
+		final reachablePredecessors:Map<String, Array<String>> = [];
+		for (index in reversePostorder)
+			reachablePredecessors.set(blockIds[index], [
+				for (predecessor in predecessors[index])
+					if (reachableIndices.exists(blockIds[predecessor])) blockIds[predecessor]
+			]);
+		return new HxcIRControlFlowFacts(reachableIndices, strictDominators, instructionFailureJumps, [for (index in reversePostorder) blockIds[index]],
+			reachablePredecessors);
 	}
 
 	/**
@@ -242,19 +265,19 @@ class HxcIRControlFlowAnalysis {
 	}
 
 	/** Collect normal and explicit failure successors without trusting their IDs. */
-	static function blockTargets(block:HxcIRBlock):Array<String> {
+	public static function blockTargets(block:HxcIRBlock):Array<String> {
 		final result:Array<String> = [];
 		function add(target:String):Void {
 			if (result.indexOf(target) == -1)
 				result.push(target);
 		}
 		for (instruction in block.instructions) {
-			final failure = instructionFailure(instruction.kind);
+			final failure = instructionFailureEdge(instruction.kind);
 			if (failure != null)
 				switch failure.target {
 					case IRFTBlock(target):
 						add(target);
-					case IRFTPropagate | IRFTAbort:
+					case IRFTPropagate | IRFTUnwind | IRFTAbort:
 				}
 		}
 		if (block.terminator != null)
@@ -276,7 +299,7 @@ class HxcIRControlFlowAnalysis {
 				case IRTThrow(_, failure):
 					switch failure.target {
 						case IRFTBlock(target): add(target);
-						case IRFTPropagate | IRFTAbort:
+						case IRFTPropagate | IRFTUnwind | IRFTAbort:
 					}
 				case IRTReturn(_, _) | IRTUnreachable:
 			}
@@ -285,23 +308,16 @@ class HxcIRControlFlowAnalysis {
 
 	static function blockHasInstructionFailureJump(block:HxcIRBlock):Bool {
 		for (instruction in block.instructions) {
-			final failure = instructionFailure(instruction.kind);
+			final failure = instructionFailureEdge(instruction.kind);
 			if (failure != null)
 				switch failure.target {
 					case IRFTBlock(_):
 						return true;
-					case IRFTPropagate | IRFTAbort:
+					case IRFTPropagate | IRFTUnwind | IRFTAbort:
 				}
 		}
 		return false;
 	}
-
-	static function instructionFailure(kind:HxcIRInstructionKind):Null<HxcIRFailureEdge>
-		return switch kind {
-			case IRIOCall(call): call.failure;
-			case IRIOConvert(_, _, _, _, failure) | IRIOAllocate(_, _, _, failure): failure;
-			case _: null;
-		};
 
 	static function compareUtf8(left:String, right:String):Int {
 		return reflaxe.c.CUtf8Order.compare(left, right);

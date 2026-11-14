@@ -3,14 +3,21 @@ package caxecraft.editor;
 import caxecraft.editor.EditorTypes.EditorCommand;
 import caxecraft.editor.EditorTypes.EditorError;
 import caxecraft.content.EditorObjectCatalog.EditorObjectRecipe;
-import caxecraft.editor.EditorPlacement.checkpointCommand;
-import caxecraft.editor.EditorPlacement.objectRecipeCommand;
+import caxecraft.editor.EditorPlacement.checkpointTemplate;
+import caxecraft.editor.EditorPlacement.objectRecipeTemplate;
+import caxecraft.editor.EditorPlacement.EditorObjectTemplateResult;
+import caxecraft.editor.EditorPlacement.EditorObjectTemplateContext;
+import caxecraft.editor.EditorPlacement.triggerZoneCommand;
 import caxecraft.editor.EditorWorldGrid.decode as decodeWorld;
+import caxecraft.editor.EditorWorldViewport.EditorWorldProjection;
 import caxecraft.scenario.ContentId;
 import caxecraft.scenario.ScenarioGeometry.VoxelBounds;
 import caxecraft.scenario.ScenarioGeometry.VoxelPoint;
+import caxecraft.scenario.ScenarioGeometry.VoxelSize;
 import caxecraft.scenario.ScenarioWorld;
+import caxecraft.scenario.ScenarioWorld.BlockPaletteEntry;
 import caxecraft.scenario.ScenarioObject;
+import caxecraft.scenario.ScenarioId;
 
 /**
 	Projects editor terrain into a small, renderer-independent top-down view.
@@ -21,7 +28,7 @@ import caxecraft.scenario.ScenarioObject;
 	back to voxel coordinates, so Eval tests and the native Raylib screen agree
 	on cell boundaries without either side imitating the other.
 **/
-/** The four block tools exposed by the first visual editor slice. */
+/** The closed terrain and object tools exposed by the visual editor. */
 enum EditorTool {
 	SelectTool;
 	PaintTool;
@@ -29,6 +36,7 @@ enum EditorTool {
 	FillTool;
 	CheckpointTool;
 	CatalogObjectTool;
+	TriggerZoneTool;
 }
 
 /**
@@ -43,6 +51,16 @@ typedef EditorViewportProjection = {
 	final depth:Int;
 	final layerY:Int;
 	final cells:Array<Int>;
+
+	/** Non-air cells prepared once so Plan does not scan empty terrain per frame. */
+	final paintedCells:Array<EditorViewportCell>;
+}
+
+/** One non-air Plan cell in canonical row-major order. */
+typedef EditorViewportCell = {
+	final x:Int;
+	final z:Int;
+	final paletteCode:Int;
 }
 
 /**
@@ -63,7 +81,23 @@ typedef EditorViewportLayout = {
 enum EditorToolCommandResult {
 	ToolSelectionReady(bounds:VoxelBounds);
 	ToolCommandReady(command:EditorCommand);
+
+	/** Several commands that must preview and commit as one edit. */
+	ToolBatchReady(commands:Array<EditorCommand>, selectedObject:ScenarioId);
+
 	ToolCommandRejected(error:EditorError);
+}
+
+/** Named draft facts used by tool gestures, kept explicit as the editor grows. */
+typedef EditorToolContext = {
+	final scenarioId:ScenarioId;
+	final worldSize:VoxelSize;
+	final paletteCode:Int;
+	final selection:Null<VoxelBounds>;
+	final objects:Array<ScenarioObject>;
+	final ruleIds:Array<ScenarioId>;
+	final dialogueIds:Array<ScenarioId>;
+	final recipe:Null<EditorObjectRecipe>;
 }
 
 /**
@@ -87,9 +121,142 @@ function project(world:ScenarioWorld, layerY:Int):Null<EditorViewportProjection>
 		width: world.size.width,
 		depth: world.size.depth,
 		layerY: layerY,
-		cells: cells
+		cells: cells,
+		paintedCells: collectPaintedCells(cells, world.size.width)
 	};
 }
+
+/**
+	Build one plan layer from cells that the 3D editor already decoded.
+
+	The screen prepares both views after an accepted edit. Reusing the complete
+	cell array avoids decoding every world chunk twice during that interaction.
+	The function checks the array length and layer before it reads any cell, then
+	returns the same compact layout as `project`.
+**/
+function projectFromCells(world:ScenarioWorld, worldCells:Array<Int>, layerY:Int):Null<EditorViewportProjection> {
+	if (layerY < 0 || layerY >= world.size.height)
+		return null;
+	if (worldCells.length != world.size.width * world.size.height * world.size.depth)
+		return null;
+	final cells:Array<Int> = [];
+	for (z in 0...world.size.depth)
+		for (x in 0...world.size.width)
+			cells.push(worldCells[(z * world.size.height + layerY) * world.size.width + x]);
+	return {
+		width: world.size.width,
+		depth: world.size.depth,
+		layerY: layerY,
+		cells: cells,
+		paintedCells: collectPaintedCells(cells, world.size.width)
+	};
+}
+
+/**
+	Build one horizontal layer from the complete cached 3D projection.
+
+	The native layer controls call this function without serializing or decoding
+	the CAXEMAP draft again. The returned cells remain a compact read-only copy,
+	so changing the selected layer cannot mutate terrain or editor history.
+**/
+function projectFromWorld(world:EditorWorldProjection, layerY:Int):Null<EditorViewportProjection> {
+	if (layerY < 0 || layerY >= world.height)
+		return null;
+	if (world.cells.length != world.width * world.height * world.depth)
+		return null;
+	final cells:Array<Int> = [];
+	for (z in 0...world.depth)
+		for (x in 0...world.width)
+			cells.push(world.cells[(z * world.height + layerY) * world.width + x]);
+	return {
+		width: world.width,
+		depth: world.depth,
+		layerY: layerY,
+		cells: cells,
+		paintedCells: collectPaintedCells(cells, world.width)
+	};
+}
+
+/**
+	Patch one accepted voxel into the cached Plan layer without scanning the layer.
+
+	A voxel on another Y layer leaves this projection valid and returns `true`.
+	Malformed coordinates or a painted-cell cache that disagrees with `cells`
+	return `false`, so the screen can rebuild the layer from its complete world
+	projection. The painted rows stay in canonical row-major order.
+**/
+function patchProjectedVoxel(projection:EditorViewportProjection, point:VoxelPoint, paletteCode:Int):Bool {
+	if (point.x < 0 || point.z < 0 || point.x >= projection.width || point.z >= projection.depth)
+		return false;
+	if (projection.cells.length != projection.width * projection.depth)
+		return false;
+	if (point.y != projection.layerY)
+		return true;
+
+	final cellIndex = point.z * projection.width + point.x;
+	final previousCode = projection.cells[cellIndex];
+	var low = 0;
+	var high = projection.paintedCells.length;
+	while (low < high) {
+		final middle = low + Std.int((high - low) / 2);
+		final row = projection.paintedCells[middle];
+		final rowIndex = row.z * projection.width + row.x;
+		if (rowIndex < cellIndex)
+			low = middle + 1;
+		else
+			high = middle;
+	}
+	final hasPaintedRow = low < projection.paintedCells.length
+		&& projection.paintedCells[low].z * projection.width + projection.paintedCells[low].x == cellIndex;
+	if ((previousCode != 0) != hasPaintedRow)
+		return false;
+	if (previousCode == paletteCode)
+		return true;
+
+	projection.cells[cellIndex] = paletteCode;
+	if (paletteCode == 0) {
+		projection.paintedCells.splice(low, 1);
+	} else {
+		final row:EditorViewportCell = {x: point.x, z: point.z, paletteCode: paletteCode};
+		if (hasPaintedRow)
+			projection.paintedCells[low] = row;
+		else
+			projection.paintedCells.insert(low, row);
+	}
+	return true;
+}
+
+/** Collect compact painted rows while preserving exact x/z display order. */
+function collectPaintedCells(cells:Array<Int>, width:Int):Array<EditorViewportCell> {
+	final painted:Array<EditorViewportCell> = [];
+	for (index in 0...cells.length) {
+		final paletteCode = cells[index];
+		if (paletteCode != 0)
+			painted.push({x: index % width, z: Std.int(index / width), paletteCode: paletteCode});
+	}
+	return painted;
+}
+
+/** Clamp one presentation-only layer to a finite world height. */
+function clampLayer(layerY:Int, worldHeight:Int):Int {
+	if (worldHeight <= 0 || layerY < 0)
+		return 0;
+	return layerY < worldHeight ? layerY : worldHeight - 1;
+}
+
+/**
+	Decide when the property inspector takes space from the world canvas.
+
+	Build keeps the world large until the creator opens details or the world
+	list. Plan shows a selected item immediately because that view supports
+	precise inspection. Both views always show an explicitly opened panel.
+**/
+function inspectorVisible(buildActive:Bool, hasSelection:Bool, detailsOpen:Bool, worldListOpen:Bool):Bool
+	return detailsOpen || worldListOpen || (!buildActive && hasSelection);
+
+/** True when one semantic voxel selection crosses the displayed layer. */
+function boundsIntersectLayer(bounds:VoxelBounds, layerY:Int):Bool
+	return layerY >= bounds.origin.y && layerY < bounds.origin.y + bounds.size.height;
 
 /**
 	Fit the largest centered square-cell grid inside a pixel rectangle.
@@ -148,9 +315,9 @@ function paletteCodeAt(projection:EditorViewportProjection, x:Int, z:Int):Int {
 	block IDs, so an editor brush must resolve its block for the current draft.
 	The function returns `-1` when the map does not admit that block.
 **/
-function paletteCodeForBlock(world:ScenarioWorld, blockType:ContentId):Int {
+function paletteCodeForBlock(palette:Array<BlockPaletteEntry>, blockType:ContentId):Int {
 	final expected = blockType.text();
-	for (entry in world.palette)
+	for (entry in palette)
 		if (entry.blockType.text() == expected)
 			return entry.code;
 	return -1;
@@ -165,6 +332,7 @@ function toolFromIndex(index:Int):Null<EditorTool> {
 		case 3: FillTool;
 		case 4: CheckpointTool;
 		case 5: CatalogObjectTool;
+		case 6: TriggerZoneTool;
 		case _: null;
 	};
 }
@@ -174,11 +342,10 @@ function toolFromIndex(index:Int):Null<EditorTool> {
 
 	Select returns workspace bounds instead of an authored command. Paint and
 	erase affect the pointed voxel. Fill carries the current bounds explicitly.
-	Checkpoint placement reads existing IDs and creates one reloadable object.
-	The UI never mutates a projection directly.
+	Object tools read existing IDs and create one reloadable record or one atomic
+	template. The UI never mutates a projection directly.
 **/
-function commandFor(tool:EditorTool, point:VoxelPoint, paletteCode:Int, selection:Null<VoxelBounds>, objects:Array<ScenarioObject>,
-		recipe:Null<EditorObjectRecipe>):EditorToolCommandResult {
+function commandFor(tool:EditorTool, point:VoxelPoint, context:EditorToolContext):EditorToolCommandResult {
 	return switch tool {
 		case SelectTool:
 			ToolSelectionReady({
@@ -186,14 +353,30 @@ function commandFor(tool:EditorTool, point:VoxelPoint, paletteCode:Int, selectio
 				size: {width: 1, height: 1, depth: 1}
 			});
 		case PaintTool:
-			ToolCommandReady(PaintVoxel(point, paletteCode));
+			ToolCommandReady(PaintVoxel(point, context.paletteCode));
 		case EraseTool:
 			ToolCommandReady(EraseVoxel(point));
 		case FillTool:
-			if (selection == null) ToolCommandRejected(NoSelection); else ToolCommandReady(FillBounds(selection, paletteCode));
+			if (context.selection == null) ToolCommandRejected(NoSelection); else ToolCommandReady(FillBounds(context.selection, context.paletteCode));
 		case CheckpointTool:
-			ToolCommandReady(checkpointCommand(point, objects));
+			final template = checkpointTemplate(point, context.objects, context.ruleIds);
+			ToolBatchReady(template.commands, template.objectId);
 		case CatalogObjectTool:
-			recipe == null ? ToolCommandRejected(MissingEditorObjectRecipe) : ToolCommandReady(objectRecipeCommand(recipe, point, objects));
+			if (context.recipe == null) ToolCommandRejected(MissingEditorObjectRecipe); else {
+				final templateContext:EditorObjectTemplateContext = {
+					scenarioId: context.scenarioId,
+					worldSize: context.worldSize,
+					objects: context.objects,
+					dialogueIds: context.dialogueIds,
+					ruleIds: context.ruleIds
+				};
+				switch objectRecipeTemplate(context.recipe, point, templateContext) {
+					case ObjectTemplateRejected(error): ToolCommandRejected(error);
+					case ObjectTemplateReady(template) if (template.commands.length == 1): ToolCommandReady(template.commands[0]);
+					case ObjectTemplateReady(template): ToolBatchReady(template.commands, template.objectId);
+				}
+			}
+		case TriggerZoneTool:
+			ToolCommandReady(triggerZoneCommand(point, context.objects));
 	};
 }

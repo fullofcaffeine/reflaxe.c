@@ -18,6 +18,7 @@ import reflaxe.c.emit.CProjectEmitter.CProjectSymbolReportDetail;
 import reflaxe.c.emit.CProjectLayout;
 import reflaxe.c.emit.GeneratedFile;
 import reflaxe.c.emit.GeneratedFile.GeneratedFileKind;
+import reflaxe.c.emit.GeneratedFile.GeneratedFileProduction;
 import reflaxe.c.emit.ReflaxeOutputWriter;
 import reflaxe.c.naming.CSymbolRegistry;
 import reflaxe.c.naming.CSymbolRequest;
@@ -68,6 +69,12 @@ class ProjectEmitterGolden {
 			case "invalid-line-endings":
 				[
 					new GeneratedFile("src/invalid_line_endings.c", "int invalid_line_endings;\r\n", GeneratedFileKind.Source)
+				];
+			case "invalid-runtime-provenance":
+				[
+					new GeneratedFile("runtime/src/status.c", "int status;\n", GeneratedFileKind.RuntimeSource, {
+						production: GeneratedFileProduction.CompiledProgram
+					})
 				];
 			case "invalid-layout":
 				new CProjectEmitter().emit({

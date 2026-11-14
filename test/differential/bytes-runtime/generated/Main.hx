@@ -73,6 +73,23 @@ final class Main {
 		return Bytes.ofString(lines.join("\n") + "\n");
 	}
 
+	/**
+		Render bytes through the ordinary lowercase hexadecimal path.
+
+		Returning the fresh result across this helper boundary proves that the
+		caller receives one independent managed String owner.
+	**/
+	static function lowercaseHex(value:Bytes):String
+		return value.toHex();
+
+	/** Build a deterministic 32-byte stand-in for a binary SHA-256 result. */
+	static function knownDigestBytes():Bytes {
+		final result = Bytes.alloc(32);
+		for (index in 0...result.length)
+			result.set(index, (index & 15) * 17);
+		return result;
+	}
+
 	/** Return one input while making its left-to-right source order observable. */
 	static function orderedText(expected:Int, value:String):String {
 		if (stringSourceEvaluations != expected)
@@ -219,6 +236,14 @@ final class Main {
 		final explicitUtf8 = decodedBytes.getString(0, decodedBytes.length, Encoding.UTF8);
 		final decodedWhole = decodedBytes.toString();
 		final decodedEmpty = Bytes.alloc(0).toString();
+		final hexBoundaryBytes = Bytes.alloc(6);
+		hexBoundaryBytes.set(1, 0x01);
+		hexBoundaryBytes.set(2, 0x7f);
+		hexBoundaryBytes.set(3, 0x80);
+		hexBoundaryBytes.set(4, 0xfe);
+		hexBoundaryBytes.set(5, 0xff);
+		final hexBoundary = hexBoundaryBytes.toHex();
+		final hexEmpty = Bytes.alloc(0).toHex();
 		decodedBytes.set(7, "X".code);
 
 		while (bytes.length != 8
@@ -275,6 +300,9 @@ final class Main {
 			|| explicitUtf8 != "prefix:hé🙂"
 			|| decodedWhole != "prefix:hé🙂"
 			|| decodedEmpty != ""
+			|| hexBoundary != "00017f80feff"
+			|| hexEmpty != ""
+			|| lowercaseHex(knownDigestBytes()) != "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff"
 			|| decodedBytes.get(7) != "X".code) {}
 	}
 }

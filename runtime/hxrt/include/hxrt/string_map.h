@@ -12,13 +12,21 @@
 #define HXRT_STRING_MAP_H_INCLUDED
 
 #include "hxrt/allocator.h"
+#include "hxrt/iterator.h"
 #include "hxrt/string_literal.h"
+#include "hxrt/string.h"
 
 #if defined(__cplusplus)
 extern "C" {
 #endif
 
 typedef struct hxc_string_map_ref hxc_string_map_ref;
+
+/** Primitive value spellings admitted by the first natural toString slice. */
+typedef enum hxc_string_map_format_kind {
+  HXC_STRING_MAP_FORMAT_BOOL = 1,
+  HXC_STRING_MAP_FORMAT_INT32 = 2
+} hxc_string_map_format_kind;
 
 /**
  * Construct one value in uninitialized slot or lookup-result storage.
@@ -95,6 +103,13 @@ HXC_API hxc_status hxc_string_map_ref_create_with_ops(
  */
 HXC_API hxc_status hxc_string_map_ref_retain(hxc_string_map_ref *map);
 HXC_API hxc_status hxc_string_map_ref_release(hxc_string_map_ref *map);
+HXC_API hxc_status hxc_string_map_ref_release_slot(void *context);
+
+/** Copy every key and value into one independent shared Map object. */
+HXC_API hxc_status hxc_string_map_ref_copy(
+  const hxc_string_map_ref *source,
+  hxc_string_map_ref **out_map
+);
 
 /**
  * Insert or replace one key after copying its UTF-8 bytes and value.
@@ -135,6 +150,35 @@ HXC_API hxc_status hxc_string_map_ref_remove(
   bool *out_removed
 );
 HXC_API hxc_status hxc_string_map_ref_clear(hxc_string_map_ref *map);
+
+/** Create a typed creation-time snapshot of the map's current values. */
+HXC_API hxc_status hxc_string_map_ref_value_iterator(
+  hxc_string_map_ref *map,
+  hxc_iterator_ref **out_iterator
+);
+
+/** Snapshot independently owned keys in table iteration order. */
+HXC_API hxc_status hxc_string_map_ref_key_iterator(
+  hxc_string_map_ref *map,
+  hxc_iterator_ref **out_iterator
+);
+
+/** Snapshot exact `{key, value}` records using generated aggregate offsets. */
+HXC_API hxc_status hxc_string_map_ref_pair_iterator(
+  hxc_string_map_ref *map,
+  size_t pair_size,
+  size_t pair_alignment,
+  size_t key_offset,
+  size_t value_offset,
+  hxc_iterator_ref **out_iterator
+);
+
+/** Format primitive maps with the pinned Eval `[key => value]` spelling. */
+HXC_API hxc_status hxc_string_map_ref_to_string(
+  const hxc_string_map_ref *map,
+  hxc_string_map_format_kind kind,
+  hxc_string *out_string
+);
 
 #if defined(__cplusplus)
 } /* extern "C" */

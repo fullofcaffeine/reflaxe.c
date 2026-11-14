@@ -1,0 +1,13 @@
+-cp test/hxc_ir/
+# Match the full host-side IR owner without typing target-registration macros.
+# test/bootstrap owns target activation; this probe retains null-safety checks.
+-cp src
+-cp std
+-cp std/c/_std
+-cp vendor/reflaxe/src
+-D reflaxe=4.0.0-beta
+-D reflaxe.c=0.0.0-development
+--macro nullSafety("reflaxe.c")
+-D hxc_owned_child_cleanup_flow_only
+-main HxcIRGolden
+--interp

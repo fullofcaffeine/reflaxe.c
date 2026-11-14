@@ -4,6 +4,7 @@ package reflaxe.c.frontend;
 import haxe.macro.ExprTools;
 import haxe.macro.Type;
 import haxe.macro.TypeTools;
+import reflaxe.c.CPhaseTiming;
 import reflaxe.c.frontend.TypedProgramInput.TypedAstDeclaration;
 import reflaxe.c.frontend.TypedProgramInput.TypedAstEntryFunction;
 import reflaxe.c.frontend.TypedProgramInput.TypedAstEntryPoint;
@@ -12,22 +13,63 @@ import reflaxe.c.frontend.TypedProgramInput.TypedAstField;
 import reflaxe.c.frontend.TypedProgramInput.TypedAstMetadata;
 import reflaxe.c.frontend.TypedProgramInput.TypedAstModule;
 import reflaxe.c.frontend.NamedRecordSourceProvenance;
+import reflaxe.c.frontend.TypedFunctionSourceProvenance;
+
+/**
+	Keeps one decoded declaration during a single input capture.
+
+	An enum preserves each concrete macro type without casts. Sorting and field
+	capture share this value because Eval reconstructs metadata on every Ref.get.
+	The snapshot never survives normalize(), so a later request reads fresh data.
+**/
+private enum CapturedDeclaration {
+	CapturedClass(value:ClassType);
+	CapturedEnum(value:EnumType);
+	CapturedTypedef(value:DefType);
+	CapturedAbstract(value:AbstractType);
+}
 
 /** Converts Haxe compiler objects into a stable whole-program input model. */
 class TypedAstNormalizer {
 	public static function normalize(moduleTypes:Array<ModuleType>, mainModule:Null<ModuleType>, mainExpr:Null<TypedExpr>):TypedProgramInput {
-		final rawModules = moduleTypes.copy();
-		rawModules.sort(compareModuleTypes);
+		// Fixed region markers localize a stalled capture without logging each node.
+		// Existing progress helpers stay quiet unless this request opted in.
+		CPhaseTiming.startProgressDetail("typed input: declaration capture and ordering");
+		final contentDigests = new SourceContentDigest();
+		final functionSources = new TypedFunctionSourceProvenance(contentDigests);
+		// Ref.get() reconstructs declaration metadata on the Eval macro host.
+		// Decode once for both ordering and normalization. These typed snapshots
+		// live only for this capture; no compiler reference is cached across
+		// requests, and normalization still visits every declaration.
+		final keyedModules = [
+			for (moduleType in moduleTypes) {
+				final captured = captureDeclaration(moduleType);
+				final base = capturedBaseType(captured);
+				{value: moduleType, captured: captured, key: '${base.module}\u0000${declarationPath(base)}\u0000${declarationKind(moduleType)}'};
+			}
+		];
+		keyedModules.sort((left, right) -> compareStrings(left.key, right.key));
+		final rawModules = [for (entry in keyedModules) entry.value];
 
+		CPhaseTiming.stopProgressDetail("typed input: declaration capture and ordering");
+		CPhaseTiming.startProgressDetail("typed input: declaration normalization");
 		final declarations:Array<TypedAstDeclaration> = [];
+		final capturedTypedefs:Array<DefType> = [];
 		final expressionRoots:Array<TypedAstExpressionRoot> = [];
-		for (moduleType in rawModules) {
-			final declaration = normalizeDeclaration(moduleType, expressionRoots);
+		for (entry in keyedModules) {
+			switch entry.captured {
+				case CapturedTypedef(definition):
+					capturedTypedefs.push(definition);
+				case _: // Other declarations do not own named-record source positions.
+			}
+			final declaration = normalizeDeclaration(entry.value, entry.captured, expressionRoots, functionSources);
 			declarations.push(declaration);
 		}
 		declarations.sort((left, right) -> compareStrings(declarationKey(left), declarationKey(right)));
 		expressionRoots.sort(compareExpressionRoots);
 
+		CPhaseTiming.stopProgressDetail("typed input: declaration normalization");
+		CPhaseTiming.startProgressDetail("typed input: module and entry assembly");
 		final grouped:Map<String, Array<TypedAstDeclaration>> = [];
 		for (declaration in declarations) {
 			final existing = grouped.get(declaration.ownerModulePath);
@@ -57,7 +99,7 @@ class TypedAstNormalizer {
 				modulePath: mainModulePath,
 				declarationPath: mainDeclarationPath,
 				expression: mainExpr,
-				target: captureEntryFunction(mainExpr)
+				target: captureEntryFunction(mainExpr, functionSources)
 			};
 			expressionRoots.push({
 				sourceOrder: 0,
@@ -70,10 +112,15 @@ class TypedAstNormalizer {
 			expressionRoots.sort(compareExpressionRoots);
 		}
 
-		return new TypedProgramInput(modules, declarations, expressionRoots, entryPoint, rawModules, NamedRecordSourceProvenance.plan(declarations));
+		CPhaseTiming.stopProgressDetail("typed input: module and entry assembly");
+		CPhaseTiming.startProgressDetail("typed input: named-record provenance and input construction");
+		final result = new TypedProgramInput(modules, declarations, expressionRoots, entryPoint, rawModules,
+			NamedRecordSourceProvenance.plan(capturedTypedefs, contentDigests));
+		CPhaseTiming.stopProgressDetail("typed input: named-record provenance and input construction");
+		return result;
 	}
 
-	static function captureEntryFunction(expression:TypedExpr):Null<TypedAstEntryFunction> {
+	static function captureEntryFunction(expression:TypedExpr, functionSources:TypedFunctionSourceProvenance):Null<TypedAstEntryFunction> {
 		return switch expression.expr {
 			case TCall({expr: TField(_, FStatic(classReference, fieldReference))}, arguments) if (arguments.length == 0):
 				final owner = classReference.get();
@@ -82,6 +129,7 @@ class TypedAstNormalizer {
 				if (field.name != "main" || fieldExpression == null) {
 					null;
 				} else {
+					final sourcePlan = functionSources.plan(declarationPath(owner), field.name, field.pos, fieldExpression);
 					final staticFields = owner.statics.get();
 					var sourceOrder = 0;
 					for (index in 0...staticFields.length) {
@@ -101,16 +149,20 @@ class TypedAstNormalizer {
 						fieldName: field.name,
 						sourceOrder: sourceOrder,
 						fieldType: field.type,
-						expression: fieldExpression
+						expression: fieldExpression,
+						declarationPosition: field.pos,
+						sourcePositionOverrides: sourcePlan.positionOverrides,
+						functionSourcePlan: sourcePlan
 					};
 				}
-			case TParenthesis(inner) | TMeta(_, inner) | TCast(inner, _): captureEntryFunction(inner);
+			case TParenthesis(inner) | TMeta(_, inner) | TCast(inner, _): captureEntryFunction(inner, functionSources);
 			case _: null;
 		};
 	}
 
-	static function normalizeDeclaration(moduleType:ModuleType, expressionRoots:Array<TypedAstExpressionRoot>):TypedAstDeclaration {
-		final base = baseType(moduleType);
+	static function normalizeDeclaration(moduleType:ModuleType, captured:CapturedDeclaration, expressionRoots:Array<TypedAstExpressionRoot>,
+			functionSources:TypedFunctionSourceProvenance):TypedAstDeclaration {
+		final base = capturedBaseType(captured);
 		final path = declarationPath(base);
 		final fields:Array<TypedAstField> = [];
 		var classKind:Null<String> = null;
@@ -120,23 +172,22 @@ class TypedAstNormalizer {
 		var representedTypeKind:Null<String> = null;
 		var representedTypeDisplay:Null<String> = null;
 
-		switch moduleType {
-			case TClassDecl(classRef):
-				final classType = classRef.get();
+		switch captured {
+			case CapturedClass(classType):
 				classKind = classKindName(classType.kind);
 				isInterface = classType.isInterface;
 				isFinal = classType.isFinal;
 				isAbstract = classType.isAbstract;
 				final memberFields = classType.fields.get();
 				for (index in 0...memberFields.length) {
-					fields.push(normalizeClassField(memberFields[index], "member", index, base.module, path, expressionRoots));
+					fields.push(normalizeClassField(memberFields[index], "member", index, base.module, path, expressionRoots, functionSources));
 				}
 				final staticFields = classType.statics.get();
 				for (index in 0...staticFields.length) {
-					fields.push(normalizeClassField(staticFields[index], "static", index, base.module, path, expressionRoots));
+					fields.push(normalizeClassField(staticFields[index], "static", index, base.module, path, expressionRoots, functionSources));
 				}
 				if (classType.constructor != null) {
-					fields.push(normalizeClassField(classType.constructor.get(), "constructor", 0, base.module, path, expressionRoots));
+					fields.push(normalizeClassField(classType.constructor.get(), "constructor", 0, base.module, path, expressionRoots, functionSources));
 				}
 				if (classType.init != null) {
 					expressionRoots.push({
@@ -148,20 +199,19 @@ class TypedAstNormalizer {
 						expression: classType.init
 					});
 				}
-			case TEnumDecl(enumRef):
-				final enumType = enumRef.get();
+			case CapturedEnum(enumType):
 				for (name in enumType.names) {
 					final field = enumType.constructs.get(name);
 					if (field != null) {
 						fields.push(normalizeEnumField(field));
 					}
 				}
-			case TTypeDecl(typeRef):
-				final target = typeRef.get().type;
+			case CapturedTypedef(type):
+				final target = type.type;
 				representedTypeKind = typeKind(target);
 				representedTypeDisplay = TypeTools.toString(target);
-			case TAbstract(abstractRef):
-				final underlying = abstractRef.get().type;
+			case CapturedAbstract(type):
+				final underlying = type.type;
 				representedTypeKind = typeKind(underlying);
 				representedTypeDisplay = TypeTools.toString(underlying);
 		}
@@ -189,7 +239,7 @@ class TypedAstNormalizer {
 	}
 
 	static function normalizeClassField(field:ClassField, role:String, sourceOrder:Int, ownerModulePath:String, ownerDeclarationPath:String,
-			expressionRoots:Array<TypedAstExpressionRoot>):TypedAstField {
+			expressionRoots:Array<TypedAstExpressionRoot>, functionSources:TypedFunctionSourceProvenance):TypedAstField {
 		final expression = field.expr();
 		if (expression != null) {
 			expressionRoots.push({
@@ -201,6 +251,10 @@ class TypedAstNormalizer {
 				expression: expression
 			});
 		}
+		final functionSourcePlan = expression == null ? null : switch expression.expr {
+			case TFunction(_): functionSources.plan(ownerDeclarationPath, field.name, field.pos, expression);
+			case _: null;
+		};
 		return {
 			sourceOrder: sourceOrder,
 			name: field.name,
@@ -212,6 +266,8 @@ class TypedAstNormalizer {
 			isExtern: field.isExtern == true,
 			metadata: normalizeMetadata(field.meta.get()),
 			expression: expression,
+			sourcePositionOverrides: functionSourcePlan == null ? [] : functionSourcePlan.positionOverrides,
+			functionSourcePlan: functionSourcePlan,
 			rawClassField: field,
 			rawEnumField: null
 		};
@@ -229,6 +285,8 @@ class TypedAstNormalizer {
 			isExtern: false,
 			metadata: normalizeMetadata(field.meta.get()),
 			expression: null,
+			sourcePositionOverrides: [],
+			functionSourcePlan: null,
 			rawClassField: null,
 			rawEnumField: field
 		};
@@ -352,11 +410,24 @@ class TypedAstNormalizer {
 		return modulePath.split(".").join("/") + ".hx";
 	}
 
-	static function compareModuleTypes(left:ModuleType, right:ModuleType):Int {
-		final leftBase = baseType(left);
-		final rightBase = baseType(right);
-		return compareStrings('${leftBase.module}\u0000${declarationPath(leftBase)}\u0000${declarationKind(left)}',
-			'${rightBase.module}\u0000${declarationPath(rightBase)}\u0000${declarationKind(right)}');
+	/** Decode each inventory input once, in the caller's original order. */
+	static function captureDeclaration(moduleType:ModuleType):CapturedDeclaration {
+		return switch moduleType {
+			case TClassDecl(reference): CapturedClass(reference.get());
+			case TEnumDecl(reference): CapturedEnum(reference.get());
+			case TTypeDecl(reference): CapturedTypedef(reference.get());
+			case TAbstract(reference): CapturedAbstract(reference.get());
+		};
+	}
+
+	/** View shared declaration metadata through its typed macro base. */
+	static function capturedBaseType(captured:CapturedDeclaration):BaseType {
+		return switch captured {
+			case CapturedClass(value): value;
+			case CapturedEnum(value): value;
+			case CapturedTypedef(value): value;
+			case CapturedAbstract(value): value;
+		};
 	}
 
 	static function declarationKey(declaration:TypedAstDeclaration):String {

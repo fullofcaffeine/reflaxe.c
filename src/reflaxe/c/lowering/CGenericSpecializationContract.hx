@@ -20,6 +20,10 @@ class CGenericSpecializationContract {
 	public static function enumArgumentKey(haxePath:String, argumentKeys:Array<String>):String
 		return 'enum(${canonicalPart(haxePath)}${canonicalArray(argumentKeys)})';
 
+	/** Keep a closed class's nominal path and every nested owner argument exact. */
+	public static function classArgumentKey(haxePath:String, argumentKeys:Array<String>):String
+		return 'class(${canonicalPart(haxePath)}${canonicalArray(argumentKeys)})';
+
 	/** Preserve each nested element identity instead of collapsing every Array to one key. */
 	public static function arrayArgumentKey(elementKey:String):String
 		return 'array(${canonicalPart(elementKey)})';
@@ -51,6 +55,10 @@ class CGenericSpecializationContract {
 
 	public static function enumInstanceKey(haxePath:String, argumentKeys:Array<String>):String
 		return 'haxe-enum-v1(${canonicalPart(haxePath)}${canonicalArray(argumentKeys)})';
+
+	/** Add owner arguments without renaming the established non-generic identity. */
+	public static function classInstanceKey(haxePath:String, argumentKeys:Array<String>):String
+		return argumentKeys.length == 0 ? 'haxe-class-v1(${canonicalPart(haxePath)})' : 'haxe-class-v1(${canonicalPart(haxePath)}${canonicalArray(argumentKeys)})';
 
 	public static function canonicalArray(values:Array<String>):String
 		return '${values.length}:${values.map(canonicalPart).join("")}';

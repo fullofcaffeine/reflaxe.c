@@ -10,7 +10,13 @@ import caxecraft.text.Utf8Decoder;
 import caxecraft.text.Utf8Decoder.Utf8DecodeResult;
 import haxe.io.Bytes;
 
-/** Bounded UTF-8 decoder and tokenizer for the line-oriented CAXEMAP grammar. */
+/**
+ * Turns bounded UTF-8 CAXEMAP bytes into source-located lexical records.
+ *
+ * The decoder admits the complete byte vector first. Tokenization then keeps
+ * one String-based grammar so Unicode scalar columns and diagnostics cannot
+ * disagree between a fast path and a fallback.
+ */
 final class ScenarioLexer {
 	public static function read(input:Bytes):ScenarioReadResult<Array<ScenarioLexRecord>> {
 		if (input.length > ScenarioLimits.MAX_FILE_BYTES)
@@ -18,62 +24,73 @@ final class ScenarioLexer {
 		final decoded = Utf8Decoder.decode(input, ScenarioLimits.MAX_FILE_BYTES);
 		return switch decoded {
 			case Utf8Rejected(offset): fail(1, 1, 0, MalformedUtf8(offset));
-			case Utf8Decoded(text): tokenize(text);
+			case Utf8Decoded(text, _): tokenize(text);
 		}
 	}
 
+	/**
+	 * Split the validated document once, then tokenize each short logical line.
+	 *
+	 * Haxe string indexes count Unicode scalar values. Repeatedly indexing the
+	 * complete document can therefore rescan UTF-8 from its beginning on native
+	 * targets. The standard split keeps that traversal linear while line-local
+	 * token columns retain the same scalar-based diagnostics.
+	 */
 	static function tokenize(text:String):ScenarioReadResult<Array<ScenarioLexRecord>> {
 		final records:Array<ScenarioLexRecord> = [];
-		var line = 1;
 		var record = 0;
-		var start = 0;
-		var index = 0;
-		while (index <= text.length) {
-			if (index == text.length || text.charCodeAt(index) == 10) {
-				var end = index;
-				if (end > start && text.charCodeAt(end - 1) == 13)
-					end--;
-				final result = tokenizeLine(text.substring(start, end), line, record + 1);
-				switch result {
-					case ReadError(diagnostics):
-						return ReadError(diagnostics);
-					case ReadOk(null):
-					case ReadOk(value):
-						record++;
-						if (record > ScenarioLimits.MAX_RECORDS)
-							return fail(line, 1, record, LimitExceeded(LogicalRecords, ScenarioLimits.MAX_RECORDS));
-						records.push(value);
-				}
-				line++;
-				start = index + 1;
+		final lines = text.split("\n");
+		for (lineIndex in 0...lines.length) {
+			final line = lineIndex + 1;
+			var lineText = lines[lineIndex];
+			if (StringTools.endsWith(lineText, "\r"))
+				lineText = lineText.substring(0, lineText.length - 1);
+			final result = tokenizeLine(lineText, line, record + 1);
+			switch result {
+				case ReadError(diagnostics):
+					return ReadError(diagnostics);
+				case ReadOk(null):
+				case ReadOk(value):
+					record++;
+					if (record > ScenarioLimits.MAX_RECORDS)
+						return fail(line, 1, record, LimitExceeded(LogicalRecords, ScenarioLimits.MAX_RECORDS));
+					records.push(value);
 			}
-			index++;
 		}
 		return ReadOk(records);
 	}
 
+	/**
+	 * Tokenize one logical line and retain scalar-based source columns.
+	 *
+	 * Native strings derive scalar length and indexed codes from UTF-8. Keeping
+	 * the length and current code in local values avoids repeated scans without
+	 * changing the grammar or its coordinates.
+	 */
 	static function tokenizeLine(lineText:String, line:Int, record:Int):ScenarioReadResult<Null<ScenarioLexRecord>> {
+		final lineLength = lineText.length;
 		var index = 0;
-		while (index < lineText.length && lineText.charCodeAt(index) == 32)
+		while (index < lineLength && lineText.charCodeAt(index) == 32)
 			index++;
 		final indent = index;
-		if (index == lineText.length || lineText.charCodeAt(index) == 35)
+		if (index == lineLength || lineText.charCodeAt(index) == 35)
 			return ReadOk(null);
 		final tokens:Array<ScenarioLexToken> = [];
-		while (index < lineText.length) {
-			while (index < lineText.length && lineText.charCodeAt(index) == 32)
+		while (index < lineLength) {
+			while (index < lineLength && lineText.charCodeAt(index) == 32)
 				index++;
-			if (index == lineText.length)
+			if (index == lineLength)
 				break;
-			if (lineText.charCodeAt(index) == 9)
+			final code = lineText.charCodeAt(index);
+			if (code == 9)
 				return fail(line, index + 1, record, InvalidToken);
 			final column = index + 1;
-			if (lineText.charCodeAt(index) == 40 || lineText.charCodeAt(index) == 41) {
-				tokens.push({text: lineText.charAt(index), kind: BareToken, coordinate: {line: line, column: column, record: record}});
+			if (code == 40 || code == 41) {
+				tokens.push({text: code == 40 ? "(" : ")", kind: BareToken, coordinate: {line: line, column: column, record: record}});
 				index++;
 				continue;
-			} else if (lineText.charCodeAt(index) == 34) {
-				final quoted = readQuoted(lineText, index, line, record);
+			} else if (code == 34) {
+				final quoted = readQuoted(lineText, lineLength, index, line, record);
 				switch quoted {
 					case ReadError(diagnostics):
 						return ReadError(diagnostics);
@@ -83,16 +100,21 @@ final class ScenarioLexer {
 				}
 			} else {
 				final begin = index;
-				while (index < lineText.length && lineText.charCodeAt(index) != 32 && lineText.charCodeAt(index) != 40 && lineText.charCodeAt(index) != 41) {
-					final code = lineText.charCodeAt(index);
-					if (code == 9 || code == 34 || code == 13)
+				while (index < lineLength) {
+					final bareCode = lineText.charCodeAt(index);
+					if (bareCode == 32 || bareCode == 40 || bareCode == 41)
+						break;
+					if (bareCode == 9 || bareCode == 34 || bareCode == 13)
 						return fail(line, index + 1, record, InvalidToken);
 					index++;
 				}
 				tokens.push({text: lineText.substring(begin, index), kind: BareToken, coordinate: {line: line, column: column, record: record}});
 			}
-			if (index < lineText.length && lineText.charCodeAt(index) != 32 && lineText.charCodeAt(index) != 40 && lineText.charCodeAt(index) != 41)
-				return fail(line, index + 1, record, InvalidToken);
+			if (index < lineLength) {
+				final separator = lineText.charCodeAt(index);
+				if (separator != 32 && separator != 40 && separator != 41)
+					return fail(line, index + 1, record, InvalidToken);
+			}
 		}
 		return tokens.length == 0 ? ReadOk(null) : ReadOk({
 			indent: indent,
@@ -101,11 +123,12 @@ final class ScenarioLexer {
 		});
 	}
 
-	static function readQuoted(lineText:String, start:Int, line:Int, record:Int):ScenarioReadResult<{text:String, next:Int}> {
+	/** Read one quoted token while reusing the caller's scalar line length. */
+	static function readQuoted(lineText:String, lineLength:Int, start:Int, line:Int, record:Int):ScenarioReadResult<{text:String, next:Int}> {
 		final output = new StringBuf();
 		var scalars = 0;
 		var index = start + 1;
-		while (index < lineText.length) {
+		while (index < lineLength) {
 			final code = lineText.charCodeAt(index);
 			if (code == 34)
 				return ReadOk({text: output.toString(), next: index + 1});
@@ -113,7 +136,7 @@ final class ScenarioLexer {
 				return fail(line, index + 1, record, InvalidToken);
 			if (code == 92) {
 				index++;
-				if (index >= lineText.length)
+				if (index >= lineLength)
 					return fail(line, index + 1, record, InvalidEscape);
 				final escape = lineText.charCodeAt(index);
 				switch escape {
@@ -128,7 +151,7 @@ final class ScenarioLexer {
 					case 116:
 						output.add("\t");
 					case 117:
-						final unicode = readUnicodeEscape(lineText, index + 1, line, record);
+						final unicode = readUnicodeEscape(lineText, lineLength, index + 1, line, record);
 						switch unicode {
 							case ReadError(diagnostics): return ReadError(diagnostics);
 							case ReadOk(value):
@@ -149,21 +172,25 @@ final class ScenarioLexer {
 		return fail(line, start + 1, record, InvalidToken);
 	}
 
-	static function readUnicodeEscape(lineText:String, open:Int, line:Int, record:Int):ScenarioReadResult<{scalar:Int, last:Int}> {
-		if (open >= lineText.length || lineText.charCodeAt(open) != 123)
+	/** Decode one braced escape without recounting the containing line. */
+	static function readUnicodeEscape(lineText:String, lineLength:Int, open:Int, line:Int, record:Int):ScenarioReadResult<{scalar:Int, last:Int}> {
+		if (open >= lineLength || lineText.charCodeAt(open) != 123)
 			return fail(line, open + 1, record, InvalidEscape);
 		var index = open + 1;
 		var digits = 0;
 		var scalar = 0;
-		while (index < lineText.length && lineText.charCodeAt(index) != 125) {
-			final digit = hexDigit(lineText.charCodeAt(index));
+		while (index < lineLength) {
+			final code = lineText.charCodeAt(index);
+			if (code == 125)
+				break;
+			final digit = hexDigit(code);
 			if (digit < 0 || digits == 6)
 				return fail(line, index + 1, record, InvalidEscape);
 			scalar = (scalar << 4) | digit;
 			digits++;
 			index++;
 		}
-		if (digits == 0 || index >= lineText.length || scalar == 0 || scalar > 0x10ffff || (scalar >= 0xd800 && scalar <= 0xdfff))
+		if (digits == 0 || index >= lineLength || scalar == 0 || scalar > 0x10ffff || (scalar >= 0xd800 && scalar <= 0xdfff))
 			return fail(line, open + 1, record, InvalidEscape);
 		return ReadOk({scalar: scalar, last: index});
 	}

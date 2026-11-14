@@ -1,5 +1,6 @@
 package caxecraft.scenario;
 
+import caxecraft.scenario.ScenarioId.isValidScenarioIdText;
 import caxecraft.scenario.CaxeFlow.FlowComparison;
 import caxecraft.scenario.ScenarioCodecModel.ScenarioLexRecord;
 import caxecraft.scenario.ScenarioCodecModel.ScenarioLexToken;
@@ -177,21 +178,6 @@ final class ScenarioTokenGrammar {
 	}
 
 	static function validId(value:String):Bool {
-		if (value.length == 0)
-			return false;
-		var expectLetter = true;
-		for (at in 0...value.length) {
-			final code = value.charCodeAt(at);
-			if (expectLetter) {
-				if (code < 97 || code > 122)
-					return false;
-				expectLetter = false;
-			} else if (code == 46 || code == 95 || code == 45) {
-				expectLetter = true;
-			} else if (!((code >= 97 && code <= 122) || (code >= 48 && code <= 57))) {
-				return false;
-			}
-		}
-		return !expectLetter;
+		return isValidScenarioIdText(value);
 	}
 }

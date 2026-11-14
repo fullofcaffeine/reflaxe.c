@@ -192,11 +192,28 @@ HXC_API hxc_status hxc_array_insert_copy(
   const void *element
 );
 
-/** Assign one live slot, including from another slot in the same array. */
+/** Assign one live slot, or append when `index` equals `length`. */
 HXC_API hxc_status hxc_array_set_copy(
   hxc_array *array,
   size_t index,
   const void *element
+);
+
+/**
+ * Assign one slot using Haxe's sparse indexed-assignment growth rule.
+ *
+ * A negative index fails without mutation. An index beyond the current end
+ * grows the Array through that index, copy-constructs each gap from
+ * `default_element`, and copy-constructs the assigned value into the final
+ * slot. Allocation or element-copy failure restores the old logical length
+ * and contents; private capacity may have increased. Both input pointers may
+ * borrow existing Array slots and are reconstructed after storage relocation.
+ */
+HXC_API hxc_status hxc_array_set_grow_copy(
+  hxc_array *array,
+  int32_t index,
+  const void *element,
+  const void *default_element
 );
 
 /** Destroy one element and shift its suffix left without allocation. */
@@ -343,6 +360,9 @@ HXC_API hxc_status hxc_array_ref_retain(hxc_array_ref *array);
  */
 HXC_API hxc_status hxc_array_ref_release(hxc_array_ref *array);
 
+/** Release and clear one generated owner slot through a cleanup callback. */
+HXC_API hxc_status hxc_array_ref_release_slot(void *context);
+
 /** Read a length that is guaranteed to fit Haxe's signed 32-bit Int. */
 HXC_API hxc_status hxc_array_ref_length(
   const hxc_array_ref *array,
@@ -401,6 +421,53 @@ HXC_API hxc_status hxc_array_ref_splice_one_discard(
   int32_t position
 );
 
+/** Copy one removed element into an empty result Array, then mutate the source. */
+HXC_API hxc_status hxc_array_ref_splice_one_copy(
+  hxc_array_ref *array,
+  int32_t position,
+  hxc_array_ref *out_removed
+);
+
+/**
+ * Remove the normalized range without allocating its discarded result.
+ *
+ * A negative length or a position beyond the current end is a successful
+ * no-op. Negative positions count from the end and clamp to zero. The length
+ * clamps to the remaining suffix, matching the pinned Haxe Array contract.
+ */
+HXC_API hxc_status hxc_array_ref_splice_discard(
+  hxc_array_ref *array,
+  int32_t position,
+  int32_t length
+);
+
+/**
+ * Copy the normalized removed range into an empty matching Array, then mutate.
+ *
+ * Copy or allocation failure rolls the result back to empty and leaves the
+ * source unchanged. This gives generated Haxe one failure-atomic ownership
+ * boundary for primitive and managed elements of any requested range length.
+ */
+HXC_API hxc_status hxc_array_ref_splice_copy(
+  hxc_array_ref *array,
+  int32_t position,
+  int32_t length,
+  hxc_array_ref *out_removed
+);
+
+/**
+ * Insert one copied element using Haxe's signed position rules.
+ *
+ * Negative positions count from the end and clamp to zero. Positions beyond
+ * the current length append. A failed allocation or element copy leaves every
+ * alias observing the original sequence.
+ */
+HXC_API hxc_status hxc_array_ref_insert_copy(
+  hxc_array_ref *array,
+  int32_t position,
+  const void *element
+);
+
 /** Append one trivial element and return the new Haxe Int length. */
 HXC_API hxc_status hxc_array_ref_push_copy(
   hxc_array_ref *array,
@@ -408,11 +475,26 @@ HXC_API hxc_status hxc_array_ref_push_copy(
   int32_t *out_length
 );
 
-/** Replace one trivial element after a bounds check. */
+/** Resize through Haxe's signed Int boundary using one exact default element. */
+HXC_API hxc_status hxc_array_ref_resize_default(
+  hxc_array_ref *array,
+  int32_t length,
+  const void *default_element
+);
+
+/** Replace one element, or append when the index equals the current length. */
 HXC_API hxc_status hxc_array_ref_set_copy(
   hxc_array_ref *array,
   size_t index,
   const void *element
+);
+
+/** Apply sparse Haxe indexed assignment through one shared Array identity. */
+HXC_API hxc_status hxc_array_ref_set_grow_copy(
+  hxc_array_ref *array,
+  int32_t index,
+  const void *element,
+  const void *default_element
 );
 
 /**

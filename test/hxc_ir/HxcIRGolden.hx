@@ -2,7 +2,14 @@ import haxe.Json;
 import reflaxe.c.ir.HxcIR;
 import reflaxe.c.ir.HxcIRDiagnostic;
 import reflaxe.c.ir.HxcIRDumper;
+import reflaxe.c.ir.HxcIRTraversal.HxcIRTraversalSite;
+import reflaxe.c.ir.HxcIRTraversal.HxcIRTraversalVisitor;
+import reflaxe.c.ir.HxcIRTraversal.HXC_IR_TRAVERSAL_SCHEMA_VERSION;
+import reflaxe.c.ir.HxcIRTraversal.walkHxcIR;
 import reflaxe.c.ir.HxcIRValidator;
+import reflaxe.c.ir.HxcIRValidator.ValidatedHxcIRProgram;
+import reflaxe.c.ir.HxcIRManagedRootPlanner;
+import reflaxe.c.ir.HxcIRManagedRootPaths;
 import reflaxe.c.ir.HxcSourceSpan;
 import reflaxe.c.lowering.CBodyNullCheckCoalescing;
 
@@ -14,6 +21,106 @@ private enum ManagedCarrierLinearMutation {
 	LinearOwnedExit;
 }
 
+/** Check the exact-layout boundary without granting arbitrary pointer casts. */
+private enum CollectorNodeViewMutation {
+	NodeViewValid;
+	NodeViewReverse;
+	NodeViewOtherDeclaration;
+	NodeViewOtherArguments;
+}
+
+/** Select one focused mutation of the mutable-record borrow contract. */
+private enum MutableAggregateBorrowMutation {
+	MutableBorrowValid;
+	MutableBorrowNullableParameter;
+	MutableBorrowImmutableField;
+	MutableBorrowReturnEscape;
+}
+
+/** Count each typed visitor family without taking ownership of recursion. */
+private class HxcIRTraversalSentinel extends HxcIRTraversalVisitor {
+	public var programs(default, null) = 0;
+	public var modules(default, null) = 0;
+	public var declarations(default, null) = 0;
+	public var typeRefs(default, null) = 0;
+	public var functions(default, null) = 0;
+	public var blocks(default, null) = 0;
+	public var instructions(default, null) = 0;
+	public var places(default, null) = 0;
+	public var implementations(default, null) = 0;
+	public var failures(default, null) = 0;
+	public var cleanupSteps(default, null) = 0;
+	public var blockEdges(default, null) = 0;
+	public var cleanupActions(default, null) = 0;
+	public var terminators(default, null) = 0;
+	public var boundsPolicies(default, null) = 0;
+	public var nullPolicies(default, null) = 0;
+	public var tagPolicies(default, null) = 0;
+	public var managedRoots(default, null) = 0;
+	public var managedRootProjections(default, null) = 0;
+
+	public function new() {
+		super();
+	}
+
+	override public function onProgram(program:ValidatedHxcIRProgram):Void
+		programs++;
+
+	override public function onModule(module:HxcIRModule, site:HxcIRTraversalSite):Void
+		modules++;
+
+	override public function onTypeDeclaration(declaration:HxcIRTypeDeclaration, site:HxcIRTraversalSite):Void
+		declarations++;
+
+	override public function onTypeRef(type:HxcIRTypeRef, site:HxcIRTraversalSite):Void
+		typeRefs++;
+
+	override public function onFunction(fn:HxcIRFunction, site:HxcIRTraversalSite):Void
+		functions++;
+
+	override public function onBlock(block:HxcIRBlock, site:HxcIRTraversalSite):Void
+		blocks++;
+
+	override public function onInstruction(instruction:HxcIRInstruction, site:HxcIRTraversalSite):Void
+		instructions++;
+
+	override public function onPlace(place:HxcIRPlace, site:HxcIRTraversalSite):Void
+		places++;
+
+	override public function onImplementation(implementation:HxcIRImplementation, site:HxcIRTraversalSite):Void
+		implementations++;
+
+	override public function onFailureEdge(edge:HxcIRFailureEdge, site:HxcIRTraversalSite):Void
+		failures++;
+
+	override public function onCleanupStep(step:HxcIRCleanupStep, site:HxcIRTraversalSite):Void
+		cleanupSteps++;
+
+	override public function onBlockEdge(edge:HxcIRBlockEdge, site:HxcIRTraversalSite):Void
+		blockEdges++;
+
+	override public function onCleanupAction(action:HxcIRCleanupAction, site:HxcIRTraversalSite):Void
+		cleanupActions++;
+
+	override public function onTerminator(terminator:HxcIRTerminator, site:HxcIRTraversalSite):Void
+		terminators++;
+
+	override public function onBoundsPolicy(policy:HxcIRBoundsPolicy, site:HxcIRTraversalSite):Void
+		boundsPolicies++;
+
+	override public function onNullCheckPolicy(policy:HxcIRNullCheckPolicy, site:HxcIRTraversalSite):Void
+		nullPolicies++;
+
+	override public function onTagCheckPolicy(policy:HxcIRTagCheckPolicy, site:HxcIRTraversalSite):Void
+		tagPolicies++;
+
+	override public function onManagedRoot(root:HxcIRManagedRoot, site:HxcIRTraversalSite):Void
+		managedRoots++;
+
+	override public function onManagedRootProjection(projection:HxcIRManagedRootProjection, site:HxcIRTraversalSite):Void
+		managedRootProjections++;
+}
+
 /** Builds deterministic semantic IR fixtures without invoking C emission. */
 class HxcIRGolden {
 	static inline final REPORT_PREFIX = "HXC_IR_REPORT=";
@@ -23,24 +130,114 @@ class HxcIRGolden {
 	static inline final COVERAGE_SOURCE = "test/hxc_ir/fixtures/IRCoverage.hx";
 
 	static function main():Void {
+		#if hxc_owned_child_cleanup_flow_only
+		final cleanupValidator = new HxcIRValidator();
+		verifyOwnedChildCleanup(cleanupValidator);
+		verifyOwnedChildCleanupFlow(cleanupValidator);
+		Sys.println("owned-child cleanup-flow contracts passed");
+		return;
+		#end
+		#if hxc_owned_child_proof_only
+		verifyOwnedChildProofs(new HxcIRValidator());
+		Sys.println("owned-child proof contracts passed");
+		return;
+		#end
 		HxcIRControlFlowGolden.run();
+		BodyControlFlowOrderProbe.run();
 		final validator = new HxcIRValidator();
+		checkCollectorNodeViews(validator);
 		final dumper = new HxcIRDumper();
+		if (HXC_IR_TRAVERSAL_SCHEMA_VERSION != HxcIRValidator.SCHEMA_VERSION)
+			throw "HxcIR traversal schema sentinel was not reviewed with the validator schema";
 		final semantic = semanticProgram(false);
-		validator.requireValid(semantic, PROFILE);
-		final semanticDump = dumper.dump(semantic);
-		verifyDumpSnapshot(dumper, semantic, semanticDump);
-		final reorderedDump = dumper.dump(semanticProgram(true));
+		final validatedSemantic = validator.requireValid(semantic, PROFILE);
+		requireValidatedFunctionOwnershipBoundary(validatedSemantic, semantic);
+		final semanticDump = dumper.dump(validatedSemantic);
+		verifyDumpSnapshot(dumper, validatedSemantic, semanticDump);
+		final reorderedDump = dumper.dump(validator.requireValid(semanticProgram(true), PROFILE));
 		if (semanticDump != reorderedDump) {
 			throw "HxcIR dump changed when unordered program collections were reversed";
 		}
 
 		final coverage = coverageProgram();
-		validator.requireValid(coverage, PROFILE);
+		final validatedCoverage = validator.requireValid(coverage, PROFILE);
+		final coverageBeforeTraversal = dumper.dump(validatedCoverage);
+		verifyTraversalSentinel([
+			validatedSemantic,
+			validatedCoverage,
+			validator.requireValid(managedRootProgram(false), PROFILE),
+			validator.requireValid(dynamicContractProgram(), PROFILE)
+		]);
+		if (dumper.dump(validatedSemantic) != semanticDump || dumper.dump(validatedCoverage) != coverageBeforeTraversal)
+			throw "HxcIR traversal mutated its validated read-only input";
+		requireInvalidMarker(dynamicContractWrongOperationProgram(), "requires a box operation", "mismatched Dynamic operation");
+		requireInvalidMarker(dynamicContractMissingRootProgram(), "missing exact root path `dynamic-payload`", "unrooted Dynamic payload");
+		requireInvalidMarker(dynamicContractWrongFailureProgram(), "requires a result-error edge", "Dynamic failure kind");
+		requireInvalidMarker(dynamicContractManagedGlobalProgram(), "require a general global-root plan", "managed Dynamic global");
+		requireInvalidMarker(genericDynamicConversionProgram(), "require dedicated plan-owned instructions", "generic Dynamic conversion");
+		requireInvalidMarker(containedExceptionWithoutRegionProgram(), "requires an explicit region or unwind terminator",
+			"contained exception without an owner");
+		requireInvalidMarker(unknownExceptionRegionProgram(), "unknown region", "unknown exception frame operation");
+		validator.requireValid(integralDivisionProgram("6"), PROFILE);
+		validator.requireValid(integralDivisionProgram("2147483647"), PROFILE);
+		for (sample in [
+			{text: "-128", width: 8, signed: true},
+			{text: "127", width: 8, signed: true},
+			{text: "255", width: 8, signed: false},
+			{text: "-32768", width: 16, signed: true},
+			{text: "32767", width: 16, signed: true},
+			{text: "65535", width: 16, signed: false},
+			{text: "-2147483648", width: 32, signed: true},
+			{text: "2147483647", width: 32, signed: true},
+			{text: "4294967295", width: 32, signed: false},
+			{text: "-9223372036854775808", width: 64, signed: true},
+			{text: "9223372036854775807", width: 64, signed: true},
+			{text: "18446744073709551615", width: 64, signed: false},
+		])
+			validator.requireValid(fixedWidthConstantProgram(sample.text, sample.width, sample.signed), PROFILE);
+		for (sample in [
+			{text: "-129", width: 8, signed: true},
+			{text: "128", width: 8, signed: true},
+			{text: "256", width: 8, signed: false},
+			{text: "-32769", width: 16, signed: true},
+			{text: "32768", width: 16, signed: true},
+			{text: "65536", width: 16, signed: false},
+			{text: "-2147483649", width: 32, signed: true},
+			{text: "2147483648", width: 32, signed: true},
+			{text: "4294967296", width: 32, signed: false},
+			{text: "-9223372036854775809", width: 64, signed: true},
+			{text: "9223372036854775808", width: 64, signed: true},
+			{text: "18446744073709551616", width: 64, signed: false},
+			{text: "-1", width: 32, signed: false},
+			{text: "9999999999999999999999999999999999999999", width: 64, signed: false},
+		])
+			requireInvalidMarker(fixedWidthConstantProgram(sample.text, sample.width, sample.signed),
+				'integer constant `${sample.text}` is outside the ${sample.signed ? "signed" : "unsigned"} ${sample.width}-bit range',
+				"fixed-width integer constant range");
+		requireInvalidMarker(fixedWidthGlobalConstantProgram("2147483648"), "integer constant `2147483648` is outside the signed 32-bit range",
+			"fixed-width global integer constant range");
+		requireInvalidMarker(fixedWidthSwitchConstantProgram("2147483648"), "integer constant `2147483648` is outside the signed 32-bit range",
+			"fixed-width switch integer constant range");
+		requireInvalidMarker(integralDivisionProgram("0"), "requires two Int operands, a direct positive constant divisor", "zero integral division proof");
+		requireInvalidMarker(integralDivisionProgram("-1"), "requires two Int operands, a direct positive constant divisor", "forged integral division proof");
+		requireInvalidMarker(integralDivisionProgram("4294967297"), "integer constant `4294967297` is outside the signed 32-bit range",
+			"out-of-range integral division proof");
+		requireInvalidMarker(integralDivisionProgram("6", "value.updated"), "requires two Int operands, a direct positive constant divisor",
+			"indirect integral division proof");
+		requireInvalidMarker(integralDivisionProgram("6", null, IRIRuntime("runtime-base")), "requires two Int operands, a direct positive constant divisor",
+			"runtime integral division proof");
+		requireInvalidMarker(integralDivisionProgram("6", null, null, IRTInt(64, true)), "requires two Int operands, a direct positive constant divisor",
+			"wrong-result integral division proof");
 		validator.requireValid(nativeConstantAggregateProgram(), PROFILE);
 		validator.requireValid(borrowedClassAliasProgram(), PROFILE);
 		validator.requireValid(borrowedClassOwnedFieldReleaseProgram(), PROFILE);
 		validator.requireValid(borrowedInterfaceAliasProgram(), PROFILE);
+		validator.requireValid(mutableAggregateBorrowProgram(MutableBorrowValid), PROFILE);
+		requireInvalidMarker(mutableAggregateBorrowProgram(MutableBorrowNullableParameter), "must be a non-null direct-record pointer",
+			"nullable mutable-record borrow");
+		requireInvalidMarker(mutableAggregateBorrowProgram(MutableBorrowImmutableField),
+			"store cannot change immutable field `x` through a mutable-record borrow", "immutable field below mutable-record borrow");
+		requireInvalidMarker(mutableAggregateBorrowProgram(MutableBorrowReturnEscape), "escapes through a return", "returned mutable-record borrow");
 		validator.requireValid(borrowedSpanReturnProgram(false), PROFILE);
 		validator.requireValid(borrowedSpanReturnProgram(false, true), PROFILE);
 		final unrootedManagedSpanDiagnostics = invalidDiagnostics(unrootedManagedBorrowedSpanReturnProgram());
@@ -52,6 +249,14 @@ class HxcIRGolden {
 			throw "collector-managed receiver span without its exact root did not fail closed";
 		validator.requireValid(mutableCStringBufferProgram(1, false, false), PROFILE);
 		validator.requireValid(callScopedCStringProgram(), PROFILE);
+		final linearCallScopedValidator = new HxcIRValidator();
+		linearCallScopedValidator.requireValid(callScopedCStringProgram(true, false, 64), PROFILE);
+		final linearCallScopedWork = linearCallScopedValidator.workReport();
+		if (linearCallScopedWork.callScopedFunctions != 1
+			|| linearCallScopedWork.callScopedValues != 64
+			|| linearCallScopedWork.callScopedInstructionVisits != 128
+			|| linearCallScopedWork.callScopedTerminatorVisits != 1)
+			throw 'call-scoped C-string validation repeated function work: ${Json.stringify(linearCallScopedWork)}';
 		validator.requireValid(managedRootProgram(false), PROFILE);
 		validator.requireValid(managedClassInheritanceProgram(false), PROFILE);
 		validator.requireValid(managedCarrierLoopProgram(), PROFILE);
@@ -62,7 +267,9 @@ class HxcIRGolden {
 		validator.requireValid(managedAggregateCarrierValidationProgram(false), PROFILE);
 		validator.requireValid(interfaceUpcastProgram(null), PROFILE);
 		verifyReceiverReassignmentCoalescing(validator);
-		final coverageDump = dumper.dump(coverage);
+		verifyOwnedChildProofs(validator);
+		verifyOwnedChildCleanupFlow(validator);
+		final coverageDump = coverageBeforeTraversal;
 
 		Sys.println(REPORT_PREFIX + Json.stringify({
 			semantic: semanticDump,
@@ -156,6 +363,7 @@ class HxcIRGolden {
 				invalidArrayResizeNullProof: invalidDiagnostics(invalidArrayResizeNullProofProgram()),
 				defaultInitializationType: invalidDiagnostics(defaultInitializationTypeProgram()),
 				uninitializedCarrierRead: invalidDiagnostics(uninitializedCarrierReadProgram()),
+				uninitializedCarrierLoopReentryRead: invalidDiagnostics(uninitializedCarrierLoopReentryReadProgram()),
 				uninitializedCarrierReadBeforeBranch: invalidDiagnostics(uninitializedCarrierReadBeforeBranchProgram()),
 				uninitializedSwitchCarrierRead: invalidDiagnostics(uninitializedSwitchCarrierReadProgram()),
 				managedUninitializedCarrier: invalidDiagnostics(managedUninitializedCarrierProgram()),
@@ -182,6 +390,33 @@ class HxcIRGolden {
 		}));
 	}
 
+	/** Prove the coverage corpus reaches every public structural visitor family. */
+	static function verifyTraversalSentinel(programs:Array<ValidatedHxcIRProgram>):Void {
+		final sentinel = new HxcIRTraversalSentinel();
+		for (program in programs)
+			walkHxcIR(program, sentinel);
+		if (sentinel.programs != programs.length
+			|| sentinel.modules == 0
+			|| sentinel.declarations == 0
+			|| sentinel.typeRefs == 0
+			|| sentinel.functions == 0
+			|| sentinel.blocks == 0
+			|| sentinel.instructions == 0
+			|| sentinel.places == 0
+			|| sentinel.implementations == 0
+			|| sentinel.failures == 0
+			|| sentinel.cleanupSteps == 0
+			|| sentinel.blockEdges == 0
+			|| sentinel.cleanupActions == 0
+			|| sentinel.terminators == 0
+			|| sentinel.boundsPolicies == 0
+			|| sentinel.nullPolicies == 0
+			|| sentinel.tagPolicies == 0
+			|| sentinel.managedRoots == 0
+			|| sentinel.managedRootProjections == 0)
+			throw 'HxcIR traversal sentinel lost one structural visitor family: cleanupSteps=${sentinel.cleanupSteps}, blockEdges=${sentinel.blockEdges}, managedRootProjections=${sentinel.managedRootProjections}';
+	}
+
 	/**
 		Prove one exhaustive rendering can serve both reports and function keys.
 
@@ -190,7 +425,7 @@ class HxcIRGolden {
 		child. This check also proves key-only mode does not retain the full
 		program string.
 	**/
-	static function verifyDumpSnapshot(dumper:HxcIRDumper, program:HxcIRProgram, expectedComplete:String):Void {
+	static function verifyDumpSnapshot(dumper:HxcIRDumper, program:reflaxe.c.ir.HxcIRValidator.ValidatedHxcIRProgram, expectedComplete:String):Void {
 		final complete = dumper.dumpSnapshot(program, true);
 		if (complete.complete != expectedComplete)
 			throw "complete HxcIR snapshot differed from the canonical dump";
@@ -310,7 +545,12 @@ class HxcIRGolden {
 			mainModule.functions[0].blocks.reverse();
 			modules.reverse();
 		}
-		return {schemaVersion: HxcIRValidator.SCHEMA_VERSION, dispatch: emptyDispatch(), modules: modules};
+		return {
+			schemaVersion: HxcIRValidator.SCHEMA_VERSION,
+			dynamicPlan: emptyDynamic(),
+			dispatch: emptyDispatch(),
+			modules: modules
+		};
 	}
 
 	static function sideEffectFunction():HxcIRFunction {
@@ -388,6 +628,70 @@ class HxcIRGolden {
 			],
 			source: span(MAIN_SOURCE, 12, 24)
 		};
+	}
+
+	/** Build one valid or forged direct integral-division proof. */
+	static function integralDivisionProgram(divisor:String, ?rightValueId:String, ?implementation:HxcIRImplementation,
+			?quotientType:HxcIRTypeRef):HxcIRProgram {
+		final program = semanticProgram(false);
+		final entry = program.modules[0].functions[0].blocks[0];
+		final selectedRight = rightValueId == null ? "value.divisor" : rightValueId;
+		if (rightValueId == null)
+			entry.instructions.push(instruction("i08.divisor", result(selectedRight, IRTInt(32, true)), IRIOConstant(IRCInt(divisor)), MAIN_SOURCE, 19));
+		entry.instructions.push(instruction("i09.integral-division", result("value.quotient", quotientType == null ? IRTInt(32, true) : quotientType),
+			IRIOBinary("haxe.i32.divide.positive-constant", "value.updated", selectedRight, implementation == null ? IRIStatic : implementation), MAIN_SOURCE,
+			19));
+		return program;
+	}
+
+	/** Build one fixed-width constant at its independent validation boundary. */
+	static function fixedWidthConstantProgram(text:String, width:Int, signed:Bool):HxcIRProgram {
+		final program = semanticProgram(false);
+		final entry = program.modules[0].functions[0].blocks[0];
+		entry.instructions.push(instruction("i08.fixed-width", result("value.fixed-width", IRTInt(width, signed)), IRIOConstant(IRCInt(text)), MAIN_SOURCE,
+			19));
+		return program;
+	}
+
+	/** Put one forged signed-32 literal at the global-initialization boundary. */
+	static function fixedWidthGlobalConstantProgram(text:String):HxcIRProgram {
+		final program = semanticProgram(false);
+		program.modules[0].globals[0] = {
+			id: "global.calls",
+			type: IRTInt(32, true),
+			mutable: true,
+			initialization: IRGIConstant(IRCInt(text)),
+			source: span(MAIN_SOURCE, 10)
+		};
+		return program;
+	}
+
+	/** Put one forged signed-32 literal at the switch-case boundary. */
+	static function fixedWidthSwitchConstantProgram(text:String):HxcIRProgram {
+		final file = "test/negative/FixedWidthSwitchConstant.hx";
+		final loopEdge:HxcIRBlockEdge = {targetBlockId: "entry", arguments: [], cleanup: []};
+		return minimalProgram("invalid.FixedWidthSwitchConstant", [
+			instruction("switch.subject", result("value.subject", IRTInt(32, true)), IRIOConstant(IRCInt("0")), file, 2)
+		], terminator(IRTSwitch("value.subject", [
+			{
+				value: IRCInt(text),
+				edge: loopEdge
+			}
+			], loopEdge), file, 3), [], [], file);
+	}
+
+	/** Prove that a matching function ID from another raw graph cannot reuse a proof. */
+	static function requireValidatedFunctionOwnershipBoundary(validated:ValidatedHxcIRProgram, program:HxcIRProgram):Void {
+		validated.requireOwnedFunction(program.modules[0].functions[0]);
+		final foreign = semanticProgram(false).modules[0].functions[0];
+		var rejected = false;
+		try {
+			validated.requireOwnedFunction(foreign);
+		} catch (error:String) {
+			rejected = error.indexOf("does not belong to this program") != -1;
+		}
+		if (!rejected)
+			throw "validated HxcIR accepted a foreign raw function with a matching ID";
 	}
 
 	static function fullCleanupPath():Array<HxcIRCleanupStep> {
@@ -558,6 +862,24 @@ class HxcIRGolden {
 		];
 		return {
 			schemaVersion: HxcIRValidator.SCHEMA_VERSION,
+			dynamicPlan: {
+				types: [
+					{
+						id: "dynamic.type.int",
+						typeId: 1,
+						sourceType: IRTInt(32, true),
+						category: IRDCInt,
+						storage: IRDSInlineInt32,
+						source: span(COVERAGE_SOURCE, 19)
+					}
+				],
+				members: [],
+				callShapes: [],
+				operations: [
+					{id: "dynamic.operation.box-int", kind: IRDOKBox("dynamic.type.int"), source: span(COVERAGE_SOURCE, 19)},
+					{id: "dynamic.operation.unbox-int", kind: IRDOKUnbox("dynamic.type.int"), source: span(COVERAGE_SOURCE, 19)}
+				]
+			},
 			dispatch: {
 				layouts: [
 					{
@@ -635,7 +957,269 @@ class HxcIRGolden {
 	}
 
 	/**
-		Exercise the schema-23 exact-root contract without involving C emission.
+		Exercise every schema-27 Dynamic operation without selecting a C carrier.
+
+		The object and function adapters use typed managed wrappers, so every
+		Dynamic value has one explicit `dynamic-payload` root. This proves that the
+		semantic plan, checked failures, value order, and collector projection agree
+		before runtime representation or C spelling exists.
+	**/
+	static function dynamicContractProgram():HxcIRProgram {
+		final source = span(COVERAGE_SOURCE, 76);
+		final objectType:HxcIRTypeDeclaration = {
+			id: "type.dynamic-object",
+			displayName: "coverage.DynamicObject",
+			kind: IRTKAggregate([
+				{
+					name: "value",
+					type: IRTInt(32, true),
+					mutable: true,
+					source: source
+				}
+			]),
+			source: source
+		};
+		final objectInstance:HxcIRTypeInstance = {
+			id: "instance.dynamic-object",
+			declarationId: objectType.id,
+			arguments: [],
+			representation: IRRDirect,
+			source: source
+		};
+		final failure:HxcIRFailureEdge = {
+			kind: IRFResultError,
+			target: IRFTBlock("result-error"),
+			arguments: [],
+			cleanup: []
+		};
+		final instructions:Array<HxcIRInstruction> = [
+			instruction("dynamic.01.box", result("value.boxed", IRTDynamic), IRIODynamic(IRDBox("value.int", "dynamic.operation.box-int")), COVERAGE_SOURCE,
+				76),
+			instruction("dynamic.02.unbox", result("value.unboxed", IRTInt(32, true)),
+				IRIODynamic(IRDUnbox("value.boxed", "dynamic.operation.unbox-int", failure)), COVERAGE_SOURCE, 76),
+			instruction("dynamic.03.get", result("value.got", IRTDynamic), IRIODynamic(IRDGet("value.receiver", "dynamic.operation.get-field", failure)),
+				COVERAGE_SOURCE, 76),
+			instruction("dynamic.04.set", result("value.set", IRTDynamic),
+				IRIODynamic(IRDSet("value.receiver", "value.member", "dynamic.operation.set-field", failure)), COVERAGE_SOURCE, 76),
+			instruction("dynamic.05.call", result("value.called", IRTDynamic),
+				IRIODynamic(IRDCall("value.callable", ["value.argument"], "dynamic.operation.call-function", failure)), COVERAGE_SOURCE, 76),
+			instruction("dynamic.06.invoke", result("value.invoked", IRTDynamic),
+				IRIODynamic(IRDInvoke("value.receiver", ["value.argument"], "dynamic.operation.invoke-method", failure)), COVERAGE_SOURCE, 76),
+			instruction("dynamic.07.equal", result("value.equal", IRTBool),
+				IRIODynamic(IRDEqual("value.boxed", "value.argument", "dynamic.operation.equal-int")), COVERAGE_SOURCE, 76)
+		];
+		final rootedValues = [
+			"value.receiver",
+			"value.member",
+			"value.callable",
+			"value.argument",
+			"value.boxed",
+			"value.got",
+			"value.set",
+			"value.called",
+			"value.invoked"
+		];
+		final roots:Array<HxcIRManagedRoot> = [];
+		for (valueId in rootedValues)
+			roots.push({
+				id: 'root.$valueId',
+				valueId: valueId,
+				projections: [IRMRPDynamicPayload],
+				source: source
+			});
+		final fn:HxcIRFunction = {
+			id: "fn.dynamic-contract",
+			displayName: "coverage.dynamicContract",
+			parameters: [
+				parameter("value.int", IRTInt(32, true), COVERAGE_SOURCE, 76),
+				parameter("value.receiver", IRTDynamic, COVERAGE_SOURCE, 76),
+				parameter("value.member", IRTDynamic, COVERAGE_SOURCE, 76),
+				parameter("value.callable", IRTDynamic, COVERAGE_SOURCE, 76),
+				parameter("value.argument", IRTDynamic, COVERAGE_SOURCE, 76)
+			],
+			borrowedClassParameterIds: [],
+			borrowedClassLocalIds: [],
+			managedRoots: roots,
+			locals: [],
+			returnType: IRTVoid,
+			failureConvention: IRFCInfallible,
+			entryBlockId: "entry",
+			blocks: [
+				{
+					id: "entry",
+					parameters: [],
+					instructions: instructions,
+					terminator: terminator(IRTReturn(null, []), COVERAGE_SOURCE, 76),
+					source: source
+				},
+				{
+					id: "result-error",
+					parameters: [],
+					instructions: [],
+					terminator: terminator(IRTReturn(null, []), COVERAGE_SOURCE, 76),
+					source: source
+				}
+			],
+			cleanupRegions: [],
+			source: source
+		};
+		return {
+			schemaVersion: HxcIRValidator.SCHEMA_VERSION,
+			dynamicPlan: {
+				types: [
+					{
+						id: "dynamic.type.function",
+						typeId: 3,
+						sourceType: IRTFunction([IRTInt(32, true)], IRTInt(32, true)),
+						category: IRDCFunction,
+						storage: IRDSManagedWrapper,
+						source: source
+					},
+					{
+						id: "dynamic.type.int",
+						typeId: 1,
+						sourceType: IRTInt(32, true),
+						category: IRDCInt,
+						storage: IRDSInlineInt32,
+						source: source
+					},
+					{
+						id: "dynamic.type.null",
+						typeId: 0,
+						category: IRDCNull,
+						storage: IRDSInlineNull,
+						source: source
+					},
+					{
+						id: "dynamic.type.object",
+						typeId: 2,
+						sourceType: IRTInstance(objectInstance.id),
+						category: IRDCObject,
+						storage: IRDSManagedWrapper,
+						source: source
+					}
+				],
+				members: [
+					{
+						id: "dynamic.member.field",
+						ownerTypeId: "dynamic.type.object",
+						token: 1,
+						sourceName: "value",
+						kind: IRDMField("dynamic.type.int", true),
+						source: source
+					},
+					{
+						id: "dynamic.member.method",
+						ownerTypeId: "dynamic.type.object",
+						token: 2,
+						sourceName: "measure",
+						kind: IRDMMethod(["dynamic.shape.int-to-int"]),
+						source: source
+					}
+				],
+				callShapes: [
+					{
+						id: "dynamic.shape.int-to-int",
+						parameterTypeIds: ["dynamic.type.int"],
+						resultTypeId: "dynamic.type.int",
+						source: source
+					}
+				],
+				operations: [
+					{id: "dynamic.operation.box-int", kind: IRDOKBox("dynamic.type.int"), source: source},
+					{
+						id: "dynamic.operation.call-function",
+						kind: IRDOKCall("dynamic.type.function", "dynamic.shape.int-to-int"),
+						source: source
+					},
+					{id: "dynamic.operation.equal-int", kind: IRDOKEqual("dynamic.type.int", "dynamic.type.int"), source: source},
+					{id: "dynamic.operation.get-field", kind: IRDOKGet("dynamic.member.field"), source: source},
+					{
+						id: "dynamic.operation.invoke-method",
+						kind: IRDOKInvoke("dynamic.member.method", "dynamic.shape.int-to-int"),
+						source: source
+					},
+					{id: "dynamic.operation.set-field", kind: IRDOKSet("dynamic.member.field"), source: source},
+					{id: "dynamic.operation.unbox-int", kind: IRDOKUnbox("dynamic.type.int"), source: source}
+				]
+			},
+			dispatch: emptyDispatch(),
+			modules: [
+				{
+					id: "coverage.DynamicContract",
+					types: [objectType],
+					typeInstances: [objectInstance],
+					globals: [],
+					functions: [fn],
+					source: source
+				}
+			]
+		};
+	}
+
+	static function dynamicContractWrongOperationProgram():HxcIRProgram {
+		final program = dynamicContractProgram();
+		final instructions = program.modules[0].functions[0].blocks[0].instructions;
+		final original = instructions[0];
+		instructions[0] = {
+			id: original.id,
+			result: original.result,
+			kind: IRIODynamic(IRDBox("value.int", "dynamic.operation.unbox-int")),
+			source: original.source
+		};
+		return program;
+	}
+
+	static function dynamicContractMissingRootProgram():HxcIRProgram {
+		final program = dynamicContractProgram();
+		final roots = program.modules[0].functions[0].managedRoots;
+		if (roots == null)
+			throw "Dynamic contract fixture lost its roots";
+		roots.pop();
+		return program;
+	}
+
+	static function dynamicContractWrongFailureProgram():HxcIRProgram {
+		final program = dynamicContractProgram();
+		final wrongFailure:HxcIRFailureEdge = {
+			kind: IRFNativeStatus,
+			target: IRFTBlock("result-error"),
+			arguments: [],
+			cleanup: []
+		};
+		final instructions = program.modules[0].functions[0].blocks[0].instructions;
+		final original = instructions[1];
+		instructions[1] = {
+			id: original.id,
+			result: original.result,
+			kind: IRIODynamic(IRDUnbox("value.boxed", "dynamic.operation.unbox-int", wrongFailure)),
+			source: original.source
+		};
+		return program;
+	}
+
+	static function dynamicContractManagedGlobalProgram():HxcIRProgram {
+		final program = dynamicContractProgram();
+		program.modules[0].globals.push({
+			id: "global.dynamic",
+			type: IRTDynamic,
+			mutable: true,
+			initialization: IRGIUninitialized,
+			source: span(COVERAGE_SOURCE, 76)
+		});
+		return program;
+	}
+
+	static function genericDynamicConversionProgram():HxcIRProgram {
+		final file = "test/negative/GenericDynamicConversion.hx";
+		return minimalProgram("invalid.GenericDynamicConversion", [
+			instruction("value.one", result("value.one", IRTInt(32, true)), IRIOConstant(IRCInt("1")), file, 2),
+			instruction("bad.box", result("value.boxed", IRTDynamic), IRIOConvert("value.one", IRCBox, IRTDynamic, IRIRuntime("dynamic"), null), file, 3)
+		], terminator(IRTReturn(null, []), file, 4), [], [], file);
+	}
+
+	/**
+		Exercise the schema-27 exact-root contract without involving C emission.
 
 		The negative variant deliberately roots an Int. A collector cannot learn
 		anything from that address-shaped mistake, so validation must reject it
@@ -689,6 +1273,7 @@ class HxcIRGolden {
 		};
 		return {
 			schemaVersion: HxcIRValidator.SCHEMA_VERSION,
+			dynamicPlan: emptyDynamic(),
 			dispatch: emptyDispatch(),
 			modules: [
 				{
@@ -885,10 +1470,10 @@ class HxcIRGolden {
 							IRIOConvert("value.one", IRCNullableInject, IRTNullable(IRTInt(32, true), IRNTagged), IRIStatic, null), COVERAGE_SOURCE, 19),
 						instruction("c01.nullable-unwrap", result("value.unwrapped-one", IRTInt(32, true)),
 							IRIOConvert("value.nullable-one", IRCNullableUnwrap, IRTInt(32, true), IRIStatic, resultFailure), COVERAGE_SOURCE, 19),
-						instruction("c01.box", result("value.boxed", IRTDynamic), IRIOConvert("value.one", IRCBox, IRTDynamic, IRIRuntime("dynamic"), null),
+						instruction("c01.box", result("value.boxed", IRTDynamic), IRIODynamic(IRDBox("value.one", "dynamic.operation.box-int")),
 							COVERAGE_SOURCE, 19),
 						instruction("c01.unbox", result("value.unboxed", IRTInt(32, true)),
-							IRIOConvert("value.boxed", IRCUnbox, IRTInt(32, true), IRIRuntime("dynamic"), null), COVERAGE_SOURCE, 19),
+							IRIODynamic(IRDUnbox("value.boxed", "dynamic.operation.unbox-int", resultFailure)), COVERAGE_SOURCE, 19),
 						instruction("c02.function-reference", result("value.direct-callable", IRTFunction([], IRTVoid)),
 							IRIOFunctionReference("fn.coverage.target"), COVERAGE_SOURCE, 20),
 						instruction("c02.function-reference-call", null, IRIOCall(call(IRCDClosure("value.direct-callable"), [], IRTVoid)), COVERAGE_SOURCE,
@@ -1098,6 +1683,7 @@ class HxcIRGolden {
 		};
 		return {
 			schemaVersion: HxcIRValidator.SCHEMA_VERSION,
+			dynamicPlan: emptyDynamic(),
 			dispatch: emptyDispatch(),
 			modules: [
 				{
@@ -1165,6 +1751,7 @@ class HxcIRGolden {
 		};
 		return {
 			schemaVersion: HxcIRValidator.SCHEMA_VERSION,
+			dynamicPlan: emptyDynamic(),
 			dispatch: emptyDispatch(),
 			modules: [
 				{
@@ -1267,6 +1854,81 @@ class HxcIRGolden {
 		return minimalProgram("invalid.ConstantTypeMismatch", [
 			instruction("bad.constant", result("value.bad", IRTInt(32, true)), IRIOConstant(IRCBool(true)), file, 2)
 		], terminator(IRTReturn(null, []), file, 3), [], [], file);
+	}
+
+	/** An exact node view preserves its source root and cannot forge a GC owner. */
+	static function checkCollectorNodeViews(validator:HxcIRValidator):Void {
+		final program = collectorNodeViewProgram(NodeViewValid);
+		validator.requireValid(program, PROFILE);
+		final paths = new HxcIRManagedRootPaths(program).collect(IRTInstance("instance.node-value"));
+		if (paths.length != 1 || HxcIRManagedRootPaths.key(paths[0]) != "tag(instance.node-value,Link,0)")
+			throw "recursive node root planning lost its finite exact child pointer";
+		for (mutation in [NodeViewReverse, NodeViewOtherDeclaration, NodeViewOtherArguments])
+			requireInvalidMarker(collectorNodeViewProgram(mutation), "pointer conversion may only preserve its pointee type",
+				"collector node view must preserve exact layout and ownership direction");
+	}
+
+	/** Build a pointer view with one recursive tag and independently chosen identities. */
+	static function collectorNodeViewProgram(mutation:CollectorNodeViewMutation):HxcIRProgram {
+		final file = "test/hxc_ir/fixtures/CollectorNodeView.hx";
+		final source = span(file, 1, 8);
+		final nodeType = IRTPointer(IRTInstance("instance.node-storage"), true);
+		final valueType = IRTPointer(IRTInstance("instance.node-value"), true);
+		final fromType = mutation == NodeViewReverse ? valueType : nodeType;
+		final toType = mutation == NodeViewReverse ? nodeType : valueType;
+		final program = minimalProgram("coverage.CollectorNodeView", [
+			instruction("view", result("value.view", toType), IRIOConvert("parameter.node", IRCPointer, toType, IRIStatic, null), file, 2)
+		], terminator(IRTReturn(null, []), file, 3), [], [], file);
+		final module = program.modules[0];
+		module.types.push({
+			id: "type.node-value",
+			displayName: "NodeValue",
+			kind: IRTKTaggedUnion([
+				{
+					name: "End",
+					tagValue: 0,
+					payload: [],
+					source: source
+				},
+				{
+					name: "Link",
+					tagValue: 1,
+					payload: [{name: "child", type: nodeType, source: source}],
+					source: source
+				}
+			]),
+			source: source
+		});
+		module.types.push({
+			id: "type.other-value",
+			displayName: "OtherValue",
+			kind: IRTKTaggedUnion([
+				{
+					name: "End",
+					tagValue: 0,
+					payload: [],
+					source: source
+				}
+			]),
+			source: source
+		});
+		module.typeInstances.push({
+			id: "instance.node-storage",
+			declarationId: "type.node-value",
+			arguments: [IRTInt(32, true)],
+			representation: IRRManaged("gc"),
+			source: source
+		});
+		module.typeInstances.push({
+			id: "instance.node-value",
+			declarationId: mutation == NodeViewOtherDeclaration ? "type.other-value" : "type.node-value",
+			arguments: [mutation == NodeViewOtherArguments ? IRTBool : IRTInt(32, true)],
+			representation: IRRTagged,
+			source: source
+		});
+		module.functions[0].parameters.push(parameter("parameter.node", fromType, file, 1));
+		new HxcIRManagedRootPlanner().run(program);
+		return program;
 	}
 
 	/**
@@ -1702,6 +2364,909 @@ class HxcIRGolden {
 			throw 'receiver reassignment retained $checks null checks; expected one for each immutable load';
 	}
 
+	/** Keep the nullable owner guard while proving a staged embedded-child address. */
+	static function ownedChildProofProgram():HxcIRProgram {
+		final file = "test/hxc_ir/fixtures/OwnedChildProof.hx";
+		final child = IRTPointer(IRTInstance("instance.class.root"), true);
+		final program = classProgram(file, [
+			instruction("parent.check", null, IRIONullCheck("parent", IRNCPCheckedAbort("portable", "debug")), file, 2),
+			instruction("child.borrow", result("child.address", IRTPointer(IRTInstance("instance.class.root"), false)),
+				IRIOBorrowClassField(IRPField(IRPDereference("parent"), "child")), file, 3),
+			instruction("child.inject", result("child.nullable", child), IRIOConvert("child.address", IRCNullableInject, child, IRIStatic, null), file, 3),
+			instruction("child.initialize", null, IRIOInitialize(IRPLocal("selected"), "child.nullable", IRISUninitialized, IRISInitialized), file, 3),
+			instruction("child.load", result("child.loaded", child), IRIOLoad(IRPLocal("selected")), file, 4),
+			instruction("child.check", null, IRIONullCheck("child.loaded", IRNCPCheckedAbort("portable", "debug")), file, 4),
+			instruction("child.field", result("answer", IRTInt(32, true)), IRIOLoad(IRPField(IRPDereference("child.loaded"), "value")), file, 4)
+		], "valid.OwnedChildProof");
+		program.modules[0].types.push({
+			id: "type.parent",
+			displayName: "Parent",
+			kind: IRTKClass({
+				baseInstanceId: null,
+				fields: [
+					{
+						name: "child",
+						type: IRTInstance("instance.class.root"),
+						mutable: false,
+						source: span(file, 1)
+					}
+				],
+				header: IRCHNone
+			}),
+			source: span(file, 1)
+		});
+		program.modules[0].typeInstances.push({
+			id: "instance.parent",
+			declarationId: "type.parent",
+			arguments: [],
+			representation: IRRDirect,
+			source: span(file, 1)
+		});
+		final fn = program.modules[0].functions[0];
+		fn.parameters.push(parameter("parent", IRTPointer(IRTInstance("instance.parent"), true), file, 1));
+		fn.locals.push(local("selected", child, IRLSAutomatic, IRISUninitialized, file, 1));
+		fn.borrowedClassLocalIds.push("selected");
+		return program;
+	}
+
+	/** A checked parent seeds a local before a diamond, optionally inside a loop. */
+	static function ownedChildDiamond(loop:Bool):HxcIRProgram {
+		final program = ownedChildProofProgram();
+		final fn = program.modules[0].functions[0];
+		final file = "test/hxc_ir/fixtures/OwnedChildBranches.hx";
+		final child = IRTPointer(IRTInstance("instance.class.root"), true);
+		fn.parameters.push(parameter("choose", IRTBool, file, 1));
+		fn.parameters.push(parameter("again", IRTBool, file, 1));
+		fn.locals.push(local("scalar", IRTInt(32, true), IRLSAutomatic, IRISUninitialized, file, 1));
+		final seed = fn.blocks[0].instructions.slice(0, 4);
+		seed.push(instruction("scalar.zero", result("zero", IRTInt(32, true)), IRIOConstant(IRCInt("0")), file, 2));
+		seed.push(instruction("scalar.initialize", null, IRIOInitialize(IRPLocal("scalar"), "zero", IRISUninitialized, IRISInitialized), file, 2));
+		function edge(id:String):HxcIRBlockEdge
+			return {targetBlockId: id, arguments: [], cleanup: []};
+		function arm(id:String):HxcIRBlock {
+			return block(id, [
+				instruction(id + ".load", result(id + ".child", child), IRIOLoad(IRPLocal("selected")), file, 3),
+				instruction(id + ".check", null, IRIONullCheck(id + ".child", IRNCPCheckedAbort("portable", "debug")), file, 3),
+				instruction(id + ".field", result(id + ".answer", IRTInt(32, true)), IRIOLoad(IRPField(IRPDereference(id + ".child"), "value")), file, 3),
+				instruction(id + ".scalar", null, IRIOStore(IRPLocal("scalar"), id + ".answer"), file, 3)
+			], IRTJump(edge("join")), file, 3);
+		}
+		fn.blocks.splice(0, fn.blocks.length);
+		if (loop) {
+			fn.blocks.push(block("entry", [], IRTJump(edge("header")), file, 1));
+			fn.blocks.push(block("header", [], IRTBranch("again", edge("seed"), edge("exit")), file, 1));
+		}
+		fn.blocks.push(block(loop ? "seed" : "entry", seed, IRTBranch("choose", edge("left"), edge("right")), file, 2));
+		fn.blocks.push(arm("left"));
+		fn.blocks.push(arm("right"));
+		fn.blocks.push(block("join", [
+			instruction("join.load", result("join.child", child), IRIOLoad(IRPLocal("selected")), file, 4),
+			instruction("join.check", null, IRIONullCheck("join.child", IRNCPCheckedAbort("portable", "debug")), file, 4),
+			instruction("join.field", result("join.answer", IRTInt(32, true)), IRIOLoad(IRPField(IRPDereference("join.child"), "value")), file, 4)
+		], loop ? IRTJump(edge("header")) : IRTReturn(null, []), file, 4));
+		if (loop)
+			fn.blocks.push(block("exit", [], IRTReturn(null, []), file, 5));
+		return program;
+	}
+
+	/** Independent branch, loop, mutation and escaping-value contracts for child proofs. */
+	static function verifyOwnedChildBranches(validator:HxcIRValidator):Void {
+		final file = "test/hxc_ir/fixtures/OwnedChildBranches.hx";
+		final child = IRTPointer(IRTInstance("instance.class.root"), true);
+		function find(fn:HxcIRFunction, id:String):HxcIRBlock {
+			for (block in fn.blocks)
+				if (block.id == id)
+					return block;
+			throw 'missing branch fixture block $id';
+		}
+		function hasCheck(block:HxcIRBlock, id:String):Bool {
+			for (node in block.instructions)
+				if (node.id == id)
+					return true;
+			return false;
+		}
+		for (loop in [false, true]) {
+			final program = ownedChildDiamond(loop);
+			final fn = program.modules[0].functions[0];
+			validator.requireValid(program, PROFILE);
+			for (_ in 0...2) {
+				new CBodyNullCheckCoalescing().run(program);
+				validator.requireValid(program, PROFILE);
+				for (id in ["left", "right", "join"])
+					if (hasCheck(find(fn, id), id + ".check"))
+						throw 'borrow did not cross diamond $id (loop=$loop)';
+				if (!hasCheck(find(fn, loop ? "seed" : "entry"), "parent.check"))
+					throw "branch origin witness disappeared";
+			}
+		}
+		final unreachable = ownedChildProofProgram();
+		final unreachableFn = unreachable.modules[0].functions[0];
+		final unreachableNodes = unreachableFn.blocks[0].instructions;
+		unreachableFn.blocks[0] = block("entry", [], IRTReturn(null, []), file, 1);
+		unreachableFn.blocks.push(block("orphan", unreachableNodes, IRTReturn(null, []), file, 2));
+		validator.requireValid(unreachable, PROFILE);
+		for (_ in 0...2) {
+			new CBodyNullCheckCoalescing().run(unreachable);
+			validator.requireValid(unreachable, PROFILE);
+			if (unreachableNodes.length != 6 || !hasCheck(find(unreachableFn, "orphan"), "parent.check"))
+				throw "unreachable block lost its local-only checked-child proof";
+		}
+		for (effect in ["one-sided", "alias", "lifetime", "default", "null-store", "failure", "cleanup"]) {
+			final program = ownedChildDiamond(false);
+			final fn = program.modules[0].functions[0];
+			final right = find(fn, "right");
+			final join = find(fn, "join");
+			switch effect {
+				case "one-sided":
+					// Clearing the local on only one incoming route must defeat the meet.
+					right.instructions.push(instruction("right.address", result("alias", IRTPointer(child, false)), IRIOAddress(IRPLocal("selected")), file,
+						3));
+				case "alias":
+					right.instructions.push(instruction("right.address", result("alias", IRTPointer(child, false)), IRIOAddress(IRPLocal("selected")), file,
+						3));
+					right.instructions.push(instruction("right.null", result("nothing", child), IRIOConstant(IRCNull), file, 3));
+					right.instructions.push(instruction("right.store", null, IRIOStore(IRPDereference("alias"), "nothing"), file, 3));
+				case "lifetime":
+					right.instructions.push(instruction("right.lifetime", null, IRIOLifetime(IRPLocal("selected"), IRISInitialized, IRISMoved, "move"), file,
+						3));
+				case "default":
+					right.instructions.push(instruction("right.default", null,
+						IRIODefaultInitialize(IRPLocal("selected"), IRISUninitialized, IRISInitialized), file, 3));
+				case "null-store":
+					right.instructions.push(instruction("right.null", result("nothing", child), IRIOConstant(IRCNull), file, 3));
+					right.instructions.push(instruction("right.store", null, IRIOStore(IRPLocal("selected"), "nothing"), file, 3));
+				case "failure":
+					// Normal and exceptional edges share the SAME source/target pair.
+					program.modules[0].functions.push(constantFunction("fn.branch.effect", "effect", "0", 1));
+					right.instructions.push(instruction("right.failure", result("failure.result", IRTInt(32, true)),
+						IRIOCall(call(IRCDDirect("fn.branch.effect"), [], IRTInt(32, true), {
+							kind: IRFException,
+							target: IRFTBlock("join"),
+							arguments: [],
+							cleanup: []
+						})), file, 3));
+				case "cleanup":
+					fn.blocks[2] = block("right", right.instructions,
+						IRTBranch("choose", {targetBlockId: "join", arguments: [], cleanup: []},
+							{targetBlockId: "join", arguments: [], cleanup: [{regionId: "missing", actionId: "missing"}]}),
+						file, 3);
+				case _:
+					throw "unknown branch barrier";
+			}
+			if (effect == "one-sided" || effect == "alias")
+				validator.requireValid(program, PROFILE);
+			new CBodyNullCheckCoalescing().run(program);
+			if (!hasCheck(join, "join.check"))
+				throw 'branch meet crossed $effect';
+			if (effect == "one-sided" || effect == "alias")
+				validator.requireValid(program, PROFILE);
+			for (index in 0...join.instructions.length)
+				if (join.instructions[index].id == "join.check") {
+					join.instructions.splice(index, 1);
+					break;
+				}
+			requireInvalidMarker(program, "requires a preceding dominating null check", 'branch missing check after $effect');
+		}
+
+		final distinct = ownedChildDiamond(false);
+		final distinctFn = distinct.modules[0].functions[0];
+		find(distinctFn, "entry").instructions.splice(0, 4);
+		for (id in ["left", "right"]) {
+			final nodes = find(distinctFn, id).instructions;
+			final origins = [
+				instruction(id + ".parent", null, IRIONullCheck("parent", IRNCPCheckedAbort("portable", "debug")), file, 2),
+				instruction(id + ".borrow", result(id + ".address", IRTPointer(IRTInstance("instance.class.root"), false)),
+					IRIOBorrowClassField(IRPField(IRPDereference("parent"), "child")), file, 2),
+				instruction(id + ".inject", result(id + ".nullable", child), IRIOConvert(id + ".address", IRCNullableInject, child, IRIStatic, null), file, 2),
+				instruction(id + ".initialize", null, IRIOInitialize(IRPLocal("selected"), id + ".nullable", IRISUninitialized, IRISInitialized), file, 2)
+			];
+			for (index in 0...origins.length)
+				nodes.insert(index, origins[index]);
+		}
+		validator.requireValid(distinct, PROFILE);
+		new CBodyNullCheckCoalescing().run(distinct);
+		validator.requireValid(distinct, PROFILE);
+		final distinctJoin = find(distinctFn, "join");
+		if (!hasCheck(distinctJoin, "join.check"))
+			throw "join conflated distinct present borrow origins";
+		distinctJoin.instructions.splice(1, 1);
+		requireInvalidMarker(distinct, "requires a preceding dominating null check", "different retained origins cannot meet");
+
+		final loop = ownedChildDiamond(true);
+		final loopFn = loop.modules[0].functions[0];
+		final header = find(loopFn, "header");
+		header.instructions.push(instruction("header.load", result("header.child", child), IRIOLoad(IRPLocal("selected")), file, 1));
+		header.instructions.push(instruction("header.check", null, IRIONullCheck("header.child", IRNCPCheckedAbort("portable", "debug")), file, 1));
+		header.instructions.push(instruction("header.field", result("header.answer", IRTInt(32, true)),
+			IRIOLoad(IRPField(IRPDereference("header.child"), "value")), file, 1));
+		new CBodyNullCheckCoalescing().run(loop);
+		if (!hasCheck(header, "header.check"))
+			throw "backedge established a loop-header proof";
+		header.instructions.splice(1, 1);
+		requireInvalidMarker(loop, "requires a preceding dominating null check", "loop header cannot inherit iteration facts");
+
+		final escaped = ownedChildProofProgram();
+		final escapedFn = escaped.modules[0].functions[0];
+		final entry = escapedFn.blocks[0];
+		escapedFn.blocks[0] = block("entry", entry.instructions, IRTJump({targetBlockId: "next", arguments: ["child.loaded"], cleanup: []}), file, 4);
+		final next = block("next", [], IRTReturn(null, []), file, 5);
+		next.parameters.push(parameter("next.child", child, file, 5));
+		escapedFn.blocks.push(next);
+		new CBodyNullCheckCoalescing().run(escaped);
+		if (!hasCheck(entry, "child.check"))
+			throw "edge argument lost its explicit operand check";
+		// A direct successor use is malformed in this IR, but its diagnostic and
+		// the check that legacy dominance may need must both survive optimization.
+		next.instructions.push(instruction("next.field", result("next.answer", IRTInt(32, true)), IRIOLoad(IRPField(IRPDereference("child.loaded"), "value")),
+			file, 5));
+		new CBodyNullCheckCoalescing().run(escaped);
+		if (!hasCheck(entry, "child.check"))
+			throw "cross-block SSA use lost its check";
+		requireInvalidMarker(escaped, "not available", "direct cross-block operand remains diagnosed");
+	}
+
+	/** Keep local proofs across a checked scalar comparison, never across unknown helpers. */
+	static function verifyOwnedChildComparisons(validator:HxcIRValidator):Void {
+		final file = "test/hxc_ir/fixtures/OwnedChildComparison.hx";
+		function find(fn:HxcIRFunction, id:String):HxcIRBlock {
+			for (node in fn.blocks)
+				if (node.id == id)
+					return node;
+			throw 'missing comparison fixture block $id';
+		}
+		function hasCheck(node:HxcIRBlock, id:String):Bool {
+			for (item in node.instructions)
+				if (item.id == id)
+					return true;
+			return false;
+		}
+		function comparison(loop:Bool, variant:String):HxcIRProgram {
+			final program = ownedChildDiamond(loop);
+			final fn = program.modules[0].functions[0];
+			final seed = find(fn, loop ? "seed" : "entry");
+			fn.parameters.push(parameter("compare.left", variant == "left-type" ? IRTBool : IRTInt(32, true), file, 1));
+			fn.parameters.push(parameter("compare.right", variant == "unsigned-right" ? IRTInt(32, false) : IRTInt(32, true), file, 1));
+			final implementation = switch variant {
+				case "program-helper" | "valid-helper": IRIProgramLocal("hxc.i32.add.wrapping");
+				case "runtime-helper": IRIRuntime("runtime-base");
+				case _: IRIStatic;
+			};
+			final operation = switch variant {
+				case "valid-helper": "haxe.i32.add";
+				case "unknown": "fixture.unknown-comparison";
+				case _: "haxe.i32.less";
+			};
+			final comparisonResult = variant == "missing-result" ? null : result(variant == "result-id" ? " compare.result " : "compare.result",
+				variant == "result-type"
+				|| variant == "valid-helper" ? IRTInt(32, true) : IRTBool);
+			seed.instructions.push(instruction(variant == "instruction-id" ? " compare " : "compare", comparisonResult,
+				IRIOBinary(operation, variant == "missing-operand" ? "not.available" : "compare.left", "compare.right", implementation), file,
+				variant == "source-range" ? 0 : 2));
+			if (variant == "duplicate-id")
+				seed.instructions.push(instruction("compare", result("duplicate.result", IRTBool), IRIOConstant(IRCBool(true)), file, 2));
+			if (variant != "valid-helper") {
+				final index = fn.blocks.indexOf(seed);
+				fn.blocks[index] = block(seed.id, seed.instructions,
+					IRTBranch("compare.result", {targetBlockId: "left", arguments: [], cleanup: []}, {targetBlockId: "right", arguments: [], cleanup: []}),
+					file, 2);
+			}
+			return program;
+		}
+		for (loop in [false, true]) {
+			final program = comparison(loop, "valid");
+			final fn = program.modules[0].functions[0];
+			validator.requireValid(program, PROFILE);
+			for (_ in 0...2) {
+				new CBodyNullCheckCoalescing().run(program);
+				validator.requireValid(program, PROFILE);
+				for (id in ["left", "right", "join"])
+					if (hasCheck(find(fn, id), id + ".check"))
+						throw 'scalar comparison lost child proof at $id (loop=$loop)';
+				if (!hasCheck(find(fn, loop ? "seed" : "entry"), "parent.check")
+					|| !hasCheck(find(fn, loop ? "seed" : "entry"), "compare"))
+					throw "comparison or its parent witness disappeared";
+			}
+			// Validation must reconstruct the proof even when no optimizer ran.
+			final independent = comparison(loop, "valid");
+			for (id in ["left", "right", "join"])
+				find(independent.modules[0].functions[0], id).instructions.splice(1, 1);
+			validator.requireValid(independent, PROFILE);
+		}
+		for (variant in [
+			"left-type",
+			"unsigned-right",
+			"missing-result",
+			"result-type",
+			"missing-operand",
+			"instruction-id",
+			"result-id",
+			"source-range",
+			"duplicate-id",
+			"program-helper",
+			"runtime-helper"
+		]) {
+			final program = comparison(false, variant);
+			new CBodyNullCheckCoalescing().run(program);
+			for (id in ["left", "right", "join"])
+				if (!hasCheck(find(program.modules[0].functions[0], id), id + ".check"))
+					throw 'invalid comparison $variant licensed removal at $id';
+			requireInvalidMarker(program, variant == "duplicate-id" ? "duplicate" : "signed Int less-than requires", 'invalid comparison $variant');
+		}
+		for (variant in ["valid-helper", "unknown"]) {
+			final program = comparison(false, variant);
+			validator.requireValid(program, PROFILE);
+			new CBodyNullCheckCoalescing().run(program);
+			validator.requireValid(program, PROFILE);
+			for (id in ["left", "right", "join"])
+				if (!hasCheck(find(program.modules[0].functions[0], id), id + ".check"))
+					throw 'unproven operation $variant licensed removal at $id';
+			find(program.modules[0].functions[0], "join").instructions.splice(1, 1);
+			requireInvalidMarker(program, "requires a preceding dominating null check", 'validator independently rejects proof through $variant');
+		}
+	}
+
+	/** Find one authored block without depending on optimizer traversal order. */
+	static function cleanupFlowBlock(fn:HxcIRFunction, id:String):HxcIRBlock {
+		for (node in fn.blocks)
+			if (node.id == id)
+				return node;
+		throw 'missing cleanup-flow block $id';
+	}
+
+	/** A terminal cleanup outside the loop does not execute inside its child-use interval. */
+	static function ownedChildCleanupFlowProgram():HxcIRProgram {
+		final program = ownedChildDiamond(true);
+		final fn = program.modules[0].functions[0];
+		final file = "test/hxc_ir/fixtures/OwnedChildCleanupFlow.hx";
+		fn.locals.push(local("cleanup.scratch", IRTInt(32, true), IRLSAutomatic, IRISInitialized, file, 1));
+		fn.cleanupRegions.push({
+			id: "cleanup.tail",
+			parentId: null,
+			source: span(file, 5),
+			actions: [
+				cleanupAction("destroy", IRCADestroy(IRPLocal("cleanup.scratch"), IRISInitialized, IRISDestroyed), file, 5)
+			]
+		});
+		final exit = cleanupFlowBlock(fn, "exit");
+		fn.blocks[fn.blocks.indexOf(exit)] = block("exit", [], IRTReturn(null, [{regionId: "cleanup.tail", actionId: "destroy"}]), file, 5);
+		return program;
+	}
+
+	/** Cleanup and failure routes each contribute an empty fact set to their join. */
+	static function verifyOwnedChildCleanupEdgeCuts(validator:HxcIRValidator):Void {
+		final file = "test/hxc_ir/fixtures/OwnedChildCleanupFlow.hx";
+		for (kind in ["cleanup", "failure"]) {
+			final program = kind == "cleanup" ? ownedChildDiamond(false) : ownedChildCleanupFlowProgram();
+			final fn = program.modules[0].functions[0];
+			final right = cleanupFlowBlock(fn, "right");
+			if (kind == "cleanup") {
+				fn.locals.push(local("cleanup.scratch", IRTInt(32, true), IRLSAutomatic, IRISInitialized, file, 1));
+				fn.cleanupRegions.push({
+					id: "cleanup.tail",
+					parentId: null,
+					source: span(file, 3),
+					actions: [
+						cleanupAction("destroy", IRCADestroy(IRPLocal("cleanup.scratch"), IRISInitialized, IRISDestroyed), file, 3)
+					]
+				});
+				// The clean and cleanup routes deliberately share the same target.
+				fn.blocks[fn.blocks.indexOf(right)] = block("right", right.instructions, IRTBranch("choose", edge("join"), {
+					targetBlockId: "join",
+					arguments: [],
+					cleanup: [{regionId: "cleanup.tail", actionId: "destroy"}]
+				}), file, 3);
+			} else {
+				program.modules[0].functions.push(voidFunction("fn.cleanup-flow.effect", "cleanupFlowEffect", file, 6, IRFCStatus(IRFException)));
+				right.instructions.push(instruction("right.failure", null, IRIOCall(call(IRCDDirect("fn.cleanup-flow.effect"), [], IRTVoid, {
+					kind: IRFException,
+					target: IRFTBlock("join"),
+					arguments: [],
+					cleanup: []
+				})), file, 3));
+			}
+			validator.requireValid(program, PROFILE);
+			final join = cleanupFlowBlock(fn, "join");
+			final required = [for (node in join.instructions) if (node.id == "join.check") node][0];
+			for (_ in 0...2) {
+				new CBodyNullCheckCoalescing().run(program);
+				validator.requireValid(program, PROFILE);
+				if (join.instructions.indexOf(required) < 0)
+					throw 'owned-child proof crossed $kind edge';
+			}
+			join.instructions.remove(required);
+			requireInvalidMarker(program, "requires a preceding dominating null check", 'cleanup-flow omitted check after $kind');
+		}
+	}
+
+	/**
+		Finally entry can bypass a checked predecessor, including through another block.
+		The fallback route installs an independently borrowed, possibly null pointer.
+		Ordinary reachability omits this cleanup route, so its checked normal neighbor
+		must never supply the missing proof.
+	**/
+	static function ownedChildFinallyJoin(descendant:Bool):HxcIRProgram {
+		final program = ownedChildProofProgram();
+		final fn = program.modules[0].functions[0];
+		final file = "test/hxc_ir/fixtures/OwnedChildFinallyJoin.hx";
+		final child = IRTPointer(IRTInstance("instance.class.root"), true);
+		final original = fn.blocks[0].instructions;
+		fn.parameters.push(parameter("choose", IRTBool, file, 1));
+		fn.parameters.push(parameter("fallback", child, file, 1));
+		fn.borrowedClassParameterIds.push("fallback");
+		fn.cleanupRegions.push({
+			id: "cleanup.finally",
+			parentId: null,
+			source: span(file, 5),
+			actions: [
+				cleanupAction("run", IRCAFinally(descendant ? "finally.entry" : "join"), file, 5)
+			]
+		});
+		fn.blocks.splice(0, fn.blocks.length);
+		fn.blocks.push(block("entry", [], IRTBranch("choose", edge("checked"), edge("fallback")), file, 1));
+		fn.blocks.push(block("checked", original.slice(0, 4), IRTJump(edge("join")), file, 2));
+		fn.blocks.push(block("fallback", [
+			instruction("fallback.initialize", null, IRIOInitialize(IRPLocal("selected"), "fallback", IRISUninitialized, IRISInitialized), file, 3)
+		], IRTReturn(null, [
+			{
+				regionId: "cleanup.finally",
+				actionId: "run"
+			}
+			]), file, 3));
+		if (descendant)
+			fn.blocks.push(block("finally.entry", [], IRTJump(edge("join")), file, 4));
+		fn.blocks.push(block("join", original.slice(4), IRTReturn(null, []), file, 5));
+		return program;
+	}
+
+	/** Guarded Finally shapes must validate; omitting their join guard must fail independently. */
+	static function verifyOwnedChildFinallyCuts(validator:HxcIRValidator):Void {
+		for (descendant in [false, true]) {
+			final program = ownedChildFinallyJoin(descendant);
+			validator.requireValid(program, PROFILE);
+			final join = cleanupFlowBlock(program.modules[0].functions[0], "join");
+			final required = [for (node in join.instructions) if (node.id == "child.check") node][0];
+			for (_ in 0...2) {
+				new CBodyNullCheckCoalescing().run(program);
+				validator.requireValid(program, PROFILE);
+				if (join.instructions.indexOf(required) < 0)
+					throw "Finally route lost its explicit child check";
+			}
+			join.instructions.remove(required);
+			final diagnostics = validator.validate(program, PROFILE);
+			if (diagnostics.length == 0)
+				throw 'OWNED_CHILD_FINALLY_JOIN_REQUIRES_GUARD descendant=$descendant';
+			requireInvalidMarker(program, "requires a preceding dominating null check", 'implicit Finally join descendant=$descendant');
+		}
+	}
+
+	/** Only child checks disappear; every other instruction, branch and cleanup stays identical. */
+	static function verifyOwnedChildCleanupFlow(validator:HxcIRValidator):Void {
+		verifyOwnedChildCleanupEdgeCuts(validator);
+		verifyOwnedChildFinallyCuts(validator);
+		final program = ownedChildCleanupFlowProgram();
+		final fn = program.modules[0].functions[0];
+		validator.requireValid(program, PROFILE);
+		final removals = ["left.check", "right.check", "join.check"];
+		final before = [
+			for (node in fn.blocks)
+				{node: node, instructions: node.instructions.copy(), tail: node.terminator}
+		];
+		final cleanup = fn.cleanupRegions[0];
+		final action = cleanup.actions[0];
+		for (_ in 0...2) {
+			new CBodyNullCheckCoalescing().run(program);
+			validator.requireValid(program, PROFILE);
+			for (saved in before) {
+				final expected = saved.instructions.filter(node -> removals.indexOf(node.id) == -1);
+				if (saved.node.instructions.length != expected.length)
+					throw "OWNED_CHILD_CLEANUP_FLOW_EXPECTED_ONLY_PARENT_GUARD";
+				for (index in 0...expected.length)
+					if (saved.node.instructions[index] != expected[index])
+						throw "cleanup flow changed a retained instruction";
+				if (saved.node.terminator != saved.tail)
+					throw "cleanup flow changed a branch or cleanup edge";
+			}
+			if (fn.cleanupRegions[0] != cleanup || cleanup.actions[0] != action)
+				throw "cleanup flow changed cleanup metadata";
+		}
+		// Check validator authority without relying on the optimizer to remove nodes.
+		final independent = ownedChildCleanupFlowProgram();
+		for (node in independent.modules[0].functions[0].blocks)
+			for (instruction in node.instructions.copy())
+				if (removals.indexOf(instruction.id) != -1)
+					node.instructions.remove(instruction);
+		validator.requireValid(independent, PROFILE);
+	}
+
+	/** Add terminal cleanup to the same independently validated child-borrow fixture. */
+	static function ownedChildCleanupProgram(?strategy:HxcIRExceptionStrategy):HxcIRProgram {
+		final seed = ownedChildProofProgram();
+		final original = seed.modules[0].functions[0];
+		final file = "test/hxc_ir/fixtures/OwnedChildProof.hx";
+		final program = minimalProgram("valid.OwnedChildCleanup", original.blocks[0].instructions,
+			terminator(IRTReturn(null, [{regionId: "cleanup.tail", actionId: "release"}]), file, 5), original.locals, [
+			{
+				id: "cleanup.tail",
+				parentId: null,
+				actions: [
+					cleanupAction("release", IRCARelease(IRPLocal("scratch"), IRIProgramLocal("helper.release")), file, 5)
+				],
+				source: span(file, 5)
+			}
+		], file, null, null, strategy);
+		for (type in seed.modules[0].types)
+			program.modules[0].types.push(type);
+		for (instance in seed.modules[0].typeInstances)
+			program.modules[0].typeInstances.push(instance);
+		final fn = program.modules[0].functions[0];
+		for (parameter in original.parameters)
+			fn.parameters.push(parameter);
+		fn.borrowedClassLocalIds.push("selected");
+		fn.locals.push(local("scratch", IRTPointer(IRTVoid, true), IRLSAutomatic, IRISInitialized, file, 1));
+		return program;
+	}
+
+	/** Cleanup follows the last use; it never grants a new lifetime or alias proof. */
+	static function verifyOwnedChildCleanup(validator:HxcIRValidator):Void {
+		final file = "test/hxc_ir/fixtures/OwnedChildProof.hx";
+		final positive = ownedChildCleanupProgram();
+		final fn = positive.modules[0].functions[0];
+		final action = fn.cleanupRegions[0].actions[0];
+		final tail = fn.blocks[0].terminator;
+		validator.requireValid(positive, PROFILE);
+		for (_ in 0...2) {
+			new CBodyNullCheckCoalescing().run(positive);
+			validator.requireValid(positive, PROFILE);
+			final nodes = fn.blocks[0].instructions;
+			if (nodes.length != 6
+				|| nodes[0].id != "parent.check"
+				|| fn.cleanupRegions[0].actions[0] != action
+				|| fn.blocks[0].terminator != tail)
+				throw "terminal cleanup must preserve the parent witness and exact cleanup while removing the child guard";
+		}
+		// Metadata alone does not invalidate a borrow before terminal cleanup.
+		// Inline effects below occur before the parent check and fresh borrow.
+		// Implicit finally/setjmp entries remain excluded from the shared proof.
+		// These shape controls do not claim that malformed metadata is executable;
+		// the independent malformed-cleanup assertions below retain that boundary.
+		for (variant in [
+			"finally",
+			"inline-cleanup",
+			"failure-cleanup",
+			"failure-propagate",
+			"borrowed",
+			"multiple-blocks",
+			"non-return",
+			"exception",
+			"setjmp",
+			"field-place"
+		]) {
+			final guarded = ownedChildCleanupProgram(variant == "exception" ? IRESContainedRuntime : null);
+			final target = guarded.modules[0].functions[0];
+			final nodes = target.blocks[0].instructions;
+			switch variant {
+				case "finally":
+					target.cleanupRegions[0].actions[0] = cleanupAction("release", IRCAFinally("entry"), file, 5);
+				case "inline-cleanup":
+					nodes.insert(0, instruction("inline.cleanup", null, IRIOException(IRECleanupRun("cleanup.tail")), file, 1));
+				case "failure-cleanup" | "failure-propagate":
+					nodes.insert(0, instruction("may.fail", result("allocated", IRTPointer(IRTVoid, true)), IRIOAllocate(IRTVoid, IRAOwned, IRIStatic, {
+						kind: IRFAllocationFailure,
+						target: variant == "failure-propagate" ? IRFTPropagate : IRFTAbort,
+						arguments: [],
+						cleanup: variant == "failure-cleanup" ? [
+							{
+								regionId: "cleanup.tail",
+								actionId: "release"
+							}
+						] : []
+					}), file, 1));
+				case "borrowed":
+					target.cleanupRegions[0].actions[0] = cleanupAction("release", IRCARelease(IRPLocal("selected"), IRIStatic), file, 5);
+				case "multiple-blocks":
+					target.blocks.push(block("other", [], IRTReturn(null, []), file, 6));
+				case "non-return":
+					target.blocks[0] = block("entry", nodes, IRTUnreachable, file, 5);
+				case "exception":
+				case "setjmp":
+					nodes.insert(0,
+						instruction("unmodeled.setjmp", result("jump.result", IRTInt(32, true)), IRIOException(IREFrameSetJmp("unmodeled.region")), file, 1));
+				case "field-place":
+					target.cleanupRegions[0].actions[0] = cleanupAction("release", IRCARelease(IRPField(IRPLocal("scratch"), "field"), IRIStatic), file, 5);
+				case _:
+					throw "unknown cleanup boundary";
+			}
+			new CBodyNullCheckCoalescing().run(guarded);
+			final expectedChecks = switch variant {
+				case "finally" | "exception" | "setjmp": 1;
+				case _: 0;
+			};
+			if (nodes.filter(node -> node.id == "child.check").length != expectedChecks)
+				throw 'owned-child cleanup proof disagrees with effect order for $variant';
+		}
+		for (barrier in ["call", "lifetime", "alias"]) {
+			final guarded = ownedChildCleanupProgram();
+			final target = guarded.modules[0].functions[0];
+			final nodes = target.blocks[0].instructions;
+			final child = IRTPointer(IRTInstance("instance.class.root"), true);
+			switch barrier {
+				case "call":
+					guarded.modules[0].functions.push(constantFunction("fn.barrier", "barrier", "0", 1));
+					nodes.insert(4,
+						instruction("effect.call", result("effect.result", IRTInt(32, true)), IRIOCall(call(IRCDDirect("fn.barrier"), [], IRTInt(32, true))),
+							file, 4));
+				case "lifetime":
+					nodes.insert(4, instruction("effect.lifetime", null, IRIOLifetime(IRPLocal("selected"), IRISInitialized, IRISMoved, "move"), file, 4));
+				case "alias":
+					nodes.insert(4, instruction("alias.address", result("alias", IRTPointer(child, false)), IRIOAddress(IRPLocal("selected")), file, 4));
+					nodes.insert(5, instruction("alias.null", result("nothing", child), IRIOConstant(IRCNull), file, 4));
+					nodes.insert(6, instruction("alias.store", null, IRIOStore(IRPDereference("alias"), "nothing"), file, 4));
+				case _:
+					throw "unknown cleanup proof barrier";
+			}
+			if (barrier != "lifetime")
+				validator.requireValid(guarded, PROFILE);
+			new CBodyNullCheckCoalescing().run(guarded);
+			final checks = nodes.filter(node -> node.id == "child.check");
+			if (checks.length != 1)
+				throw 'terminal cleanup incorrectly proved a fresh load after $barrier';
+			nodes.remove(checks[0]);
+			requireInvalidMarker(guarded, "requires a preceding dominating null check", 'terminal cleanup after $barrier');
+		}
+
+		for (variant in ["place", "reference", "state", "type", "span", "id", "order"]) {
+			final bad = ownedChildCleanupProgram();
+			final target = bad.modules[0].functions[0];
+			final actions = target.cleanupRegions[0].actions;
+			final marker = switch variant {
+				case "place":
+					actions[0] = cleanupAction("release", IRCARelease(IRPDereference("child.loaded"), IRIStatic), file, 5);
+					"cleanup actions require a stable local/global place";
+				case "reference":
+					target.blocks[0] = block("entry", target.blocks[0].instructions, IRTReturn(null, [{regionId: "cleanup.tail", actionId: "missing"}]), file,
+						5);
+					"cleanup step refers to unknown action";
+				case "state":
+					actions[0] = cleanupAction("release", IRCADestroy(IRPLocal("scratch"), IRISInitialized, IRISMoved), file, 5);
+					"destroy cleanup must end in destroyed state";
+				case "type":
+					actions[0] = cleanupAction("release", IRCARelease(IRPLocal("scratch"), IRIRuntime("array")), file, 5);
+					"array release cleanup requires a managed Array place";
+				case "span":
+					actions[0] = {
+						id: "release",
+						idempotence: IRCExactlyOnce,
+						kind: actions[0].kind,
+						source: new HxcSourceSpan(file, 0, 1, 0, 1)
+					};
+					"source line and column values must be one-based";
+				case "id":
+					actions[0] = cleanupAction(" bad ", actions[0].kind, file, 5);
+					"stable identifier";
+				case "order":
+					actions.push(cleanupAction("second", IRCARelease(IRPLocal("scratch"), IRIStatic), file, 5));
+					target.blocks[0] = block("entry", target.blocks[0].instructions, IRTReturn(null, [
+						{regionId: "cleanup.tail", actionId: "release"},
+						{regionId: "cleanup.tail", actionId: "second"}
+					]), file, 5);
+					"must execute in reverse registration order";
+				case _: throw "unknown malformed cleanup";
+			};
+			requireInvalidMarker(bad, marker, 'guarded malformed cleanup $variant');
+			new CBodyNullCheckCoalescing().run(bad);
+			requireInvalidMarker(bad, marker, 'owned-child malformed cleanup $variant');
+		}
+	}
+
+	/** Reject malformed discarded nodes and stop inferred facts at aliasing boundaries. */
+	static function verifyOwnedChildProofs(validator:HxcIRValidator):Void {
+		verifyOwnedChildCleanup(validator);
+		verifyOwnedChildBranches(validator);
+		verifyOwnedChildComparisons(validator);
+		final program = ownedChildProofProgram();
+		validator.requireValid(program, PROFILE);
+		new CBodyNullCheckCoalescing().run(program);
+		validator.requireValid(program, PROFILE);
+		final instructions = program.modules[0].functions[0].blocks[0].instructions;
+		if (instructions.length != 6 || instructions[0].id != "parent.check")
+			throw "owned-child proof must remove only the child guard";
+		for (variant in [
+			"parent-policy",
+			"child-span",
+			"child-id",
+			"child-result",
+			"duplicate-id",
+			"crossblock-duplicate-id",
+			"borrow-type",
+			"nonnull-check"
+		]) {
+			final bad = ownedChildProofProgram();
+			final nodes = bad.modules[0].functions[0].blocks[0].instructions;
+			final file = "test/hxc_ir/fixtures/OwnedChildProof.hx";
+			switch variant {
+				case "parent-policy":
+					nodes[0] = instruction("parent.check", null, IRIONullCheck("parent", IRNCPCheckedAbort("invalid", "debug")), file, 2);
+					nodes[5] = instruction("child.check", null, IRIONullCheck("child.loaded", IRNCPCheckedAbort("invalid", "debug")), file, 4);
+				case "child-span":
+					nodes[5] = {
+						id: "child.check",
+						result: null,
+						kind: nodes[5].kind,
+						source: new HxcSourceSpan(file, 0, 1, 4, 1)
+					};
+				case "child-id":
+					nodes[5] = instruction(" bad.check ", null, nodes[5].kind, file, 4);
+				case "child-result":
+					nodes[5] = instruction("child.check", result("bad.result", IRTBool), nodes[5].kind, file, 4);
+				case "duplicate-id":
+					nodes[5] = instruction("parent.check", null, nodes[5].kind, file, 4);
+				case "crossblock-duplicate-id":
+					final fn = bad.modules[0].functions[0];
+					fn.blocks.push(block("next", [instruction("child.check", null, IRIOSequence("duplicate instruction"), file, 6)], IRTReturn(null, []),
+						file, 6));
+				case "nonnull-check":
+					nodes[5] = instruction("child.check", null, IRIONullCheck("child.address", IRNCPCheckedAbort("portable", "debug")), file, 4);
+				case "borrow-type":
+					nodes[1] = instruction("child.borrow", result("child.address", IRTPointer(IRTInt(32, true), false)), nodes[1].kind, file, 3);
+				case _:
+					throw "unknown owned-child test variant";
+			}
+			new CBodyNullCheckCoalescing().run(bad);
+			final marker = switch variant {
+				case "parent-policy": "null-check policy has unknown profile";
+				case "child-span": "source line and column values must be one-based";
+				case "child-id": "stable identifier";
+				case "child-result": "side-effect-only instruction unexpectedly defines";
+				case "duplicate-id" | "crossblock-duplicate-id": "duplicate instruction ID";
+				case "borrow-type": "borrowed class field result must be a non-null pointer";
+				case "nonnull-check": "null check requires a nullable pointer";
+				case _: throw "unknown malformed variant";
+			};
+			requireInvalidMarker(bad, marker, 'malformed owned-child $variant');
+		}
+		final policyMismatch = ownedChildProofProgram();
+		final mismatchNodes = policyMismatch.modules[0].functions[0].blocks[0].instructions;
+		mismatchNodes[5] = instruction("child.check", null, IRIONullCheck("child.loaded", IRNCPCheckedAbort("portable", "release")),
+			"test/hxc_ir/fixtures/OwnedChildProof.hx", 4);
+		new CBodyNullCheckCoalescing().run(policyMismatch);
+		validator.requireValid(policyMismatch, PROFILE);
+		if (mismatchNodes.length != 7)
+			throw "owned-child coalescing erased a different valid policy";
+
+		final twice = ownedChildProofProgram();
+		final twiceFn = twice.modules[0].functions[0];
+		final fileTwice = "test/hxc_ir/fixtures/OwnedChildProof.hx";
+		final childNodes = twiceFn.blocks[0].instructions;
+		twiceFn.blocks[0] = block("entry", [
+			instruction("entry.parent.check", null, IRIONullCheck("parent", IRNCPCheckedAbort("portable", "debug")), fileTwice, 1)
+		], IRTJump({
+			targetBlockId: "body",
+			arguments: [],
+			cleanup: []
+		}), fileTwice, 1);
+		twiceFn.blocks.push(block("body", childNodes, IRTReturn(null, []), fileTwice, 5));
+		for (_ in 0...2) {
+			new CBodyNullCheckCoalescing().run(twice);
+			validator.requireValid(twice, PROFILE);
+			if (childNodes.length != 6 || childNodes[0].id != "parent.check")
+				throw "owned-child parent witness did not survive a repeated pass";
+		}
+		for (barrier in ["call", "lifetime", "default"]) {
+			final guarded = ownedChildProofProgram();
+			final fn = guarded.modules[0].functions[0];
+			final nodes = fn.blocks[0].instructions;
+			final file = "test/hxc_ir/fixtures/OwnedChildProof.hx";
+			final operation = switch barrier {
+				case "call":
+					guarded.modules[0].functions.push(constantFunction("fn.barrier", "barrier", "0", 1));
+					instruction("effect.call", result("effect.result", IRTInt(32, true)), IRIOCall(call(IRCDDirect("fn.barrier"), [], IRTInt(32, true))),
+						file, 4);
+				case "lifetime": instruction("effect.lifetime", null, IRIOLifetime(IRPLocal("selected"), IRISInitialized, IRISMoved, "move"), file, 4);
+				case "default": instruction("effect.default", null, IRIODefaultInitialize(IRPLocal("selected"), IRISUninitialized, IRISInitialized), file, 4);
+				case _: throw "unknown barrier";
+			};
+			nodes.insert(4, operation);
+			new CBodyNullCheckCoalescing().run(guarded);
+			if (nodes.length != 8)
+				throw 'owned-child guard crossed $barrier barrier';
+			nodes.splice(6, 1);
+			requireInvalidMarker(guarded, "requires a preceding dominating null check", 'unguarded child after $barrier');
+		}
+
+		// A place-consuming effect may use the current immutable pointer, but a
+		// subsequent fresh load must not reuse the old local-content fact.
+		for (effect in ["field-store", "field-address", "call"]) {
+			final retained = ownedChildProofProgram();
+			final effectFn = retained.modules[0].functions[0];
+			final effectNodes = effectFn.blocks[0].instructions;
+			final effectFile = "test/hxc_ir/fixtures/OwnedChildProof.hx";
+			final operation = switch effect {
+				case "field-store": instruction("effect.store", null, IRIOStore(IRPField(IRPDereference("child.loaded"), "value"), "answer"), effectFile, 5);
+				case "field-address": instruction("effect.address", result("field.address", IRTPointer(IRTInt(32, true), false)),
+						IRIOAddress(IRPField(IRPDereference("child.loaded"), "value")), effectFile, 5);
+				case "call":
+					retained.modules[0].functions.push(constantFunction("fn.effect", "effect", "0", 1));
+					instruction("effect.call", result("effect.result", IRTInt(32, true)), IRIOCall(call(IRCDDirect("fn.effect"), [], IRTInt(32, true))),
+						effectFile, 5);
+				case _: throw "unknown owned-child effect";
+			};
+			effectNodes.push(operation);
+			effectNodes.push(instruction("later.same.value", result("later.answer", IRTInt(32, true)),
+				IRIOLoad(IRPField(IRPDereference("child.loaded"), "value")), effectFile, 6));
+			validator.requireValid(retained, PROFILE);
+			new CBodyNullCheckCoalescing().run(retained);
+			validator.requireValid(retained, PROFILE);
+			for (node in effectNodes)
+				if (node.id == "child.check")
+					throw 'owned-child guard was not removed before $effect';
+			effectNodes.push(instruction("fresh.load", result("fresh.child", IRTPointer(IRTInstance("instance.class.root"), true)),
+				IRIOLoad(IRPLocal("selected")), effectFile, 7));
+			effectNodes.push(instruction("fresh.use", result("fresh.answer", IRTInt(32, true)), IRIOLoad(IRPField(IRPDereference("fresh.child"), "value")),
+				effectFile, 7));
+			requireInvalidMarker(retained, "requires a preceding dominating null check", 'fresh child after $effect');
+		}
+		final outgoing = ownedChildProofProgram();
+		final outgoingFn = outgoing.modules[0].functions[0];
+		final outgoingFile = "test/hxc_ir/fixtures/OwnedChildProof.hx";
+		final outgoingNodes = outgoingFn.blocks[0].instructions;
+		outgoingFn.blocks[0] = block("entry", outgoingNodes, IRTJump({targetBlockId: "next", arguments: [], cleanup: []}), outgoingFile, 5);
+		outgoingFn.blocks.push(block("next", [
+			instruction("successor.load", result("successor.child", IRTPointer(IRTInstance("instance.class.root"), true)), IRIOLoad(IRPLocal("selected")),
+				outgoingFile, 6),
+			instruction("successor.check", null, IRIONullCheck("successor.child", IRNCPCheckedAbort("portable", "debug")), outgoingFile, 6),
+			instruction("successor.field", result("successor.answer", IRTInt(32, true)), IRIOLoad(IRPField(IRPDereference("successor.child"), "value")),
+				outgoingFile, 6)
+		], IRTReturn(null, []), outgoingFile, 6));
+		validator.requireValid(outgoing, PROFILE);
+		new CBodyNullCheckCoalescing().run(outgoing);
+		validator.requireValid(outgoing, PROFILE);
+		if (outgoingNodes.length != 6 || outgoingFn.blocks[1].instructions.length != 2)
+			throw "straight successor local load did not reuse the exact retained origin";
+
+		final immutable = ownedChildProofProgram();
+		final immutableNodes = immutable.modules[0].functions[0].blocks[0].instructions;
+		final immutableFile = "test/hxc_ir/fixtures/OwnedChildProof.hx";
+		final immutableChild = IRTPointer(IRTInstance("instance.class.root"), true);
+		immutableNodes.push(instruction("immutable.alias", result("immutable.alias.value", IRTPointer(immutableChild, false)),
+			IRIOAddress(IRPLocal("selected")), immutableFile, 5));
+		immutableNodes.push(instruction("immutable.null", result("immutable.nothing", immutableChild), IRIOConstant(IRCNull), immutableFile, 5));
+		immutableNodes.push(instruction("immutable.store", null, IRIOStore(IRPDereference("immutable.alias.value"), "immutable.nothing"), immutableFile, 5));
+		immutableNodes.push(instruction("immutable.old.use", result("immutable.old.answer", IRTInt(32, true)),
+			IRIOLoad(IRPField(IRPDereference("child.loaded"), "value")), immutableFile, 6));
+		immutableNodes.push(instruction("immutable.new.load", result("immutable.new.child", immutableChild), IRIOLoad(IRPLocal("selected")), immutableFile, 7));
+		immutableNodes.push(instruction("immutable.new.check", null, IRIONullCheck("immutable.new.child", IRNCPCheckedAbort("portable", "debug")),
+			immutableFile, 7));
+		immutableNodes.push(instruction("immutable.new.use", result("immutable.new.answer", IRTInt(32, true)),
+			IRIOLoad(IRPField(IRPDereference("immutable.new.child"), "value")), immutableFile, 7));
+		validator.requireValid(immutable, PROFILE);
+		new CBodyNullCheckCoalescing().run(immutable);
+		validator.requireValid(immutable, PROFILE);
+		var freshCheckIndex = -1;
+		for (index in 0...immutableNodes.length) {
+			if (immutableNodes[index].id == "child.check")
+				throw "an old captured value lost its nonnull proof after local mutation";
+			if (immutableNodes[index].id == "immutable.new.check")
+				freshCheckIndex = index;
+		}
+		if (freshCheckIndex < 0)
+			throw "local mutation incorrectly proved a fresh nullable load";
+		immutableNodes.splice(freshCheckIndex, 1);
+		requireInvalidMarker(immutable, "requires a preceding dominating null check", "fresh load after alias mutation");
+
+		final alias = ownedChildProofProgram();
+		final nodes = alias.modules[0].functions[0].blocks[0].instructions;
+		final file = "test/hxc_ir/fixtures/OwnedChildProof.hx";
+		final child = IRTPointer(IRTInstance("instance.class.root"), true);
+		nodes.insert(4, instruction("alias.address", result("alias", IRTPointer(child, false)), IRIOAddress(IRPLocal("selected")), file, 4));
+		nodes.insert(5, instruction("alias.null", result("nothing", child), IRIOConstant(IRCNull), file, 4));
+		nodes.insert(6, instruction("alias.store", null, IRIOStore(IRPDereference("alias"), "nothing"), file, 4));
+		validator.requireValid(alias, PROFILE);
+		// Removing the source guard makes this an independent validator negative.
+		nodes.splice(8, 1);
+		new CBodyNullCheckCoalescing().run(alias);
+		requireInvalidMarker(alias, "requires a preceding dominating null check", "owned child after indirect null write");
+	}
+
 	/** A null check on only one branch must not authorize the shared join. */
 	static function nonDominatingNullProofProgram():HxcIRProgram {
 		final file = "test/negative/NonDominatingNullProof.hx";
@@ -1993,6 +3558,75 @@ class HxcIRGolden {
 			representation: IRRDirect,
 			source: span(file, 1)
 		});
+		return program;
+	}
+
+	/**
+	 * Build the smallest explicit mutable-record borrow and malformed neighbors.
+	 *
+	 * The valid shape initializes one automatic pointer alias, reloads it, and
+	 * stores through a mutable field. Variants independently test non-null ABI,
+	 * field mutability, and the rule that caller-owned storage cannot be returned.
+	 */
+	static function mutableAggregateBorrowProgram(mutation:MutableAggregateBorrowMutation):HxcIRProgram {
+		final file = mutation == MutableBorrowValid ? "test/hxc_ir/fixtures/MutableAggregateBorrow.hx" : "test/negative/MutableAggregateBorrow.hx";
+		final nullable = mutation == MutableBorrowNullableParameter;
+		final pointerType = IRTPointer(IRTInstance("instance.record"), nullable);
+		final instructions = [
+			instruction("borrow.alias-initialize", null, IRIOInitialize(IRPLocal("local.borrow"), "value.borrowed", IRISUninitialized, IRISInitialized), file,
+				2),
+			instruction("borrow.alias-load", result("value.reloaded", pointerType), IRIOLoad(IRPLocal("local.borrow")), file, 3),
+			instruction("borrow.field-store", null, IRIOStore(IRPField(IRPDereference("value.reloaded"), "x"), "value.next"), file, 4)
+		];
+		final program = aggregateProgram(file, instructions, [local("local.borrow", pointerType, IRLSAutomatic, IRISUninitialized, file, 1)],
+			"fixture.MutableAggregateBorrow");
+		final declaration = program.modules[0].types[0];
+		program.modules[0].types[0] = switch declaration.kind {
+			case IRTKAggregate(fields):
+				{
+					id: declaration.id,
+					displayName: declaration.displayName,
+					kind: IRTKAggregate([
+						{
+							name: fields[0].name,
+							type: fields[0].type,
+							mutable: mutation != MutableBorrowImmutableField,
+							source: fields[0].source
+						},
+						fields[1]
+					]),
+					source: declaration.source
+				};
+			case _: declaration;
+		};
+		final fn = program.modules[0].functions[0];
+		fn.parameters.push(parameter("value.borrowed", pointerType, file, 1));
+		fn.parameters.push(parameter("value.next", IRTInt(32, true), file, 1));
+		final borrowParameters = fn.mutableAggregateBorrowParameterIds;
+		final borrowLocals = fn.mutableAggregateBorrowLocalIds;
+		if (borrowParameters == null || borrowLocals == null)
+			throw "mutable-record borrow fixture lost its explicit ownership lists";
+		borrowParameters.push("value.borrowed");
+		borrowLocals.push("local.borrow");
+		if (mutation == MutableBorrowReturnEscape) {
+			program.modules[0].functions[0] = {
+				id: fn.id,
+				displayName: fn.displayName,
+				parameters: fn.parameters,
+				borrowedClassParameterIds: fn.borrowedClassParameterIds,
+				mutableAggregateBorrowParameterIds: borrowParameters,
+				borrowedClassLocalIds: fn.borrowedClassLocalIds,
+				mutableAggregateBorrowLocalIds: borrowLocals,
+				managedRoots: fn.managedRoots,
+				locals: fn.locals,
+				returnType: pointerType,
+				failureConvention: fn.failureConvention,
+				entryBlockId: fn.entryBlockId,
+				blocks: [block("entry", instructions, IRTReturn("value.borrowed", []), file, 5)],
+				cleanupRegions: fn.cleanupRegions,
+				source: fn.source
+			};
+		}
 		return program;
 	}
 
@@ -2805,6 +4439,30 @@ class HxcIRGolden {
 		return program;
 	}
 
+	/** Reject a loop re-entry that reads the prior iteration's direct carrier. */
+	static function uninitializedCarrierLoopReentryReadProgram():HxcIRProgram {
+		final file = "test/negative/UninitializedCarrierLoopReentryRead.hx";
+		final program = aggregateProgram(file, [], [
+			local("local.result", IRTInstance("instance.record"), IRLSAutomatic, IRISUninitialized, file, 1)
+		], "invalid.UninitializedCarrierLoopReentryRead");
+		final fn = program.modules[0].functions[0];
+		fn.parameters.push(parameter("value.condition", IRTBool, file, 1));
+		fn.parameters.push(parameter("value.record", IRTInstance("instance.record"), file, 1));
+		fn.blocks.splice(0, 1);
+		fn.blocks.push(block("entry", [
+			instruction("entry.initialize", null, IRIOInitialize(IRPLocal("local.result"), "value.record", IRISUninitialized, IRISInitialized), file, 2)
+		], IRTJump(edge("loop")), file, 2));
+		fn.blocks.push(block("loop", [
+			instruction("bad.prior-iteration-load", result("value.prior", IRTInstance("instance.record")), IRIOLoad(IRPLocal("local.result")), file, 3),
+			instruction("loop.declare", null, IRIODeclareUninitialized(IRPLocal("local.result")), file, 4),
+			instruction("loop.store", null, IRIOStore(IRPLocal("local.result"), "value.record"), file, 5)
+		], IRTBranch("value.condition", edge("loop"), edge("exit")), file, 6));
+		fn.blocks.push(block("exit", [
+			instruction("exit.load", result("value.result", IRTInstance("instance.record")), IRIOLoad(IRPLocal("local.result")), file, 7)
+		], IRTReturn(null, []), file, 7));
+		return program;
+	}
+
 	/** Reject a carrier read placed between its no-value declaration and conditional branch. */
 	static function uninitializedCarrierReadBeforeBranchProgram():HxcIRProgram {
 		final file = "test/negative/UninitializedCarrierReadBeforeBranch.hx";
@@ -2970,6 +4628,7 @@ class HxcIRGolden {
 		};
 		return {
 			schemaVersion: HxcIRValidator.SCHEMA_VERSION,
+			dynamicPlan: emptyDynamic(),
 			dispatch: emptyDispatch(),
 			modules: [
 				{
@@ -3042,6 +4701,7 @@ class HxcIRGolden {
 		};
 		return {
 			schemaVersion: HxcIRValidator.SCHEMA_VERSION,
+			dynamicPlan: emptyDynamic(),
 			dispatch: emptyDispatch(),
 			modules: [
 				{
@@ -3111,6 +4771,7 @@ class HxcIRGolden {
 		};
 		return {
 			schemaVersion: HxcIRValidator.SCHEMA_VERSION,
+			dynamicPlan: emptyDynamic(),
 			dispatch: emptyDispatch(),
 			modules: [
 				{
@@ -3197,6 +4858,7 @@ class HxcIRGolden {
 		};
 		return {
 			schemaVersion: HxcIRValidator.SCHEMA_VERSION,
+			dynamicPlan: emptyDynamic(),
 			dispatch: emptyDispatch(),
 			modules: [
 				{
@@ -3291,6 +4953,7 @@ class HxcIRGolden {
 		};
 		return {
 			schemaVersion: HxcIRValidator.SCHEMA_VERSION,
+			dynamicPlan: emptyDynamic(),
 			dispatch: emptyDispatch(),
 			modules: [
 				{
@@ -3352,6 +5015,7 @@ class HxcIRGolden {
 		};
 		return {
 			schemaVersion: HxcIRValidator.SCHEMA_VERSION,
+			dynamicPlan: emptyDynamic(),
 			dispatch: emptyDispatch(),
 			modules: [
 				{
@@ -3450,7 +5114,7 @@ class HxcIRGolden {
 	}
 
 	/** Build one checked immutable String borrow with one same-block native use. */
-	static function callScopedCStringProgram(checkedBorrow:Bool = true, parameterCarrier:Bool = false):HxcIRProgram {
+	static function callScopedCStringProgram(checkedBorrow:Bool = true, parameterCarrier:Bool = false, valueCount:Int = 1):HxcIRProgram {
 		final invalid = !checkedBorrow || parameterCarrier;
 		final file = invalid ? "test/negative/CallScopedCString.hx" : "test/hxc_ir/fixtures/CallScopedCString.hx";
 		final failure:HxcIRFailureEdge = {
@@ -3460,24 +5124,47 @@ class HxcIRGolden {
 			cleanup: []
 		};
 		final instructions:Array<HxcIRInstruction> = [];
-		if (!parameterCarrier) {
-			instructions.push(checkedBorrow ? instruction("borrow.cstring", result("value.cstring", IRTCallScopedCString),
-				IRIOCall(call(IRCDRuntime("string", "borrow-cstring"), ["value.text"], IRTCallScopedCString, failure)), file,
-				2) : instruction("invent.cstring", result("value.cstring", IRTCallScopedCString), IRIOConstant(IRCString("text", 4)), file, 2));
+		for (index in 0...valueCount) {
+			final suffix = valueCount == 1 ? "" : '.$index';
+			final valueId = 'value.cstring$suffix';
+			if (!parameterCarrier)
+				instructions.push(checkedBorrow ? instruction('borrow.cstring$suffix', result(valueId, IRTCallScopedCString),
+					IRIOCall(call(IRCDRuntime("string", "borrow-cstring"), ["value.text"], IRTCallScopedCString, failure)), file,
+					2 + index * 2) : instruction('invent.cstring$suffix', result(valueId, IRTCallScopedCString), IRIOConstant(IRCString("text", 4)), file,
+						2 + index * 2));
+			instructions.push(instruction('consume.cstring$suffix', null, IRIOCall(call(IRCDNative("native.text"), [valueId], IRTVoid)), file, 3 + index * 2));
 		}
-		instructions.push(instruction("consume.cstring", null, IRIOCall(call(IRCDNative("native.text"), ["value.cstring"], IRTVoid)), file, 3));
 		final program = minimalProgram("fixture.CallScopedCString", instructions, terminator(IRTReturn(null, []), file, 4), [], [], file);
 		program.modules[0].functions[0].parameters.push(parameter(parameterCarrier ? "value.cstring" : "value.text",
 			parameterCarrier ? IRTCallScopedCString : IRTManagedString, file, 1));
 		return program;
 	}
 
+	/** Reject a runtime strategy that owns neither a handler frame nor an unwind. */
+	static function containedExceptionWithoutRegionProgram():HxcIRProgram {
+		final file = "test/hxc_ir/fixtures/InvalidContainedException.hx";
+		return minimalProgram("fixture.InvalidContainedException", [], terminator(IRTReturn(null, []), file, 2), [], [], file, null, null,
+			IRESContainedRuntime);
+	}
+
+	/** Reject an exception operation whose frame is absent from function metadata. */
+	static function unknownExceptionRegionProgram():HxcIRProgram {
+		final file = "test/hxc_ir/fixtures/UnknownExceptionRegion.hx";
+		return minimalProgram("fixture.UnknownExceptionRegion", [
+			instruction("exception.push", null, IRIOException(IREFramePush("exception.region.missing")), file, 2)
+		], terminator(IRTReturn(null, []), file, 3), [], [], file, null, null,
+			IRESContainedRuntime);
+	}
+
 	static function minimalProgram(moduleId:String, instructions:Array<HxcIRInstruction>, terminatorValue:Null<HxcIRTerminator>, locals:Array<HxcIRLocal>,
-			regions:Array<HxcIRCleanupRegion>, file:String, ?returnType:HxcIRTypeRef, ?failureConvention:HxcIRFunctionFailureConvention):HxcIRProgram {
+			regions:Array<HxcIRCleanupRegion>, file:String, ?returnType:HxcIRTypeRef, ?failureConvention:HxcIRFunctionFailureConvention,
+			?exceptionStrategy:HxcIRExceptionStrategy, ?exceptionRegions:Array<HxcIRExceptionRegion>,
+			?exceptionCleanups:Array<HxcIRExceptionCleanup>):HxcIRProgram {
 		final functionReturnType = returnType == null ? IRTVoid : returnType;
 		final functionFailureConvention = failureConvention == null ? IRFCInfallible : failureConvention;
 		return {
 			schemaVersion: HxcIRValidator.SCHEMA_VERSION,
+			dynamicPlan: emptyDynamic(),
 			dispatch: emptyDispatch(),
 			modules: [
 				{
@@ -3491,9 +5178,14 @@ class HxcIRGolden {
 							displayName: '$moduleId.main',
 							parameters: [],
 							borrowedClassParameterIds: [],
+							mutableAggregateBorrowParameterIds: [],
 							borrowedClassLocalIds: [],
+							mutableAggregateBorrowLocalIds: [],
 							managedRoots: [],
 							locals: locals,
+							exceptionStrategy: exceptionStrategy,
+							exceptionRegions: exceptionRegions == null ? [] : exceptionRegions,
+							exceptionCleanups: exceptionCleanups == null ? [] : exceptionCleanups,
 							returnType: functionReturnType,
 							failureConvention: functionFailureConvention,
 							entryBlockId: "entry",
@@ -3519,6 +5211,14 @@ class HxcIRGolden {
 	static function emptyDispatch():HxcIRDispatchPlan
 		return {layouts: [], slots: [], tables: []};
 
+	static function emptyDynamic():HxcIRDynamicPlan
+		return {
+			types: [],
+			members: [],
+			callShapes: [],
+			operations: []
+		};
+
 	static function invalidDiagnostics(program:HxcIRProgram):Array<String> {
 		final diagnostics = new HxcIRValidator().validate(program, PROFILE);
 		if (diagnostics.length == 0) {
@@ -3531,6 +5231,15 @@ class HxcIRGolden {
 			}
 		}
 		return diagnostics.map(diagnostic -> diagnostic.render());
+	}
+
+	/** Require one malformed focused fixture to expose its intended contract. */
+	static function requireInvalidMarker(program:HxcIRProgram, marker:String, label:String):Void {
+		final diagnostics = invalidDiagnostics(program);
+		for (diagnostic in diagnostics)
+			if (diagnostic.indexOf(marker) != -1)
+				return;
+		throw '$label did not report `$marker`';
 	}
 
 	static function voidFunction(id:String, displayName:String, file:String, line:Int, ?failureConvention:HxcIRFunctionFailureConvention):HxcIRFunction {

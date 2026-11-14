@@ -1,0 +1,49 @@
+/*
+ * Observe the generated program through its allocator boundary. The wrapper
+ * counts real allocations and releases without changing generated source or
+ * adding a production hook. A correct Boolean result alone cannot prove cleanup.
+ */
+#include <stdlib.h>
+#include "hxrt/allocator.h"
+
+static size_t fixture_live = 0u;
+static size_t fixture_total = 0u;
+
+static hxc_status fixture_allocate(void *context, size_t size, size_t alignment, void **out_memory) {
+  hxc_allocator base = hxc_default_allocator();
+  hxc_status status;
+  (void)context;
+  status = base.allocate(base.context, size, alignment, out_memory);
+  if (status == HXC_STATUS_OK) {
+    fixture_live += 1u;
+    fixture_total += 1u;
+  }
+  return status;
+}
+
+static void fixture_release(void *context, void *memory, size_t size, size_t alignment) {
+  hxc_allocator base = hxc_default_allocator();
+  (void)context;
+  if (fixture_live == 0u) {
+    abort();
+  }
+  fixture_live -= 1u;
+  base.release(base.context, memory, size, alignment);
+}
+
+static hxc_allocator fixture_allocator(void) {
+  hxc_allocator allocator = { NULL, fixture_allocate, NULL, fixture_release };
+  return allocator;
+}
+
+int fixture_generated_main(void);
+#define main fixture_generated_main
+#define hxc_default_allocator fixture_allocator
+#include "../generated/src/program.c"
+#undef hxc_default_allocator
+#undef main
+
+int main(void) {
+  int result = fixture_generated_main();
+  return result != 0 || fixture_total == 0u || fixture_live != 0u ? 1 : 0;
+}

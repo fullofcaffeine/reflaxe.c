@@ -1,0 +1,10 @@
+# Host-side cache contracts share the full IR owner's classpaths and null safety.
+-cp test/hxc_ir
+-cp src
+-cp std
+-cp std/c/_std
+-cp vendor/reflaxe/src
+--macro nullSafety("reflaxe.c")
+--macro BodyFunctionReplayCacheProbe.run()
+-main BodyFunctionReplayMain
+--interp

@@ -1,10 +1,8 @@
 class Main {
 	static function main():Void {
-		try {
-			trace("not admitted");
-		} catch (error:String) {
-			trace(error);
-		}
+		final message = "not admitted";
+		final callback = function():String return message;
+		trace(callback());
 	}
 
 	/**
@@ -12,7 +10,7 @@ class Main {
 
 		The semantic-function replay prepass must not inspect this inferred
 		`Null<UnsupportedCacheRequest>` before ordinary lowering reaches the
-		source-anchored `try` expression above. A bare null has no storage layout;
+		source-anchored capturing closure above. A bare null has no storage layout;
 		its eventual declaration or use owns that representation decision.
 	**/
 	static var activeRequest:Null<UnsupportedCacheRequest> = null;

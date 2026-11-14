@@ -1,0 +1,6 @@
+# Compile-time boundary: downstream analysis requires validated HxcIR.
+
+-cp test/hxc_ir/fixtures
+-cp src
+-main RawProgramConsumer
+--no-output

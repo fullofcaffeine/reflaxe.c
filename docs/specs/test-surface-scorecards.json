@@ -44,8 +44,10 @@
       "focusedOwners": [
         "test:body-lowering",
         "test:function-lowering",
+        "test:incremental-backend",
         "test:aggregate-lowering",
         "test:enum-lowering",
+        "test:span-lowering",
         "test:string-runtime"
       ],
       "verticalOwners": [
@@ -272,6 +274,8 @@
       "focusedOwners": [
         "test:runtime-features",
         "test:gc-runtime",
+        "test:runtime-stress",
+        "test:span-lowering",
         "test:string-runtime",
         "test:array-runtime",
         "test:bytes-runtime",
@@ -304,14 +308,20 @@
       ],
       "affectedExtendedOwners": [
         "test:gc-runtime",
+        "test:runtime-stress",
         "test:caxecraft-domain:full"
       ],
       "oracles": [
         "Pinned Haxe Eval behavior for shared semantics",
-        "ASan and UBSan for invalid memory and undefined C behavior",
+        "ASan and UBSan for invalid memory and undefined C behavior, plus LeakSanitizer where the platform compiler provides it",
         "Independent allocator and C consumer invariants"
       ],
       "evidence": [
+        {
+          "path": "test/runtime_stress/runtime_stress.c",
+          "proves": "One reproducible cross-feature native contract sweeps observed String, Array, and collector allocation attempts, checks deep cyclic collection and repeated exception cleanup, and runs under strict optimization plus available memory sanitizers.",
+          "doesNotProve": "Operating-system thread safety before the thread runtime exists, leak detection on platforms without LeakSanitizer, every future runtime feature, or stable public ABI support."
+        },
         {
           "path": "test/runtime/gc/case.json",
           "proves": "The declared collector seed has a native and sanitizer owner.",
@@ -443,11 +453,11 @@
       "releaseCommand": null,
       "lastObserved": {
         "state": "not-qualified",
-        "evidence": "Current native smoke and hosted component jobs are evidence inputs; platform-support-matrix remains unsupported."
+        "evidence": "The data-owned Tier 1 workflow now fails closed and archives normalized reports; a supported-platform claim still requires a passing remote aggregate and E10.T07 compatibility qualification."
       },
       "residualRisks": [
-        "The ADR 0007 Tier 1 tuple matrix is incomplete.",
-        "No R5 release command can honestly qualify supported platforms yet."
+        "The first complete remote Tier 1 aggregate has not been archived yet.",
+        "E10.T07 still owns compatibility qualification before a supported-platform claim."
       ]
     },
     {
@@ -471,7 +481,8 @@
         "hxc-doctor"
       ],
       "focusedOwners": [
-        "test:diagnostics"
+        "test:diagnostics",
+        "test:span-lowering"
       ],
       "verticalOwners": [
         "test:hello",

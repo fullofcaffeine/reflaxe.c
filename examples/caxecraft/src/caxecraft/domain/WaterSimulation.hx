@@ -9,9 +9,6 @@ import caxecraft.domain.WaterCellCodec.isValidCode;
 import caxecraft.domain.WaterCellCodec.isWaterCode;
 import caxecraft.domain.WaterCellCodec.sourceCode;
 import caxecraft.domain.WaterCellCodec.stateAt as waterStateAt;
-#if c
-import c.CArray;
-#end
 
 /**
 	Deterministic, bounded voxel water for the target-neutral game domain.
@@ -41,18 +38,9 @@ import c.CArray;
 	the simulation and its fixed queue array in the session C struct without a heap
 	allocation.
 **/
-final class WaterSimulation {
+final class WaterSimulation extends WaterStorageBase {
 	var pendingCount:Int;
 	var lowestPending:Int;
-
-	#if c
-	/** One compact work mark per voxel, owned beside the scheduler counters. */
-	final pendingStorage:WaterPendingOwner = CArray.zero(World.VOLUME);
-	#else
-
-	/** Eval carrier for the same queue ownership and deterministic behavior. */
-	final pendingStorage:WaterPendingOwner = [];
-	#end
 
 	/**
 		Construct one empty scheduler and its matching queue storage.
@@ -62,13 +50,7 @@ final class WaterSimulation {
 		that read or change it.
 	**/
 	public function new() {
-		#if !c
-		var index = 0;
-		while (index < World.VOLUME) {
-			pendingStorage.push(0);
-			index++;
-		}
-		#end
+		super();
 		pendingCount = 0;
 		lowestPending = World.VOLUME;
 	}
@@ -77,7 +59,7 @@ final class WaterSimulation {
 	public function resetPending():Void {
 		var index = 0;
 		while (index < World.VOLUME) {
-			WaterPendingStorage.setOwnerMarked(pendingStorage, index, false);
+			setPendingMarked(index, false);
 			index++;
 		}
 		pendingCount = 0;
@@ -93,7 +75,7 @@ final class WaterSimulation {
 	public function capturePending(destination:WaterPendingCells):Void {
 		var index = 0;
 		while (index < World.VOLUME) {
-			WaterPendingStorage.setSnapshotMarked(destination, index, WaterPendingStorage.ownerIsMarked(pendingStorage, index));
+			WaterPendingStorage.setSnapshotMarked(destination, index, pendingIsMarked(index));
 			index++;
 		}
 	}
@@ -112,7 +94,7 @@ final class WaterSimulation {
 		var index = 0;
 		while (index < World.VOLUME) {
 			final marked = WaterPendingStorage.snapshotIsMarked(source, index);
-			WaterPendingStorage.setOwnerMarked(pendingStorage, index, marked);
+			setPendingMarked(index, marked);
 			if (marked) {
 				pendingCount++;
 				if (lowestPending == World.VOLUME)
@@ -258,9 +240,9 @@ final class WaterSimulation {
 	/** Add one cell to the duplicate-free deterministic work set. */
 	public function schedule(coord:BlockCoord):Bool {
 		final index = World.indexOf(coord);
-		if (index < 0 || WaterPendingStorage.ownerIsMarked(pendingStorage, index))
+		if (index < 0 || pendingIsMarked(index))
 			return false;
-		WaterPendingStorage.setOwnerMarked(pendingStorage, index, true);
+		setPendingMarked(index, true);
 		pendingCount++;
 		if (index < lowestPending)
 			lowestPending = index;
@@ -365,19 +347,19 @@ final class WaterSimulation {
 		if (pendingCount <= 0 || lowestPending >= World.VOLUME)
 			return -1;
 		final result = lowestPending;
-		WaterPendingStorage.setOwnerMarked(pendingStorage, result, false);
+		setPendingMarked(result, false);
 		pendingCount--;
 		lowestPending = World.VOLUME;
 		if (pendingCount > 0) {
 			var index = result + 1;
 			while (index < World.VOLUME && lowestPending == World.VOLUME) {
-				if (WaterPendingStorage.ownerIsMarked(pendingStorage, index))
+				if (pendingIsMarked(index))
 					lowestPending = index;
 				index++;
 			}
 			index = 0;
 			while (index < result && lowestPending == World.VOLUME) {
-				if (WaterPendingStorage.ownerIsMarked(pendingStorage, index))
+				if (pendingIsMarked(index))
 					lowestPending = index;
 				index++;
 			}

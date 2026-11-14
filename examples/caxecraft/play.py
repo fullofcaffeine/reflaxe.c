@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import base64
 import difflib
 import hashlib
 import json
@@ -19,17 +20,28 @@ import sys
 import tempfile
 import time
 import zlib
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
+from typing import TextIO
 
 
 ROOT = Path(__file__).resolve().parents[2]
 CASE = Path(__file__).resolve().parent
 PROVISION_DIR = ROOT / "scripts/raylib"
+CAXECRAFT_NATIVE_INCLUDE = CASE / "native/include"
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(PROVISION_DIR))
 import provision  # type: ignore  # noqa: E402
+from scripts.test.compiler_progress import (  # noqa: E402
+    compiler_process_detail,
+    compiler_timeout_suffix,
+)
+from renderer_interval import IntervalEvidenceFailure, parse_interval_evidence  # noqa: E402
+from renderer_call_coverage import CoverageFailure  # noqa: E402
+from renderer_native_contract import NativeContractFailure, NativeTerrainContract  # noqa: E402
+from renderer_build_coverage import TerrainBuildCoverage  # noqa: E402
 from dev_build_state import (  # noqa: E402
     BuildStateFailure,
     ExternalFile,
@@ -41,6 +53,7 @@ from dev_build_state import (  # noqa: E402
     output_snapshot,
     request_snapshot,
     sha256_file,
+    validate_request_reuse,
     validate_reuse,
 )
 from dev_haxe_server import (  # noqa: E402
@@ -99,6 +112,10 @@ SANITIZER_FLAGS = (
 )
 PLATFORM_NAMES = {"Darwin": "macos", "Linux": "linux", "Windows": "windows"}
 RAYLIB_CONFIGURATIONS = ("desktop", "memory-software")
+# Compiler-owned typed math helpers may request the platform math library.
+# Keep this allow-list narrow so authored or generated metadata cannot silently
+# expand the native link surface beyond reviewed system dependencies.
+ADMITTED_GENERATED_SYSTEM_LIBRARIES = frozenset({"m"})
 EXPECTED = CASE / "expected"
 # Snapshots review generated structure, not whichever desktop runs the updater.
 # Native build/play still selects the real host below, and the Raylib CI matrix
@@ -182,9 +199,13 @@ EXPECTED_PLAY_RUNTIME_FEATURES = (
     "bytes-string",
     "object",
     "gc",
+    "iterator",
+    "typed-map",
+    "gc-string-map",
     "int-map",
     "io",
     "string-float",
+    "string-lower-case",
     "string-map",
     "string-split",
 )
@@ -193,6 +214,7 @@ RUNTIME_CONTENT_ENTRY_KINDS = frozenset(
 )
 RUNTIME_ASSET_ENTRY_KINDS = frozenset(("asset", "asset-manifest"))
 RUNTIME_GRID_ASSET_KINDS = frozenset(("icon-atlas", "sprite-atlas", "tile-atlas"))
+RUNTIME_PACKAGE_FILES = ("caxecraft.package.json",)
 RUNTIME_LAUNCHER_FILES = ("pilots/active.piloscript",)
 
 
@@ -306,8 +328,8 @@ MOSSLING_ENTITY_COLORS = {
     (147, 128, 100),
 }
 PILOT_TELEMETRY_MAGIC = 0x43585054
-PILOT_TELEMETRY_VERSION = 11
-PILOT_TELEMETRY_WORDS = 48
+PILOT_TELEMETRY_VERSION = 12
+PILOT_TELEMETRY_WORDS = 50
 PILOT_TELEMETRY_COLORS = tuple(
     (
         8 + nibble * 16,
@@ -317,6 +339,20 @@ PILOT_TELEMETRY_COLORS = tuple(
     )
     for nibble in range(16)
 )
+class _LeasePublicationFailure(Exception):
+    """Hand exact retry ownership back when publication itself is interrupted.
+
+    The transaction owner must clean this replacement, not its positively dead
+    predecessor. The original exception is rethrown after that cleanup so a
+    cancellation remains status130 and ordinary failures retain their status.
+    """
+
+    def __init__(self, lease: HaxeServerLease, failure: BaseException):
+        super().__init__("replacement Haxe lease publication failed")
+        self.lease = lease
+        self.failure = failure
+
+
 class PlayFailure(RuntimeError):
     """The playable could not be built without weakening its contracts."""
 
@@ -491,7 +527,7 @@ def stage_runtime_assets(destination: Path) -> None:
 
     stage_root = destination / "assets"
     selected: list[dict[str, object]] = []
-    expected_files = {RUNTIME_ASSET_REPORT}
+    expected_files = {"manifest.json", RUNTIME_ASSET_REPORT}
     for asset_id in selected_ids:
         asset = by_id.get(asset_id)
         if asset is None:
@@ -570,6 +606,12 @@ def stage_runtime_assets(destination: Path) -> None:
         )
         shutil.copyfile(source_root.joinpath(*relative.parts), target)
 
+    prepare_stage_destination(
+        stage_root,
+        PurePosixPath("manifest.json"),
+        "Caxecraft asset manifest",
+    ).write_bytes((source_root / "manifest.json").read_bytes())
+
     report = {
         "schemaVersion": 1,
         "packId": manifest.get("packId"),
@@ -594,9 +636,10 @@ def stage_content_catalogs(
 ) -> None:
     """Publish the exact authored content tree consumed beside the executable.
 
-    Native play reads the staged CaxeMap after process startup. The base content
-    manifest and UI catalog use the same bounded ownership rule. Their current
-    bytes are runtime inputs and are deliberately absent from the compile key.
+    Native play reads the staged CaxeMap after process startup. The outer
+    package manifest, base content manifest, and UI catalog use the same bounded
+    ownership rule. Their current bytes are runtime inputs and are deliberately
+    absent from the compile key.
     """
 
     runtime_files = runtime_content_files(source_root)
@@ -663,8 +706,8 @@ def runtime_content_files(source_root: Path = CASE) -> tuple[str, ...]:
     if not isinstance(document, dict) or not isinstance(document.get("entries"), list):
         raise PlayFailure("Caxecraft package manifest entries must be an array")
 
-    selected: list[str] = []
-    seen: set[str] = set()
+    selected = list(RUNTIME_PACKAGE_FILES)
+    seen = set(RUNTIME_PACKAGE_FILES)
     for index, entry in enumerate(document["entries"]):
         if not isinstance(entry, dict):
             raise PlayFailure(f"Caxecraft package manifest entry {index} must be an object")
@@ -694,12 +737,75 @@ def development_tool(name: str) -> str:
     return str(local) if local.is_file() else name
 
 
+def retain_compiler_streams(
+    log: TextIO | None,
+    *,
+    command: list[str],
+    cwd: Path,
+    timeout: int,
+    result: subprocess.CompletedProcess[str] | subprocess.TimeoutExpired,
+    attempt: int = 1,
+    lease: HaxeServerLease | None = None,
+) -> None:
+    """Retain each compiler attempt before retry or publication can hide it.
+
+    Completed streams are text; TimeoutExpired may instead carry raw bytes.
+    Keep those bytes losslessly beside a readable projection. A compiler exit
+    of zero proves only that attempt, not project validation or publication.
+    """
+    if log is None:
+        return
+    timed_out = isinstance(result, subprocess.TimeoutExpired)
+    record: dict[str, object] = {
+        "attempt": attempt,
+        "command": command,
+        "cwd": str(cwd),
+        "configuredTimeoutSeconds": timeout,
+        "expiredTimeoutSeconds": result.timeout if timed_out else None,
+        "timedOut": timed_out,
+        "returncode": None if timed_out else result.returncode,
+        "server": None,
+    }
+    if lease is not None:
+        process = lease.process
+        record["server"] = {
+            "endpoint": lease.connection.endpoint,
+            "owned": lease.owned,
+            "compatibilitySha256": lease.compatibility_sha256,
+            "process": None if process is None else {
+                "pid": process.pid,
+                "startIdentity": process.start_identity,
+                "commandIdentity": process.command_identity,
+                "cookieSha256": process.cookie_sha256,
+            },
+        }
+    for name, value in (("stdout", result.stdout), ("stderr", result.stderr)):
+        record[name + "Kind"] = "bytes" if isinstance(value, bytes) else "none" if value is None else "text"
+        record[name] = value.decode("utf-8", errors="replace") if isinstance(value, bytes) else value or ""
+        record[name + "Base64"] = base64.b64encode(value).decode("ascii") if isinstance(value, bytes) else None
+    try:
+        log.write(json.dumps(record) + "\n")
+        log.flush()
+    except OSError as error:
+        # An incomplete observation must not become a successful retried run.
+        # Keep the compiler failure first when both operations failed.
+        primary = ""
+        if timed_out:
+            primary = (f"Caxecraft Haxe-to-C compile could not run: {result}"
+                       + compiler_timeout_suffix(result.stdout, result.stderr) + "\n")
+        elif result.returncode != 0:
+            primary = (f"Caxecraft Haxe-to-C compile failed with exit {result.returncode}\n"
+                       + compiler_process_detail(result.stdout, result.stderr) + "\n")
+        raise PlayFailure(f"{primary}could not retain compiler log: {error}") from error
+
+
 def run(
     arguments: list[str],
     *,
     cwd: Path,
     timeout: int,
     label: str,
+    compiler_log: TextIO | None = None,
 ) -> subprocess.CompletedProcess[str]:
     """Run one checked tool without changing the developer's Haxe-server policy.
 
@@ -721,10 +827,23 @@ def run(
             text=True,
             timeout=timeout,
         )
-    except (OSError, subprocess.TimeoutExpired) as error:
+    except subprocess.TimeoutExpired as error:
+        retain_compiler_streams(compiler_log, command=arguments, cwd=cwd, timeout=timeout, result=error)
+        suffix = compiler_timeout_suffix(
+            error.stdout,
+            error.stderr,
+            missing_status=(
+                "no haxe.c phase marker; request remained in Haxe frontend or server startup"
+                if label == "Caxecraft Haxe-to-C compile"
+                else None
+            ),
+        )
+        raise PlayFailure(f"{label} could not run: {error}{suffix}") from error
+    except OSError as error:
         raise PlayFailure(f"{label} could not run: {error}") from error
+    retain_compiler_streams(compiler_log, command=arguments, cwd=cwd, timeout=timeout, result=result)
     if result.returncode != 0:
-        detail = "\n".join(value.strip() for value in (result.stdout, result.stderr) if value.strip())
+        detail = compiler_process_detail(result.stdout, result.stderr)
         suffix = f"\n{detail}" if detail else ""
         raise PlayFailure(f"{label} failed with exit {result.returncode}{suffix}")
     return result
@@ -1247,9 +1366,14 @@ def build_pilot_report(
                 f"stops={signed[46]}, fixedTicks={signed[47]}, "
                 f"restoredHotbar={signed[28]})"
             )
+        if not 1 <= signed[48] <= 3 or signed[49] != 0:
+            raise PlayFailure(
+                "editor-shell pilot rebuilt broad terrain after one voxel edit "
+                f"(dirtyChunks={signed[48]}, fullRefreshFallbacks={signed[49]})"
+            )
     elif editor_visible:
         raise PlayFailure(f"pilot {pilot!r} unexpectedly finished on the editor screen")
-    elif any(signed[index] != 0 for index in range(42, 48)):
+    elif any(signed[index] != 0 for index in range(42, 50)):
         raise PlayFailure("non-editor pilot unexpectedly reported editor Test Play lifecycle state")
     if pilot == "aquatic-gear" and not (
         aquatic_gear_equipped and submersion_observed and water_exit_observed and sand_mined_observed
@@ -1332,6 +1456,8 @@ def build_pilot_report(
             "rebuiltTerrainChunks": signed[33],
             "totalRebuiltTerrainChunks": signed[34],
             "terrainCacheValid": signed[35] == 1,
+            "editorTerrainPatchDirtyChunks": signed[48],
+            "editorTerrainPatchFallbacks": signed[49],
             "implementation": renderer,
         },
         "gameplay": {
@@ -1413,17 +1539,16 @@ def validate_presented_screenshot(
 
 
 def validate_editor_screenshot(path: Path, *, platform_name: str) -> tuple[int, int]:
-    """Prove the native editor drew its controls and active 3D world.
+    """Prove captured Build drew its compact controls and active 3D world.
 
     This is a structural framebuffer check, not a pixel golden. It admits small
     driver and font-rendering differences while still rejecting a blank frame,
     a gameplay frame, a flat placeholder canvas, or an editor missing one of
-    its main working regions. The pilot paints and selects one real air cell.
+    its direct-editing regions. The pilot paints and selects one real air cell.
     Broad color counts prove that the perspective view contains sky, authored
     terrain, and its selection outline without prescribing map geometry. The
-    focused sidebar subregion proves the scene controls are presented. The
-    exact yellow focus-ring color proves that device-neutral focus reached the
-    native toolbar; exact edit semantics remain owned by faster tests.
+    compact top regions prove that help and the current tool remain visible
+    after the desktop controls hide. Faster tests own exact edit semantics.
     """
     width, height, pixels = decode_rgba_png(path, "editor")
     logical_width, logical_height = 1280, 720
@@ -1450,34 +1575,30 @@ def validate_editor_screenshot(path: Path, *, platform_name: str) -> tuple[int, 
                     changed += 1
         return changed, len(colors)
 
-    toolbar = region_evidence(32, 52, 672, 94)
-    canvas = region_evidence(32, 104, 1018, 650)
-    sidebar = region_evidence(1018, 104, 1248, 650)
-    world_name = region_evidence(126, 58, 386, 96)
-    status = region_evidence(32, 660, 1248, 700)
-    minimum_changed = (
-        2_000 * scale * scale,
-        25_000 * scale * scale,
-        8_000 * scale * scale,
-        8_000 * scale * scale,
-        2_000 * scale * scale,
+    help_strip = region_evidence(26, 26, 1254, 48)
+    hotbar = region_evidence(190, 620, 1090, 672)
+    canvas = region_evidence(16, 16, 1264, 704)
+    evidence = (
+        ("help-strip", help_strip, 2_000 * scale * scale, 2),
+        ("hotbar", hotbar, 15_000 * scale * scale, 5),
+        ("canvas", canvas, 100_000 * scale * scale, 3),
     )
-    evidence = (toolbar, canvas, sidebar, world_name, status)
-    labels = ("toolbar", "canvas", "sidebar", "world-name", "status")
     failures = [
         f"{label}=changed:{changed},colors:{colors}"
-        for label, (changed, colors), threshold in zip(labels, evidence, minimum_changed)
-        if changed < threshold or colors < 3
+        for label, (changed, colors), threshold, minimum_colors in evidence
+        if changed < threshold or colors < minimum_colors
     ]
     canvas_colors = {
-        "sky": ((126, 190, 201), 50_000),
+        # Orbit frames the selected actor closely, so terrain owns most of the
+        # viewport. This still requires a broad, exact sky region.
+        "sky": ((126, 190, 201), 20_000),
         "selection-outline": ((255, 132, 47), 20),
     }
     for label, (expected, minimum) in canvas_colors.items():
         matching = 0
-        for row in range(104 * scale, 650 * scale):
+        for row in range(16 * scale, 704 * scale):
             row_at = row * width * 4
-            for column in range(32 * scale, 1018 * scale):
+            for column in range(16 * scale, 1264 * scale):
                 at = row_at + column * 4
                 if tuple(pixels[at : at + 3]) == expected:
                     matching += 1
@@ -1485,45 +1606,315 @@ def validate_editor_screenshot(path: Path, *, platform_name: str) -> tuple[int, 
             failures.append(
                 f"3d-{label}=pixels:{matching},minimum:{minimum * scale * scale}"
             )
-    terrain_colors = {
-        (132, 157, 167),
-        (108, 164, 103),
-        (180, 153, 102),
-        (102, 159, 174),
-        (172, 174, 187),
-        (176, 119, 91),
-    }
+    # Build now borrows the ordinary terrain atlases. Broad green/warm pixels
+    # prove that authored terrain is visible, while quantized color variety
+    # distinguishes textured faces from the former flat overview rectangles.
     terrain_pixels = 0
-    for row in range(104 * scale, 650 * scale):
+    terrain_color_buckets: set[int] = set()
+    for row in range(16 * scale, 704 * scale):
         row_at = row * width * 4
-        for column in range(32 * scale, 1018 * scale):
+        for column in range(16 * scale, 1264 * scale):
             at = row_at + column * 4
-            if tuple(pixels[at : at + 3]) in terrain_colors:
+            red, green, blue = pixels[at : at + 3]
+            green_terrain = green > red * 0.9 and green > blue * 1.2 and green > 50
+            warm_terrain = red > 80 and green > 60 and red > blue * 1.4 and green > blue * 1.2
+            if green_terrain or warm_terrain:
                 terrain_pixels += 1
+                terrain_color_buckets.add(
+                    (red >> 4) << 8 | (green >> 4) << 4 | (blue >> 4)
+                )
     minimum_terrain_pixels = 5_000 * scale * scale
-    if terrain_pixels < minimum_terrain_pixels:
+    minimum_terrain_buckets = 24
+    if (
+        terrain_pixels < minimum_terrain_pixels
+        or len(terrain_color_buckets) < minimum_terrain_buckets
+    ):
         failures.append(
-            f"3d-authored-terrain=pixels:{terrain_pixels},minimum:{minimum_terrain_pixels}"
+            "3d-atlas-terrain="
+            f"pixels:{terrain_pixels},minimum:{minimum_terrain_pixels},"
+            f"colorBuckets:{len(terrain_color_buckets)},minimumBuckets:{minimum_terrain_buckets}"
         )
-    focus_pixels = 0
-    # The child-first shell keeps the primary action at the far right. Check
-    # the complete toolbar so layout changes do not turn this into a stale
-    # coordinate test while still proving that keyboard focus is visible.
-    for row in range(48 * scale, 102 * scale):
+    # The deterministic editor pilot selects one shipped actor, then Orbit keeps
+    # that actor near the viewport center. Its atlas cell contributes compact
+    # red-dominant pixels. Exclude the exact orange selection-wire color so an
+    # empty gizmo cannot imitate authored art.
+    actor_pixels = 0
+    for row in range(260 * scale, 460 * scale):
         row_at = row * width * 4
-        for column in range(32 * scale, 1248 * scale):
+        for column in range(540 * scale, 740 * scale):
             at = row_at + column * 4
-            if tuple(pixels[at : at + 3]) == (255, 216, 92):
-                focus_pixels += 1
-    minimum_focus_pixels = 150 * scale * scale
-    if focus_pixels < minimum_focus_pixels:
+            red, green, blue = pixels[at : at + 3]
+            if (
+                (red, green, blue) != (255, 132, 47)
+                and red > 60
+                and red > green * 1.25
+                and red > blue * 1.2
+            ):
+                actor_pixels += 1
+    minimum_actor_pixels = 40 * scale * scale
+    if actor_pixels < minimum_actor_pixels:
         failures.append(
-            f"primary-action-focus-ring=pixels:{focus_pixels},minimum:{minimum_focus_pixels}"
+            f"3d-authored-object-art=pixels:{actor_pixels},minimum:{minimum_actor_pixels}"
+        )
+    # Trigger volumes stay precise wire overlays in Build. A broad magenta
+    # surface here means one volume obscures the world as opaque geometry.
+    opaque_volume_pixels = 0
+    for row in range(152 * scale, 541 * scale):
+        row_at = row * width * 4
+        for column in range(44 * scale, 974 * scale):
+            at = row_at + column * 4
+            red, green, blue = pixels[at : at + 3]
+            if red > 160 and blue > 180 and red > green * 1.3 and blue > green * 1.4:
+                opaque_volume_pixels += 1
+    maximum_volume_pixels = 2_000 * scale * scale
+    if opaque_volume_pixels > maximum_volume_pixels:
+        failures.append(
+            f"3d-opaque-trigger-volume=pixels:{opaque_volume_pixels},maximum:{maximum_volume_pixels}"
+        )
+    tool_outline_pixels = 0
+    # The exact selection color around one hotbar slot proves that captured
+    # Build still identifies the tool that owns direct input.
+    for row in range(620 * scale, 672 * scale):
+        row_at = row * width * 4
+        for column in range(190 * scale, 1090 * scale):
+            at = row_at + column * 4
+            if tuple(pixels[at : at + 3]) == (255, 132, 47):
+                tool_outline_pixels += 1
+    minimum_tool_outline_pixels = 80 * scale * scale
+    if tool_outline_pixels < minimum_tool_outline_pixels:
+        failures.append(
+            "captured-tool-outline="
+            f"pixels:{tool_outline_pixels},minimum:{minimum_tool_outline_pixels}"
         )
     if failures:
         raise PlayFailure(
             "Caxecraft editor framebuffer is blank or missing a working region "
             f"({'; '.join(failures)})"
+        )
+    return width, height
+
+
+def validate_editor_environment_screenshot(path: Path, *, platform_name: str) -> tuple[int, int]:
+    """Prove the native editor presented its complete modal over the workspace.
+
+    Exact environment changes are owned by the renderer-independent editor
+    probe. This broad framebuffer check proves that the native route presents
+    a substantial, varied two-column panel and a visible device focus ring.
+    """
+    width, height, pixels = decode_rgba_png(path, "editor environment")
+    logical_width, logical_height = 1280, 720
+    expected_dimensions = {(logical_width, logical_height)}
+    if platform_name == "macos":
+        expected_dimensions.add((logical_width * 2, logical_height * 2))
+    if (width, height) not in expected_dimensions:
+        raise PlayFailure(
+            "Caxecraft editor environment screenshot must match its logical "
+            f"1280x720 window at an admitted pixel scale, found {width}x{height}"
+        )
+    scale = width // logical_width
+    panel_changed = 0
+    panel_colors: set[int] = set()
+    focus_pixels = 0
+    for row in range(100 * scale, 660 * scale):
+        row_at = row * width * 4
+        for column in range(230 * scale, 1050 * scale):
+            at = row_at + column * 4
+            red, green, blue = pixels[at : at + 3]
+            panel_colors.add((red >> 4) << 8 | (green >> 4) << 4 | (blue >> 4))
+            if abs(red - 12) + abs(green - 28) + abs(blue - 36) > 24:
+                panel_changed += 1
+            if (red, green, blue) == (255, 132, 47):
+                focus_pixels += 1
+    minimum_changed = 80_000 * scale * scale
+    minimum_focus = 100 * scale * scale
+    if panel_changed < minimum_changed or len(panel_colors) < 8 or focus_pixels < minimum_focus:
+        raise PlayFailure(
+            "Caxecraft editor environment panel is blank, incomplete, or missing focus "
+            f"(changed:{panel_changed}, colors:{len(panel_colors)}, focus:{focus_pixels})"
+        )
+    return width, height
+
+
+def validate_editor_asset_browser_screenshot(path: Path, *, platform_name: str) -> tuple[int, int]:
+    """Prove the searched asset browser is visible, focused, and icon-backed."""
+
+    width, height, pixels = decode_rgba_png(path, "editor asset browser")
+    logical_width, logical_height = 1280, 720
+    expected_dimensions = {(logical_width, logical_height)}
+    if platform_name == "macos":
+        expected_dimensions.add((logical_width * 2, logical_height * 2))
+    if (width, height) not in expected_dimensions:
+        raise PlayFailure(
+            "Caxecraft editor asset-browser screenshot must match its logical "
+            f"1280x720 window at an admitted pixel scale, found {width}x{height}"
+        )
+    scale = width // logical_width
+    panel_changed = 0
+    panel_colors: set[int] = set()
+    thumbnail_colors: dict[int, int] = {}
+    focus_pixels = 0
+    for row in range(50 * scale, 670 * scale):
+        row_at = row * width * 4
+        for column in range(200 * scale, 1080 * scale):
+            at = row_at + column * 4
+            red, green, blue = pixels[at : at + 3]
+            panel_colors.add((red >> 4) << 8 | (green >> 4) << 4 | (blue >> 4))
+            if abs(red - 12) + abs(green - 28) + abs(blue - 36) > 24:
+                panel_changed += 1
+            # Inspect the first result's thumbnail, away from text and focus borders.
+            # Atlas art owns its palette; a flat category mark is not texture evidence.
+            if 204 * scale <= row < 238 * scale and 236 * scale <= column < 270 * scale:
+                color = red << 16 | green << 8 | blue
+                thumbnail_colors[color] = thumbnail_colors.get(color, 0) + 1
+            if (red, green, blue) == (255, 132, 47):
+                focus_pixels += 1
+    minimum_changed = 150_000 * scale * scale
+    thumbnail_detail_pixels = sum(thumbnail_colors.values()) - max(thumbnail_colors.values(), default=0)
+    minimum_icon = 400 * scale * scale
+    minimum_focus = 100 * scale * scale
+    if (
+        panel_changed < minimum_changed
+        or len(panel_colors) < 8
+        or len(thumbnail_colors) < 8
+        or thumbnail_detail_pixels < minimum_icon
+        or focus_pixels < minimum_focus
+    ):
+        raise PlayFailure(
+            "Caxecraft editor asset browser is blank, unfocused, or missing its textured thumbnail "
+            f"(changed:{panel_changed}, colors:{len(panel_colors)}, "
+            f"icon-detail:{thumbnail_detail_pixels}, icon-colors:{len(thumbnail_colors)}, focus:{focus_pixels})"
+        )
+    return width, height
+
+
+def validate_editor_text_screenshot(path: Path, *, platform_name: str) -> tuple[int, int]:
+    """Prove native Text kept complete invalid source visible for repair.
+
+    Renderer-independent probes own exact source edits and atomic rejection.
+    This broad visual check requires a substantial source panel, many readable
+    row marks, CaxeFlow syntax families, and the stable invalid-state color. It
+    does not inspect localized glyph shapes or duplicate parser expectations.
+    """
+
+    width, height, pixels = decode_rgba_png(path, "editor Text workspace")
+    logical_width, logical_height = 1280, 720
+    expected_dimensions = {(logical_width, logical_height)}
+    if platform_name == "macos":
+        expected_dimensions.add((logical_width * 2, logical_height * 2))
+    if (width, height) not in expected_dimensions:
+        raise PlayFailure(
+            "Caxecraft editor Text screenshot must match its logical "
+            f"1280x720 window at an admitted pixel scale, found {width}x{height}"
+        )
+    scale = width // logical_width
+    panel_changed = 0
+    panel_colors: set[int] = set()
+    row_mark_pixels = 0
+    rule_pixels = 0
+    condition_pixels = 0
+    action_pixels = 0
+    invalid_pixels = 0
+    for row in range(24 * scale, 696 * scale):
+        row_at = row * width * 4
+        for column in range(24 * scale, 1256 * scale):
+            at = row_at + column * 4
+            red, green, blue = pixels[at : at + 3]
+            panel_colors.add((red >> 4) << 8 | (green >> 4) << 4 | (blue >> 4))
+            if abs(red - 12) + abs(green - 28) + abs(blue - 36) > 24:
+                panel_changed += 1
+            if (red, green, blue) == (100, 143, 151):
+                row_mark_pixels += 1
+            elif (red, green, blue) == (210, 105, 230):
+                rule_pixels += 1
+            elif (red, green, blue) == (84, 191, 205):
+                condition_pixels += 1
+            elif (red, green, blue) == (111, 174, 91):
+                action_pixels += 1
+            elif (red, green, blue) in ((255, 154, 112), (255, 190, 132)):
+                invalid_pixels += 1
+    minimum_changed = 180_000 * scale * scale
+    minimum_rows = 80 * scale * scale
+    minimum_syntax = 12 * scale * scale
+    minimum_invalid = 30 * scale * scale
+    if (
+        panel_changed < minimum_changed
+        or len(panel_colors) < 10
+        or row_mark_pixels < minimum_rows
+        or rule_pixels < minimum_syntax
+        or condition_pixels < minimum_syntax
+        or action_pixels < minimum_syntax
+        or invalid_pixels < minimum_invalid
+    ):
+        raise PlayFailure(
+            "Caxecraft Text workspace is blank, incomplete, or missing repair evidence "
+            f"(changed:{panel_changed}, colors:{len(panel_colors)}, rows:{row_mark_pixels}, "
+            f"rules:{rule_pixels}, conditions:{condition_pixels}, actions:{action_pixels}, "
+            f"invalid:{invalid_pixels})"
+        )
+    return width, height
+
+
+def validate_editor_flow_screenshot(path: Path, *, platform_name: str) -> tuple[int, int]:
+    """Prove the native editor presented a usable CaxeFlow card library.
+
+    Renderer-independent probes own exact card values and edits. This visual
+    check instead requires the large modal, both readable columns, and the
+    stable green action-family stripe on many separate rows. It deliberately
+    ignores localized glyph pixels and exact card wording.
+    """
+    width, height, pixels = decode_rgba_png(path, "editor CaxeFlow cards")
+    logical_width, logical_height = 1280, 720
+    expected_dimensions = {(logical_width, logical_height)}
+    if platform_name == "macos":
+        expected_dimensions.add((logical_width * 2, logical_height * 2))
+    if (width, height) not in expected_dimensions:
+        raise PlayFailure(
+            "Caxecraft editor CaxeFlow screenshot must match its logical "
+            f"1280x720 window at an admitted pixel scale, found {width}x{height}"
+        )
+    scale = width // logical_width
+    panel_changed = 0
+    panel_colors: set[int] = set()
+    label_evidence = 0
+    help_evidence = 0
+    stripe_rows = 0
+    for logical_row in range(19):
+        stripe_pixels = 0
+        row_top = 94 + logical_row * 29
+        for row in range(row_top * scale, (row_top + 21) * scale):
+            row_at = row * width * 4
+            for column in range(125 * scale, 129 * scale):
+                at = row_at + column * 4
+                if tuple(pixels[at : at + 3]) == (111, 174, 91):
+                    stripe_pixels += 1
+        if stripe_pixels >= 60 * scale * scale:
+            stripe_rows += 1
+    for row in range(40 * scale, 680 * scale):
+        row_at = row * width * 4
+        for column in range(110 * scale, 1170 * scale):
+            at = row_at + column * 4
+            red, green, blue = pixels[at : at + 3]
+            panel_colors.add((red >> 4) << 8 | (green >> 4) << 4 | (blue >> 4))
+            if abs(red - 12) + abs(green - 28) + abs(blue - 36) > 24:
+                panel_changed += 1
+            bright = red + green + blue > 300
+            if bright and 132 * scale <= column < 575 * scale:
+                label_evidence += 1
+            if bright and 590 * scale <= column < 1148 * scale:
+                help_evidence += 1
+    minimum_changed = 120_000 * scale * scale
+    minimum_column_evidence = 1_000 * scale * scale
+    if (
+        panel_changed < minimum_changed
+        or len(panel_colors) < 8
+        or stripe_rows < 12
+        or label_evidence < minimum_column_evidence
+        or help_evidence < minimum_column_evidence
+    ):
+        raise PlayFailure(
+            "Caxecraft CaxeFlow card library is blank, incomplete, or missing usable rows "
+            f"(changed:{panel_changed}, colors:{len(panel_colors)}, stripes:{stripe_rows}, "
+            f"labels:{label_evidence}, help:{help_evidence})"
         )
     return width, height
 
@@ -1720,9 +2111,9 @@ def haxe_server_compatibility(
 ) -> dict[str, object]:
     """Identify infrastructure that may persist inside the Haxe server.
 
-    Ordinary game-module bytes are intentionally absent: Haxe's server checks
-    and invalidates edits inside those modules, which is the work we want it to
-    reuse. Their relative `.hx` paths are present because add/remove/rename
+    Ordinary game-module bytes are intentionally absent: the owned request's
+    source snapshot supplies exact changed-file invalidations without replacing
+    the server, preserving reuse of unchanged modules. Their relative `.hx` paths are present because add/remove/rename
     changes need a fresh server under the pinned preview. Compiler macros,
     Reflaxe, the Haxe binary/standard library, package resolution, and base HXML
     also define the machinery interpreting a request, so changing any of them
@@ -1742,6 +2133,10 @@ def haxe_server_compatibility(
             "repo/caxecraft/tooling/dev_haxe_server.py",
             CASE / "dev_haxe_server.py",
         ),
+        InputPath(
+            "repo/caxecraft/tooling/dev_windows_process.py",
+            CASE / "dev_windows_process.py",
+        ),
         InputPath("haxe/compiler", installation.compiler),
         InputPath("haxe/std", installation.standard_library),
     )
@@ -1754,6 +2149,49 @@ def haxe_server_compatibility(
         "files": files,
     }
     return {**body, "sha256": canonical_digest(body)}
+
+
+def haxe_game_source_snapshot(request: dict[str, object] | None = None) -> dict[str, str]:
+    """Reuse build-input hashes for ordinary modules; infrastructure uses compatibility."""
+    prefix = "repo/caxecraft/src/"
+    records = request["files"] if request is not None else inventory_inputs([
+        InputPath("repo/caxecraft/src", CASE / "src"),
+    ])
+    result: dict[str, str] = {}
+    for record in records:
+        logical = record["path"]
+        if logical.startswith(prefix) and logical.endswith(".hx"):
+            result[str((CASE / "src" / logical[len(prefix):]).resolve())] = record["sha256"]
+    return result
+
+
+def validate_haxe_source_roots(arguments: tuple[str, ...], installation: HaxeInstallation) -> None:
+    """Refuse a server request whose source roots escape the hashed input closure.
+
+    The bootstrap also admits vendored Reflaxe, already covered by compatibility.
+    A new library or externally reading macro needs an explicit inventory owner;
+    this boundary must not quietly promise freshness for unknown dependencies.
+    """
+    known = {(CASE / "src").resolve(), (ROOT / "src").resolve(),
+             (ROOT / "std").resolve(), (ROOT / "std/c/_std").resolve(),
+             (ROOT / "vendor/reflaxe/src").resolve(), installation.standard_library.resolve()}
+    cwd = CASE
+    index = 0
+    while index < len(arguments):
+        argument = arguments[index]
+        if argument in ("--next", "--each"):
+            raise PlayFailure("owned server freshness requires one compilation request")
+        if argument in ("--cwd", "-C", "-cp", "--class-path", "-p"):
+            index += 1
+            if index >= len(arguments):
+                raise PlayFailure("resolved Haxe path argument is incomplete")
+            path = Path(arguments[index])
+            path = (cwd / path).resolve() if not path.is_absolute() else path.resolve()
+            if argument in ("--cwd", "-C"):
+                cwd = path
+            elif path not in known:
+                raise PlayFailure(f"owned server source root has no freshness inventory: {path}")
+        index += 1
 
 
 def play_request_snapshot(
@@ -1775,6 +2213,7 @@ def play_request_snapshot(
         "raylibConfiguration": args.raylib_configuration,
         "renderer": args.renderer,
         "benchmarkRenderer": args.benchmark_renderer,
+        "observeRendererInterval": getattr(args, "observe_renderer_interval", False),
         "pilot": selected_pilot,
         "optimization": args.optimization,
         "sanitizers": args.sanitizers,
@@ -1965,6 +2404,18 @@ def validated_relative(value: str, label: str) -> PurePosixPath:
     return path
 
 
+def validate_terrain_observation(*, pilot: str | None, benchmark_renderer: bool,
+                                 raylib_configuration: str, agent_session: bool = False) -> None:
+    """Admit only the fixed benchmark or a bounded reloadable journey observer."""
+    if (agent_session or raylib_configuration != "memory-software"
+            or (benchmark_renderer and pilot != "move-jump-edit")
+            or (not benchmark_renderer and pilot != "adventure-journey")):
+        raise PlayFailure(
+            "terrain observation requires memory-software and either the move-jump-edit "
+            "benchmark or a bounded adventure-journey without benchmark timing"
+        )
+
+
 def compile_haxe(
     generated: Path,
     *,
@@ -1975,9 +2426,17 @@ def compile_haxe(
     pilot: str | None = None,
     renderer: str = "chunk-cache",
     benchmark_renderer: bool = False,
+    observe_renderer_interval: bool = False,
     server_lease: HaxeServerLease | None = None,
     server_owner: OwnedHaxeServer | None = None,
+    publish_server_lease: Callable[[HaxeServerLease], None] | None = None,
+    haxe_timeout_seconds: int = 120,
+    source_request_snapshot: dict[str, object] | None = None,
+    compiler_log: TextIO | None = None,
+    compiler_cache_report: bool = False,
 ) -> dict[str, object]:
+    if compiler_cache_report and compiler_log is None:
+        raise PlayFailure("--compiler-cache-report requires --compiler-log")
     if raylib_configuration not in RAYLIB_CONFIGURATIONS:
         raise PlayFailure(f"unknown Raylib configuration {raylib_configuration!r}")
     if runtime_report not in ("full", "summary"):
@@ -1996,7 +2455,14 @@ def compile_haxe(
         ),
         "-D",
         f"hxc_runtime_report={runtime_report}",
+        "-D",
+        "reflaxe_c_phase_progress",
     ]
+    if compiler_cache_report:
+        arguments.extend([
+            "-D", "reflaxe_c_body_function_replay_cache_report",
+            "-D", "reflaxe_c_control_flow_plan_cache_report",
+        ])
     for define in hosted_content_haxe_defines(platform_name):
         arguments.extend(["-D", define])
     if layout != "split":
@@ -2007,11 +2473,19 @@ def compile_haxe(
         raise PlayFailure(f"unknown Caxecraft renderer {renderer!r}")
     if benchmark_renderer:
         arguments.extend(["-D", "caxecraft_render_benchmark"])
+    if observe_renderer_interval:
+        validate_terrain_observation(pilot=pilot, benchmark_renderer=benchmark_renderer,
+                                     raylib_configuration=raylib_configuration)
+        arguments.extend(["-D", "caxecraft_observe_terrain"])
     if pilot is not None:
         arguments.extend(
             ["-D", "caxecraft_pilot", "-D", pilot_metadata(pilot).haxe_define]
         )
     arguments.extend(["--custom-target", f"c={generated}"])
+    print(
+        "caxecraft: Haxe-to-C compile started; current stage: Haxe frontend or server startup",
+        flush=True,
+    )
     if server_lease is None:
         run(
             [
@@ -2021,21 +2495,54 @@ def compile_haxe(
                 *arguments,
             ],
             cwd=ROOT,
-            timeout=120,
+            timeout=haxe_timeout_seconds,
             label="Caxecraft Haxe-to-C compile",
+            **({"compiler_log": compiler_log} if compiler_log is not None else {}),
         )
     else:
+        source_inputs = None
+        compatibility_before = None
+        invalidated: tuple[str, ...] = ()
+
+        def adopt_lease(replacement: HaxeServerLease) -> None:
+            nonlocal server_lease
+            server_lease = replacement
+            if publish_server_lease is not None:
+                try:
+                    publish_server_lease(replacement)
+                except BaseException as failure:
+                    raise _LeasePublicationFailure(replacement, failure) from failure
+
+        if server_owner is not None and server_lease.owned:
+            source_inputs = haxe_game_source_snapshot(source_request_snapshot)
+            compatibility_before = haxe_server_compatibility(server_lease.connection.installation)
+            if server_owner.compatibility != {
+                **compatibility_before, "canonicalServerStateRoot": str(server_owner.state_root.resolve()),
+            }:
+                raise PlayFailure("Haxe infrastructure changed after server selection")
+            replacement, invalidated = server_owner.prepare_source_request(server_lease, source_inputs)
+            if replacement != server_lease:
+                adopt_lease(replacement)
         resolved = resolve_haxe_arguments(arguments, locale="C")
+        if source_inputs is not None:
+            validate_haxe_source_roots(resolved, server_lease.connection.installation)
+
+        attempt = 0
 
         def request(lease: HaxeServerLease) -> subprocess.CompletedProcess[str]:
+            nonlocal attempt
+            attempt += 1
+            command = [
+                str(lease.connection.installation.compiler),
+                "--connect",
+                lease.connection.endpoint,
+                *(["--macro", "haxe.macro.CompilationServer.invalidateFiles("
+                   + json.dumps(list(invalidated)) + ")"] if invalidated else []),
+                *resolved,
+            ]
             try:
-                return subprocess.run(
-                    [
-                        str(lease.connection.installation.compiler),
-                        "--connect",
-                        lease.connection.endpoint,
-                        *resolved,
-                    ],
+                result = subprocess.run(
+                    command,
                     cwd=CASE,
                     env=pinned_haxe_environment(
                         "C", lease.connection.installation
@@ -2043,12 +2550,27 @@ def compile_haxe(
                     check=False,
                     capture_output=True,
                     text=True,
-                    timeout=120,
+                    timeout=haxe_timeout_seconds,
                 )
-            except (OSError, subprocess.TimeoutExpired) as error:
+            except subprocess.TimeoutExpired as error:
+                retain_compiler_streams(compiler_log, command=command, cwd=CASE, timeout=haxe_timeout_seconds,
+                                        result=error, attempt=attempt, lease=lease)
+                suffix = compiler_timeout_suffix(
+                    error.stdout,
+                    error.stderr,
+                    missing_status="no haxe.c phase marker; request remained in Haxe frontend or server startup",
+                )
+                raise PlayFailure(
+                    f"Caxecraft Haxe-to-C server request could not run: {error}{suffix}"
+                ) from error
+            except OSError as error:
                 raise PlayFailure(
                     f"Caxecraft Haxe-to-C server request could not run: {error}"
                 ) from error
+
+            retain_compiler_streams(compiler_log, command=command, cwd=CASE, timeout=haxe_timeout_seconds,
+                                    result=result, attempt=attempt, lease=lease)
+            return result
 
         result = request(server_lease)
         if (
@@ -2060,16 +2582,14 @@ def compile_haxe(
                 "caxecraft: owned Haxe server transport failed; "
                 "restarting it once and retrying the same request"
             )
-            server_lease = server_owner.restart_after_transport_failure(
-                server_lease
-            )
+            adopt_lease(server_owner.restart_after_transport_failure(server_lease))
+            if source_inputs is not None:
+                replacement, invalidated = server_owner.prepare_source_request(server_lease, source_inputs)
+                if replacement != server_lease:
+                    adopt_lease(replacement)
             result = request(server_lease)
         if result.returncode != 0:
-            detail = "\n".join(
-                value.strip()
-                for value in (result.stdout, result.stderr)
-                if value.strip()
-            )
+            detail = compiler_process_detail(result.stdout, result.stderr)
             suffix = f"\n{detail}" if detail else ""
             raise PlayFailure(
                 "Caxecraft Haxe-to-C compile failed with exit "
@@ -2083,6 +2603,14 @@ def compile_haxe(
         renderer=renderer,
     )
     validate_content_platform_output(generated, manifest, platform_name)
+    # A close failure must precede both trusted source history and publication.
+    if compiler_log is not None:
+        compiler_log.close()
+    if server_lease is not None and server_owner is not None and server_lease.owned:
+        if (haxe_game_source_snapshot() != source_inputs
+                or haxe_server_compatibility(server_lease.connection.installation) != compatibility_before):
+            raise PlayFailure("Haxe inputs changed during the request; generation was not published")
+        server_owner.finish_source_request(server_lease, source_inputs)
     return manifest
 
 
@@ -2544,8 +3072,8 @@ def validate_generated_playable(
     # in-process input provider. Requiring GetMouseDelta there would reject the
     # exact dead-code removal that makes the two providers a clean compile-time
     # choice. Normal playable builds must still prove the real input path.
-    if pilot is None and "GetMouseDelta(" not in app:
-        raise PlayFailure("generated Caxecraft app omitted direct Raylib call GetMouseDelta(")
+    if pilot is None and "GetMouseDelta(" not in combined:
+        raise PlayFailure("generated Caxecraft output omitted direct Raylib call GetMouseDelta(")
     if pilot == "resize-layout" and "SetWindowSize(" not in app:
         raise PlayFailure("generated Caxecraft resize pilot omitted direct Raylib call SetWindowSize(")
     if pilot == "secondary-locale" and "UiCatalog_nextLocale(" not in app:
@@ -2640,9 +3168,10 @@ def validate_generated_playable(
     # conversation panel adds one checked legacy-entity portrait path and one
     # manifest-owned runtime-atlas portrait path. Runtime loops still reuse
     # those fixed sites; campaign rows and dialogue lines add no texture owner.
-    if draw_texture_count != 11:
+    # The editor's atlas preview adds one shared site for its object icons.
+    if draw_texture_count != 12:
         raise PlayFailure(
-            f"generated Caxecraft sources contain {draw_texture_count} direct DrawTexturePro call sites; expected 11"
+            f"generated Caxecraft sources contain {draw_texture_count} direct DrawTexturePro call sites; expected 12"
         )
     billboard_count = combined.count("DrawBillboardRec(")
     # Actors and entity-backed stateful objects share one explicit 4x5 entity
@@ -2674,8 +3203,12 @@ def validate_generated_playable(
             )
 
 
-def snapshot_values() -> dict[str, object]:
-    with tempfile.TemporaryDirectory(prefix="hxc-caxecraft-playable-snapshot-") as temporary:
+def snapshot_values(*, evidence_dir: Path | None = None) -> dict[str, object]:
+    from scripts.test.snapshots import snapshot_project_root
+
+    with snapshot_project_root("hxc-caxecraft-playable-snapshot-", None if evidence_dir is None else evidence_dir / "playable",
+                               request={"layout": "split", "platform": SNAPSHOT_PLATFORM,
+                                        "raylibConfiguration": "desktop", "runtimeReport": "full"}) as temporary:
         generated = Path(temporary) / "generated"
         compile_haxe(
             generated,
@@ -2822,11 +3355,14 @@ def provision_raylib(
             or state.get("raylibCommit") != provision.PINNED_COMMIT
             or state.get("librarySha256") != provision.sha256_file(library)
             or not isinstance(provisioning_report, dict)
-            or provisioning_report.get("configuration", {}).get("id") != raylib_configuration
-            or provision.patch_report_identity(provisioning_report) != expected_patches
             or not include_directory.is_dir()
         ):
             raise PlayFailure("cached Raylib build does not match its verified state; use --rebuild-raylib")
+        provision.verify_source_build_receipt(
+            lock=lock, report=provisioning_report, authority=authority,
+            platform_name=platform_name, configuration=raylib_configuration,
+            effective_source_root=include_directory.parent, library_file=library,
+        )
         return include_directory, library
 
     if build_root.exists():
@@ -2889,6 +3425,7 @@ def provision_raygui(
         "schemaVersion": 1,
         "authority": source_authority,
         "rayguiSourceTreeSha256": raygui_provision.PINNED_TREE[0],
+        "rayguiProvisionerSha256": raygui_provision.sha256_file(ROOT / "scripts/raygui/provision.py"),
         "raylibHeaderSha256": raygui_provision.sha256_file(raylib_header),
         "compiler": cc,
         "compilerVersion": tool_version(cc),
@@ -2955,11 +3492,6 @@ def resolve_prebuilt_raylib(
     report = integration_report.get("provision")
     if not isinstance(report, dict):
         raise PlayFailure("prebuilt Raylib integration report omitted its provisioning record")
-    target = report.get("target")
-    configuration = report.get("configuration")
-    outputs = report.get("outputs")
-    claims = report.get("claims")
-    library_report = outputs.get("library") if isinstance(outputs, dict) else None
     expected_patches = provision.patch_lock_identity(
         lock, platform_name, raylib_configuration
     )
@@ -2968,55 +3500,50 @@ def resolve_prebuilt_raylib(
         if expected_patches
         else source_root / "src"
     )
-    if (
-        report.get("authority") != "pinned-source"
-        or not isinstance(target, dict)
-        or target.get("platform") != platform_name
-        or not isinstance(configuration, dict)
-        or configuration.get("id") != raylib_configuration
-        or not isinstance(claims, dict)
-        or claims.get("raylibBuilt") is not True
-        or not isinstance(library_report, dict)
-        or library_report.get("sha256") != provision.sha256_file(library)
-        or provision.patch_report_identity(report) != expected_patches
-        or not include_directory.is_dir()
-    ):
+    if not include_directory.is_dir():
         raise PlayFailure(
             "prebuilt Raylib inputs do not match the pinned "
             f"{raylib_configuration} provisioning report"
         )
+    provision.verify_source_build_receipt(
+        lock=lock, report=report, authority="pinned-source",
+        platform_name=platform_name, configuration=raylib_configuration,
+        effective_source_root=include_directory.parent, library_file=library,
+    )
     return include_directory, library
 
 
-def compile_native(
+@dataclass(frozen=True)
+class NativeCompilePlan:
+    """Ordered native inputs shared by compilation and future source inspection.
+
+    This value preserves the manifest's translation-unit and include order. It
+    describes compilation only; library admission and linking remain separate.
+    """
+
+    sources: tuple[tuple[str, Path], ...]
+    include_roots: tuple[IncludeRoot, ...]
+    dependency_roots: tuple[DependencyRoot, ...]
+    compile_flags: tuple[str, ...]
+
+
+def native_compile_plan(
     generated: Path,
     manifest: dict[str, object],
     *,
-    output: Path,
     include_directory: Path,
-    library: Path,
     raygui_include_directory: Path,
-    raygui_library: Path,
     platform_name: str,
-    raylib_configuration: str,
-    cc: str,
     optimization: str,
     native_sanitizer_flags: tuple[str, ...],
-    cache_root: Path,
-    cache_enabled: bool,
-    jobs: int,
-) -> NativeBuildResult:
-    """Build the generated project through depfile-validated object/link reuse.
+    observe_renderer_interval: bool = False,
+) -> NativeCompilePlan:
+    """Validate generated inputs and preserve the exact native compilation recipe.
 
-    The split project already gives each source module a stable C translation
-    unit. The native cache preserves that boundary: a source or dependency
-    change recompiles only the affected units, while link-only inputs can reuse
-    every object. ``cache_enabled=False`` runs the same depfile-aware compile
-    plan in private temporary directories and publishes no reusable entries.
+    Only opted-in correctness builds add the observer source and forced header.
+    No compiler is invoked and no static terrain-coverage claim is made here.
     """
 
-    if platform_name == "windows":
-        raise PlayFailure("the one-command Windows linker adapter is deferred; generated C remains available with --compile-only")
     build = manifest.get("build")
     if not isinstance(build, dict):
         raise PlayFailure("generated Caxecraft manifest omitted its build plan")
@@ -3047,37 +3574,114 @@ def compile_native(
         ],
         IncludeRoot("raylib-include", include_directory),
         IncludeRoot("raygui-include", raygui_include_directory),
+        IncludeRoot("caxecraft-native-include", CAXECRAFT_NATIVE_INCLUDE),
     ]
     dependency_roots = [
         DependencyRoot("generated-project", generated),
         DependencyRoot("raylib-include", include_directory),
         DependencyRoot("raygui-include", raygui_include_directory),
+        DependencyRoot("caxecraft-native-include", CAXECRAFT_NATIVE_INCLUDE),
     ]
-    native_cache = NativeCache(
-        cache_root,
-        compiler=cc,
+    observer_flags: tuple[str, ...] = ()
+    if observe_renderer_interval:
+        # This source is an independent test oracle. Only this separate artifact
+        # receives entry hooks; Raylib and ordinary timing builds keep their flags.
+        observer_root = ROOT / "runtime/hxrt/test"
+        include_roots.append(IncludeRoot("terrain-observer", observer_root))
+        dependency_roots.append(DependencyRoot("terrain-observer", observer_root))
+        sources.append(("terrain-observer/interval_observer.c", observer_root / "interval_observer.c"))
+        observer_flags = ("-include", str(observer_root / "interval_observer_hooks.h"))
+    return NativeCompilePlan(
+        sources=tuple(sources),
+        include_roots=tuple(include_roots),
+        dependency_roots=tuple(dependency_roots),
         compile_flags=(
             *STRICT_FLAGS,
             *hosted_content_compile_flags(platform_name),
             f"-O{optimization}",
             *native_sanitizer_flags,
+            *observer_flags,
         ),
-        include_roots=include_roots,
-        dependency_roots=dependency_roots,
+    )
+
+
+def compile_native(
+    generated: Path,
+    manifest: dict[str, object],
+    *,
+    output: Path,
+    include_directory: Path,
+    library: Path,
+    raygui_include_directory: Path,
+    raygui_library: Path,
+    platform_name: str,
+    raylib_configuration: str,
+    cc: str,
+    optimization: str,
+    native_sanitizer_flags: tuple[str, ...],
+    cache_root: Path,
+    cache_enabled: bool,
+    jobs: int,
+    observe_renderer_interval: bool = False,
+    retain_objects: bool = False,
+) -> NativeBuildResult:
+    """Build the generated project through depfile-validated object/link reuse.
+
+    The split project already gives each source module a stable C translation
+    unit. The native cache preserves that boundary: a source or dependency
+    change recompiles only the affected units, while link-only inputs can reuse
+    every object. ``cache_enabled=False`` runs the same depfile-aware compile
+    plan in private temporary directories and publishes no reusable entries.
+    """
+
+    if platform_name == "windows":
+        raise PlayFailure("the one-command Windows linker adapter is deferred; generated C remains available with --compile-only")
+    plan = native_compile_plan(
+        generated,
+        manifest,
+        include_directory=include_directory,
+        raygui_include_directory=raygui_include_directory,
+        platform_name=platform_name,
+        optimization=optimization,
+        native_sanitizer_flags=native_sanitizer_flags,
+        observe_renderer_interval=observe_renderer_interval,
+    )
+    build = manifest.get("build")
+    if not isinstance(build, dict):
+        raise PlayFailure("generated Caxecraft manifest omitted its build plan")
+    native_cache = NativeCache(
+        cache_root,
+        compiler=cc,
+        compile_flags=plan.compile_flags,
+        include_roots=plan.include_roots,
+        dependency_roots=plan.dependency_roots,
         jobs=jobs,
         enabled=cache_enabled,
     )
-    objects = native_cache.objects(sources)
+    objects = native_cache.objects(plan.sources)
 
     lock = provision.load_lock()
     libraries, frameworks = provision.link_facts(lock, platform_name, raylib_configuration)
     manifest_libraries = owned_fact_names(build.get("libraries"), "generated Caxecraft libraries")
     manifest_frameworks = owned_fact_names(build.get("frameworks"), "generated Caxecraft frameworks")
-    expected_libraries = list(libraries)
-    if "raygui" not in expected_libraries:
-        expected_libraries.append("raygui")
-    if len(manifest_libraries) != len(expected_libraries) or set(manifest_libraries) != set(expected_libraries):
-        raise PlayFailure("generated Caxecraft libraries differ from the pinned Raylib + Raygui link plan")
+    pinned_libraries = list(libraries)
+    if "raygui" not in pinned_libraries:
+        pinned_libraries.append("raygui")
+    generated_system_libraries = [
+        name for name in manifest_libraries if name not in pinned_libraries
+    ]
+    if (
+        len(manifest_libraries) != len(set(manifest_libraries))
+        or not set(pinned_libraries).issubset(manifest_libraries)
+        or not set(generated_system_libraries).issubset(
+            ADMITTED_GENERATED_SYSTEM_LIBRARIES
+        )
+    ):
+        raise PlayFailure(
+            "generated Caxecraft libraries differ from the pinned Raylib + "
+            "Raygui and admitted compiler-owned system link plan"
+        )
+    expected_libraries = [*pinned_libraries, *generated_system_libraries]
     if len(manifest_frameworks) != len(frameworks) or set(manifest_frameworks) != set(frameworks):
         raise PlayFailure("generated Caxecraft frameworks differ from the pinned Raylib link plan")
     # Static-link order is significant: generated code needs raygui, and the
@@ -3095,6 +3699,9 @@ def compile_native(
     link_hit = native_cache.link(
         objects,
         output=output,
+        # Observer and ordinary benchmark builds retain cache-off object records
+        # as dependency evidence until the variant directory is removed.
+        retain_objects=observe_renderer_interval or retain_objects,
         arguments_after_objects=arguments_after_objects,
         libraries=(
             ("raygui/library", raygui_library),
@@ -3110,6 +3717,160 @@ def compile_native(
     )
 
 
+def renderer_benchmark_binding(
+    *, output_root: Path, generated: Path, executable: Path,
+    request: dict[str, object], content: list[dict[str, object]],
+    plan: NativeCompilePlan, native_result: NativeBuildResult,
+    static_coverage: TerrainBuildCoverage | None,
+) -> dict[str, object]:
+    """Bind benchmark observations to the existing build and native owners.
+
+    The caller checks the request before and after pilots. This receipt retains
+    their exact schemas and native-plan operands, so the comparison can reconstruct
+    the plan and recheck the selected objects without accepting arbitrary flags.
+    Runtime content stays separate because it intentionally does not rebuild Haxe.
+    """
+    state_path = output_root / PLAY_BUILD_STATE
+    decision = validate_reuse(state_path=state_path, current_request=request,
+                              generated=generated, executable=executable)
+    if not decision.hit:
+        raise PlayFailure(f"renderer benchmark build binding failed: {decision.reason}")
+    if inventory_inputs((InputPath("runtime-content", executable.parent / "content"),)) != content:
+        raise PlayFailure("renderer benchmark runtime content changed during pilots")
+    return {
+        "schemaVersion": 1,
+        "buildStateSha256": sha256_file(state_path),
+        "runtimeContent": content,
+        "nativeBuild": {
+            "sources": [[name, str(path.resolve())] for name, path in plan.sources],
+            "compileFlags": list(plan.compile_flags),
+            "includeRoots": [[root.logical_name, str(root.path.resolve())] for root in plan.include_roots],
+            "dependencyRoots": [[root.logical_name, str(root.path.resolve())] for root in plan.dependency_roots],
+            "objects": [{"source": item.source, "key": item.key, "path": str(item.path.resolve()),
+                         "sha256": item.sha256} for item in native_result.objects],
+        },
+        "staticCoverageReceipt": (
+            {"path": static_coverage.receipt.relative_to(output_root).as_posix(),
+             "sha256": static_coverage.receipt_sha256}
+            if static_coverage is not None else None
+        ),
+    }
+
+
+def terrain_native_contract(args: argparse.Namespace, *, platform_name: str,
+                            source: Path, include_directory: Path, library: Path) -> NativeTerrainContract:
+    """Recheck the software library's source review against its actual build recipe.
+
+    Legacy normalized receipts need original invocation spellings. A bare tool
+    name must stay bare; CMake's subsequently resolved path is not that input.
+    A mismatched reconstruction fails instead of granting foreign-call admission.
+    """
+    from renderer_native_contract import verify_native_contract
+
+    if args.prebuilt_raylib_build is not None:
+        build = args.prebuilt_raylib_build.resolve()
+        source_cache = args.prebuilt_raylib_cache.resolve()
+        report = load_object(args.prebuilt_raylib_report, "Raylib integration report").get("provision")
+        authority = "pinned-source"
+    else:
+        key = raylib_cache_key(
+            authority=args.authority, platform_name=platform_name,
+            raylib_configuration=args.raylib_configuration, source=args.source,
+            cc=args.cc, cxx=args.cxx, cmake=args.cmake, generator=args.generator,
+        )
+        build = args.cache_root.resolve() / "build" / key
+        source_cache = args.cache_root.resolve() / "source" if args.authority == "pinned-source" else ""
+        report = load_object(build / "hxc-caxecraft-raylib.json", "Raylib cache state").get("provisioningReport")
+        authority = args.authority
+    if not isinstance(report, dict):
+        raise PlayFailure("terrain coverage requires a trusted Raylib source-build receipt")
+    replacements = None
+    outputs = report.get("outputs")
+    if not isinstance(outputs, dict) or "compileCommandsSha256" not in outputs:
+        target = report.get("target")
+        if not isinstance(target, dict):
+            raise PlayFailure("legacy terrain recipe omitted original tool arguments")
+        values: dict[str, Path | str] = {
+            "${CACHE_ROOT}": source_cache, "${RAYLIB_SOURCE}": source,
+            "${RAYLIB_BUILD}": build,
+        }
+        for key, placeholder, current in (
+            ("compiler", "${C_COMPILER}", args.cc),
+            ("cxxCompiler", "${CXX_COMPILER}", args.cxx),
+            ("cmake", "${CMAKE}", args.cmake),
+            ("buildTool", "${BUILD_TOOL}", "ninja" if args.generator == "Ninja" else "make"),
+        ):
+            identity = target.get(key)
+            command = identity.get("command") if isinstance(identity, dict) else None
+            if not isinstance(command, str) or not command:
+                raise PlayFailure("legacy terrain recipe omitted an original tool argument")
+            values[placeholder] = current if command == placeholder else command
+        replacements = provision.path_replacements(values)
+    return verify_native_contract(
+        lock=provision.load_lock(), report=report, authority=authority,
+        platform_name=platform_name, configuration=args.raylib_configuration,
+        source_root=source, effective_source_root=include_directory.parent,
+        build_root=build, library_file=library, original_replacements=replacements,
+    )
+
+
+def terrain_build_coverage(args: argparse.Namespace, *, generated: Path,
+                           manifest: dict[str, object], executable: Path,
+                           include_directory: Path, raygui_include_directory: Path,
+                           platform_name: str, native_sanitizer_flags: tuple[str, ...],
+                           native_contract: NativeTerrainContract, native_result: NativeBuildResult,
+                           output_root: Path) -> TerrainBuildCoverage:
+    """Inspect the exact native plan once; repeated pilot samples share its proof."""
+    from renderer_build_coverage import build_terrain_coverage
+    from dev_native_cache import verify_native_objects
+    from scripts.test.compiler_discovery import resolve_compiler
+
+    parser = resolve_compiler("clang")
+    preprocessor = shutil.which(args.cc)
+    if parser is None or preprocessor is None:
+        raise PlayFailure("terrain coverage requires Clang parsing and the selected native C compiler")
+    plan = native_compile_plan(
+        generated, manifest, include_directory=include_directory,
+        raygui_include_directory=raygui_include_directory, platform_name=platform_name,
+        optimization=args.optimization, native_sanitizer_flags=native_sanitizer_flags,
+        observe_renderer_interval=True,
+    )
+    flags = (*plan.compile_flags, *(flag for root in plan.include_roots for flag in ("-I", str(root.path))))
+    native_build_pins = verify_native_objects(
+        objects=native_result.objects, sources=plan.sources, compiler=args.cc,
+        compile_flags=plan.compile_flags, include_roots=plan.include_roots,
+        dependency_roots=plan.dependency_roots,
+    )
+    return build_terrain_coverage(
+        sources=plan.sources, flags=flags, compiler=Path(parser), preprocessor=Path(preprocessor),
+        cwd=ROOT, manifest=generated / "hxc.manifest.json", executable=executable,
+        native_contract=native_contract, native_build_pins=native_build_pins,
+        evidence=output_root / f"terrain-coverage-{time.time_ns()}",
+    )
+
+
+def pilot_timeout_seconds(pilot: str) -> int:
+    """Return the bounded process budget for one graphical pilot run.
+
+    Most focused pilots finish within 15 seconds. The secondary-locale pilot
+    took 26.34 and 26.37 seconds in consecutive direct runs on the reference
+    Mac, with no useful warm-run reduction, so it shares the 35-second budget
+    used by the similarly sized runtime-content journey.
+    """
+
+    if pilot == "editor-shell":
+        # This pilot draws both the editor and the real game, including full-map
+        # frames that need more time in the reference memory/software renderer.
+        return 90
+    if pilot == "secondary-locale":
+        return 35
+    if pilot_metadata(pilot).execution == "runtime-content":
+        # The representative Adventure journey measures about 27 seconds after
+        # adding blocking dialogue.
+        return 35
+    return 15
+
+
 def run_pilot_sample(
     *,
     executable: Path,
@@ -3122,6 +3883,7 @@ def run_pilot_sample(
     cc: str,
     compiler_version: str,
     label: str,
+    observe_renderer_interval: bool = False,
 ) -> tuple[dict[str, object], int, int, str, dict[str, str]]:
     """Run and inspect one Haxe-authored pilot without duplicating its oracle.
 
@@ -3139,23 +3901,20 @@ def run_pilot_sample(
             executable.parent / "caxecraft-pilot-runtime-level-selection.png",
         )
     elif pilot == "editor-shell":
-        supporting_screenshots = (executable.parent / "caxecraft-pilot-editor-play.png",)
+        supporting_screenshots = (
+            executable.parent / "caxecraft-pilot-editor-terrain-prompt.png",
+            executable.parent / "caxecraft-pilot-editor-play.png",
+            executable.parent / "caxecraft-pilot-editor-text.png",
+            executable.parent / "caxecraft-pilot-editor-assets.png",
+            executable.parent / "caxecraft-pilot-editor-environment.png",
+        )
     else:
         supporting_screenshots = ()
     state_screenshot = executable.parent / "caxecraft-pilot-state.png"
     for stale in (screenshot, state_screenshot, *supporting_screenshots):
         if stale.exists():
             stale.unlink()
-    # The editor pilot draws both the editor and the real game. The reference
-    # Mac can need more time for these full-map frames than for a short probe.
-    if pilot == "editor-shell":
-        timeout_seconds = 90
-    elif pilot_metadata(pilot).execution == "runtime-content":
-        # The representative Adventure journey measures about 27 seconds in
-        # the pinned memory/software renderer after adding blocking dialogue.
-        timeout_seconds = 35
-    else:
-        timeout_seconds = 15
+    timeout_seconds = pilot_timeout_seconds(pilot)
     process = run([str(executable)], cwd=executable.parent, timeout=timeout_seconds, label=label)
     observations: list[dict[str, object]] = []
     observation_prefix = "CAXECRAFT_AGENT_OBSERVATION="
@@ -3193,6 +3952,20 @@ def run_pilot_sample(
         cc=cc,
         compiler_version=compiler_version,
     )
+    if observe_renderer_interval:
+        sample = report.get("benchmarkSample")
+        if benchmark_renderer and (not isinstance(sample, dict)
+                                   or type(sample.get("measuredFrames")) is not int):
+            raise PlayFailure("terrain observation requires measured benchmark frames")
+        try:
+            report["terrainInterval"] = parse_interval_evidence(
+                process.stdout,
+                measured_frames=sample.get("measuredFrames") if benchmark_renderer else None,
+                require_portal=pilot == "adventure-journey",
+                timing_enabled=benchmark_renderer,
+            )
+        except IntervalEvidenceFailure as error:
+            raise PlayFailure(f"{label}: {error}") from error
     if pilot == "adventure-journey":
         if not observations:
             raise PlayFailure(f"{label} emitted no agent world observations")
@@ -3217,6 +3990,14 @@ def run_pilot_sample(
                 expected_entities=False,
                 expected_open_sky=False,
             )
+        elif supporting_screenshot.name == "caxecraft-pilot-editor-environment.png":
+            validate_editor_environment_screenshot(supporting_screenshot, platform_name=platform_name)
+        elif supporting_screenshot.name == "caxecraft-pilot-editor-assets.png":
+            validate_editor_asset_browser_screenshot(supporting_screenshot, platform_name=platform_name)
+        elif supporting_screenshot.name == "caxecraft-pilot-editor-text.png":
+            validate_editor_text_screenshot(supporting_screenshot, platform_name=platform_name)
+        elif supporting_screenshot.name == "caxecraft-pilot-editor-terrain-prompt.png":
+            validate_editor_screenshot(supporting_screenshot, platform_name=platform_name)
         else:
             validate_smoke_screenshot(supporting_screenshot, platform_name=platform_name)
         supporting_hashes[supporting_screenshot.name] = hashlib.sha256(
@@ -3231,7 +4012,7 @@ def run_pilot_sample(
             expected_logical_size=(960, 540),
         )
     elif pilot == "editor-shell":
-        width, height = validate_editor_screenshot(screenshot, platform_name=platform_name)
+        width, height = validate_editor_flow_screenshot(screenshot, platform_name=platform_name)
     else:
         width, height = validate_presented_screenshot(
             screenshot,
@@ -3277,31 +4058,60 @@ def publish_agent_request(path: Path, source: str) -> bytes:
     return payload
 
 
+@dataclass
+class AgentResponseState:
+    """Keep unread pipe bytes and observation order for one live game process."""
+
+    pending: bytes = b""
+    sequence: int = 0
+
+
+def read_agent_line(
+    process: subprocess.Popen[bytes],
+    selector: selectors.BaseSelector,
+    state: AgentResponseState,
+    deadline: float,
+) -> str:
+    """Read a bounded UTF-8 line without hiding read-ahead bytes from select."""
+
+    maximum_line_bytes = 1024 * 1024
+    while True:
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            raise PlayFailure("the live Caxecraft agent request timed out")
+        newline = state.pending.find(b"\n")
+        if newline > maximum_line_bytes or (newline < 0 and len(state.pending) > maximum_line_bytes):
+            raise PlayFailure("the live Caxecraft process exceeded the observation line limit")
+        if newline >= 0:
+            line = state.pending[:newline]
+            state.pending = state.pending[newline + 1 :]
+            return line.decode("utf-8").rstrip("\r")
+        if not selector.select(remaining):
+            raise PlayFailure("the live Caxecraft agent request timed out")
+        if process.stdout is None:
+            raise PlayFailure("the live Caxecraft process lost its output pipe")
+        chunk = os.read(process.stdout.fileno(), 65536)
+        if not chunk:
+            raise PlayFailure(
+                f"the live Caxecraft process exited before its response (status {process.poll()})"
+            )
+        state.pending += chunk
+
+
 def read_agent_response(
-    process: subprocess.Popen[str],
+    process: subprocess.Popen[bytes],
     selector: selectors.BaseSelector,
     *,
     timeout_seconds: float,
+    state: AgentResponseState,
 ) -> dict[str, object]:
-    """Wait for one flushed Haxe response while retaining a bounded host timeout."""
+    """Consume ordered checkpoints until one explicitly final batch response."""
 
     observation_prefix = "CAXECRAFT_AGENT_OBSERVATION="
     error_prefix = "CAXECRAFT_AGENT_ERROR="
     deadline = time.monotonic() + timeout_seconds
     while True:
-        remaining = deadline - time.monotonic()
-        if remaining <= 0:
-            raise PlayFailure("the live Caxecraft agent request timed out")
-        events = selector.select(remaining)
-        if not events:
-            raise PlayFailure("the live Caxecraft agent request timed out")
-        if process.stdout is None:
-            raise PlayFailure("the live Caxecraft process lost its output pipe")
-        line = process.stdout.readline()
-        if line == "":
-            status = process.poll()
-            raise PlayFailure(f"the live Caxecraft process exited before its response (status {status})")
-        text = line.rstrip("\r\n")
+        text = read_agent_line(process, selector, state, deadline)
         if text.startswith(error_prefix):
             return {"schemaVersion": 1, "type": "error", "message": text[len(error_prefix) :]}
         if not text.startswith(observation_prefix):
@@ -3310,9 +4120,29 @@ def read_agent_response(
             observation = json.loads(text[len(observation_prefix) :])
         except json.JSONDecodeError as error:
             raise PlayFailure(f"the live Caxecraft process emitted invalid observation JSON: {error}") from error
-        if not isinstance(observation, dict) or observation.get("schemaVersion") != 1:
+        if (not isinstance(observation, dict)
+                or type(observation.get("schemaVersion")) is not int
+                or observation.get("schemaVersion") != 1):
             raise PlayFailure("the live Caxecraft process emitted an unknown observation schema")
-        return observation
+        terminal = observation.get("terminal")
+        sequence = observation.get("sequence")
+        if type(terminal) is not bool:
+            raise PlayFailure("the live Caxecraft observation omitted its Boolean terminal marker")
+        if type(sequence) is not int or sequence <= state.sequence:
+            raise PlayFailure("the live Caxecraft observations are not strictly ordered")
+        screenshot = observation.get("screenshot")
+        allowed_screenshots = (
+            ("none", "caxecraft-agent-session.png") if terminal else
+            ("none", "caxecraft-pilot-runtime-title-selection.png",
+             "caxecraft-pilot-runtime-campaign-selection.png",
+             "caxecraft-pilot-runtime-level-selection.png",
+             "caxecraft-pilot-runtime-final.png")
+        )
+        if screenshot not in allowed_screenshots:
+            raise PlayFailure("the live Caxecraft observation named an unknown screenshot")
+        state.sequence = sequence
+        if terminal:
+            return observation
 
 
 def prepare_agent_session_screenshot(
@@ -3357,23 +4187,21 @@ def run_agent_session(
         stdin=subprocess.DEVNULL,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
-        text=True,
-        encoding="utf-8",
-        errors="strict",
-        bufsize=1,
+        bufsize=0,
     )
     selector = selectors.DefaultSelector()
     if process.stdout is None:
         process.terminate()
         raise PlayFailure("the live Caxecraft process did not expose standard output")
     selector.register(process.stdout, selectors.EVENT_READ)
+    responses = AgentResponseState()
     last_payload = active_request.read_bytes()
     recorded_requests = 0
     try:
         # The first observation includes native window, renderer, texture, and
         # voxel-model setup. Keep later action batches strict, but allow this
         # one-time startup to complete on a representative developer machine.
-        initial = read_agent_response(process, selector, timeout_seconds=30.0)
+        initial = read_agent_response(process, selector, timeout_seconds=30.0, state=responses)
         prepare_agent_session_screenshot(executable, initial, raylib_configuration)
         print("CAXECRAFT_AGENT_RESPONSE=" + json.dumps(initial, ensure_ascii=False, separators=(",", ":")), flush=True)
         for input_line in sys.stdin:
@@ -3395,7 +4223,7 @@ def run_agent_session(
                 print("CAXECRAFT_AGENT_RESPONSE=" + json.dumps(response, separators=(",", ":")), flush=True)
                 continue
             last_payload = publish_agent_request(active_request, envelope["piloscript"])
-            response = read_agent_response(process, selector, timeout_seconds=15.0)
+            response = read_agent_response(process, selector, timeout_seconds=15.0, state=responses)
             prepare_agent_session_screenshot(executable, response, raylib_configuration)
             print("CAXECRAFT_AGENT_RESPONSE=" + json.dumps(response, ensure_ascii=False, separators=(",", ":")), flush=True)
             if record_directory is not None and response.get("type") != "error":
@@ -3529,6 +4357,10 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--check-snapshots", action="store_true", help="compile once and compare the registered playable snapshots")
     parser.add_argument("--compile-only", action="store_true", help="emit and validate C without provisioning or linking Raylib")
+    parser.add_argument("--compiler-log", type=Path,
+                        help="create a new JSONL file outside --output-root with each compiler attempt; empty if no compile runs")
+    parser.add_argument("--compiler-cache-report", action="store_true",
+                        help="with --compiler-log, request body/control-flow cache counts; changes compiler defines, not full profiling")
     parser.add_argument("--build-only", action="store_true", help="link the native executable without opening a window")
     parser.add_argument("--smoke", action="store_true", help="render three real frames, require timely exit, and do not wait for input")
     parser.add_argument(
@@ -3584,6 +4416,11 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
         help="measure post-warmup terrain and update work in the move-jump-edit pilot",
     )
     parser.add_argument(
+        "--observe-renderer-interval",
+        action="store_true",
+        help="build separate runtime-entry evidence; recorded timings are not performance samples",
+    )
+    parser.add_argument(
         "--raylib-configuration",
         choices=RAYLIB_CONFIGURATIONS,
         default="desktop",
@@ -3627,6 +4464,12 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
         help="existing host:port accepted only with --haxe-server attach",
     )
     parser.add_argument(
+        "--haxe-timeout-seconds",
+        type=int,
+        default=120,
+        help="bounded Haxe-to-C timeout for unusually slow hosts (default: 120)",
+    )
+    parser.add_argument(
         "--stop-haxe-server",
         action="store_true",
         help="stop only the exact auto-owned server recorded for this worktree",
@@ -3651,10 +4494,76 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
+def stop_owned_server_after_failure(
+    owner: OwnedHaxeServer | None, lease: HaxeServerLease | None
+) -> bool:
+    """Stop one exact worktree-owned server without hiding the original error."""
+
+    if owner is None:
+        return False
+    try:
+        if lease is not None and lease.owned:
+            return owner.stop_lease(lease)
+        return owner.stop()
+    except (OSError, HaxeServerFailure) as error:
+        print(
+            f"caxecraft: WARNING: could not stop the owned Haxe server: {error}",
+            file=sys.stderr,
+        )
+        return False
+
+
 def main(argv: list[str]) -> int:
-    variant_lock: VariantLock | None = None
+    """Reserve optional evidence before any compiler or server work starts."""
+    compiler_log: TextIO | None = None
+    code = 1
     try:
         args = parse_args(argv)
+        if args.compiler_cache_report and args.compiler_log is None:
+            raise PlayFailure("--compiler-cache-report requires --compiler-log")
+        if args.compiler_log is not None and args.check_snapshots:
+            raise PlayFailure("--compiler-log observes ordinary play builds, not --check-snapshots")
+        if args.compiler_log is not None:
+            destination = args.compiler_log.resolve()
+            if destination.is_relative_to(args.output_root.resolve()):
+                raise PlayFailure("--compiler-log must be outside --output-root so generation cleanup cannot remove it")
+            compiler_log = destination.open("x", encoding="utf-8")
+        code = run_play(args, compiler_log=compiler_log)
+    except (OSError, PlayFailure) as error:
+        print(f"caxecraft: ERROR: {error}", file=sys.stderr)
+    finally:
+        if compiler_log is not None and not compiler_log.closed:
+            try:
+                compiler_log.close()
+            except OSError as error:
+                print(f"caxecraft: ERROR: could not close compiler log: {error}", file=sys.stderr)
+                if code == 0:
+                    code = 1
+    return code
+
+
+def run_play(args: argparse.Namespace, *, compiler_log: TextIO | None = None) -> int:
+    """Run the ordinary launcher after optional evidence ownership is settled."""
+    variant_lock: VariantLock | None = None
+    server_request_lock: VariantLock | None = None
+    server_owner: OwnedHaxeServer | None = None
+    server_lease: HaxeServerLease | None = None
+    server_failure_handled = False
+
+    def stop_server_for_failure() -> bool:
+        # Native work runs outside the shared Haxe lock. Reacquire it before
+        # stopping an older lease so another variant's request cannot be cut off.
+        if server_owner is not None and server_request_lock is None:
+            with VariantLock(server_owner.state_root / "hxc-haxe-request.lock"):
+                return stop_owned_server_after_failure(server_owner, server_lease)
+        return stop_owned_server_after_failure(server_owner, server_lease)
+
+    def publish_server_lease(lease: HaxeServerLease) -> None:
+        # Retry cleanup must retain the replacement's immutable process identity.
+        nonlocal server_lease
+        server_lease = lease
+
+    try:
         if args.cold:
             os.environ["HAXE_NO_SERVER"] = "1"
             args.haxe_server = "off"
@@ -3672,6 +4581,8 @@ def main(argv: list[str]) -> int:
             os.environ["HAXE_NO_SERVER"] = "1"
         if args.native_jobs < 1 or args.native_jobs > 32:
             raise PlayFailure("--native-jobs must be between 1 and 32")
+        if args.haxe_timeout_seconds < 1 or args.haxe_timeout_seconds > 600:
+            raise PlayFailure("--haxe-timeout-seconds must be between 1 and 600")
         if args.validate_only and not args.content_feedback:
             raise PlayFailure("--validate-only is available only with --content-feedback")
         if args.agent_session and (args.content_feedback or args.smoke or args.pilot is not None):
@@ -3689,6 +4600,7 @@ def main(argv: list[str]) -> int:
             or args.build_only
             or args.sanitizers
             or args.benchmark_renderer
+            or args.observe_renderer_interval
             or args.cold
             or args.no_build_cache
             or args.rebuild_raylib
@@ -3724,6 +4636,11 @@ def main(argv: list[str]) -> int:
             raise PlayFailure("--sanitizers is a native execution profile and cannot be combined with --check-snapshots")
         if args.renderer == "immediate-baseline" and selected_pilot is None:
             raise PlayFailure("the immediate renderer is benchmark evidence and requires a bounded pilot")
+        if args.observe_renderer_interval:
+            validate_terrain_observation(
+                pilot=selected_pilot, benchmark_renderer=args.benchmark_renderer,
+                raylib_configuration=args.raylib_configuration, agent_session=args.agent_session,
+            )
         if args.benchmark_renderer and selected_pilot != "move-jump-edit":
             raise PlayFailure("--benchmark-renderer requires --pilot move-jump-edit")
         if args.check_snapshots:
@@ -3767,7 +4684,8 @@ def main(argv: list[str]) -> int:
                 installation=installation,
                 compatibility={"operation": "stop-only"},
             )
-            stopped = server_owner.stop()
+            with VariantLock(server_state_root / "hxc-haxe-request.lock"):
+                stopped = server_owner.stop()
             print(
                 "caxecraft: stopped the exact owned Haxe server"
                 if stopped
@@ -3781,13 +4699,14 @@ def main(argv: list[str]) -> int:
         profile = "interactive" if selected_pilot is None else f"pilot-{selected_pilot}"
         renderer_part = "" if args.renderer == "chunk-cache" else "-immediate-baseline"
         benchmark_part = "-benchmark" if args.benchmark_renderer else ""
+        observer_part = "-interval-observer" if args.observe_renderer_interval else ""
         configuration_part = "" if args.raylib_configuration == "desktop" else f"-{args.raylib_configuration}"
         sanitizer_part = "-sanitized" if args.sanitizers else ""
         output_root = prepare_output_root(
             variants
             / (
                 f"{platform_name}{configuration_part}-{args.layout}{sanitizer_part}-"
-                f"{profile}{renderer_part}{benchmark_part}"
+                f"{profile}{renderer_part}{benchmark_part}{observer_part}"
             )
         )
         variant_lock = VariantLock(output_root / "hxc-play-build.lock")
@@ -3795,16 +4714,21 @@ def main(argv: list[str]) -> int:
         generated = output_root / "generated"
         executable = output_root / "bin" / ("caxecraft.exe" if platform_name == "windows" else "caxecraft")
         requested_snapshot: dict[str, object] | None = None
+        build_only_request_matches = False
         reusable_profile = not args.sanitizers
         if reusable_profile and not args.compile_only:
             snapshot_started = time.monotonic()
-            requested_snapshot = play_request_snapshot(
-                args,
-                platform_name=platform_name,
-                selected_pilot=selected_pilot,
-                native_sanitizer_flags=native_sanitizer_flags,
-            )
-            snapshot_ms = (time.monotonic() - snapshot_started) * 1000.0
+            print("caxecraft: preparing build request and input inventory", flush=True)
+            try:
+                requested_snapshot = play_request_snapshot(
+                    args,
+                    platform_name=platform_name,
+                    selected_pilot=selected_pilot,
+                    native_sanitizer_flags=native_sanitizer_flags,
+                )
+            finally:
+                snapshot_ms = (time.monotonic() - snapshot_started) * 1000.0
+                print(f"caxecraft: build request preparation elapsed {snapshot_ms:.1f} ms", flush=True)
             fast_path_eligible = not args.build_only and (
                 not args.rebuild_raylib
                 and not args.rebuild_raygui
@@ -3848,6 +4772,17 @@ def main(argv: list[str]) -> int:
                     print(f"caxecraft: unchanged build miss: {miss_reason}")
         if args.build_only:
             generated = current_generation(output_root).generated
+            if requested_snapshot is not None:
+                request_decision = validate_request_reuse(
+                    state_path=output_root / PLAY_BUILD_STATE,
+                    current_request=requested_snapshot,
+                )
+                build_only_request_matches = request_decision.hit
+                if not request_decision.hit:
+                    print(
+                        "caxecraft: build-only will not publish reusable state: "
+                        + request_decision.reason
+                    )
             manifest = validate_compiled_haxe(
                 generated,
                 layout=args.layout,
@@ -3857,8 +4792,11 @@ def main(argv: list[str]) -> int:
             )
             print(f"caxecraft: reusing validated {args.layout} C project at {generated}")
         else:
-            server_lease: HaxeServerLease | None = None
-            server_owner: OwnedHaxeServer | None = None
+            if args.haxe_server == "auto":
+                # Variants share one compiler. Serialize connect/restart and
+                # input history through failure cleanup, but not native builds.
+                server_request_lock = VariantLock(server_state_root / "hxc-haxe-request.lock")
+                server_request_lock.__enter__()
             if args.haxe_server != "off":
                 installation = pinned_haxe_installation()
                 verify_pinned_haxe(installation)
@@ -3891,15 +4829,42 @@ def main(argv: list[str]) -> int:
                     pilot=selected_pilot,
                     renderer=args.renderer,
                     benchmark_renderer=args.benchmark_renderer,
+                    observe_renderer_interval=args.observe_renderer_interval,
                     server_lease=server_lease,
                     server_owner=server_owner,
+                    publish_server_lease=publish_server_lease,
+                    haxe_timeout_seconds=args.haxe_timeout_seconds,
+                    source_request_snapshot=requested_snapshot,
+                    **({"compiler_log": compiler_log, "compiler_cache_report": args.compiler_cache_report}
+                       if compiler_log is not None else {}),
                 )
                 generation = finalize_transaction(output_root, transaction)
                 generation = publish_pointer(output_root, generation)
                 generated = generation.generated
-            except BaseException:
-                discard_transaction(transaction)
+            except BaseException as failure:
+                if isinstance(failure, _LeasePublicationFailure):
+                    server_lease = failure.lease
+                # A connected compiler may still write after its client exits.
+                # Dispose only after exact owned termination is confirmed; an
+                # attachment or uncertain stop keeps its output for diagnosis.
+                stopped = stop_owned_server_after_failure(server_owner, server_lease)
+                server_failure_handled = True
+                if server_lease is None or stopped:
+                    discard_transaction(transaction)
+                else:
+                    print(
+                        f"caxecraft: WARNING: retained failed generation at {transaction.generated}; "
+                        "server termination could not be confirmed",
+                        file=sys.stderr,
+                    )
+                if isinstance(failure, _LeasePublicationFailure):
+                    raise failure.failure.with_traceback(failure.failure.__traceback__)
                 raise
+            if server_request_lock is not None:
+                try:
+                    server_request_lock.__exit__(None, None, None)
+                finally:
+                    server_request_lock = None
             print(f"caxecraft: generated {args.layout} C project at {generated}")
         if args.compile_only:
             print("caxecraft: compile-only proof passed (direct C with reviewed selective hxrt plan)")
@@ -3952,6 +4917,12 @@ def main(argv: list[str]) -> int:
             allow_network=args.allow_network,
             rebuild=args.rebuild_raygui,
         )
+        native_contract = None
+        if args.observe_renderer_interval:
+            native_contract = terrain_native_contract(
+                args, platform_name=platform_name, source=raylib_source,
+                include_directory=include_directory, library=library,
+            )
         native_result = compile_native(
             generated,
             manifest,
@@ -3970,6 +4941,8 @@ def main(argv: list[str]) -> int:
             cache_root=output_root / "native-cache",
             cache_enabled=args.native_cache == "auto",
             jobs=args.native_jobs,
+            observe_renderer_interval=args.observe_renderer_interval,
+            retain_objects=args.benchmark_renderer,
         )
         print(
             "caxecraft: native cache "
@@ -3980,7 +4953,10 @@ def main(argv: list[str]) -> int:
         stage_runtime_assets(executable.parent)
         stage_content_catalogs(executable.parent, runtime_pilot=args.piloscript)
         print(f"caxecraft: built native executable at {executable}")
-        if requested_snapshot is not None:
+        can_publish_reusable_state = requested_snapshot is not None and (
+            not args.build_only or build_only_request_matches
+        )
+        if can_publish_reusable_state and requested_snapshot is not None:
             final_snapshot = play_request_snapshot(
                 args,
                 platform_name=platform_name,
@@ -4007,12 +4983,50 @@ def main(argv: list[str]) -> int:
             except BuildStateFailure as error:
                 raise PlayFailure(str(error)) from error
             print(f"caxecraft: published unchanged-build state at {output_root / PLAY_BUILD_STATE}")
+        elif requested_snapshot is not None and args.build_only:
+            print(
+                "caxecraft: build-only kept the prior reusable state because its build request did not match"
+            )
         if args.build_only and selected_pilot is None:
             return 0
         if args.agent_session:
             print("caxecraft: live agent session ready; send one JSON envelope per line", flush=True)
             return run_agent_session(executable, args.agent_record_dir, args.raylib_configuration)
         if selected_pilot is not None:
+            static_coverage = None
+            if args.observe_renderer_interval:
+                if native_contract is None:
+                    raise PlayFailure("terrain observation lost its native build contract")
+                static_coverage = terrain_build_coverage(
+                    args, generated=generated, manifest=manifest, executable=executable,
+                    include_directory=include_directory, raygui_include_directory=raygui_include_directory,
+                    platform_name=platform_name, native_sanitizer_flags=native_sanitizer_flags,
+                    native_contract=native_contract, native_result=native_result, output_root=output_root,
+                )
+            benchmark_plan = None
+            benchmark_pins = None
+            benchmark_content = None
+            if args.benchmark_renderer:
+                from dev_native_cache import verify_native_objects
+                if requested_snapshot is None:
+                    raise PlayFailure("renderer benchmark requires its original build request")
+                benchmark_plan = native_compile_plan(
+                    generated, manifest, include_directory=include_directory,
+                    raygui_include_directory=raygui_include_directory, platform_name=platform_name,
+                    optimization=args.optimization, native_sanitizer_flags=native_sanitizer_flags,
+                    observe_renderer_interval=args.observe_renderer_interval,
+                )
+                benchmark_pins = verify_native_objects(
+                    objects=native_result.objects, sources=benchmark_plan.sources, compiler=args.cc,
+                    compile_flags=benchmark_plan.compile_flags, include_roots=benchmark_plan.include_roots,
+                    dependency_roots=benchmark_plan.dependency_roots,
+                )
+                benchmark_content = inventory_inputs((InputPath("runtime-content", executable.parent / "content"),))
+                renderer_benchmark_binding(
+                    output_root=output_root, generated=generated, executable=executable,
+                    request=requested_snapshot, content=benchmark_content, plan=benchmark_plan,
+                    native_result=native_result, static_coverage=static_coverage,
+                )
             reports: list[dict[str, object]] = []
             screenshot_hashes: list[str] = []
             supporting_hashes: dict[str, list[str]] = {}
@@ -4021,6 +5035,11 @@ def main(argv: list[str]) -> int:
             height = 0
             repetitions = 7 if args.benchmark_renderer else 2
             for repeat in range(repetitions):
+                # Native editor Save intentionally changes the staged package. Restore the
+                # reviewed source package before each repeat so determinism compares two
+                # independent creator journeys instead of replaying edits on prior output.
+                if selected_pilot == "editor-shell":
+                    stage_content_catalogs(executable.parent, runtime_pilot=args.piloscript)
                 report, width, height, screenshot_hash, sample_supporting_hashes = run_pilot_sample(
                     executable=executable,
                     pilot=selected_pilot,
@@ -4032,12 +5051,22 @@ def main(argv: list[str]) -> int:
                     cc=args.cc,
                     compiler_version=compiler_version,
                     label=f"Caxecraft {selected_pilot} graphical pilot run {repeat + 1}",
+                    observe_renderer_interval=args.observe_renderer_interval,
                 )
+                if static_coverage is not None:
+                    report["staticTerrainCoverage"] = static_coverage.summary()
                 reports.append(report)
                 screenshot_hashes.append(screenshot_hash)
                 for name, digest in sample_supporting_hashes.items():
                     supporting_hashes.setdefault(name, []).append(digest)
 
+            if static_coverage is not None:
+                # Hold all samples until the same source/library/executable inputs
+                # still verify; do not rebuild the AST for each repeated pilot.
+                static_coverage.verify(native_contract=terrain_native_contract(
+                    args, platform_name=platform_name, source=raylib_source,
+                    include_directory=include_directory, library=library,
+                ))
             semantic_reports: list[dict[str, object]] = []
             for report in reports:
                 comparable = dict(report)
@@ -4070,6 +5099,7 @@ def main(argv: list[str]) -> int:
                 update_median = statistics.median(update)
                 preparation_median = statistics.median(preparation)
                 final_report["benchmark"] = {
+                    "measurementKind": "instrumented-correctness" if args.observe_renderer_interval else "timing",
                     "clock": "raylib-monotonic-time",
                     "warmupFrames": 2,
                     "sampleCount": repetitions,
@@ -4085,6 +5115,24 @@ def main(argv: list[str]) -> int:
                     "preparationMedianMicrosecondsPerFrame": preparation_median / measured_frames,
                     "reviewScreenshotSha256": screenshot_hashes[0],
                 }
+            if args.benchmark_renderer:
+                if benchmark_plan is None or benchmark_pins is None or benchmark_content is None:
+                    raise PlayFailure("renderer benchmark lost its original native evidence")
+                final_request = play_request_snapshot(
+                    args, platform_name=platform_name, selected_pilot=selected_pilot,
+                    native_sanitizer_flags=native_sanitizer_flags,
+                )
+                if final_request != requested_snapshot:
+                    raise PlayFailure("renderer benchmark inputs changed during pilots")
+                benchmark_pins.verify()
+                binding = renderer_benchmark_binding(
+                    output_root=output_root, generated=generated, executable=executable,
+                    request=final_request, content=benchmark_content, plan=benchmark_plan,
+                    native_result=native_result, static_coverage=static_coverage,
+                )
+                binding_path = output_root / "renderer-benchmark-binding.json"
+                atomic_write_state(binding_path, binding)
+                final_report["benchmarkBindingSha256"] = sha256_file(binding_path)
             report_path = executable.parent / "caxecraft-pilot-report.json"
             report_path.write_text(
                 json.dumps(final_report, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
@@ -4099,6 +5147,12 @@ def main(argv: list[str]) -> int:
             return 0
         print("caxecraft: launching; press Q to quit")
         return subprocess.run([str(executable)], cwd=executable.parent, check=False).returncode
+    except KeyboardInterrupt:
+        stopped = (False if server_failure_handled else
+                   stop_server_for_failure())
+        suffix = "; stopped the owned Haxe server" if stopped else ""
+        print(f"caxecraft: interrupted{suffix}", file=sys.stderr)
+        return 130
     except (
         OSError,
         UnicodeError,
@@ -4106,12 +5160,18 @@ def main(argv: list[str]) -> int:
         GenerationFailure,
         HaxeServerFailure,
         NativeCacheFailure,
+        CoverageFailure,
+        NativeContractFailure,
         provision.ProvisionFailure,
         PlayFailure,
     ) as error:
+        if not server_failure_handled:
+            stop_server_for_failure()
         print(f"caxecraft: ERROR: {error}", file=sys.stderr)
         return 1
     finally:
+        if server_request_lock is not None:
+            server_request_lock.__exit__(None, None, None)
         if variant_lock is not None:
             variant_lock.__exit__(None, None, None)
 

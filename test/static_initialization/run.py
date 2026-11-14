@@ -18,6 +18,11 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from scripts.test.bounded_process import run as run_bounded_process  # noqa: E402
+
 POSITIVE = Path(__file__).with_name("fixtures") / "positive"
 CYCLE = Path(__file__).with_name("fixtures") / "cycle"
 EXPECTED = Path(__file__).with_name("expected")
@@ -92,7 +97,7 @@ def base_environment() -> dict[str, str]:
 
 def run_oracle(root: Path) -> str:
     javascript = root / "oracle.js"
-    compiled = subprocess.run(
+    compiled = run_bounded_process(
         [
             development_tool("haxe"),
             "-cp",
@@ -119,7 +124,7 @@ def run_oracle(root: Path) -> str:
     node = shutil.which("node")
     if node is None:
         raise StaticInitializationFailure("Node.js is required for the pinned Haxe JavaScript oracle")
-    ran = subprocess.run(
+    ran = run_bounded_process(
         [node, str(javascript)],
         cwd=ROOT,
         check=False,
@@ -163,7 +168,7 @@ def custom_target(
     if report:
         command.extend(["-D", "reflaxe_c_static_initialization_report"])
     command.extend(["-D", "hxc_project_layout=unity", "--custom-target", f"c={output}"])
-    return subprocess.run(
+    return run_bounded_process(
         command,
         cwd=ROOT,
         env=base_environment(),
@@ -496,7 +501,7 @@ def cycle_compile(output: Path, *, reverse: bool = False) -> subprocess.Complete
     if reverse:
         command.extend(["-D", "reflaxe_c_test_reverse_typed_modules"])
     command.extend(["--custom-target", f"c={output}"])
-    return subprocess.run(
+    return run_bounded_process(
         command,
         cwd=ROOT,
         env=base_environment(),
@@ -528,7 +533,7 @@ def cycle_diagnostic(result: subprocess.CompletedProcess[str]) -> str:
 
 
 def compiler_identity(executable: str) -> tuple[str, str]:
-    result = subprocess.run(
+    result = run_bounded_process(
         [executable, "--version"], capture_output=True, text=True, timeout=10
     )
     combined = (result.stdout + result.stderr).strip()
@@ -607,7 +612,7 @@ def compile_and_run(
     objects: list[Path] = []
     for index, source in enumerate(sources):
         target = root / f"source-{index}-{toolchain.family}-{optimization[1:]}.o"
-        compiled = subprocess.run(
+        compiled = run_bounded_process(
             [
                 toolchain.compiler,
                 *STRICT_FLAGS,
@@ -634,7 +639,7 @@ def compile_and_run(
             )
         objects.append(target)
     harness_object = root / f"harness-{toolchain.family}-{optimization[1:]}.o"
-    compiled_harness = subprocess.run(
+    compiled_harness = run_bounded_process(
         [
             toolchain.compiler,
             *STRICT_FLAGS,
@@ -667,7 +672,7 @@ def compile_and_run(
     runtime_plan = json.loads((root / "hxc.runtime-plan.json").read_text())
     if "m" in runtime_plan.get("libraries", []):
         command.append("-lm")
-    compiled = subprocess.run(
+    compiled = run_bounded_process(
         command, capture_output=True, text=True, check=False, timeout=30
     )
     if compiled.returncode != 0 or compiled.stdout or compiled.stderr:
@@ -675,7 +680,7 @@ def compile_and_run(
             f"{toolchain.family} {optimization} rejected generated C\n"
             f"stdout:\n{compiled.stdout}\nstderr:\n{compiled.stderr}"
         )
-    ran = subprocess.run(
+    ran = run_bounded_process(
         [str(executable)], capture_output=True, text=True, check=False, timeout=10
     )
     if ran.returncode != 0 or ran.stdout or ran.stderr:

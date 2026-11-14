@@ -236,6 +236,7 @@ class CPrimitiveSemantics {
 			case CPHI32BitwiseNot: "hxc.i32.bit-not";
 			case CPHF64Divide: "hxc.f64.divide.zero-safe";
 			case CPHF64Modulo: "hxc.f64.modulo";
+			case CPHF64SquareRoot: "hxc.f64.sqrt";
 			case CPHF64ToI32Saturating: "hxc.f64.to.i32.saturating";
 		};
 	}
@@ -258,6 +259,7 @@ class CPrimitiveSemantics {
 			case "hxc.i32.bit-not": CPHI32BitwiseNot;
 			case "hxc.f64.divide.zero-safe": CPHF64Divide;
 			case "hxc.f64.modulo": CPHF64Modulo;
+			case "hxc.f64.sqrt": CPHF64SquareRoot;
 			case "hxc.f64.to.i32.saturating": CPHF64ToI32Saturating;
 			case _: null;
 		};
@@ -268,7 +270,7 @@ class CPrimitiveSemantics {
 			case CPHI32Add | CPHI32Subtract | CPHI32Multiply | CPHI32Negate | CPHI32ShiftLeft | CPHI32ShiftRight | CPHI32UnsignedShiftRight | CPHI32BitAnd |
 				CPHI32BitOr | CPHI32BitXor | CPHI32BitwiseNot:
 				[CPHU32ToI32Bits];
-			case CPHU32ToI32Bits | CPHI32Modulo | CPHU32Modulo | CPHF64Divide | CPHF64Modulo | CPHF64ToI32Saturating:
+			case CPHU32ToI32Bits | CPHI32Modulo | CPHU32Modulo | CPHF64Divide | CPHF64Modulo | CPHF64SquareRoot | CPHF64ToI32Saturating:
 				[];
 		};
 	}

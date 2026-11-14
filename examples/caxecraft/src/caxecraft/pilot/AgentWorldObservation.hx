@@ -78,12 +78,15 @@ typedef AgentTerrainColumn = {
 /**
  * One versioned observation from the real game loop.
  *
- * `sequence` orders replies in a persistent session. `screenshot` names the
+ * `sequence` orders replies in a persistent session. `terminal` distinguishes
+ * a completed action batch from an intermediate checkpoint; it does not mean
+ * that the game process has exited. `screenshot` names the
  * framebuffer capture paired with this state, or `none` when no image exists.
  * Content IDs remain data from the active package and are not compiled here.
  */
 typedef AgentWorldObservation = {
 	final sequence:Int;
+	final terminal:Bool;
 	final frame:Int;
 	final tick:Int;
 	final screen:String;
@@ -110,7 +113,7 @@ typedef AgentWorldObservation = {
 /** Render one stable JSON object through the closed observation fields. */
 function renderAgentWorldObservation(observation:AgentWorldObservation):String {
 	final output = new StringBuf();
-	output.add('{"schemaVersion":1,"sequence":${observation.sequence},"frame":${observation.frame},"tick":${observation.tick}');
+	output.add('{"schemaVersion":1,"sequence":${observation.sequence},"terminal":${observation.terminal ? "true" : "false"},"frame":${observation.frame},"tick":${observation.tick}');
 	addStringField(output, "screen", observation.screen);
 	addStringField(output, "mode", observation.mode);
 	addStringField(output, "level", observation.level);

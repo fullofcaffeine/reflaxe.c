@@ -155,6 +155,10 @@ is a planning diagnostic. Compile-only, cross-compile, emulated-run, and native
 run evidence remain distinct in manifests and release reports. The accepted 1.0
 lanes and tiers are in
 [ADR 0007](adr/0007-strict-c11-target-and-platform-baseline.md).
+The machine-readable form is
+[`platform-support-matrix.json`](specs/platform-support-matrix.json). CI plans
+its jobs from that file. An unknown lane fails during planning; it does not fall
+back to the current host or to a nearby compiler.
 
 Target-contract snapshots include the complete custom-target platform
 configuration for auditability. Hosted currently enables `sys`; freestanding,

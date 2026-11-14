@@ -1,8 +1,6 @@
 package caxecraft.domain;
 
-#if c
-import c.IntConvert;
-#end
+import caxecraft.domain.WorldViewStorage.readCode;
 
 /**
 	Provides the read-only questions that gameplay and presentation ask a world.
@@ -14,11 +12,7 @@ import c.IntConvert;
 **/
 /** Read one validated storage position as a Haxe `Int`. */
 function storageCodeAt(view:WorldView, index:Int):Int {
-	#if c
-	return IntConvert.exact(view[index]);
-	#else
-	return view[index];
-	#end
+	return readCode(view, index);
 }
 
 /** Return the block kind at a coordinate, treating out-of-bounds as air. */

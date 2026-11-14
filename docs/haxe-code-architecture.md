@@ -399,12 +399,12 @@ some aggregate forms still fail closed instead of being boxed silently.
 Use a class when a value has a meaningful identity or owns state across calls:
 
 ```haxe
-final class WaterSimulation {
+final class WaterSimulation extends WaterStorageBase {
 	var pendingCount:Int;
 	var lowestPending:Int;
-	final pendingStorage:WaterPendingOwner = CArray.zero(World.VOLUME);
 
 	public function new() {
+		super();
 		pendingCount = 0;
 		lowestPending = World.VOLUME;
 	}
