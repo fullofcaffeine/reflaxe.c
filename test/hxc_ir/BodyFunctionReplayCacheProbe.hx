@@ -9,6 +9,7 @@ import reflaxe.c.lowering.CBodyFunctionReplayCache;
 import reflaxe.c.lowering.CBodyFunctionReplayCache.CBodyFunctionReplayData;
 import reflaxe.c.lowering.CBodyFunctionReplayCache.CBodyFunctionReplayIdentity;
 import reflaxe.c.lowering.CBodyFunctionReplayCache.CBodyFunctionReplayProgramDecision;
+import reflaxe.c.naming.CSymbolRequest;
 
 /**
 	Exercises semantic-function replay inside the persistent macro process.
@@ -167,7 +168,334 @@ class BodyFunctionReplayCacheProbe {
 			"changed-input miss reason drifted");
 
 		verifyBoundedReplacementSoak(build);
+		verifySnapshotOwnership();
 		return macro null;
+	}
+
+	/**
+		Keep caller edits and current compiler positions out of retained generations.
+
+		The cache transports typed containers; this fixture does not claim that its
+		combined borrow, cleanup and exception metadata forms an executable program.
+		Existing validator and native owners test those independent semantic rules.
+	**/
+	static function verifySnapshotOwnership():Void {
+		var builds = 0;
+		final firstPosition = snapshotPosition(10);
+		final secondPosition = snapshotPosition(20);
+		final thirdPosition = snapshotPosition(30);
+		function build():CBodyFunctionReplayData {
+			builds++;
+			return snapshotData("function.snapshot", firstPosition);
+		}
+		CBodyFunctionReplayCache.beginRequest(true);
+		CBodyFunctionReplayCache.settleProgramRevision("snapshot-program");
+		final seeded = CBodyFunctionReplayCache.resolve("function.snapshot", snapshotIdentity(firstPosition), build);
+		require(!seeded.reused && builds == 1, "snapshot seed did not build exactly once");
+		mutateSnapshot(seeded.data);
+		CBodyFunctionReplayCache.completeRequest();
+
+		CBodyFunctionReplayCache.beginRequest(true);
+		CBodyFunctionReplayCache.settleProgramRevision("snapshot-program");
+		final hit = CBodyFunctionReplayCache.resolve("function.snapshot", snapshotIdentity(secondPosition), build);
+		require(hit.reused && builds == 1, "snapshot hit called the builder");
+		requireSnapshot(hit.data, 20);
+		mutateSnapshot(hit.data);
+		CBodyFunctionReplayCache.completeRequest();
+		// This result outlives publication. Its containers must remain caller-owned.
+		hit.data.localRequests.set("late", new CSymbolRequest(CSKLocal, ["late"], CNSOrdinary("function.snapshot")));
+		hit.data.ir.blocks.push(seeded.data.ir.blocks[0]);
+
+		CBodyFunctionReplayCache.beginRequest(true);
+		CBodyFunctionReplayCache.settleProgramRevision("snapshot-program");
+		final third = CBodyFunctionReplayCache.resolve("function.snapshot", snapshotIdentity(thirdPosition), build);
+		require(third.reused && builds == 1, "third generation did not reuse the original snapshot");
+		requireSnapshot(third.data, 30);
+		mutateSnapshot(third.data);
+		CBodyFunctionReplayCache.abortRequest();
+
+		CBodyFunctionReplayCache.beginRequest(true);
+		CBodyFunctionReplayCache.settleProgramRevision("snapshot-program");
+		var rejected = false;
+		try {
+			CBodyFunctionReplayCache.resolve("function.snapshot", identity("snapshot-input"), build);
+		} catch (error:haxe.Exception) {
+			rejected = error.message.indexOf("could not restore required source position") >= 0;
+		}
+		require(rejected && builds == 1, "missing current position did not reject the hit");
+		// Retry in this request proves that the failed restore inserted no candidate.
+		final recovered = CBodyFunctionReplayCache.resolve("function.snapshot", snapshotIdentity(thirdPosition), build);
+		require(recovered.reused && builds == 1, "failed restore published a candidate or lost prior data");
+		requireSnapshot(recovered.data, 30);
+		final recoveredStats = CBodyFunctionReplayCache.completeRequest();
+		require(recoveredStats.hits == 2 && recoveredStats.misses == 0 && recoveredStats.retainedFunctions == 1,
+			"restoration failure changed existing hit accounting or publication");
+	}
+
+	/** A distinct compiler position lets each request prove that it used its own ledger. */
+	public static function snapshotPosition(offset:Int):Position
+		return Context.makePosition({file: "test/hxc_ir/BodyFunctionReplayCacheProbe.hx", min: offset, max: offset + 1});
+
+	/** Bind the same exact function input to a new request's source-position ledger. */
+	public static function snapshotIdentity(position:Position):CBodyFunctionReplayIdentity {
+		final positions:Map<String, Position> = [];
+		positions.set(snapshotSource().display(), position);
+		return new CBodyFunctionReplayIdentity("snapshot-input", positions);
+	}
+
+	/** Stable source identity is shared; opaque compiler positions are supplied separately. */
+	static function snapshotSource():HxcSourceSpan
+		return new HxcSourceSpan("test/hxc_ir/BodyFunctionReplayCacheProbe.hx", 1, 1, 1, 2);
+
+	/**
+		One finite transport payload exercises every container copied by replay.
+
+		The private allocation probe uses this ordinary public test fixture too.
+		No cache internals or privileged access are exposed for measurement.
+	**/
+	public static function snapshotData(id:String, position:Position):CBodyFunctionReplayData {
+		final source = snapshotSource();
+		final request = new CSymbolRequest(CSKLocal, ["snapshot"], CNSOrdinary("function.snapshot"));
+		final ir:HxcIRFunction = {
+			id: id,
+			displayName: id,
+			parameters: [{id: "argument", type: IRTInt(32, true), source: source}],
+			borrowedClassParameterIds: ["class.parameter"],
+			borrowedInterfaceParameterIds: ["interface.parameter"],
+			borrowedAggregateParameterIds: ["aggregate.parameter"],
+			mutableAggregateBorrowParameterIds: ["mutable.parameter"],
+			borrowedClassLocalIds: ["class.local"],
+			borrowedInterfaceLocalIds: ["interface.local"],
+			borrowedAggregateLocalIds: ["aggregate.local"],
+			mutableAggregateBorrowLocalIds: ["mutable.local"],
+			managedRoots: [
+				{
+					id: "root",
+					valueId: "value",
+					projections: [IRMRPDynamicPayload],
+					source: source
+				}
+			],
+			exceptionStrategy: IRESContainedRuntime,
+			exceptionRegions: [
+				{
+					id: "exception",
+					frameStorageId: "frame",
+					payloadValueId: "payload",
+					source: source
+				}
+			],
+			exceptionCleanups: [
+				{
+					id: "exception.cleanup",
+					storageId: "local",
+					actionId: "cleanup.action",
+					place: IRPLocal("local"),
+					implementation: IRIStatic,
+					source: source
+				}
+			],
+			locals: [
+				{
+					id: "local",
+					type: IRTInt(32, true),
+					storage: IRLSAutomatic,
+					initialState: IRISUninitialized,
+					source: source
+				}
+			],
+			returnType: IRTVoid,
+			borrowedSpanReturn: null,
+			failureConvention: IRFCInfallible,
+			entryBlockId: "entry",
+			blocks: [
+				{
+					id: "entry",
+					parameters: [{id: "block.argument", type: IRTBool, source: source}],
+					instructions: [
+						{
+							id: "constant",
+							result: {id: "value", type: IRTInt(32, true)},
+							kind: IRIOConstant(IRCInt("7")),
+							source: source
+						}
+					],
+					terminator: {kind: IRTReturn(null, []), source: source},
+					source: source
+				}
+			],
+			cleanupRegions: [
+				{
+					id: "cleanup",
+					parentId: null,
+					actions: [
+						{
+							id: "cleanup.action",
+							idempotence: IRCExactlyOnce,
+							kind: IRCAFinally("entry"),
+							source: source
+						}
+					],
+					source: source
+				}
+			],
+			source: source
+		};
+		return {
+			ir: ir,
+			localRequests: ["local" => request],
+			spanLengthRequests: ["span" => request],
+			temporaryRequests: ["temporary" => request],
+			tailArgumentRequests: ["tail" => [request]],
+			labelRequests: ["label" => request],
+			enumReasons: [
+				{
+					instanceId: "enum.instance",
+					source: source
+				}
+			],
+			runtimeRequirements: [
+				{
+					featureId: "gc",
+					operationId: "positioned",
+					surface: "snapshot",
+					source: source,
+					position: position,
+					kind: "runtime-operation"
+				},
+				{
+					featureId: "gc",
+					operationId: "unpositioned",
+					surface: "snapshot",
+					source: source,
+					position: null,
+					kind: "runtime-operation"
+				}
+			]
+		};
+	}
+
+	/** Assert authored values after restore; the expectation does not inspect cache storage. */
+	public static function requireSnapshot(value:CBodyFunctionReplayData, offset:Int):Void {
+		final ir = value.ir;
+		require(ir.parameters.length == 1 && ir.parameters[0].id == "argument" && ir.locals.length == 1 && ir.locals[0].id == "local",
+			"snapshot lost parameters or locals");
+		final ledgers = [
+			ir.borrowedClassParameterIds,
+			ir.borrowedInterfaceParameterIds,
+			ir.borrowedAggregateParameterIds,
+			ir.mutableAggregateBorrowParameterIds,
+			ir.borrowedClassLocalIds,
+			ir.borrowedInterfaceLocalIds,
+			ir.borrowedAggregateLocalIds,
+			ir.mutableAggregateBorrowLocalIds
+		];
+		final expected = [
+			"class.parameter", "interface.parameter", "aggregate.parameter", "mutable.parameter",
+			    "class.local",     "interface.local",     "aggregate.local",     "mutable.local"
+		];
+		for (index in 0...ledgers.length) {
+			final ledger = ledgers[index];
+			require(ledger != null && ledger.length == 1 && ledger[0] == expected[index], "snapshot borrow ledger changed");
+		}
+		final roots = ir.managedRoots;
+		final regions = ir.exceptionRegions;
+		final cleanups = ir.exceptionCleanups;
+		require(roots != null
+			&& roots.length == 1
+			&& roots[0].id == "root"
+			&& roots[0].projections.length == 1
+			&& roots[0].projections[0] == IRMRPDynamicPayload,
+			"snapshot managed root changed");
+		require(regions != null && regions.length == 1 && regions[0].frameStorageId == "frame", "snapshot exception region changed");
+		require(cleanups != null
+			&& cleanups.length == 1
+			&& cleanups[0].actionId == "cleanup.action", "snapshot exception cleanup changed");
+		require(ir.blocks.length == 1
+			&& ir.blocks[0].id == "entry"
+			&& ir.blocks[0].parameters.length == 1
+			&& ir.blocks[0].parameters[0].id == "block.argument"
+			&& ir.blocks[0].instructions.length == 1
+			&& ir.blocks[0].instructions[0].id == "constant",
+			"snapshot block containers changed");
+		require(ir.cleanupRegions.length == 1
+			&& ir.cleanupRegions[0].actions.length == 1
+			&& ir.cleanupRegions[0].actions[0].id == "cleanup.action",
+			"snapshot cleanup actions changed");
+		final maps = [
+			value.localRequests,
+			value.spanLengthRequests,
+			value.temporaryRequests,
+			value.labelRequests
+		];
+		final keys = ["local", "span", "temporary", "label"];
+		for (index in 0...maps.length) {
+			final map = maps[index];
+			final request = map.get(keys[index]);
+			require([for (key in map.keys()) key].length == 1 && request != null && request.qualifiedName.join(".") == "snapshot",
+				"snapshot request map changed");
+		}
+		final tail = value.tailArgumentRequests.get("tail");
+		require([for (key in value.tailArgumentRequests.keys()) key].length == 1
+			&& tail != null
+			&& tail.length == 1
+			&& tail[0].qualifiedName.join(".") == "snapshot",
+			"snapshot tail arguments changed");
+		require(value.enumReasons.length == 1 && value.enumReasons[0].instanceId == "enum.instance", "snapshot enum reasons changed");
+		require(value.runtimeRequirements.length == 2 && value.runtimeRequirements[1].position == null, "snapshot null position changed");
+		final position = value.runtimeRequirements[0].position;
+		require(position != null, "snapshot lost its required current position");
+		if (position != null) {
+			final current = Context.getPosInfos(position);
+			require(current.min == offset && current.max == offset + 1, "snapshot retained an older compiler position");
+		}
+	}
+
+	/** Mutate only containers which the public replay contract makes caller-owned. */
+	static function mutateSnapshot(value:CBodyFunctionReplayData):Void {
+		final ir = value.ir;
+		ir.parameters.resize(0);
+		ir.locals.resize(0);
+		for (ledger in [
+			ir.borrowedClassParameterIds,
+			ir.borrowedInterfaceParameterIds,
+			ir.borrowedAggregateParameterIds,
+			ir.mutableAggregateBorrowParameterIds,
+			ir.borrowedClassLocalIds,
+			ir.borrowedInterfaceLocalIds,
+			ir.borrowedAggregateLocalIds,
+			ir.mutableAggregateBorrowLocalIds
+		])
+			if (ledger != null)
+				ledger.resize(0);
+		final roots = ir.managedRoots;
+		if (roots != null) {
+			roots[0].projections.resize(0);
+			roots.resize(0);
+		}
+		final regions = ir.exceptionRegions;
+		if (regions != null)
+			regions.resize(0);
+		final cleanups = ir.exceptionCleanups;
+		if (cleanups != null)
+			cleanups.resize(0);
+		ir.blocks[0].parameters.resize(0);
+		ir.blocks[0].instructions.resize(0);
+		ir.cleanupRegions[0].actions.resize(0);
+		ir.cleanupRegions.resize(0);
+		for (map in [
+			value.localRequests,
+			value.spanLengthRequests,
+			value.temporaryRequests,
+			value.labelRequests
+		])
+			map.clear();
+		final tail = value.tailArgumentRequests.get("tail");
+		if (tail != null)
+			tail.resize(0);
+		value.tailArgumentRequests.clear();
+		value.enumReasons.resize(0);
+		value.runtimeRequirements.resize(0);
 	}
 
 	/**

@@ -146,12 +146,18 @@ class CBodyFunctionReplayCache {
 			}
 			build();
 		};
-		request.candidateByFunction.set(functionId, {
-			schemaVersion: SCHEMA_VERSION,
-			functionId: functionId,
-			canonicalInput: identity.canonicalInput,
-			data: persist(data)
-		});
+		if (reused && prior != null) {
+			// Restore first: a missing current position must not publish a candidate.
+			// The prior snapshot stays private; callers receive fresh containers above.
+			request.candidateByFunction.set(functionId, prior);
+		} else {
+			request.candidateByFunction.set(functionId, {
+				schemaVersion: SCHEMA_VERSION,
+				functionId: functionId,
+				canonicalInput: identity.canonicalInput,
+				data: persist(data)
+			});
+		}
 		return new CBodyFunctionReplayResolution(data, reused);
 	}
 

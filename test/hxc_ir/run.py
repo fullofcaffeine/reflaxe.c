@@ -430,13 +430,28 @@ def check_borrow_refinement() -> None:
         raise HxcIRFailure(f"borrow refinement check failed\n{result.stdout}\n{result.stderr}")
 
 
+def check_body_function_replay() -> None:
+    """Check snapshot isolation and publication through the public cache API."""
+    result = run_bounded_process(
+        [development_tool("haxe"), "test/hxc_ir/body_function_replay.hxml"],
+        cwd=ROOT, env={**os.environ, "HAXE_NO_SERVER": "1"},
+        check=False, capture_output=True, text=True, timeout=30,
+    )
+    if result.returncode or result.stderr or result.stdout != "body replay contracts passed\n":
+        raise HxcIRFailure(f"body replay check failed\n{result.stdout}\n{result.stderr}")
+
+
 def main() -> int:
     if shutil.which(development_tool("haxe")) is None:
         print("hxc-ir: ERROR: pinned Haxe executable is unavailable", file=sys.stderr)
         return 1
     try:
-        if sys.argv[1:] not in ([], ["--json-strings-only"], ["--nominal-cache-only"], ["--carrier-declarations-only"], ["--managed-root-paths-only"], ["--borrow-parameter-summary-only"], ["--borrow-refinement-only"]):
-            raise HxcIRFailure("usage: test/hxc_ir/run.py [--json-strings-only | --nominal-cache-only | --carrier-declarations-only | --managed-root-paths-only | --borrow-parameter-summary-only | --borrow-refinement-only]")
+        if sys.argv[1:] not in ([], ["--json-strings-only"], ["--nominal-cache-only"], ["--carrier-declarations-only"], ["--managed-root-paths-only"], ["--borrow-parameter-summary-only"], ["--borrow-refinement-only"], ["--body-function-replay-only"]):
+            raise HxcIRFailure("usage: test/hxc_ir/run.py [--json-strings-only | --nominal-cache-only | --carrier-declarations-only | --managed-root-paths-only | --borrow-parameter-summary-only | --borrow-refinement-only | --body-function-replay-only]")
+        if sys.argv[1:] == ["--body-function-replay-only"]:
+            check_body_function_replay()
+            print("hxc-ir: OK: body replay isolation and publication")
+            return 0
         if not sys.argv[1:] or sys.argv[1:] == ["--borrow-refinement-only"]:
             check_borrow_refinement()
         if sys.argv[1:] == ["--borrow-refinement-only"]:
