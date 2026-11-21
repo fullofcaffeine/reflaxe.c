@@ -1774,9 +1774,7 @@ chunk region.evergrove 32 0 0 32 16 32
   run 5 6
   run 9 1
   run 3 2
-  run 0 29
-  run 5 1
-  run 0 56
+  run 0 86
   run 5 1
   run 0 6
   run 5 1
@@ -1804,9 +1802,7 @@ chunk region.evergrove 32 0 0 32 16 32
   run 5 6
   run 9 1
   run 3 2
-  run 0 29
-  run 5 1
-  run 0 56
+  run 0 86
   run 5 1
   run 0 6
   run 5 1
