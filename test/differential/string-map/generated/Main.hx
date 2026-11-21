@@ -331,6 +331,10 @@ final class Main {
 		return !alias.exists("depth") && alias.get("depth") == null;
 	}
 
+	/** Compare a nullable lookup with a concrete tag using both Haxe equality operators. */
+	static function matchesKind(actual:Null<StoredKind>, expected:StoredKind, shouldMatch:Bool):Bool
+		return (actual == expected) == shouldMatch && (actual != expected) == !shouldMatch;
+
 	/**
 		Exercise direct enum insertion, replacement, lookup, absence, and removal.
 
@@ -344,7 +348,10 @@ final class Main {
 		if (table.getOr("build", Complete) != Draft
 			|| table.get("missing") != null
 			|| table.getInline("build") != Draft
-			|| table.getInline("missing") != null)
+			|| table.getInline("missing") != null
+			|| !matchesKind(table.get("build"), Draft, true)
+			|| !matchesKind(table.get("build"), Ready, false)
+			|| !matchesKind(table.get("missing"), Draft, false))
 			return false;
 
 		table.set("build", Ready);
