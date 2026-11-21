@@ -111,7 +111,7 @@ REQUIRED_INTERFACE_NATIVE_COVERAGE = frozenset(
 
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
-from scripts.test.bounded_process import run as run_bounded_process  # noqa: E402
+from scripts.test.bounded_process import server_process, run as run_bounded_process  # noqa: E402
 
 
 from scripts.test.c_fixture_harness import (  # noqa: E402
@@ -1063,10 +1063,7 @@ def wait_for_server(server: subprocess.Popen[str], port: int) -> None:
     deadline = time.monotonic() + 10
     while time.monotonic() < deadline:
         if server.poll() is not None:
-            stdout, stderr = server.communicate()
-            raise VirtualDispatchFailure(
-                f"Haxe server exited early\nstdout:\n{stdout}\nstderr:\n{stderr}"
-            )
+            raise VirtualDispatchFailure("Haxe server exited early")
         try:
             with socket.create_connection(("127.0.0.1", port), timeout=0.2):
                 return
@@ -1081,24 +1078,29 @@ def haxe_server() -> Iterator[str]:
     endpoint = str(port)
     environment = os.environ.copy()
     environment.pop("HAXE_NO_SERVER", None)
-    server = subprocess.Popen(
-        [development_tool("haxe"), "--wait", endpoint],
-        cwd=ROOT,
-        env=environment,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        text=True,
-    )
-    try:
-        wait_for_server(server, port)
-        yield endpoint
-    finally:
-        server.terminate()
+    # A child may keep inherited pipes open after the launcher exits. Files
+    # preserve startup diagnostics without making readiness wait for pipe EOF.
+    with (
+        tempfile.TemporaryFile(mode="w+", encoding="utf-8", errors="replace") as stdout,
+        tempfile.TemporaryFile(mode="w+", encoding="utf-8", errors="replace") as stderr,
+    ):
+        ready = False
         try:
-            server.wait(timeout=5)
-        except subprocess.TimeoutExpired:
-            server.kill()
-            server.wait(timeout=5)
+            with server_process(
+                [development_tool("haxe"), "--wait", endpoint],
+                cwd=ROOT, env=environment, stdout=stdout, stderr=stderr,
+            ) as server:
+                wait_for_server(server, port)
+                ready = True
+                yield endpoint
+        except VirtualDispatchFailure as error:
+            if ready:
+                raise
+            stdout.seek(0)
+            stderr.seek(0)
+            raise VirtualDispatchFailure(
+                f"{error}\nstdout:\n{stdout.read()}\nstderr:\n{stderr.read()}"
+            ) from error
 
 
 def require_silent_success(command: list[str], label: str) -> None:

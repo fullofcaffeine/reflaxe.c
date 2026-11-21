@@ -18,8 +18,11 @@ import os
 import re
 import signal
 import subprocess
+import sys
 import time
-from collections.abc import Sequence
+from collections.abc import Iterator, Sequence
+from contextlib import contextmanager
+from pathlib import Path
 from typing import Any
 
 from scripts.test.compiler_progress import compiler_timeout_suffix
@@ -144,6 +147,51 @@ def _stop_and_drain(
     return stdout, stderr, "; ".join(problems)
 
 
+def _start_process_group(
+    command: Sequence[str | os.PathLike[str]] | str | os.PathLike[str],
+    **popen_arguments: Any,
+) -> subprocess.Popen[Any]:
+    if os.name == "nt":
+        existing_flags = int(popen_arguments.pop("creationflags", 0))
+        new_process_group = subprocess.CREATE_NEW_PROCESS_GROUP  # type: ignore[attr-defined]
+        popen_arguments["creationflags"] = _windows_creation_flags(
+            existing_flags, new_process_group
+        )
+    else:
+        popen_arguments["start_new_session"] = True
+
+    return subprocess.Popen(command, **popen_arguments)
+
+
+@contextmanager
+def server_process(command: Sequence[str], **popen_arguments: Any) -> Iterator[subprocess.Popen[Any]]:
+    """Keep the test server's family owned even if its launcher exits first."""
+    if os.name == "nt":
+        launcher = Path(__file__).with_name("windows_job_launcher.py")
+        command = [sys.executable, "-I", str(launcher), *command]
+    process = _start_process_group(command, **popen_arguments)
+
+    def stop() -> None:
+        if os.name == "nt":
+            # This handle identifies the supervisor even after its PID exits.
+            # Killing the supervisor closes the private job and its entire tree.
+            process.kill()
+        else:
+            _terminate_process_tree(process)
+        process.wait(timeout=5)
+
+    try:
+        yield process
+    except BaseException as error:
+        try:
+            stop()
+        except (OSError, subprocess.TimeoutExpired) as cleanup_error:
+            error.add_note(f"Server process cleanup failed: {cleanup_error}")
+        raise
+    else:
+        stop()
+
+
 def run(
     command: Sequence[str | os.PathLike[str]] | str | os.PathLike[str],
     *,
@@ -184,16 +232,7 @@ def run(
         popen_arguments["stdout"] = subprocess.PIPE
         popen_arguments["stderr"] = subprocess.PIPE
 
-    if os.name == "nt":
-        existing_flags = int(popen_arguments.pop("creationflags", 0))
-        new_process_group = subprocess.CREATE_NEW_PROCESS_GROUP  # type: ignore[attr-defined]
-        popen_arguments["creationflags"] = _windows_creation_flags(
-            existing_flags, new_process_group
-        )
-    else:
-        popen_arguments["start_new_session"] = True
-
-    process = subprocess.Popen(command, **popen_arguments)
+    process = _start_process_group(command, **popen_arguments)
     drained = False
     try:
         try:

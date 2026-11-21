@@ -675,6 +675,7 @@ jobs:
         shell: bash
         run: |
           python3 -m unittest discover -s test/governance -p test_windows_process_identity.py
+          python3 -m unittest discover -s test/governance -p test_dispatch_server_cleanup.py
           python3 -m unittest discover -s test/governance -p test_caxecraft_haxe_server.py
 
       - name: Compile Windows Caxecraft with explicit unsupported package capability
