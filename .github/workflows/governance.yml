@@ -608,6 +608,17 @@ jobs:
             xvfb \
             xauth
 
+      - name: Select clang-cl from the installed Visual Studio toolchain
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $vswhere = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio/Installer/vswhere.exe'
+          $installation = & $vswhere -latest -products '*' -requires Microsoft.VisualStudio.Component.VC.Llvm.Clang -property installationPath
+          if (-not $installation) { throw 'Visual Studio with clang-cl is required.' }
+          $llvmBin = Join-Path $installation 'VC/Tools/Llvm/x64/bin'
+          if (-not (Test-Path (Join-Path $llvmBin 'clang-cl.exe'))) { throw "Missing clang-cl in $llvmBin" }
+          $llvmBin | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
       - name: Require native build tools
         shell: bash
         run: |
