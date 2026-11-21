@@ -5,9 +5,9 @@ database is shared through the Git remote's `refs/dolt/data` ref. This is
 separate from ordinary source commits on `refs/heads/main`.
 
 The reviewed client is the stock **Beads 1.1.2** release, using database
-schema v53. The hook installer checks that
-Beads 1.1.2 is on `PATH`; after setup, the tracked hooks and scripts call the
-stock `bd` command directly.
+schema v53. Hook installation and each passive issue export check the version
+of the stock `bd` on `PATH`. If a shell update selects an incompatible client
+after setup, the export stops before opening the database or staging a file.
 
 `bd hooks list` currently labels the installed hook template as version
 `1.1.0`, even when stock Beads 1.1.2 installs it. That is the hook-template
@@ -26,8 +26,8 @@ same expensive tests started again.
 The strict check prevents that chain of events:
 
 1. resolve and verify Beads 1.1.2;
-2. confirm the local database is available;
-3. export to temporary files beside the destination;
+2. open the local database in read-only mode to confirm compatibility;
+3. export in read-only mode to temporary files beside the destination;
 4. replace and stage `.beads/issues.jsonl` only after export succeeds.
 
 If version discovery or export fails, the existing JSONL bytes and Git index

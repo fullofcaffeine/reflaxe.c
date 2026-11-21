@@ -3,17 +3,7 @@ set -euo pipefail
 
 ROOT_DIR="$(git rev-parse --show-toplevel)"
 
-if ! command -v bd >/dev/null 2>&1; then
-  echo "[hooks] ERROR: stock Beads 1.1.2 is required on PATH." >&2
-  exit 1
-fi
-case "$(bd --version)" in
-  "bd version 1.1.2 "*) ;;
-  *)
-    echo "[hooks] ERROR: stock Beads 1.1.2 is required; found: $(bd --version)" >&2
-    exit 1
-    ;;
-esac
+bash "$ROOT_DIR/scripts/beads/check-version.sh"
 
 if [ ! -x "$ROOT_DIR/.beads/hooks/pre-commit" ] || [ ! -x "$ROOT_DIR/.beads/hooks/pre-push" ]; then
   echo "[hooks] ERROR: expected tracked Beads pre-commit and pre-push hooks." >&2
