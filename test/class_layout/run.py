@@ -859,6 +859,69 @@ def static_hxcir(result: subprocess.CompletedProcess[str]) -> str:
     return hxcir
 
 
+def check_saved_predicate(*, requested_toolchain: str) -> None:
+    """Only the true result of a still-valid presence test protects the later field read."""
+    fixture = FIXTURES / "saved_predicate"
+    expected = "17\n-1\n-1\n-1\n4\n"
+    with tempfile.TemporaryDirectory(prefix="hxc-saved-predicate-") as temporary:
+        root = Path(temporary)
+        for main in ("Replaced", "Independent", "UncheckedJoin", "Main"):
+            positive = main == "Main"
+            oracle = run_bounded_process(
+                [development_tool("haxe"), "-cp", str(fixture), "-main", main, "--interp"],
+                cwd=ROOT, env=haxe_environment(), capture_output=True, text=True, timeout=30,
+            )
+            if positive:
+                valid = oracle.returncode == 0 and oracle.stdout == expected and not oracle.stderr
+            else:
+                valid = (
+                    oracle.returncode == 1 and not oracle.stdout
+                    and "Uncaught exception field access on null" in oracle.stderr
+                    and "selected.value" in oracle.stderr and f"{main}.hx:" in oracle.stderr
+                )
+            if not valid:
+                raise ClassLayoutFailure(f"{main} Eval outcome changed\n{oracle.stdout}{oracle.stderr}")
+
+            output = root / main
+            generated = custom_target(fixture, output, main=main, report=positive)
+            if generated.returncode or generated.stderr or "[ERROR]" in generated.stdout:
+                raise ClassLayoutFailure(f"{main} generation failed\n{generated.stdout}{generated.stderr}")
+            manifest = json.loads((output / "hxc.manifest.json").read_text())
+            project = CFixtureProject(
+                identifier=main.lower(), sources=tuple(manifest["build"]["sources"]),
+                headers=tuple(sorted(path.relative_to(output).as_posix() for path in output.rglob("*.h"))),
+                include_directories=("include", "runtime/include"), expected_stdout=expected if positive else "",
+                coverage=("saved-predicate",), expected_exit=0 if positive else -signal.SIGABRT,
+            )
+            report = run_c_fixture_corpus(
+                suite="saved-predicate", projects=(project,), fixture_root=output, build_root=root / "native",
+                repository_root=ROOT, requested_toolchain=requested_toolchain, strict_flags=(*C11_STRICT_FLAGS, "-O2"),
+                timeout_seconds=30,
+            )
+            validate_report(report, required_coverage=frozenset({"saved-predicate"}))
+            if positive:
+                check_saved_field_guard(static_hxcir(generated), (output / "src/program.c").read_text())
+
+
+def check_saved_field_guard(hxcir: str, source: str) -> None:
+    """Identify the receiver of the final field read independently in IR and generated C."""
+    _, start, function = hxcir.partition('  function "function.Main.read" ')
+    function, end, _ = function.partition('  end function "function.Main.read"')
+    _, call, after_call = function.partition('call dispatch=direct("function.Main.unrelated")')
+    field = re.search(r'load place=field\(dereference\("([^"]+)"\),"value"\)', after_call)
+    if not (start and end and call and field):
+        raise ClassLayoutFailure("saved-predicate IR omitted the field read after the unrelated call")
+    body = c_function_section(source, "hxc_Main_read")
+    _, call, after_c_call = body.partition("hxc_Main_unrelated();")
+    receiver = re.search(r"\(\*([A-Za-z_]\w*)\)\.hxc_value\b", after_c_call)
+    if not call or not receiver:
+        raise ClassLayoutFailure("saved-predicate C omitted the field read after the unrelated call")
+    if f'null-check value="{field[1]}"' in after_call or re.search(
+        rf"if\s*\(\s*{re.escape(receiver[1])}\s*==\s*NULL\s*\)", after_c_call,
+    ):
+        raise ClassLayoutFailure("saved-predicate field read still checks its proven receiver")
+
+
 def check_owned_child_nonnull(*, requested_toolchain: str) -> None:
     """Remove only child-address guards; preserve scalar behavior and nullable fail-stop."""
     fixture = FIXTURES / "owned_child_nonnull"
@@ -1402,6 +1465,7 @@ def parse_args(arguments: Iterable[str]) -> argparse.Namespace:
     parser.add_argument("--borrowed-child-only", action="store_true")
     parser.add_argument("--owned-child-nonnull-only", action="store_true")
     parser.add_argument("--owned-child-branches-only", action="store_true")
+    parser.add_argument("--saved-predicate-only", action="store_true")
     parser.add_argument("--owned-child-managed-output", type=Path)
     parser.add_argument("--owned-child-managed-only", action="store_true")
     return parser.parse_args(list(arguments))
@@ -1413,6 +1477,10 @@ def main(arguments: Iterable[str] = ()) -> int:
         print("class-layout: ERROR: pinned Haxe executable is unavailable", file=sys.stderr)
         return 1
     try:
+        if args.saved_predicate_only:
+            check_saved_predicate(requested_toolchain=args.toolchain)
+            print("class-layout: OK: saved predicate protects the field read and all unchecked reads abort")
+            return 0
         if args.owned_child_managed_output is not None:
             check_owned_child_managed(args.owned_child_managed_output)
             print("class-layout: OK: managed-child structural capture passed; native scalar/fail-stop checks remain pending")
@@ -1461,6 +1529,7 @@ def main(arguments: Iterable[str] = ()) -> int:
         check_owned_child_nonnull(requested_toolchain=args.toolchain)
         check_owned_child_managed_native(requested_toolchain=args.toolchain)
         check_owned_child_branches(requested_toolchain=args.toolchain)
+        check_saved_predicate(requested_toolchain=args.toolchain)
         check_negative_cases()
     except (
         ClassLayoutFailure,

@@ -713,7 +713,7 @@ class CBodyLowering {
 		CPhaseTiming.stopProgressDetail(Std.string(CDTHxcIRManagedRootPlanning));
 		CPhaseTiming.startProgressDetail(Std.string(CDTHxcIRNullCheckCoalescing));
 		final nullCheckTimer = CPhaseTiming.startDetail(CDTHxcIRNullCheckCoalescing);
-		new CBodyNullCheckCoalescing().run(program);
+		new CBodyNullCheckCoalescing().run(program, IRNCPCheckedAbort(Std.string(context.profile), Std.string(context.buildMode)));
 		CPhaseTiming.stopDetail(nullCheckTimer);
 		CPhaseTiming.stopProgressDetail(Std.string(CDTHxcIRNullCheckCoalescing));
 		recordProgramCounters(program);

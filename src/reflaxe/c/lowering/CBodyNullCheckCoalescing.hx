@@ -3,6 +3,7 @@ package reflaxe.c.lowering;
 import reflaxe.c.ir.HxcIR;
 import reflaxe.c.ir.HxcIROwnedChildProofs;
 import reflaxe.c.ir.HxcIROwnedChildFlow;
+import reflaxe.c.ir.HxcIRSavedPredicateFlow;
 import reflaxe.c.ir.HxcIRValidator;
 import reflaxe.c.ir.HxcIRControlFlowAnalysis;
 import reflaxe.c.ir.HxcIRControlFlowAnalysis.HxcIRControlFlowFacts;
@@ -29,15 +30,17 @@ class CBodyNullCheckCoalescing {
 	public function new() {}
 
 	/** Optimize every reachable function without changing the HxcIR schema. */
-	public function run(program:HxcIRProgram):Void {
+	public function run(program:HxcIRProgram, ?expectedPolicy:HxcIRNullCheckPolicy):Void {
 		for (module in program.modules)
 			for (fn in module.functions)
-				coalesceFunction(fn);
+				coalesceFunction(fn, expectedPolicy);
 	}
 
-	function coalesceFunction(fn:HxcIRFunction):Void {
+	function coalesceFunction(fn:HxcIRFunction, expectedPolicy:Null<HxcIRNullCheckPolicy>):Void {
 		final controlFlow = new HxcIRControlFlowAnalysis().analyze(fn);
 		final retainedWitnesses = removeOwnedChildChecks(fn, controlFlow);
+		if (expectedPolicy != null)
+			removeSavedFieldChecks(fn, controlFlow, expectedPolicy, retainedWitnesses);
 		final proofsByBlock = collectWholeBlockProofs(fn, controlFlow);
 		for (block in fn.blocks) {
 			final available:Map<String, Bool> = [];
@@ -64,6 +67,35 @@ class CBodyNullCheckCoalescing {
 				block.instructions.splice(0, block.instructions.length);
 				for (instruction in kept)
 					block.instructions.push(instruction);
+			}
+		}
+	}
+
+	/**
+		Remove a guard immediately before a proven field read. Every other use of
+		its operand must also be covered. The compilation policy must match because
+		the comparison itself has no checked-abort policy to serve as a witness.
+	**/
+	function removeSavedFieldChecks(fn:HxcIRFunction, controlFlow:HxcIRControlFlowFacts, expectedPolicy:HxcIRNullCheckPolicy,
+			witnesses:Map<String, Bool>):Void {
+		final predicates = new HxcIRSavedPredicateFlow(fn, controlFlow);
+		if (!predicates.hasProvenFields())
+			return;
+		final retained = HxcIRValidator.valuesNeedingExplicitNullChecks(fn, predicates);
+		for (block in fn.blocks) {
+			var index = block.instructions.length - 1;
+			while (--index >= 0) {
+				final check = block.instructions[index];
+				switch check.kind {
+					case IRIONullCheck(id, policy)
+						if (predicates.fieldValue(block.instructions[index + 1]) == id
+							&& !retained.exists(id)
+							&& !witnesses.exists(check.id)
+							&& HxcIROwnedChildProofs.samePolicy(expectedPolicy, policy)
+							&& HxcIRValidator.canDiscardNullCheckEnvelope(check, true)):
+						block.instructions.splice(index, 1);
+					case _:
+				}
 			}
 		}
 	}

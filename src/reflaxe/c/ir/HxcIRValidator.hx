@@ -74,6 +74,7 @@ private typedef HxcIRDominanceProofs = {
 	final proofsByBlock:Map<String, Map<String, Bool>>;
 	final nullProofsByBlock:Map<String, Map<String, Bool>>;
 	final ownedChildren:HxcIROwnedChildFlow;
+	final savedPredicates:HxcIRSavedPredicateFlow;
 }
 
 /** Whether one dispatch layout is embedded in a class or carried by an interface value. */
@@ -153,8 +154,8 @@ class HxcIRValidator {
 	public static inline final SCHEMA_VERSION = 27;
 
 	/** Operand-use query shared with optimizers; cleanup involvement remains conservative. */
-	public static function valuesNeedingExplicitNullChecks(fn:HxcIRFunction):Map<String, Bool>
-		return HxcIRValidationState.valuesNeedingExplicitNullChecks(fn);
+	public static function valuesNeedingExplicitNullChecks(fn:HxcIRFunction, ?predicates:HxcIRSavedPredicateFlow):Map<String, Bool>
+		return HxcIRValidationState.valuesNeedingExplicitNullChecks(fn, predicates);
 
 	/**
 		Recognize the one primitive comparison that can preserve a borrowed local.
@@ -2170,7 +2171,7 @@ private class HxcIRValidationState {
 		callers must separately prove terminal-only stable-local cleanup or retain
 		the guards. This query does not grant lifetime or cleanup-order authority.
 	**/
-	public static function valuesNeedingExplicitNullChecks(fn:HxcIRFunction):Map<String, Bool> {
+	public static function valuesNeedingExplicitNullChecks(fn:HxcIRFunction, ?predicates:HxcIRSavedPredicateFlow):Map<String, Bool> {
 		final firstBlock:Map<String, String> = [];
 		final retained:Map<String, Bool> = [];
 		function use(id:String, block:String):Void {
@@ -2187,8 +2188,17 @@ private class HxcIRValidationState {
 							.concat(call.failure == null ? [] : call.failure.arguments);
 					case _: nonCallInstructionValueUses(instruction.kind);
 				};
-				for (id in ids)
+				for (id in ids) {
 					use(id, block.id);
+					// Saved decisions authorize specific field reads. A different
+					// consumer can still need the explicit guard or propagate it.
+					if (predicates != null && predicates.fieldValue(instruction) != id)
+						switch instruction.kind {
+							case IRIONullCheck(_, _):
+							case _:
+								retained.set(id, true);
+						}
+				}
 			}
 			if (block.terminator != null)
 				for (id in terminatorValueUses(block.terminator.kind))
@@ -2349,7 +2359,8 @@ private class HxcIRValidationState {
 			controlFlow: controlFlow,
 			proofsByBlock: proofsByBlock,
 			nullProofsByBlock: nullProofsByBlock,
-			ownedChildren: new HxcIROwnedChildFlow(fn, controlFlow)
+			ownedChildren: new HxcIROwnedChildFlow(fn, controlFlow),
+			savedPredicates: new HxcIRSavedPredicateFlow(fn, controlFlow)
 		};
 	}
 
@@ -2760,7 +2771,8 @@ private class HxcIRValidationState {
 		}
 		for (index => instruction in block.instructions) {
 			final instructionPath = ("" + path + ".instruction:" + index + ":" + instruction.id);
-			final instructionNullProofs = ownedChildProofs == null ? nullProofs : ownedChildProofs.forUse(instruction, nullProofs);
+			final childNullProofs = ownedChildProofs == null ? nullProofs : ownedChildProofs.forUse(instruction, nullProofs);
+			final instructionNullProofs = dominanceProofs.savedPredicates.forUse(instruction, childNullProofs);
 			validateInstruction(instruction, instructionPath, block, available, locals, blocks, regions, exceptionRegions, exceptionCleanups,
 				instructionSites, valueSites, boundsProofs, instructionNullProofs, dominanceProofs);
 			validateBorrowedReferenceInstruction(instruction, instructionPath, available, locals, borrowedReferenceValues, borrowedReferenceLocals);

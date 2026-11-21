@@ -37,6 +37,18 @@ private enum MutableAggregateBorrowMutation {
 	MutableBorrowReturnEscape;
 }
 
+/** Each alternative changes one reason a saved decision might admit a null pointer. */
+private enum SavedPredicateCase {
+	Present;
+	AbsentSavesFalse;
+	AbsentSavesTrue;
+	PointerAliasWrite;
+	DecisionAliasWrite;
+	FalseBranch;
+	BothBranches;
+	ReplacedOnBackedge;
+}
+
 /** Count each typed visitor family without taking ownership of recursion. */
 private class HxcIRTraversalSentinel extends HxcIRTraversalVisitor {
 	public var programs(default, null) = 0;
@@ -130,6 +142,11 @@ class HxcIRGolden {
 	static inline final COVERAGE_SOURCE = "test/hxc_ir/fixtures/IRCoverage.hx";
 
 	static function main():Void {
+		#if hxc_saved_predicate_only
+		verifySavedPredicate(new HxcIRValidator());
+		Sys.println("saved predicate contracts passed");
+		return;
+		#end
 		#if hxc_owned_child_cleanup_flow_only
 		final cleanupValidator = new HxcIRValidator();
 		verifyOwnedChildCleanup(cleanupValidator);
@@ -267,6 +284,7 @@ class HxcIRGolden {
 		validator.requireValid(managedAggregateCarrierValidationProgram(false), PROFILE);
 		validator.requireValid(interfaceUpcastProgram(null), PROFILE);
 		verifyReceiverReassignmentCoalescing(validator);
+		verifySavedPredicate(validator);
 		verifyOwnedChildProofs(validator);
 		verifyOwnedChildCleanupFlow(validator);
 		final coverageDump = coverageBeforeTraversal;
@@ -2362,6 +2380,114 @@ class HxcIRGolden {
 			}
 		if (checks != 2)
 			throw 'receiver reassignment retained $checks null checks; expected one for each immutable load';
+	}
+
+	/**
+		Check the storage boundary independently of the optimizer. An indirect store
+		can replace the pointer or the Boolean that guards it. A false edge or a
+		shared destination can also reach the read with a null pointer. Each guarded
+		input must validate, then removing the guard must expose that exact unsafe read.
+	**/
+	static function verifySavedPredicate(validator:HxcIRValidator):Void {
+		final file = "test/class_layout/fixtures/saved_predicate/Main.hx";
+		final reference = IRTPointer(IRTInstance("instance.class.root"), true);
+		final cases:Array<SavedPredicateCase> = [
+			PointerAliasWrite,
+			DecisionAliasWrite,
+			FalseBranch,
+			BothBranches,
+			ReplacedOnBackedge,
+			Present,
+			AbsentSavesFalse,
+			AbsentSavesTrue
+		];
+		for (variant in cases) {
+			final program = classProgram(file, [], "fixture.SavedPredicate");
+			final fn = program.modules[0].functions[0];
+			fn.parameters.push(parameter("input", reference, file, 1));
+			fn.locals.push(local("selected", reference, IRLSAutomatic, IRISUninitialized, file, 2));
+			fn.locals.push(local("saved", IRTBool, IRLSAutomatic, IRISUninitialized, file, 3));
+			final body = [
+				instruction("init.selected", null, IRIOInitialize(IRPLocal("selected"), "input", IRISUninitialized, IRISInitialized), file, 2),
+				instruction("load.selected", result("before", reference), IRIOLoad(IRPLocal("selected")), file, 3),
+				instruction("literal.null", result("absent", reference), IRIOConstant(IRCNull), file, 3),
+				instruction("compare", result("present", IRTBool), IRIOBinary("haxe.class-reference.not-equal", "before", "absent", IRIStatic), file, 3)
+			];
+			final acrossJoin = variant == AbsentSavesFalse || variant == AbsentSavesTrue;
+			if (acrossJoin)
+				body.push(instruction("declare.saved", null, IRIODeclareUninitialized(IRPLocal("saved")), file, 3));
+			else
+				body.push(instruction("init.saved", null, IRIOInitialize(IRPLocal("saved"), "present", IRISUninitialized, IRISInitialized), file, 3));
+			switch variant {
+				case PointerAliasWrite:
+					body.push(instruction("take.address", result("address", IRTPointer(reference, false)), IRIOAddress(IRPLocal("selected")), file, 4));
+					body.push(instruction("replace", null, IRIOStore(IRPDereference("address"), "absent"), file, 4));
+				case DecisionAliasWrite:
+					body.push(instruction("take.address", result("address", IRTPointer(IRTBool, false)), IRIOAddress(IRPLocal("saved")), file, 4));
+					body.push(instruction("literal.true", result("yes", IRTBool), IRIOConstant(IRCBool(true)), file, 4));
+					body.push(instruction("replace", null, IRIOStore(IRPDereference("address"), "yes"), file, 4));
+				case Present | AbsentSavesFalse | AbsentSavesTrue | FalseBranch | BothBranches | ReplacedOnBackedge:
+			}
+			final load = instruction("load.saved", result("decision", IRTBool), IRIOLoad(IRPLocal("saved")), file, 5);
+			if (acrossJoin) {
+				// An inlined method can assign one Boolean local in two arms. Only the
+				// present arm may supply a true value that protects the later field read.
+				fn.parameters.push(parameter("enabled", IRTBool, file, 1));
+				fn.blocks[0] = block(fn.entryBlockId, body, IRTBranch("present", edge("present.arm"), edge("absent.arm")), file, 3);
+				fn.blocks.push(block("present.arm", [
+					instruction("save.enabled", null, IRIOStore(IRPLocal("saved"), "enabled"), file, 4)
+				], IRTJump(edge("join")), file, 4));
+				fn.blocks.push(block("absent.arm", [
+					instruction("fallback", result("literal", IRTBool), IRIOConstant(IRCBool(variant == AbsentSavesTrue)), file, 4),
+					instruction("save.fallback", null, IRIOStore(IRPLocal("saved"), "literal"), file, 4)
+				], IRTJump(edge("join")), file, 4));
+				fn.blocks.push(block("join", [load], IRTBranch("decision", edge("read"), edge("exit")), file, 5));
+			} else {
+				body.push(load);
+				fn.blocks[0] = block(fn.entryBlockId, body,
+					IRTBranch("decision", edge(variant == FalseBranch ? "exit" : "read"),
+						edge(variant == FalseBranch || variant == BothBranches ? "read" : "exit")),
+					file, 5);
+			}
+			final guard = instruction("field.guard", null, IRIONullCheck("after", IRNCPCheckedAbort("portable", "debug")), file, 6);
+			final access = block("read", [
+				instruction("reload", result("after", reference), IRIOLoad(IRPLocal("selected")), file, 6),
+				guard,
+				instruction("read.field", result("answer", IRTInt(32, true)), IRIOLoad(IRPField(IRPDereference("after"), "value")), file, 6)
+			],
+				variant == ReplacedOnBackedge ? IRTBranch("again", edge("replace"), edge("exit")) : IRTReturn(null, []), file, 6);
+			fn.blocks.push(access);
+			if (variant == ReplacedOnBackedge) {
+				fn.parameters.push(parameter("again", IRTBool, file, 1));
+				fn.blocks.push(block("replace", [
+					instruction("new.null", result("replacement", reference), IRIOConstant(IRCNull), file, 7),
+					instruction("replace.it", null, IRIOStore(IRPLocal("selected"), "replacement"), file, 7)
+				], IRTJump(edge("read")), file, 7));
+			}
+			fn.blocks.push(block("exit", [], IRTReturn(null, []), file, 7));
+			validator.requireValid(program, PROFILE);
+			if (variant == Present) {
+				for (policy in [
+					{value: IRNCPCheckedAbort("metal", "debug"), marker: "does not match validator profile"},
+					{value: IRNCPCheckedAbort("portable", "invalid"), marker: "unknown build mode"}
+				]) {
+					access.instructions[1] = instruction("field.guard", null, IRIONullCheck("after", policy.value), file, 6);
+					new CBodyNullCheckCoalescing().run(program, IRNCPCheckedAbort("portable", "debug"));
+					requireInvalidMarker(program, policy.marker, "saved predicate guard policy");
+				}
+				access.instructions[1] = guard;
+			}
+			new CBodyNullCheckCoalescing().run(program, IRNCPCheckedAbort("portable", "debug"));
+			validator.requireValid(program, PROFILE);
+			if (variant == Present || variant == AbsentSavesFalse) {
+				if (access.instructions.indexOf(guard) != -1)
+					throw "saved true decision retained its redundant field check";
+			} else {
+				if (!access.instructions.remove(guard))
+					throw 'saved decision incorrectly removed the guard in ${variant}';
+				requireInvalidMarker(program, "requires a preceding dominating null check", 'saved decision after ${variant}');
+			}
+		}
 	}
 
 	/** Keep the nullable owner guard while proving a staged embedded-child address. */
