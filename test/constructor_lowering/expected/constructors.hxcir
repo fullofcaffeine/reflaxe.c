@@ -394,7 +394,6 @@ module "Main" @"Main.hx":2:2-128:3
       instruction "instruction.2.class-nullable-inject" result="value.1":pointer(nullable,instance("instance.class.a095ab85ab47f0a42fdf4b4481d77d9c964a28a1c98eea73b260cf0f96a74be7")) convert value="value.0" kind=nullable-inject target=pointer(nullable,instance("instance.class.a095ab85ab47f0a42fdf4b4481d77d9c964a28a1c98eea73b260cf0f96a74be7")) implementation=static failure=none @"Main.hx":96:8-96:13
       instruction "instruction.3.initialize" result=- initialize place=local("local.2") value="value.1" transition=uninitialized->initialized @"Main.hx":96:8-96:31
       instruction "instruction.4.load" result="value.2":pointer(nullable,instance("instance.class.a095ab85ab47f0a42fdf4b4481d77d9c964a28a1c98eea73b260cf0f96a74be7")) load place=local("local.2") @"Main.hx":96:8-96:31
-      instruction "instruction.5.class-field-null-check" result=- null-check value="value.2" policy=checked-abort(profile="portable",build="debug") @"Main.hx":96:8-96:31
       instruction "instruction.6.class-field-load" result="value.3":i32 load place=field(dereference("value.2"),"value") @"Main.hx":96:8-96:31
       instruction "instruction.7.constant" result="value.4":i32 constant value=int(0) @"Main.hx":96:8-96:31
       instruction "instruction.8.binary" result="value.5":bool binary operation="haxe.i32.greater-equal" left="value.3" right="value.4" implementation=static @"Main.hx":96:8-96:31
@@ -420,11 +419,11 @@ module "Main" @"Main.hx":2:2-128:3
       terminator return value="value.12" cleanup=[] @"Main.hx":97:4-97:13
     end block "block.2.if-true"
     block "block.3.if-join" @"Main.hx":96:3-97:13
+      instruction "instruction.19.class-field-null-check" result=- null-check value="parameter.self" policy=checked-abort(profile="portable",build="debug") @"Main.hx":98:10-98:15
       instruction "instruction.20.owned-class-field-borrow" result="value.13":pointer(nonnull,instance("instance.class.a095ab85ab47f0a42fdf4b4481d77d9c964a28a1c98eea73b260cf0f96a74be7")) borrow-class-field place=field(dereference("parameter.self"),"child") @"Main.hx":98:10-98:15
       instruction "instruction.21.class-nullable-inject" result="value.14":pointer(nullable,instance("instance.class.a095ab85ab47f0a42fdf4b4481d77d9c964a28a1c98eea73b260cf0f96a74be7")) convert value="value.13" kind=nullable-inject target=pointer(nullable,instance("instance.class.a095ab85ab47f0a42fdf4b4481d77d9c964a28a1c98eea73b260cf0f96a74be7")) implementation=static failure=none @"Main.hx":98:10-98:15
       instruction "instruction.22.initialize" result=- initialize place=local("local.4") value="value.14" transition=uninitialized->initialized @"Main.hx":98:10-98:32
       instruction "instruction.23.load" result="value.15":pointer(nullable,instance("instance.class.a095ab85ab47f0a42fdf4b4481d77d9c964a28a1c98eea73b260cf0f96a74be7")) load place=local("local.4") @"Main.hx":98:10-98:32
-      instruction "instruction.24.class-field-null-check" result=- null-check value="value.15" policy=checked-abort(profile="portable",build="debug") @"Main.hx":98:10-98:32
       instruction "instruction.25.compound-load" result="value.16":i32 load place=field(dereference("value.15"),"value") @"Main.hx":98:10-98:32
       instruction "instruction.26.compound" result="value.17":i32 binary operation="haxe.i32.add" left="value.16" right="parameter.0" implementation=program-local("hxc.i32.add.wrapping") @"Main.hx":98:10-98:32
       instruction "instruction.27.compound-store" result=- store place=field(dereference("value.15"),"value") value="value.17" @"Main.hx":98:10-98:32
