@@ -788,13 +788,13 @@ malformed, unlisted, stale, mismatched, and missing sources cannot create a
 candidate. Expected hashes come from Python `hashlib`, while standard SHA-256
 known vectors independently own the portable digest result.
 `npm run test:caxecraft-sha256` compares the standard `haxe.crypto.Sha256`
-implementation with `hashlib` on Eval and native C, so its bytes are proven.
-Runtime content still calls a private portable-Haxe worker through the shared
-`runtimeSha256` boundary, because the generated standard implementation is
-currently too slow for the package path (the package-manifest native run
-exceeds its 120-second budget with it). `haxe_c-xge.8.1` owns that lowering cost
-and switching the boundary to `Sha256.make`. Runtime-content generation calls
-the same digest boundary for package receipts. Its cold Haxe-to-C budget remains owned by
+implementation with Python's `hashlib` on Eval and native C. The corpus includes
+padding boundaries and a one-MiB binary input. Each native execution must
+finish within the probe's existing 20-second budget. Package verification and
+runtime-content generation both call `Sha256.make` through the shared
+`runtimeSha256` function. The package-manifest test exercises this path with
+its existing 120-second native budget. Runtime-content generation also uses
+the digest for package receipts. Its cold Haxe-to-C budget remains owned by
 `haxe_c-w26f`; contended timeouts are not passing performance evidence.
 
 The two-second diagnostic owner for complete publication runs with:

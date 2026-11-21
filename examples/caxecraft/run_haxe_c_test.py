@@ -1652,6 +1652,7 @@ def validate_oracle(test_case: HaxeCTestCase, output: str) -> None:
                     129,
                     1024,
                     65537,
+                    1 << 20,
                 )
             ),
         ]

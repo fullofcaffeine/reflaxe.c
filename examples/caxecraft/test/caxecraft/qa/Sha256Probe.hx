@@ -72,7 +72,9 @@ function selfCheck():Int {
 		if (!includeDigest(digest))
 			return 100;
 	}
-	for (length in [1, 2, 3, 54, 55, 56, 57, 63, 64, 65, 119, 120, 121, 127, 128, 129, 1024, 65537]) {
+	for (length in [
+		1, 2, 3, 54, 55, 56, 57, 63, 64, 65, 119, 120, 121, 127, 128, 129, 1024, 65537, 1 << 20
+	]) {
 		final input = Bytes.alloc(length);
 		for (index in 0...length)
 			input.set(index, (index * 131 + length * 17) & 0xFF);
