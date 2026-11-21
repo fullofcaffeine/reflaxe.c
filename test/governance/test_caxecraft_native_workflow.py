@@ -1,10 +1,11 @@
-"""Protect one cold macOS generation and both independently retained native builds."""
+"""Check which native game each hosted job runs and when its evidence is uploaded."""
 from __future__ import annotations
 
 import json
 import os
 from pathlib import Path
 import re
+import runpy
 import shlex
 import subprocess
 import sys
@@ -21,6 +22,21 @@ def steps() -> list[tuple[str, str]]:
 
 
 class NativeWorkflowContract(unittest.TestCase):
+    def test_headless_pilot_and_upload_cannot_skip_one_compiler(self) -> None:
+        workflow = WORKFLOW.read_text(encoding="utf-8")
+        check = runpy.run_path(str(ROOT / "scripts/ci/check_ci_policy.py"))["check_headless_pilot_upload"]
+        problems: list[str] = []
+        check(workflow, problems)
+        self.assertEqual(problems, [])
+        for contract in ("--sanitizers ", "name: caxecraft-sanitized-pilot-${{ matrix.name }}"):
+            with self.subTest(contract=contract):
+                name, = [name for name, body in steps() if contract in body]
+                label = f"      - name: {name}\n"
+                clang_only = workflow.replace(label, label + "        if: matrix.name == 'linux-clang'\n", 1)
+                problems = []
+                check(clang_only, problems)
+                self.assertTrue(any("both headless compilers" in problem for problem in problems))
+
     @unittest.skipIf(os.name == "nt", "executes the POSIX-only native workflow branches")
     def test_macos_reuses_generation_but_linux_keeps_pilot_inputs(self) -> None:
         selected = [(name, body) for name, body in steps() if name in (

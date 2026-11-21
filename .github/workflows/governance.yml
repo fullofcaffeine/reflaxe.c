@@ -426,6 +426,26 @@ jobs:
             --raygui-cache-root "$raygui_cache" \
             --output-root "$RUNNER_TEMP/caxecraft-headless"
 
+          pilot_bin="$RUNNER_TEMP/caxecraft-headless/variants/linux-memory-software-split-sanitized-pilot-move-jump-edit/bin"
+          test -s "$pilot_bin/caxecraft-pilot-report.json"
+          test -s "$pilot_bin/caxecraft-pilot-move.png"
+
+      - name: Preserve the sanitized Caxecraft pilot before benchmarking
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: caxecraft-sanitized-pilot-${{ matrix.name }}
+          path: |
+            ${{ runner.temp }}/caxecraft-headless/variants/linux-memory-software-split-sanitized-pilot-move-jump-edit/bin/caxecraft-pilot-report.json
+            ${{ runner.temp }}/caxecraft-headless/variants/linux-memory-software-split-sanitized-pilot-move-jump-edit/bin/caxecraft-pilot-move.png
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Compare Caxecraft renderer variants
+        shell: bash
+        run: |
+          set -euo pipefail
+          export ASAN_OPTIONS="detect_leaks=1:halt_on_error=1:strict_string_checks=1"
+          export UBSAN_OPTIONS="halt_on_error=1:print_stacktrace=1"
           # Timing uses the same verified Raylib build without sanitizer
           # instrumentation. The benchmark itself runs both generated-Haxe
           # renderer variants and requires identical semantic/image evidence.
@@ -433,10 +453,10 @@ jobs:
             --cc "${{ matrix.cc }}" \
             --cxx "${{ matrix.cxx }}" \
             --generator Ninja \
-            --prebuilt-raylib-cache "$raylib_cache" \
-            --prebuilt-raylib-build "$raylib_build" \
-            --prebuilt-raylib-report "$raylib_report" \
-            --raygui-cache-root "$raygui_cache" \
+            --prebuilt-raylib-cache "$RUNNER_TEMP/raylib-headless-cache" \
+            --prebuilt-raylib-build "$RUNNER_TEMP/raylib-headless-build" \
+            --prebuilt-raylib-report "$RUNNER_TEMP/raylib-headless-report.json" \
+            --raygui-cache-root "$RUNNER_TEMP/raygui-headless-cache" \
             --output-root "$RUNNER_TEMP/caxecraft-renderer-benchmark" \
             --report "$RUNNER_TEMP/caxecraft-renderer-comparison-${{ matrix.name }}.json"
 

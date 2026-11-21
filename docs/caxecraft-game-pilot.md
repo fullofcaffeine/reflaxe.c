@@ -459,6 +459,12 @@ Raylib static library is executed under the sanitizer runtime but is not itself
 rebuilt with instrumentation in this slice; the claim is deliberately limited
 to instrumented generated C linked to and running through real Raylib.
 
+After each compiler completes both `move-jump-edit` runs, the headless workflow
+uploads the JSON report and the frame before starting the renderer benchmark.
+Look for `caxecraft-sanitized-pilot-linux-gcc` or
+`caxecraft-sanitized-pilot-linux-clang` in the run's artifacts. Those files
+remain available if the later comparison times out.
+
 ### Why this carrier is temporary
 
 The colored strip is acceptable for one small final observation because all of
@@ -624,12 +630,11 @@ observations and static coverage remain pending on `haxe_c-rl9u`. The normal
 120-second Haxe build budget remains pending on `haxe_c-xty2`. Focused host tests
 check the gate's acceptance logic; they do not establish these game results.
 
-The Linux desktop workflow runs the launch pilot through Xvfb, a small virtual
-display server used when CI has no physical monitor. It uploads the normalized
-JSON report and human-review screenshot as one fail-closed artifact. This lane
-proves the compiled application can open, draw, report state, and quit on the
-hosted Linux image; it does not replace the separate macOS/Windows compile/link
-matrix or manual input-quality review.
+The Linux desktop workflow runs `resize-layout` with the optimized game
+under Xvfb, a virtual display. The pilot opens the title screen, resizes
+the window to 960×540, and captures the resized frame. Open
+`caxecraft-pilot-linux-gcc` for the JSON report and
+`caxecraft-pilot-resize.png`. For a local launch check, use `--smoke`.
 
 A macOS desktop executable also needs access to the logged-in graphical
 session. A normal Terminal window has that access. A background automation

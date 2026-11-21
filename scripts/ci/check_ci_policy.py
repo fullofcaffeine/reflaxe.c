@@ -1089,6 +1089,50 @@ def read_text(path: Path, errors: list[str]) -> str:
         return ""
 
 
+def check_headless_pilot_upload(workflow: str, errors: list[str]) -> None:
+    """Keep each completed sanitizer pilot available even if the renderer benchmark times out."""
+    job = re.search(r"^  raylib-headless:\n(.*?)(?=^  [\w-]+:|\Z)", workflow, re.M | re.S)
+    if job is None:
+        errors.append("cannot check pilot artifacts without the raylib-headless job")
+        return
+    matrix, *steps = job[1].split("\n      - name: ")
+    for lane, cc, cxx in (("linux-gcc", "gcc", "g++"), ("linux-clang", "clang", "clang++")):
+        if f"- name: {lane}\n            cc: {cc}\n            cxx: {cxx}\n" not in matrix + "\n":
+            errors.append(f"raylib-headless must run the {lane} sanitizer pilot with its native compilers")
+
+    pilot_dir = (
+        "${{ runner.temp }}/caxecraft-headless/variants/"
+        "linux-memory-software-split-sanitized-pilot-move-jump-edit/bin"
+    )
+    pilot_contract = ("python3 examples/caxecraft/play.py ", "--pilot move-jump-edit ", "--sanitizers ")
+    upload_contract = (
+        "        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02",
+        "          name: caxecraft-sanitized-pilot-${{ matrix.name }}\n",
+        f"            {pilot_dir}/caxecraft-pilot-report.json\n",
+        f"            {pilot_dir}/caxecraft-pilot-move.png\n",
+        "          if-no-files-found: error\n",
+        "          retention-days: 14\n",
+    )
+
+    def step_index(*required: str) -> int | None:
+        return next(
+            (index for index, step in enumerate(steps) if all(part in step for part in required)),
+            None,
+        )
+
+    pilot = step_index(*pilot_contract)
+    upload = step_index(*upload_contract)
+    benchmark = step_index("python3 examples/caxecraft/benchmark_renderer.py ")
+    if pilot is None or upload is None or benchmark is None or not pilot < upload < benchmark:
+        errors.append("raylib-headless must upload both completed sanitizer pilot files before starting the renderer comparison")
+        return
+
+    for index in (pilot, upload):
+        condition = re.search(r"^        if: *(.*)$", steps[index], re.M)
+        if condition and condition[1].strip() not in ("success()", "${{ success() }}"):
+            errors.append("both headless compilers must run the sanitizer pilot and upload its evidence on success")
+
+
 def validate() -> list[str]:
     errors: list[str] = []
     missing_files = [path for path in REQUIRED_GATE_FILES if not (ROOT / path).is_file()]
@@ -1652,6 +1696,7 @@ def validate() -> list[str]:
             )
 
     workflow = read_text(WORKFLOW, errors)
+    check_headless_pilot_upload(workflow, errors)
     for snippet in REQUIRED_WORKFLOW_SNIPPETS:
         if snippet not in workflow:
             errors.append(f"governance workflow is missing required CI contract: {snippet.strip()}")
