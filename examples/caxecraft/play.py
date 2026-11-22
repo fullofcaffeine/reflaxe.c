@@ -34,6 +34,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(PROVISION_DIR))
 import provision  # type: ignore  # noqa: E402
+from scripts.test.bounded_process import run as run_process_tree
 from scripts.test.compiler_progress import (  # noqa: E402
     compiler_process_detail,
     compiler_timeout_suffix,
@@ -818,8 +819,10 @@ def run(
     """
 
     try:
-        result = subprocess.run(
+        result = run_process_tree(
             arguments,
+            phase=label,
+            honor_timeout_scale=False,
             cwd=cwd,
             env={**os.environ, "LC_ALL": "C"},
             check=False,
@@ -3204,6 +3207,7 @@ def validate_generated_playable(
 
 
 def snapshot_values(*, evidence_dir: Path | None = None) -> dict[str, object]:
+    from scripts.test.bounded_process import effective_timeout
     from scripts.test.snapshots import snapshot_project_root
 
     with snapshot_project_root("hxc-caxecraft-playable-snapshot-", None if evidence_dir is None else evidence_dir / "playable",
@@ -3216,6 +3220,7 @@ def snapshot_values(*, evidence_dir: Path | None = None) -> dict[str, object]:
             platform_name=SNAPSHOT_PLATFORM,
             raylib_configuration="desktop",
             runtime_report="full",
+            haxe_timeout_seconds=int(effective_timeout(120)),
         )
         values: dict[str, object] = {}
         for name, format_name in PLAYABLE_SNAPSHOT_FORMATS.items():

@@ -99,11 +99,13 @@ class SnapshotEvidenceTests(unittest.TestCase):
     def test_playable_owner_passes_complete_project_to_retention(self):
         sys.path.insert(0, str(ROOT / "examples/caxecraft"))
         import play
+        from scripts.test.bounded_process import effective_timeout
         with tempfile.TemporaryDirectory() as temporary:
             evidence = Path(temporary).resolve() / "evidence"
             def compile_fixture(generated, **options):
                 self.assertEqual(options, {"layout": "split", "platform_name": play.SNAPSHOT_PLATFORM,
-                                           "raylib_configuration": "desktop", "runtime_report": "full"})
+                                           "raylib_configuration": "desktop", "runtime_report": "full",
+                                           "haxe_timeout_seconds": int(effective_timeout(120))})
                 generated.mkdir()
                 (generated / "selected.c").write_text("selected")
                 (generated / "unselected.c").write_text("full dependency")

@@ -179,7 +179,7 @@ class CaxecraftCompilerProgressTests(unittest.TestCase):
             output=partial,
             stderr=b"",
         )
-        with mock.patch.object(self.play.subprocess, "run", side_effect=timeout):
+        with mock.patch.object(self.play, "run_process_tree", side_effect=timeout):
             with self.assertRaisesRegex(
                 self.play.PlayFailure,
                 r"timed out after 120 seconds; last active compiler phase: CAST body construction \(portable/debug\)",
@@ -193,7 +193,7 @@ class CaxecraftCompilerProgressTests(unittest.TestCase):
 
     def test_non_compiler_timeout_keeps_the_existing_message(self) -> None:
         timeout = subprocess.TimeoutExpired(["clang"], 30)
-        with mock.patch.object(self.play.subprocess, "run", side_effect=timeout):
+        with mock.patch.object(self.play, "run_process_tree", side_effect=timeout):
             with self.assertRaisesRegex(
                 self.play.PlayFailure,
                 r"Command '\['clang'\]' timed out after 30 seconds$",
@@ -207,7 +207,7 @@ class CaxecraftCompilerProgressTests(unittest.TestCase):
 
     def test_compiler_timeout_before_typed_capture_names_the_frontend(self) -> None:
         timeout = subprocess.TimeoutExpired(["haxe"], 120)
-        with mock.patch.object(self.play.subprocess, "run", side_effect=timeout):
+        with mock.patch.object(self.play, "run_process_tree", side_effect=timeout):
             with self.assertRaisesRegex(
                 self.play.PlayFailure,
                 r"no haxe\.c phase marker; request remained in Haxe frontend or server startup$",
@@ -280,7 +280,7 @@ class CompilerEvidenceTests(unittest.TestCase):
             mock.patch.object(self.play, "haxe_game_source_snapshot", return_value={}),
             mock.patch.object(self.play, "haxe_server_compatibility", return_value={}),
             mock.patch.object(self.play, "validate_haxe_source_roots"),
-            mock.patch.object(self.play.subprocess, "run", side_effect=results) as run,
+            mock.patch.object(self.play.subprocess if connected else self.play, "run" if connected else "run_process_tree", side_effect=results) as run,
             mock.patch.object(self.play, "transport_failed", side_effect=lambda result, lease: result.returncode == 17),
             mock.patch.object(self.play, "validate_compiled_haxe", return_value={}, side_effect=validation_error),
             mock.patch.object(self.play, "validate_content_platform_output"),
