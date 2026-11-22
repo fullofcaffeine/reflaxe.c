@@ -440,6 +440,12 @@ class RendererBenchmarkIntervalTests(unittest.TestCase):
                             value = getattr(args, field)
                             self.assertEqual(getattr(parsed, field), value.resolve() if value is not None else None)
 
+    def test_failure_identifies_renderer_and_measurement(self):
+        with mock.patch.object(benchmark.subprocess, "run", return_value=SimpleNamespace(returncode=7)) as run:
+            with self.assertRaisesRegex(benchmark.BenchmarkFailure, r"chunk-cache \(interval observer\) benchmark failed with exit 7"):
+                benchmark.run_renderer(self.args, "chunk-cache", observed=True)
+        self.assertEqual(run.call_args.kwargs["env"]["PYTHONUNBUFFERED"], "1")
+
     def test_runner_uses_distinct_observer_variant(self):
         expected = self.root / "variants/linux-memory-software-split-pilot-move-jump-edit-benchmark-interval-observer"
         (expected / "bin").mkdir(parents=True)

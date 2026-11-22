@@ -16,6 +16,7 @@ import statistics
 import subprocess
 import sys
 import tempfile
+import time
 from pathlib import Path
 
 import play as play_tool
@@ -142,10 +143,14 @@ def run_renderer(args: argparse.Namespace, renderer: str, *, observed: bool = Fa
                 str(args.prebuilt_raylib_report.resolve()),
             )
         )
-    print(f"caxecraft benchmark: running {renderer}", flush=True)
-    result = subprocess.run(command, cwd=ROOT, check=False)
+    mode = "interval observer" if observed else "timing"
+    print(f"caxecraft benchmark: starting {renderer} ({mode})", flush=True)
+    started = time.monotonic()
+    result = subprocess.run(command, cwd=ROOT, check=False, env={**os.environ, "PYTHONUNBUFFERED": "1"})
+    elapsed = time.monotonic() - started
+    print(f"caxecraft benchmark: {renderer} ({mode}) exited {result.returncode} after {elapsed:.1f}s", flush=True)
     if result.returncode != 0:
-        raise BenchmarkFailure(f"{renderer} benchmark failed with exit {result.returncode}")
+        raise BenchmarkFailure(f"{renderer} ({mode}) benchmark failed with exit {result.returncode}")
 
     platform_name = PLATFORM_NAMES[platform.system()]
     renderer_part = "" if renderer == "chunk-cache" else "-immediate-baseline"
