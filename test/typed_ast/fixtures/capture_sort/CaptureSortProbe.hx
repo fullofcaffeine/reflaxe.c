@@ -55,6 +55,17 @@ class CaptureSortProbe {
 				throw "reversing input changed normalized order";
 			if ([for (raw in second.rawModules) TypedAstNormalizer.baseType(raw).name].join(",") != expected.join(","))
 				throw "reversing input changed raw module order";
+			var entryReads = 0;
+			final entryReference = switch Context.getType("SortFixture") {
+				case TInst(reference, _): reference;
+				case _: throw "entry fixture is not a class";
+			};
+			final entryModule = TClassDecl(countedReference(entryReference, () -> entryReads++));
+			final entryExpression = entryReference.get().statics.get()[0].expr();
+			final withEntry = TypedAstNormalizer.normalize(modules, entryModule, entryExpression);
+			final entry = withEntry.entryPoint;
+			if (entryReads != 1 || entry == null || entry.modulePath != "SortFixture" || entry.declarationPath != "SortFixture")
+				throw "entry ownership must retain both paths from one module reference read";
 			Sys.println("HXC_CAPTURE_SORT_OK");
 		});
 	}

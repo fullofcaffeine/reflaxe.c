@@ -65,8 +65,6 @@ class TypedAstNormalizer {
 			final declaration = normalizeDeclaration(entry.value, entry.captured, expressionRoots, functionSources);
 			declarations.push(declaration);
 		}
-		declarations.sort((left, right) -> compareStrings(declarationKey(left), declarationKey(right)));
-		expressionRoots.sort(compareExpressionRoots);
 
 		CPhaseTiming.stopProgressDetail("typed input: declaration normalization");
 		CPhaseTiming.startProgressDetail("typed input: module and entry assembly");
@@ -93,8 +91,9 @@ class TypedAstNormalizer {
 
 		var entryPoint:Null<TypedAstEntryPoint> = null;
 		if (mainExpr != null) {
-			final mainModulePath = mainModule == null ? null : baseType(mainModule).module;
-			final mainDeclarationPath = mainModule == null ? null : declarationPath(baseType(mainModule));
+			final mainBase = mainModule == null ? null : baseType(mainModule);
+			final mainModulePath = mainBase == null ? null : mainBase.module;
+			final mainDeclarationPath = mainBase == null ? null : declarationPath(mainBase);
 			entryPoint = {
 				modulePath: mainModulePath,
 				declarationPath: mainDeclarationPath,
@@ -109,8 +108,8 @@ class TypedAstNormalizer {
 				role: "entry-point",
 				expression: mainExpr
 			});
-			expressionRoots.sort(compareExpressionRoots);
 		}
+		expressionRoots.sort(compareExpressionRoots);
 
 		CPhaseTiming.stopProgressDetail("typed input: module and entry assembly");
 		CPhaseTiming.startProgressDetail("typed input: named-record provenance and input construction");
@@ -428,10 +427,6 @@ class TypedAstNormalizer {
 			case CapturedTypedef(value): value;
 			case CapturedAbstract(value): value;
 		};
-	}
-
-	static function declarationKey(declaration:TypedAstDeclaration):String {
-		return '${declaration.ownerModulePath}\u0000${declaration.path}\u0000${declaration.kind}';
 	}
 
 	static function compareExpressionRoots(left:TypedAstExpressionRoot, right:TypedAstExpressionRoot):Int {
