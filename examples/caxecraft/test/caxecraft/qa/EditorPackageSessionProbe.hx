@@ -30,11 +30,11 @@ final class EditorPackageSessionProbe {
 	/** Run the package save scenarios without changing checked-in content. */
 	public static function main():Void {
 		final root = temporaryRoot();
-		copyPackage(root);
 		var failure:Null<haxe.Exception> = null;
-		try
-			runSaveContract(root)
-		catch (error:haxe.Exception)
+		try {
+			copyPackage(root);
+			runSaveContract(root);
+		} catch (error:haxe.Exception)
 			failure = error;
 		removeTree(root);
 		if (failure != null)
@@ -170,9 +170,12 @@ final class EditorPackageSessionProbe {
 		}
 	}
 
-	/** Select a collision-resistant disposable directory below the current root. */
-	static function temporaryRoot():String
-		return '.hxc-editor-save-${Std.int(Sys.time() * 1000)}-${Std.random(1000000)}';
+	/** Keep the copy under the runner's temporary directory so a timed-out child leaves cleanup to its parent. */
+	static function temporaryRoot():String {
+		final parent = Sys.getEnv("CAXECRAFT_PROBE_TMP");
+		final name = '.hxc-editor-save-${Std.int(Sys.time() * 1000)}-${Std.random(1000000)}';
+		return parent == null || parent == "" ? name : haxe.io.Path.join([parent, name]);
+	}
 
 	/** Remove only the isolated package copy created by this probe. */
 	static function removeTree(path:String):Void {

@@ -2003,16 +2003,17 @@ def run_eval_probe(
         command.extend(("--connect", connection))
     command.extend(arguments)
     try:
-        result = run_bounded_process(
-            command,
-            cwd=CASE_ROOT,
-            env=pinned_haxe_environment(locale, installation),
-            check=False,
-            capture_output=True,
-            text=True,
-            encoding="utf-8",
-            timeout=90,
-        )
+        with tempfile.TemporaryDirectory(prefix="hxc-caxecraft-eval-") as temporary:
+            result = run_bounded_process(
+                command,
+                cwd=CASE_ROOT,
+                env={**pinned_haxe_environment(locale, installation), "CAXECRAFT_PROBE_TMP": temporary},
+                check=False,
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                timeout=90,
+            )
     except (OSError, subprocess.TimeoutExpired) as error:
         raise HaxeCTestFailure(
             f"{test_case.case_id} {probe.hxml} could not run: {error}"
