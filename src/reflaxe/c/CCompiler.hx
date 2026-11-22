@@ -9,6 +9,7 @@ import haxe.Json;
 import reflaxe.c.ast.CAST.CIdentifier;
 import reflaxe.c.ast.CAST.CDecl;
 import reflaxe.c.CDiagnostic.CDiagnosticId;
+import reflaxe.c.CPhaseTiming.CDetailTimingId;
 import reflaxe.c.CPhaseTiming.CProfileCounterId;
 import reflaxe.c.CPhaseTiming.CPhaseTimingId;
 import reflaxe.c.emit.CProjectEmitter;
@@ -290,15 +291,20 @@ class CCompiler {
 			final units = staticProjectEmitter.emitPlan(staticProject);
 			CPhaseTiming.stop(printingTimer);
 			final artifactPlanTimer = CPhaseTiming.start(CPArtifactPlanning);
+			CPhaseTiming.startProgressDetail(CDetailTimingId.CDTArtifactRuntimePackaging);
 			final runtimePackagingTimer = CPhaseTiming.startDetail(CDTArtifactRuntimePackaging);
 			for (runtimeFile in new RuntimeFeaturePackager(registry).packageFiles(runtimePlan, new PackageRuntimeArtifactSource())) {
 				units.push(runtimeFile);
 			}
 			CPhaseTiming.stopDetail(runtimePackagingTimer);
+			CPhaseTiming.stopProgressDetail(CDetailTimingId.CDTArtifactRuntimePackaging);
+			CPhaseTiming.startProgressDetail(CDetailTimingId.CDTArtifactSpecializationReport);
 			final specializationReportTimer = CPhaseTiming.startDetail(CDTArtifactSpecializationReport);
 			final specializationReport = new CGenericSpecializationReportBuilder(context).build(graph, lowered, staticProject.functionDefinitions, units,
 				input.expression.pos, input.sourcePath);
 			CPhaseTiming.stopDetail(specializationReportTimer);
+			CPhaseTiming.stopProgressDetail(CDetailTimingId.CDTArtifactSpecializationReport);
+			CPhaseTiming.startProgressDetail(CDetailTimingId.CDTArtifactProjectEmission);
 			final projectEmissionTimer = CPhaseTiming.startDetail(CDTArtifactProjectEmission);
 			final inspectionFiles:Array<GeneratedFile> = [];
 			if (Context.defined(INSPECTION_REPORTS_DEFINE)) {
@@ -378,6 +384,7 @@ class CCompiler {
 				symbolTable: lowered.symbolTable
 			});
 			CPhaseTiming.stopDetail(projectEmissionTimer);
+			CPhaseTiming.stopProgressDetail(CDetailTimingId.CDTArtifactProjectEmission);
 			var generatedBytes = 0.0;
 			for (file in generatedFiles)
 				generatedBytes += file.contentByteLength;
