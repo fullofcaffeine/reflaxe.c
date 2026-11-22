@@ -332,6 +332,24 @@ def prove_runtime_policy_rejection(output: Path, connect: str) -> None:
 		)
 
 
+def prove_constructor_diagnostic(root: Path, connect: str) -> None:
+	"""Keep unsupported construction distinct from the additional no-runtime restriction."""
+	for policy in ("auto", "none"):
+		output = root / policy
+		result = run(
+			[development_tool("haxe"), "--connect", connect, "-cp", "fixtures/constructor",
+			 "-lib", "reflaxe.c", "-main", "ExceptionConstructor", "-D", f"hxc_runtime={policy}",
+			 "--custom-target", f"c={output}"],
+			cwd=HERE, server=True,
+		)
+		message = result.stdout + result.stderr
+		if (result.returncode == 0 or "HXC1001" not in message
+			or "new haxe.Exception (unsupported constructor representation" not in message
+			or ("hxc_runtime=none also forbids collector-managed storage" in message) != (policy == "none")
+			or any(path.is_file() for path in output.rglob("*"))):
+			raise ExceptionLoweringFailure(f"unexpected constructor diagnostic under {policy}\n{message}")
+
+
 def available_port() -> int:
 	with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as candidate:
 		candidate.bind(("127.0.0.1", 0))
@@ -381,6 +399,7 @@ def main() -> int:
 			prove_cleanup_before_catch(root / "cleanup", endpoint)
 			prove_runtime_cross_call(root / "runtime", endpoint)
 			prove_runtime_policy_rejection(root / "runtime-none", endpoint)
+			prove_constructor_diagnostic(root / "constructor", endpoint)
 	except (ExceptionLoweringFailure, subprocess.TimeoutExpired, OSError, json.JSONDecodeError) as error:
 		print(f"exception-lowering: ERROR: {error}", file=sys.stderr)
 		return 1

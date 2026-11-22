@@ -7966,11 +7966,12 @@ private class FunctionBuilder {
 		// Its surrounding context may expect an interface value; using that fat
 		// interface type as the allocation type would lose the concrete descriptor
 		// and dispatch table needed below.
-		final sourceMapping = bodyValueType(expression.t, expression.pos, "TNew(managed-result-type)");
+		final classPath = CBodyConstructor.classPath(construction.classReference);
+		final allocationContext = Context.definedValue("hxc_runtime") == "none" ? 'new $classPath (unsupported constructor representation; hxc_runtime=none also forbids collector-managed storage)' : 'new $classPath (unsupported constructor representation)';
+		final sourceMapping = bodyValueType(expression.t, expression.pos, allocationContext);
 		final classValue = sourceMapping.classValue();
 		if (classValue == null || !classValue.managedByCollector)
 			return unsupported(expression, "TNew(stack-construction-requires-direct-local)");
-		final classPath = CBodyConstructor.classPath(construction.classReference);
 		if (classPath != classValue.haxePath)
 			return unsupported(expression, ("TNew(managed-class-type-mismatch:" + classPath + "->" + classValue.haxePath + ")"));
 		final signature = constructorSignatureForClass(classValue);
