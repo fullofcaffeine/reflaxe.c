@@ -302,11 +302,11 @@ struct hxc_caxecraft_app_TerrainRenderer_TerrainSheetCounters hxc_caxecraft_app_
     (void)hxc_l_this_h9aa181935989;
     int32_t hxc_l_tmp_call_result_n7 = hxc_caxecraft_app_TerrainChunkLayout_facePartitionStart(hxc_l_chunk);
     int32_t hxc_l_start = hxc_l_tmp_call_result_n7;
-    struct hxc_caxecraft_app_TerrainChunkCache *hxc_l_tmp_owned_class_field_address_n8 = &(*hxc_l_self).hxc_cache;
-    if (hxc_l_tmp_owned_class_field_address_n8 == NULL)
+    if (hxc_l_self == NULL)
     {
       abort();
     }
+    struct hxc_caxecraft_app_TerrainChunkCache *hxc_l_tmp_owned_class_field_address_n8 = &(*hxc_l_self).hxc_cache;
     int32_t hxc_l_tmp_instance_call_result_n10 = hxc_caxecraft_app_TerrainChunkCache_chunkFaceCount(hxc_l_tmp_owned_class_field_address_n8, hxc_l_chunk);
     int32_t hxc_l_count = hxc_l_tmp_instance_call_result_n10;
     int32_t hxc_l_offset = 0;
@@ -319,6 +319,10 @@ struct hxc_caxecraft_app_TerrainRenderer_TerrainSheetCounters hxc_caxecraft_app_
       }
       int32_t hxc_l_tmp_load_result_n13 = hxc_l_start;
       int32_t hxc_l_index = hxc_i32_add_wrapping(hxc_l_tmp_load_result_n13, hxc_l_offset);
+      if (hxc_l_self == NULL)
+      {
+        abort();
+      }
       struct hxc_caxecraft_app_TerrainChunkCache *hxc_l_tmp_owned_class_field_address_n15 = &(*hxc_l_self).hxc_cache;
       struct hxc_caxecraft_app_TerrainChunkCache *hxc_l_this_h28ccdcfeb27e = hxc_l_tmp_owned_class_field_address_n15;
       int32_t hxc_l_tmp_load_result_n16 = hxc_l_index;
@@ -326,10 +330,6 @@ struct hxc_caxecraft_app_TerrainRenderer_TerrainSheetCounters hxc_caxecraft_app_
       if (hxc_l_tmp_load_result_n16 < 49152)
       {
         struct hxc_caxecraft_app_TerrainChunkCache *hxc_l_tmp_load_result_n17 = hxc_l_this_h28ccdcfeb27e;
-        if (hxc_l_tmp_load_result_n17 == NULL)
-        {
-          abort();
-        }
         int32_t hxc_l_tmp_load_result_n18 = hxc_l_index;
         if (hxc_l_tmp_load_result_n18 < 0 || (size_t)hxc_l_tmp_load_result_n18 >= 49152)
         {
@@ -341,10 +341,6 @@ struct hxc_caxecraft_app_TerrainRenderer_TerrainSheetCounters hxc_caxecraft_app_
       else
       {
         struct hxc_caxecraft_app_TerrainChunkCache *hxc_l_tmp_load_result_n20 = hxc_l_this_h28ccdcfeb27e;
-        if (hxc_l_tmp_load_result_n20 == NULL)
-        {
-          abort();
-        }
         int32_t hxc_l_tmp_load_result_n21 = hxc_l_index;
         if (hxc_i32_subtract_wrapping(hxc_l_tmp_load_result_n21, 49152) < 0 || (size_t)hxc_i32_subtract_wrapping(hxc_l_tmp_load_result_n21, 49152) >= 49152)
         {
@@ -359,6 +355,10 @@ struct hxc_caxecraft_app_TerrainRenderer_TerrainSheetCounters hxc_caxecraft_app_
       enum hxc_caxecraft_app_TerrainSheet hxc_l_tmp_call_result_n27 = hxc_caxecraft_app_TerrainAtlas_sheet(hxc_l_kind);
       if (hxc_l_tmp_call_result_n27 == hxc_l_sheet)
       {
+        if (hxc_l_self == NULL)
+        {
+          abort();
+        }
         struct hxc_caxecraft_app_TerrainChunkCache *hxc_l_tmp_owned_class_field_address_n28 = &(*hxc_l_self).hxc_cache;
         struct hxc_caxecraft_app_TerrainChunkCache *hxc_l_this_h65011d293c40 = hxc_l_tmp_owned_class_field_address_n28;
         int32_t hxc_l_tmp_load_result_n29 = hxc_l_index;
@@ -366,10 +366,6 @@ struct hxc_caxecraft_app_TerrainRenderer_TerrainSheetCounters hxc_caxecraft_app_
         if (hxc_l_tmp_load_result_n29 < 49152)
         {
           struct hxc_caxecraft_app_TerrainChunkCache *hxc_l_tmp_load_result_n30 = hxc_l_this_h65011d293c40;
-          if (hxc_l_tmp_load_result_n30 == NULL)
-          {
-            abort();
-          }
           int32_t hxc_l_tmp_load_result_n31 = hxc_l_index;
           if (hxc_l_tmp_load_result_n31 < 0 || (size_t)hxc_l_tmp_load_result_n31 >= 49152)
           {
@@ -381,10 +377,6 @@ struct hxc_caxecraft_app_TerrainRenderer_TerrainSheetCounters hxc_caxecraft_app_
         else
         {
           struct hxc_caxecraft_app_TerrainChunkCache *hxc_l_tmp_load_result_n33 = hxc_l_this_h65011d293c40;
-          if (hxc_l_tmp_load_result_n33 == NULL)
-          {
-            abort();
-          }
           int32_t hxc_l_tmp_load_result_n34 = hxc_l_index;
           if (hxc_i32_subtract_wrapping(hxc_l_tmp_load_result_n34, 49152) < 0 || (size_t)hxc_i32_subtract_wrapping(hxc_l_tmp_load_result_n34, 49152) >= 49152)
           {
@@ -394,6 +386,10 @@ struct hxc_caxecraft_app_TerrainRenderer_TerrainSheetCounters hxc_caxecraft_app_
           hxc_l_tmp_conditional_result_n24 = (int32_t)hxc_l_tmp_collection_index_load_result_n35;
         }
         int32_t hxc_l_x = hxc_l_tmp_conditional_result_n24;
+        if (hxc_l_self == NULL)
+        {
+          abort();
+        }
         struct hxc_caxecraft_app_TerrainChunkCache *hxc_l_tmp_owned_class_field_address_n37 = &(*hxc_l_self).hxc_cache;
         struct hxc_caxecraft_app_TerrainChunkCache *hxc_l_this_h4d0662cba405 = hxc_l_tmp_owned_class_field_address_n37;
         int32_t hxc_l_tmp_load_result_n38 = hxc_l_index;
@@ -401,10 +397,6 @@ struct hxc_caxecraft_app_TerrainRenderer_TerrainSheetCounters hxc_caxecraft_app_
         if (hxc_l_tmp_load_result_n38 < 49152)
         {
           struct hxc_caxecraft_app_TerrainChunkCache *hxc_l_tmp_load_result_n39 = hxc_l_this_h4d0662cba405;
-          if (hxc_l_tmp_load_result_n39 == NULL)
-          {
-            abort();
-          }
           int32_t hxc_l_tmp_load_result_n40 = hxc_l_index;
           if (hxc_l_tmp_load_result_n40 < 0 || (size_t)hxc_l_tmp_load_result_n40 >= 49152)
           {
@@ -416,10 +408,6 @@ struct hxc_caxecraft_app_TerrainRenderer_TerrainSheetCounters hxc_caxecraft_app_
         else
         {
           struct hxc_caxecraft_app_TerrainChunkCache *hxc_l_tmp_load_result_n42 = hxc_l_this_h4d0662cba405;
-          if (hxc_l_tmp_load_result_n42 == NULL)
-          {
-            abort();
-          }
           int32_t hxc_l_tmp_load_result_n43 = hxc_l_index;
           if (hxc_i32_subtract_wrapping(hxc_l_tmp_load_result_n43, 49152) < 0 || (size_t)hxc_i32_subtract_wrapping(hxc_l_tmp_load_result_n43, 49152) >= 49152)
           {
@@ -429,6 +417,10 @@ struct hxc_caxecraft_app_TerrainRenderer_TerrainSheetCounters hxc_caxecraft_app_
           hxc_l_tmp_conditional_result_n27 = (int32_t)hxc_l_tmp_collection_index_load_result_n44;
         }
         int32_t hxc_l_y = hxc_l_tmp_conditional_result_n27;
+        if (hxc_l_self == NULL)
+        {
+          abort();
+        }
         struct hxc_caxecraft_app_TerrainChunkCache *hxc_l_tmp_owned_class_field_address_n46 = &(*hxc_l_self).hxc_cache;
         struct hxc_caxecraft_app_TerrainChunkCache *hxc_l_this_h354e207bcd46 = hxc_l_tmp_owned_class_field_address_n46;
         int32_t hxc_l_tmp_load_result_n47 = hxc_l_index;
@@ -436,10 +428,6 @@ struct hxc_caxecraft_app_TerrainRenderer_TerrainSheetCounters hxc_caxecraft_app_
         if (hxc_l_tmp_load_result_n47 < 49152)
         {
           struct hxc_caxecraft_app_TerrainChunkCache *hxc_l_tmp_load_result_n48 = hxc_l_this_h354e207bcd46;
-          if (hxc_l_tmp_load_result_n48 == NULL)
-          {
-            abort();
-          }
           int32_t hxc_l_tmp_load_result_n49 = hxc_l_index;
           if (hxc_l_tmp_load_result_n49 < 0 || (size_t)hxc_l_tmp_load_result_n49 >= 49152)
           {
@@ -451,10 +439,6 @@ struct hxc_caxecraft_app_TerrainRenderer_TerrainSheetCounters hxc_caxecraft_app_
         else
         {
           struct hxc_caxecraft_app_TerrainChunkCache *hxc_l_tmp_load_result_n51 = hxc_l_this_h354e207bcd46;
-          if (hxc_l_tmp_load_result_n51 == NULL)
-          {
-            abort();
-          }
           int32_t hxc_l_tmp_load_result_n52 = hxc_l_index;
           if (hxc_i32_subtract_wrapping(hxc_l_tmp_load_result_n52, 49152) < 0 || (size_t)hxc_i32_subtract_wrapping(hxc_l_tmp_load_result_n52, 49152) >= 49152)
           {
@@ -486,10 +470,6 @@ struct hxc_caxecraft_app_TerrainRenderer_TerrainSheetCounters hxc_caxecraft_app_
     abort();
   }
   struct hxc_caxecraft_app_TerrainChunkCache *hxc_l_tmp_owned_class_field_address_n68 = &(*hxc_l_self).hxc_cache;
-  if (hxc_l_tmp_owned_class_field_address_n68 == NULL)
-  {
-    abort();
-  }
   int32_t hxc_l_tmp_instance_call_result_n69 = hxc_caxecraft_app_TerrainChunkCache_visibleBlocks(hxc_l_tmp_owned_class_field_address_n68, hxc_l_sheet);
   int32_t hxc_l_tmp_record_field_visible_n31 = hxc_l_tmp_instance_call_result_n69;
   int32_t hxc_l_tmp_record_field_faces_n32 = hxc_l_faces;
@@ -523,10 +503,6 @@ struct hxc_caxecraft_app_TerrainRenderCounters hxc_caxecraft_app_TerrainRenderer
     abort();
   }
   struct hxc_caxecraft_app_TerrainChunkCache *hxc_l_tmp_owned_class_field_address_n0 = &(*hxc_l_self).hxc_cache;
-  if (hxc_l_tmp_owned_class_field_address_n0 == NULL)
-  {
-    abort();
-  }
   struct hxc_caxecraft_app_TerrainChunkPreparation hxc_l_tmp_instance_call_result_n1 = hxc_caxecraft_app_TerrainChunkCache_prepare(hxc_l_tmp_owned_class_field_address_n0, hxc_l_cells, hxc_l_length);
   struct hxc_caxecraft_app_TerrainChunkPreparation hxc_l_preparation = hxc_l_tmp_instance_call_result_n1;
   int32_t hxc_l_tmp_compound_load_result_n2 = (*hxc_l_self).hxc_totalRebuiltChunks;

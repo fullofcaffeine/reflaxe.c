@@ -421,11 +421,11 @@ bool hxc_caxecraft_domain_GameSession_actorInteractionAvailable(struct hxc_caxec
   }
   struct hxc_caxecraft_domain_Character hxc_l_tmp_instance_call_result_n0 = hxc_caxecraft_domain_GameSession_readCharacter(hxc_l_self, hxc_l_id);
   struct hxc_caxecraft_domain_Character hxc_l_actor = hxc_l_tmp_instance_call_result_n0;
-  struct hxc_caxecraft_domain_EntityStore *hxc_l_tmp_owned_class_field_address_n1 = &(*hxc_l_self).hxc_entities;
-  if (hxc_l_tmp_owned_class_field_address_n1 == NULL)
+  if (hxc_l_self == NULL)
   {
     abort();
   }
+  struct hxc_caxecraft_domain_EntityStore *hxc_l_tmp_owned_class_field_address_n1 = &(*hxc_l_self).hxc_entities;
   struct hxc_caxecraft_domain_PlayerAgent hxc_l_tmp_class_field_load_result_n2 = (*hxc_l_self).hxc_localPlayer;
   struct hxc_caxecraft_domain_Character hxc_l_tmp_instance_call_result_n4 = hxc_caxecraft_domain_EntityStore_read(hxc_l_tmp_owned_class_field_address_n1, hxc_l_tmp_class_field_load_result_n2.hxc_characterId);
   struct hxc_caxecraft_domain_Character hxc_l_player = hxc_l_tmp_instance_call_result_n4;
@@ -808,10 +808,6 @@ bool hxc_caxecraft_domain_GameSession_bindLocalPlayer(struct hxc_caxecraft_domai
     abort();
   }
   struct hxc_caxecraft_domain_EntityStore *hxc_l_tmp_owned_class_field_address_n0 = &(*hxc_l_self).hxc_entities;
-  if (hxc_l_tmp_owned_class_field_address_n0 == NULL)
-  {
-    abort();
-  }
   bool hxc_l_tmp_instance_call_result_n1 = hxc_caxecraft_domain_EntityStore_put(hxc_l_tmp_owned_class_field_address_n0, hxc_l_character);
   if (!!hxc_l_tmp_instance_call_result_n1)
   {
@@ -1127,10 +1123,6 @@ struct hxc_caxecraft_domain_AuthoredAquaticEquipmentResult hxc_caxecraft_domain_
     abort();
   }
   struct hxc_caxecraft_domain_EntityStore *hxc_l_tmp_owned_class_field_address_n0 = &(*hxc_l_self).hxc_entities;
-  if (hxc_l_tmp_owned_class_field_address_n0 == NULL)
-  {
-    abort();
-  }
   struct hxc_caxecraft_domain_PlayerAgent hxc_l_tmp_class_field_load_result_n1 = (*hxc_l_self).hxc_localPlayer;
   struct hxc_caxecraft_domain_Character hxc_l_tmp_instance_call_result_n3 = hxc_caxecraft_domain_EntityStore_read(hxc_l_tmp_owned_class_field_address_n0, hxc_l_tmp_class_field_load_result_n1.hxc_characterId);
   struct hxc_caxecraft_domain_Character hxc_l_original = hxc_l_tmp_instance_call_result_n3;
@@ -1334,10 +1326,6 @@ struct hxc_caxecraft_domain_LocalCharacterCommandResult hxc_caxecraft_domain_Gam
       abort();
     }
     struct hxc_caxecraft_domain_EntityStore *hxc_l_tmp_owned_class_field_address_n1 = &(*hxc_l_self).hxc_entities;
-    if (hxc_l_tmp_owned_class_field_address_n1 == NULL)
-    {
-      abort();
-    }
     struct hxc_caxecraft_domain_PlayerAgent hxc_l_tmp_class_field_load_result_n2 = (*hxc_l_self).hxc_localPlayer;
     bool hxc_l_tmp_instance_call_result_n4 = hxc_caxecraft_domain_EntityStore_replace(hxc_l_tmp_owned_class_field_address_n1, hxc_l_tmp_class_field_load_result_n2.hxc_characterId, hxc_l_replacement);
     hxc_l_tmp_short_circuit_result_n4 = hxc_l_tmp_instance_call_result_n4;
@@ -1402,11 +1390,11 @@ struct hxc_array_ref *hxc_caxecraft_domain_GameSession_currentFlowPositions(stru
     int32_t hxc_l_tmp_increment_load_result_n5 = hxc_l_g;
     hxc_l_g = hxc_i32_add_wrapping(hxc_l_tmp_increment_load_result_n5, 1);
     int32_t hxc_l_actorIndex = hxc_l_tmp_increment_load_result_n5;
-    struct hxc_caxecraft_domain_EntityStore *hxc_l_tmp_owned_class_field_address_n6 = &(*hxc_l_self).hxc_entities;
-    if (hxc_l_tmp_owned_class_field_address_n6 == NULL)
+    if (hxc_l_self == NULL)
     {
       abort();
     }
+    struct hxc_caxecraft_domain_EntityStore *hxc_l_tmp_owned_class_field_address_n6 = &(*hxc_l_self).hxc_entities;
     struct hxc_array_ref *hxc_l_tmp_class_field_load_result_n7 = (*hxc_l_self).hxc_triggerActorEntities;
     int32_t hxc_l_tmp_array_get_result_n9;
     if (hxc_array_ref_get_copy(hxc_l_tmp_class_field_load_result_n7, (size_t)hxc_l_actorIndex, &hxc_l_tmp_array_get_result_n9) != HXC_STATUS_OK)
@@ -1755,11 +1743,11 @@ struct hxc_caxecraft_domain_CharacterDamageResult hxc_caxecraft_domain_GameSessi
     }
     return (struct hxc_caxecraft_domain_CharacterDamageResult){ .hxc_character = hxc_l_tmp_load_result_n60, .hxc_damageApplied = 0, .hxc_defeated = false, .hxc_resolved = false };
   }
-  struct hxc_caxecraft_domain_EntityStore *hxc_l_tmp_owned_class_field_address_n62 = &(*hxc_l_self).hxc_entities;
-  if (hxc_l_tmp_owned_class_field_address_n62 == NULL)
+  if (hxc_l_self == NULL)
   {
     abort();
   }
+  struct hxc_caxecraft_domain_EntityStore *hxc_l_tmp_owned_class_field_address_n62 = &(*hxc_l_self).hxc_entities;
   bool hxc_l_tmp_instance_call_result_n65 = hxc_caxecraft_domain_EntityStore_replace(hxc_l_tmp_owned_class_field_address_n62, hxc_l_command.hxc_target, hxc_l_replacement);
   bool hxc_l_resolved = hxc_l_tmp_instance_call_result_n65;
   if (!!hxc_l_resolved)
@@ -3361,11 +3349,11 @@ struct hxc_caxecraft_gameplay_MiningResult hxc_caxecraft_domain_GameSession_mine
   struct hxc_caxecraft_gameplay_MiningResult hxc_l_result = hxc_l_tmp_call_result_n18;
   if (hxc_l_result.hxc_outcome == 2)
   {
-    struct hxc_caxecraft_domain_WaterSimulation *hxc_l_tmp_owned_class_field_address_n20 = &(*hxc_l_self).hxc_water;
-    if (hxc_l_tmp_owned_class_field_address_n20 == NULL)
+    if (hxc_l_self == NULL)
     {
       abort();
     }
+    struct hxc_caxecraft_domain_WaterSimulation *hxc_l_tmp_owned_class_field_address_n20 = &(*hxc_l_self).hxc_water;
     hxc_caxecraft_domain_WaterSimulation_terrainChanged(hxc_l_tmp_owned_class_field_address_n20, hxc_l_coord);
     hxc_caxecraft_domain_GameSession_commitFlowEvents(hxc_l_self, hxc_l_tmp_managed_flow_owner_n10);
   }
@@ -3396,11 +3384,11 @@ bool hxc_caxecraft_domain_GameSession_placeInitialWaterVolume(struct hxc_caxecra
   }
   uint8_t *hxc_l_cells = (*hxc_l_self).hxc_base.hxc_worldStorage;
   size_t hxc_l_tmp_length_n5 = 32768;
-  struct hxc_caxecraft_domain_WaterSimulation *hxc_l_tmp_owned_class_field_address_n0 = &(*hxc_l_self).hxc_water;
-  if (hxc_l_tmp_owned_class_field_address_n0 == NULL)
+  if (hxc_l_self == NULL)
   {
     abort();
   }
+  struct hxc_caxecraft_domain_WaterSimulation *hxc_l_tmp_owned_class_field_address_n0 = &(*hxc_l_self).hxc_water;
   bool hxc_l_tmp_instance_call_result_n1 = hxc_caxecraft_domain_WaterSimulation_placeInitialVolume(hxc_l_tmp_owned_class_field_address_n0, hxc_l_cells, hxc_l_tmp_length_n5, hxc_l_origin, hxc_l_width, hxc_l_height, hxc_l_depth);
   if (hxc_gc_root_frame_pop(&hxc_l_gc_frame) != HXC_STATUS_OK)
   {
@@ -3522,11 +3510,11 @@ bool hxc_caxecraft_domain_GameSession_placeTerrain(struct hxc_caxecraft_domain_G
   bool hxc_l_tmp_short_circuit_result_n14 = !hxc_l_tmp_instance_call_result_n20;
   if (!!hxc_l_tmp_instance_call_result_n20)
   {
-    struct hxc_caxecraft_domain_WaterSimulation *hxc_l_tmp_owned_class_field_address_n21 = &(*hxc_l_self).hxc_water;
-    if (hxc_l_tmp_owned_class_field_address_n21 == NULL)
+    if (hxc_l_self == NULL)
     {
       abort();
     }
+    struct hxc_caxecraft_domain_WaterSimulation *hxc_l_tmp_owned_class_field_address_n21 = &(*hxc_l_self).hxc_water;
     bool hxc_l_tmp_instance_call_result_n22 = hxc_caxecraft_domain_WaterSimulation_placeTerrain(hxc_l_tmp_owned_class_field_address_n21, hxc_l_cells, hxc_l_tmp_length_n4, hxc_l_coord, hxc_l_kind);
     hxc_l_tmp_short_circuit_result_n14 = !hxc_l_tmp_instance_call_result_n22;
   }
@@ -3577,11 +3565,11 @@ bool hxc_caxecraft_domain_GameSession_placeWaterSource(struct hxc_caxecraft_doma
   }
   uint8_t *hxc_l_cells = (*hxc_l_self).hxc_base.hxc_worldStorage;
   size_t hxc_l_tmp_length_n2 = 32768;
-  struct hxc_caxecraft_domain_WaterSimulation *hxc_l_tmp_owned_class_field_address_n0 = &(*hxc_l_self).hxc_water;
-  if (hxc_l_tmp_owned_class_field_address_n0 == NULL)
+  if (hxc_l_self == NULL)
   {
     abort();
   }
+  struct hxc_caxecraft_domain_WaterSimulation *hxc_l_tmp_owned_class_field_address_n0 = &(*hxc_l_self).hxc_water;
   bool hxc_l_tmp_instance_call_result_n1 = hxc_caxecraft_domain_WaterSimulation_placeSource(hxc_l_tmp_owned_class_field_address_n0, hxc_l_cells, hxc_l_tmp_length_n2, hxc_l_coord);
   if (hxc_gc_root_frame_pop(&hxc_l_gc_frame) != HXC_STATUS_OK)
   {
@@ -3894,11 +3882,11 @@ void hxc_caxecraft_domain_GameSession_queueTriggerZoneTransitions(struct hxc_cax
     int32_t hxc_l_tmp_increment_load_result_n9 = hxc_l_g_hd0c1d13e7ae2;
     hxc_l_g_hd0c1d13e7ae2 = hxc_i32_add_wrapping(hxc_l_tmp_increment_load_result_n9, 1);
     int32_t hxc_l_actorIndex_h857846214071 = hxc_l_tmp_increment_load_result_n9;
-    struct hxc_caxecraft_domain_EntityStore *hxc_l_tmp_owned_class_field_address_n10 = &(*hxc_l_self).hxc_entities;
-    if (hxc_l_tmp_owned_class_field_address_n10 == NULL)
+    if (hxc_l_self == NULL)
     {
       abort();
     }
+    struct hxc_caxecraft_domain_EntityStore *hxc_l_tmp_owned_class_field_address_n10 = &(*hxc_l_self).hxc_entities;
     struct hxc_array_ref *hxc_l_tmp_class_field_load_result_n11 = (*hxc_l_self).hxc_triggerActorEntities;
     int32_t hxc_l_tmp_array_get_result_n13;
     if (hxc_array_ref_get_copy(hxc_l_tmp_class_field_load_result_n11, (size_t)hxc_l_actorIndex_h857846214071, &hxc_l_tmp_array_get_result_n13) != HXC_STATUS_OK)
@@ -4468,10 +4456,6 @@ struct hxc_caxecraft_domain_Character hxc_caxecraft_domain_GameSession_readChara
     abort();
   }
   struct hxc_caxecraft_domain_EntityStore *hxc_l_tmp_owned_class_field_address_n0 = &(*hxc_l_self).hxc_entities;
-  if (hxc_l_tmp_owned_class_field_address_n0 == NULL)
-  {
-    abort();
-  }
   struct hxc_caxecraft_domain_Character hxc_l_tmp_instance_call_result_n1 = hxc_caxecraft_domain_EntityStore_read(hxc_l_tmp_owned_class_field_address_n0, hxc_l_id);
   if (hxc_gc_root_frame_pop(&hxc_l_gc_frame) != HXC_STATUS_OK)
   {
@@ -4533,10 +4517,6 @@ struct hxc_caxecraft_domain_LocalCharacterCommandResult hxc_caxecraft_domain_Gam
     abort();
   }
   struct hxc_caxecraft_domain_EntityStore *hxc_l_tmp_owned_class_field_address_n0 = &(*hxc_l_self).hxc_entities;
-  if (hxc_l_tmp_owned_class_field_address_n0 == NULL)
-  {
-    abort();
-  }
   struct hxc_caxecraft_domain_PlayerAgent hxc_l_tmp_class_field_load_result_n1 = (*hxc_l_self).hxc_localPlayer;
   struct hxc_caxecraft_domain_Character hxc_l_tmp_instance_call_result_n3 = hxc_caxecraft_domain_EntityStore_read(hxc_l_tmp_owned_class_field_address_n0, hxc_l_tmp_class_field_load_result_n1.hxc_characterId);
   struct hxc_caxecraft_domain_Character hxc_l_original = hxc_l_tmp_instance_call_result_n3;
@@ -4653,11 +4633,11 @@ void hxc_caxecraft_domain_GameSession_refreshLocalPlayerCollision(struct hxc_cax
     switch (hxc_l_controller.hxc_profile.hxc_tag) {
       case hxc_caxecraft_domain_ActorControllerProfile_StationaryDialogue:
         {
-          struct hxc_caxecraft_domain_EntityStore *hxc_l_tmp_owned_class_field_address_n22 = &(*hxc_l_self).hxc_entities;
-          if (hxc_l_tmp_owned_class_field_address_n22 == NULL)
+          if (hxc_l_self == NULL)
           {
             abort();
           }
+          struct hxc_caxecraft_domain_EntityStore *hxc_l_tmp_owned_class_field_address_n22 = &(*hxc_l_self).hxc_entities;
           struct hxc_caxecraft_domain_Character hxc_l_tmp_instance_call_result_n24 = hxc_caxecraft_domain_EntityStore_read(hxc_l_tmp_owned_class_field_address_n22, hxc_l_controller.hxc_characterId);
           struct hxc_caxecraft_domain_Character hxc_l_actor = hxc_l_tmp_instance_call_result_n24;
           if (hxc_l_actor.hxc_id > 0)
@@ -5057,11 +5037,11 @@ bool hxc_caxecraft_domain_GameSession_removeTerrain(struct hxc_caxecraft_domain_
   }
   if (!hxc_l_tmp_short_circuit_result_n6)
   {
-    struct hxc_caxecraft_domain_WaterSimulation *hxc_l_tmp_owned_class_field_address_n9 = &(*hxc_l_self).hxc_water;
-    if (hxc_l_tmp_owned_class_field_address_n9 == NULL)
+    if (hxc_l_self == NULL)
     {
       abort();
     }
+    struct hxc_caxecraft_domain_WaterSimulation *hxc_l_tmp_owned_class_field_address_n9 = &(*hxc_l_self).hxc_water;
     hxc_caxecraft_domain_WaterSimulation_terrainChanged(hxc_l_tmp_owned_class_field_address_n9, hxc_l_coord);
     hxc_caxecraft_domain_GameSession_commitFlowEvents(hxc_l_self, hxc_l_stagedEvents);
     if (hxc_array_ref_release(hxc_l_stagedEvents) != HXC_STATUS_OK)
@@ -5110,11 +5090,11 @@ bool hxc_caxecraft_domain_GameSession_replaceAuthoredActors(struct hxc_caxecraft
   bool hxc_l_tmp_short_circuit_result_n3 = hxc_l_tmp_class_field_load_result_n0.hxc_characterId > 0;
   if (hxc_l_tmp_class_field_load_result_n0.hxc_characterId > 0)
   {
-    struct hxc_caxecraft_domain_EntityStore *hxc_l_tmp_owned_class_field_address_n2 = &(*hxc_l_self).hxc_entities;
-    if (hxc_l_tmp_owned_class_field_address_n2 == NULL)
+    if (hxc_l_self == NULL)
     {
       abort();
     }
+    struct hxc_caxecraft_domain_EntityStore *hxc_l_tmp_owned_class_field_address_n2 = &(*hxc_l_self).hxc_entities;
     struct hxc_caxecraft_domain_PlayerAgent hxc_l_tmp_class_field_load_result_n3 = (*hxc_l_self).hxc_localPlayer;
     bool hxc_l_tmp_instance_call_result_n5 = hxc_caxecraft_domain_EntityStore_contains(hxc_l_tmp_owned_class_field_address_n2, hxc_l_tmp_class_field_load_result_n3.hxc_characterId);
     hxc_l_tmp_short_circuit_result_n3 = hxc_l_tmp_instance_call_result_n5;
@@ -5239,11 +5219,11 @@ bool hxc_caxecraft_domain_GameSession_replaceAuthoredActors(struct hxc_caxecraft
     hxc_record_50dff1c7_destroy(&hxc_l_tmp_array_push_element_owner_n13);
     hxc_array_622f12db_element_destroy(NULL, &hxc_l_tmp_array_element_owner_n12);
   }
-  struct hxc_caxecraft_domain_EntityStore *hxc_l_tmp_owned_class_field_address_n38 = &(*hxc_l_self).hxc_entities;
-  if (hxc_l_tmp_owned_class_field_address_n38 == NULL)
+  if (hxc_l_self == NULL)
   {
     abort();
   }
+  struct hxc_caxecraft_domain_EntityStore *hxc_l_tmp_owned_class_field_address_n38 = &(*hxc_l_self).hxc_entities;
   struct hxc_caxecraft_domain_PlayerAgent hxc_l_tmp_class_field_load_result_n39 = (*hxc_l_self).hxc_localPlayer;
   bool hxc_l_tmp_instance_call_result_n42 = hxc_caxecraft_domain_EntityStore_replaceOthers(hxc_l_tmp_owned_class_field_address_n38, hxc_l_tmp_class_field_load_result_n39.hxc_characterId, hxc_l_ownedCharacters);
   if (!hxc_l_tmp_instance_call_result_n42)
@@ -5358,10 +5338,6 @@ struct hxc_caxecraft_domain_LocalCharacterCommandResult hxc_caxecraft_domain_Gam
     abort();
   }
   struct hxc_caxecraft_domain_EntityStore *hxc_l_tmp_owned_class_field_address_n0 = &(*hxc_l_self).hxc_entities;
-  if (hxc_l_tmp_owned_class_field_address_n0 == NULL)
-  {
-    abort();
-  }
   struct hxc_caxecraft_domain_PlayerAgent hxc_l_tmp_class_field_load_result_n1 = (*hxc_l_self).hxc_localPlayer;
   struct hxc_caxecraft_domain_Character hxc_l_tmp_instance_call_result_n3 = hxc_caxecraft_domain_EntityStore_read(hxc_l_tmp_owned_class_field_address_n0, hxc_l_tmp_class_field_load_result_n1.hxc_characterId);
   struct hxc_caxecraft_domain_Character hxc_l_original = hxc_l_tmp_instance_call_result_n3;
@@ -5429,11 +5405,11 @@ bool hxc_caxecraft_domain_GameSession_statefulObjectInteractionAvailable(struct 
     }
     return false;
   }
-  struct hxc_caxecraft_domain_EntityStore *hxc_l_tmp_owned_class_field_address_n6 = &(*hxc_l_self).hxc_entities;
-  if (hxc_l_tmp_owned_class_field_address_n6 == NULL)
+  if (hxc_l_self == NULL)
   {
     abort();
   }
+  struct hxc_caxecraft_domain_EntityStore *hxc_l_tmp_owned_class_field_address_n6 = &(*hxc_l_self).hxc_entities;
   struct hxc_caxecraft_domain_PlayerAgent hxc_l_tmp_class_field_load_result_n7 = (*hxc_l_self).hxc_localPlayer;
   struct hxc_caxecraft_domain_Character hxc_l_tmp_instance_call_result_n9 = hxc_caxecraft_domain_EntityStore_read(hxc_l_tmp_owned_class_field_address_n6, hxc_l_tmp_class_field_load_result_n7.hxc_characterId);
   struct hxc_caxecraft_domain_Character hxc_l_player = hxc_l_tmp_instance_call_result_n9;
@@ -5562,13 +5538,8 @@ bool hxc_caxecraft_domain_GameSession_statefulObjectIsActive(struct hxc_caxecraf
   bool hxc_l_tmp_short_circuit_result_n3 = hxc_l_tmp_load_result_n1 != NULL;
   if (hxc_l_tmp_load_result_n1 != NULL)
   {
-    struct hxc_caxecraft_scenario_CaxeFlowExecutor *hxc_l_tmp_load_result_n2 = hxc_l_executor;
-    hxc_l_gc_roots[4] = (const void *)hxc_l_tmp_load_result_n2;
-    if (hxc_l_tmp_load_result_n2 == NULL)
-    {
-      abort();
-    }
-    struct hxc_caxecraft_scenario_CaxeFlowState *hxc_l_tmp_class_field_load_result_n3 = (*hxc_l_tmp_load_result_n2).hxc_state;
+    hxc_l_gc_roots[4] = (const void *)hxc_l_executor;
+    struct hxc_caxecraft_scenario_CaxeFlowState *hxc_l_tmp_class_field_load_result_n3 = (*hxc_l_executor).hxc_state;
     hxc_l_gc_roots[5] = (const void *)hxc_l_tmp_class_field_load_result_n3;
     if (hxc_l_tmp_class_field_load_result_n3 == NULL)
     {
@@ -5655,11 +5626,11 @@ struct hxc_caxecraft_domain_ActorControllerTickResult hxc_caxecraft_domain_GameS
     abort();
   }
   hxc_caxecraft_domain_GameSession_clearActorControllerEvents(hxc_l_self);
-  struct hxc_caxecraft_domain_EntityStore *hxc_l_tmp_owned_class_field_address_n0 = &(*hxc_l_self).hxc_entities;
-  if (hxc_l_tmp_owned_class_field_address_n0 == NULL)
+  if (hxc_l_self == NULL)
   {
     abort();
   }
+  struct hxc_caxecraft_domain_EntityStore *hxc_l_tmp_owned_class_field_address_n0 = &(*hxc_l_self).hxc_entities;
   struct hxc_caxecraft_domain_PlayerAgent hxc_l_tmp_class_field_load_result_n1 = (*hxc_l_self).hxc_localPlayer;
   struct hxc_caxecraft_domain_Character hxc_l_tmp_instance_call_result_n3 = hxc_caxecraft_domain_EntityStore_read(hxc_l_tmp_owned_class_field_address_n0, hxc_l_tmp_class_field_load_result_n1.hxc_characterId);
   struct hxc_caxecraft_domain_Character hxc_l_observedLocalPlayer = hxc_l_tmp_instance_call_result_n3;
@@ -5911,11 +5882,11 @@ struct hxc_caxecraft_domain_CharacterCommandStepResult hxc_caxecraft_domain_Game
   }
   const uint8_t *hxc_l_readCells = (*hxc_l_self).hxc_base.hxc_worldStorage;
   size_t hxc_l_tmp_length_n4 = 32768;
-  struct hxc_caxecraft_domain_EntityStore *hxc_l_tmp_owned_class_field_address_n0 = &(*hxc_l_self).hxc_entities;
-  if (hxc_l_tmp_owned_class_field_address_n0 == NULL)
+  if (hxc_l_self == NULL)
   {
     abort();
   }
+  struct hxc_caxecraft_domain_EntityStore *hxc_l_tmp_owned_class_field_address_n0 = &(*hxc_l_self).hxc_entities;
   struct hxc_caxecraft_domain_Character hxc_l_tmp_instance_call_result_n1 = hxc_caxecraft_domain_EntityStore_read(hxc_l_tmp_owned_class_field_address_n0, hxc_l_id);
   struct hxc_caxecraft_domain_CharacterCommandStepResult hxc_l_tmp_instance_call_result_n2 = hxc_caxecraft_domain_GameSession_stepStoredCharacter(hxc_l_self, hxc_l_readCells, hxc_l_tmp_length_n4, hxc_l_tmp_instance_call_result_n1, hxc_l_intent, hxc_l_damagePolicy);
   if (hxc_gc_root_frame_pop(&hxc_l_gc_frame) != HXC_STATUS_OK)
@@ -5984,11 +5955,11 @@ struct hxc_caxecraft_domain_CharacterCommandStepResult hxc_caxecraft_domain_Game
   hxc_l_collision = hxc_l_tmp_conditional_managed_move_result_n11;
   struct hxc_caxecraft_domain_CharacterStep hxc_l_tmp_call_result_n13 = hxc_caxecraft_domain_Character_stepWithCollisions(hxc_l_readCells, hxc_l_length, hxc_l_collision, hxc_l_original, hxc_l_intent, hxc_l_damagePolicy);
   struct hxc_caxecraft_domain_CharacterStep hxc_l_result = hxc_l_tmp_call_result_n13;
-  struct hxc_caxecraft_domain_EntityStore *hxc_l_tmp_owned_class_field_address_n14 = &(*hxc_l_self).hxc_entities;
-  if (hxc_l_tmp_owned_class_field_address_n14 == NULL)
+  if (hxc_l_self == NULL)
   {
     abort();
   }
+  struct hxc_caxecraft_domain_EntityStore *hxc_l_tmp_owned_class_field_address_n14 = &(*hxc_l_self).hxc_entities;
   bool hxc_l_tmp_instance_call_result_n17 = hxc_caxecraft_domain_EntityStore_replace(hxc_l_tmp_owned_class_field_address_n14, hxc_l_original.hxc_id, hxc_l_result.hxc_character);
   bool hxc_l_resolved = hxc_l_tmp_instance_call_result_n17;
   bool hxc_l_tmp_load_result_n18 = hxc_l_resolved;
@@ -6037,17 +6008,21 @@ struct hxc_caxecraft_domain_GameTickResult hxc_caxecraft_domain_GameSession_tick
   size_t hxc_l_tmp_length_n3 = 32768;
   struct hxc_caxecraft_domain_PlayerAgent hxc_l_tmp_class_field_load_result_n0 = (*hxc_l_self).hxc_localPlayer;
   int32_t hxc_l_characterId = hxc_l_tmp_class_field_load_result_n0.hxc_characterId;
-  struct hxc_caxecraft_domain_EntityStore *hxc_l_tmp_owned_class_field_address_n2 = &(*hxc_l_self).hxc_entities;
-  if (hxc_l_tmp_owned_class_field_address_n2 == NULL)
+  if (hxc_l_self == NULL)
   {
     abort();
   }
+  struct hxc_caxecraft_domain_EntityStore *hxc_l_tmp_owned_class_field_address_n2 = &(*hxc_l_self).hxc_entities;
   struct hxc_caxecraft_domain_Character hxc_l_tmp_instance_call_result_n4 = hxc_caxecraft_domain_EntityStore_read(hxc_l_tmp_owned_class_field_address_n2, hxc_l_characterId);
   struct hxc_caxecraft_domain_Character hxc_l_original = hxc_l_tmp_instance_call_result_n4;
   if (hxc_l_original.hxc_id <= 0)
   {
     struct hxc_caxecraft_domain_Character hxc_l_tmp_load_result_n6 = hxc_l_original;
     struct hxc_caxecraft_domain_Immersion hxc_l_tmp_call_result_n8 = hxc_caxecraft_domain_Aquatics_observe(hxc_l_readCells, hxc_l_tmp_length_n3, hxc_l_original.hxc_body);
+    if (hxc_l_self == NULL)
+    {
+      abort();
+    }
     struct hxc_caxecraft_domain_WaterSimulation *hxc_l_tmp_owned_class_field_address_n9 = &(*hxc_l_self).hxc_water;
     int32_t hxc_l_tmp_class_field_load_result_n10 = (*hxc_l_tmp_owned_class_field_address_n9).hxc_pendingCount;
     if (hxc_gc_root_frame_pop(&hxc_l_gc_frame) != HXC_STATUS_OK)
@@ -6056,11 +6031,11 @@ struct hxc_caxecraft_domain_GameTickResult hxc_caxecraft_domain_GameSession_tick
     }
     return (struct hxc_caxecraft_domain_GameTickResult){ .hxc_character = hxc_l_tmp_load_result_n6, .hxc_committed = false, .hxc_drowningDamage = 0, .hxc_flow = (struct hxc_optional_caxecraft_scenario_FlowTickResult){ .hxc_has_value = false }, .hxc_immersion = hxc_l_tmp_call_result_n8, .hxc_tickIndex = -1, .hxc_water = (struct hxc_caxecraft_domain_WaterTickResult){ .hxc_changed = 0, .hxc_processed = 0, .hxc_remaining = hxc_l_tmp_class_field_load_result_n10 } };
   }
-  struct hxc_caxecraft_domain_WaterSimulation *hxc_l_tmp_owned_class_field_address_n13 = &(*hxc_l_self).hxc_water;
-  if (hxc_l_tmp_owned_class_field_address_n13 == NULL)
+  if (hxc_l_self == NULL)
   {
     abort();
   }
+  struct hxc_caxecraft_domain_WaterSimulation *hxc_l_tmp_owned_class_field_address_n13 = &(*hxc_l_self).hxc_water;
   struct hxc_caxecraft_domain_WaterTickResult hxc_l_tmp_instance_call_result_n15 = hxc_caxecraft_domain_WaterSimulation_tick(hxc_l_tmp_owned_class_field_address_n13, hxc_l_cells, hxc_l_tmp_length_n2, hxc_l_input.hxc_waterUpdateBudget);
   struct hxc_caxecraft_domain_WaterTickResult hxc_l_waterResult = hxc_l_tmp_instance_call_result_n15;
   struct hxc_caxecraft_domain_CharacterCommandStepResult hxc_l_tmp_instance_call_result_n19 = hxc_caxecraft_domain_GameSession_stepStoredCharacter(hxc_l_self, hxc_l_readCells, hxc_l_tmp_length_n3, hxc_l_original, hxc_l_input.hxc_intent, hxc_l_input.hxc_damagePolicy);
@@ -6500,10 +6475,6 @@ struct hxc_caxecraft_domain_LocalRecoveryResult hxc_caxecraft_domain_GameSession
     abort();
   }
   struct hxc_caxecraft_domain_EntityStore *hxc_l_tmp_owned_class_field_address_n0 = &(*hxc_l_self).hxc_entities;
-  if (hxc_l_tmp_owned_class_field_address_n0 == NULL)
-  {
-    abort();
-  }
   struct hxc_caxecraft_domain_PlayerAgent hxc_l_tmp_class_field_load_result_n1 = (*hxc_l_self).hxc_localPlayer;
   struct hxc_caxecraft_domain_Character hxc_l_tmp_instance_call_result_n3 = hxc_caxecraft_domain_EntityStore_read(hxc_l_tmp_owned_class_field_address_n0, hxc_l_tmp_class_field_load_result_n1.hxc_characterId);
   struct hxc_caxecraft_domain_Character hxc_l_original = hxc_l_tmp_instance_call_result_n3;
@@ -6604,10 +6575,6 @@ struct hxc_caxecraft_domain_GameView hxc_caxecraft_domain_GameSession_view(struc
     abort();
   }
   struct hxc_caxecraft_domain_EntityStore *hxc_l_tmp_owned_class_field_address_n0 = &(*hxc_l_self).hxc_entities;
-  if (hxc_l_tmp_owned_class_field_address_n0 == NULL)
-  {
-    abort();
-  }
   struct hxc_caxecraft_domain_PlayerAgent hxc_l_tmp_class_field_load_result_n1 = (*hxc_l_self).hxc_localPlayer;
   struct hxc_caxecraft_domain_Character hxc_l_tmp_instance_call_result_n3 = hxc_caxecraft_domain_EntityStore_read(hxc_l_tmp_owned_class_field_address_n0, hxc_l_tmp_class_field_load_result_n1.hxc_characterId);
   struct hxc_caxecraft_domain_Character hxc_l_character = hxc_l_tmp_instance_call_result_n3;

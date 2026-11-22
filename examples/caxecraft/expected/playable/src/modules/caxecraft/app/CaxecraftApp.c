@@ -6254,13 +6254,8 @@ void hxc_caxecraft_app_CaxecraftApp_run(struct hxc_caxecraft_app_CaxecraftApp *h
         hxc_l_gc_roots[356] = (const void *)NULL;
         if (hxc_l_requestedCampaignPortal != NULL)
         {
-          struct hxc_caxecraft_app_PreparedCampaignPortal *hxc_l_tmp_load_result_n574 = hxc_l_requestedCampaignPortal;
-          hxc_l_gc_roots[360] = (const void *)hxc_l_tmp_load_result_n574;
-          if (hxc_l_tmp_load_result_n574 == NULL)
-          {
-            abort();
-          }
-          struct hxc_caxecraft_content_CampaignLevel *hxc_l_tmp_class_field_load_result_n575 = (*hxc_l_tmp_load_result_n574).hxc_destinationValue;
+          hxc_l_gc_roots[360] = (const void *)hxc_l_requestedCampaignPortal;
+          struct hxc_caxecraft_content_CampaignLevel *hxc_l_tmp_class_field_load_result_n575 = (*hxc_l_requestedCampaignPortal).hxc_destinationValue;
           hxc_l_gc_roots[361] = (const void *)hxc_l_tmp_class_field_load_result_n575;
           hxc_l_destination_h0d1fdb1e5aab = hxc_l_tmp_class_field_load_result_n575;
         }
@@ -6285,13 +6280,8 @@ void hxc_caxecraft_app_CaxecraftApp_run(struct hxc_caxecraft_app_CaxecraftApp *h
           hxc_l_gc_roots[367] = (const void *)NULL;
           if (hxc_l_requestedCampaignPortal != NULL)
           {
-            struct hxc_caxecraft_app_PreparedCampaignPortal *hxc_l_tmp_load_result_n584 = hxc_l_requestedCampaignPortal;
-            hxc_l_gc_roots[370] = (const void *)hxc_l_tmp_load_result_n584;
-            if (hxc_l_tmp_load_result_n584 == NULL)
-            {
-              abort();
-            }
-            struct hxc_caxecraft_app_StagedPlayableLevel *hxc_l_tmp_class_field_load_result_n585 = (*hxc_l_tmp_load_result_n584).hxc_stagedValue;
+            hxc_l_gc_roots[370] = (const void *)hxc_l_requestedCampaignPortal;
+            struct hxc_caxecraft_app_StagedPlayableLevel *hxc_l_tmp_class_field_load_result_n585 = (*hxc_l_requestedCampaignPortal).hxc_stagedValue;
             hxc_l_gc_roots[371] = (const void *)hxc_l_tmp_class_field_load_result_n585;
             hxc_l_stagedDestination = hxc_l_tmp_class_field_load_result_n585;
           }
@@ -6775,6 +6765,10 @@ void hxc_caxecraft_app_CaxecraftApp_run(struct hxc_caxecraft_app_CaxecraftApp *h
                     hxc_caxecraft_app_TerrainChunkCache_invalidateAll(hxc_l_tmp_owned_class_field_address_n693);
                     hxc_l_gc_roots[425] = (const void *)NULL;
                     hxc_l_preparedPortal = NULL;
+                    if (hxc_l_self == NULL)
+                    {
+                      abort();
+                    }
                     struct hxc_caxecraft_app_TerrainRenderer *hxc_l_tmp_owned_class_field_address_n694 = &(*hxc_l_self).hxc_portalTerrainRenderer;
                     struct hxc_caxecraft_app_TerrainChunkCache *hxc_l_tmp_owned_class_field_address_n695 = &(*hxc_l_tmp_owned_class_field_address_n694).hxc_cache;
                     if (hxc_l_tmp_owned_class_field_address_n695 == NULL)
@@ -7530,10 +7524,6 @@ void hxc_caxecraft_app_CaxecraftApp_run(struct hxc_caxecraft_app_CaxecraftApp *h
             abort();
           }
           struct hxc_caxecraft_input_NavigationRepeater *hxc_l_tmp_owned_class_field_address_n865 = &(*hxc_l_self).hxc_editorNavigation;
-          if (hxc_l_tmp_owned_class_field_address_n865 == NULL)
-          {
-            abort();
-          }
           struct hxc_caxecraft_input_NavigationSample hxc_l_tmp_call_result_n866 = hxc_caxecraft_app_RaylibNavigationInput_samplePrimaryGamepad();
           int32_t hxc_l_tmp_instance_call_result_n868 = hxc_caxecraft_input_NavigationRepeater_advance(hxc_l_tmp_owned_class_field_address_n865, hxc_l_tmp_call_result_n866, hxc_l_frameSeconds);
           hxc_l_editorNavigationCommand = hxc_l_tmp_instance_call_result_n868;
@@ -7545,10 +7535,6 @@ void hxc_caxecraft_app_CaxecraftApp_run(struct hxc_caxecraft_app_CaxecraftApp *h
             abort();
           }
           struct hxc_caxecraft_input_NavigationRepeater *hxc_l_tmp_owned_class_field_address_n869 = &(*hxc_l_self).hxc_editorNavigation;
-          if (hxc_l_tmp_owned_class_field_address_n869 == NULL)
-          {
-            abort();
-          }
           hxc_caxecraft_input_NavigationRepeater_release(hxc_l_tmp_owned_class_field_address_n869);
         }
         enum hxc_caxecraft_domain_PlayerCameraMode hxc_l_tmp_load_result_n870 = hxc_l_cameraMode;
@@ -8199,13 +8185,8 @@ void hxc_caxecraft_app_CaxecraftApp_run(struct hxc_caxecraft_app_CaxecraftApp *h
                               bool hxc_l_tmp_short_circuit_result_n340 = hxc_l_tmp_load_result_n1014 != NULL;
                               if (hxc_l_tmp_load_result_n1014 != NULL)
                               {
-                                struct hxc_caxecraft_app_PreparedCampaignPortal *hxc_l_tmp_load_result_n1015 = hxc_l_portal_h919137c2c307;
-                                hxc_l_gc_roots[488] = (const void *)hxc_l_tmp_load_result_n1015;
-                                if (hxc_l_tmp_load_result_n1015 == NULL)
-                                {
-                                  abort();
-                                }
-                                struct hxc_caxecraft_content_CampaignTransition *hxc_l_tmp_class_field_load_result_n1016 = (*hxc_l_tmp_load_result_n1015).hxc_transitionValue;
+                                hxc_l_gc_roots[488] = (const void *)hxc_l_portal_h919137c2c307;
+                                struct hxc_caxecraft_content_CampaignTransition *hxc_l_tmp_class_field_load_result_n1016 = (*hxc_l_portal_h919137c2c307).hxc_transitionValue;
                                 hxc_l_gc_roots[489] = (const void *)hxc_l_tmp_class_field_load_result_n1016;
                                 if (hxc_l_tmp_class_field_load_result_n1016 == NULL)
                                 {
@@ -8224,13 +8205,8 @@ void hxc_caxecraft_app_CaxecraftApp_run(struct hxc_caxecraft_app_CaxecraftApp *h
                                 bool hxc_l_tmp_short_circuit_result_n342 = hxc_l_tmp_string_equality_result_result_n1021;
                                 if (hxc_l_tmp_string_equality_result_result_n1021)
                                 {
-                                  struct hxc_caxecraft_app_PreparedCampaignPortal *hxc_l_tmp_load_result_n1022 = hxc_l_portal_h919137c2c307;
-                                  hxc_l_gc_roots[491] = (const void *)hxc_l_tmp_load_result_n1022;
-                                  if (hxc_l_tmp_load_result_n1022 == NULL)
-                                  {
-                                    abort();
-                                  }
-                                  struct hxc_caxecraft_content_CampaignTransition *hxc_l_tmp_class_field_load_result_n1023 = (*hxc_l_tmp_load_result_n1022).hxc_transitionValue;
+                                  hxc_l_gc_roots[491] = (const void *)hxc_l_portal_h919137c2c307;
+                                  struct hxc_caxecraft_content_CampaignTransition *hxc_l_tmp_class_field_load_result_n1023 = (*hxc_l_portal_h919137c2c307).hxc_transitionValue;
                                   hxc_l_gc_roots[492] = (const void *)hxc_l_tmp_class_field_load_result_n1023;
                                   if (hxc_l_tmp_class_field_load_result_n1023 == NULL)
                                   {
@@ -8251,13 +8227,8 @@ void hxc_caxecraft_app_CaxecraftApp_run(struct hxc_caxecraft_app_CaxecraftApp *h
                                 bool hxc_l_tmp_short_circuit_result_n344 = hxc_l_tmp_short_circuit_load_result_n1029;
                                 if (hxc_l_tmp_short_circuit_load_result_n1029)
                                 {
-                                  struct hxc_caxecraft_app_PreparedCampaignPortal *hxc_l_tmp_load_result_n1030 = hxc_l_portal_h919137c2c307;
-                                  hxc_l_gc_roots[494] = (const void *)hxc_l_tmp_load_result_n1030;
-                                  if (hxc_l_tmp_load_result_n1030 == NULL)
-                                  {
-                                    abort();
-                                  }
-                                  struct hxc_caxecraft_content_CampaignLevel *hxc_l_tmp_class_field_load_result_n1031 = (*hxc_l_tmp_load_result_n1030).hxc_destinationValue;
+                                  hxc_l_gc_roots[494] = (const void *)hxc_l_portal_h919137c2c307;
+                                  struct hxc_caxecraft_content_CampaignLevel *hxc_l_tmp_class_field_load_result_n1031 = (*hxc_l_portal_h919137c2c307).hxc_destinationValue;
                                   hxc_l_gc_roots[495] = (const void *)hxc_l_tmp_class_field_load_result_n1031;
                                   if (hxc_l_tmp_class_field_load_result_n1031 == NULL)
                                   {
@@ -10085,22 +10056,12 @@ void hxc_caxecraft_app_CaxecraftApp_run(struct hxc_caxecraft_app_CaxecraftApp *h
                 if (hxc_l_portal_h5495b2eb0abd != NULL)
                 {
                   double hxc_l_tmp_record_field_load_result_n1741 = hxc_l_renderPosition.hxc_x;
-                  struct hxc_caxecraft_app_PreparedCampaignPortal *hxc_l_tmp_load_result_n1742 = hxc_l_portal_h5495b2eb0abd;
-                  hxc_l_gc_roots[572] = (const void *)hxc_l_tmp_load_result_n1742;
-                  if (hxc_l_tmp_load_result_n1742 == NULL)
-                  {
-                    abort();
-                  }
-                  double hxc_l_tmp_class_field_load_result_n1743 = (*hxc_l_tmp_load_result_n1742).hxc_sourceCenterXValue;
+                  hxc_l_gc_roots[572] = (const void *)hxc_l_portal_h5495b2eb0abd;
+                  double hxc_l_tmp_class_field_load_result_n1743 = (*hxc_l_portal_h5495b2eb0abd).hxc_sourceCenterXValue;
                   double hxc_l_dx = hxc_l_tmp_record_field_load_result_n1741 - hxc_l_tmp_class_field_load_result_n1743;
                   double hxc_l_tmp_record_field_load_result_n1744 = hxc_l_renderPosition.hxc_z;
-                  struct hxc_caxecraft_app_PreparedCampaignPortal *hxc_l_tmp_load_result_n1745 = hxc_l_portal_h5495b2eb0abd;
-                  hxc_l_gc_roots[573] = (const void *)hxc_l_tmp_load_result_n1745;
-                  if (hxc_l_tmp_load_result_n1745 == NULL)
-                  {
-                    abort();
-                  }
-                  double hxc_l_tmp_class_field_load_result_n1746 = (*hxc_l_tmp_load_result_n1745).hxc_sourceCenterZValue;
+                  hxc_l_gc_roots[573] = (const void *)hxc_l_portal_h5495b2eb0abd;
+                  double hxc_l_tmp_class_field_load_result_n1746 = (*hxc_l_portal_h5495b2eb0abd).hxc_sourceCenterZValue;
                   double hxc_l_dz = hxc_l_tmp_record_field_load_result_n1744 - hxc_l_tmp_class_field_load_result_n1746;
                   double hxc_l_tmp_load_result_n1747 = hxc_l_dx;
                   double hxc_l_tmp_load_result_n1748 = hxc_l_dx;
@@ -10284,11 +10245,11 @@ void hxc_caxecraft_app_CaxecraftApp_run(struct hxc_caxecraft_app_CaxecraftApp *h
                   }
                   int32_t hxc_l_tmp_class_field_load_result_n1793 = (*hxc_l_tmp_class_field_load_result_n1792).hxc_worldWidth;
                   (*hxc_l_tmp_owned_class_field_address_n1790).hxc_descriptorValue = hxc_i32_bit_or(hxc_l_tmp_class_field_load_result_n1793, hxc_i32_shift_left_masked(hxc_l_horizonMask, 8));
-                  struct hxc_caxecraft_app_DistantHorizonRenderer *hxc_l_tmp_owned_class_field_address_n1795 = &(*hxc_l_self).hxc_distantHorizonRenderer;
-                  if (hxc_l_tmp_owned_class_field_address_n1795 == NULL)
+                  if (hxc_l_self == NULL)
                   {
                     abort();
                   }
+                  struct hxc_caxecraft_app_DistantHorizonRenderer *hxc_l_tmp_owned_class_field_address_n1795 = &(*hxc_l_self).hxc_distantHorizonRenderer;
                   struct hxc_caxecraft_domain_GameSession *hxc_l_tmp_load_result_n1796 = hxc_l_session;
                   hxc_l_gc_roots[597] = (const void *)hxc_l_tmp_load_result_n1796;
                   if (hxc_l_tmp_load_result_n1796 == NULL)
@@ -10312,13 +10273,8 @@ void hxc_caxecraft_app_CaxecraftApp_run(struct hxc_caxecraft_app_CaxecraftApp *h
                 }
                 if (hxc_l_portalVisible)
                 {
-                  struct hxc_caxecraft_app_PreparedCampaignPortal *hxc_l_tmp_load_result_n1806 = hxc_l_portal_h5495b2eb0abd;
-                  hxc_l_gc_roots[599] = (const void *)hxc_l_tmp_load_result_n1806;
-                  if (hxc_l_tmp_load_result_n1806 == NULL)
-                  {
-                    abort();
-                  }
-                  struct hxc_caxecraft_app_StagedPlayableLevel *hxc_l_tmp_class_field_load_result_n1807 = (*hxc_l_tmp_load_result_n1806).hxc_stagedValue;
+                  hxc_l_gc_roots[599] = (const void *)hxc_l_portal_h5495b2eb0abd;
+                  struct hxc_caxecraft_app_StagedPlayableLevel *hxc_l_tmp_class_field_load_result_n1807 = (*hxc_l_portal_h5495b2eb0abd).hxc_stagedValue;
                   hxc_l_gc_roots[600] = (const void *)hxc_l_tmp_class_field_load_result_n1807;
                   struct hxc_caxecraft_app_StagedPlayableLevel *hxc_l_preview_h01b171c98658 = hxc_l_tmp_class_field_load_result_n1807;
                   if (hxc_l_self == NULL)
@@ -10326,10 +10282,6 @@ void hxc_caxecraft_app_CaxecraftApp_run(struct hxc_caxecraft_app_CaxecraftApp *h
                     abort();
                   }
                   struct hxc_caxecraft_app_TerrainRenderer *hxc_l_tmp_owned_class_field_address_n1808 = &(*hxc_l_self).hxc_portalTerrainRenderer;
-                  if (hxc_l_tmp_owned_class_field_address_n1808 == NULL)
-                  {
-                    abort();
-                  }
                   struct hxc_caxecraft_app_StagedPlayableLevel *hxc_l_tmp_load_result_n1809 = hxc_l_preview_h01b171c98658;
                   hxc_l_gc_roots[601] = (const void *)hxc_l_tmp_load_result_n1809;
                   if (hxc_l_tmp_load_result_n1809 == NULL)
@@ -10362,27 +10314,12 @@ void hxc_caxecraft_app_CaxecraftApp_run(struct hxc_caxecraft_app_CaxecraftApp *h
                   bool hxc_l_tmp_load_result_n1818 = hxc_l_adventureTerrainTextureReady;
                   double hxc_l_tmp_record_field_load_result_n1819 = hxc_l_renderPosition.hxc_x;
                   double hxc_l_tmp_record_field_load_result_n1820 = hxc_l_renderPosition.hxc_z;
-                  struct hxc_caxecraft_app_PreparedCampaignPortal *hxc_l_tmp_load_result_n1821 = hxc_l_portal_h5495b2eb0abd;
-                  hxc_l_gc_roots[605] = (const void *)hxc_l_tmp_load_result_n1821;
-                  if (hxc_l_tmp_load_result_n1821 == NULL)
-                  {
-                    abort();
-                  }
-                  double hxc_l_tmp_class_field_load_result_n1822 = (*hxc_l_tmp_load_result_n1821).hxc_offsetXValue;
-                  struct hxc_caxecraft_app_PreparedCampaignPortal *hxc_l_tmp_load_result_n1823 = hxc_l_portal_h5495b2eb0abd;
-                  hxc_l_gc_roots[606] = (const void *)hxc_l_tmp_load_result_n1823;
-                  if (hxc_l_tmp_load_result_n1823 == NULL)
-                  {
-                    abort();
-                  }
-                  double hxc_l_tmp_class_field_load_result_n1824 = (*hxc_l_tmp_load_result_n1823).hxc_offsetYValue;
-                  struct hxc_caxecraft_app_PreparedCampaignPortal *hxc_l_tmp_load_result_n1825 = hxc_l_portal_h5495b2eb0abd;
-                  hxc_l_gc_roots[607] = (const void *)hxc_l_tmp_load_result_n1825;
-                  if (hxc_l_tmp_load_result_n1825 == NULL)
-                  {
-                    abort();
-                  }
-                  double hxc_l_tmp_class_field_load_result_n1826 = (*hxc_l_tmp_load_result_n1825).hxc_offsetZValue;
+                  hxc_l_gc_roots[605] = (const void *)hxc_l_portal_h5495b2eb0abd;
+                  double hxc_l_tmp_class_field_load_result_n1822 = (*hxc_l_portal_h5495b2eb0abd).hxc_offsetXValue;
+                  hxc_l_gc_roots[606] = (const void *)hxc_l_portal_h5495b2eb0abd;
+                  double hxc_l_tmp_class_field_load_result_n1824 = (*hxc_l_portal_h5495b2eb0abd).hxc_offsetYValue;
+                  hxc_l_gc_roots[607] = (const void *)hxc_l_portal_h5495b2eb0abd;
+                  double hxc_l_tmp_class_field_load_result_n1826 = (*hxc_l_portal_h5495b2eb0abd).hxc_offsetZValue;
                   hxc_caxecraft_app_TerrainRenderer_drawTranslated(hxc_l_tmp_owned_class_field_address_n1808, hxc_l_tmp_instance_call_result_n1813, hxc_l_tmp_length_n1814, hxc_l_tmp_load_result_n1815, hxc_l_tmp_load_result_n1816, hxc_l_tmp_load_result_n1817, hxc_l_tmp_load_result_n1818, hxc_l_tmp_record_field_load_result_n1819, hxc_l_tmp_record_field_load_result_n1820, hxc_l_tmp_class_field_load_result_n1822, hxc_l_tmp_class_field_load_result_n1824, hxc_l_tmp_class_field_load_result_n1826);
                 }
                 if (hxc_l_self == NULL)
@@ -10390,10 +10327,6 @@ void hxc_caxecraft_app_CaxecraftApp_run(struct hxc_caxecraft_app_CaxecraftApp *h
                   abort();
                 }
                 struct hxc_caxecraft_app_TerrainRenderer *hxc_l_tmp_owned_class_field_address_n1827 = &(*hxc_l_self).hxc_terrainRenderer;
-                if (hxc_l_tmp_owned_class_field_address_n1827 == NULL)
-                {
-                  abort();
-                }
                 struct hxc_caxecraft_domain_GameSession *hxc_l_tmp_load_result_n1828 = hxc_l_session;
                 hxc_l_gc_roots[608] = (const void *)hxc_l_tmp_load_result_n1828;
                 if (hxc_l_tmp_load_result_n1828 == NULL)
@@ -10411,20 +10344,15 @@ void hxc_caxecraft_app_CaxecraftApp_run(struct hxc_caxecraft_app_CaxecraftApp *h
                 struct hxc_caxecraft_app_TerrainRenderCounters hxc_l_renderCounters = hxc_l_tmp_instance_call_result_n1837;
                 if (hxc_l_portalVisible)
                 {
-                  struct hxc_caxecraft_app_PreparedCampaignPortal *hxc_l_tmp_load_result_n1839 = hxc_l_portal_h5495b2eb0abd;
-                  hxc_l_gc_roots[609] = (const void *)hxc_l_tmp_load_result_n1839;
-                  if (hxc_l_tmp_load_result_n1839 == NULL)
-                  {
-                    abort();
-                  }
-                  struct hxc_caxecraft_app_StagedPlayableLevel *hxc_l_tmp_class_field_load_result_n1840 = (*hxc_l_tmp_load_result_n1839).hxc_stagedValue;
+                  hxc_l_gc_roots[609] = (const void *)hxc_l_portal_h5495b2eb0abd;
+                  struct hxc_caxecraft_app_StagedPlayableLevel *hxc_l_tmp_class_field_load_result_n1840 = (*hxc_l_portal_h5495b2eb0abd).hxc_stagedValue;
                   hxc_l_gc_roots[610] = (const void *)hxc_l_tmp_class_field_load_result_n1840;
                   struct hxc_caxecraft_app_StagedPlayableLevel *hxc_l_preview_hbd1792c0ff0a = hxc_l_tmp_class_field_load_result_n1840;
-                  struct hxc_caxecraft_app_WaterRenderer *hxc_l_tmp_owned_class_field_address_n1841 = &(*hxc_l_self).hxc_portalWaterRenderer;
-                  if (hxc_l_tmp_owned_class_field_address_n1841 == NULL)
+                  if (hxc_l_self == NULL)
                   {
                     abort();
                   }
+                  struct hxc_caxecraft_app_WaterRenderer *hxc_l_tmp_owned_class_field_address_n1841 = &(*hxc_l_self).hxc_portalWaterRenderer;
                   struct hxc_caxecraft_app_StagedPlayableLevel *hxc_l_tmp_load_result_n1842 = hxc_l_preview_hbd1792c0ff0a;
                   hxc_l_gc_roots[611] = (const void *)hxc_l_tmp_load_result_n1842;
                   if (hxc_l_tmp_load_result_n1842 == NULL)
@@ -10469,34 +10397,19 @@ void hxc_caxecraft_app_CaxecraftApp_run(struct hxc_caxecraft_app_CaxecraftApp *h
                   double hxc_l_tmp_load_result_n1853 = hxc_l_eyeX;
                   double hxc_l_tmp_load_result_n1854 = hxc_l_eyeY;
                   double hxc_l_tmp_load_result_n1855 = hxc_l_eyeZ;
-                  struct hxc_caxecraft_app_PreparedCampaignPortal *hxc_l_tmp_load_result_n1856 = hxc_l_portal_h5495b2eb0abd;
-                  hxc_l_gc_roots[617] = (const void *)hxc_l_tmp_load_result_n1856;
-                  if (hxc_l_tmp_load_result_n1856 == NULL)
-                  {
-                    abort();
-                  }
-                  double hxc_l_tmp_class_field_load_result_n1857 = (*hxc_l_tmp_load_result_n1856).hxc_offsetXValue;
-                  struct hxc_caxecraft_app_PreparedCampaignPortal *hxc_l_tmp_load_result_n1858 = hxc_l_portal_h5495b2eb0abd;
-                  hxc_l_gc_roots[618] = (const void *)hxc_l_tmp_load_result_n1858;
-                  if (hxc_l_tmp_load_result_n1858 == NULL)
-                  {
-                    abort();
-                  }
-                  double hxc_l_tmp_class_field_load_result_n1859 = (*hxc_l_tmp_load_result_n1858).hxc_offsetYValue;
-                  struct hxc_caxecraft_app_PreparedCampaignPortal *hxc_l_tmp_load_result_n1860 = hxc_l_portal_h5495b2eb0abd;
-                  hxc_l_gc_roots[619] = (const void *)hxc_l_tmp_load_result_n1860;
-                  if (hxc_l_tmp_load_result_n1860 == NULL)
-                  {
-                    abort();
-                  }
-                  double hxc_l_tmp_class_field_load_result_n1861 = (*hxc_l_tmp_load_result_n1860).hxc_offsetZValue;
+                  hxc_l_gc_roots[617] = (const void *)hxc_l_portal_h5495b2eb0abd;
+                  double hxc_l_tmp_class_field_load_result_n1857 = (*hxc_l_portal_h5495b2eb0abd).hxc_offsetXValue;
+                  hxc_l_gc_roots[618] = (const void *)hxc_l_portal_h5495b2eb0abd;
+                  double hxc_l_tmp_class_field_load_result_n1859 = (*hxc_l_portal_h5495b2eb0abd).hxc_offsetYValue;
+                  hxc_l_gc_roots[619] = (const void *)hxc_l_portal_h5495b2eb0abd;
+                  double hxc_l_tmp_class_field_load_result_n1861 = (*hxc_l_portal_h5495b2eb0abd).hxc_offsetZValue;
                   hxc_caxecraft_app_WaterRenderer_drawTranslated(hxc_l_tmp_owned_class_field_address_n1841, hxc_l_tmp_instance_call_result_n1846, hxc_l_tmp_length_n1847, hxc_l_tmp_load_result_n1848, hxc_l_tmp_load_result_n1849, hxc_l_tmp_class_field_load_result_n1852, hxc_l_tmp_load_result_n1853, hxc_l_tmp_load_result_n1854, hxc_l_tmp_load_result_n1855, hxc_l_tmp_class_field_load_result_n1857, hxc_l_tmp_class_field_load_result_n1859, hxc_l_tmp_class_field_load_result_n1861);
                 }
-                struct hxc_caxecraft_app_WaterRenderer *hxc_l_tmp_owned_class_field_address_n1862 = &(*hxc_l_self).hxc_waterRenderer;
-                if (hxc_l_tmp_owned_class_field_address_n1862 == NULL)
+                if (hxc_l_self == NULL)
                 {
                   abort();
                 }
+                struct hxc_caxecraft_app_WaterRenderer *hxc_l_tmp_owned_class_field_address_n1862 = &(*hxc_l_self).hxc_waterRenderer;
                 struct hxc_caxecraft_domain_GameSession *hxc_l_tmp_load_result_n1863 = hxc_l_session;
                 hxc_l_gc_roots[620] = (const void *)hxc_l_tmp_load_result_n1863;
                 if (hxc_l_tmp_load_result_n1863 == NULL)
@@ -11637,11 +11550,11 @@ void hxc_caxecraft_app_CaxecraftApp_run(struct hxc_caxecraft_app_CaxecraftApp *h
                             abort();
                           }
                           hxc_caxecraft_app_TerrainChunkCache_invalidateAll(hxc_l_tmp_owned_class_field_address_n2231);
-                          struct hxc_caxecraft_input_NavigationRepeater *hxc_l_tmp_owned_class_field_address_n2232 = &(*hxc_l_self).hxc_editorNavigation;
-                          if (hxc_l_tmp_owned_class_field_address_n2232 == NULL)
+                          if (hxc_l_self == NULL)
                           {
                             abort();
                           }
+                          struct hxc_caxecraft_input_NavigationRepeater *hxc_l_tmp_owned_class_field_address_n2232 = &(*hxc_l_self).hxc_editorNavigation;
                           hxc_caxecraft_input_NavigationRepeater_release(hxc_l_tmp_owned_class_field_address_n2232);
                           enum hxc_caxecraft_app_AppScreen hxc_l_tmp_call_result_n2234 = hxc_caxecraft_app_AppScreen_beginEditorTestPlay(hxc_l_screen);
                           hxc_l_screen = hxc_l_tmp_call_result_n2234;
@@ -11897,11 +11810,11 @@ void hxc_caxecraft_app_CaxecraftApp_run(struct hxc_caxecraft_app_CaxecraftApp *h
           abort();
         }
         hxc_caxecraft_app_TerrainChunkCache_invalidateAll(hxc_l_tmp_owned_class_field_address_n435);
-        struct hxc_caxecraft_input_NavigationRepeater *hxc_l_tmp_owned_class_field_address_n436 = &(*hxc_l_self).hxc_editorNavigation;
-        if (hxc_l_tmp_owned_class_field_address_n436 == NULL)
+        if (hxc_l_self == NULL)
         {
           abort();
         }
+        struct hxc_caxecraft_input_NavigationRepeater *hxc_l_tmp_owned_class_field_address_n436 = &(*hxc_l_self).hxc_editorNavigation;
         hxc_caxecraft_input_NavigationRepeater_release(hxc_l_tmp_owned_class_field_address_n436);
         EnableCursor();
         hxc_record_3b3e16aa_destroy(&hxc_l_saved);

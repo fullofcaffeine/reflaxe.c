@@ -201,6 +201,7 @@
       "src/modules/caxecraft/scenario/ScenarioWorldValidator.c",
       "src/modules/caxecraft/scenario/ScenarioWriter.c",
       "src/modules/caxecraft/text/Utf8Decoder.c",
+      "src/modules/haxe/crypto/Sha256.c",
       "src/modules/raygui/GuiListViewState.c",
       "src/modules/raygui/GuiTextBoxState.c"
     ],
@@ -425,6 +426,7 @@
       "include/hxc/modules/caxecraft/scenario/ScenarioWorldValidator.h",
       "include/hxc/modules/caxecraft/scenario/ScenarioWriter.h",
       "include/hxc/modules/caxecraft/text/Utf8Decoder.h",
+      "include/hxc/modules/haxe/crypto/Sha256.h",
       "include/hxc/modules/raygui/GuiListViewState.h",
       "include/hxc/modules/raygui/GuiTextBoxState.h",
       "include/hxc/modules/raylib/raw/Camera.h",
@@ -658,7 +660,7 @@
       "provenance": {
         "production": "compiler-sidecar"
       },
-      "sha256": "bc016f33cf5c45814be87e0a57242133a70997a01809924d71487100c8d6f102",
+      "sha256": "d25388ab2f5fb0c55647bacde1b12571394d175ba966823f5817358cd8c2d957",
       "path": "cmake/CMakeLists.txt",
       "kind": "cmake-adapter"
     },
@@ -690,7 +692,7 @@
       "provenance": {
         "production": "compiler-sidecar"
       },
-      "sha256": "6e62c845b11eb6c733d8eaa773e12658c8f697c3cf61ccee60d37f0d6753a502",
+      "sha256": "7635506e6a871104ca4599291c1ece9938633dc7247a2296282e439d406ec54d",
       "path": "hxc.dispatch.json",
       "kind": "dispatch-report"
     },
@@ -722,7 +724,7 @@
       "provenance": {
         "production": "compiler-sidecar"
       },
-      "sha256": "ffadf22227d5ecc3c390767c0c2a2029a5d8647ef7cd99cf8b9fc2628aeeda11",
+      "sha256": "15264a7a05f787412efe3152b8c8ace3afb5f13b923ed1c271f62ff0bf211e97",
       "path": "hxc.runtime-plan.json",
       "kind": "runtime-plan"
     },
@@ -738,7 +740,7 @@
       "provenance": {
         "production": "compiler-sidecar"
       },
-      "sha256": "fd1b0cefae4fa14fe123b4f08e5976bc51b9b382bb3e39ebc1bea87b0b613d57",
+      "sha256": "a4254e46f520cc654961263dc3d48a4e05891826e6645777909753b2e57eb186",
       "path": "hxc.specializations.json",
       "kind": "specialization-report"
     },
@@ -770,7 +772,7 @@
       "provenance": {
         "production": "compiler-sidecar"
       },
-      "sha256": "999ab7ce839f713511082afd255f6e7aa88acf16638ac1e3bb3817f408432f10",
+      "sha256": "60fbc904b8075d921e14f2cc2fd677485ece22b3719194d5445b0e7b84cccb68",
       "path": "hxc.symbols.json",
       "kind": "symbol-table"
     },
@@ -784,7 +786,7 @@
       "provenance": {
         "production": "compiled-program"
       },
-      "sha256": "119c5b0f3a4668b64897a2d09b207baaf9cd48f38f9af7e0960547b88689fa0e",
+      "sha256": "453b3fb120eeb0fe71370ff83b042b7820f85918c9e0b05ce6a0ac487f9065de",
       "path": "include/hxc/detail/program_types.h",
       "kind": "private-header"
     },
@@ -1778,7 +1780,7 @@
       "provenance": {
         "production": "compiled-program"
       },
-      "sha256": "8cc1f49b9fd8b540123f4c7edce2e244d89c492bb84954e8d053a738bd49a414",
+      "sha256": "02dfb31fd8b2cbc4792530b75feae9c04373cb26d5e16a1e4b39d2ce3332b311",
       "path": "include/hxc/modules/caxecraft/content/RuntimeContentDigest.h",
       "kind": "private-header"
     },
@@ -3808,6 +3810,20 @@
       "provenance": {
         "production": "compiled-program"
       },
+      "sha256": "787f38a3d8fd6ea93930afc98f1b454d5c0dd16cd292cc74437d3efd539117ba",
+      "path": "include/hxc/modules/haxe/crypto/Sha256.h",
+      "kind": "private-header"
+    },
+    {
+      "licensing": {
+        "rationale": "user-license-not-declared",
+        "licenseConcluded": "NOASSERTION",
+        "noticeFiles": [],
+        "projectCopyrightClaim": false
+      },
+      "provenance": {
+        "production": "compiled-program"
+      },
       "sha256": "8711f654c02938c074700f98b0c5eb751e970f09c2569beb02ce75a11e073f76",
       "path": "include/hxc/modules/raygui/GuiListViewState.h",
       "kind": "private-header"
@@ -3976,7 +3992,7 @@
       "provenance": {
         "production": "compiled-program"
       },
-      "sha256": "678669262fb2e8a2f9ef274ac2f9aaddb5fb525930d96d176db9343cbbdd213f",
+      "sha256": "3a57d87eba310153d77ba288ed132084af6a14c42fe960c8c31127be07167590",
       "path": "include/hxc/program.h",
       "kind": "private-header"
     },
@@ -3992,7 +4008,7 @@
       "provenance": {
         "production": "compiler-sidecar"
       },
-      "sha256": "1123d19bd11038d981043121e33ce10d4c7e41f955a6b0b694e33585ed5932fc",
+      "sha256": "841bf0c5c51693a2520beebe2c82697512f113732dc0163bb6dad9b113e262a2",
       "path": "meson.build",
       "kind": "meson-adapter"
     },
@@ -4722,7 +4738,7 @@
       "provenance": {
         "production": "compiled-program"
       },
-      "sha256": "53af742abb43f0d87f1e204dbe56014ea680b1704a73cc3ba0c2b0598396a487",
+      "sha256": "72aff9d481a81fd93dde3a733337d971df6ca1838867cb8425aac93791b298cb",
       "path": "src/hxc/support.c",
       "kind": "source"
     },
@@ -4848,7 +4864,7 @@
       "provenance": {
         "production": "compiled-program"
       },
-      "sha256": "b471a424d42bfd7b4784231b878124fee262c8ed50dfe6ea85ddcf6665785006",
+      "sha256": "ff67bfc63911e5e71fe5d4a7633ab76854e1fc5adde9dad1026f1e38c8642077",
       "path": "src/modules/caxecraft/app/CaxecraftApp.c",
       "kind": "source"
     },
@@ -4876,7 +4892,7 @@
       "provenance": {
         "production": "compiled-program"
       },
-      "sha256": "4663bfc897ad8e2f7698dfc6224cdd176c90596bc6fbb7c7acaaaba945984efa",
+      "sha256": "3b305b5177c58b3cb20fb619cd81f7ab7e86fbb35f4d4d3c9eba8f2578aff580",
       "path": "src/modules/caxecraft/app/CaxecraftEditorScreen.c",
       "kind": "source"
     },
@@ -4960,7 +4976,7 @@
       "provenance": {
         "production": "compiled-program"
       },
-      "sha256": "629ce2610845cf83c45109e5775e796ec960d95cf65eed8cf3258f78816c3ff9",
+      "sha256": "3417a28224eb3230a3f0b59bba250f5e32c057b73d19353774eb3f870b268d77",
       "path": "src/modules/caxecraft/app/EditorTerrainPresentation.c",
       "kind": "source"
     },
@@ -5226,7 +5242,7 @@
       "provenance": {
         "production": "compiled-program"
       },
-      "sha256": "f7a8991ffc1c053e9e3b20cee4a3f3e7496be6449fea17a075b72184b62fa9c6",
+      "sha256": "867aa74c90b87532dbdb98df4867b5d9d7836d40d66e55f03c97d0597f74c0a1",
       "path": "src/modules/caxecraft/app/TerrainRenderer.c",
       "kind": "source"
     },
@@ -5632,7 +5648,7 @@
       "provenance": {
         "production": "compiled-program"
       },
-      "sha256": "fd23049fe393da4d7ce93e31e3f2ed93cf98356992c7a3553f49fe88a97a1a88",
+      "sha256": "ab5275e2652756274f6b9f2ed9b871bec03fbd30cbaacab65561d8698821d45e",
       "path": "src/modules/caxecraft/content/RuntimeContentDigest.c",
       "kind": "source"
     },
@@ -5660,7 +5676,7 @@
       "provenance": {
         "production": "compiled-program"
       },
-      "sha256": "ef8a0ebbe1af8278bcf86a658b2c53550e357039b417e35f90f1a119b792beab",
+      "sha256": "0790b6172876d3177b7a7a6f141a7457f6866e0c82be6f6cabad9035a43a617b",
       "path": "src/modules/caxecraft/content/RuntimeContentPack.c",
       "kind": "source"
     },
@@ -5814,7 +5830,7 @@
       "provenance": {
         "production": "compiled-program"
       },
-      "sha256": "eab1b7653f4d2b1a2f672ce94a5599c8ee368adfe844e33972dd9bd11d87e831",
+      "sha256": "a6e2d824ace494c1804e3b2f29624e6b2e55a511a0f72850e94c12e21bc2255b",
       "path": "src/modules/caxecraft/domain/GameSession.c",
       "kind": "source"
     },
@@ -6318,7 +6334,7 @@
       "provenance": {
         "production": "compiled-program"
       },
-      "sha256": "c2496c280f48e91a4c87d1c7be6b865220480a89582cece4fab187e6908d2414",
+      "sha256": "ed8034c85706ad2b4dc0b7c6be0e4ff29d8f4ddf8ffc50a37084cbd54e6f82b7",
       "path": "src/modules/caxecraft/editor/EditorSession.c",
       "kind": "source"
     },
@@ -6710,7 +6726,7 @@
       "provenance": {
         "production": "compiled-program"
       },
-      "sha256": "52e3e597ec70b5dae719724bcd85000a60a9ac7324744e1fabf7ef128db6194a",
+      "sha256": "2c16832b893e7b299484505400ccb01046236bc8cd1deb2a849c61fe8ed2b175",
       "path": "src/modules/caxecraft/scenario/CaxeFlowState.c",
       "kind": "source"
     },
@@ -7006,6 +7022,20 @@
       },
       "sha256": "4b53b6fc8ad04dc03c6d0459f52cef1fd873e921c0a52d570a18d65cf06fc4a9",
       "path": "src/modules/caxecraft/text/Utf8Decoder.c",
+      "kind": "source"
+    },
+    {
+      "licensing": {
+        "rationale": "user-license-not-declared",
+        "licenseConcluded": "NOASSERTION",
+        "noticeFiles": [],
+        "projectCopyrightClaim": false
+      },
+      "provenance": {
+        "production": "compiled-program"
+      },
+      "sha256": "4128b203df9687a1a13dfd56319d97682c62db9aca0a3d01901a9c3a81bf0618",
+      "path": "src/modules/haxe/crypto/Sha256.c",
       "kind": "source"
     },
     {

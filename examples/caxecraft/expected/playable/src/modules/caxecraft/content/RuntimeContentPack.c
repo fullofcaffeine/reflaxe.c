@@ -17397,13 +17397,8 @@ struct hxc_caxecraft_content_ActorPresentationResolution hxc_caxecraft_content_R
   hxc_l_gc_roots[3] = (const void *)NULL;
   if (hxc_l_npc != NULL)
   {
-    struct hxc_caxecraft_content_RuntimeContentPack_RuntimeNpcDefinition *hxc_l_tmp_load_result_n2 = hxc_l_npc;
-    hxc_l_gc_roots[4] = (const void *)hxc_l_tmp_load_result_n2;
-    if (hxc_l_tmp_load_result_n2 == NULL)
-    {
-      abort();
-    }
-    struct hxc_caxecraft_content_RuntimePresentation *hxc_l_tmp_class_field_load_result_n3 = (*hxc_l_tmp_load_result_n2).hxc_presentation;
+    hxc_l_gc_roots[4] = (const void *)hxc_l_npc;
+    struct hxc_caxecraft_content_RuntimePresentation *hxc_l_tmp_class_field_load_result_n3 = (*hxc_l_npc).hxc_presentation;
     hxc_l_gc_roots[5] = (const void *)hxc_l_tmp_class_field_load_result_n3;
     if (hxc_l_tmp_class_field_load_result_n3 == NULL)
     {
@@ -17416,13 +17411,8 @@ struct hxc_caxecraft_content_ActorPresentationResolution hxc_caxecraft_content_R
       abort();
     }
     hxc_string hxc_l_tmp_enum_payload_0_owned_load_result_n5 = hxc_l_tmp_enum_payload_0_owner_n3;
-    struct hxc_caxecraft_content_RuntimeContentPack_RuntimeNpcDefinition *hxc_l_tmp_load_result_n6 = hxc_l_npc;
-    hxc_l_gc_roots[6] = (const void *)hxc_l_tmp_load_result_n6;
-    if (hxc_l_tmp_load_result_n6 == NULL)
-    {
-      abort();
-    }
-    struct hxc_caxecraft_content_RuntimePresentation *hxc_l_tmp_class_field_load_result_n7 = (*hxc_l_tmp_load_result_n6).hxc_presentation;
+    hxc_l_gc_roots[6] = (const void *)hxc_l_npc;
+    struct hxc_caxecraft_content_RuntimePresentation *hxc_l_tmp_class_field_load_result_n7 = (*hxc_l_npc).hxc_presentation;
     hxc_l_gc_roots[7] = (const void *)hxc_l_tmp_class_field_load_result_n7;
     if (hxc_l_tmp_class_field_load_result_n7 == NULL)
     {
@@ -17525,55 +17515,20 @@ struct hxc_caxecraft_content_ActorContentResolution hxc_caxecraft_content_Runtim
     }
     return (struct hxc_caxecraft_content_ActorContentResolution){ .hxc_tag = hxc_caxecraft_content_ActorContentResolution_WrongActorContentKind, .hxc_payload.hxc_WrongActorContentKind.hxc_actual = hxc_caxecraft_content_ActorContentKind_NpcContent };
   }
-  struct hxc_caxecraft_content_RuntimeContentPack_RuntimeEnemyDefinition *hxc_l_tmp_load_result_n2 = hxc_l_enemy;
-  hxc_l_gc_roots[4] = (const void *)hxc_l_tmp_load_result_n2;
-  if (hxc_l_tmp_load_result_n2 == NULL)
-  {
-    abort();
-  }
-  int32_t hxc_l_tmp_class_field_load_result_n3 = (*hxc_l_tmp_load_result_n2).hxc_noticeRadiusMilli;
-  struct hxc_caxecraft_content_RuntimeContentPack_RuntimeEnemyDefinition *hxc_l_tmp_load_result_n4 = hxc_l_enemy;
-  hxc_l_gc_roots[5] = (const void *)hxc_l_tmp_load_result_n4;
-  if (hxc_l_tmp_load_result_n4 == NULL)
-  {
-    abort();
-  }
-  int32_t hxc_l_tmp_class_field_load_result_n5 = (*hxc_l_tmp_load_result_n4).hxc_strikeRadiusMilli;
-  struct hxc_caxecraft_content_RuntimeContentPack_RuntimeEnemyDefinition *hxc_l_tmp_load_result_n6 = hxc_l_enemy;
-  hxc_l_gc_roots[6] = (const void *)hxc_l_tmp_load_result_n6;
-  if (hxc_l_tmp_load_result_n6 == NULL)
-  {
-    abort();
-  }
-  int32_t hxc_l_tmp_class_field_load_result_n7 = (*hxc_l_tmp_load_result_n6).hxc_attackRadiusMilli;
-  struct hxc_caxecraft_content_RuntimeContentPack_RuntimeEnemyDefinition *hxc_l_tmp_load_result_n8 = hxc_l_enemy;
-  hxc_l_gc_roots[7] = (const void *)hxc_l_tmp_load_result_n8;
-  if (hxc_l_tmp_load_result_n8 == NULL)
-  {
-    abort();
-  }
-  int32_t hxc_l_tmp_class_field_load_result_n9 = (*hxc_l_tmp_load_result_n8).hxc_windupTicks;
-  struct hxc_caxecraft_content_RuntimeContentPack_RuntimeEnemyDefinition *hxc_l_tmp_load_result_n10 = hxc_l_enemy;
-  hxc_l_gc_roots[8] = (const void *)hxc_l_tmp_load_result_n10;
-  if (hxc_l_tmp_load_result_n10 == NULL)
-  {
-    abort();
-  }
-  int32_t hxc_l_tmp_class_field_load_result_n11 = (*hxc_l_tmp_load_result_n10).hxc_recoveryTicks;
-  struct hxc_caxecraft_content_RuntimeContentPack_RuntimeEnemyDefinition *hxc_l_tmp_load_result_n12 = hxc_l_enemy;
-  hxc_l_gc_roots[9] = (const void *)hxc_l_tmp_load_result_n12;
-  if (hxc_l_tmp_load_result_n12 == NULL)
-  {
-    abort();
-  }
-  int32_t hxc_l_tmp_class_field_load_result_n13 = (*hxc_l_tmp_load_result_n12).hxc_stepMilli;
-  struct hxc_caxecraft_content_RuntimeContentPack_RuntimeEnemyDefinition *hxc_l_tmp_load_result_n14 = hxc_l_enemy;
-  hxc_l_gc_roots[10] = (const void *)hxc_l_tmp_load_result_n14;
-  if (hxc_l_tmp_load_result_n14 == NULL)
-  {
-    abort();
-  }
-  struct hxc_caxecraft_content_RuntimeContentPack_RuntimeReference *hxc_l_tmp_class_field_load_result_n15 = (*hxc_l_tmp_load_result_n14).hxc_drop;
+  hxc_l_gc_roots[4] = (const void *)hxc_l_enemy;
+  int32_t hxc_l_tmp_class_field_load_result_n3 = (*hxc_l_enemy).hxc_noticeRadiusMilli;
+  hxc_l_gc_roots[5] = (const void *)hxc_l_enemy;
+  int32_t hxc_l_tmp_class_field_load_result_n5 = (*hxc_l_enemy).hxc_strikeRadiusMilli;
+  hxc_l_gc_roots[6] = (const void *)hxc_l_enemy;
+  int32_t hxc_l_tmp_class_field_load_result_n7 = (*hxc_l_enemy).hxc_attackRadiusMilli;
+  hxc_l_gc_roots[7] = (const void *)hxc_l_enemy;
+  int32_t hxc_l_tmp_class_field_load_result_n9 = (*hxc_l_enemy).hxc_windupTicks;
+  hxc_l_gc_roots[8] = (const void *)hxc_l_enemy;
+  int32_t hxc_l_tmp_class_field_load_result_n11 = (*hxc_l_enemy).hxc_recoveryTicks;
+  hxc_l_gc_roots[9] = (const void *)hxc_l_enemy;
+  int32_t hxc_l_tmp_class_field_load_result_n13 = (*hxc_l_enemy).hxc_stepMilli;
+  hxc_l_gc_roots[10] = (const void *)hxc_l_enemy;
+  struct hxc_caxecraft_content_RuntimeContentPack_RuntimeReference *hxc_l_tmp_class_field_load_result_n15 = (*hxc_l_enemy).hxc_drop;
   hxc_l_gc_roots[11] = (const void *)hxc_l_tmp_class_field_load_result_n15;
   if (hxc_l_tmp_class_field_load_result_n15 == NULL)
   {
@@ -17586,23 +17541,13 @@ struct hxc_caxecraft_content_ActorContentResolution hxc_caxecraft_content_Runtim
     abort();
   }
   hxc_l_profile = (struct hxc_caxecraft_domain_WanderChaseMeleeProfile){ .hxc_attackRadiusMilli = hxc_l_tmp_class_field_load_result_n7, .hxc_drop = hxc_l_tmp_record_field_drop_owner_n4, .hxc_noticeRadiusMilli = hxc_l_tmp_class_field_load_result_n3, .hxc_recoveryTicks = hxc_l_tmp_class_field_load_result_n11, .hxc_stepMilli = hxc_l_tmp_class_field_load_result_n13, .hxc_strikeRadiusMilli = hxc_l_tmp_class_field_load_result_n5, .hxc_windupTicks = hxc_l_tmp_class_field_load_result_n9 };
-  struct hxc_caxecraft_content_RuntimeContentPack_RuntimeEnemyDefinition *hxc_l_tmp_load_result_n19 = hxc_l_enemy;
-  hxc_l_gc_roots[12] = (const void *)hxc_l_tmp_load_result_n19;
-  if (hxc_l_tmp_load_result_n19 == NULL)
-  {
-    abort();
-  }
-  int32_t hxc_l_tmp_class_field_load_result_n20 = (*hxc_l_tmp_load_result_n19).hxc_maximumHealth;
+  hxc_l_gc_roots[12] = (const void *)hxc_l_enemy;
+  int32_t hxc_l_tmp_class_field_load_result_n20 = (*hxc_l_enemy).hxc_maximumHealth;
   int32_t hxc_l_tmp_record_field_maximumHealth_n5 = hxc_l_tmp_class_field_load_result_n20;
   struct hxc_caxecraft_domain_AquaticProfile hxc_l_tmp_instance_call_result_n21 = hxc_caxecraft_content_RuntimeContentRegistry_defaultAquaticProfile(hxc_l_self);
   struct hxc_caxecraft_domain_AquaticProfile hxc_l_tmp_record_field_aquaticProfile_n6 = hxc_l_tmp_instance_call_result_n21;
-  struct hxc_caxecraft_content_RuntimeContentPack_RuntimeEnemyDefinition *hxc_l_tmp_load_result_n22 = hxc_l_enemy;
-  hxc_l_gc_roots[13] = (const void *)hxc_l_tmp_load_result_n22;
-  if (hxc_l_tmp_load_result_n22 == NULL)
-  {
-    abort();
-  }
-  hxc_string hxc_l_tmp_class_field_load_result_n23 = (*hxc_l_tmp_load_result_n22).hxc_behaviorProfile;
+  hxc_l_gc_roots[13] = (const void *)hxc_l_enemy;
+  hxc_string hxc_l_tmp_class_field_load_result_n23 = (*hxc_l_enemy).hxc_behaviorProfile;
   bool hxc_l_tmp_string_equality_result_n7 = hxc_l_tmp_class_field_load_result_n23.data != NULL && (hxc_l_tmp_class_field_load_result_n23.byte_length == (hxc_string){ (const uint8_t *)"telegraphed-charge", 18, true, NULL }.byte_length && (hxc_l_tmp_class_field_load_result_n23.byte_length == 0 || memcmp(hxc_l_tmp_class_field_load_result_n23.data, (hxc_string){ (const uint8_t *)"telegraphed-charge", 18, true, NULL }.data, hxc_l_tmp_class_field_load_result_n23.byte_length) == 0));
   bool hxc_l_tmp_string_equality_result_result_n25 = hxc_l_tmp_string_equality_result_n7;
   struct hxc_caxecraft_domain_ActorControllerProfile hxc_l_tmp_conditional_managed_result_n8 = { 0 };
@@ -17733,21 +17678,11 @@ struct hxc_caxecraft_content_ActorContentResolution hxc_caxecraft_content_Runtim
   hxc_l_gc_roots[3] = (const void *)NULL;
   if (hxc_l_npc != NULL)
   {
-    struct hxc_caxecraft_content_RuntimeContentPack_RuntimeNpcDefinition *hxc_l_tmp_load_result_n2 = hxc_l_npc;
-    hxc_l_gc_roots[4] = (const void *)hxc_l_tmp_load_result_n2;
-    if (hxc_l_tmp_load_result_n2 == NULL)
-    {
-      abort();
-    }
-    int32_t hxc_l_tmp_class_field_load_result_n3 = (*hxc_l_tmp_load_result_n2).hxc_maximumHealth;
+    hxc_l_gc_roots[4] = (const void *)hxc_l_npc;
+    int32_t hxc_l_tmp_class_field_load_result_n3 = (*hxc_l_npc).hxc_maximumHealth;
     struct hxc_caxecraft_domain_AquaticProfile hxc_l_tmp_instance_call_result_n4 = hxc_caxecraft_content_RuntimeContentRegistry_defaultAquaticProfile(hxc_l_self);
-    struct hxc_caxecraft_content_RuntimeContentPack_RuntimeNpcDefinition *hxc_l_tmp_load_result_n5 = hxc_l_npc;
-    hxc_l_gc_roots[5] = (const void *)hxc_l_tmp_load_result_n5;
-    if (hxc_l_tmp_load_result_n5 == NULL)
-    {
-      abort();
-    }
-    int32_t hxc_l_tmp_class_field_load_result_n6 = (*hxc_l_tmp_load_result_n5).hxc_interactionRadiusMilli;
+    hxc_l_gc_roots[5] = (const void *)hxc_l_npc;
+    int32_t hxc_l_tmp_class_field_load_result_n6 = (*hxc_l_npc).hxc_interactionRadiusMilli;
     if (hxc_gc_root_frame_pop(&hxc_l_gc_frame) != HXC_STATUS_OK)
     {
       abort();
