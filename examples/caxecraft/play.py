@@ -1326,11 +1326,13 @@ def build_pilot_report(
     if pilot == "editor-shell":
         if not editor_visible or title_visible:
             raise PlayFailure("editor-shell pilot did not finish on the native editor screen")
-        if signed[22] != 0 or signed[23] != 1 or signed[24] != 0:
+        if signed[22] != 0 or signed[23] != 1:
             raise PlayFailure(
-                "editor-shell pilot did not commit exactly one typed paint gesture "
-                f"(removed={signed[22]}, placed={signed[23]}, rejected={signed[24]})"
+                "editor-shell pilot expected one placement and zero removals "
+                f"(removed={signed[22]}, placed={signed[23]})"
             )
+        if signed[24] != 0:
+            raise PlayFailure(f"editor-shell pilot recorded rejected actions (count={signed[24]})")
         if (
             signed[42] <= 0
             or signed[43] != signed[42] + 1

@@ -4800,6 +4800,7 @@ final class CaxecraftEditorScreen {
 	 * refresh, and the Orbit target use the same path as interactive input.
 	 */
 	public function applyPilotDirectObjectEdits():Bool {
+		setActiveTool(SelectTool);
 		var currentCamera = camera;
 		var selected = selectedObjectIndex();
 		if (currentCamera == null || selected < 0)
@@ -4906,7 +4907,8 @@ final class CaxecraftEditorScreen {
 			baseRevision: current.revision(),
 			mutation: ApplyBatch([
 				PutFlowVariable({id: supportCounter, scope: Map, initial: Counter(0)}),
-				PutFlowSequence({id: supportSequence, parameters: [], actions: []})
+				PutFlowSequence({id: supportSequence, parameters: [], actions: []}),
+				PutFlowSequence({id: new ScenarioId(supportSequence.text() + ".alternate"), parameters: [], actions: []})
 			])
 		}) {
 			case MutationApplied(_, _, _, _, _, _):
@@ -4986,7 +4988,9 @@ final class CaxecraftEditorScreen {
 		if (flowCardSelection != 0)
 			return false;
 		flowCardLibraryTarget = NoFlowCardPanel;
-		openFlowDocumentPanel(FlowDocumentPanel(zone.id, connected, DoCardAddress(0), 0, WorldObjectFlowReference, current.revision()));
+		// The scheduled action is third after moving Spawn to the front. Its
+		// second reference chooses a sequence from the map document.
+		beginFlowDocumentPick(zone.id, connected, DoCardAddress(2), 1, SequenceFlowReference);
 		final documentChoiceCount = flowDocumentPanelChoiceCount(flowDocumentPickMode, restoredDraft);
 		applyNavigation(NavigationCommand.Up);
 		if (documentChoiceCount < 2 || flowDocumentSelection != documentChoiceCount - 1)
@@ -4994,7 +4998,13 @@ final class CaxecraftEditorScreen {
 		applyNavigation(NavigationCommand.Down);
 		if (flowDocumentSelection != 0)
 			return false;
-		flowDocumentPickMode = NoFlowDocumentPanel;
+		applyNavigation(NavigationCommand.Up);
+		applyNavigation(NavigationCommand.Confirm);
+		if (flowDocumentPickerOpen() || current.canonicalDraft().compare(beforeNavigation) == 0)
+			return false;
+		undo();
+		if (current.canonicalDraft().compare(beforeNavigation) != 0)
+			return false;
 		openFlowDefinitions();
 		final beforeDefinition = current.canonicalDraft();
 		applyNavigation(NavigationCommand.Confirm);
