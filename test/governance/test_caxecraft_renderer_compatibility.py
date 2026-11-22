@@ -11,7 +11,7 @@ import shutil
 import sys
 import tempfile
 import unittest
-from unittest.mock import patch
+from unittest.mock import call, patch
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path[:0] = [str(ROOT), str(ROOT / "examples/caxecraft")]
@@ -138,15 +138,16 @@ def conditional_ast():
 
 class ConditionalCertificateContracts(unittest.TestCase):
     def setUp(self):
-        self.derived, self.edits = compatibility.prepare_parser_input(CONDITIONAL)
+        self.derived, _ = compatibility.prepare_parser_input(CONDITIONAL)
         self.ast = conditional_ast()
 
     def certify(self):
         return compatibility._certify_forwarding(
-            CONDITIONAL, self.derived, self.edits, self.ast, parse_returncode=0, marker_names=set())
+            CONDITIONAL, self.derived, self.ast, parse_returncode=0, marker_names=set())
 
     def test_one_owner_requires_all_original_branches_calls_and_pack_occurrences(self):
-        excluded = self.certify()
+        edits, excluded = self.certify()
+        self.assertEqual(len(edits), 2)
         self.assertEqual(excluded, [{"name": "relay", "storage": "extern", "declarationId": "relay",
                                      "bodyRange": [204, 454]}])
 
@@ -204,18 +205,22 @@ class ConditionalCertificateContracts(unittest.TestCase):
 
     def test_retained_marker_owner_and_modified_parse_are_not_certificates(self):
         with self.assertRaisesRegex(compatibility.CompatibilityFailure, "modified marker"):
-            compatibility._certify_forwarding(CONDITIONAL, self.derived, self.edits, self.ast,
+            compatibility._certify_forwarding(CONDITIONAL, self.derived, self.ast,
                                                parse_returncode=0, marker_names={"relay"})
         for marker in ("channel", "empty", "deny", "__builtin_constant_p"):
             with self.subTest(marker=marker), self.assertRaisesRegex(
                     compatibility.CompatibilityFailure, "marker conditional call"):
-                compatibility._certify_forwarding(CONDITIONAL, self.derived, self.edits, self.ast,
+                compatibility._certify_forwarding(CONDITIONAL, self.derived, self.ast,
                                                    parse_returncode=0, marker_names={marker})
         with self.assertRaisesRegex(compatibility.CompatibilityFailure, "successful parse"):
-            compatibility._certify_forwarding(CONDITIONAL, self.derived, self.edits, self.ast,
+            compatibility._certify_forwarding(CONDITIONAL, self.derived, self.ast,
                                                parse_returncode=1, marker_names=set())
-        self.edits = self.edits[:-1]
-        with self.assertRaisesRegex(compatibility.CompatibilityFailure, "transformation mismatch"):
+        # Restore one removed pack operand while keeping the other approved edit.
+        _, edits = compatibility.prepare_parser_input(CONDITIONAL)
+        missing = edits[-1]
+        self.derived = (self.derived[:missing.start] + CONDITIONAL[missing.start:missing.end]
+                        + self.derived[missing.end:])
+        with self.assertRaisesRegex(compatibility.CompatibilityFailure, "parser compatibility bytes differ"):
             self.certify()
 
 
@@ -247,8 +252,12 @@ class ForwardingContracts(unittest.TestCase):
                                        forbidden={"allocate"}, reviewed_leaves=set(leaves))
 
     def test_unused_forwarder_extracts_without_becoming_a_leaf(self):
-        unit = self.extract("forward", FORWARD + MARKERS +
-                            "void measured(void) { begin(); end(); }\n")
+        with patch.object(compatibility, "prepare_parser_input", wraps=compatibility.prepare_parser_input) as prepare:
+            unit = self.extract("forward", FORWARD + MARKERS +
+                                "void measured(void) { begin(); end(); }\n")
+        original = (unit.receipt.parent / "diagnostic-neutral.i").read_bytes()
+        # Generate the parser input once, then independently verify it after Clang returns.
+        self.assertEqual(prepare.call_args_list, [call(original), call(original)])
         self.assertEqual(self.prove({"forward": unit})["functions"], [])
         record = json.loads(unit.receipt.read_text())
         self.assertEqual(record["status"], "success")

@@ -724,8 +724,11 @@ def _certify_operand(node, spelling, params, source):
     inspect(node, bool(spelling and spelling[0] in OBJECT_SIZE))
 
 
-def _certify_forwarding(original, derived, edits, ast, *, parse_returncode, marker_names):
-    """No failed/partial AST can certify; caller must retain successful diagnostics.
+def _certify_forwarding(original, derived, ast, *, parse_returncode, marker_names):
+    """Reconstruct the parser edits and return them with their declaration exclusions.
+
+    The complete AST must describe the exact reconstructed bytes. Keeping the
+    edits here also lets format diagnostics use the same verified source ranges.
 
     Only the two reviewed Clang 21.1.8 fortified signatures receive builtin
     authority. The diagnostic owner must verify the matching version profile.
@@ -734,12 +737,12 @@ def _certify_forwarding(original, derived, edits, ast, *, parse_returncode, mark
         parse_returncode == 0 and ast.get("kind") == "TranslationUnitDecl",
         "complete successful parse required",
     )
-    expected, expected_edits = prepare_parser_input(original)
-    _require(derived == expected and edits == expected_edits, "transformation mismatch")
+    expected, edits = prepare_parser_input(original)
+    _require(derived == expected, "parser compatibility bytes differ")
     if not edits:
         # Ordinary units need no forwarding index. Their complete AST still goes
         # through the existing graph checks; this skips only compatibility work.
-        return []
+        return edits, []
     builtin_signatures = PRINTF_FIXED_PARAMETERS
     decls = {
         node["id"]: node
@@ -847,7 +850,7 @@ def _certify_forwarding(original, derived, edits, ast, *, parse_returncode, mark
                 "bodyRange": [edit.body_start, edit.body_end],
             }
         )
-    return excluded
+    return edits, excluded
 
 
 def _parameters(function):
@@ -1129,10 +1132,8 @@ def certify_diagnostics(original: bytes, derived: bytes, ast: dict, value: objec
     )
     require_matching_version(value["compilerVersion"], value["libraryVersion"])
     _require(isinstance(value["diagnostics"], list), "invalid diagnostic list")
-    expected, edits = prepare_parser_input(original)
-    _require(expected == derived, "parser compatibility bytes differ")
-    excluded = _certify_forwarding(
-        original, derived, edits, ast, parse_returncode=0, marker_names=set()
+    edits, excluded = _certify_forwarding(
+        original, derived, ast, parse_returncode=0, marker_names=set()
     )
     functions = [f for f in ast["inner"] if f.get("kind") == "FunctionDecl"]
     decisions = []
