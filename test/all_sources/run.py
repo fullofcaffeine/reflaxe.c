@@ -154,19 +154,12 @@ def check_complete_eval_graph(compiler_log: TextIO | None = None) -> None:
 
     verbose_output = (result.stdout + result.stderr + hxc_result.stdout + hxc_result.stderr).replace("\\", "/")
     parsed_sources = [line.removeprefix("Parsed ") for line in verbose_output.splitlines() if line.startswith("Parsed ")]
-    missing_sources = [
-        source.relative_to(ROOT).as_posix()
-        for source in owned_haxe_sources()
-        # Haxe reports the checkout's logical path while Path.resolve() may
-        # traverse a workspace or home-directory symlink. Match the stable
-        # repository-relative suffix so the gate behaves identically locally
-        # and in CI.
-        if not any(
-            parsed == source.relative_to(ROOT).as_posix()
-            or parsed.endswith(f"/{source.relative_to(ROOT).as_posix()}")
-            for parsed in parsed_sources
-        )
-    ]
+    missing_sources = []
+    for source in owned_haxe_sources():
+        relative = source.relative_to(ROOT).as_posix()
+        # Haxe can report the logical checkout path through a symlink.
+        if not any(parsed == relative or parsed.endswith("/" + relative) for parsed in parsed_sources):
+            missing_sources.append(relative)
     if missing_sources:
         raise AllSourcesFailure(
             "dedicated HXML did not parse every target-owned Haxe source:\n"
