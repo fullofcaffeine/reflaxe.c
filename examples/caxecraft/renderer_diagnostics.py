@@ -200,10 +200,20 @@ def admit_diagnostics(value: object, source: bytes) -> list[dict[str, object]]:
     require_matching_version(value["compilerVersion"], value["libraryVersion"])
     diagnostics = value["diagnostics"]
     if not isinstance(diagnostics, list): raise ValueError("invalid diagnostic list")
-    occurrences = access_occurrences(source)
-    decisions: list[dict[str, object]] = []
-    seen: set[tuple[int, int]] = set()
-    for diagnostic in diagnostics:
+    admission = AccessDiagnostics(source)
+    return [admission.check(diagnostic) for diagnostic in diagnostics]
+
+
+class AccessDiagnostics:
+    """Bind literal access attributes and their diagnostic ranges to one parser input."""
+
+    def __init__(self, source: bytes) -> None:
+        self._occurrences = access_occurrences(source)
+        self._source_length = len(source)
+        self._seen: set[tuple[int, int]] = set()
+
+    def check(self, diagnostic: object) -> dict[str, object]:
+        """Match one warning to a unique reviewed occurrence in the same input."""
         if not isinstance(diagnostic, dict) or set(diagnostic) != {"severity", "option", "offset", "ranges", "children"}:
             raise ValueError("invalid diagnostic entry")
         if (type(diagnostic["severity"]) is not int or diagnostic["severity"] != 2
@@ -217,7 +227,7 @@ def admit_diagnostics(value: object, source: bytes) -> list[dict[str, object]]:
         if type(first) is not int or type(last) is not int or type(diagnostic["offset"]) is not int:
             raise ValueError("invalid diagnostic offsets")
         key = (first, last)
-        if diagnostic["offset"] != first or key not in occurrences or key in seen:
+        if diagnostic["offset"] != first or key not in self._occurrences or key in self._seen:
             raise ValueError("unreviewed or duplicate ignored attribute occurrence")
         context = diagnostic["children"]
         # LLVM llvmorg-21.1.8 clang/lib/Frontend/SerializedDiagnosticPrinter.cpp
@@ -233,12 +243,11 @@ def admit_diagnostics(value: object, source: bytes) -> list[dict[str, object]]:
             location = note["location"]
             if (not isinstance(location, dict) or set(location) != {"offset", "line", "column"}
                     or any(type(value) is not int or value < 0 for value in location.values())
-                    or location["offset"] >= len(source)):
+                    or location["offset"] >= self._source_length):
                 raise ValueError("invalid context diagnostic location")
-        seen.add(key)
-        decisions.append({"start": first, "lastToken": last, "attribute": occurrences[key],
-                          "decision": "literal-access-explicit-call-compatibility", "contextNotes": context})
-    return decisions
+        self._seen.add(key)
+        return {"start": first, "lastToken": last, "attribute": self._occurrences[key],
+                "decision": "literal-access-explicit-call-compatibility", "contextNotes": context}
 
 
 def read_serialized(compiler: Path, library: Path, diagnostics: Path, *, retain_origins: bool = False) -> dict[str, object]:

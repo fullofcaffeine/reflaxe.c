@@ -21,7 +21,7 @@ from dataclasses import dataclass
 from pathlib import Path
 import re
 
-from renderer_diagnostics import admit_diagnostics, require_matching_version
+from renderer_diagnostics import AccessDiagnostics, require_matching_version
 
 # LLVM llvmorg-21.1.8: clang/include/clang/Basic/Builtins.td declares these
 # fixed counts and PrintfFormat<3>/<4>. BuiltinsBase.td and
@@ -34,7 +34,8 @@ PRINTF_FIXED_PARAMETERS = {"__builtin___sprintf_chk": 4, "__builtin___snprintf_c
 PACK = b"__builtin_va_arg_pack"
 PACK_LENGTH = b"__builtin_va_arg_pack_len"
 OBJECT_SIZE = {b"__builtin_object_size", b"__builtin_dynamic_object_size"}
-IDENT = re.compile(b"[A-Za-z_][A-Za-z_0-9]*\\Z")
+WHITESPACE = re.compile(rb"[ \t\r\n\v\f]+")
+IDENT = re.compile(rb"[A-Za-z_][A-Za-z_0-9]*")
 DECIMAL = re.compile(b"(?:0|[1-9][0-9]*)\\Z")
 
 
@@ -77,8 +78,8 @@ def _tokens(data):
     result = []
     i = 0
     while i < len(data):
-        if data[i : i + 1] in b" \t\r\n\x0b\x0c":
-            i += 1
+        if whitespace := WHITESPACE.match(data, i):
+            i = whitespace.end()
             continue
         start = i
         if data[i : i + 2] in (b"//", b"/*"):
@@ -98,15 +99,8 @@ def _tokens(data):
                 i += 2 if data[i] == 92 else 1
             _require(i < len(data), "unterminated literal")
             i += 1
-        elif 65 <= data[i] <= 90 or 97 <= data[i] <= 122 or data[i] == 95:
-            i += 1
-            while i < len(data) and (
-                65 <= data[i] <= 90
-                or 97 <= data[i] <= 122
-                or 48 <= data[i] <= 57
-                or (data[i] == 95)
-            ):
-                i += 1
+        elif identifier := IDENT.match(data, i):
+            i = identifier.end()
         elif 48 <= data[i] <= 57:
             i += 1
             while i < len(data) and (chr(data[i]).isalnum() or data[i] in b"._"):
@@ -1142,6 +1136,7 @@ def certify_diagnostics(original: bytes, derived: bytes, ast: dict, value: objec
     )
     functions = [f for f in ast["inner"] if f.get("kind") == "FunctionDecl"]
     decisions = []
+    access = None
     seen = set()
     for diagnostic in value["diagnostics"]:
         _require(
@@ -1167,7 +1162,9 @@ def certify_diagnostics(original: bytes, derived: bytes, ast: dict, value: objec
             old = {
                 key: item for key, item in diagnostic.items() if key not in ("category", "fixits")
             }
-            decisions.extend(admit_diagnostics(dict(value, diagnostics=[old]), derived))
+            if access is None:
+                access = AccessDiagnostics(derived)
+            decisions.append(access.check(old))
             continue
         if diagnostic["option"] == "-Wignored-attributes":
             certificate = _allocator_certificate(original, derived, functions, diagnostic)

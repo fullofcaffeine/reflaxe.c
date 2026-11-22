@@ -11,11 +11,13 @@ import shutil
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path[:0] = [str(ROOT), str(ROOT / "examples/caxecraft")]
 import renderer_call_coverage as coverage
 import renderer_compatibility as compatibility
+import renderer_diagnostics as diagnostics
 
 FORWARD = """
 int sink(const char *, ...) __attribute__((format(printf, 1, 2)));
@@ -265,6 +267,23 @@ class ForwardingContracts(unittest.TestCase):
             with self.assertRaises(coverage.CoverageFailure):
                 coverage.prove_interval(units, begin="forward", end="end",
                                         forbidden=set(), reviewed_leaves={"forward", "sink"})
+
+    def test_access_warnings_share_one_scan_and_keep_diagnostic_order(self):
+        source = ("void first(const char *p) __attribute__((access(read_only,1)));\n"
+                  "extern int dispose(void *);\n"
+                  "extern void *make(void) __attribute__((malloc)) __attribute__((malloc(dispose, 1)));\n"
+                  "void second(char *p) __attribute__((access(write_only,1)));\n")
+        with patch.object(diagnostics, "access_occurrences", wraps=diagnostics.access_occurrences) as scan:
+            self.extract("attributes", source)
+        parser_input = (self.root / "attributes/parser-input.i").read_bytes()
+        scan.assert_called_once_with(parser_input)
+        decisions = json.loads((self.root / "attributes/diagnostic-decisions.json").read_bytes())["decisions"]
+        first, allocator, second = decisions
+        self.assertEqual(allocator["certificate"]["kind"], "malloc")
+        for entry, attribute in ((first, b"access(read_only,1)"), (second, b"access(write_only,1)")):
+            start = parser_input.index(attribute)
+            self.assertEqual((entry["attribute"], entry["start"], entry["lastToken"]),
+                             (attribute.decode("ascii"), start, start + len(attribute) - 1))
 
     def test_allocator_association_extracts_but_stays_excluded(self):
         declarations = ("extern int dispose(void *);\n"
