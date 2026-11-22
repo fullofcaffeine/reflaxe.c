@@ -1,5 +1,5 @@
 hxcir schema=27
-module "SpanFixture" @"test/span_lowering/fixtures/SpanFixture.hx":67:35-215:3
+module "SpanFixture" @"test/span_lowering/fixtures/SpanFixture.hx":67:35-216:3
   function "function.SpanFixture.checkedAt" name="SpanFixture.checkedAt" returns=i32 failure=infallible exception-strategy=none entry="entry" @"test/span_lowering/fixtures/SpanFixture.hx":88:43-92:3
     parameter "parameter.0" type=i32 ownership=owned-or-value @"test/span_lowering/fixtures/SpanFixture.hx":88:43-92:3
     local "local.1" type=fixed-array(length=4,witness="Length4",element=i32) ownership=owned-or-value storage=automatic state=uninitialized @"test/span_lowering/fixtures/SpanFixture.hx":89:3-89:51
@@ -98,8 +98,8 @@ module "SpanFixture" @"test/span_lowering/fixtures/SpanFixture.hx":67:35-215:3
       terminator return value="value.5" cleanup=[] @"test/span_lowering/fixtures/SpanFixture.hx":174:3-174:48
     end block "entry"
   end function "function.SpanFixture.linearIndex"
-  function "function.SpanFixture.main" name="SpanFixture.main" returns=void failure=infallible exception-strategy=none entry="entry" @"test/span_lowering/fixtures/SpanFixture.hx":198:30-215:3
-    block "entry" @"test/span_lowering/fixtures/SpanFixture.hx":198:30-215:3
+  function "function.SpanFixture.main" name="SpanFixture.main" returns=void failure=infallible exception-strategy=none entry="entry" @"test/span_lowering/fixtures/SpanFixture.hx":198:30-216:3
+    block "entry" @"test/span_lowering/fixtures/SpanFixture.hx":198:30-216:3
       instruction "instruction.0.call" result="value.0":i32 call dispatch=direct("function.SpanFixture.mutableSum") arguments=[] returns=i32 failure=none @"test/span_lowering/fixtures/SpanFixture.hx":199:3-199:15
       instruction "instruction.1.call" result="value.1":i32 call dispatch=direct("function.SpanFixture.constSum") arguments=[] returns=i32 failure=none @"test/span_lowering/fixtures/SpanFixture.hx":200:3-200:13
       instruction "instruction.2.constant" result="value.2":i32 constant value=int(2) @"test/span_lowering/fixtures/SpanFixture.hx":201:13-201:14
@@ -111,7 +111,7 @@ module "SpanFixture" @"test/span_lowering/fixtures/SpanFixture.hx":67:35-215:3
       instruction "instruction.8.call" result="value.8":u8 call dispatch=direct("function.SpanFixture.zeroedGridCell") arguments=[] returns=u8 failure=none @"test/span_lowering/fixtures/SpanFixture.hx":207:3-207:19
       instruction "instruction.9.call" result="value.9":u8 call dispatch=direct("function.SpanFixture.zeroedGridCell") arguments=[] returns=u8 failure=none @"test/span_lowering/fixtures/SpanFixture.hx":208:19-208:35
       instruction "instruction.10.call" result="value.10":u8 call dispatch=direct("function.SpanFixture.mutatedGridCell") arguments=["value.9"] returns=u8 failure=none @"test/span_lowering/fixtures/SpanFixture.hx":208:3-208:36
-      terminator return value=none cleanup=[] @"test/span_lowering/fixtures/SpanFixture.hx":198:30-215:3
+      terminator return value=none cleanup=[] @"test/span_lowering/fixtures/SpanFixture.hx":198:30-216:3
     end block "entry"
   end function "function.SpanFixture.main"
   function "function.SpanFixture.mutableSum" name="SpanFixture.mutableSum" returns=i32 failure=infallible exception-strategy=none entry="entry" @"test/span_lowering/fixtures/SpanFixture.hx":67:35-76:3

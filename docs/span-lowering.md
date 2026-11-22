@@ -128,22 +128,30 @@ static function replaceAt(
 }
 ```
 
-The current parameter admission is deliberately exact:
+The caller can borrow the array directly in the argument list.
 
-- the callee is a reached direct static, non-generic function;
-- the argument is an admitted `Span<T>` or `ConstSpan<T>` value borrowed from
-  fixed `CArray` storage, or the same typed parameter forwarded by another
-  admitted direct static call;
-- element type and mutability remain exact through the call;
-- the callee may index the borrow but cannot store or return it; and
-- the call is compiler-private implementation, not an exported/native/callback
-  ABI.
+```haxe
+replaceAt(voxels.span(), index, replacement);
+return readAt(voxels.constSpan(), index);
+```
 
-Instance, virtual, interface, closure, constructor, native/imported, exported,
-recursive, and generic-specialized span calls remain rejected. A parameter span
-also has a runtime-forwarded length rather than a compile-time fixed-array
-length, so the current exact `for (value in span)` proof does not admit it;
-ordinary indexed access retains checked bounds against the forwarded count.
+For both calls, the generated C passes a pointer to the original elements and
+their count. A write through the mutable span is visible to the following
+read. If the array is a field, the compiler evaluates its receiver once, before
+the next argument. A later argument can branch without losing the pointer or
+its count.
+
+A non-generic static function or a directly called method on a final class can
+receive this borrow. The argument can also be a named view or a span parameter
+forwarded by another admitted call. The element type and mutability must match.
+The callee can index the view while the caller's storage is alive. Returning
+or storing the parameter would let it outlive the call, so the compiler rejects
+both uses.
+
+Virtual, interface, closure, constructor, native/imported, exported, recursive,
+and generic-specialized span calls remain rejected. A parameter receives its
+length from the caller. Indexed access checks that length at runtime. The
+compiler currently requires a statically known length for `for (value in span)`.
 
 A mutable `Span<T>` still cannot be returned. A read-only `ConstSpan<T>` has one
 narrow return contract: a `final`, non-generic instance method may lend an
@@ -378,7 +386,7 @@ already-running compiler server. Warm requests are faster and, more
 importantly, prove that one build cannot leak symbols, configuration, or output
 into the next build.
 
-The exact full-suite topology is guarded in code:
+The runner checks how many requests use each mode.
 
 - three cold typed-report requests: normal, exact repeat, and reversed function
   discovery;
@@ -386,13 +394,11 @@ The exact full-suite topology is guarded in code:
   input through all six `portable`/`metal` and
   `debug`/`release`/`minsizerel` combinations with a fresh compiler context for
   each combination;
-- 36 negative-diagnostic requests, with one cold representative for body
-  lowering and one for the C ABI boundary while the remaining 34 exercise the
-  warm server;
+- one negative-diagnostic request per fixture and profile, with a cold
+  representative for body lowering and another for the C ABI boundary;
 - two invalid-configuration requests, seven production/repeat requests, and
   six bounds-matrix requests, each retaining a cold representative; and
-- 54 Haxe requests in total: 8 cold and 46 warm. Including the one compiler
-  server, the compiler executable is loaded 9 times instead of the previous 87.
+- eight cold requests in total, plus one server process for all warm requests.
 
 The typed-report requests stay cold for a specific reason. The pinned Haxe
 compiler can represent a cached one-expression body with a narrower source
@@ -420,7 +426,7 @@ ASan/UBSan; and exercises local and parameter dynamic negative/upper fail-stop
 paths in every profile/build coordinate. Source-positioned negatives cover
 zero, negative, unknown, overflowing, and over-budget lengths, unsupported
 element storage, static out-of-bounds access, borrowed returns, field/global
-storage, instance/virtual dispatch, callbacks, recursion, exported/native ABI
+storage, virtual dispatch, callbacks, recursion, exported/native ABI
 boundaries, general/empty arrays, and lookalike intrinsics. Required native
 lanes inspect generated artifacts and linked images for the absence of
 allocation and `hxrt` dependencies.

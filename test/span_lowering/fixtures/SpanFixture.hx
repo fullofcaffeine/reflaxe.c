@@ -22,7 +22,7 @@ private final class FinalSpanMutator {
 **/
 #if !span_lowering_report
 private final class ReturnedSpanOwner {
-	var bytes:CArray<UInt8, Length4> = CArray.zero(4);
+	public final bytes:CArray<UInt8, Length4> = CArray.zero(4);
 
 	public function new() {
 		bytes[2] = c.IntConvert.modulo(29);
@@ -211,6 +211,7 @@ class SpanFixture {
 		returnedSpanRoundTrip();
 		conditionalAssignment(true);
 		conditionalAssignment(false);
+		directSpanArguments(true);
 		#end
 	}
 
@@ -218,4 +219,20 @@ class SpanFixture {
 	static function runtimeTypeOnly(value:String):String {
 		return value;
 	}
+
+	#if !span_lowering_report
+	/** A final method writes through a fresh borrow before the next call reads the same storage. */
+	static function directSpanArguments(third:Bool):UInt8 {
+		final bytes:CArray<UInt8, Length4> = CArray.zero(4);
+		final mutator = new FinalSpanMutator();
+		mutator.replace(bytes.span(), third ? 2 : 1, c.IntConvert.modulo(91));
+		final owner = new ReturnedSpanOwner();
+		var evaluations = 0;
+		// The next argument sees the increment only after the borrow has evaluated its owner.
+		final observed = readAt(({evaluations++; owner;}).bytes.constSpan(), evaluations == 1 ? 2 : 0);
+		if (observed != c.IntConvert.modulo(29) || evaluations != 1)
+			return c.IntConvert.modulo(255);
+		return readAt((bytes.constSpan()), 2);
+	}
+	#end
 }

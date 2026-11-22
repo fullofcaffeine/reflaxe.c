@@ -122,6 +122,11 @@ NEGATIVE_CASES = (
     NegativeCase("ZeroLengthFixture", "TArrayDecl(empty-fixed-array-not-strict-c11)"),
     NegativeCase("LookalikeFixture", "TVar(Span:requires-fixed-array-borrow)"),
     NegativeCase(
+        "DirectSpanLookalikeFixture",
+        "TCall(unavailable-static-target:",
+        "DirectSpanLookalikeFixture.hx:13: characters 9-35",
+    ),
+    NegativeCase(
         "ZeroConstructionLengthFixture",
         "TCall(c.CArray.zero:length-must-be-positive:0)",
         "ZeroConstructionLengthFixture.hx:6: characters 54-55",
@@ -407,14 +412,14 @@ class HaxeHarness:
     def validate_topology(self) -> None:
         cold = sum(value.transport == "cold" for value in self.invocations)
         warm = sum(value.transport == "warm-server" for value in self.invocations)
-        # The 27 negative fixtures run once per profile. The remaining warm
+        # The 28 negative fixtures run once per profile. The remaining warm
         # requests prove report/production determinism and configuration edges;
         # eight cold requests independently detect compiler-server state leaks.
-        if len(self.invocations) != 72 or cold != 8 or warm != 64:
+        if len(self.invocations) != 74 or cold != 8 or warm != 66:
             raise SpanLoweringFailure(
                 "span Haxe request topology drifted: "
                 f"total={len(self.invocations)}, cold={cold}, warm={warm}; "
-                "expected total=72, cold=8, warm=64"
+                "expected total=74, cold=8, warm=66"
             )
 
     def timing_report(self, *, outcome: str) -> dict[str, object]:
@@ -591,6 +596,7 @@ def function_names(
         expected.add("conditionalAssignment")
         expected.add("ownedFieldRoundTrip")
         expected.add("returnedSpanRoundTrip")
+        expected.add("directSpanArguments")
     if set(names) != expected:
         raise SpanLoweringFailure(f"span fixture symbol set drifted: {sorted(names)!r}")
     return names
@@ -804,10 +810,10 @@ def validate_project(root: Path, *, profile: str, build: str) -> dict[str, objec
         != {
             "modules": 2,
             "typeInstances": 3,
-            "functions": 23,
-            "blocks": 44,
-            "instructions": 283,
-            "cleanupActions": 6,
+            "functions": 24,
+            "blocks": 55,
+            "instructions": 355,
+            "cleanupActions": 10,
             "runtimeIntents": 0,
         }
         or runtime_absence
@@ -843,14 +849,14 @@ def validate_project(root: Path, *, profile: str, build: str) -> dict[str, objec
         != {
             "indirectCalls": 0,
             "slots": 0,
-            "instanceCalls": 3,
+            "instanceCalls": 4,
             "tables": 0,
-            "directCalls": 3,
+            "directCalls": 4,
             "adapters": 0,
             "layouts": 0,
         }
         or not isinstance(calls, list)
-        or len(calls) != 3
+        or len(calls) != 4
         or any(
             not isinstance(call, dict)
             or call.get("dispatch") != "direct"
@@ -897,15 +903,15 @@ def validate_project(root: Path, *, profile: str, build: str) -> dict[str, objec
         )
     if (
         len(re.findall(r"int32_t [A-Za-z0-9_]+\[4\] = \{", source)) != 3
-        or len(re.findall(r"uint8_t [A-Za-z0-9_]+\[4\] = \{", source)) != 4
+        or len(re.findall(r"uint8_t [A-Za-z0-9_]+\[4\] = \{", source)) != 5
         or len(re.findall(r"uint8_t [A-Za-z0-9_]+\[16384\] = \{ 0 \};", source)) != 2
         or source.count("const int32_t *") != 3
         or len(re.findall(r"(?m)^  int32_t \*[A-Za-z0-9_]+ =", source)) != 1
-        or source.count("const uint8_t *") != 12
-        or len(re.findall(r"(?m)^  uint8_t \*[A-Za-z0-9_]+ =", source)) != 10
-        or source.count(" = sizeof(") != 11
+        or source.count("const uint8_t *") != 15
+        or len(re.findall(r"(?m)^  uint8_t \*[A-Za-z0-9_]+ =", source)) != 12
+        or source.count(" = sizeof(") != 13
         or source.count("bounds") != 0
-        or source.count("abort();") != 19
+        or source.count("abort();") != 22
         or source.count("[(size_t)") != 25
     ):
         raise SpanLoweringFailure(f"{profile}/{build} fixed-array/span C shape drifted")
@@ -1110,6 +1116,8 @@ int main(void)
   if ({names["conditionalAssignment"]}(false) != UINT8_C(73)) return 11;
   if ({names["ownedFieldRoundTrip"]}(UINT8_C(201)) != INT32_C(242)) return 12;
   if ({names["returnedSpanRoundTrip"]}() != UINT8_C(29)) return 13;
+  if ({names["directSpanArguments"]}(true) != UINT8_C(91)) return 14;
+  if ({names["directSpanArguments"]}(false) != UINT8_C(0)) return 15;
   return 0;
 }}
 '''

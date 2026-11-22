@@ -7926,6 +7926,23 @@ private class FunctionBuilder {
 	function lowerDirectCallArgument(expression:TypedExpr, parameter:PreparedParameter, role:String):LoweredValue {
 		if (parameter.passing != PPValue)
 			return unsupported(expression, '$role:mutable-record-borrow-requires-pointer-argument-path');
+		// A direct callee borrows the array for this call. Give its pointer and
+		// length the same checked initialization as an explicitly named span.
+		switch [parameter.mapping.kind, expression.expr] {
+			case [CBVKSpan(_, _), TParenthesis(inner) | TMeta(_, inner)]:
+				return lowerDirectCallArgument(inner, parameter, role);
+			case [CBVKSpan(element, mutable), TCall(callee, [array])] if (isAbstractMethod(callee, "c.CArray", mutable ? "span" : "constSpan")):
+				final borrow = requireFixedArrayBorrowSource(array, mutable);
+				if (typeKey(borrow.element.irType) != typeKey(element.irType))
+					return unsupported(expression, '$role:span-element-type-mismatch');
+				final source = sourceSpan(expression.pos);
+				final local = declareFlowLocal(parameter.mapping, source, "call-span");
+				appendInstruction(null, IRIOInitializeSpan(IRPLocal(local), borrow.place, IRISUninitialized, IRISInitialized), source, "span-initialize");
+				final result:HxcIRResult = {id: nextValueId(), type: parameter.mapping.irType};
+				appendInstruction(result, IRIOLoad(IRPLocal(local)), source, "load-span-borrow");
+				return {id: result.id, type: result.type, mapping: parameter.mapping};
+			case _:
+		}
 		final construction = newExpression(expression);
 		final value = construction != null
 			&& parameter.borrowedReference ? lowerConstructedReceiver(expression, construction) : lowerValue(expression, parameter.mapping);

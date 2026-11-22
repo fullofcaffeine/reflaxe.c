@@ -903,6 +903,1240 @@
     },
     {
       "overloadSignature": [
+        "bool"
+      ],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": null,
+      "readableName": [
+        "SpanFixture",
+        "directSpanArguments"
+      ],
+      "requestedName": null,
+      "cName": "hxc_SpanFixture_directSpanArguments",
+      "semanticKey": "6:method|28:ordinary:16:translation-unit|2:11:SpanFixture19:directSpanArguments|1:4:bool|0:|0:",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "method",
+      "specializationArguments": [],
+      "baseName": "hxc_SpanFixture_directSpanArguments",
+      "sourceSymbol": "SpanFixture.directSpanArguments(bool)"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 1,
+      "readableName": [
+        "tmp",
+        "conditional-false"
+      ],
+      "requestedName": null,
+      "cName": "hxc_tmp_conditional_false_n1",
+      "semanticKey": "9:temporary|103:label:94:6:method|28:ordinary:16:translation-unit|2:11:SpanFixture19:directSpanArguments|1:4:bool|0:|0:|4:11:SpanFixture19:directSpanArguments11:block-label17:conditional-false|0:|0:|1:1",
+      "escapeReasons": [
+        "non-c-identifier-byte",
+        "separator-normalized"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:SpanFixture19:directSpanArguments|1:4:bool|0:|0:",
+        "kind": "label"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_tmp_conditional_false_n1",
+      "sourceSymbol": "SpanFixture.directSpanArguments.block-label.conditional-false#1"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 4,
+      "readableName": [
+        "tmp",
+        "conditional-false"
+      ],
+      "requestedName": null,
+      "cName": "hxc_tmp_conditional_false_n4",
+      "semanticKey": "9:temporary|103:label:94:6:method|28:ordinary:16:translation-unit|2:11:SpanFixture19:directSpanArguments|1:4:bool|0:|0:|4:11:SpanFixture19:directSpanArguments11:block-label17:conditional-false|0:|0:|1:4",
+      "escapeReasons": [
+        "non-c-identifier-byte",
+        "separator-normalized"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:SpanFixture19:directSpanArguments|1:4:bool|0:|0:",
+        "kind": "label"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_tmp_conditional_false_n4",
+      "sourceSymbol": "SpanFixture.directSpanArguments.block-label.conditional-false#4"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 2,
+      "readableName": [
+        "tmp",
+        "conditional-join"
+      ],
+      "requestedName": null,
+      "cName": "hxc_tmp_conditional_join_n2",
+      "semanticKey": "9:temporary|103:label:94:6:method|28:ordinary:16:translation-unit|2:11:SpanFixture19:directSpanArguments|1:4:bool|0:|0:|4:11:SpanFixture19:directSpanArguments11:block-label16:conditional-join|0:|0:|1:2",
+      "escapeReasons": [
+        "non-c-identifier-byte",
+        "separator-normalized"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:SpanFixture19:directSpanArguments|1:4:bool|0:|0:",
+        "kind": "label"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_tmp_conditional_join_n2",
+      "sourceSymbol": "SpanFixture.directSpanArguments.block-label.conditional-join#2"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 5,
+      "readableName": [
+        "tmp",
+        "conditional-join"
+      ],
+      "requestedName": null,
+      "cName": "hxc_tmp_conditional_join_n5",
+      "semanticKey": "9:temporary|103:label:94:6:method|28:ordinary:16:translation-unit|2:11:SpanFixture19:directSpanArguments|1:4:bool|0:|0:|4:11:SpanFixture19:directSpanArguments11:block-label16:conditional-join|0:|0:|1:5",
+      "escapeReasons": [
+        "non-c-identifier-byte",
+        "separator-normalized"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:SpanFixture19:directSpanArguments|1:4:bool|0:|0:",
+        "kind": "label"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_tmp_conditional_join_n5",
+      "sourceSymbol": "SpanFixture.directSpanArguments.block-label.conditional-join#5"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "readableName": [
+        "tmp",
+        "conditional-true"
+      ],
+      "requestedName": null,
+      "cName": "hxc_tmp_conditional_true_n0",
+      "semanticKey": "9:temporary|103:label:94:6:method|28:ordinary:16:translation-unit|2:11:SpanFixture19:directSpanArguments|1:4:bool|0:|0:|4:11:SpanFixture19:directSpanArguments11:block-label16:conditional-true|0:|0:|1:0",
+      "escapeReasons": [
+        "non-c-identifier-byte",
+        "separator-normalized"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:SpanFixture19:directSpanArguments|1:4:bool|0:|0:",
+        "kind": "label"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_tmp_conditional_true_n0",
+      "sourceSymbol": "SpanFixture.directSpanArguments.block-label.conditional-true#0"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 3,
+      "readableName": [
+        "tmp",
+        "conditional-true"
+      ],
+      "requestedName": null,
+      "cName": "hxc_tmp_conditional_true_n3",
+      "semanticKey": "9:temporary|103:label:94:6:method|28:ordinary:16:translation-unit|2:11:SpanFixture19:directSpanArguments|1:4:bool|0:|0:|4:11:SpanFixture19:directSpanArguments11:block-label16:conditional-true|0:|0:|1:3",
+      "escapeReasons": [
+        "non-c-identifier-byte",
+        "separator-normalized"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:SpanFixture19:directSpanArguments|1:4:bool|0:|0:",
+        "kind": "label"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_tmp_conditional_true_n3",
+      "sourceSymbol": "SpanFixture.directSpanArguments.block-label.conditional-true#3"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 9,
+      "readableName": [
+        "tmp",
+        "if-join"
+      ],
+      "requestedName": null,
+      "cName": "hxc_tmp_if_join_n9",
+      "semanticKey": "9:temporary|103:label:94:6:method|28:ordinary:16:translation-unit|2:11:SpanFixture19:directSpanArguments|1:4:bool|0:|0:|4:11:SpanFixture19:directSpanArguments11:block-label7:if-join|0:|0:|1:9",
+      "escapeReasons": [
+        "non-c-identifier-byte",
+        "separator-normalized"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:SpanFixture19:directSpanArguments|1:4:bool|0:|0:",
+        "kind": "label"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_tmp_if_join_n9",
+      "sourceSymbol": "SpanFixture.directSpanArguments.block-label.if-join#9"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 8,
+      "readableName": [
+        "tmp",
+        "if-true"
+      ],
+      "requestedName": null,
+      "cName": "hxc_tmp_if_true_n8",
+      "semanticKey": "9:temporary|103:label:94:6:method|28:ordinary:16:translation-unit|2:11:SpanFixture19:directSpanArguments|1:4:bool|0:|0:|4:11:SpanFixture19:directSpanArguments11:block-label7:if-true|0:|0:|1:8",
+      "escapeReasons": [
+        "non-c-identifier-byte",
+        "separator-normalized"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:SpanFixture19:directSpanArguments|1:4:bool|0:|0:",
+        "kind": "label"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_tmp_if_true_n8",
+      "sourceSymbol": "SpanFixture.directSpanArguments.block-label.if-true#8"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 7,
+      "readableName": [
+        "tmp",
+        "short-circuit-join"
+      ],
+      "requestedName": null,
+      "cName": "hxc_tmp_short_circuit_join_n7",
+      "semanticKey": "9:temporary|103:label:94:6:method|28:ordinary:16:translation-unit|2:11:SpanFixture19:directSpanArguments|1:4:bool|0:|0:|4:11:SpanFixture19:directSpanArguments11:block-label18:short-circuit-join|0:|0:|1:7",
+      "escapeReasons": [
+        "non-c-identifier-byte",
+        "separator-normalized"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:SpanFixture19:directSpanArguments|1:4:bool|0:|0:",
+        "kind": "label"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_tmp_short_circuit_join_n7",
+      "sourceSymbol": "SpanFixture.directSpanArguments.block-label.short-circuit-join#7"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 6,
+      "readableName": [
+        "tmp",
+        "short-circuit-rhs"
+      ],
+      "requestedName": null,
+      "cName": "hxc_tmp_short_circuit_rhs_n6",
+      "semanticKey": "9:temporary|103:label:94:6:method|28:ordinary:16:translation-unit|2:11:SpanFixture19:directSpanArguments|1:4:bool|0:|0:|4:11:SpanFixture19:directSpanArguments11:block-label17:short-circuit-rhs|0:|0:|1:6",
+      "escapeReasons": [
+        "non-c-identifier-byte",
+        "separator-normalized"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:SpanFixture19:directSpanArguments|1:4:bool|0:|0:",
+        "kind": "label"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_tmp_short_circuit_rhs_n6",
+      "sourceSymbol": "SpanFixture.directSpanArguments.block-label.short-circuit-rhs#6"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 1,
+      "readableName": [
+        "bytes"
+      ],
+      "requestedName": null,
+      "cName": "hxc_l_bytes",
+      "semanticKey": "5:local|106:ordinary:94:6:method|28:ordinary:16:translation-unit|2:11:SpanFixture19:directSpanArguments|1:4:bool|0:|0:|3:11:SpanFixture19:directSpanArguments5:bytes|0:|0:|1:1",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:SpanFixture19:directSpanArguments|1:4:bool|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_l_bytes",
+      "sourceSymbol": "SpanFixture.directSpanArguments.bytes#1"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 11,
+      "readableName": [
+        "tmp",
+        "call-result"
+      ],
+      "requestedName": null,
+      "cName": "hxc_l_tmp_call_result_n11",
+      "semanticKey": "9:temporary|106:ordinary:94:6:method|28:ordinary:16:translation-unit|2:11:SpanFixture19:directSpanArguments|1:4:bool|0:|0:|3:11:SpanFixture19:directSpanArguments11:call-result|0:|0:|2:11",
+      "escapeReasons": [
+        "non-c-identifier-byte",
+        "separator-normalized"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:SpanFixture19:directSpanArguments|1:4:bool|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_l_tmp_call_result_n11",
+      "sourceSymbol": "SpanFixture.directSpanArguments.call-result#11"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 15,
+      "readableName": [
+        "tmp",
+        "call-result"
+      ],
+      "requestedName": null,
+      "cName": "hxc_l_tmp_call_result_n15",
+      "semanticKey": "9:temporary|106:ordinary:94:6:method|28:ordinary:16:translation-unit|2:11:SpanFixture19:directSpanArguments|1:4:bool|0:|0:|3:11:SpanFixture19:directSpanArguments11:call-result|0:|0:|2:15",
+      "escapeReasons": [
+        "non-c-identifier-byte",
+        "separator-normalized"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:SpanFixture19:directSpanArguments|1:4:bool|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_l_tmp_call_result_n15",
+      "sourceSymbol": "SpanFixture.directSpanArguments.call-result#15"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 12,
+      "readableName": [
+        "tmp",
+        "call-span"
+      ],
+      "requestedName": null,
+      "cName": "hxc_l_tmp_call_span_n12",
+      "semanticKey": "9:temporary|106:ordinary:94:6:method|28:ordinary:16:translation-unit|2:11:SpanFixture19:directSpanArguments|1:4:bool|0:|0:|3:11:SpanFixture19:directSpanArguments9:call-span|0:|0:|2:12",
+      "escapeReasons": [
+        "non-c-identifier-byte",
+        "separator-normalized"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:SpanFixture19:directSpanArguments|1:4:bool|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_l_tmp_call_span_n12",
+      "sourceSymbol": "SpanFixture.directSpanArguments.call-span#12"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 16,
+      "readableName": [
+        "tmp",
+        "call-span"
+      ],
+      "requestedName": null,
+      "cName": "hxc_l_tmp_call_span_n16",
+      "semanticKey": "9:temporary|106:ordinary:94:6:method|28:ordinary:16:translation-unit|2:11:SpanFixture19:directSpanArguments|1:4:bool|0:|0:|3:11:SpanFixture19:directSpanArguments9:call-span|0:|0:|2:16",
+      "escapeReasons": [
+        "non-c-identifier-byte",
+        "separator-normalized"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:SpanFixture19:directSpanArguments|1:4:bool|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_l_tmp_call_span_n16",
+      "sourceSymbol": "SpanFixture.directSpanArguments.call-span#16"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 5,
+      "readableName": [
+        "tmp",
+        "call-span"
+      ],
+      "requestedName": null,
+      "cName": "hxc_l_tmp_call_span_n5",
+      "semanticKey": "9:temporary|106:ordinary:94:6:method|28:ordinary:16:translation-unit|2:11:SpanFixture19:directSpanArguments|1:4:bool|0:|0:|3:11:SpanFixture19:directSpanArguments9:call-span|0:|0:|1:5",
+      "escapeReasons": [
+        "non-c-identifier-byte",
+        "separator-normalized"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:SpanFixture19:directSpanArguments|1:4:bool|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_l_tmp_call_span_n5",
+      "sourceSymbol": "SpanFixture.directSpanArguments.call-span#5"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 12,
+      "readableName": [
+        "tmp",
+        "length"
+      ],
+      "requestedName": null,
+      "cName": "hxc_l_tmp_length_n12",
+      "semanticKey": "9:temporary|106:ordinary:94:6:method|28:ordinary:16:translation-unit|2:11:SpanFixture19:directSpanArguments|1:4:bool|0:|0:|4:11:SpanFixture19:directSpanArguments9:call-span6:length|0:|0:|2:12",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:SpanFixture19:directSpanArguments|1:4:bool|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_l_tmp_length_n12",
+      "sourceSymbol": "SpanFixture.directSpanArguments.call-span.length#12"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 16,
+      "readableName": [
+        "tmp",
+        "length"
+      ],
+      "requestedName": null,
+      "cName": "hxc_l_tmp_length_n16",
+      "semanticKey": "9:temporary|106:ordinary:94:6:method|28:ordinary:16:translation-unit|2:11:SpanFixture19:directSpanArguments|1:4:bool|0:|0:|4:11:SpanFixture19:directSpanArguments9:call-span6:length|0:|0:|2:16",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:SpanFixture19:directSpanArguments|1:4:bool|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_l_tmp_length_n16",
+      "sourceSymbol": "SpanFixture.directSpanArguments.call-span.length#16"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 5,
+      "readableName": [
+        "tmp",
+        "length"
+      ],
+      "requestedName": null,
+      "cName": "hxc_l_tmp_length_n5",
+      "semanticKey": "9:temporary|106:ordinary:94:6:method|28:ordinary:16:translation-unit|2:11:SpanFixture19:directSpanArguments|1:4:bool|0:|0:|4:11:SpanFixture19:directSpanArguments9:call-span6:length|0:|0:|1:5",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:SpanFixture19:directSpanArguments|1:4:bool|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_l_tmp_length_n5",
+      "sourceSymbol": "SpanFixture.directSpanArguments.call-span.length#5"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "readableName": [
+        "tmp",
+        "class-object-address"
+      ],
+      "requestedName": null,
+      "cName": "hxc_l_tmp_class_object_address_n0",
+      "semanticKey": "9:temporary|106:ordinary:94:6:method|28:ordinary:16:translation-unit|2:11:SpanFixture19:directSpanArguments|1:4:bool|0:|0:|3:11:SpanFixture19:directSpanArguments20:class-object-address|0:|0:|1:0",
+      "escapeReasons": [
+        "non-c-identifier-byte",
+        "separator-normalized"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:SpanFixture19:directSpanArguments|1:4:bool|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_l_tmp_class_object_address_n0",
+      "sourceSymbol": "SpanFixture.directSpanArguments.class-object-address#0"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 5,
+      "readableName": [
+        "tmp",
+        "class-object-address"
+      ],
+      "requestedName": null,
+      "cName": "hxc_l_tmp_class_object_address_n5",
+      "semanticKey": "9:temporary|106:ordinary:94:6:method|28:ordinary:16:translation-unit|2:11:SpanFixture19:directSpanArguments|1:4:bool|0:|0:|3:11:SpanFixture19:directSpanArguments20:class-object-address|0:|0:|1:5",
+      "escapeReasons": [
+        "non-c-identifier-byte",
+        "separator-normalized"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:SpanFixture19:directSpanArguments|1:4:bool|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_l_tmp_class_object_address_n5",
+      "sourceSymbol": "SpanFixture.directSpanArguments.class-object-address#5"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 2,
+      "readableName": [
+        "tmp",
+        "conditional-load-result"
+      ],
+      "requestedName": null,
+      "cName": "hxc_l_tmp_conditional_load_result_n2",
+      "semanticKey": "9:temporary|106:ordinary:94:6:method|28:ordinary:16:translation-unit|2:11:SpanFixture19:directSpanArguments|1:4:bool|0:|0:|3:11:SpanFixture19:directSpanArguments23:conditional-load-result|0:|0:|1:2",
+      "escapeReasons": [
+        "non-c-identifier-byte",
+        "separator-normalized"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:SpanFixture19:directSpanArguments|1:4:bool|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_l_tmp_conditional_load_result_n2",
+      "sourceSymbol": "SpanFixture.directSpanArguments.conditional-load-result#2"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 9,
+      "readableName": [
+        "tmp",
+        "conditional-load-result"
+      ],
+      "requestedName": null,
+      "cName": "hxc_l_tmp_conditional_load_result_n9",
+      "semanticKey": "9:temporary|106:ordinary:94:6:method|28:ordinary:16:translation-unit|2:11:SpanFixture19:directSpanArguments|1:4:bool|0:|0:|3:11:SpanFixture19:directSpanArguments23:conditional-load-result|0:|0:|1:9",
+      "escapeReasons": [
+        "non-c-identifier-byte",
+        "separator-normalized"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:SpanFixture19:directSpanArguments|1:4:bool|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_l_tmp_conditional_load_result_n9",
+      "sourceSymbol": "SpanFixture.directSpanArguments.conditional-load-result#9"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 14,
+      "readableName": [
+        "tmp",
+        "conditional-result"
+      ],
+      "requestedName": null,
+      "cName": "hxc_l_tmp_conditional_result_n14",
+      "semanticKey": "9:temporary|106:ordinary:94:6:method|28:ordinary:16:translation-unit|2:11:SpanFixture19:directSpanArguments|1:4:bool|0:|0:|3:11:SpanFixture19:directSpanArguments18:conditional-result|0:|0:|2:14",
+      "escapeReasons": [
+        "non-c-identifier-byte",
+        "separator-normalized"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:SpanFixture19:directSpanArguments|1:4:bool|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_l_tmp_conditional_result_n14",
+      "sourceSymbol": "SpanFixture.directSpanArguments.conditional-result#14"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 7,
+      "readableName": [
+        "tmp",
+        "conditional-result"
+      ],
+      "requestedName": null,
+      "cName": "hxc_l_tmp_conditional_result_n7",
+      "semanticKey": "9:temporary|106:ordinary:94:6:method|28:ordinary:16:translation-unit|2:11:SpanFixture19:directSpanArguments|1:4:bool|0:|0:|3:11:SpanFixture19:directSpanArguments18:conditional-result|0:|0:|1:7",
+      "escapeReasons": [
+        "non-c-identifier-byte",
+        "separator-normalized"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:SpanFixture19:directSpanArguments|1:4:bool|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_l_tmp_conditional_result_n7",
+      "sourceSymbol": "SpanFixture.directSpanArguments.conditional-result#7"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 10,
+      "readableName": [
+        "evaluations"
+      ],
+      "requestedName": null,
+      "cName": "hxc_l_evaluations",
+      "semanticKey": "5:local|106:ordinary:94:6:method|28:ordinary:16:translation-unit|2:11:SpanFixture19:directSpanArguments|1:4:bool|0:|0:|3:11:SpanFixture19:directSpanArguments11:evaluations|0:|0:|2:10",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:SpanFixture19:directSpanArguments|1:4:bool|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_l_evaluations",
+      "sourceSymbol": "SpanFixture.directSpanArguments.evaluations#10"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 6,
+      "readableName": [
+        "tmp",
+        "instance-call-argument-0"
+      ],
+      "requestedName": null,
+      "cName": "hxc_l_tmp_instance_call_argument_0_n6",
+      "semanticKey": "9:temporary|106:ordinary:94:6:method|28:ordinary:16:translation-unit|2:11:SpanFixture19:directSpanArguments|1:4:bool|0:|0:|3:11:SpanFixture19:directSpanArguments24:instance-call-argument-0|0:|0:|1:6",
+      "escapeReasons": [
+        "non-c-identifier-byte",
+        "separator-normalized"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:SpanFixture19:directSpanArguments|1:4:bool|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_l_tmp_instance_call_argument_0_n6",
+      "sourceSymbol": "SpanFixture.directSpanArguments.instance-call-argument-0#6"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 4,
+      "readableName": [
+        "tmp",
+        "instance-call-argument-0-load-result"
+      ],
+      "requestedName": null,
+      "cName": "hxc_l_tmp_instance_call_argument_0_load_result_n4",
+      "semanticKey": "9:temporary|106:ordinary:94:6:method|28:ordinary:16:translation-unit|2:11:SpanFixture19:directSpanArguments|1:4:bool|0:|0:|3:11:SpanFixture19:directSpanArguments36:instance-call-argument-0-load-result|0:|0:|1:4",
+      "escapeReasons": [
+        "non-c-identifier-byte",
+        "separator-normalized"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:SpanFixture19:directSpanArguments|1:4:bool|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_l_tmp_instance_call_argument_0_load_result_n4",
+      "sourceSymbol": "SpanFixture.directSpanArguments.instance-call-argument-0-load-result#4"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 6,
+      "readableName": [
+        "tmp",
+        "length"
+      ],
+      "requestedName": null,
+      "cName": "hxc_l_tmp_length_n6",
+      "semanticKey": "9:temporary|106:ordinary:94:6:method|28:ordinary:16:translation-unit|2:11:SpanFixture19:directSpanArguments|1:4:bool|0:|0:|4:11:SpanFixture19:directSpanArguments24:instance-call-argument-06:length|0:|0:|1:6",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:SpanFixture19:directSpanArguments|1:4:bool|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_l_tmp_length_n6",
+      "sourceSymbol": "SpanFixture.directSpanArguments.instance-call-argument-0.length#6"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 4,
+      "readableName": [
+        "tmp",
+        "instance-call-receiver"
+      ],
+      "requestedName": null,
+      "cName": "hxc_l_tmp_instance_call_receiver_n4",
+      "semanticKey": "9:temporary|106:ordinary:94:6:method|28:ordinary:16:translation-unit|2:11:SpanFixture19:directSpanArguments|1:4:bool|0:|0:|3:11:SpanFixture19:directSpanArguments22:instance-call-receiver|0:|0:|1:4",
+      "escapeReasons": [
+        "non-c-identifier-byte",
+        "separator-normalized"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:SpanFixture19:directSpanArguments|1:4:bool|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_l_tmp_instance_call_receiver_n4",
+      "sourceSymbol": "SpanFixture.directSpanArguments.instance-call-receiver#4"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 3,
+      "readableName": [
+        "tmp",
+        "instance-call-receiver-load-result"
+      ],
+      "requestedName": null,
+      "cName": "hxc_l_tmp_instance_call_receiver_load_result_n3",
+      "semanticKey": "9:temporary|106:ordinary:94:6:method|28:ordinary:16:translation-unit|2:11:SpanFixture19:directSpanArguments|1:4:bool|0:|0:|3:11:SpanFixture19:directSpanArguments34:instance-call-receiver-load-result|0:|0:|1:3",
+      "escapeReasons": [
+        "non-c-identifier-byte",
+        "separator-normalized"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:SpanFixture19:directSpanArguments|1:4:bool|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_l_tmp_instance_call_receiver_load_result_n3",
+      "sourceSymbol": "SpanFixture.directSpanArguments.instance-call-receiver-load-result#3"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 1,
+      "readableName": [
+        "tmp",
+        "load-result"
+      ],
+      "requestedName": null,
+      "cName": "hxc_l_tmp_load_result_n1",
+      "semanticKey": "9:temporary|106:ordinary:94:6:method|28:ordinary:16:translation-unit|2:11:SpanFixture19:directSpanArguments|1:4:bool|0:|0:|3:11:SpanFixture19:directSpanArguments11:load-result|0:|0:|1:1",
+      "escapeReasons": [
+        "non-c-identifier-byte",
+        "separator-normalized"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:SpanFixture19:directSpanArguments|1:4:bool|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_l_tmp_load_result_n1",
+      "sourceSymbol": "SpanFixture.directSpanArguments.load-result#1"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 12,
+      "readableName": [
+        "tmp",
+        "load-result"
+      ],
+      "requestedName": null,
+      "cName": "hxc_l_tmp_load_result_n12",
+      "semanticKey": "9:temporary|106:ordinary:94:6:method|28:ordinary:16:translation-unit|2:11:SpanFixture19:directSpanArguments|1:4:bool|0:|0:|3:11:SpanFixture19:directSpanArguments11:load-result|0:|0:|2:12",
+      "escapeReasons": [
+        "non-c-identifier-byte",
+        "separator-normalized"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:SpanFixture19:directSpanArguments|1:4:bool|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_l_tmp_load_result_n12",
+      "sourceSymbol": "SpanFixture.directSpanArguments.load-result#12"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 7,
+      "readableName": [
+        "tmp",
+        "load-result"
+      ],
+      "requestedName": null,
+      "cName": "hxc_l_tmp_load_result_n7",
+      "semanticKey": "9:temporary|106:ordinary:94:6:method|28:ordinary:16:translation-unit|2:11:SpanFixture19:directSpanArguments|1:4:bool|0:|0:|3:11:SpanFixture19:directSpanArguments11:load-result|0:|0:|1:7",
+      "escapeReasons": [
+        "non-c-identifier-byte",
+        "separator-normalized"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:SpanFixture19:directSpanArguments|1:4:bool|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_l_tmp_load_result_n7",
+      "sourceSymbol": "SpanFixture.directSpanArguments.load-result#7"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 8,
+      "readableName": [
+        "tmp",
+        "load-result"
+      ],
+      "requestedName": null,
+      "cName": "hxc_l_tmp_load_result_n8",
+      "semanticKey": "9:temporary|106:ordinary:94:6:method|28:ordinary:16:translation-unit|2:11:SpanFixture19:directSpanArguments|1:4:bool|0:|0:|3:11:SpanFixture19:directSpanArguments11:load-result|0:|0:|1:8",
+      "escapeReasons": [
+        "non-c-identifier-byte",
+        "separator-normalized"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:SpanFixture19:directSpanArguments|1:4:bool|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_l_tmp_load_result_n8",
+      "sourceSymbol": "SpanFixture.directSpanArguments.load-result#8"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 16,
+      "readableName": [
+        "tmp",
+        "materialized-value"
+      ],
+      "requestedName": null,
+      "cName": "hxc_l_tmp_materialized_value_n16",
+      "semanticKey": "9:temporary|106:ordinary:94:6:method|28:ordinary:16:translation-unit|2:11:SpanFixture19:directSpanArguments|1:4:bool|0:|0:|3:11:SpanFixture19:directSpanArguments18:materialized-value|0:|0:|2:16",
+      "escapeReasons": [
+        "non-c-identifier-byte",
+        "separator-normalized"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:SpanFixture19:directSpanArguments|1:4:bool|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_l_tmp_materialized_value_n16",
+      "sourceSymbol": "SpanFixture.directSpanArguments.materialized-value#16"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 17,
+      "readableName": [
+        "tmp",
+        "materialized-value"
+      ],
+      "requestedName": null,
+      "cName": "hxc_l_tmp_materialized_value_n17",
+      "semanticKey": "9:temporary|106:ordinary:94:6:method|28:ordinary:16:translation-unit|2:11:SpanFixture19:directSpanArguments|1:4:bool|0:|0:|3:11:SpanFixture19:directSpanArguments18:materialized-value|0:|0:|2:17",
+      "escapeReasons": [
+        "non-c-identifier-byte",
+        "separator-normalized"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:SpanFixture19:directSpanArguments|1:4:bool|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_l_tmp_materialized_value_n17",
+      "sourceSymbol": "SpanFixture.directSpanArguments.materialized-value#17"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 18,
+      "readableName": [
+        "tmp",
+        "materialized-value"
+      ],
+      "requestedName": null,
+      "cName": "hxc_l_tmp_materialized_value_n18",
+      "semanticKey": "9:temporary|106:ordinary:94:6:method|28:ordinary:16:translation-unit|2:11:SpanFixture19:directSpanArguments|1:4:bool|0:|0:|3:11:SpanFixture19:directSpanArguments18:materialized-value|0:|0:|2:18",
+      "escapeReasons": [
+        "non-c-identifier-byte",
+        "separator-normalized"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:SpanFixture19:directSpanArguments|1:4:bool|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_l_tmp_materialized_value_n18",
+      "sourceSymbol": "SpanFixture.directSpanArguments.materialized-value#18"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 2,
+      "readableName": [
+        "mutator"
+      ],
+      "requestedName": null,
+      "cName": "hxc_l_mutator",
+      "semanticKey": "5:local|106:ordinary:94:6:method|28:ordinary:16:translation-unit|2:11:SpanFixture19:directSpanArguments|1:4:bool|0:|0:|3:11:SpanFixture19:directSpanArguments7:mutator|0:|0:|1:2",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:SpanFixture19:directSpanArguments|1:4:bool|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_l_mutator",
+      "sourceSymbol": "SpanFixture.directSpanArguments.mutator#2"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 3,
+      "readableName": [
+        "tmp",
+        "object-storage"
+      ],
+      "requestedName": null,
+      "cName": "hxc_l_tmp_object_storage_n3",
+      "semanticKey": "9:temporary|106:ordinary:94:6:method|28:ordinary:16:translation-unit|2:11:SpanFixture19:directSpanArguments|1:4:bool|0:|0:|4:11:SpanFixture19:directSpanArguments7:mutator14:object-storage|0:|0:|1:3",
+      "escapeReasons": [
+        "non-c-identifier-byte",
+        "separator-normalized"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:SpanFixture19:directSpanArguments|1:4:bool|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_l_tmp_object_storage_n3",
+      "sourceSymbol": "SpanFixture.directSpanArguments.mutator.object-storage#3"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 11,
+      "readableName": [
+        "observed"
+      ],
+      "requestedName": null,
+      "cName": "hxc_l_observed",
+      "semanticKey": "5:local|106:ordinary:94:6:method|28:ordinary:16:translation-unit|2:11:SpanFixture19:directSpanArguments|1:4:bool|0:|0:|3:11:SpanFixture19:directSpanArguments8:observed|0:|0:|2:11",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:SpanFixture19:directSpanArguments|1:4:bool|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_l_observed",
+      "sourceSymbol": "SpanFixture.directSpanArguments.observed#11"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 8,
+      "readableName": [
+        "owner"
+      ],
+      "requestedName": null,
+      "cName": "hxc_l_owner",
+      "semanticKey": "5:local|106:ordinary:94:6:method|28:ordinary:16:translation-unit|2:11:SpanFixture19:directSpanArguments|1:4:bool|0:|0:|3:11:SpanFixture19:directSpanArguments5:owner|0:|0:|1:8",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:SpanFixture19:directSpanArguments|1:4:bool|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_l_owner",
+      "sourceSymbol": "SpanFixture.directSpanArguments.owner#8"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 9,
+      "readableName": [
+        "tmp",
+        "object-storage"
+      ],
+      "requestedName": null,
+      "cName": "hxc_l_tmp_object_storage_n9",
+      "semanticKey": "9:temporary|106:ordinary:94:6:method|28:ordinary:16:translation-unit|2:11:SpanFixture19:directSpanArguments|1:4:bool|0:|0:|4:11:SpanFixture19:directSpanArguments5:owner14:object-storage|0:|0:|1:9",
+      "escapeReasons": [
+        "non-c-identifier-byte",
+        "separator-normalized"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:SpanFixture19:directSpanArguments|1:4:bool|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_l_tmp_object_storage_n9",
+      "sourceSymbol": "SpanFixture.directSpanArguments.owner.object-storage#9"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 15,
+      "readableName": [
+        "tmp",
+        "short-circuit-result"
+      ],
+      "requestedName": null,
+      "cName": "hxc_l_tmp_short_circuit_result_n15",
+      "semanticKey": "9:temporary|106:ordinary:94:6:method|28:ordinary:16:translation-unit|2:11:SpanFixture19:directSpanArguments|1:4:bool|0:|0:|3:11:SpanFixture19:directSpanArguments20:short-circuit-result|0:|0:|2:15",
+      "escapeReasons": [
+        "non-c-identifier-byte",
+        "separator-normalized"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:SpanFixture19:directSpanArguments|1:4:bool|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_l_tmp_short_circuit_result_n15",
+      "sourceSymbol": "SpanFixture.directSpanArguments.short-circuit-result#15"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 13,
+      "readableName": [
+        "tmp",
+        "static-call-argument-0"
+      ],
+      "requestedName": null,
+      "cName": "hxc_l_tmp_static_call_argument_0_n13",
+      "semanticKey": "9:temporary|106:ordinary:94:6:method|28:ordinary:16:translation-unit|2:11:SpanFixture19:directSpanArguments|1:4:bool|0:|0:|3:11:SpanFixture19:directSpanArguments22:static-call-argument-0|0:|0:|2:13",
+      "escapeReasons": [
+        "non-c-identifier-byte",
+        "separator-normalized"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:SpanFixture19:directSpanArguments|1:4:bool|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_l_tmp_static_call_argument_0_n13",
+      "sourceSymbol": "SpanFixture.directSpanArguments.static-call-argument-0#13"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 10,
+      "readableName": [
+        "tmp",
+        "static-call-argument-0-load-result"
+      ],
+      "requestedName": null,
+      "cName": "hxc_l_tmp_static_call_argument_0_load_result_n10",
+      "semanticKey": "9:temporary|106:ordinary:94:6:method|28:ordinary:16:translation-unit|2:11:SpanFixture19:directSpanArguments|1:4:bool|0:|0:|3:11:SpanFixture19:directSpanArguments34:static-call-argument-0-load-result|0:|0:|2:10",
+      "escapeReasons": [
+        "non-c-identifier-byte",
+        "separator-normalized"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:SpanFixture19:directSpanArguments|1:4:bool|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_l_tmp_static_call_argument_0_load_result_n10",
+      "sourceSymbol": "SpanFixture.directSpanArguments.static-call-argument-0-load-result#10"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 13,
+      "readableName": [
+        "tmp",
+        "length"
+      ],
+      "requestedName": null,
+      "cName": "hxc_l_tmp_length_n13",
+      "semanticKey": "9:temporary|106:ordinary:94:6:method|28:ordinary:16:translation-unit|2:11:SpanFixture19:directSpanArguments|1:4:bool|0:|0:|4:11:SpanFixture19:directSpanArguments22:static-call-argument-06:length|0:|0:|2:13",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:SpanFixture19:directSpanArguments|1:4:bool|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_l_tmp_length_n13",
+      "sourceSymbol": "SpanFixture.directSpanArguments.static-call-argument-0.length#13"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "readableName": [
+        "third"
+      ],
+      "requestedName": null,
+      "cName": "hxc_l_third",
+      "semanticKey": "5:local|106:ordinary:94:6:method|28:ordinary:16:translation-unit|2:11:SpanFixture19:directSpanArguments|1:4:bool|0:|0:|3:11:SpanFixture19:directSpanArguments5:third|0:|0:|1:0",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:SpanFixture19:directSpanArguments|1:4:bool|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_l_third",
+      "sourceSymbol": "SpanFixture.directSpanArguments.third#0"
+    },
+    {
+      "overloadSignature": [
         "u8"
       ],
       "collisionResolved": false,
