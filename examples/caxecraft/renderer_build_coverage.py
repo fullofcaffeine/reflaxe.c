@@ -15,6 +15,7 @@ from pathlib import Path, PurePosixPath
 
 import renderer_call_coverage as coverage
 from renderer_native_contract import NativeTerrainContract
+from dev_build_state import sha256_file as _sha
 from dev_native_cache import NativeBuildPins, NativeCacheFailure
 
 
@@ -26,10 +27,6 @@ FORBIDDEN = frozenset({
     "hxc_alloc", "hxc_realloc", "hxc_gc_allocate", "hxc_gc_collect",
     "malloc", "calloc", "realloc", "aligned_alloc", "posix_memalign",
 })
-
-
-def _sha(path: Path) -> str:
-    return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def _json(value: object) -> str:

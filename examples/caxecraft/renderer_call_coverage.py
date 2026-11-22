@@ -27,6 +27,7 @@ import sys
 from renderer_diagnostics import PARSER_POLICY_VERSION, PROOF_FLAGS, matching_library
 import renderer_diagnostics
 import renderer_compatibility
+from dev_build_state import sha256_file as _sha
 from dev_native_cache import NativeBuildPins
 
 from scripts.test.bounded_process import run as run_bounded_process
@@ -269,10 +270,6 @@ class ExtractedUnit:
     """Trusted extraction receipt identity, returned only after a complete parse."""
     receipt: Path
     sha256: str
-
-
-def _sha(path: Path) -> str:
-    return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def _flags(flags: tuple[str, ...]) -> None:
