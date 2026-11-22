@@ -291,8 +291,9 @@ void run(void) {
             self.proof(program)
 
     def test_unknown_foreign_call_is_rejected(self):
-        program = self.program(main="void mystery(void); void run(void) { observe_begin(); mystery(); observe_end(); }")
-        with self.assertRaisesRegex(CoverageFailure, "unreviewed external"):
+        program = self.program(main="void helper(void); void run(void) { observe_begin(); helper(); observe_end(); }",
+                               other="void mystery(void); void helper(void) { mystery(); }")
+        with self.assertRaisesRegex(CoverageFailure, r"unreviewed external.*mystery.*from helper in .*other"):
             self.proof(program)
 
     def test_indirect_call_is_rejected(self):

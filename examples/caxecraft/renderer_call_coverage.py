@@ -230,11 +230,11 @@ class _Program:
               reviewed_leaves: set[str]) -> dict[str, object]:
         """Explore a closure; leaf admission here is an input, not provenance proof."""
         unit, statements = self.interval(begin, end)
-        pending = [(unit, node) for node in statements]
+        pending = [(unit, node, f"interval in {unit}") for node in statements]
         visited: set[Key] = set()
         leaves: set[str] = set()
         while pending:
-            unit, statement = pending.pop()
+            unit, statement, caller = pending.pop()
             for node in walk(statement):
                 if (node.kind == "DeclRefExpr" and node.reference_kind == "VarDecl"
                         and (unit, node.reference) in self.tls_variables):
@@ -254,11 +254,12 @@ class _Program:
                     continue
                 visited.add(key)
                 if definitions:
-                    pending.append(definitions[0])
+                    target_unit, body = definitions[0]
+                    pending.append((target_unit, body, f"{key[1]} in {target_unit}"))
                 elif not key[0] and key[1] in reviewed_leaves:
                     leaves.add(key[1])
                 else:
-                    raise CoverageFailure(f"unreviewed external call: {key}")
+                    raise CoverageFailure(f"unreviewed external call: {key} from {caller}")
         return {"functions": sorted(visited), "foreignLeaves": sorted(leaves),
                 "claim": "coverage of supplied validated C translation units only; not full-game admission"}
 
