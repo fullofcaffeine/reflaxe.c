@@ -948,6 +948,14 @@ def check_owned_child_nonnull(*, requested_toolchain: str) -> None:
                 raise ClassLayoutFailure("owned-child total must keep parent guard and remove two child guards")
             if 'null-check value="parameter.self"' not in section or "borrow-class-field" not in section:
                 raise ClassLayoutFailure("owned-child borrow lost its checked-parent origin")
+            if main == "Positive":
+                repeated = c_function_section(source, "hxc_OwnedCounter_repeatedTotal")
+                if repeated.count("if (hxc_l_self == NULL)") != 1 or repeated.count("&(*hxc_l_self).hxc_child") != 2:
+                    raise ClassLayoutFailure("two owned-field borrows must share one parent check")
+                for method, expected_checks in (("checkedBeforeBranch", 1), ("checkedOnOnePath", 2)):
+                    branch = c_function_section(source, f"hxc_OwnedCounter_{method}")
+                    if branch.count("if (hxc_l_self == NULL)") != expected_checks:
+                        raise ClassLayoutFailure(f"{method} must retain {expected_checks} parent checks")
             manifest = json.loads((output / "hxc.manifest.json").read_text())
             project = CFixtureProject(
                 main.lower(), tuple(manifest["build"]["sources"]),

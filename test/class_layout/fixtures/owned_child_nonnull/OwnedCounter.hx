@@ -17,6 +17,10 @@ private final class ChildCounter {
 		this.right = right;
 	}
 
+	/** Expose one scalar read without an intervening arithmetic operation. */
+	public inline function first():Int
+		return left;
+
 	/** Keep the synthetic child receiver visible after ordinary Haxe inlining. */
 	public inline function sum():Int
 		return left + right;
@@ -32,6 +36,22 @@ final class OwnedCounter {
 	/** Read the initialized child through the same natural field/method shape. */
 	public function total():Int
 		return child.sum();
+
+	/** Borrow the child twice while the parent reference stays the same. */
+	public function repeatedTotal():Int
+		return child.sum() + child.sum();
+
+	/** Both paths check the parent before the conditional borrow. */
+	public function checkedBeforeBranch(repeat:Bool):Int {
+		final first = child.first();
+		return repeat ? first + child.first() : first;
+	}
+
+	/** The shared read needs a guard because one path skips the first borrow. */
+	public function checkedOnOnePath(repeat:Bool):Int {
+		final first = repeat ? child.first() : 0;
+		return first + child.first();
+	}
 
 	/**
 	 * Keep a nullable receiver boundary independent of the positive call site.

@@ -3,6 +3,7 @@ package reflaxe.c.ir;
 import reflaxe.c.ir.HxcIR;
 import reflaxe.c.ir.HxcIRControlFlowAnalysis.HxcIRControlFlowFacts;
 import reflaxe.c.ir.HxcIROwnedChildProofs.OwnedChildFact;
+import reflaxe.c.ir.HxcIROwnedChildProofs.ParentCheck;
 import reflaxe.c.ir.HxcIRTraversal.instructionFailureEdge;
 
 /**
@@ -23,6 +24,7 @@ import reflaxe.c.ir.HxcIRTraversal.instructionFailureEdge;
 class HxcIROwnedChildFlow {
 	final fn:HxcIRFunction;
 	final incoming:Map<String, Map<String, OwnedChildFact>> = [];
+	final incomingParents:Map<String, Map<String, ParentCheck>> = [];
 	final active:Map<String, Bool> = [];
 	final witnesses:Map<String, Bool> = [];
 
@@ -102,10 +104,12 @@ class HxcIROwnedChildFlow {
 		for (index => id in order)
 			rank.set(id, index);
 		final outgoing:Map<String, Map<String, OwnedChildFact>> = [];
+		final outgoingParents:Map<String, Map<String, ParentCheck>> = [];
 		for (id in order) {
 			final block = blocks.get(id);
 			if (block == null)
 				continue;
+			var parents:Map<String, ParentCheck> = [];
 			var joined:Null<Map<String, OwnedChildFact>> = null;
 			if (id != fn.entryBlockId)
 				for (predecessor in flow.predecessorsOf(id)) {
@@ -116,13 +120,26 @@ class HxcIROwnedChildFlow {
 					final prior = predecessorRank != null
 						&& blockRank != null
 						&& predecessorRank < blockRank ? outgoing.get(predecessor) : null;
-					if (prior == null) {
+					final priorParents = outgoingParents.get(predecessor);
+					if (prior == null || priorParents == null) {
 						joined = [];
+						parents = [];
 						break;
 					}
-					if (joined == null)
+					if (joined == null) {
+						parents = priorParents.copy();
 						joined = prior.copy();
-					else
+					} else {
+						for (key in [for (key in parents.keys()) key]) {
+							final candidate = priorParents.get(key);
+							final current = parents.get(key);
+							if (current == null)
+								parents.remove(key);
+							else if (candidate == null)
+								parents.remove(key);
+							else if (candidate.id != current.id)
+								parents.remove(key);
+						}
 						for (local in [for (key in joined.keys()) key]) {
 							final candidate = prior.get(local);
 							final current = joined.get(local);
@@ -133,25 +150,29 @@ class HxcIROwnedChildFlow {
 							else if (!HxcIROwnedChildProofs.sameOrigin(current, candidate))
 								joined.remove(local);
 						}
+					}
 				}
 			if (joined == null)
 				joined = [];
-			final tracker = reconstructBlock(block, joined);
+			final tracker = reconstructBlock(block, joined, parents);
 			// Any exceptional/cleanup route empties the whole source's output.
 			// This deliberately handles parallel clean and unsafe edges to the
 			// same target without relying on the graph's deduplicated adjacency.
-			outgoing.set(id, tracker != null && cleanExit(block) ? tracker.localSnapshot() : []);
+			if (tracker != null && cleanExit(block)) {
+				outgoing.set(id, tracker.localSnapshot());
+				outgoingParents.set(id, tracker.parentSnapshot());
+			}
 		}
 		// Validation also checks unreachable blocks. Preserve their existing
 		// straight-line proof domain without inventing predecessor transport.
 		for (block in fn.blocks)
 			if (!rank.exists(block.id))
-				reconstructBlock(block, []);
+				reconstructBlock(block, [], []);
 	}
 
 	/** Reconstruct one local scope; callers alone decide whether its contents can leave. */
-	function reconstructBlock(block:HxcIRBlock, joined:Map<String, OwnedChildFact>):Null<HxcIROwnedChildProofs> {
-		var needed = joined.iterator().hasNext();
+	function reconstructBlock(block:HxcIRBlock, joined:Map<String, OwnedChildFact>, parents:Map<String, ParentCheck>):Null<HxcIROwnedChildProofs> {
+		var needed = joined.iterator().hasNext() || parents.iterator().hasNext();
 		for (instruction in block.instructions)
 			switch instruction.kind {
 				case IRIOBorrowClassField(_):
@@ -161,8 +182,9 @@ class HxcIROwnedChildFlow {
 		if (!needed)
 			return null;
 		incoming.set(block.id, joined);
+		incomingParents.set(block.id, parents);
 		active.set(block.id, true);
-		final tracker = new HxcIROwnedChildProofs(fn, joined);
+		final tracker = new HxcIROwnedChildProofs(fn, joined, parents);
 		final available:Map<String, HxcIRTypeRef> = [];
 		for (parameter in fn.parameters)
 			available.set(parameter.id, parameter.type);
@@ -184,7 +206,7 @@ class HxcIROwnedChildFlow {
 
 	/** A fresh block tracker; no optimizer-owned mutable state is shared with validation. */
 	public function forBlock(id:String):Null<HxcIROwnedChildProofs>
-		return active.exists(id) ? new HxcIROwnedChildProofs(fn, incoming.get(id)) : null;
+		return active.exists(id) ? new HxcIROwnedChildProofs(fn, incoming.get(id), incomingParents.get(id)) : null;
 
 	/** Keep every reconstructed origin explicit, including on repeated optimization passes. */
 	public function retainedWitnesses():Map<String, Bool>

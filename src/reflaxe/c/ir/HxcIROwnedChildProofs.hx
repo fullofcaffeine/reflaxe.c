@@ -7,7 +7,7 @@ import reflaxe.c.ir.HxcIR;
 
 	The producer, conversion, and local operations remain in HxcIR for independent
 	validation. This tracker supplies candidate facts, never authority from a type
-	annotation alone. Only local contents with the exact same origin may enter from predecessors.
+	annotation alone. Only local contents and parent checks with the exact same origin may enter from predecessors.
 	Calls, alias-capable writes, address-taking,
 	lifetime changes, and unknown effects forget local contents and parent witnesses.
 	Already loaded immutable values stay nonnull; their lifetime is still checked
@@ -21,18 +21,24 @@ class HxcIROwnedChildProofs {
 	var localValues:Map<String, OwnedChildFact> = [];
 
 	/** Start a block with independently reconstructed local contents, never immutable value facts. */
-	public function new(fn:HxcIRFunction, ?incoming:Map<String, OwnedChildFact>) {
+	public function new(fn:HxcIRFunction, ?incoming:Map<String, OwnedChildFact>, ?parents:Map<String, ParentCheck>) {
 		if (incoming != null)
 			localValues = incoming.copy();
+		if (parents != null)
+			checked = parents.copy();
 		for (local in fn.locals)
 			locals.set(local.id, local);
 		for (id in fn.borrowedClassLocalIds)
 			borrowedLocals.set(id, true);
 	}
 
-	/** Snapshot local contents only; loaded values and parent checks never cross an edge. */
+	/** Snapshot local contents independently from the parent checks that justify new borrows. */
 	public function localSnapshot():Map<String, OwnedChildFact>
 		return localValues.copy();
+
+	/** A fresh map prevents successor intersections from modifying this block. */
+	public function parentSnapshot():Map<String, ParentCheck>
+		return checked.copy();
 
 	/** Require the same retained producer and witness, not merely equal pointer types. */
 	public static function sameOrigin(left:OwnedChildFact, right:OwnedChildFact):Bool
@@ -75,7 +81,9 @@ class HxcIROwnedChildProofs {
 		final result = instruction.result;
 		switch instruction.kind {
 			case IRIONullCheck(valueId, policy):
-				checked.set(valueId, {policy: policy, id: instruction.id});
+				final earlier = checked.get(valueId);
+				if (earlier == null || !samePolicy(earlier.policy, policy))
+					checked.set(valueId, {policy: policy, id: instruction.id});
 			case IRIOBorrowClassField(IRPField(IRPDereference(parentId), _)):
 				final parent = checked.get(parentId);
 				final instance = result == null ? null : pointerInstance(result.type, false);
@@ -163,7 +171,7 @@ typedef OwnedChildFact = {
 }
 
 /** The actual instruction remains available for policy and metadata validation. */
-private typedef ParentCheck = {
+typedef ParentCheck = {
 	final policy:HxcIRNullCheckPolicy;
 	final id:String;
 }
