@@ -216,6 +216,15 @@ class FlowCarrierFixture {
 		return total;
 	}
 
+	/** Stop on the requested value or after one complete traversal of the ring. */
+	static function advanceUntil(start:Int, target:Int):Int {
+		var value = start;
+		do {
+			value = (value + 1) % 5;
+		} while (value != target && value != start);
+		return value;
+	}
+
 	/** Returns two only when both lazy chains preserve skip and evaluation order. */
 	static function run():UInt {
 		observedCalls = 0;
@@ -255,6 +264,8 @@ class FlowCarrierFixture {
 			return 106;
 		if (sharedEnumSwitchExit() != 25)
 			return 107;
+		if (advanceUntil(0, 3) != 3 || advanceUntil(1, 9) != 1)
+			return 108;
 		return observedCalls;
 	}
 

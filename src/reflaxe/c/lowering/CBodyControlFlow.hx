@@ -616,6 +616,10 @@ private class CBodyControlFlowBuilder {
 		if (loop != null) {
 			escapeTargets.set(loop.breakTargetBlockId, true);
 			escapeTargets.set(loop.iterationBoundaryBlockId, true);
+			// A direct arm can already be at the trailing condition. Its back edge
+			// leads into the next iteration, outside the other arm’s prefix.
+			if (starts.contains(loop.iterationBoundaryBlockId))
+				escapeTargets.set(loop.headerBlockId, true);
 			iterationBypassTargets.set(loop.iterationBoundaryBlockId, true);
 		}
 		return analysis.normalJoin(starts, allowed, escapeTargets, iterationBypassTargets, planned, preferredCandidate);
@@ -1281,6 +1285,8 @@ private class CBodyControlFlowPlanValidator {
 	/** Recheck the exact ordinary-join or enclosing-iteration-boundary proof. */
 	function isNormalOrBoundaryJoin(candidate:String, starts:Array<String>, loop:Null<CBodyLoopContext>):Bool {
 		final escapes = escapeTargets(loop);
+		if (loop != null && starts.contains(loop.iterationBoundaryBlockId))
+			escapes.set(loop.headerBlockId, true);
 		// The planner's analysis has already absorbed each proven acyclic loop
 		// escape into this exact loop set. Reusing that set lets its validator find
 		// the construction certificate. A public verifier starts from an external
