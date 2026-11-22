@@ -1,0 +1,40 @@
+name: Editor shell diagnostic
+on:
+  push:
+    branches: [codex/verify-editor-shell-20261122]
+permissions:
+  contents: read
+jobs:
+  editor:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out source
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Resolve exact Haxe and Lix tools
+        run: npm ci
+
+      - name: Run the stock compiler and play the editor pilot
+        run: |
+          python3 examples/caxecraft/play.py --pilot editor-shell --cold \
+            --raylib-configuration memory-software --allow-network \
+            --cc clang --cxx clang++ --haxe-timeout-seconds 600 \
+            --compiler-log "$RUNNER_TEMP/editor-compiler.jsonl" \
+            --output-root "$RUNNER_TEMP/editor"
+      - name: Preserve the compiler trace and player-visible evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: editor-shell-diagnostic
+          path: |
+            ${{ runner.temp }}/editor-compiler.jsonl
+            ${{ runner.temp }}/editor/variants/**/bin/*.png
+            ${{ runner.temp }}/editor/variants/**/bin/*report.json
+          if-no-files-found: warn

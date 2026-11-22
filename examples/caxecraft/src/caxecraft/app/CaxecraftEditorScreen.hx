@@ -4800,6 +4800,7 @@ final class CaxecraftEditorScreen {
 	 * refresh, and the Orbit target use the same path as interactive input.
 	 */
 	public function applyPilotDirectObjectEdits():Bool {
+		setActiveTool(SelectTool);
 		var currentCamera = camera;
 		var selected = selectedObjectIndex();
 		if (currentCamera == null || selected < 0)
