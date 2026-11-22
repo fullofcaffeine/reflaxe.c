@@ -396,7 +396,8 @@ class CImportRegistry {
 				resolved == null ? null : valueType(resolved, position, ownerModule, sourcePath, fail, node);
 			case TLazy(resolve): valueType(resolve(), position, ownerModule, sourcePath, fail, node);
 			case TType(reference, parameters):
-				final path = typePath(reference.get().module, reference.get().pack, reference.get().name);
+				final definition = reference.get();
+				final path = typePath(definition.module, definition.pack, definition.name);
 				isImportedType(path) ? CBodyValueType.imported(prepareType(path, parameters, position, sourcePath)) : null;
 			case TInst(reference, parameters):
 				final value = reference.get();
@@ -734,10 +735,10 @@ class CImportRegistry {
 			case TLazy(resolve):
 				validateBoundaryType(resolve(), position, sourcePath, label, parameter);
 			case TType(reference, parameters):
-				final path = typePath(reference.get().module, reference.get().pack, reference.get().name);
+				final definition = reference.get();
+				final path = typePath(definition.module, definition.pack, definition.name);
 				if (!isImportedType(path))
-					validateBoundaryType(TypeTools.applyTypeParameters(reference.get().type, reference.get().params, parameters), position, sourcePath, label,
-						parameter);
+					validateBoundaryType(TypeTools.applyTypeParameters(definition.type, definition.params, parameters), position, sourcePath, label, parameter);
 			case TFun(_, _):
 				abiFailure(position, sourcePath, label, "Callbacks require the later typed function-pointer and context-lifetime contract.");
 			case TDynamic(_):
