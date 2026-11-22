@@ -152,6 +152,9 @@ import caxecraft.input.ControlPrompts.conversationHelpMessage;
 import caxecraft.input.ControlPrompts.gamepadInteractionPrompt;
 import caxecraft.input.ControlPrompts.pauseHelpMessage;
 import caxecraft.input.ControlPrompts.returnPromptMessage;
+import caxecraft.editor.EditorFocus.EditorFocusTarget;
+import caxecraft.editor.EditorFocus.initialFocus;
+import caxecraft.editor.EditorFocus.moveFocus;
 import caxecraft.input.NavigationInput.NavigationCommand;
 import caxecraft.input.NavigationInput.NavigationRepeater;
 import caxecraft.input.NavigationInput.NavigationSample;
@@ -376,7 +379,9 @@ final class CaxecraftApp {
 				horizontal: 0.0,
 				vertical: 0.0
 			};
-			for (step in 0...12) {
+			var expectedFocus = initialFocus();
+			var step = 0;
+			do {
 				final elapsed = if (step == 0) 0.0 else if (step == 1) NavigationRepeater.INITIAL_REPEAT_DELAY_SECONDS else
 					NavigationRepeater.REPEAT_INTERVAL_SECONDS;
 				switch editorScreen.applyNavigation(editorNavigation.advance(heldDown, elapsed)) {
@@ -384,7 +389,9 @@ final class CaxecraftApp {
 					case ReturnToTitle | StartTestPlay(_):
 						rejectedEditCount++;
 				}
-			}
+				step++;
+				expectedFocus = moveFocus(expectedFocus, Forward);
+			} while (expectedFocus != EditorFocusTarget.Play && expectedFocus != initialFocus());
 			final confirm:NavigationSample = {
 				connected: true,
 				up: false,

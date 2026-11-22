@@ -1492,7 +1492,11 @@ class CProjectEmitter {
 		#if (macro || reflaxe_runtime)
 		final jsonTimer = CPhaseTiming.startDetail(CDTArtifactJsonSerialization);
 		#end
+		#if eval
+		final contents = CompactReportPrinter.render(value) + "\n";
+		#else
 		final contents = Json.stringify(value) + "\n";
+		#end
 		#if (macro || reflaxe_runtime)
 		CPhaseTiming.stopDetail(jsonTimer);
 		final fileTimer = CPhaseTiming.startDetail(CDTCGeneratedFileConstruction);
@@ -1622,3 +1626,33 @@ class CProjectEmitter {
 	static function fail(detail:String, ?paths:Array<String>):Void
 		throw new ProjectEmissionError(detail, paths);
 }
+
+#if eval
+/**
+	Write ordinary ASCII strings in one operation on the Eval macro host.
+	The standard JSON printer owns field order, nesting, and escaping. Its
+	per-character loop is expensive for the long identifiers in compiler reports.
+**/
+private class CompactReportPrinter extends haxe.format.JsonPrinter {
+	/** Match anything outside printable ASCII, plus the quote and backslash inside that range. */
+	static final needsStandardQuoting = ~/[^\x20-\x21\x23-\x5b\x5d-\x7e]/;
+
+	/** Use a fresh output buffer for each complete report. */
+	public static function render<T>(value:T):String {
+		final printer = new CompactReportPrinter(null, null);
+		printer.write("", value);
+		return printer.buf.toString();
+	}
+
+	/** Delegate the entire string whenever any character needs the standard encoding rules. */
+	override function quote(value:String):Void {
+		if (needsStandardQuoting.match(value)) {
+			super.quote(value);
+			return;
+		}
+		buf.addChar('"'.code);
+		buf.add(value);
+		buf.addChar('"'.code);
+	}
+}
+#end

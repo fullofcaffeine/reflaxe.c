@@ -5,20 +5,14 @@ on:
 permissions:
   contents: read
 jobs:
-  profile:
-    name: Profile ${{ matrix.workload }} on ${{ matrix.runner }}
-    runs-on: ${{ matrix.runner }}
-    timeout-minutes: 25
+  verify:
+    name: Verify ${{ matrix.command }} on macOS
+    runs-on: macos-latest
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - runner: macos-latest
-            workload: playable
-            transport: cold
-          - runner: ubuntu-latest
-            workload: runtime-level-loader
-            transport: both
+        command: ["test:all-sources", "test:caxecraft-runtime-content-generation"]
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
       - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
@@ -26,22 +20,14 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
-      - name: Profile the pinned Haxe compiler
+      - name: Run the ordinary command on a fresh runner
         shell: bash
         env:
-          WORKLOAD: ${{ matrix.workload }}
-          TRANSPORT: ${{ matrix.transport }}
+          COMMAND: ${{ matrix.command }}
         run: |
           set -euo pipefail
-          python3 examples/caxecraft/profile_compiler.py --runs 1 \
-            --workload "$WORKLOAD" --transport "$TRANSPORT" \
-            --output "$RUNNER_TEMP/compiler-profile.json" 2>&1 | tee "$RUNNER_TEMP/compiler-profile.log"
-      - name: Preserve the phase measurements
+          sysctl hw.logicalcpu vm.loadavg
+          time npm run "$COMMAND"
+      - name: Capture final runner load
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
-        with:
-          name: compiler-profile-${{ matrix.workload }}
-          path: |
-            ${{ runner.temp }}/compiler-profile.json
-            ${{ runner.temp }}/compiler-profile.log
-          if-no-files-found: error
+        run: sysctl hw.logicalcpu vm.loadavg
