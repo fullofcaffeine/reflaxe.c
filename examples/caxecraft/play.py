@@ -466,28 +466,6 @@ def pilot_metadata(pilot: str) -> PilotMetadata:
     return metadata
 
 
-def is_current_compiler_boundary(message: str) -> bool:
-    """Recognize the exact honest boundary that stops the current playable build.
-
-    Caxecraft is a compiler-development workload, so "the game failed to
-    compile" is not an acceptable success condition. Beads issue
-    `haxe_c-djl.13` owns the current managed-enum flow-carrier gap exposed after
-    fresh Strings became valid `Bytes.ofString` sources. Callers that
-    intentionally test product progress may accept only this exact
-    source-positioned HXC1001 diagnostic. Any earlier, later, or differently
-    shaped failure remains an error. Once that carrier is admitted, this
-    predicate naturally returns false and snapshot validation resumes against
-    newly generated playable artifacts.
-    """
-    return (
-        "src/caxecraft/scenario/CaxeFlowActionRegistry.hx:179:" in message
-        and "caxecraft.scenario._CaxeFlowActionRegistry.CaxeFlowActionRegistry_Fields_.flowActionDescriptorById body"
-        in message
-        and "TVar(family:flow-carrier)(result-type-without-direct-default)"
-        in message
-    )
-
-
 def stage_runtime_assets(destination: Path) -> None:
     """Copy only reviewed runtime assets beside the executable.
 

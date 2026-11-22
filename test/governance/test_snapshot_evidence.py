@@ -18,6 +18,35 @@ from scripts.test import snapshots
 
 
 class SnapshotEvidenceTests(unittest.TestCase):
+    def test_domain_validation_requires_successful_complete_playable_output(self):
+        from examples.caxecraft import run as domain
+
+        expected = domain.expected_values()
+        playable = {name: expected[name] for name in domain.PLAYABLE_SNAPSHOT_FORMATS}
+        with tempfile.TemporaryDirectory() as temporary:
+            projects, oracle = domain.checked_in_projects(Path(temporary), expected)
+            args = (projects["split"], projects["package"], projects["unity"], oracle)
+            with patch.object(domain, "playable_snapshot_values", return_value=playable):
+                domain.validate_snapshots(*args)
+
+            missing = next(iter(playable))
+            partial = playable.copy()
+            del partial[missing]
+            with patch.object(domain, "playable_snapshot_values", return_value=partial):
+                with self.assertRaises(domain.CaxecraftFailure) as failure:
+                    domain.validate_snapshots(*args)
+                self.assertIn(missing, str(failure.exception))
+
+            diagnostic = domain.PlayFailure(
+                "src/caxecraft/scenario/CaxeFlowActionRegistry.hx:179: "
+                "caxecraft.scenario._CaxeFlowActionRegistry.CaxeFlowActionRegistry_Fields_."
+                "flowActionDescriptorById body TVar(family:flow-carrier)(result-type-without-direct-default)"
+            )
+            with patch.object(domain, "playable_snapshot_values", side_effect=diagnostic):
+                with self.assertRaises(domain.PlayFailure) as failure:
+                    domain.validate_snapshots(*args)
+                self.assertIs(failure.exception, diagnostic)
+
     def test_full_project_and_unselected_dependency_survive_cleanup(self):
         with tempfile.TemporaryDirectory() as temporary:
             evidence = Path(temporary).resolve() / "evidence"

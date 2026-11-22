@@ -45,7 +45,6 @@ from dev_haxe_server import (  # noqa: E402
 from play import (  # noqa: E402
     PLAYABLE_SNAPSHOT_FORMATS,
     PlayFailure,
-    is_current_compiler_boundary,
     snapshot_values as playable_snapshot_values,
 )
 
@@ -1651,19 +1650,7 @@ def validate_snapshots(
     oracle: bytes,
 ) -> None:
     expected = expected_values()
-    try:
-        playable = playable_snapshot_values()
-    except PlayFailure as error:
-        if not is_current_compiler_boundary(str(error)):
-            raise
-        progress(
-            "playable snapshots deferred at exact managed-enum flow-carrier boundary"
-        )
-        # The domain program below is fully generated and compared. The wider
-        # playable application is intentionally checked only up to its exact
-        # current compiler boundary; copying old generated files into `actual`
-        # would falsely claim that today's Haxe source produced them.
-        playable = {}
+    playable = playable_snapshot_values()
     actual: dict[str, object] = {
         **{
             path: (split.output / path).read_text(encoding="utf-8")
@@ -1687,15 +1674,13 @@ def validate_snapshots(
         "oracle.txt": oracle.decode("ascii"),
         **playable,
     }
-    compared_formats = {
-        name: format_name
-        for name, format_name in SNAPSHOT_FORMATS.items()
-        if name in actual
-    }
-    compared_expected = {name: expected[name] for name in compared_formats}
-    if actual == compared_expected:
-        return
-    for name in compared_formats:
+    if actual.keys() != expected.keys():
+        missing = sorted(expected.keys() - actual.keys())
+        unexpected = sorted(actual.keys() - expected.keys())
+        raise CaxecraftFailure(
+            f"Caxecraft snapshot file set drifted: missing={missing!r}, unexpected={unexpected!r}"
+        )
+    for name in expected:
         if actual[name] != expected[name]:
             if isinstance(actual[name], str) and isinstance(expected[name], str):
                 difference = "".join(
@@ -2079,6 +2064,7 @@ def main(argv: Iterable[str] = ()) -> int:
         CaxecraftFailure,
         HaxeServerFailure,
         MaintainabilityError,
+        PlayFailure,
         OSError,
         UnicodeError,
         ValueError,
