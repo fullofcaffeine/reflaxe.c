@@ -28,6 +28,7 @@ from scripts.raylib.core_binding import (
     digest_json,
     load_lock,
     load_selection,
+    owned_tag_id,
     render_files,
     require_selected_node,
     selection_sha256,
@@ -37,6 +38,17 @@ from scripts.raylib.core_binding import (
 
 
 class RaylibCoreBindingTests(unittest.TestCase):
+    def test_enum_ownership_requires_a_direct_owned_tag(self) -> None:
+        enum = {"kind": "EnumDecl", "id": "camera"}
+        owner = {"kind": "EnumType", "decl": enum, "isTagOwned": True}
+        self.assertEqual(owned_tag_id({"inner": [owner]}, "CameraProjection"), "camera")
+        for alias in (
+            {"kind": "TypedefType", "inner": [owner]},
+            {"kind": "EnumType", "decl": enum},
+        ):
+            with self.subTest(alias=alias), self.assertRaises(BindingFailure):
+                owned_tag_id({"inner": [alias]}, "Alias")
+
     def test_runtime_text_facade_avoids_unconditional_per_draw_copy(self) -> None:
         facade = (ROOT / "src/raylib/Raylib.hx").read_text(encoding="utf-8")
         start = facade.index("public static inline function DrawTextString")
