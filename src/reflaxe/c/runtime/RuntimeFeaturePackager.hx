@@ -1,6 +1,5 @@
 package reflaxe.c.runtime;
 
-import haxe.crypto.Sha256;
 import haxe.io.Bytes;
 #if macro
 import haxe.io.Path;
@@ -8,6 +7,7 @@ import haxe.macro.Context;
 import sys.FileSystem;
 import sys.io.File;
 #end
+import reflaxe.c.CContentDigest.sha256Hex;
 import reflaxe.c.CDiagnostic.CDiagnosticId;
 import reflaxe.c.emit.GeneratedFile;
 import reflaxe.c.emit.GeneratedFile.GeneratedFileProduction;
@@ -91,7 +91,7 @@ class RuntimeFeaturePackager {
 				throw new RuntimeFeatureError(CDiagnosticId.InternalCompilerError,
 					'selected runtime artifact `${artifact.sourcePath}` for `${artifact.featureId}` is unavailable', [artifact.featureId]);
 			}
-			final actualSha256 = Sha256.make(Bytes.ofString(contents)).toHex();
+			final actualSha256 = sha256Hex(Bytes.ofString(contents));
 			if (actualSha256 != registeredSourceSha256(artifact.featureId, artifact.sourcePath)) {
 				throw new RuntimeFeatureError(CDiagnosticId.InternalCompilerError,
 					'selected runtime artifact `${artifact.sourcePath}` failed its registered SHA-256 provenance check', [artifact.featureId]);
