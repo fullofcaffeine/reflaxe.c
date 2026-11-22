@@ -265,49 +265,29 @@ headless campaign tracer remains responsible for malformed manifests, stale
 receipts, missing destinations, and unchanged-state failures. Neither owner
 freezes the destination's spawn coordinates or decoration.
 
-The adventure-journey pilot protects the path a player actually sees. Its
-actions and expected content IDs live in the staged `PILOSCRIPT 1` file. The
-compiled parser and observer contain no campaign or level identity.
+The default Adventure journey starts in Evergrove. It opens the campaign
+from the title screen, talks to Nia, and walks through the west gate.
+At the gate, the pilot checks that Western Falls is active and that the
+player has the objective to find the Fallskeeper. Its final frame shows
+the game paused in Western Falls. The expected screens, objectives, and
+level changes live in the [reloadable journey](../examples/caxecraft/pilots/active.piloscript).
 
-The journey starts with Creative highlighted on the real title screen. It
-sends the same device-independent next and confirm choices used by keyboard
-input. It retains a frame that shows Adventure highlighted. Confirming
-Adventure opens the campaign screen. The staged campaign manifest supplies
-the route from `evergrove` to `western-falls`. The journey selects Western
-Falls and launches it through that screen.
+Live play continues from that arrival. The Mossling chased the player on
+the descent and turned back when the player kept moving. From the
+Fallskeeper's ledge, the wooden bridge by the waterfall led to the marks.
+The crossing farther downstream was easy to mistake for the vault bridge.
 
-Haxe compares the visible screen, selected mode, level ID, active objective ID,
-content generation, publication count, grid position, aquatic medium,
-equipment, and selected inventory counts with the runtime file. The journey
-then mines the concealed route, collects and equips Tideweave through ordinary
-world-item behavior, enters the flooded grotto, collects its lantern, and
-returns to dry ground. The final capture keeps a generic presented-gameplay
-check for review. It does not freeze the waterfall shape, terrain decoration,
-actor placement, or camera framing.
+On the earlier map, approaching the sealed gate from the pool collected
+Tideweave through the gate. Replaying the same inputs on the revised map
+left the suit inside. After opening the gate, the player mined two sand
+blocks, equipped Tideweave, and collected the lantern underwater. About
+66 seconds of active simulation elapsed between the first Western Falls
+observation and the lantern pickup. Dialogue and time spent looking at
+paused frames are outside that measure.
 
-Focused Haxe probes separately own the exact screen transitions, manifest
-receipts, item transaction rules, Piloscript grammar, and valid runtime
-loading. They do not contain Western Falls names, prose, routes, decorative
-terrain, or actor coordinates. Generation 2 and one publication can only be
-reached while the app is both playing and in Adventure mode, so a Creative
-launch, a hidden campaign screen, or a script that bypasses the title cannot
-satisfy this owner.
-
-This is evidence for the current two-level forward journey and one repeatable
-Western Falls exploration route. The runtime Piloscript launches Western Falls
-through the visible Adventure menus, checks that Moss is the first objective,
-interacts with Moss, checks that the Tideweave objective becomes active, checks
-that collecting Tideweave opens the grotto objective, and checks that collecting
-the lantern leaves no active objective. Those expected IDs remain in the
-content-owned Piloscript rather than compiled engine code.
-The interaction also checks the authored journal ID. The final review image
-pauses after the return route and shows the resolved journal title and wrapped
-body, while focused Haxe tests own generic text lookup and missing-ID behavior.
-The player still presses `N` to use the manifest's
-sole exit. Authored exit volumes, branching, return travel between levels,
-saves, the Fallskeeper encounter, exact code interaction, and opening the
-vault through story logic remain future work. Subjective route readability,
-waterfall appearance, puzzle quality, and fun still require hands-on review.
+The flooded relay leads to Flooded Ruins. Players can also surface and
+follow the road to Frostmere. Beads issue `haxe_c-xge.20.1.3` records the
+native playthroughs and their frames.
 
 ## How semantic state leaves the native game
 

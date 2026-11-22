@@ -25,10 +25,10 @@ authored pickups, any uncollected part of a world drop, and a mined block whose
 matching stack is full instead of silently deleting items. Adventure checks
 capacity before changing the world; Creative removal remains unlimited. This
 is the first actor loop, not the planned finished game. The
-target-neutral editor command/history/test-play layer now exists, but the
-in-game Raylib interface does not. The menu can choose Creative or Adventure.
-Adventure starts in Evergrove and can load the admitted five-level campaign at
-runtime. Broader combat and enemies, persistence, complete
+in-game editor uses these same levels for editing and Test Play. The title
+menu also offers Creative and Adventure. Adventure starts in Evergrove.
+The [campaign manifest](../examples/caxecraft/campaigns/first-adventure/campaign.json)
+lists the available levels and connections. Broader combat and enemies, persistence, complete
 localization, Ivvy behavior, additional Adventure-cast art, and audio remain
 unimplemented.
 
@@ -39,20 +39,16 @@ streambank route, and an overlook story beat. A walk-through root arch frames
 the split. A bread cache and Ceesh survey note reward the quieter lower side.
 The two routes rejoin near the Fallskeeper. Moss directs the player to that
 distinct character.
-The Fallskeeper repeats the exact bilingual sequence--river, root, moon,
-flame--and adds it to the pause-overlay journal. The objective then points to
-Tideweave, and the current grotto route completes when the player collects its
-lantern. At the concealed cache, one runic pedestal presents the four marks in
-that order. Each accepted mark advances the pedestal. A wrong mark resets it.
-The final flame mark opens a solid vault gate before the player can collect
-Tideweave. The NPCs, dialogue, journal text, objectives, gate states, and rules
-live in the Western Falls CaxeMap and can change without rebuilding the game.
+The Fallskeeper gives the four-mark sequence and adds a clue to the journal.
+Each mark has its own control on the wooden bridge by the waterfall.
+Using the controls in order opens the vault. The player can then mine the
+sand inside, collect Tideweave, and dive for the grotto lantern. After the pickup, the player can
+use the flooded relay to reach Flooded Ruins or surface and take the road
+to Frostmere. The [Western Falls map](../examples/caxecraft/scenarios/first-adventure/western-falls.caxemap)
+owns the dialogue, controls, rewards, and exit rules.
 
-The merged outdoor map is a tracer region, not the finished chapter. Its
-terrain still needs more landmarks, route polish, encounters, and play-time.
-Multiple journal entries and larger flooded ruins remain designs. Return
-travel and persistence are also unimplemented. Do not use concept art or
-semantic editor tests as evidence that these features run.
+The [pilot guide](caxecraft-game-pilot.md) describes the tested route from
+the overlook to the lantern and the two exits.
 
 Evergrove itself is now a compact authored village rather than the former flat
 meadow: the runtime-loaded CAXEMAP includes the arrival road and gate, a house,
