@@ -5,14 +5,10 @@ on:
 permissions:
   contents: read
 jobs:
-  verify:
-    name: Verify ${{ matrix.command }} on macOS
+  profile:
+    name: Profile the native editor shell on macOS
     runs-on: macos-latest
-    timeout-minutes: 20
-    strategy:
-      fail-fast: false
-      matrix:
-        command: ["test:all-sources", "test:caxecraft-runtime-content-generation"]
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
       - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
@@ -20,14 +16,19 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
-      - name: Run the ordinary command on a fresh runner
+      - name: Profile the pinned Haxe compiler
         shell: bash
-        env:
-          COMMAND: ${{ matrix.command }}
         run: |
           set -euo pipefail
-          sysctl hw.logicalcpu vm.loadavg
-          time npm run "$COMMAND"
-      - name: Capture final runner load
+          python3 examples/caxecraft/profile_compiler.py --runs 1 \
+            --workload editor-shell --transport cold --timeout-seconds 600 \
+            --output "$RUNNER_TEMP/compiler-profile.json" 2>&1 | tee "$RUNNER_TEMP/compiler-profile.log"
+      - name: Preserve the phase measurements
         if: always()
-        run: sysctl hw.logicalcpu vm.loadavg
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: compiler-profile-editor-shell
+          path: |
+            ${{ runner.temp }}/compiler-profile.json
+            ${{ runner.temp }}/compiler-profile.log
+          if-no-files-found: error
