@@ -501,6 +501,53 @@
       "sourceOrdinal": null,
       "readableName": [
         "ArithmeticFixture",
+        "fractionalDivisor"
+      ],
+      "requestedName": null,
+      "cName": "hxc_ArithmeticFixture_fractionalDivisor",
+      "semanticKey": "6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture17:fractionalDivisor|1:3:f64|0:|0:",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "method",
+      "specializationArguments": [],
+      "baseName": "hxc_ArithmeticFixture_fractionalDivisor",
+      "sourceSymbol": "ArithmeticFixture.fractionalDivisor(f64)"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "readableName": [
+        "value"
+      ],
+      "requestedName": null,
+      "cName": "hxc_l_value",
+      "semanticKey": "5:local|109:ordinary:97:6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture17:fractionalDivisor|1:3:f64|0:|0:|3:17:ArithmeticFixture17:fractionalDivisor5:value|0:|0:|1:0",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture17:fractionalDivisor|1:3:f64|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_l_value",
+      "sourceSymbol": "ArithmeticFixture.fractionalDivisor.value#0"
+    },
+    {
+      "overloadSignature": [
+        "f64"
+      ],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": null,
+      "readableName": [
+        "ArithmeticFixture",
         "fsqrt"
       ],
       "requestedName": null,
@@ -2277,6 +2324,53 @@
       "specializationArguments": [],
       "baseName": "hxc_ArithmeticFixture_main",
       "sourceSymbol": "ArithmeticFixture.main"
+    },
+    {
+      "overloadSignature": [
+        "f64"
+      ],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": null,
+      "readableName": [
+        "ArithmeticFixture",
+        "negativeZeroDivisor"
+      ],
+      "requestedName": null,
+      "cName": "hxc_ArithmeticFixture_negativeZeroDivisor",
+      "semanticKey": "6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture19:negativeZeroDivisor|1:3:f64|0:|0:",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "method",
+      "specializationArguments": [],
+      "baseName": "hxc_ArithmeticFixture_negativeZeroDivisor",
+      "sourceSymbol": "ArithmeticFixture.negativeZeroDivisor(f64)"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "readableName": [
+        "value"
+      ],
+      "requestedName": null,
+      "cName": "hxc_l_value",
+      "semanticKey": "5:local|111:ordinary:99:6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture19:negativeZeroDivisor|1:3:f64|0:|0:|3:17:ArithmeticFixture19:negativeZeroDivisor5:value|0:|0:|1:0",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture19:negativeZeroDivisor|1:3:f64|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_l_value",
+      "sourceSymbol": "ArithmeticFixture.negativeZeroDivisor.value#0"
     },
     {
       "overloadSignature": [

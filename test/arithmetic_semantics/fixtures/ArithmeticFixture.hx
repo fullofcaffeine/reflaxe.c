@@ -110,7 +110,7 @@ class ArithmeticFixture {
 	static function intQuotientByNegativeOne(value:Int):Int
 		return Std.int(value / -1);
 
-	/** Keeps a real Float operand on the general division and conversion path. */
+	/** A Float numerator keeps the binary64 quotient before the saturating Int conversion. */
 	static function floatQuotientByEight(value:Float):Int
 		return Std.int(value / 8);
 
@@ -226,7 +226,11 @@ class ArithmeticFixture {
 			ushl(1, -1),
 			ushr(unsignedHalf, -1),
 			update(3),
-			updateParameter(3)
+			updateParameter(3),
+			fractionalDivisor(1.25),
+			1.0 / fractionalDivisor(0.0) == Math.NEGATIVE_INFINITY ? 1 : 0,
+			Math.isNaN(fractionalDivisor(Math.NaN)) ? 1 : 0,
+			negativeZeroDivisor(1.0) == Math.NEGATIVE_INFINITY ? 1 : 0
 		].join(","));
 		#else
 		iadd(1, 2);
@@ -275,6 +279,16 @@ class ArithmeticFixture {
 		u8ToI16(c.IntConvert.modulo(255));
 		update(3);
 		updateParameter(3);
+		fractionalDivisor(1.25);
+		negativeZeroDivisor(1.0);
 		#end
 	}
+
+	/** Nonzero binary64 divisors preserve the numerator's sign and special values. */
+	static function fractionalDivisor(value:Float):Float
+		return value / -0.5;
+
+	/** A literal negative zero must still select Haxe's signed infinity behavior. */
+	static function negativeZeroDivisor(value:Float):Float
+		return value / -0.0;
 }

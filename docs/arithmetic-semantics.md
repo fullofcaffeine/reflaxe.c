@@ -15,15 +15,23 @@ program-local specialization. No primitive operation may select `hxrt`.
 | Haxe operation | Defined result | Generated strategy |
 | --- | --- | --- |
 | `Int` `+`, `-`, `*`, unary `-` | Wrap modulo 2^32 and interpret as signed two's-complement | Compute through `uint64_t`, retain the low 32 bits, and reconstruct `int32_t` in a static-inline helper |
-| `Int` `/` | Binary64 division; zero produces NaN or signed infinity | Convert operands exactly to `double`; use a zero-safe helper |
+| `Int` `/` | Binary64 division; zero produces NaN or signed infinity | Convert operands to `double` and guard divisors that might be zero |
 | `Int` `%` | Signed remainder; zero and `INT32_MIN % -1` produce `0` | Guard exceptional divisors before C remainder |
 | `Int` shifts | Count masked with `31`; signed right shift has explicit sign extension | Shift unsigned bits in a static-inline helper |
 | `Int` bit operations | Operate on the 32-bit representation | Use unsigned bits and defined signed reconstruction |
 | `UInt` arithmetic and shifts | ISO C modulo-2^32 behavior with count masked by `31` | Direct widened unsigned C with explicit `uint32_t` narrowing |
 | `UInt` `%` | Unsigned remainder; zero produces `0` | Guard zero in a static-inline helper |
-| `Float` arithmetic | Binary64 NaN, infinity, and signed-zero behavior | Direct `double`, except zero-safe division and `fmod` |
+| `Float` arithmetic | Binary64 NaN, infinity, and signed-zero behavior | Direct `double` operations, guarded division when needed, and `fmod` |
 | `Std.int(Float)` | Truncate finite in-range input; NaN to `0`; overflow/infinity saturates | Compare first, then perform only an in-range C conversion |
 | `Std.int(Int / positiveConstant)` | The same truncation as binary64 division followed by `Std.int` | Record a proven integral HxcIR operation and emit direct signed C division |
+
+For an `Int` parameter `column`, Haxe's `column / 4` produces a `Float`.
+The generated C converts both operands to `double` and divides directly.
+The compiler can use this form for a nonzero 32-bit integer literal or a
+finite, normal binary64 literal such as `-0.5`. HxcIR validation checks
+the literal that supplies the divisor, including an exact integer promotion.
+A variable or either sign of zero keeps the helper. A tiny literal that can
+become zero on the target also keeps it.
 
 The zero result for integer modulo by zero is an intentional deterministic
 target refinement. Haxe leaves this exceptional edge target-specific; the C
@@ -43,10 +51,10 @@ C11 signed division truncates in the same direction as `Std.int`. The positive
 constant excludes division by zero and the one overflowing C case,
 `INT32_MIN / -1`. HxcIR records this proof as
 `haxe.i32.divide.positive-constant`, and validation requires the divisor to be
-a directly defined positive `Int` constant. Zero, negative, nonconstant,
-nullable, `UInt`, `Dynamic`, real `Float`, and cast-wrapped forms stay with
-their existing general lowering. Shapes that were unsupported there still fail
-closed.
+a directly defined positive `Int` constant. For example, `Std.int(value / -1)`
+keeps the binary64 quotient and saturating conversion, so `INT32_MIN / -1`
+can reach `INT32_MAX` safely. Other operand types and cast-wrapped forms use
+their ordinary conversion rules.
 
 Floating modulo calls `fmod` and records the exact `m` link fact in the compiler
 manifest with the requesting module as provenance. A build-library fact is not

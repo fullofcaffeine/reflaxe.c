@@ -3709,7 +3709,7 @@ class CBodyEmitter {
 		return switch operationId {
 			case "hxc.size.add-one.span-index-proven": EBinary(Add, left, right);
 			case "hxc.size.less.span-index": EBinary(Less, left, right);
-			case "haxe.i32.divide.positive-constant": EBinary(Divide, left, right);
+			case "haxe.i32.divide.positive-constant" | "haxe.f64.divide": EBinary(Divide, left, right);
 			case "haxe.u32.add": widenedUInt32Binary(Add, left, right);
 			case "haxe.u32.subtract": widenedUInt32Binary(Subtract, left, right);
 			case "haxe.u32.multiply": widenedUInt32Binary(Multiply, left, right);

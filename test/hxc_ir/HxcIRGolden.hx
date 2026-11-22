@@ -195,6 +195,11 @@ class HxcIRGolden {
 		requireInvalidMarker(containedExceptionWithoutRegionProgram(), "requires an explicit region or unwind terminator",
 			"contained exception without an owner");
 		requireInvalidMarker(unknownExceptionRegionProgram(), "unknown region", "unknown exception frame operation");
+		validator.requireValid(floatDivisionProgram(IRIOConstant(IRCFloat("-0.5"))), PROFILE);
+		for (text in ["0.0", "-0.0", "1e-320", "1e-9999"])
+			requireInvalidMarker(floatDivisionProgram(IRIOConstant(IRCFloat(text))), "proven nonzero literal divisor", 'direct division by $text');
+		requireInvalidMarker(floatDivisionProgram(IRIOConvert("value.updated", IRCNumericExact, IRTFloat(64), IRIStatic, null)),
+			"proven nonzero literal divisor", "integer promotion alone cannot authorize direct Float division");
 		validator.requireValid(integralDivisionProgram("6"), PROFILE);
 		validator.requireValid(integralDivisionProgram("2147483647"), PROFILE);
 		for (sample in [
@@ -659,6 +664,17 @@ class HxcIRGolden {
 		entry.instructions.push(instruction("i09.integral-division", result("value.quotient", quotientType == null ? IRTInt(32, true) : quotientType),
 			IRIOBinary("haxe.i32.divide.positive-constant", "value.updated", selectedRight, implementation == null ? IRIStatic : implementation), MAIN_SOURCE,
 			19));
+		return program;
+	}
+
+	/** Present a claimed direct quotient to validation without running the source lowerer. */
+	static function floatDivisionProgram(divisor:HxcIRInstructionKind):HxcIRProgram {
+		final program = semanticProgram(false);
+		final entry = program.modules[0].functions[0].blocks[0];
+		entry.instructions.push(instruction("i08.numerator", result("value.numerator", IRTFloat(64)), IRIOConstant(IRCFloat("1.0")), MAIN_SOURCE, 19));
+		entry.instructions.push(instruction("i09.divisor", result("value.divisor", IRTFloat(64)), divisor, MAIN_SOURCE, 19));
+		entry.instructions.push(instruction("i10.quotient", result("value.quotient", IRTFloat(64)),
+			IRIOBinary("haxe.f64.divide", "value.numerator", "value.divisor", IRIStatic), MAIN_SOURCE, 19));
 		return program;
 	}
 

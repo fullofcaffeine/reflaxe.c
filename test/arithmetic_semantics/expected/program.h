@@ -147,6 +147,8 @@ double hxc_ArithmeticFixture_fmul(double hxc_l_left, double hxc_l_right);
 
 double hxc_ArithmeticFixture_fneg(double hxc_l_value);
 
+double hxc_ArithmeticFixture_fractionalDivisor(double hxc_l_value);
+
 double hxc_ArithmeticFixture_fsqrt(double hxc_l_value);
 
 double hxc_ArithmeticFixture_fsub(double hxc_l_left, double hxc_l_right);
@@ -206,6 +208,8 @@ int32_t hxc_ArithmeticFixture_ixor(int32_t hxc_l_left, int32_t hxc_l_right);
 uint8_t hxc_ArithmeticFixture_literalToU8(void);
 
 void hxc_ArithmeticFixture_main(void);
+
+double hxc_ArithmeticFixture_negativeZeroDivisor(double hxc_l_value);
 
 uint64_t hxc_ArithmeticFixture_u32ToU64(uint32_t hxc_l_value);
 

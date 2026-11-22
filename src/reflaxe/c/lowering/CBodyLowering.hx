@@ -12898,10 +12898,18 @@ private class FunctionBuilder {
 			case IRIRuntime(featureId):
 				return unsupported(expression, 'TBinop($operation:primitive-operation-must-not-use-runtime:$featureId)');
 		}
+		// Inspect the literal before operand coercion inserts an Int-to-Float conversion.
+		// The validator later follows the actual divisor through that same conversion.
+		var implementation = decision.implementation;
+		if (decision.operationId == "haxe.f64.divide" && currentBlock.instructions.length > 0) {
+			final producer = currentBlock.instructions[currentBlock.instructions.length - 1];
+			if (producer.result != null && producer.result.id == rightValue.id && HxcIRValidator.isNonzeroDivisionLiteral(producer))
+				implementation = IRIStatic;
+		}
 		final left = coerce(leftValue, CBodyValueType.primitive(decision.leftOperand), expression.pos, 'TBinop($operation:left)');
 		final right = coerce(rightValue, CBodyValueType.primitive(decision.rightOperand), expression.pos, 'TBinop($operation:right)');
 		final result:HxcIRResult = {id: nextValueId(), type: decision.result.irType};
-		appendInstruction(result, IRIOBinary(decision.operationId, left.id, right.id, decision.implementation), sourceSpan(expression.pos), role);
+		appendInstruction(result, IRIOBinary(decision.operationId, left.id, right.id, implementation), sourceSpan(expression.pos), role);
 		return {id: result.id, type: result.type, mapping: CBodyValueType.primitive(decision.result)};
 	}
 

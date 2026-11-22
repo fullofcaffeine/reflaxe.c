@@ -229,6 +229,22 @@ class HxcIRValidator {
 	public static function hasOrderedCoordinates(span:HxcSourceSpan):Bool
 		return span.endLine > span.startLine || span.endLine == span.startLine && span.endColumn >= span.startColumn;
 
+	/**
+		A literal can bypass the zero check when its binary64 value stays nonzero.
+		A 32-bit integer converts exactly. For floating literals, leave subnormal
+		values with the helper because target arithmetic can flush them to zero.
+		The constant validator separately checks spelling, type and integer range.
+	**/
+	public static function isNonzeroDivisionLiteral(instruction:HxcIRInstruction):Bool {
+		if (instruction.result == null)
+			return false;
+		return switch [instruction.result.type, instruction.kind] {
+			case [IRTInt(32, _), IRIOConstant(IRCInt(text))]: text != "0" && text != "-0";
+			case [IRTFloat(64), IRIOConstant(IRCFloat(text))]: final value = Std.parseFloat(text); Math.isFinite(value) && Math.abs(value) >= 2.2250738585072014e-308;
+			case _: false;
+		}
+	}
+
 	/** Check only metadata that would disappear with a removed null-check node. */
 	public static function canDiscardNullCheckEnvelope(instruction:HxcIRInstruction, uniqueId:Bool):Bool
 		return instruction.result == null
@@ -3390,6 +3406,15 @@ private class HxcIRValidationState {
 					if (!HxcIRValidator.isStaticI32Less(instruction, available))
 						add(path, "signed Int less-than requires two signed i32 operands, a static Bool result, and valid instruction metadata",
 							instruction.source);
+				} else if (operationId == "haxe.f64.divide" && implementation == IRIStatic) {
+					if (leftType == null
+						|| rightType == null
+						|| !leftType.match(IRTFloat(64))
+						|| !rightType.match(IRTFloat(64))
+						|| instruction.result == null
+						|| !instruction.result.type.match(IRTFloat(64))
+						|| !isNonzeroF64Divisor(rightValueId, valueSites))
+						add(path, "direct Float division requires binary64 operands and result and a proven nonzero literal divisor", instruction.source);
 				} else if (operationId == "haxe.i32.divide.positive-constant") {
 					final validTypes = isSignedI32(leftType)
 						&& isSignedI32(rightType)
@@ -4048,6 +4073,23 @@ private class HxcIRValidationState {
 				validatePlace(place, '$path.place', instruction.source, available, locals, nullProofs);
 				validateTransition(from, to, '$path.transition', instruction.source);
 				validateText(reason, '$path.reason', instruction.source);
+		}
+	}
+
+	/** Reconstruct the divisor from its SSA definition, including one exact Int-to-Float promotion. */
+	static function isNonzeroF64Divisor(valueId:String, sites:Map<String, HxcIRInstructionSite>):Bool {
+		final site = sites.get(valueId);
+		if (site == null)
+			return false;
+		return switch site.instruction.kind {
+			case IRIOConvert(source, IRCNumericExact, IRTFloat(64), IRIStatic, null):
+				final origin = sites.get(source);
+				origin != null
+				&& origin.instruction.result != null
+				&& origin.instruction.result.type.match(IRTInt(32, _))
+				&& HxcIRValidator.isNonzeroDivisionLiteral(origin.instruction);
+			case _:
+				HxcIRValidator.isNonzeroDivisionLiteral(site.instruction);
 		}
 	}
 

@@ -22,7 +22,7 @@ int32_t hxc_ArithmeticFixture_fint(double hxc_l_value)
 
 int32_t hxc_ArithmeticFixture_floatQuotientByEight(double hxc_l_value)
 {
-  return hxc_f64_to_i32_saturating(hxc_f64_divide_zero_safe(hxc_l_value, (double)8));
+  return hxc_f64_to_i32_saturating(hxc_l_value / (double)8);
 }
 
 double hxc_ArithmeticFixture_fmod(double hxc_l_left, double hxc_l_right)
@@ -38,6 +38,11 @@ double hxc_ArithmeticFixture_fmul(double hxc_l_left, double hxc_l_right)
 double hxc_ArithmeticFixture_fneg(double hxc_l_value)
 {
   return -hxc_l_value;
+}
+
+double hxc_ArithmeticFixture_fractionalDivisor(double hxc_l_value)
+{
+  return hxc_l_value / -0.5;
 }
 
 double hxc_ArithmeticFixture_fsqrt(double hxc_l_value)
@@ -117,7 +122,7 @@ int32_t hxc_ArithmeticFixture_intQuotientByMaximum(int32_t hxc_l_value)
 
 int32_t hxc_ArithmeticFixture_intQuotientByNegativeOne(int32_t hxc_l_value)
 {
-  return hxc_f64_to_i32_saturating(hxc_f64_divide_zero_safe((double)hxc_l_value, (double)-1));
+  return hxc_f64_to_i32_saturating((double)hxc_l_value / (double)-1);
 }
 
 int32_t hxc_ArithmeticFixture_intQuotientByOne(int32_t hxc_l_value)
@@ -152,7 +157,7 @@ int32_t hxc_ArithmeticFixture_intQuotientSideEffect(int32_t hxc_l_value)
 
 int32_t hxc_ArithmeticFixture_intQuotientThroughFloatCast(int32_t hxc_l_value)
 {
-  return hxc_f64_to_i32_saturating(hxc_f64_divide_zero_safe((double)hxc_l_value, (double)8));
+  return hxc_f64_to_i32_saturating((double)hxc_l_value / (double)8);
 }
 
 int32_t hxc_ArithmeticFixture_ior(int32_t hxc_l_left, int32_t hxc_l_right)
@@ -238,7 +243,14 @@ void hxc_ArithmeticFixture_main(void)
   hxc_ArithmeticFixture_u8ToI16((uint8_t)255);
   hxc_ArithmeticFixture_update(3);
   hxc_ArithmeticFixture_updateParameter(3);
+  hxc_ArithmeticFixture_fractionalDivisor(1.25);
+  hxc_ArithmeticFixture_negativeZeroDivisor(1.0);
   return;
+}
+
+double hxc_ArithmeticFixture_negativeZeroDivisor(double hxc_l_value)
+{
+  return hxc_f64_divide_zero_safe(hxc_l_value, -0.0);
 }
 
 uint64_t hxc_ArithmeticFixture_u32ToU64(uint32_t hxc_l_value)

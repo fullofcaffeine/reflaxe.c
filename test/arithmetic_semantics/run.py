@@ -33,7 +33,7 @@ REPORT_PREFIX = "HXC_ARITHMETIC_SEMANTICS="
 EXPECTED_ORACLE = (
     "-2147483648,2147483647,-2,-2147483648,2147483648,0,-2147483648,-1,1,"
     "85,95,90,-1,-1,3,0,1,1,1,1,5,3,268435455,-268435456,357913941,"
-    "-357913941,0,-1,2147483647,71,5,1,-2147483648,5,5,0,2147483647,-2147483648,1,18,6\n"
+    "-357913941,0,-1,2147483647,71,5,1,-2147483648,5,5,0,2147483647,-2147483648,1,18,6,-2.5,1,1,1\n"
 )
 STRICT_FLAGS = (
     "-std=c11",
@@ -312,23 +312,19 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
             raise ArithmeticSemanticsFailure(
                 f"{field} lost its proven direct integral division in HxcIR"
             )
-    for field in (
-        "intQuotientByVariable",
-        "intQuotientByZero",
-        "intQuotientByNegativeOne",
-        "floatQuotientByEight",
-        "intQuotientThroughFloatCast",
+    for field, implementation in (
+        ("intQuotientByVariable", 'program-local("hxc.f64.divide.zero-safe")'),
+        ("intQuotientByZero", 'program-local("hxc.f64.divide.zero-safe")'),
+        ("negativeZeroDivisor", 'program-local("hxc.f64.divide.zero-safe")'),
+        ("intQuotientByNegativeOne", "static"),
+        ("floatQuotientByEight", "static"),
+        ("intQuotientThroughFloatCast", "static"),
+        ("fractionalDivisor", "static"),
     ):
-        marker = (
-            rf'function "function\.ArithmeticFixture\.{field}"[\s\S]+?'
-            r'operation="haxe\.f64\.divide"[^\n]+'
-            r'program-local\("hxc\.f64\.divide\.zero-safe"\)[\s\S]+?'
-            rf'end function "function\.ArithmeticFixture\.{field}"'
-        )
-        if re.search(marker, hxcir) is None:
-            raise ArithmeticSemanticsFailure(
-                f"{field} incorrectly left the general floating division path"
-            )
+        name = f'"function.ArithmeticFixture.{field}"'
+        section = hxcir.split(f'  function {name} ', 1)[1].split(f'  end function {name}', 1)[0]
+        if re.search(r'operation="haxe\.f64\.divide"[^\n]*implementation=' + re.escape(implementation), section) is None:
+            raise ArithmeticSemanticsFailure(f"{field} needs {implementation} Float division in HxcIR")
     required_conversion_ir = (
         ("literalToU8", "numeric-wrapping", "u8"),
         ("i32ToU8", "numeric-wrapping", "u8"),
@@ -429,18 +425,14 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
             raise ArithmeticSemanticsFailure(
                 f"{field} stopped emitting one readable direct C integer division"
             )
-    for field in (
-        "intQuotientByVariable",
-        "intQuotientByZero",
-        "intQuotientByNegativeOne",
-        "floatQuotientByEight",
-        "intQuotientThroughFloatCast",
-    ):
+    for field in ("intQuotientByVariable", "intQuotientByZero"):
         body = function_body(source, function_c_name(symbols, field))
         if "hxc_f64_divide" not in body or "hxc_f64_to_i32" not in body:
-            raise ArithmeticSemanticsFailure(
-                f"{field} stopped emitting the complete general Float conversion path"
-            )
+            raise ArithmeticSemanticsFailure(f"{field} lost guarded Float division or its Int conversion")
+    for field in ("intQuotientByNegativeOne", "floatQuotientByEight", "intQuotientThroughFloatCast", "fractionalDivisor"):
+        body = function_body(source, function_c_name(symbols, field))
+        if " / " not in body or "hxc_f64_divide" in body or (field != "fractionalDivisor" and "hxc_f64_to_i32" not in body):
+            raise ArithmeticSemanticsFailure(f"{field} lost direct Float division or its result conversion")
 
 
 def snapshot_values(report: dict[str, object]) -> dict[str, object]:
@@ -575,7 +567,7 @@ def harness_source(symbols: dict[str, object]) -> str:
             "fmul", "fneg", "fdiv", "fmod", "fsqrt", "fint", "intQuotientByEight",
             "intQuotientBySix", "intQuotientByMaximum", "intQuotientByOne", "intQuotientSideEffect",
             "intQuotientByVariable", "intQuotientByZero", "intQuotientByNegativeOne",
-            "floatQuotientByEight", "intQuotientThroughFloatCast", "fequal", "uadd", "umod", "ushl",
+            "floatQuotientByEight", "intQuotientThroughFloatCast", "fractionalDivisor", "negativeZeroDivisor", "fequal", "uadd", "umod", "ushl",
             "ushr", "literalToU8", "i32ToU8", "u8ToI32", "i64ToU16",
             "u32ToU64", "u32ToU8", "u8ToI16", "update", "updateParameter",
         )
@@ -649,6 +641,9 @@ int main(void)
   if ({names["intQuotientByNegativeOne"]}(INT32_MIN) != INT32_MAX) return 68;
   if ({names["floatQuotientByEight"]}(47.0) != INT32_C(5)) return 69;
   if ({names["intQuotientThroughFloatCast"]}(INT32_C(47)) != INT32_C(5)) return 75;
+  if ({names["fractionalDivisor"]}(1.25) != -2.5 || !signbit({names["fractionalDivisor"]}(0.0))) return 76;
+  if (!isnan({names["fractionalDivisor"]}(NAN)) || {names["fractionalDivisor"]}(INFINITY) != -INFINITY) return 77;
+  if ({names["negativeZeroDivisor"]}(1.0) != -INFINITY) return 78;
   if ({names["fequal"]}(NAN, NAN)) return 37;
   if ({names["uadd"]}(UINT32_MAX, UINT32_C(1)) != UINT32_C(0)) return 38;
   if ({names["umod"]}(UINT32_MAX, UINT32_C(0)) != UINT32_C(0)) return 39;
