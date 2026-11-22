@@ -1,7 +1,9 @@
 package caxecraft.scenario;
 
-import caxecraft.scenario.CaxeFlow.FlowEvent;
+import caxecraft.scenario.CaxeFlow.FlowEventOccurrence;
 import caxecraft.scenario.CaxeFlow.FlowValue;
+import caxecraft.scenario.CaxeFlowActionRegistry.FlowActionId;
+import caxecraft.scenario.CaxeFlowEventRegistry.FlowEventId;
 import caxecraft.scenario.ScenarioStory.ObjectiveState;
 
 /**
@@ -31,7 +33,7 @@ typedef FlowPosition = {
 	keeps every rule predicate on the same stable view of the tick.
 **/
 typedef FlowTickInput = {
-	final events:Array<FlowEvent>;
+	final events:Array<FlowEventOccurrence>;
 	final positions:Array<FlowPosition>;
 }
 
@@ -47,6 +49,7 @@ enum FlowExecutionLimit {
 	ScheduledWork;
 	PredicateEvaluations;
 	DeferredWork;
+	TraceEntries;
 }
 
 /** Visible, deterministic failure from one fixed-tick execution attempt. */
@@ -54,6 +57,45 @@ enum FlowRuntimeDiagnostic {
 	LimitExceeded(kind:FlowExecutionLimit, maximum:Int, owner:Null<ScenarioId>);
 	InvalidRuntimeReference(id:ScenarioId);
 	InvalidRuntimeAction(owner:ScenarioId);
+	InvalidRuntimeEvent(id:FlowEventId);
+}
+
+/** Closed recovery policy attached to every terminal runtime fault. */
+enum FlowFailureDisposition {
+	/** Keep the completed prefix visible, stop future ticks, and require restore. */
+	TerminalFaultRetainedPrefix;
+}
+
+/**
+	Exact work and visible prefix retained when a Flow tick becomes terminal.
+
+	`attempted` is the rejected count for a bounded limit and zero for semantic
+	failures. Prefix counts let the editor explain what completed without
+	presenting those partial effects as a successful tick.
+**/
+typedef FlowFailure = {
+	final diagnostic:FlowRuntimeDiagnostic;
+	final disposition:FlowFailureDisposition;
+	final attempted:Int;
+	final completedRules:Int;
+	final completedActions:Int;
+	final presentationEvents:Int;
+	final traceEntries:Int;
+}
+
+/**
+	One bounded, deterministic explanation of a fixed-tick CaxeFlow decision.
+
+	The editor can show these values as WHEN / IF / DO progress without reading
+	executor internals. Entries contain stable semantic IDs only; they never carry
+	host paths, raw input keys, wall-clock values, or renderer state.
+**/
+enum FlowTraceEntry {
+	EventObserved(event:FlowEventId, actor:Null<ScenarioId>);
+	PredicateEvaluated(rule:ScenarioId, event:FlowEventId, actor:Null<ScenarioId>, passed:Bool);
+	ActionExecuted(owner:ScenarioId, action:FlowActionId);
+	FollowUpDeferred(owner:ScenarioId, event:FlowEventId, readyTick:FlowTick);
+	SequenceDeferred(owner:ScenarioId, timer:ScenarioId, sequence:ScenarioId, readyTick:FlowTick);
 }
 
 /**
@@ -92,4 +134,9 @@ typedef FlowTickResult = {
 	final presentation:Array<FlowPresentationEvent>;
 	final activeObjective:Null<ScenarioId>;
 	final diagnostics:Array<FlowRuntimeDiagnostic>;
+
+	/** Terminal failure detail, or null when this tick completed normally. */
+	final failure:Null<FlowFailure>;
+
+	final trace:Array<FlowTraceEntry>;
 }

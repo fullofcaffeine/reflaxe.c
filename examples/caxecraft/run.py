@@ -21,6 +21,11 @@ from dataclasses import dataclass
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from scripts.test.bounded_process import run as run_bounded_process  # noqa: E402
+
 CASE = Path(__file__).resolve().parent
 sys.path.insert(0, str(CASE))
 from check_assets import (  # noqa: E402
@@ -40,7 +45,6 @@ from dev_haxe_server import (  # noqa: E402
 from play import (  # noqa: E402
     PLAYABLE_SNAPSHOT_FORMATS,
     PlayFailure,
-    is_current_compiler_boundary,
     snapshot_values as playable_snapshot_values,
 )
 
@@ -50,6 +54,7 @@ EXPECTED = CASE / "expected"
 NATIVE = CASE / "test/native"
 REPORT_PREFIX = "HXC_STATIC_INITIALIZATION="
 COMMON_PRODUCTION_FILES = {
+    "LICENSES/HAXE-C-OUTPUT-SUPPORT-MIT.txt",
     "_GeneratedFiles.json",
     "cmake/CMakeLists.txt",
     "hxc.abi.json",
@@ -383,7 +388,7 @@ def compile_target(
         ]
         cwd = CASE
         environment = pinned_haxe_environment(locale, connect.installation)
-    return subprocess.run(
+    return run_bounded_process(
         command,
         cwd=cwd,
         env=environment,
@@ -682,7 +687,7 @@ def validate_hxcir(hxcir: str, projection: dict[str, object]) -> None:
         projection, "caxecraft.domain.CharacterPhysics.step"
     )
     for marker in (
-        "hxcir schema=24",
+        "hxcir schema=27",
         'function "function.caxecraft.domain.World.generate"',
         'function "function.caxecraft.domain.VoxelRaycast.trace"',
         f'function "{player_step_id}"',
@@ -1262,7 +1267,7 @@ def render_project(
 
 
 def run_oracle() -> bytes:
-    result = subprocess.run(
+    result = run_bounded_process(
         [
             development_tool("haxe"),
             "--cwd",
@@ -1319,7 +1324,7 @@ def assert_artifacts_equal(
 
 
 def alternate_locale() -> str:
-    result = subprocess.run(
+    result = run_bounded_process(
         ["locale", "-a"], check=False, capture_output=True, text=True, timeout=10
     )
     available = {line.strip() for line in result.stdout.splitlines()}
@@ -1456,8 +1461,11 @@ def check_determinism(
                 )
 
 
-def snapshot_values() -> dict[str, object]:
-    with tempfile.TemporaryDirectory(prefix="hxc-caxecraft-snapshot-") as temporary:
+def snapshot_values(*, evidence_dir: Path | None = None) -> dict[str, object]:
+    from scripts.test.snapshots import snapshot_project_root
+
+    with snapshot_project_root("hxc-caxecraft-snapshot-", None if evidence_dir is None else evidence_dir / "domain",
+                               request={"layouts": "split,package,unity", "owner": "domain snapshot"}) as temporary:
         root = Path(temporary)
         split = render_project(
             root / "split",
@@ -1493,7 +1501,7 @@ def snapshot_values() -> dict[str, object]:
             unity.maintainability_report,
         )
         oracle = run_oracle().decode("ascii")
-        playable = playable_snapshot_values()
+        playable = playable_snapshot_values(evidence_dir=evidence_dir)
         return {
             **{
                 path: (split.output / path).read_text(encoding="utf-8")
@@ -1642,19 +1650,7 @@ def validate_snapshots(
     oracle: bytes,
 ) -> None:
     expected = expected_values()
-    try:
-        playable = playable_snapshot_values()
-    except PlayFailure as error:
-        if not is_current_compiler_boundary(str(error)):
-            raise
-        progress(
-            "playable snapshots deferred at exact managed-enum flow-carrier boundary"
-        )
-        # The domain program below is fully generated and compared. The wider
-        # playable application is intentionally checked only up to its exact
-        # current compiler boundary; copying old generated files into `actual`
-        # would falsely claim that today's Haxe source produced them.
-        playable = {}
+    playable = playable_snapshot_values()
     actual: dict[str, object] = {
         **{
             path: (split.output / path).read_text(encoding="utf-8")
@@ -1678,15 +1674,13 @@ def validate_snapshots(
         "oracle.txt": oracle.decode("ascii"),
         **playable,
     }
-    compared_formats = {
-        name: format_name
-        for name, format_name in SNAPSHOT_FORMATS.items()
-        if name in actual
-    }
-    compared_expected = {name: expected[name] for name in compared_formats}
-    if actual == compared_expected:
-        return
-    for name in compared_formats:
+    if actual.keys() != expected.keys():
+        missing = sorted(expected.keys() - actual.keys())
+        unexpected = sorted(actual.keys() - expected.keys())
+        raise CaxecraftFailure(
+            f"Caxecraft snapshot file set drifted: missing={missing!r}, unexpected={unexpected!r}"
+        )
+    for name in expected:
         if actual[name] != expected[name]:
             if isinstance(actual[name], str) and isinstance(expected[name], str):
                 difference = "".join(
@@ -1788,7 +1782,7 @@ def inspect_generated_object_symbols(
             )
         imported: set[str] = set()
         for generated_object in objects:
-            result = subprocess.run(
+            result = run_bounded_process(
                 ["nm", "-u", str(generated_object)],
                 cwd=ROOT,
                 check=False,
@@ -1830,7 +1824,7 @@ def check_standalone_headers(
         requested_toolchain, repository_root=ROOT
     ):
         for header in headers:
-            result = subprocess.run(
+            result = run_bounded_process(
                 [
                     toolchain.compiler,
                     *STRICT_FLAGS,
@@ -2070,6 +2064,7 @@ def main(argv: Iterable[str] = ()) -> int:
         CaxecraftFailure,
         HaxeServerFailure,
         MaintainabilityError,
+        PlayFailure,
         OSError,
         UnicodeError,
         ValueError,

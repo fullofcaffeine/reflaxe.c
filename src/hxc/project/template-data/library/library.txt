@@ -1,0 +1,12 @@
+/**
+	Small arithmetic library for ${PROJECT_NAME}.
+
+	The export metadata records intent for the evolving haxe.c C ABI surface.
+**/
+class ${MODULE_NAME} {
+	/** Add two signed integers without hidden state or allocation. */
+	@:c.export
+	public static function add(left:Int, right:Int):Int {
+		return left + right;
+	}
+}

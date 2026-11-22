@@ -78,9 +78,11 @@ final class TerrainRenderer {
 	public function new() {}
 
 	/** Notify presentation after one successful terrain edit. */
-	public inline function invalidate(coord:BlockCoord):Void {
+	public inline function invalidate(coord:BlockCoord):Int {
 		#if !caxecraft_renderer_baseline
-		cache.invalidate(coord);
+		return cache.invalidate(coord);
+		#else
+		return 0;
 		#end
 	}
 

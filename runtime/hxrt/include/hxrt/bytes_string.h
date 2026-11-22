@@ -32,6 +32,13 @@ HXC_API hxc_status hxc_bytes_ref_get_string_utf8(
   hxc_string *out_string
 );
 
+/** Encode every byte as two lowercase hexadecimal digits in a fresh String. */
+HXC_API hxc_status hxc_bytes_ref_to_hex(
+  const hxc_bytes_ref *bytes,
+  hxc_allocator allocator,
+  hxc_string *out_string
+);
+
 #if defined(__cplusplus)
 } /* extern "C" */
 #endif

@@ -12,6 +12,19 @@
  */
 #include "hxrt/allocator.h"
 
+/* Optional correctness-test entry hooks. With no override these compile away:
+ * the runtime retains no observer state and makes no observer call. Overrides
+ * must not allocate, reenter hxrt, or change runtime arguments/results. These
+ * count API attempts (including invalid/zero requests), not successful blocks;
+ * realloc fallback can also enter alloc. Define before compiling this unit.
+ */
+#ifndef HXC_RUNTIME_ALLOC_ATTEMPT
+#define HXC_RUNTIME_ALLOC_ATTEMPT() ((void)0)
+#endif
+#ifndef HXC_RUNTIME_REALLOC_ATTEMPT
+#define HXC_RUNTIME_REALLOC_ATTEMPT() ((void)0)
+#endif
+
 #if !defined(HXC_FREESTANDING)
 #include <stdlib.h>
 #endif
@@ -227,6 +240,7 @@ hxc_status hxc_alloc(
   size_t alignment,
   void **out_memory
 ) {
+  HXC_RUNTIME_ALLOC_ATTEMPT();
   void *memory = NULL;
   hxc_status status;
   if (out_memory == NULL || !hxc_allocator_is_valid(allocator)) {
@@ -269,6 +283,7 @@ hxc_status hxc_realloc(
   size_t alignment,
   void **out_memory
 ) {
+  HXC_RUNTIME_REALLOC_ATTEMPT();
   const size_t copy_size = old_size < new_size ? old_size : new_size;
   void *resized = NULL;
   hxc_status status;

@@ -10,4 +10,7 @@ enum abstract MiningOutcome(Int) {
 
 	/** Exactly one block left the world and entered its matching stack. */
 	var Collected = 2;
+
+	/** Authored progression could not reserve its matching terrain event. */
+	var FlowEventUnavailable = 3;
 }

@@ -77,7 +77,8 @@ explicit sign extension. Bit operations work on unsigned bits and reconstruct
 the signed value without an implementation-defined cast. Integer modulo by
 zero returns `0`, as does `INT32_MIN % -1`. Haxe division produces binary64
 `Float`, so integer operands convert before the operation and zero yields IEEE
-NaN or signed infinity through a guarded helper.
+NaN or signed infinity through a guarded helper. A proven nonzero literal
+divisor permits direct C division after the same operand conversions.
 
 Safe `UInt` arithmetic and masked shifts remain direct C, with explicit
 `uint64_t` intermediates and `uint32_t` narrowing to defeat integer-promotion

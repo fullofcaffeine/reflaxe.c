@@ -20,6 +20,7 @@
     "runtime/hxrt/src/object.c",
     "runtime/hxrt/test/gc_contract.c",
     "runtime/hxrt/test/gc_freestanding.c",
+    "runtime/hxrt/test/gc_scaling.c",
     "runtime/hxrt/test/gc_header_cpp.cpp",
     "runtime/hxrt/test/generated_root_frame_harness.c",
     "test/runtime/gc/GeneratedRootFrameFixture.hx",
@@ -40,7 +41,7 @@
     "exitCode": 0,
     "stdout": {
       "mode": "regex",
-      "value": "gc-runtime: OK: precise cycles, exact stack/global/thread roots, pins, pressure, reports, generated root lifetimes, freestanding allocation, C\\+\\+17, and sanitizers passed \\(.+\\)$"
+      "value": "gc-runtime: OK: precise cycles, exact stack/global/thread roots, pins, pressure, indexed scaling, reports, generated root lifetimes, freestanding allocation, C\\+\\+17, and sanitizers passed \\(.+\\)$"
     },
     "artifacts": [
       {

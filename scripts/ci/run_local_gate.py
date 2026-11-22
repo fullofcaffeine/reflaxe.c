@@ -15,6 +15,7 @@ import hashlib
 import json
 import os
 import re
+import shutil
 import stat
 import subprocess
 import sys
@@ -84,6 +85,7 @@ GIT_HOOK_AUTHOR_VARIABLES = (
     "GIT_AUTHOR_EMAIL",
     "GIT_AUTHOR_DATE",
 )
+PARTIAL_INDEX_EVIDENCE_VALUE = "<content-addressed-by-stagedTree>"
 
 
 class LocalGateFailure(Exception):
@@ -202,21 +204,69 @@ def default_git_index_path(environment: Mapping[str, str]) -> Path | None:
     return (ROOT / path).resolve() if not path.is_absolute() else path.resolve()
 
 
+def default_git_directory(environment: Mapping[str, str]) -> Path | None:
+    """Find this checkout's Git directory without a hook's explicit selector."""
+    selected = dict(environment)
+    selected.pop("GIT_DIR", None)
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "--absolute-git-dir"],
+            cwd=ROOT, env=selected, check=False, capture_output=True,
+            text=True, timeout=15,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    value = result.stdout.strip()
+    if result.returncode != 0 or not value or not Path(value).is_absolute():
+        return None
+    return Path(value).resolve()
+
+
 def normalized_owner_environment(
     environment: Mapping[str, str],
 ) -> dict[str, str]:
     """Remove only proven wrapper noise before keying and running an owner.
 
-    Git supplies the normal index plus commit-author/editor variables, while
-    stock Beads marks its own hook delegation with ``BD_GIT_HOOK=1``. None of
-    the admitted local owners consumes those transport values, so both direct
+    Git supplies its repository/index selectors and commit-author/editor
+    variables; Beads, shells, and Codex also add invocation metadata. Equivalent
+    default selectors and unused metadata are transport values, so both direct
     and hook runs remove them and execute under the same environment. A
-    partial commit's temporary index and every other environment difference
-    remain in the key.
+    partial commit keeps its temporary index so an owner that invokes Git sees
+    the intended staged state. Every other environment difference remains in
+    the key.
     """
 
     selected = dict(environment)
     selected.pop("BD_GIT_HOOK", None)
+    # Codex assigns a new tracing ID to each tool invocation. Admitted owners
+    # do not consume that host metadata, so it must not reach their execution
+    # environment or invalidate a result produced by the preceding invocation.
+    selected.pop("CODEX_TOOL_CALL_ID", None)
+    # Linked-worktree hooks export GIT_DIR even though cwd already selects the
+    # same checkout. Keep an override that selects any other Git directory.
+    git_directory = selected.get("GIT_DIR")
+    if git_directory is not None:
+        candidate = Path(git_directory)
+        candidate = (
+            (ROOT / candidate).resolve()
+            if not candidate.is_absolute()
+            else candidate.resolve()
+        )
+        if candidate == default_git_directory(selected):
+            selected.pop("GIT_DIR")
+    # Shell nesting and Git's empty root prefix describe how the hook reached
+    # this runner. Admitted owners do not consume them; remove them from both
+    # execution and evidence, while retaining a nonempty Git prefix.
+    selected.pop("SHLVL", None)
+    # Bash may export the previous directory after the hook changes cwd.
+    # Owners use an explicit working directory, never shell navigation history;
+    # remove it from their execution as well as their evidence identity.
+    selected.pop("OLDPWD", None)
+    # Shells export their last command in _. It describes the invocation path,
+    # not an owner input; remove it from execution and evidence together.
+    selected.pop("_", None)
+    if selected.get("GIT_PREFIX") == "":
+        selected.pop("GIT_PREFIX")
     for name in GIT_HOOK_AUTHOR_VARIABLES:
         selected.pop(name, None)
     if selected.get("GIT_EDITOR") == ":":
@@ -243,6 +293,25 @@ def normalized_owner_environment(
     return selected
 
 
+def environment_for_evidence_digest(
+    environment: Mapping[str, str],
+) -> dict[str, str]:
+    """Remove only a partial index's non-semantic pathname from its key.
+
+    Git creates a newly named temporary index for every path-limited commit.
+    The separate ``stagedTree`` input already hashes that index's complete
+    logical contents, including each path, mode, stage, and blob identity. The
+    pathname therefore identifies Git's transport file, not different test
+    inputs. Owners still execute with the original environment and index path;
+    only the environment digest uses this stable marker.
+    """
+
+    selected = dict(environment)
+    if "GIT_INDEX_FILE" in selected:
+        selected["GIT_INDEX_FILE"] = PARTIAL_INDEX_EVIDENCE_VALUE
+    return selected
+
+
 def collect_inputs(
     script: str,
     command: str,
@@ -258,7 +327,9 @@ def collect_inputs(
             "commandDigest": command_definition_digest(script, command),
             "locksDigest": digest_files(EVIDENCE_LOCK_PATHS),
             "toolsDigest": tool_identity_digest(environment),
-            "environmentDigest": environment_digest(environment),
+            "environmentDigest": environment_digest(
+                environment_for_evidence_digest(environment)
+            ),
             "runnerDigest": runner_implementation_digest(),
             "hookDigest": hook_digest,
             "hostDigest": host_identity_digest(),
@@ -535,12 +606,30 @@ def environment_requests_ci(environment: Mapping[str, str]) -> bool:
 def execute_package_owner(
     script: str,
     environment: Mapping[str, str],
+    *,
+    background_owner: bool = False,
 ) -> tuple[int, int]:
-    """Execute one npm owner and return its status and wall duration."""
+    """Execute one owner, optionally lowering only its process-tree priority.
+
+    Keep identity collection in the caller. Native scheduling commands wrap
+    the unchanged npm arguments and environment; they do not relax deadlines
+    or alter which passing result may become reusable evidence.
+    """
+    command = ["npm", "run", script]
+    if background_owner:
+        nice = shutil.which("nice", path=environment.get("PATH", os.defpath))
+        if nice is None:
+            raise LocalGateFailure("--background-owner requires nice on this host")
+        prefix = [nice, "-n", "10"]
+        if sys.platform == "darwin":
+            taskpolicy = shutil.which("taskpolicy", path=environment.get("PATH", os.defpath))
+            if taskpolicy is not None:
+                prefix = [taskpolicy, "-b", *prefix]
+        command = [*prefix, *command]
     start = time.monotonic_ns()
     try:
         result = subprocess.run(
-            ["npm", "run", script],
+            command,
             cwd=ROOT,
             env=dict(environment),
             check=False,
@@ -559,6 +648,7 @@ def run_owner(
     evidence_dir: Path,
     environment: Mapping[str, str],
     now: int | None = None,
+    background_owner: bool = False,
 ) -> int:
     """Run or exactly reuse one package owner and return its process status."""
     scripts = load_scripts()
@@ -570,7 +660,7 @@ def run_owner(
     if not reusable_kind:
         reason = "this owner is not in the reviewed expensive-reuse set"
         print(f"local-gate: {script}: executing cold because {reason}", flush=True)
-        returncode, _ = execute_package_owner(script, owner_environment)
+        returncode, _ = execute_package_owner(script, owner_environment, background_owner=background_owner)
         if returncode != 0:
             print(
                 f"local-gate: {script}: failed with exit {returncode}; "
@@ -593,7 +683,7 @@ def run_owner(
             with owner_evidence_lock(record_path):
                 invalidate_prior_evidence(record_path)
                 returncode, _ = execute_package_owner(
-                    script, owner_environment
+                    script, owner_environment, background_owner=background_owner
                 )
                 cold_executed = True
                 # A cold result is authoritative execution evidence, not a
@@ -615,7 +705,7 @@ def run_owner(
                 file=sys.stderr,
                 flush=True,
             )
-            returncode, _ = execute_package_owner(script, owner_environment)
+            returncode, _ = execute_package_owner(script, owner_environment, background_owner=background_owner)
         if returncode != 0:
             print(
                 f"local-gate: {script}: failed with exit {returncode}; "
@@ -654,7 +744,7 @@ def run_owner(
             )
 
         invalidate_prior_evidence(record_path)
-        returncode, duration_ms = execute_package_owner(script, owner_environment)
+        returncode, duration_ms = execute_package_owner(script, owner_environment, background_owner=background_owner)
         if returncode != 0:
             print(
                 f"local-gate: {script}: failed with exit {returncode}; "
@@ -663,7 +753,17 @@ def run_owner(
                 flush=True,
             )
             return returncode
-        inputs_after = collect_inputs(script, command, owner_environment)
+        try:
+            inputs_after = collect_inputs(script, command, owner_environment)
+        except LocalGateFailure as error:
+            print(
+                f"local-gate: WARNING: {script}: passed, but could not verify "
+                "reusable input identity; no reusable evidence was published: "
+                f"{error}",
+                file=sys.stderr,
+                flush=True,
+            )
+            return 0
         if inputs_after != inputs_before:
             print(
                 f"local-gate: {script}: passed, but inputs changed during "
@@ -696,6 +796,10 @@ def parser() -> argparse.ArgumentParser:
     selected.add_argument("--hook", action="store_true", help="reuse before executing")
     selected.add_argument("--cold", action="store_true", help="always execute")
     selected.add_argument(
+        "--background-owner", action="store_true",
+        help="lower only the package owner's priority; start this runner at normal priority",
+    )
+    selected.add_argument(
         "--evidence-dir",
         type=Path,
         default=DEFAULT_EVIDENCE_DIR,
@@ -713,6 +817,7 @@ def main(arguments: list[str] | None = None) -> int:
             selected.script,
             hook_mode=selected.hook,
             cold=selected.cold,
+            background_owner=selected.background_owner,
             evidence_dir=selected.evidence_dir,
             environment=os.environ,
         )

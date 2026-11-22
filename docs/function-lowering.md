@@ -56,6 +56,24 @@ pointer such as `int32_t (*operation)(int32_t)`. Calling that value uses the
 pointer directly; it does not box arguments, erase them to `void *`, or select a
 runtime feature.
 
+An `Array` can store these exact bare function pointers as unboxed elements.
+The complete parameter and result signature belongs to the Array
+specialization key, so `Array<Int -> Int>` cannot share storage with
+`Array<(Int, Int) -> Int>`. Construction, indexed calls, replacement, growth,
+copying, iteration, and sorting use the ordinary typed Array operations. A
+non-capturing sort comparator can receive two stored pointers directly. The
+elements have no cleanup callback because a bare function pointer owns no
+environment. A capturing function still fails before output because its
+environment has no Array-owned lifetime.
+
+The same bare function pointer can cross ordinary typed control flow. An `if`
+or `switch` expression stores the selected function in one exact local, and
+HxcIR proves that every path assigns that local before its first read. A
+function can also place its own non-capturing reference in a local and call it
+recursively. These paths keep the declared signature throughout; incompatible
+branch signatures fail in Haxe type checking before haxe.c creates output.
+They do not admit a capture environment or weaken a callable to `void *`.
+
 An inline function literal uses the same direct representation when it is
 non-capturing. For example, an `Array<Int>` comparator that uses only its
 `left` and `right` parameters becomes a private typed HxcIR function and an
@@ -241,21 +259,28 @@ are registered snapshots. A module function using a rest argument proves that
 unsupported module fields still stop at the source with `HXC1001` and leave no
 output.
 
-## Closed generic functions
+## Closed generic functions and owners
 
-E3.T03 specializes reachable direct static generic functions for closed
-primitive and admitted enum arguments. The graph worklist keys each instance by
-the base function plus a length-prefixed normalized argument sequence, merges
-aliases and repeated call reasons, and registers the instance before scanning
-its body so recursion terminates. Full keys remain authoritative when SHA-256
-supplies compact instance and C-symbol suffixes.
+E3.T03 specializes reachable direct generic functions and constructors for
+closed primitive, enum, record, Array, String, transparent-abstract, nullable,
+and ordinary managed-class arguments. The graph worklist keys each instance by
+the base function plus a length-prefixed normalized argument sequence, with
+owner arguments before method arguments. It merges aliases and repeated call
+reasons, and registers the instance before scanning its body so recursion
+terminates. Full keys remain authoritative when SHA-256 supplies compact
+instance and C-symbol suffixes.
 
-Dynamic, open, reference, class, anonymous-record, function, nullable, and
-native-pointer arguments remain exact source-positioned `HXC1001` boundaries.
-The compiler also rejects a 65th generic function or enum instance and a project
-whose conservative specialization estimate exceeds 524,288 C bytes. Successful
-generic builds emit the schema-2 `hxc.specializations.json` sidecar and remain
-runtime-free. See [deterministic generic
+Closed generic instance methods additionally require one proven effective
+target after reachable construction discovery reaches a fixed point. A
+reachable descendant override makes the call fail closed because generic
+virtual slots are not yet represented. Dynamic, open, extern/interface,
+function, unsupported nullable, and native-pointer arguments remain exact
+source-positioned `HXC1001` boundaries. The compiler also rejects a 65th
+generic function or enum instance and a project whose conservative
+specialization estimate exceeds 524,288 C bytes. Successful generic builds
+emit the schema-2 `hxc.specializations.json` sidecar. Specialization itself adds
+no runtime feature; a managed class, Array, or String argument still composes
+its already-proven runtime plan. See [deterministic generic
 specialization](generic-specialization.md).
 
 ## Calls, conversions, and C evaluation order
@@ -369,7 +394,8 @@ npm run snapshots:check
 The focused function and enum suites render twice, reverse discovery order,
 compare portable and metal, check exact HxcIR/header/C-source-set/symbol
 snapshots, and prove explicit
-argument conversion order, exact non-capturing function pointers, nonescaping
+argument conversion order, exact non-capturing function pointers selected by
+`if` and `switch`, recursion through a typed function local, nonescaping
 stack closures, shared captured mutation, directly reassigned primitive
 parameters, read-only parameter fast paths, captured parameters, repeated
 callback calls, context-discarding static/enum adapters, and indirect calls.
@@ -382,14 +408,16 @@ a literal string default, and direct instance methods. They compile in unity,
 split, and package layouts, repeat byte-identically, match Eval, and run as
 strict native C at `-O0`, `-O2`, and under address/undefined-behavior
 sanitizers. Repeated requests through one warm Haxe compiler server remain
-byte-identical. The suite also exercises scoped rest and non-hosted-entry
-diagnostics, then runs portable,
+byte-identical. The suite also exercises incompatible function signatures,
+scoped rest, and non-hosted-entry diagnostics with no generated output. It then
+runs portable,
 metal, and explicit `hxc_runtime=none` production builds, compares isolated
 output roots byte for byte, validates the analyzed sidecars, and compiles/runs
 both fixture and production C under strict GCC and Clang lanes at `-O0` and
 `-O2`.
 
-Broader object/string operations, general arrays, generic classes/references,
+Broader object/string operations, general Array element shapes, generic
+virtual/interface slots, open or extern/interface owner arguments,
 descriptor-driven generic bodies, unresolved virtual/interface omission,
 escaping, nested, recursive, or self-capturing closures, callback sites without
 a proven synchronous-use contract, exceptions, escaping allocation, recursive

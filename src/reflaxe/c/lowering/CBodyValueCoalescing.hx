@@ -404,7 +404,7 @@ class CBodyValueCoalescingPlanner {
 
 	function collectInstructionUses(kind:HxcIRInstructionKind, site:CBodyValueUseSite):Void {
 		switch kind {
-			case IRIOSequence(_) | IRIOConstant(_) | IRIOFunctionReference(_) | IRIOZeroAggregate(_):
+			case IRIOSequence(_) | IRIOConstant(_) | IRIOFunctionReference(_) | IRIOZeroAggregate(_) | IRIOException(_):
 			case IRIOLoad(place) | IRIOAddress(place) | IRIOBorrowClassField(place) | IRIODeallocate(place, _) | IRIORetain(place, _) |
 				IRIORelease(place, _) | IRIOTrace(place, _) | IRIODeclareUninitialized(place) | IRIODeclareManagedCarrier(place, _) |
 				IRIOMoveManagedCarrier(place) | IRIODefaultInitialize(place, _, _) | IRIOBindVirtualTable(place, _) | IRIOLifetime(place, _, _, _):
@@ -420,6 +420,10 @@ class CBodyValueCoalescingPlanner {
 			case IRIOConvert(valueId, _, _, _, failure):
 				addUse(valueId, site);
 				collectFailureUses(failure, site);
+			case IRIODynamic(operation):
+				collectDynamicUses(operation, site);
+			case IRIOAtomic(operation):
+				collectAtomicUses(operation, site);
 			case IRIOCall(call):
 				collectCallUses(call, site);
 			case IRIOConstructAggregate(_, fields):
@@ -452,6 +456,46 @@ class CBodyValueCoalescingPlanner {
 				addUse(indexValueId, site);
 			case IRIONullCheck(valueId, _):
 				addUse(valueId, site);
+		}
+	}
+
+	function collectAtomicUses(operation:HxcIRAtomicInstruction, site:CBodyValueUseSite):Void {
+		switch operation {
+			case IRALoad(place, _):
+				collectPlaceUses(place, site);
+			case IRAInitialize(place, valueId) | IRAStore(place, valueId, _) | IRAExchange(place, valueId, _) | IRAFetchAdd(place, valueId, _) |
+				IRAFetchSub(place, valueId, _) | IRAFetchAnd(place, valueId, _) | IRAFetchOr(place, valueId, _) | IRAFetchXor(place, valueId, _):
+				collectPlaceUses(place, site);
+				addUse(valueId, site);
+			case IRACompareExchange(place, expectedValueId, replacementValueId, _, _):
+				collectPlaceUses(place, site);
+				addUse(expectedValueId, site);
+				addUse(replacementValueId, site);
+		}
+	}
+
+	function collectDynamicUses(operation:HxcIRDynamicInstruction, site:CBodyValueUseSite):Void {
+		function addValues(values:Array<String>):Void
+			for (valueId in values)
+				addUse(valueId, site);
+		switch operation {
+			case IRDBox(valueId, _):
+				addUse(valueId, site);
+			case IRDBoxNull(_) | IRDBoxTypeToken(_):
+			case IRDUnbox(valueId, _, failure) | IRDGet(valueId, _, failure):
+				addUse(valueId, site);
+				collectFailureUses(failure, site);
+			case IRDSet(receiverValueId, valueId, _, failure):
+				addUse(receiverValueId, site);
+				addUse(valueId, site);
+				collectFailureUses(failure, site);
+			case IRDCall(callableValueId, arguments, _, failure) | IRDInvoke(callableValueId, arguments, _, failure):
+				addUse(callableValueId, site);
+				addValues(arguments);
+				collectFailureUses(failure, site);
+			case IRDEqual(leftValueId, rightValueId, _):
+				addUse(leftValueId, site);
+				addUse(rightValueId, site);
 		}
 	}
 

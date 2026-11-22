@@ -34,6 +34,8 @@ class TargetContractProbe {
 				haxeVersion: Context.definedValue("haxe"),
 				carrier: Context.definedValue("reflaxe_c_haxe_carrier"),
 				environment: Context.definedValue("reflaxe_c_platform_environment"),
+				atomicBackend: Context.definedValue("reflaxe_c_platform_atomic_backend"),
+				threadBackend: Context.definedValue("reflaxe_c_platform_thread_backend"),
 				platform: platformSnapshot(platform),
 				defines: {
 					bootstrapCount: Context.definedValue("reflaxe_c_bootstrap_count"),

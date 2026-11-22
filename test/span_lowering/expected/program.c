@@ -103,6 +103,82 @@ int32_t hxc_SpanFixture_constSum(void)
   return hxc_l_total;
 }
 
+uint8_t hxc_SpanFixture_directSpanArguments(bool hxc_l_third)
+{
+  uint8_t hxc_l_bytes[4] = { 0 };
+  struct hxc_SpanFixture_FinalSpanMutator hxc_l_tmp_object_storage_n3 = { 0 };
+  struct hxc_SpanFixture_FinalSpanMutator *hxc_l_tmp_class_object_address_n0 = &hxc_l_tmp_object_storage_n3;
+  struct hxc_SpanFixture_FinalSpanMutator *hxc_l_mutator = hxc_l_tmp_class_object_address_n0;
+  struct hxc_SpanFixture_FinalSpanMutator *hxc_l_tmp_load_result_n1 = hxc_l_mutator;
+  if (hxc_l_tmp_load_result_n1 == NULL)
+  {
+    abort();
+  }
+  struct hxc_SpanFixture_FinalSpanMutator *hxc_l_tmp_instance_call_receiver_n4 = hxc_l_tmp_load_result_n1;
+  uint8_t *hxc_l_tmp_call_span_n5 = hxc_l_bytes;
+  size_t hxc_l_tmp_length_n5 = sizeof(hxc_l_bytes) / sizeof(hxc_l_bytes[0]);
+  uint8_t *hxc_l_tmp_instance_call_argument_0_n6 = hxc_l_tmp_call_span_n5;
+  size_t hxc_l_tmp_length_n6 = hxc_l_tmp_length_n5;
+  int32_t hxc_l_tmp_conditional_result_n7 = 0;
+  if (hxc_l_third)
+  {
+    hxc_l_tmp_conditional_result_n7 = 2;
+  }
+  else
+  {
+    hxc_l_tmp_conditional_result_n7 = 1;
+  }
+  int32_t hxc_l_tmp_conditional_load_result_n2 = hxc_l_tmp_conditional_result_n7;
+  struct hxc_SpanFixture_FinalSpanMutator *hxc_l_tmp_instance_call_receiver_load_result_n3 = hxc_l_tmp_instance_call_receiver_n4;
+  if (hxc_l_tmp_instance_call_receiver_load_result_n3 == NULL)
+  {
+    abort();
+  }
+  hxc_SpanFixture_FinalSpanMutator_replace(hxc_l_tmp_instance_call_receiver_load_result_n3, hxc_l_tmp_instance_call_argument_0_n6, hxc_l_tmp_length_n6, hxc_l_tmp_conditional_load_result_n2, (uint8_t)91);
+  struct hxc_SpanFixture_ReturnedSpanOwner hxc_l_tmp_object_storage_n9 = { 0 };
+  struct hxc_SpanFixture_ReturnedSpanOwner *hxc_l_tmp_class_object_address_n5 = &hxc_l_tmp_object_storage_n9;
+  hxc_compiler_constructor_SpanFixture_ReturnedSpanOwner(hxc_l_tmp_class_object_address_n5);
+  struct hxc_SpanFixture_ReturnedSpanOwner *hxc_l_owner = hxc_l_tmp_class_object_address_n5;
+  int32_t hxc_l_evaluations = 0;
+  hxc_l_evaluations = hxc_i32_add_wrapping(hxc_l_evaluations, 1);
+  struct hxc_SpanFixture_ReturnedSpanOwner *hxc_l_tmp_load_result_n7 = hxc_l_owner;
+  if (hxc_l_tmp_load_result_n7 == NULL)
+  {
+    abort();
+  }
+  const uint8_t *hxc_l_tmp_call_span_n12 = (*hxc_l_tmp_load_result_n7).hxc_bytes;
+  size_t hxc_l_tmp_length_n12 = 4;
+  const uint8_t *hxc_l_tmp_static_call_argument_0_n13 = hxc_l_tmp_call_span_n12;
+  size_t hxc_l_tmp_length_n13 = hxc_l_tmp_length_n12;
+  int32_t hxc_l_tmp_load_result_n8 = hxc_l_evaluations;
+  int32_t hxc_l_tmp_conditional_result_n14 = 0;
+  if (hxc_l_tmp_load_result_n8 == 1)
+  {
+    hxc_l_tmp_conditional_result_n14 = 2;
+  }
+  else
+  {
+    hxc_l_tmp_conditional_result_n14 = 0;
+  }
+  int32_t hxc_l_tmp_conditional_load_result_n9 = hxc_l_tmp_conditional_result_n14;
+  uint8_t hxc_l_tmp_call_result_n11 = hxc_SpanFixture_readAt(hxc_l_tmp_static_call_argument_0_n13, hxc_l_tmp_length_n13, hxc_l_tmp_conditional_load_result_n9);
+  uint8_t hxc_l_observed = hxc_l_tmp_call_result_n11;
+  uint8_t hxc_l_tmp_load_result_n12 = hxc_l_observed;
+  bool hxc_l_tmp_short_circuit_result_n15 = hxc_l_tmp_load_result_n12 != (uint8_t)29;
+  if (!(hxc_l_tmp_load_result_n12 != (uint8_t)29))
+  {
+    hxc_l_tmp_short_circuit_result_n15 = hxc_l_evaluations != 1;
+  }
+  if (!hxc_l_tmp_short_circuit_result_n15)
+  {
+    const uint8_t *hxc_l_tmp_call_span_n16 = hxc_l_bytes;
+    size_t hxc_l_tmp_length_n16 = sizeof(hxc_l_bytes) / sizeof(hxc_l_bytes[0]);
+    uint8_t hxc_l_tmp_call_result_n15 = hxc_SpanFixture_readAt(hxc_l_tmp_call_span_n16, hxc_l_tmp_length_n16, 2);
+    return hxc_l_tmp_call_result_n15;
+  }
+  return (uint8_t)255;
+}
+
 uint8_t hxc_SpanFixture_finalClassParameterRoundTrip(uint8_t hxc_l_replacement)
 {
   uint8_t hxc_l_values[4] = { 0 };
@@ -161,6 +237,7 @@ void hxc_SpanFixture_main(void)
   hxc_SpanFixture_returnedSpanRoundTrip();
   hxc_SpanFixture_conditionalAssignment(true);
   hxc_SpanFixture_conditionalAssignment(false);
+  hxc_SpanFixture_directSpanArguments(true);
   return;
 }
 

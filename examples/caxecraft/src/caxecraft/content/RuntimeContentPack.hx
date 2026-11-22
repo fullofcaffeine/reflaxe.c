@@ -205,6 +205,10 @@ final class RuntimeContentRegistry implements ScenarioContentRegistry implements
 	public inline function blockCount():Int
 		return blocks.length;
 
+	/** Return one admitted terrain identity without exposing registry storage. */
+	public function blockIdAt(index:Int):Null<ContentId>
+		return index < 0 || index >= blocks.length ? null : new ContentId(blocks[index].id);
+
 	/** Return the schema-validated air ID used to initialize blank terrain. */
 	public inline function airBlockId():ContentId
 		return new ContentId(airBlock);
@@ -231,6 +235,26 @@ final class RuntimeContentRegistry implements ScenarioContentRegistry implements
 	public inline function itemCount():Int
 		return items.length;
 
+	/** Return one admitted item identity without exposing registry storage. */
+	public function itemIdAt(index:Int):Null<ContentId>
+		return index < 0 || index >= items.length ? null : new ContentId(items[index].id);
+
+	/** Number of admitted NPC definitions available to authoring projections. */
+	public inline function npcCount():Int
+		return npcs.length;
+
+	/** Return one admitted NPC identity without exposing registry storage. */
+	public function npcIdAt(index:Int):Null<ContentId>
+		return index < 0 || index >= npcs.length ? null : new ContentId(npcs[index].id);
+
+	/** Number of admitted enemy definitions available to authoring projections. */
+	public inline function enemyCount():Int
+		return enemies.length;
+
+	/** Return one admitted enemy identity without exposing registry storage. */
+	public function enemyIdAt(index:Int):Null<ContentId>
+		return index < 0 || index >= enemies.length ? null : new ContentId(enemies[index].id);
+
 	/** Number of pack-owned object recipes shown by creator tools. */
 	public inline function editorObjectCount():Int
 		return editorObjects.length;
@@ -240,8 +264,21 @@ final class RuntimeContentRegistry implements ScenarioContentRegistry implements
 		if (index < 0 || index >= editorObjects.length)
 			return null;
 		final entry = editorObjects[index];
-		return new EditorObjectRecipe(entry.id, entry.labelEn, entry.labelEsMx,
-			EditorStatefulObject(new ContentId(entry.objectType.id), new ContentId(entry.initialState.id)));
+		final kind = switch entry.recipe {
+			case RuntimeStatefulEditorObject(objectType, initialState):
+				EditorStatefulObject(new ContentId(objectType.id), new ContentId(initialState.id));
+			case RuntimeLinkedStatefulPair(source, target):
+				EditorLinkedStatefulPair({
+					objectType: new ContentId(source.objectType.id),
+					initialState: new ContentId(source.initialState.id),
+					activeState: new ContentId(source.activeState.id)
+				}, {
+					objectType: new ContentId(target.objectType.id),
+					initialState: new ContentId(target.initialState.id),
+					activeState: new ContentId(target.activeState.id)
+				});
+		};
+		return new EditorObjectRecipe(entry.id, entry.labelEn, entry.labelEsMx, kind);
 	}
 
 	/** Number of admitted fluid definitions. */
@@ -268,6 +305,14 @@ final class RuntimeContentRegistry implements ScenarioContentRegistry implements
 	public function blockStorageCode(id:ContentId):Int {
 		final block = findBlock(id.text());
 		return block == null ? -1 : block.storageCode;
+	}
+
+	/** Return the canonical terrain ID represented by one compact world byte. */
+	public function blockContentIdForStorageCode(code:Int):Null<ContentId> {
+		for (block in blocks)
+			if (block.storageCode == code)
+				return new ContentId(block.id);
+		return null;
 	}
 
 	/** True when the admitted pack allows this terrain to become its declared drop. */
@@ -452,6 +497,20 @@ final class RuntimeContentRegistry implements ScenarioContentRegistry implements
 		return false;
 	}
 
+	/** Number of admitted state identities available to typed authoring fields. */
+	public inline function stateCount():Int
+		return states.length;
+
+	/** Return one admitted state identity without exposing registry storage. */
+	public function stateIdAt(index:Int):Null<ContentId>
+		return index < 0 || index >= states.length ? null : new ContentId(states[index].id);
+
+	/** True only when the object definition owns the requested closed state. */
+	public function statefulObjectHasState(objectType:ContentId, state:ContentId):Bool {
+		final object = findStatefulObject(objectType.text());
+		return object != null && object.presentationFor(state.text()) != null;
+	}
+
 	/** Return one interactive object's bounded proximity, or zero when unknown. */
 	public function statefulObjectInteractionRadiusMilli(id:ContentId):Int {
 		final object = findStatefulObject(id.text());
@@ -495,6 +554,14 @@ final class RuntimeContentRegistry implements ScenarioContentRegistry implements
 				return true;
 		return false;
 	}
+
+	/** Number of admitted feedback effects available to typed authoring fields. */
+	public inline function effectCount():Int
+		return effects.length;
+
+	/** Return one admitted effect identity without exposing registry storage. */
+	public function effectIdAt(index:Int):Null<ContentId>
+		return index < 0 || index >= effects.length ? null : new ContentId(effects[index].id);
 
 	/** Return an item's stack bound, or zero for an unknown ID. */
 	public function maximumItemQuantity(id:ContentId):Int {
@@ -602,6 +669,20 @@ final class RuntimeContentPack {
 		final root = reader.parse(input);
 		if (root == null)
 			return rejected(reader);
+		return decodeParsed(root);
+	}
+
+	/**
+	 * Admit one parser-bounded tree without parsing its source a second time.
+	 *
+	 * Only the runtime-schema probe receives this read-only friend capability. It
+	 * uses the entry point to isolate schema mutations after one real byte parse;
+	 * application callers must continue through `decode`, which owns byte, UTF-8,
+	 * syntax, and resource-bound validation.
+	 */
+	@:allow(caxecraft.qa.RuntimeSchemasProbe)
+	private static function decodeParsed(root:ContentJsonNode):RuntimeContentPackResult {
+		final reader = new RuntimeSchemaReader();
 		final fields = reader.object(root, "content pack", [
 			"schemaVersion",
 			"logicalPath",
@@ -732,12 +813,22 @@ final class RuntimeContentPack {
 		final result:Array<RuntimeEditorObjectDefinition> = [];
 		for (index in 0...values.length) {
 			final path = 'editorObjects[$index]';
-			final fields = reader.object(values[index], path, ["id", "kind", "label", "objectType", "initialState"]);
+			final fields = reader.object(values[index], path, [
+				"id",
+				"kind",
+				"label",
+				"objectType",
+				"initialState",
+				"activeState",
+				"targetObjectType",
+				"targetInitialState",
+				"targetActiveState"
+			]);
 			if (fields == null)
 				return null;
 			final idNode = reader.field(fields, "id");
 			final id = reader.string(idNode, path + ".id", 64);
-			final kind = readClosed(reader, reader.field(fields, "kind"), path + ".kind", ["stateful-object"]);
+			final kind = readClosed(reader, reader.field(fields, "kind"), path + ".kind", ["linked-stateful-pair", "stateful-object"]);
 			final labelFields = reader.object(reader.field(fields, "label"), path + ".label", ["en", "es-MX"]);
 			if (labelFields == null)
 				return null;
@@ -747,19 +838,60 @@ final class RuntimeContentPack {
 			final objectType = readContentId(reader, objectNode, path + ".objectType");
 			final stateNode = reader.field(fields, "initialState");
 			final initialState = readContentId(reader, stateNode, path + ".initialState");
+			final activeNode = reader.field(fields, "activeState");
+			final activeState = reader.nullableContentId(activeNode, path + ".activeState");
+			final targetObjectNode = reader.field(fields, "targetObjectType");
+			final targetObjectType = reader.nullableContentId(targetObjectNode, path + ".targetObjectType");
+			final targetInitialNode = reader.field(fields, "targetInitialState");
+			final targetInitialState = reader.nullableContentId(targetInitialNode, path + ".targetInitialState");
+			final targetActiveNode = reader.field(fields, "targetActiveState");
+			final targetActiveState = reader.nullableContentId(targetActiveNode, path + ".targetActiveState");
 			if (id == null
 				|| !RuntimeSchemaReader.validProfile(id)
 				|| kind == null
 				|| labelEn == null
 				|| labelEsMx == null
 				|| objectType == null
-				|| initialState == null) {
+				|| initialState == null
+				|| activeState == null
+				|| targetObjectType == null
+				|| targetInitialState == null
+				|| targetActiveState == null) {
 				if (id != null && !RuntimeSchemaReader.validProfile(id))
 					reader.reject(idNode, SchemaInvalidString(path + ".id"));
 				return null;
 			}
-			result.push(new RuntimeEditorObjectDefinition(id, idNode.line, idNode.column, labelEn, labelEsMx,
-				new RuntimeReference(objectType, objectNode.line, objectNode.column), new RuntimeReference(initialState, stateNode.line, stateNode.column)));
+			final sourceTypeReference = new RuntimeReference(objectType, objectNode.line, objectNode.column);
+			final sourceInitialReference = new RuntimeReference(initialState, stateNode.line, stateNode.column);
+			final recipe = switch kind {
+				case "stateful-object":
+					if (activeState.value != null || targetObjectType.value != null || targetInitialState.value != null || targetActiveState.value != null) {
+						reader.reject(values[index], SchemaInvalidInvariant(path + ".kind"));
+						return null;
+					}
+					RuntimeStatefulEditorObject(sourceTypeReference, sourceInitialReference);
+				case "linked-stateful-pair":
+					final active = activeState.value;
+					final targetType = targetObjectType.value;
+					final targetInitial = targetInitialState.value;
+					final targetActive = targetActiveState.value;
+					if (active == null || targetType == null || targetInitial == null || targetActive == null) {
+						reader.reject(values[index], SchemaInvalidInvariant(path + ".kind"));
+						return null;
+					}
+					RuntimeLinkedStatefulPair({
+						objectType: sourceTypeReference,
+						initialState: sourceInitialReference,
+						activeState: new RuntimeReference(active, activeNode.line, activeNode.column)
+					}, {
+						objectType: new RuntimeReference(targetType, targetObjectNode.line, targetObjectNode.column),
+						initialState: new RuntimeReference(targetInitial, targetInitialNode.line, targetInitialNode.column),
+						activeState: new RuntimeReference(targetActive, targetActiveNode.line, targetActiveNode.column)
+					});
+				case _:
+					return null;
+			};
+			result.push(new RuntimeEditorObjectDefinition(id, idNode.line, idNode.column, labelEn, labelEsMx, recipe));
 		}
 		return validateEditorObjectOrder(reader, "editorObjects", result) ? result : null;
 	}
@@ -1538,22 +1670,37 @@ final class RuntimeContentPack {
 				if (kindOf(kinds, state.id) != "state"
 					&& !rejectReference(reader, state.reference(), "statefulObject.states", "state", kinds))
 					return false;
-		for (entry in editorObjects) {
-			final object = findStatefulObjectDefinition(statefulObjects, entry.objectType.id);
-			if (object == null) {
-				if (!rejectReference(reader, entry.objectType, "editorObjects.objectType", "stateful object", kinds))
-					return false;
-			} else {
-				var ownsState = false;
-				for (state in object.states)
-					if (state.id == entry.initialState.id)
-						ownsState = true;
-				if (!ownsState) {
-					if (kindOf(kinds, entry.initialState.id) != "state")
-						return rejectReference(reader, entry.initialState, "editorObjects.initialState", "state", kinds);
-					reader.rejectAt(entry.initialState.line, entry.initialState.column, SchemaInvalidInvariant("editorObjects.initialState"));
-					return false;
-				}
+		for (entry in editorObjects)
+			switch entry.recipe {
+				case RuntimeStatefulEditorObject(objectType, initialState):
+					if (!validateEditorObjectStates(reader, kinds, statefulObjects, objectType, [initialState], "objectType", "initialState"))
+						return false;
+				case RuntimeLinkedStatefulPair(source, target):
+					if (!validateEditorObjectStates(reader, kinds, statefulObjects, source.objectType, [source.initialState, source.activeState],
+						"objectType", "sourceState")
+						|| !validateEditorObjectStates(reader, kinds, statefulObjects, target.objectType, [target.initialState, target.activeState],
+							"targetObjectType", "targetState"))
+						return false;
+			}
+		return true;
+	}
+
+	/** Validate one recipe object's state references without duplicating pack facts. */
+	static function validateEditorObjectStates(reader:RuntimeSchemaReader, kinds:Array<RuntimeKindId>, statefulObjects:Array<RuntimeStatefulObjectDefinition>,
+			objectReference:RuntimeReference, stateReferences:Array<RuntimeReference>, objectField:String, stateField:String):Bool {
+		final object = findStatefulObjectDefinition(statefulObjects, objectReference.id);
+		if (object == null)
+			return rejectReference(reader, objectReference, "editorObjects." + objectField, "stateful object", kinds);
+		for (reference in stateReferences) {
+			var owned = false;
+			for (state in object.states)
+				if (state.id == reference.id)
+					owned = true;
+			if (!owned) {
+				if (kindOf(kinds, reference.id) != "state")
+					return rejectReference(reader, reference, "editorObjects." + stateField, "state", kinds);
+				reader.rejectAt(reference.line, reference.column, SchemaInvalidInvariant("editorObjects." + stateField));
+				return false;
 			}
 		}
 		return true;
@@ -1678,6 +1825,22 @@ private final class RuntimeKindId {
 	}
 }
 
+/** One located state transition retained while the pack validates references. */
+private typedef RuntimeStatefulTransitionRecipe = {
+	final objectType:RuntimeReference;
+	final initialState:RuntimeReference;
+	final activeState:RuntimeReference;
+}
+
+/** Closed data-owned recipe payload retained behind the public immutable view. */
+private enum RuntimeEditorObjectRecipeKind {
+	/** Place one admitted stateful object. */
+	RuntimeStatefulEditorObject(objectType:RuntimeReference, initialState:RuntimeReference);
+
+	/** Place two admitted objects and connect their initial and active states. */
+	RuntimeLinkedStatefulPair(source:RuntimeStatefulTransitionRecipe, target:RuntimeStatefulTransitionRecipe);
+}
+
 /** One validated reloadable recipe retained behind the public immutable view. */
 private final class RuntimeEditorObjectDefinition extends RuntimeLocatedId {
 	/** Child-readable English shelf label. */
@@ -1686,19 +1849,15 @@ private final class RuntimeEditorObjectDefinition extends RuntimeLocatedId {
 	/** Child-readable Mexican Spanish shelf label. */
 	public final labelEsMx:String;
 
-	/** Stateful profile referenced by this first admitted recipe kind. */
-	public final objectType:RuntimeReference;
-
-	/** Compatible state selected when the creator places the object. */
-	public final initialState:RuntimeReference;
+	/** Closed recipe whose references were validated against this same pack. */
+	public final recipe:RuntimeEditorObjectRecipeKind;
 
 	/** Retain one fully located recipe for later cross-reference checks. */
-	public function new(id:String, line:Int, column:Int, labelEn:String, labelEsMx:String, objectType:RuntimeReference, initialState:RuntimeReference) {
+	public function new(id:String, line:Int, column:Int, labelEn:String, labelEsMx:String, recipe:RuntimeEditorObjectRecipeKind) {
 		super(id, line, column);
 		this.labelEn = labelEn;
 		this.labelEsMx = labelEsMx;
-		this.objectType = objectType;
-		this.initialState = initialState;
+		this.recipe = recipe;
 	}
 }
 

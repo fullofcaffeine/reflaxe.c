@@ -20,6 +20,11 @@ int32_t hxc_ArithmeticFixture_fint(double hxc_l_value)
   return hxc_f64_to_i32_saturating(hxc_l_value);
 }
 
+int32_t hxc_ArithmeticFixture_floatQuotientByEight(double hxc_l_value)
+{
+  return hxc_f64_to_i32_saturating(hxc_l_value / (double)8);
+}
+
 double hxc_ArithmeticFixture_fmod(double hxc_l_left, double hxc_l_right)
 {
   return hxc_f64_modulo(hxc_l_left, hxc_l_right);
@@ -33,6 +38,16 @@ double hxc_ArithmeticFixture_fmul(double hxc_l_left, double hxc_l_right)
 double hxc_ArithmeticFixture_fneg(double hxc_l_value)
 {
   return -hxc_l_value;
+}
+
+double hxc_ArithmeticFixture_fractionalDivisor(double hxc_l_value)
+{
+  return hxc_l_value / -0.5;
+}
+
+double hxc_ArithmeticFixture_fsqrt(double hxc_l_value)
+{
+  return hxc_f64_sqrt(hxc_l_value);
 }
 
 double hxc_ArithmeticFixture_fsub(double hxc_l_left, double hxc_l_right)
@@ -95,6 +110,56 @@ int32_t hxc_ArithmeticFixture_inot(int32_t hxc_l_value)
   return hxc_i32_bit_not(hxc_l_value);
 }
 
+int32_t hxc_ArithmeticFixture_intQuotientByEight(int32_t hxc_l_value)
+{
+  return hxc_l_value / 8;
+}
+
+int32_t hxc_ArithmeticFixture_intQuotientByMaximum(int32_t hxc_l_value)
+{
+  return hxc_l_value / 2147483647;
+}
+
+int32_t hxc_ArithmeticFixture_intQuotientByNegativeOne(int32_t hxc_l_value)
+{
+  return hxc_f64_to_i32_saturating((double)hxc_l_value / (double)-1);
+}
+
+int32_t hxc_ArithmeticFixture_intQuotientByOne(int32_t hxc_l_value)
+{
+  return hxc_l_value / 1;
+}
+
+int32_t hxc_ArithmeticFixture_intQuotientBySix(int32_t hxc_l_value)
+{
+  return hxc_l_value / 6;
+}
+
+int32_t hxc_ArithmeticFixture_intQuotientByVariable(int32_t hxc_l_value, int32_t hxc_l_divisor)
+{
+  return hxc_f64_to_i32_saturating(hxc_f64_divide_zero_safe((double)hxc_l_value, (double)hxc_l_divisor));
+}
+
+int32_t hxc_ArithmeticFixture_intQuotientByZero(int32_t hxc_l_value)
+{
+  return hxc_f64_to_i32_saturating(hxc_f64_divide_zero_safe((double)hxc_l_value, (double)0));
+}
+
+int32_t hxc_ArithmeticFixture_intQuotientSideEffect(int32_t hxc_l_value)
+{
+  int32_t hxc_l_observed = hxc_l_value;
+  int32_t hxc_l_tmp_increment_load_result_n0 = hxc_l_observed;
+  hxc_l_observed = hxc_i32_add_wrapping(hxc_l_tmp_increment_load_result_n0, 1);
+  int32_t hxc_l_quotient = hxc_l_tmp_increment_load_result_n0 / 6;
+  int32_t hxc_l_tmp_load_result_n1 = hxc_l_quotient;
+  return hxc_i32_subtract_wrapping(hxc_i32_add_wrapping(hxc_i32_multiply_wrapping(hxc_l_tmp_load_result_n1, 10), hxc_l_observed), hxc_l_value);
+}
+
+int32_t hxc_ArithmeticFixture_intQuotientThroughFloatCast(int32_t hxc_l_value)
+{
+  return hxc_f64_to_i32_saturating((double)hxc_l_value / (double)8);
+}
+
 int32_t hxc_ArithmeticFixture_ior(int32_t hxc_l_left, int32_t hxc_l_right)
 {
   return hxc_i32_bit_or(hxc_l_left, hxc_l_right);
@@ -152,7 +217,18 @@ void hxc_ArithmeticFixture_main(void)
   hxc_ArithmeticFixture_fneg(1.0);
   hxc_ArithmeticFixture_fdiv(1.0, 0.0);
   hxc_ArithmeticFixture_fmod(1.0, 0.0);
+  hxc_ArithmeticFixture_fsqrt(25.0);
   hxc_ArithmeticFixture_fint(3.75);
+  hxc_ArithmeticFixture_intQuotientByEight(47);
+  hxc_ArithmeticFixture_intQuotientBySix(47);
+  hxc_ArithmeticFixture_intQuotientByMaximum(47);
+  hxc_ArithmeticFixture_intQuotientByOne(47);
+  hxc_ArithmeticFixture_intQuotientSideEffect(47);
+  hxc_ArithmeticFixture_intQuotientByVariable(47, 8);
+  hxc_ArithmeticFixture_intQuotientByZero(47);
+  hxc_ArithmeticFixture_intQuotientByNegativeOne(47);
+  hxc_ArithmeticFixture_floatQuotientByEight(47.0);
+  hxc_ArithmeticFixture_intQuotientThroughFloatCast(47);
   hxc_ArithmeticFixture_fequal(1.0, 2.0);
   hxc_ArithmeticFixture_uadd(1, 2);
   hxc_ArithmeticFixture_umod(1, 2);
@@ -167,7 +243,14 @@ void hxc_ArithmeticFixture_main(void)
   hxc_ArithmeticFixture_u8ToI16((uint8_t)255);
   hxc_ArithmeticFixture_update(3);
   hxc_ArithmeticFixture_updateParameter(3);
+  hxc_ArithmeticFixture_fractionalDivisor(1.25);
+  hxc_ArithmeticFixture_negativeZeroDivisor(1.0);
   return;
+}
+
+double hxc_ArithmeticFixture_negativeZeroDivisor(double hxc_l_value)
+{
+  return hxc_f64_divide_zero_safe(hxc_l_value, -0.0);
 }
 
 uint64_t hxc_ArithmeticFixture_u32ToU64(uint32_t hxc_l_value)

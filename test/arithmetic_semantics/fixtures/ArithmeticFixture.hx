@@ -68,8 +68,55 @@ class ArithmeticFixture {
 	static function fmod(left:Float, right:Float):Float
 		return left % right;
 
+	/** Use the ordinary Haxe standard-library surface for binary64 square roots. */
+	static function fsqrt(value:Float):Float
+		return Math.sqrt(value);
+
 	static function fint(value:Float):Int
 		return Std.int(value);
+
+	/** Proves a positive constant Int divisor can stay integral through Std.int. */
+	static function intQuotientByEight(value:Int):Int
+		return Std.int(value / 8);
+
+	/** Covers a positive divisor that binary64 cannot represent as a reciprocal. */
+	static function intQuotientBySix(value:Int):Int
+		return Std.int(value / 6);
+
+	/** Exercises the narrow rounding margin near one with the largest divisor. */
+	static function intQuotientByMaximum(value:Int):Int
+		return Std.int(value / 2147483647);
+
+	/** Covers the exact endpoint quotient for the smallest positive divisor. */
+	static function intQuotientByOne(value:Int):Int
+		return Std.int(value / 1);
+
+	/** Proves that a side-effecting numerator executes exactly once. */
+	static function intQuotientSideEffect(value:Int):Int {
+		var observed = value;
+		final quotient = Std.int(observed++ / 6);
+		return quotient * 10 + observed - value;
+	}
+
+	/** Keeps a runtime divisor on the general Float division path. */
+	static function intQuotientByVariable(value:Int, divisor:Int):Int
+		return Std.int(value / divisor);
+
+	/** Keeps division by zero on the IEEE and saturating-conversion path. */
+	static function intQuotientByZero(value:Int):Int
+		return Std.int(value / 0);
+
+	/** Keeps a negative divisor on the general path, including INT_MIN / -1. */
+	static function intQuotientByNegativeOne(value:Int):Int
+		return Std.int(value / -1);
+
+	/** A Float numerator keeps the binary64 quotient before the saturating Int conversion. */
+	static function floatQuotientByEight(value:Float):Int
+		return Std.int(value / 8);
+
+	/** Keeps a cast-wrapped division outside the direct syntactic proof. */
+	static function intQuotientThroughFloatCast(value:Int):Int
+		return Std.int((cast(value / 8) : Float));
 
 	static function fequal(left:Float, right:Float):Bool
 		return left == right;
@@ -153,13 +200,37 @@ class ArithmeticFixture {
 			ixor(85, 15),
 			inot(0),
 			fmod(-7.0, 3.0),
+			fsqrt(9.0),
+			fsqrt(0.0),
+			1.0 / fsqrt(-0.0) == Math.NEGATIVE_INFINITY ? 1 : 0,
+			Math.isNaN(fsqrt(-1.0)) ? 1 : 0,
+			fsqrt(Math.POSITIVE_INFINITY) == Math.POSITIVE_INFINITY ? 1 : 0,
+			Math.isNaN(fsqrt(Math.NaN)) ? 1 : 0,
+			fsqrt(3.0 * 3.0 + 4.0 * 4.0),
 			fint(3.75),
+			intQuotientByEight(2147483647),
+			intQuotientByEight(minimum),
+			intQuotientBySix(2147483647),
+			intQuotientBySix(minimum),
+			intQuotientByMaximum(2147483646),
+			intQuotientByMaximum(minimum),
+			intQuotientByOne(2147483647),
+			intQuotientSideEffect(47),
+			intQuotientByVariable(47, 8),
+			intQuotientByZero(1) == Std.int(Math.POSITIVE_INFINITY) ? 1 : 0,
+			intQuotientByNegativeOne(minimum),
+			floatQuotientByEight(47.0),
+			intQuotientThroughFloatCast(47),
 			uadd(unsignedMaximum, 1),
 			umod(unsignedMaximum, unsignedHalf),
 			ushl(1, -1),
 			ushr(unsignedHalf, -1),
 			update(3),
-			updateParameter(3)
+			updateParameter(3),
+			fractionalDivisor(1.25),
+			1.0 / fractionalDivisor(0.0) == Math.NEGATIVE_INFINITY ? 1 : 0,
+			Math.isNaN(fractionalDivisor(Math.NaN)) ? 1 : 0,
+			negativeZeroDivisor(1.0) == Math.NEGATIVE_INFINITY ? 1 : 0
 		].join(","));
 		#else
 		iadd(1, 2);
@@ -182,7 +253,18 @@ class ArithmeticFixture {
 		fneg(1.0);
 		fdiv(1.0, 0.0);
 		fmod(1.0, 0.0);
+		fsqrt(25.0);
 		fint(3.75);
+		intQuotientByEight(47);
+		intQuotientBySix(47);
+		intQuotientByMaximum(47);
+		intQuotientByOne(47);
+		intQuotientSideEffect(47);
+		intQuotientByVariable(47, 8);
+		intQuotientByZero(47);
+		intQuotientByNegativeOne(47);
+		floatQuotientByEight(47.0);
+		intQuotientThroughFloatCast(47);
 		fequal(1.0, 2.0);
 		uadd(1, 2);
 		umod(1, 2);
@@ -197,6 +279,16 @@ class ArithmeticFixture {
 		u8ToI16(c.IntConvert.modulo(255));
 		update(3);
 		updateParameter(3);
+		fractionalDivisor(1.25);
+		negativeZeroDivisor(1.0);
 		#end
 	}
+
+	/** Nonzero binary64 divisors preserve the numerator's sign and special values. */
+	static function fractionalDivisor(value:Float):Float
+		return value / -0.5;
+
+	/** A literal negative zero must still select Haxe's signed infinity behavior. */
+	static function negativeZeroDivisor(value:Float):Float
+		return value / -0.0;
 }

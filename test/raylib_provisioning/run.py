@@ -28,6 +28,8 @@ MEMORY_CLOCK_PROBE = SUITE / "native/memory_clock_probe.c"
 EXPECTED = SUITE / "expected"
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
+from scripts.test.bounded_process import run as run_bounded_process  # noqa: E402
+
 
 from scripts.raylib.provision import (  # noqa: E402
     CommandResult,
@@ -204,7 +206,7 @@ def compile_fixture(
     system: bool = False,
     fixture: Path = FIXTURE,
 ) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(
+    return run_bounded_process(
         haxe_command(
             output,
             platform_name=platform_name,

@@ -40,6 +40,12 @@ typedef BodyLoweringProbeRecord = {
 	final runtimeFeatures:Array<String>;
 	final runtimeArtifacts:Array<String>;
 	final unreachableDiagnostic:String;
+	final definiteAssignmentDiagnostics:Array<BodyLoweringDiagnosticRecord>;
+}
+
+typedef BodyLoweringDiagnosticRecord = {
+	final field:String;
+	final diagnostic:String;
 }
 #end
 
@@ -59,6 +65,10 @@ class BodyLoweringProbe {
 		final selected = [
 			"booleanValue",
 			"chooseOrThrow",
+			"definitelyAssignedAfterReturn",
+			"definitelyAssignedBranches",
+			"definitelyAssignedInteger",
+			"definitelyAssignedLoop",
 			"directInteger",
 			"explicitVoid",
 			"floatingValue",
@@ -95,6 +105,7 @@ class BodyLoweringProbe {
 		verifySourceSpanReuse(inputs);
 		final profile = Context.definedValue("body_lowering_profile") == "metal" ? CProfile.Metal : CProfile.Portable;
 		final unreachableDiagnostic = renderUnreachableDiagnostic(inputs, profile);
+		final definiteAssignmentDiagnostics = renderDefiniteAssignmentDiagnostics(inputs, profile);
 		final result = new CBodyLowering(new CompilationContext(profile), CBSMNormalAndLineMapped).lower(inputs);
 		final printer = new CASTPrinter();
 		final functionRecords:Array<BodyLoweringFunctionRecord> = [];
@@ -128,9 +139,77 @@ class BodyLoweringProbe {
 			symbols: result.symbolTable,
 			runtimeFeatures: [],
 			runtimeArtifacts: [],
-			unreachableDiagnostic: unreachableDiagnostic
+			unreachableDiagnostic: unreachableDiagnostic,
+			definiteAssignmentDiagnostics: definiteAssignmentDiagnostics
 		};
 		Sys.println(REPORT_PREFIX + Json.stringify(record));
+	}
+
+	/** Render each unsafe source-local failure independently and deterministically. */
+	static function renderDefiniteAssignmentDiagnostics(inputs:Array<CBodyFunctionInput>, profile:CProfile):Array<BodyLoweringDiagnosticRecord> {
+		final straight = requireInput(inputs, "definitelyAssignedInteger");
+		final straightBody = requireBlockExpressions(requireFunction(straight.expression, straight.fieldName).expr, straight.fieldName);
+		final branches = requireInput(inputs, "definitelyAssignedBranches");
+		final branchBody = requireBlockExpressions(requireFunction(branches.expression, branches.fieldName).expr, branches.fieldName);
+		final loop = requireInput(inputs, "definitelyAssignedLoop");
+		final loopBody = requireBlockExpressions(requireFunction(loop.expression, loop.fieldName).expr, loop.fieldName);
+		final earlyReturn = requireInput(inputs, "definitelyAssignedAfterReturn");
+		final earlyReturnBody = requireBlockExpressions(requireFunction(earlyReturn.expression, earlyReturn.fieldName).expr, earlyReturn.fieldName);
+
+		final originalBranch = branchBody[1];
+		final partialBranch:TypedExpr = switch originalBranch.expr {
+			case TIf(condition, whenTrue, _): {expr: TIf(condition, whenTrue, null), pos: originalBranch.pos, t: originalBranch.t};
+			case _: fatal("branch definite-assignment fixture lost its typed if", originalBranch.pos);
+		};
+		final originalEarlyReturn = earlyReturnBody[1];
+		final fallthrough:TypedExpr = switch originalEarlyReturn.expr {
+			case TIf(condition, _, whenFalse) if (whenFalse != null):
+				{expr: TIf(condition, whenFalse, null), pos: originalEarlyReturn.pos, t: originalEarlyReturn.t};
+			case _: fatal("early-return definite-assignment fixture lost its typed if", originalEarlyReturn.pos);
+		};
+
+		return [
+			renderDefiniteAssignmentDiagnostic(straight, "unsafeReadBeforeAssignment", [straightBody[0], straightBody[2], straightBody[1]], profile),
+			renderDefiniteAssignmentDiagnostic(branches, "unsafePartialBranch", [branchBody[0], partialBranch, branchBody[2]], profile),
+			renderDefiniteAssignmentDiagnostic(loop, "unsafeLoopOnlyAssignment", [loopBody[0], loopBody[2], loopBody[3]], profile),
+			renderDefiniteAssignmentDiagnostic(earlyReturn, "unsafeEarlyReturnFallthrough", [earlyReturnBody[0], fallthrough, earlyReturnBody[2]], profile)
+		];
+	}
+
+	/** Lower one synthetic unsafe body and retain its stable source diagnostic. */
+	static function renderDefiniteAssignmentDiagnostic(base:CBodyFunctionInput, fieldName:String, expressions:Array<TypedExpr>,
+			profile:CProfile):BodyLoweringDiagnosticRecord {
+		final original = requireFunction(base.expression, base.fieldName);
+		final originalBody = original.expr;
+		final syntheticBody:TypedExpr = {expr: TBlock(expressions), pos: originalBody.pos, t: originalBody.t};
+		final syntheticExpression:TypedExpr = {
+			expr: TFunction({args: original.args, t: original.t, expr: syntheticBody}),
+			pos: base.expression.pos,
+			t: base.expression.t
+		};
+		try {
+			new CBodyLowering(new CompilationContext(profile)).lower([
+				{
+					modulePath: base.modulePath,
+					declarationPath: base.declarationPath,
+					sourcePath: base.sourcePath,
+					fieldName: fieldName,
+					sourceOrder: base.sourceOrder,
+					fieldType: base.fieldType,
+					expression: syntheticExpression
+				}
+			]);
+		} catch (error:CBodyLoweringError) {
+			return {field: fieldName, diagnostic: error.diagnostic.render()};
+		}
+		return fatal('unsafe definite-assignment fixture `$fieldName` unexpectedly passed lowering', base.expression.pos);
+	}
+
+	static function requireBlockExpressions(expression:TypedExpr, fieldName:String):Array<TypedExpr> {
+		return switch expression.expr {
+			case TBlock(expressions): expressions;
+			case _: fatal('body fixture `$fieldName` has no typed block', expression.pos);
+		};
 	}
 
 	/**

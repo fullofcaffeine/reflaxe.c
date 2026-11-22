@@ -66,6 +66,25 @@ source file before and after the change. Its own SHA-256 is then pinned in
 [`raylib-provisioning-lock.json`](specs/raylib-provisioning-lock.json). This is
 reviewable provenance, not an untracked edit to a downloaded dependency.
 
+Patch recipes have one canonical repository representation: UTF-8 bytes with
+LF line endings. [`.gitattributes`](../.gitattributes) enforces this checkout
+form on every host, including Windows. The verifier does not normalize a file
+and accept it silently. It reports equivalent CRLF bytes as checkout
+line-ending drift. It reports every other changed byte as content drift.
+
+After you review an intentional recipe edit, calculate its lock value with the
+same canonical-byte function that verification uses:
+
+```sh
+python3 scripts/raylib/provision.py patch-recipe-digest \
+  scripts/raylib/patches/memory-macos-monotonic-clock.json
+```
+
+Copy that digest into the recipe's lock entry. Then run `verify-lock`. The
+digest command rejects CRLF input, symbolic links, and paths outside the patch
+recipe directory. Therefore, an updater cannot establish a different byte
+policy from the verifier.
+
 No manual patch command is required. Run the ordinary `build-source` command
 above with `--platform macos --configuration memory-software`. The provisioner:
 

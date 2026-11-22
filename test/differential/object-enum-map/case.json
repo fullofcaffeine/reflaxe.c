@@ -1,0 +1,54 @@
+{
+  "schemaVersion": 1,
+  "id": "object-enum-map",
+  "role": "fixture",
+  "type": "differential",
+  "status": "active",
+  "requirements": [
+    "HXC-PROD-002",
+    "HXC-SEM-008",
+    "HXC-RT-008",
+    "HXC-RT-009",
+    "HXC-STD-002"
+  ],
+  "sources": [
+    "docs/hxrt.md",
+    "runtime/hxrt/include/hxrt/iterator.h",
+    "runtime/hxrt/include/hxrt/typed_map.h",
+    "runtime/hxrt/src/iterator.c",
+    "runtime/hxrt/src/typed_map.c",
+    "src/reflaxe/c/lowering/CBodyTypedMap.hx",
+    "test/differential/object-enum-map/generated/Main.hx",
+    "test/differential/object-enum-map/generated/oracle.hxml",
+    "test/differential/object-enum-map/negative/dynamic_key/Main.hx",
+    "test/differential/object-enum-map/negative/enum_float/Main.hx",
+    "test/differential/object-enum-map/negative/interface_key/Main.hx",
+    "test/differential/object-enum-map/negative/recursive_enum/Main.hx",
+    "test/differential/object-enum-map/run.py",
+    "test/differential/object-enum-map/typed_map_runtime.c"
+  ],
+  "runner": {
+    "command": [
+      "python3",
+      "run.py"
+    ],
+    "workingDirectory": "test/differential/object-enum-map",
+    "timeoutSeconds": 600,
+    "network": false
+  },
+  "expected": {
+    "exitCode": 0,
+    "stdout": {
+      "mode": "regex",
+      "value": "object-enum-map: OK: .*Eval and generated typed-map identity, recursive equality, collisions, aliases, replacement/removal, snapshot mutation, exact tracing, rollback, layouts, determinism, C\\+\\+, sanitizers, runtime-none, diagnostics, and symbols passed$"
+    },
+    "oracle": "test/differential/object-enum-map/generated/oracle.hxml",
+    "artifacts": [
+      {
+        "path": "runtime/hxrt/include/hxrt/typed_map.h",
+        "format": "header",
+        "comparison": "layout"
+      }
+    ]
+  }
+}

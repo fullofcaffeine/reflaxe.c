@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import importlib.util
 import shutil
 import subprocess
 import sys
 import tempfile
 import unittest
+from unittest import mock
 from pathlib import Path
 
 
@@ -141,6 +143,40 @@ class GovernancePolicyTests(unittest.TestCase):
                 "must name the verified GitHub private reporting path",
                 result.stderr,
             )
+
+
+class GovernanceTriggerPolicyTests(unittest.TestCase):
+    """Keep one PR matrix while retaining main pushes and manual runs."""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        spec = importlib.util.spec_from_file_location("governance_trigger_policy", ROOT / "scripts/ci/check_ci_policy.py")
+        assert spec is not None and spec.loader is not None
+        cls.policy = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(cls.policy)
+
+    def test_current_workflow_preserves_required_contract(self) -> None:
+        self.assertEqual(self.policy.validate(), [])
+
+    def test_trigger_coverage_and_duplicate_push_regressions_fail(self) -> None:
+        workflow = self.policy.WORKFLOW.read_text()
+        mutations = {
+            "unrestricted feature pushes": workflow.replace("    branches:\n      - main\n", "", 1),
+            "extra feature branch": workflow.replace("      - main\n", "      - main\n      - '**'\n", 1),
+            "missing PR": workflow.replace("  pull_request:\n", "", 1),
+            "missing manual": workflow.replace("  workflow_dispatch:\n", "", 1),
+            "wrong default branch": workflow.replace("      - main\n", "      - release\n", 1),
+            "filtered PR coverage": workflow.replace("  pull_request:\n", "  pull_request:\n    branches: [main]\n", 1),
+        }
+        original_read = self.policy.read_text
+        for label, mutated in mutations.items():
+            with self.subTest(label=label):
+                self.assertNotEqual(mutated, workflow)
+                def read(path: Path, errors: list[str]) -> str:
+                    return mutated if path == self.policy.WORKFLOW else original_read(path, errors)
+                with mock.patch.object(self.policy, "read_text", side_effect=read):
+                    errors = self.policy.validate()
+                self.assertTrue(any("governance workflow is missing required CI contract: on:" in error for error in errors), errors)
 
 
 if __name__ == "__main__":

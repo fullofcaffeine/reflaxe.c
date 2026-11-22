@@ -2,12 +2,14 @@ package reflaxe.c.frontend;
 
 #if (macro || reflaxe_runtime)
 import haxe.macro.Expr.MetadataEntry;
+import haxe.macro.Expr.Position;
 import haxe.macro.Type.ClassField;
 import haxe.macro.Type.EnumField;
 import haxe.macro.Type.ModuleType;
 import haxe.macro.Type.Type;
 import haxe.macro.Type.TypedExpr;
 import reflaxe.c.frontend.NamedRecordSourceProvenance.NamedRecordSourcePlan;
+import reflaxe.c.frontend.TypedFunctionSourceProvenance.TypedFunctionSourcePlan;
 
 /** A normalized metadata entry whose arguments have stable source rendering. */
 typedef TypedAstMetadata = {
@@ -29,6 +31,13 @@ typedef TypedAstField = {
 	final isExtern:Bool;
 	final metadata:Array<TypedAstMetadata>;
 	final expression:Null<TypedExpr>;
+
+	/** Content-verified authored positions for a cached typed function tree. */
+	final sourcePositionOverrides:Map<String, Position>;
+
+	/** Canonical text and expression order, or null when this field has no function body. */
+	final functionSourcePlan:Null<TypedFunctionSourcePlan>;
+
 	final rawClassField:Null<ClassField>;
 	final rawEnumField:Null<EnumField>;
 }
@@ -81,6 +90,13 @@ typedef TypedAstEntryFunction = {
 	final sourceOrder:Int;
 	final fieldType:Type;
 	final expression:TypedExpr;
+	final declarationPosition:Position;
+
+	/** Content-verified authored positions for a cached typed function tree. */
+	final sourcePositionOverrides:Map<String, Position>;
+
+	/** Canonical text and expression order already computed for the entry function. */
+	final functionSourcePlan:TypedFunctionSourcePlan;
 }
 
 /** Entry expression plus its eagerly captured static target, when available. */

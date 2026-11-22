@@ -63,6 +63,23 @@ final class FocusedContentRegistry implements ScenarioContentRegistry implements
 	public function blockStorageCode(id:ContentId):Int
 		return terrainStorageCode(id);
 
+	/** Reverse the fixed terrain table for authoritative event adapters. */
+	public function blockContentIdForStorageCode(code:Int):Null<ContentId> {
+		return switch code {
+			case 0: new ContentId("caxecraft:air");
+			case 1: new ContentId("caxecraft:grass");
+			case 2: new ContentId("caxecraft:dirt");
+			case 3: new ContentId("caxecraft:stone");
+			case 4: new ContentId("caxecraft:bedrock");
+			case 5: new ContentId("caxecraft:sand");
+			case 6: new ContentId("caxecraft:wood");
+			case 7: new ContentId("caxecraft:leaves");
+			case 8: new ContentId("caxecraft:snow");
+			case 9: new ContentId("caxecraft:ash");
+			case _: null;
+		};
+	}
+
 	/** Admit the bounded-water definition used by current focused maps. */
 	public function hasFluid(id:ContentId):Bool
 		return id.text() == "caxecraft:water";
@@ -107,13 +124,17 @@ final class FocusedContentRegistry implements ScenarioContentRegistry implements
 	public function hasState(id:ContentId):Bool
 		return id.text() == "caxecraft:active" || id.text() == "caxecraft:idle";
 
+	/** Keep the fixture's two states bound to its one generic object type. */
+	public function statefulObjectHasState(objectType:ContentId, state:ContentId):Bool
+		return hasStatefulObject(objectType) && hasState(state);
+
 	/** Admit the two feedback effects referenced by existing scenario tests. */
 	public function hasEffect(id:ContentId):Bool
 		return id.text() == "caxecraft:berry-pickup" || id.text() == "caxecraft:copper-strike";
 
-	/** Named signal definitions are outside this fixture's admitted slice. */
+	/** Admit the two synthetic controls used by the spatial Flow boundary probe. */
 	public function hasSignal(id:ContentId):Bool
-		return false;
+		return id.text() == "caxecraft:disable-zone" || id.text() == "caxecraft:enable-zone";
 
 	/** Return the manually authored inventory bound, or zero if unknown. */
 	public function maximumItemQuantity(id:ContentId):Int {

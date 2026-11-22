@@ -22,6 +22,12 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from scripts.test.bounded_process import run as run_bounded_process  # noqa: E402
+from scripts.test.compiler_discovery import sanitizer_execution_environment  # noqa: E402
+
 HXML = Path(__file__).with_name("span_lowering.hxml")
 FIXTURE = Path(__file__).with_name("fixtures")
 EXPECTED = Path(__file__).with_name("expected")
@@ -46,6 +52,7 @@ STRICT_FLAGS = (
     "-Wcast-qual",
 )
 PRODUCTION_FILES = {
+    "LICENSES/HAXE-C-OUTPUT-SUPPORT-MIT.txt",
     "_GeneratedFiles.json",
     "cmake/CMakeLists.txt",
     "hxc.abi.json",
@@ -114,6 +121,11 @@ NEGATIVE_CASES = (
     NegativeCase("NonLiteralFixture", "TVar(values:fixed-array-requires-direct-literal)"),
     NegativeCase("ZeroLengthFixture", "TArrayDecl(empty-fixed-array-not-strict-c11)"),
     NegativeCase("LookalikeFixture", "TVar(Span:requires-fixed-array-borrow)"),
+    NegativeCase(
+        "DirectSpanLookalikeFixture",
+        "TCall(unavailable-static-target:",
+        "DirectSpanLookalikeFixture.hx:13: characters 9-35",
+    ),
     NegativeCase(
         "ZeroConstructionLengthFixture",
         "TCall(c.CArray.zero:length-must-be-positive:0)",
@@ -368,7 +380,7 @@ class HaxeHarness:
         command.extend(arguments)
         start = time.monotonic_ns()
         try:
-            result = subprocess.run(
+            result = run_bounded_process(
                 command,
                 cwd=ROOT,
                 env=haxe_environment(server=warm),
@@ -400,14 +412,14 @@ class HaxeHarness:
     def validate_topology(self) -> None:
         cold = sum(value.transport == "cold" for value in self.invocations)
         warm = sum(value.transport == "warm-server" for value in self.invocations)
-        # The 27 negative fixtures run once per profile. The remaining warm
+        # The 28 negative fixtures run once per profile. The remaining warm
         # requests prove report/production determinism and configuration edges;
         # eight cold requests independently detect compiler-server state leaks.
-        if len(self.invocations) != 72 or cold != 8 or warm != 64:
+        if len(self.invocations) != 74 or cold != 8 or warm != 66:
             raise SpanLoweringFailure(
                 "span Haxe request topology drifted: "
                 f"total={len(self.invocations)}, cold={cold}, warm={warm}; "
-                "expected total=72, cold=8, warm=64"
+                "expected total=74, cold=8, warm=66"
             )
 
     def timing_report(self, *, outcome: str) -> dict[str, object]:
@@ -514,6 +526,34 @@ def required_text(report: dict[str, object], key: str) -> str:
     return value
 
 
+def assert_no_retained_iterator_execution(hxcir: str) -> None:
+    """Permit typed Iterator inventory but reject executable iterator machinery."""
+
+    for forbidden in ("hasNext", 'direct("next")'):
+        if forbidden in hxcir:
+            raise SpanLoweringFailure(
+                f"HxcIR retained iterator machinery {forbidden!r}"
+            )
+    for line in hxcir.splitlines():
+        if "iterator" not in line.lower():
+            continue
+        statement = line.lstrip()
+        typed_declaration = (
+            statement.startswith('type "type.haxe-iterator.')
+            and ' name="Iterator<' in statement
+            and " kind=reference " in statement
+        )
+        typed_instance = (
+            statement.startswith('instance "instance.haxe-iterator.')
+            and ' declaration="type.haxe-iterator.' in statement
+            and ' representation=managed("iterator") ' in statement
+        )
+        if not typed_declaration and not typed_instance:
+            raise SpanLoweringFailure(
+                f"HxcIR retained iterator machinery {statement!r}"
+            )
+
+
 def symbol_entries(symbols: dict[str, object]) -> list[dict[str, object]]:
     value = symbols.get("symbols")
     if not isinstance(value, list) or not all(isinstance(item, dict) for item in value):
@@ -556,6 +596,7 @@ def function_names(
         expected.add("conditionalAssignment")
         expected.add("ownedFieldRoundTrip")
         expected.add("returnedSpanRoundTrip")
+        expected.add("directSpanArguments")
     if set(names) != expected:
         raise SpanLoweringFailure(f"span fixture symbol set drifted: {sorted(names)!r}")
     return names
@@ -575,9 +616,7 @@ def validate(report: dict[str, object], *, profile: str, build: str) -> None:
     hxcir = required_text(report, "hxcir")
     if str(ROOT) in hxcir or "\\" in hxcir or "hxrt" in hxcir.lower():
         raise SpanLoweringFailure("HxcIR leaked a host path or runtime dependency")
-    for forbidden in ("iterator", "hasNext", 'direct("next")'):
-        if forbidden in hxcir:
-            raise SpanLoweringFailure(f"HxcIR retained iterator machinery {forbidden!r}")
+    assert_no_retained_iterator_execution(hxcir)
     expected_counts = {
         "type=fixed-array(length=4,witness=\"Length4\",element=i32)": 3,
         "type=fixed-array(length=4,witness=\"Length4\",element=u8)": 2,
@@ -771,10 +810,10 @@ def validate_project(root: Path, *, profile: str, build: str) -> dict[str, objec
         != {
             "modules": 2,
             "typeInstances": 3,
-            "functions": 23,
-            "blocks": 44,
-            "instructions": 283,
-            "cleanupActions": 6,
+            "functions": 24,
+            "blocks": 55,
+            "instructions": 355,
+            "cleanupActions": 10,
             "runtimeIntents": 0,
         }
         or runtime_absence
@@ -810,14 +849,14 @@ def validate_project(root: Path, *, profile: str, build: str) -> dict[str, objec
         != {
             "indirectCalls": 0,
             "slots": 0,
-            "instanceCalls": 3,
+            "instanceCalls": 4,
             "tables": 0,
-            "directCalls": 3,
+            "directCalls": 4,
             "adapters": 0,
             "layouts": 0,
         }
         or not isinstance(calls, list)
-        or len(calls) != 3
+        or len(calls) != 4
         or any(
             not isinstance(call, dict)
             or call.get("dispatch") != "direct"
@@ -864,15 +903,15 @@ def validate_project(root: Path, *, profile: str, build: str) -> dict[str, objec
         )
     if (
         len(re.findall(r"int32_t [A-Za-z0-9_]+\[4\] = \{", source)) != 3
-        or len(re.findall(r"uint8_t [A-Za-z0-9_]+\[4\] = \{", source)) != 4
+        or len(re.findall(r"uint8_t [A-Za-z0-9_]+\[4\] = \{", source)) != 5
         or len(re.findall(r"uint8_t [A-Za-z0-9_]+\[16384\] = \{ 0 \};", source)) != 2
         or source.count("const int32_t *") != 3
         or len(re.findall(r"(?m)^  int32_t \*[A-Za-z0-9_]+ =", source)) != 1
-        or source.count("const uint8_t *") != 12
-        or len(re.findall(r"(?m)^  uint8_t \*[A-Za-z0-9_]+ =", source)) != 10
-        or source.count(" = sizeof(") != 11
+        or source.count("const uint8_t *") != 15
+        or len(re.findall(r"(?m)^  uint8_t \*[A-Za-z0-9_]+ =", source)) != 12
+        or source.count(" = sizeof(") != 13
         or source.count("bounds") != 0
-        or source.count("abort();") != 19
+        or source.count("abort();") != 22
         or source.count("[(size_t)") != 25
     ):
         raise SpanLoweringFailure(f"{profile}/{build} fixed-array/span C shape drifted")
@@ -993,7 +1032,7 @@ def check_snapshots(artifacts: dict[str, object]) -> None:
 
 
 def compiler_identity(executable: str) -> tuple[str, str]:
-    result = subprocess.run(
+    result = run_bounded_process(
         [executable, "--version"], capture_output=True, text=True, timeout=10
     )
     combined = (result.stdout + result.stderr).strip()
@@ -1042,7 +1081,7 @@ def run_command(
     timeout: int = 30,
     environment: dict[str, str] | None = None,
 ) -> None:
-    result = subprocess.run(
+    result = run_bounded_process(
         command,
         capture_output=True,
         text=True,
@@ -1077,6 +1116,8 @@ int main(void)
   if ({names["conditionalAssignment"]}(false) != UINT8_C(73)) return 11;
   if ({names["ownedFieldRoundTrip"]}(UINT8_C(201)) != INT32_C(242)) return 12;
   if ({names["returnedSpanRoundTrip"]}() != UINT8_C(29)) return 13;
+  if ({names["directSpanArguments"]}(true) != UINT8_C(91)) return 14;
+  if ({names["directSpanArguments"]}(false) != UINT8_C(0)) return 15;
   return 0;
 }}
 '''
@@ -1115,7 +1156,7 @@ def check_no_hxrt_symbols(executable: Path, label: str) -> None:
     nm = shutil.which("nm")
     if nm is None:
         raise SpanLoweringFailure("nm is required for the no-hxrt link proof")
-    result = subprocess.run([nm, str(executable)], capture_output=True, text=True, timeout=10)
+    result = run_bounded_process([nm, str(executable)], capture_output=True, text=True, timeout=10)
     if result.returncode != 0 or "hxrt" in (result.stdout + result.stderr).lower():
         raise SpanLoweringFailure(f"{label} linked an hxrt symbol or could not be inspected")
 
@@ -1234,7 +1275,9 @@ def check_native_artifacts(
                 run_command(
                     [str(executable)],
                     f"{toolchain.family} {lane} span behavior",
-                    environment=run_environment,
+                    environment=sanitizer_execution_environment(
+                        toolchain.compiler, toolchain.family, link_flags, environment=run_environment
+                    ),
                 )
                 check_no_hxrt_symbols(executable, f"{toolchain.family} {lane}")
 
@@ -1428,7 +1471,7 @@ void span_bounds_mark(int32_t actual)
                 ],
                 f"{profile}/{build} {case_name} link",
             )
-            ran = subprocess.run(
+            ran = run_bounded_process(
                 [str(executable)], capture_output=True, text=True, timeout=10
             )
             if (

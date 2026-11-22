@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib.util
+import io
 import json
 import os
 import subprocess
@@ -28,6 +29,83 @@ def load_module(name: str, path: Path):
 
 
 class CaxecraftTimingTests(unittest.TestCase):
+    def test_compiler_profile_timeout_keeps_partial_diagnostics(self) -> None:
+        profiler = load_module(
+            "caxecraft_profile_partial_timeout_subject",
+            ROOT / "examples/caxecraft/profile_compiler.py",
+        )
+        for output, error_output, expected in (
+            (
+                b"HXC_PHASE_TIMING\ttyped input capture\t123\n",
+                b"C printing\npartial UTF-8: \xe2",
+                ("typed input capture\t123", "C printing", "partial UTF-8: \ufffd"),
+            ),
+            ("partial stdout", "partial stderr", ("partial stdout", "partial stderr")),
+            (None, None, ()),
+        ):
+            with self.subTest(output=output), tempfile.TemporaryDirectory() as directory:
+                report_path = Path(directory) / "profile.json"
+                timeout = subprocess.TimeoutExpired(
+                    ["haxe"], 120, output=output, stderr=error_output
+                )
+                diagnostics = io.StringIO()
+                with mock.patch.object(profiler, "profile", side_effect=timeout), mock.patch.object(
+                    sys, "stderr", diagnostics
+                ):
+                    status = profiler.main(["--output", str(report_path)])
+                self.assertEqual(status, 1)
+                self.assertIn("timed out after 120 seconds", diagnostics.getvalue())
+                for fragment in expected:
+                    self.assertIn(fragment, diagnostics.getvalue())
+                self.assertFalse(report_path.exists())
+
+    def test_compiler_profile_timeout_override_is_bounded_and_explicit(self) -> None:
+        profiler = load_module(
+            "caxecraft_profile_timeout_subject",
+            ROOT / "examples/caxecraft/profile_compiler.py",
+        )
+
+        self.assertIsNone(profiler.parse_args([]).timeout_seconds)
+        self.assertEqual(
+            profiler.parse_args(["--timeout-seconds", "600"]).timeout_seconds,
+            600,
+        )
+        for timeout in (0, 601):
+            with self.assertRaisesRegex(
+                profiler.CompilerProfileFailure,
+                "timeout must be from 1 through 600",
+            ):
+                profiler.profile(1, timeout_seconds=timeout)
+
+    def test_secondary_locale_pilot_has_a_measured_bounded_budget(self) -> None:
+        with mock.patch.object(
+            sys, "path", [str(ROOT / "examples/caxecraft"), *sys.path]
+        ):
+            play = load_module(
+                "caxecraft_pilot_timeout_subject",
+                ROOT / "examples/caxecraft/play.py",
+            )
+
+        self.assertEqual(play.pilot_timeout_seconds("secondary-locale"), 35)
+        self.assertEqual(play.pilot_timeout_seconds("editor-shell"), 90)
+        self.assertEqual(play.pilot_timeout_seconds("adventure-journey"), 35)
+        self.assertEqual(play.pilot_timeout_seconds("launch-smoke"), 15)
+
+    def test_representation_owner_details_are_required(self) -> None:
+        profiler = load_module("representation_details_subject", ROOT / "examples/caxecraft/profile_compiler.py")
+        expected = ("dynamic discovery", "managed discovery", "managed completion",
+                    "shared-body discovery", "canonical export", "replay revision")
+        for suffix in expected:
+            detail = "HxcIR representation " + suffix
+            self.assertIn(detail, profiler.DETAIL_PHASES)
+            self.assertNotIn(detail, profiler.PHASES)
+            remaining = "\n".join(f"HXC_DETAIL_TIMING\t{name}\t1"
+                                  for name in profiler.DETAIL_PHASES if name != detail)
+            with self.assertRaisesRegex(profiler.CompilerProfileFailure, "omitted"):
+                profiler.parse_detail_records(remaining)
+        with self.assertRaises(profiler.CompilerProfileFailure):
+            profiler.parse_detail_records("HXC_DETAIL_TIMING\tHxcIR representation unknown\t1")
+
     def test_compiler_profile_parses_closed_phase_and_haxe_timer_records(self) -> None:
         profiler = load_module(
             "caxecraft_compiler_profile_subject",
@@ -337,6 +415,7 @@ class CaxecraftTimingTests(unittest.TestCase):
                         "addedArrays": 1,
                         "addedIntMaps": 0,
                         "addedStringMaps": 0,
+                        "addedTypedMaps": 0,
                         "addedBytes": 0,
                         "addedOptionals": 0,
                         "addedImportTypes": 1,
@@ -634,6 +713,153 @@ class CaxecraftTimingTests(unittest.TestCase):
             lock["haxe"]["sourceRevision"],
         )
 
+    def test_compiler_profile_matches_ordinary_play_on_each_platform(self) -> None:
+        profiler = load_module(
+            "caxecraft_playable_profile_subject",
+            ROOT / "examples/caxecraft/profile_compiler.py",
+        )
+        play = load_module(
+            "caxecraft_playable_arguments_subject",
+            ROOT / "examples/caxecraft/play.py",
+        )
+        output = Path("generated-playable-profile")
+        for host, target in (("darwin", "macos"), ("linux", "linux"), ("win32", "windows")):
+            with (
+                self.subTest(platform=target),
+                mock.patch.object(profiler.sys, "platform", host),
+                mock.patch.object(
+                    profiler, "resolve_haxe_arguments",
+                    side_effect=lambda arguments, *, locale: tuple(arguments),
+                ),
+                mock.patch.object(play, "run") as run_process,
+                mock.patch.object(play, "validate_compiled_haxe", return_value={}),
+                mock.patch.object(play, "validate_content_platform_output"),
+                mock.patch("builtins.print"),
+            ):
+                arguments = list(profiler.workload_arguments(output, "playable"))
+                play.compile_haxe(
+                    output, layout="split", platform_name=target,
+                    raylib_configuration="desktop",
+                )
+                # Timing instrumentation is the only permitted difference from
+                # the ordinary build, including its real content adapter.
+                timing_define = arguments.index("reflaxe_c_phase_timing")
+                del arguments[timing_define - 1 : timing_define + 1]
+                arguments.remove("--times")
+                self.assertEqual(tuple(arguments), tuple(run_process.call_args.args[0][3:]))
+
+    def test_compiler_profile_can_match_the_editor_shell_request(self) -> None:
+        profiler = load_module(
+            "caxecraft_editor_profile_subject",
+            ROOT / "examples/caxecraft/profile_compiler.py",
+        )
+        output = Path("generated-editor-profile")
+
+        with (
+            mock.patch.object(profiler.sys, "platform", "darwin"),
+            mock.patch.object(
+                profiler,
+                "resolve_haxe_arguments",
+                side_effect=lambda arguments, *, locale: tuple(arguments),
+            ),
+        ):
+            arguments = profiler.workload_arguments(output, "editor-shell")
+
+        self.assertEqual(
+            arguments,
+            (
+                "play.hxml",
+                "-D",
+                "hxc_runtime_diagnostics=off",
+                "-D",
+                "raylib_platform_macos",
+                "-D",
+                "raylib_configuration_memory",
+                "-D",
+                "hxc_runtime_report=summary",
+                "-D",
+                "reflaxe_c_phase_progress",
+                "-D",
+                "caxecraft_posix_hosted",
+                "-D",
+                "caxecraft_posix_darwin",
+                "-D",
+                "caxecraft_pilot",
+                "-D",
+                "caxecraft_pilot_editor_shell",
+                "-D",
+                "reflaxe_c_phase_timing",
+                "--times",
+                "--custom-target",
+                f"c={output}",
+            ),
+        )
+
+        play = load_module(
+            "caxecraft_editor_play_arguments_subject",
+            ROOT / "examples/caxecraft/play.py",
+        )
+        with (
+            mock.patch.object(play, "run") as run_process,
+            mock.patch.object(play, "validate_compiled_haxe", return_value={}),
+            mock.patch.object(play, "validate_content_platform_output"),
+            mock.patch("builtins.print"),
+        ):
+            play.compile_haxe(
+                output,
+                layout="split",
+                platform_name="macos",
+                raylib_configuration="memory-software",
+                pilot="editor-shell",
+            )
+
+        play_arguments = tuple(run_process.call_args.args[0][3:])
+        profiled_play_arguments = list(arguments)
+        timing_define = profiled_play_arguments.index("reflaxe_c_phase_timing")
+        del profiled_play_arguments[timing_define - 1 : timing_define + 1]
+        profiled_play_arguments.remove("--times")
+        self.assertEqual(tuple(profiled_play_arguments), play_arguments)
+
+    def test_compiler_profile_can_match_the_runtime_level_loader_request(
+        self,
+    ) -> None:
+        profiler = load_module(
+            "caxecraft_runtime_level_loader_profile_subject",
+            ROOT / "examples/caxecraft/profile_compiler.py",
+        )
+        output = Path("generated-runtime-level-loader-profile")
+
+        with (
+            mock.patch.object(profiler.sys, "platform", "darwin"),
+            mock.patch.object(
+                profiler,
+                "resolve_haxe_arguments",
+                side_effect=lambda arguments, *, locale: tuple(arguments),
+            ),
+        ):
+            arguments = profiler.workload_arguments(output, "runtime-level-loader")
+
+        self.assertIn("runtime-level-loader", profiler.PROFILE_WORKLOADS)
+        self.assertEqual(
+            arguments,
+            (
+                "runtime-level-loader-c.hxml",
+                "-D",
+                "hxc_runtime_diagnostics=off",
+                "-D",
+                "caxecraft_posix_hosted",
+                "-D",
+                "caxecraft_posix_darwin",
+                "-D",
+                "hxc_project_layout=split",
+                "-D",
+                "reflaxe_c_phase_timing",
+                "--times",
+                "--custom-target",
+                f"c={output}",
+            ),
+        )
+
     def test_pinned_haxe_resolution_uses_the_haxerc_version(self) -> None:
         caxecraft = load_module(
             "caxecraft_pin_subject", ROOT / "examples/caxecraft/run.py"
@@ -749,7 +975,7 @@ class CaxecraftTimingTests(unittest.TestCase):
                 return_value=("-cp", "src", "--custom-target", "c=/test/out"),
             ) as resolve,
             mock.patch.object(
-                caxecraft.subprocess, "run", return_value=completed
+                caxecraft, "run_bounded_process", return_value=completed
             ) as run,
         ):
             observed = caxecraft.compile_target(
@@ -839,6 +1065,171 @@ class CaxecraftTimingTests(unittest.TestCase):
             )
         self.assertEqual(tuple(observed), toolchain.CAXECRAFT_FULL_PHASES)
         self.assertFalse(timing["properties"]["phases"]["items"])
+
+
+class FocusedCasePhaseReceiptTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.subject = load_module("focused_case_phase_subject", ROOT / "examples/caxecraft/run_haxe_c_test.py")
+        self.temporary = tempfile.TemporaryDirectory(prefix="case-phase-tests-")
+        self.addCleanup(self.temporary.cleanup)
+        self.directory = Path(self.temporary.name).resolve()
+        self.command = ["/synthetic/clang", *self.subject.STRICT_FLAGS,
+                        *self.subject.SANITIZER_FLAGS, "/private/input.c", "-o", "/private/output"]
+
+    def enable(self):
+        collector = self.subject.TestPhaseReceipts(str(self.directory / "receipts"), "campaign-runtime", "split")
+        self.subject._phase_receipts = collector
+        return collector
+
+    def invoke(self):
+        return self.subject.run(self.command, cwd=ROOT, timeout=60,
+                                label="sanitized strict native build", environment={"EXAMPLE": "fixed"})
+
+    def test_disabled_preserves_dispatch_without_observer_work(self) -> None:
+        completed = subprocess.CompletedProcess(self.command, 0, "exact", "")
+        with mock.patch.object(self.subject, "run_bounded_process", return_value=completed) as run, \
+             mock.patch.object(self.subject.time, "monotonic", side_effect=AssertionError("unexpected clock")):
+            self.assertIs(self.invoke(), completed)
+        self.assertEqual(run.call_args.args, (self.command,))
+        self.assertEqual(run.call_args.kwargs, dict(cwd=ROOT,
+            env={**os.environ, "HAXE_NO_SERVER": "1", "LC_ALL": "C", "EXAMPLE": "fixed"},
+            check=False, capture_output=True, text=True, encoding="utf-8", timeout=60, compiler_progress=False))
+        self.assertEqual(list(self.directory.iterdir()), [])
+
+    def test_success_records_phase_and_keeps_command_private(self) -> None:
+        collector = self.enable()
+        completed = subprocess.CompletedProcess(self.command, 0, "ok", "")
+        with mock.patch.object(self.subject, "run_bounded_process", return_value=completed) as run, \
+             mock.patch.object(self.subject.time, "monotonic", side_effect=[10.0, 12.5]):
+            self.assertIs(self.invoke(), completed)
+        self.assertEqual(run.call_args.args, (self.command,))
+        self.assertEqual(run.call_args.kwargs["timeout"], 60)
+        report = json.loads(collector.path.read_text())
+        self.assertEqual(report["phases"], [dict(sequence=1, label="sanitized strict native build",
+            timeoutSeconds=60, cSourceCount=1, outcome="passed", elapsedMs=2500.0, exitCode=0)])
+        self.assertNotIn("/private", collector.path.read_text())
+        self.assertNotIn("EXAMPLE", collector.path.read_text())
+
+    def test_failure_receipts_preserve_primary_error(self) -> None:
+        for outcome, error in [("timeout", subprocess.TimeoutExpired(self.command, 60, output="partial", stderr="details")),
+                               ("spawn-error", OSError("cannot start")),
+                               ("interrupted", KeyboardInterrupt())]:
+            with self.subTest(outcome=outcome):
+                self.subject._phase_receipts = None
+                folder = self.directory / outcome
+                collector = self.subject.TestPhaseReceipts(str(folder), "campaign-runtime", "split")
+                self.subject._phase_receipts = collector
+                with mock.patch.object(self.subject, "run_bounded_process", side_effect=error), \
+                     mock.patch.object(self.subject.time, "monotonic", side_effect=[1.0, 2.0]):
+                    with self.assertRaises(BaseException) as caught:
+                        self.invoke()
+                if isinstance(error, KeyboardInterrupt):
+                    self.assertIs(caught.exception, error)
+                else:
+                    self.assertIs(caught.exception.__cause__, error)
+                    self.assertIn("could not run", str(caught.exception))
+                if outcome == "timeout":
+                    self.assertIn("partial", str(caught.exception))
+                    self.assertIn("details", str(caught.exception))
+                self.assertEqual(json.loads(collector.path.read_text())["phases"][0]["outcome"], outcome)
+
+    def test_nonzero_keeps_diagnostics_and_exit(self) -> None:
+        collector = self.enable()
+        completed = subprocess.CompletedProcess(self.command, 7, "out", "err")
+        with mock.patch.object(self.subject, "run_bounded_process", return_value=completed):
+            with self.assertRaises(self.subject.HaxeCTestFailure) as caught:
+                self.invoke()
+        self.assertEqual(str(caught.exception), "sanitized strict native build failed with exit 7\nstdout:\noutstderr:\nerr")
+        phase = json.loads(collector.path.read_text())["phases"][0]
+        self.assertEqual((phase["outcome"], phase["exitCode"]), ("nonzero", 7))
+
+    def test_terminal_receipt_failure_keeps_failed_command_and_running_record(self) -> None:
+        collector = self.enable()
+        original = collector.write
+        def write():
+            if collector.phases[0].outcome == "running":
+                return original()
+            raise OSError("report unavailable")
+        with mock.patch.object(collector, "write", side_effect=write), \
+             mock.patch.object(self.subject, "run_bounded_process", side_effect=subprocess.TimeoutExpired(self.command, 60)), \
+             mock.patch("sys.stderr", new_callable=io.StringIO) as stderr:
+            with self.assertRaises(self.subject.HaxeCTestFailure):
+                self.invoke()
+        self.assertIn("primary failure retained", stderr.getvalue())
+        self.assertEqual(json.loads(collector.path.read_text())["phases"][0]["outcome"], "running")
+
+    def test_success_cannot_hide_requested_evidence_failure(self) -> None:
+        collector = self.enable()
+        original = collector.write
+        def write():
+            if collector.phases[0].outcome == "running":
+                return original()
+            raise OSError("report unavailable")
+        with mock.patch.object(collector, "write", side_effect=write), \
+             mock.patch.object(self.subject, "run_bounded_process", return_value=subprocess.CompletedProcess(self.command, 0, "", "")):
+            with self.assertRaisesRegex(OSError, "report unavailable"):
+                self.invoke()
+
+    def test_paths_duplicates_and_labels_fail_before_dispatch(self) -> None:
+        collector = self.enable()
+        with self.assertRaises(FileExistsError):
+            self.subject.TestPhaseReceipts(str(collector.path.parent), "campaign-runtime", "split")
+        with self.assertRaises(self.subject.HaxeCTestFailure):
+            self.subject.TestPhaseReceipts(str(ROOT / "phase-receipts"), "campaign-runtime", "split")
+        link = self.directory / "link"
+        link.symlink_to(collector.path.parent, target_is_directory=True)
+        with self.assertRaises(self.subject.HaxeCTestFailure):
+            self.subject.TestPhaseReceipts(str(link), "campaign-runtime", "split")
+        with mock.patch.object(self.subject, "run_bounded_process") as run:
+            with self.assertRaises(self.subject.HaxeCTestFailure):
+                self.subject.run(self.command, cwd=ROOT, timeout=60, label="/private/source.c")
+            run.assert_not_called()
+
+    def test_main_enables_ordered_receipts_and_clears_owner(self) -> None:
+        directory = self.directory / "main"
+        arguments = mock.Mock(case="campaign-runtime", layout="split", cc=None)
+        def execute(*unused):
+            self.invoke()
+            self.subject.run(["/synthetic/result"], cwd=ROOT, timeout=30, label="campaign-runtime sanitized native test")
+            return True
+        with mock.patch.dict(os.environ, {"HXC_CAXECRAFT_PHASE_REPORT_DIR": str(directory)}), \
+             mock.patch.object(self.subject, "parse_args", return_value=arguments), \
+             mock.patch.object(self.subject, "execute", side_effect=execute), \
+             mock.patch.object(self.subject, "run_bounded_process", return_value=subprocess.CompletedProcess([], 0, "", "")), \
+             mock.patch("sys.stdout", new_callable=io.StringIO):
+            self.assertEqual(self.subject.main(), 0)
+        report = json.loads((directory / "campaign-runtime-split.json").read_text())
+        self.assertEqual([p["sequence"] for p in report["phases"]], [1, 2])
+        self.assertEqual([p["timeoutSeconds"] for p in report["phases"]], [60, 30])
+        self.assertIsNone(self.subject._phase_receipts)
+
+    def test_start_receipt_failure_prevents_dispatch(self) -> None:
+        collector = self.enable()
+        with mock.patch.object(collector, "write", side_effect=OSError("cannot save start")), \
+             mock.patch.object(self.subject, "run_bounded_process") as run:
+            with self.assertRaisesRegex(OSError, "cannot save start"):
+                self.invoke()
+            run.assert_not_called()
+
+    def test_phase_files_cannot_satisfy_required_aggregate_upload(self) -> None:
+        workflow = (ROOT / ".github/workflows/governance.yml").read_text()
+        aggregate = workflow.split("      - name: Preserve toolchain suite timings\n", 1)[1].split("      - name:", 1)[0]
+        self.assertIn("if-no-files-found: error", aggregate)
+        path_line = next(line.strip() for line in aggregate.splitlines() if line.strip().startswith("path:"))
+        self.assertEqual(path_line, "path: ${{ runner.temp }}/toolchain-${{ matrix.shard }}-timing.json")
+        selected = path_line.removeprefix("path: ").replace("${{ runner.temp }}", str(self.directory)).replace("${{ matrix.shard }}", "caxecraft")
+        phases = self.directory / "toolchain-caxecraft-phases"
+        phases.mkdir()
+        (phases / "campaign-runtime-split.json").write_text("{}")
+        self.assertFalse(Path(selected).exists())
+        self.assertNotIn("-phases/", aggregate)
+
+    def test_ci_retains_existing_and_phase_timing_artifacts(self) -> None:
+        workflow = (ROOT / ".github/workflows/governance.yml").read_text()
+        self.assertIn("HXC_CAXECRAFT_PHASE_REPORT_DIR: ${{ runner.temp }}/toolchain-${{ matrix.shard }}-phases", workflow)
+        self.assertIn("toolchain-${{ matrix.shard }}-timing.json", workflow)
+        self.assertIn("toolchain-${{ matrix.shard }}-phases/", workflow)
+        self.assertIn("actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02", workflow)
 
 
 if __name__ == "__main__":

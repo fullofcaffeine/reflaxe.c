@@ -54,6 +54,8 @@ uint8_t hxc_SpanFixture_conditionalAssignment(bool hxc_l_selectReplacement);
 
 int32_t hxc_SpanFixture_constSum(void);
 
+uint8_t hxc_SpanFixture_directSpanArguments(bool hxc_l_third);
+
 uint8_t hxc_SpanFixture_finalClassParameterRoundTrip(uint8_t hxc_l_replacement);
 
 uint8_t hxc_SpanFixture_forwardRead(const uint8_t *hxc_l_values, size_t hxc_l_length, int32_t hxc_l_index);

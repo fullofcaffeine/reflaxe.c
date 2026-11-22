@@ -19,3 +19,9 @@ copies, embedded NUL data, byte masking, bounds failures, reference-count
 overflow, allocator rollback, and final-release balance. A declaration in the C
 target `_std` override makes the nominal API visible without claiming that every
 declared Bytes method is already implemented.
+
+The ObjectMap and EnumValueMap slice compares ordinary Haxe identity and enum
+equality with Eval. Its independent C contract forces hash collisions,
+replacement and allocation rollback, mutation during snapshot iteration, exact
+collector roots, and final cleanup. Negative fixtures keep Float payloads,
+recursive enums, interfaces, and Dynamic keys fail-closed.

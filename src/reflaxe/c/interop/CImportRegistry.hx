@@ -396,7 +396,8 @@ class CImportRegistry {
 				resolved == null ? null : valueType(resolved, position, ownerModule, sourcePath, fail, node);
 			case TLazy(resolve): valueType(resolve(), position, ownerModule, sourcePath, fail, node);
 			case TType(reference, parameters):
-				final path = typePath(reference.get().module, reference.get().pack, reference.get().name);
+				final definition = reference.get();
+				final path = typePath(definition.module, definition.pack, definition.name);
 				isImportedType(path) ? CBodyValueType.imported(prepareType(path, parameters, position, sourcePath)) : null;
 			case TInst(reference, parameters):
 				final value = reference.get();
@@ -407,7 +408,7 @@ class CImportRegistry {
 				final path = typePath(value.module, value.pack, value.name);
 				isImportedType(path) ? CBodyValueType.imported(prepareType(path, parameters, position, sourcePath)) : null;
 			case TAbstract(reference, parameters): final value = reference.get(); final path = typePath(value.module, value.pack,
-					value.name); path == "c.CString" && parameters.length == 0 ? CBodyValueType.cString() : path == "c.CStringRef"
+					value.name); path == "c.CString" && parameters.length == 0 ? CBodyValueType.cString() : (path == "c.CStringRef" || path == "c.CStringArg")
 					&& parameters.length == 0 ? CBodyValueType.cStringRef() : null;
 			case _: null;
 		};
@@ -646,7 +647,7 @@ class CImportRegistry {
 		Describe only the C declaration shape of an imported function.
 
 		Source-level lifetime carriers deliberately remain distinct in HxcIR, but
-		`c.CString` and `c.CStringRef` both enter C as `const char *`. This key is
+		`c.CString`, `c.CStringRef`, and `c.CStringArg` all enter C as `const char *`. This key is
 		used only to prove that two declarations may name the same header-owned C
 		function; it never makes their Haxe values interchangeable.
 	**/
@@ -734,10 +735,10 @@ class CImportRegistry {
 			case TLazy(resolve):
 				validateBoundaryType(resolve(), position, sourcePath, label, parameter);
 			case TType(reference, parameters):
-				final path = typePath(reference.get().module, reference.get().pack, reference.get().name);
+				final definition = reference.get();
+				final path = typePath(definition.module, definition.pack, definition.name);
 				if (!isImportedType(path))
-					validateBoundaryType(TypeTools.applyTypeParameters(reference.get().type, reference.get().params, parameters), position, sourcePath, label,
-						parameter);
+					validateBoundaryType(TypeTools.applyTypeParameters(definition.type, definition.params, parameters), position, sourcePath, label, parameter);
 			case TFun(_, _):
 				abiFailure(position, sourcePath, label, "Callbacks require the later typed function-pointer and context-lifetime contract.");
 			case TDynamic(_):
@@ -750,7 +751,8 @@ class CImportRegistry {
 				if (path == "c.FunctionPtr")
 					abiFailure(position, sourcePath, label, "Callbacks require the later typed function-pointer and context-lifetime contract.");
 				if (pointerLike(path)
-					&& !(parameter && (path == "c.CString" || path == "c.CStringRef" || path == "c.Ref" || path == "c.CStringBufferRef")))
+					&& !(parameter
+						&& (path == "c.CString" || path == "c.CStringRef" || path == "c.CStringArg" || path == "c.Ref" || path == "c.CStringBufferRef")))
 					abiFailure(position, sourcePath, label, "Pointer and retained-borrow lifetimes are outside this direct by-value slice.");
 			case TInst(reference, _):
 				final value = reference.get();
@@ -882,7 +884,8 @@ class CImportRegistry {
 	static function pointerLike(path:String):Bool {
 		return switch path {
 			case "c.Ptr" | "c.ConstPtr" | "c.NullablePtr" | "c.Ref" | "c.ConstRef" | "c.RestrictPtr" | "c.VolatilePtr" | "c.FunctionPtr" | "c.Span" |
-				"c.ConstSpan" | "c.CString" | "c.CStringRef" | "c.CStringBufferRef" | "c.StringView" | "c.Owned" | "c.Borrowed" | "c.Allocator" | "c.Arena": true;
+				"c.ConstSpan" | "c.CString" | "c.CStringRef" | "c.CStringArg" | "c.CStringBufferRef" | "c.StringView" | "c.Owned" | "c.Borrowed" |
+				"c.Allocator" | "c.Arena": true;
 			case _: false;
 		};
 	}

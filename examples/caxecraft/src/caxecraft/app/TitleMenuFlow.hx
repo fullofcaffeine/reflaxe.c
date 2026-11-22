@@ -29,6 +29,20 @@ typedef TitleMenuState = {
 	final mode:GameMode;
 }
 
+/** Device-neutral inputs collected during one title-menu frame. */
+typedef TitleMenuFrameInput = {
+	final state:TitleMenuState;
+	final campaignAvailable:Bool;
+	final cycleMode:Bool;
+	final confirmMode:Bool;
+
+	/** Hovered pointer choice, or `-1` when no pointer choice is active. */
+	final pointerChoice:Int;
+
+	/** Whether the active pointer choice was pressed during this frame. */
+	final pointerPressed:Bool;
+}
+
 /**
  * Apply one menu command without reading a keyboard, mouse, or window.
  *
@@ -57,6 +71,30 @@ function applyTitleMenuCommand(state:TitleMenuState, command:TitleMenuCommand):T
 /** Build an immutable menu state without exposing a device-specific object. */
 function titleMenuState(screen:AppScreen, mode:GameMode):TitleMenuState
 	return newState(screen, mode);
+
+/**
+ * Advance all semantic title-menu choices collected during one frame.
+ *
+ * Device adapters supply only a hovered choice and button states. Keeping the
+ * precedence here prevents keyboard, mouse, controller, and pilot paths from
+ * rebuilding the same transition branches inside the application loop.
+ */
+function advanceTitleMenuFrame(input:TitleMenuFrameInput):TitleMenuState {
+	var state = input.state;
+	if (input.cycleMode)
+		state = applyTitleMenuCommand(state, TitleMenuCommand.CycleMode);
+	if (input.pointerChoice == 0)
+		state = applyTitleMenuCommand(state, TitleMenuCommand.SelectCreative);
+	if (input.pointerChoice == 1)
+		state = applyTitleMenuCommand(state, TitleMenuCommand.SelectAdventure);
+	if (input.pointerPressed && input.pointerChoice >= 0)
+		state = applyTitleMenuCommand(state, input.pointerChoice == 2 ? TitleMenuCommand.OpenEditor : TitleMenuCommand.ConfirmMode);
+	else if (input.confirmMode)
+		state = applyTitleMenuCommand(state, TitleMenuCommand.ConfirmMode);
+	if (!input.campaignAvailable && state.screen == AppScreen.CampaignSelect)
+		state = newState(input.state.screen, state.mode);
+	return state;
+}
 
 /**
  * Admit campaign travel only after the player has launched Adventure.

@@ -13,6 +13,7 @@ enum abstract KeyboardKey(Int) {
 	var Six = 54;
 	var Seven = 55;
 	var Eight = 56;
+	var Nine = 57;
 	var A = 65;
 	var B = 66;
 	var C = 67;
@@ -39,6 +40,8 @@ enum abstract KeyboardKey(Int) {
 	var X = 88;
 	var Y = 89;
 	var Z = 90;
+	var LeftBracket = 91;
+	var RightBracket = 93;
 	var Escape = 256;
 	var Enter = 257;
 	var Tab = 258;
@@ -62,8 +65,10 @@ enum abstract KeyboardKey(Int) {
 	var LeftShift = 340;
 	var LeftControl = 341;
 	var LeftAlt = 342;
+	var LeftSuper = 343;
 	var RightShift = 344;
 	var RightControl = 345;
 	var RightAlt = 346;
+	var RightSuper = 347;
 }
 #end

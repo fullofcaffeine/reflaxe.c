@@ -1,6 +1,10 @@
 package reflaxe.c.lowering;
 
 import reflaxe.c.ir.HxcIR;
+import reflaxe.c.ir.HxcIROwnedChildProofs;
+import reflaxe.c.ir.HxcIROwnedChildFlow;
+import reflaxe.c.ir.HxcIRSavedPredicateFlow;
+import reflaxe.c.ir.HxcIRValidator;
 import reflaxe.c.ir.HxcIRControlFlowAnalysis;
 import reflaxe.c.ir.HxcIRControlFlowAnalysis.HxcIRControlFlowFacts;
 
@@ -26,14 +30,17 @@ class CBodyNullCheckCoalescing {
 	public function new() {}
 
 	/** Optimize every reachable function without changing the HxcIR schema. */
-	public function run(program:HxcIRProgram):Void {
+	public function run(program:HxcIRProgram, ?expectedPolicy:HxcIRNullCheckPolicy):Void {
 		for (module in program.modules)
 			for (fn in module.functions)
-				coalesceFunction(fn);
+				coalesceFunction(fn, expectedPolicy);
 	}
 
-	function coalesceFunction(fn:HxcIRFunction):Void {
+	function coalesceFunction(fn:HxcIRFunction, expectedPolicy:Null<HxcIRNullCheckPolicy>):Void {
 		final controlFlow = new HxcIRControlFlowAnalysis().analyze(fn);
+		final retainedWitnesses = removeOwnedChildChecks(fn, controlFlow);
+		if (expectedPolicy != null)
+			removeSavedFieldChecks(fn, controlFlow, expectedPolicy, retainedWitnesses);
 		final proofsByBlock = collectWholeBlockProofs(fn, controlFlow);
 		for (block in fn.blocks) {
 			final available:Map<String, Bool> = [];
@@ -49,7 +56,7 @@ class CBodyNullCheckCoalescing {
 				switch instruction.kind {
 					case IRIONullCheck(valueId, policy):
 						final proofKey = nullProofKey(valueId, policy);
-						if (!available.exists(proofKey)) {
+						if (!available.exists(proofKey) || retainedWitnesses.exists(instruction.id)) {
 							kept.push(instruction);
 							available.set(proofKey, true);
 						}
@@ -62,6 +69,107 @@ class CBodyNullCheckCoalescing {
 					block.instructions.push(instruction);
 			}
 		}
+	}
+
+	/**
+		Remove a guard immediately before a proven field read. Every other use of
+		its operand must also be covered. The compilation policy must match because
+		the comparison itself has no checked-abort policy to serve as a witness.
+	**/
+	function removeSavedFieldChecks(fn:HxcIRFunction, controlFlow:HxcIRControlFlowFacts, expectedPolicy:HxcIRNullCheckPolicy,
+			witnesses:Map<String, Bool>):Void {
+		final predicates = new HxcIRSavedPredicateFlow(fn, controlFlow);
+		if (!predicates.hasProvenFields())
+			return;
+		final retained = HxcIRValidator.valuesNeedingExplicitNullChecks(fn, predicates);
+		for (block in fn.blocks) {
+			var index = block.instructions.length - 1;
+			while (--index >= 0) {
+				final check = block.instructions[index];
+				switch check.kind {
+					case IRIONullCheck(id, policy)
+						if (predicates.fieldValue(block.instructions[index + 1]) == id
+							&& !retained.exists(id)
+							&& !witnesses.exists(check.id)
+							&& HxcIROwnedChildProofs.samePolicy(expectedPolicy, policy)
+							&& HxcIRValidator.canDiscardNullCheckEnvelope(check, true)):
+						block.instructions.splice(index, 1);
+					case _:
+				}
+			}
+		}
+	}
+
+	/**
+		Remove child guards only from independently reconstructed branch-local facts.
+		The shared transfer analysis intersects exact retained origins across every
+		predecessor and cuts cycle/failure/cleanup edges. Its local-content facts never
+		become legacy explicit checks. Keep guards on operands used outside their
+		block, and retain all parent witnesses before the older dominance pass runs.
+	**/
+	function removeOwnedChildChecks(fn:HxcIRFunction, controlFlow:HxcIRControlFlowFacts):Map<String, Bool> {
+		final flow = new HxcIROwnedChildFlow(fn, controlFlow);
+		final witnesses = flow.retainedWitnesses();
+		if (!witnesses.iterator().hasNext())
+			return witnesses;
+		final retainedValues = HxcIRValidator.valuesNeedingExplicitNullChecks(fn);
+		final counts:Map<String, Int> = [];
+		for (block in fn.blocks)
+			for (instruction in block.instructions) {
+				final count = counts.get(instruction.id);
+				counts.set(instruction.id, count == null ? 1 : count + 1);
+			}
+		for (block in fn.blocks) {
+			if (controlFlow.hasInstructionFailureJump(block.id))
+				continue;
+			final facts = flow.forBlock(block.id);
+			if (facts == null)
+				continue;
+			final types:Map<String, HxcIRTypeRef> = [];
+			for (parameter in fn.parameters)
+				types.set(parameter.id, parameter.type);
+			for (parameter in block.parameters)
+				types.set(parameter.id, parameter.type);
+			final kept:Array<HxcIRInstruction> = [];
+			for (instruction in block.instructions) {
+				var remove = false;
+				switch instruction.kind {
+					case IRIONullCheck(valueId, policy):
+						final known = facts.policy(valueId);
+						final witness = facts.witness(valueId);
+						if (!witnesses.exists(instruction.id)
+							&& !retainedValues.exists(valueId)
+							&& known != null
+							&& witness != null
+							&& HxcIROwnedChildProofs.samePolicy(known, policy)
+							&& HxcIRValidator.canDiscardNullCheckEnvelope(instruction, counts.get(instruction.id) == 1)) {
+							remove = true;
+							witnesses.set(witness, true);
+						}
+					case _:
+				}
+				if (!remove) {
+					kept.push(instruction);
+					facts.observe(instruction, types);
+					// Keep origins of already optimized uses when this pass runs again.
+					switch instruction.kind {
+						case IRIOBorrowClassField(_) if (instruction.result != null):
+							final witness = facts.witness(instruction.result.id);
+							if (witness != null)
+								witnesses.set(witness, true);
+						case _:
+					}
+				}
+				if (instruction.result != null)
+					types.set(instruction.result.id, instruction.result.type);
+			}
+			if (kept.length != block.instructions.length) {
+				block.instructions.splice(0, block.instructions.length);
+				for (instruction in kept)
+					block.instructions.push(instruction);
+			}
+		}
+		return witnesses;
 	}
 
 	/**

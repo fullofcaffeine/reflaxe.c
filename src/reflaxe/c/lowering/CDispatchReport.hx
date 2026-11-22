@@ -94,7 +94,7 @@ class CDispatchReportBuilder {
 	public function new() {}
 
 	public function build(graph:CBodyDispatchGraph, lowered:CLoweredBodyDispatch):Null<CDispatchReportSnapshot> {
-		if (graph.calls.length == 0 && lowered.layouts.length == 0 && lowered.slots.length == 0 && lowered.tables.length == 0)
+		if (graph.calls.length == 0 && lowered.slots.length == 0 && lowered.tables.length == 0)
 			return null;
 		final calls:Array<CDispatchCallSnapshot> = [];
 		var directCalls = 0;
@@ -139,12 +139,18 @@ class CDispatchReportBuilder {
 				source: sourceSnapshot(call.source)
 			});
 		}
-		final layouts:Array<CDispatchLayoutSnapshot> = lowered.layouts.map(layout -> {
-			id: layout.prepared.id,
-			rootInstanceId: layout.prepared.rootInstanceId(),
-			cTag: layout.cTag.value,
-			slotIds: layout.slots.map(slot -> slot.prepared.input.id)
-		});
+		// A value-only interface layout describes its `{ object, table }` carrier
+		// but has no callable dispatch facts. Keep this report focused on reachable
+		// calls and tables; structural type evidence remains in HxcIR and generated C.
+		final layouts:Array<CDispatchLayoutSnapshot> = [];
+		for (layout in lowered.layouts)
+			if (layout.slots.length > 0)
+				layouts.push({
+					id: layout.prepared.id,
+					rootInstanceId: layout.prepared.rootInstanceId(),
+					cTag: layout.cTag.value,
+					slotIds: layout.slots.map(slot -> slot.prepared.input.id)
+				});
 		final slots:Array<CDispatchSlotSnapshot> = lowered.slots.map(slot -> {
 			id: slot.prepared.input.id,
 			ownerInstanceId: slot.prepared.ownerInstanceId(),

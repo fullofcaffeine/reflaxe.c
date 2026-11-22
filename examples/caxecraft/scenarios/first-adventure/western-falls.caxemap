@@ -15,7 +15,7 @@ locale en
   message enemy_windup "MOSSLING GETS READY: DODGE"
   message fallskeeper_first "BROWSER'S RAIDERS BROKE THE OLD ROAD. THEY DID NOT FIND CEESH'S TIDEWEAVE VAULT."
   message fallskeeper_marks "THE FOUR MARKS OPEN IT. USE RIVER, LEAF, MOON, THEN FLAME. A MISTAKE RESETS THEM."
-  message fallskeeper_task "GO BACK DOWN THE GRASS STEPS. START WITH THE RIVER MARK AT THE ROOT BRIDGE."
+  message fallskeeper_task "LOOK DOWN FROM MY LEDGE. THE RIVER MARK IS ON THE WOODEN BRIDGE BY THE WATERFALL."
   message flooded_route_body "THE TIDE SWITCH OPENS THE FLOODED RUINS. THE WEST ROAD TO FROSTMERE STAYS OPEN."
   message flooded_route_title "TWO WAYS TO THE CASTLE"
   message grotto_complete "THE LANTERN SHOWS TWO ROADS. GO WEST TO FROSTMERE, OR USE THE TIDE SWITCH FOR THE UNDERWATER ROAD."
@@ -46,7 +46,7 @@ locale en
   message survey_note_title "CEESH'S RIVER MAP"
   message tide_gate_ready "TIDEWEAVE STARTS THE TIDE SWITCH. THE FLOODED RUINS OPEN BELOW."
   message tideweave_found "HAXIRIO PUTS ON TIDEWEAVE. HOLD SHIFT TO DIVE. HOLD SPACE TO RISE."
-  message vault_open "THE FOUR MARKS LIGHT UP. THE VAULT OPENS."
+  message vault_open "THE VAULT IS OPEN. SWIM UNDER THE BRIDGE. MINE THE SAND INSIDE FOR TIDEWEAVE."
   message vault_reset "THE MARKS TURN OFF. START AGAIN WITH RIVER."
 end locale
 locale es-mx
@@ -61,7 +61,7 @@ locale es-mx
   message enemy_windup "EL MUSGUITO SE PREPARA: ESQUIVA"
   message fallskeeper_first "LA BANDA DE BROWSER ROMPIÓ EL CAMINO. NO ENCONTRÓ LA BÓVEDA DE TIDEWEAVE."
   message fallskeeper_marks "LAS CUATRO MARCAS LA ABREN. USA RÍO, HOJA, LUNA Y LLAMA. UN ERROR LAS REINICIA."
-  message fallskeeper_task "BAJA POR LOS ESCALONES DE PASTO. EMPIEZA CON LA MARCA DEL RÍO EN EL PUENTE DE RAÍCES."
+  message fallskeeper_task "MIRA ABAJO DESDE AQUÍ. LA MARCA DEL RÍO ESTÁ EN EL PUENTE DE MADERA JUNTO A LA CASCADA."
   message flooded_route_body "EL INTERRUPTOR DE MAREA ABRE LAS RUINAS INUNDADAS. EL CAMINO A FROSTMERE SIGUE ABIERTO."
   message flooded_route_title "DOS CAMINOS AL CASTILLO"
   message grotto_complete "LA LINTERNA MUESTRA DOS CAMINOS. VE AL OESTE A FROSTMERE O USA EL INTERRUPTOR PARA IR BAJO EL AGUA."
@@ -92,7 +92,7 @@ locale es-mx
   message survey_note_title "MAPA DEL RÍO DE CEESH"
   message tide_gate_ready "TIDEWEAVE ACTIVA EL INTERRUPTOR. LAS RUINAS INUNDADAS SE ABREN ABAJO."
   message tideweave_found "HAXIRIO SE PONE TIDEWEAVE. MANTÉN SHIFT PARA BUCEAR. MANTÉN ESPACIO PARA SUBIR."
-  message vault_open "LAS CUATRO MARCAS SE ENCIENDEN. LA BÓVEDA SE ABRE."
+  message vault_open "LA BÓVEDA ESTÁ ABIERTA. NADA BAJO EL PUENTE. EXCAVA LA ARENA DE ADENTRO PARA ENCONTRAR TIDEWEAVE."
   message vault_reset "LAS MARCAS SE APAGAN. EMPIEZA DE NUEVO CON RÍO."
 end locale
 title message scenario_title
@@ -431,13 +431,21 @@ chunk region.western-falls 0 0 0 32 16 32
   run 0 49
   run 1 32
   run 9 32
-  run 2 64
-  run 3 19
+  run 2 36
+  run 0 2
+  run 9 1
+  run 2 25
+  run 3 4
+  run 0 2
+  run 9 1
+  run 3 12
   run 4 8
   run 3 5
   run 0 2
   run 5 1
-  run 0 4
+  run 0 1
+  run 9 2
+  run 0 1
   run 9 1
   run 0 1
   run 9 1
@@ -490,9 +498,13 @@ chunk region.western-falls 0 0 0 32 16 32
   run 9 5
   run 2 9
   run 9 4
-  run 2 28
+  run 4 2
+  run 9 1
+  run 2 25
   run 9 4
-  run 4 12
+  run 4 2
+  run 9 1
+  run 4 9
   run 3 2
   run 2 5
   run 4 4
@@ -539,12 +551,10 @@ chunk region.western-falls 0 0 0 32 16 32
   run 9 5
   run 2 9
   run 9 4
-  run 2 1
-  run 0 10
+  run 0 11
   run 2 17
   run 9 4
-  run 4 1
-  run 0 10
+  run 0 11
   run 4 1
   run 3 2
   run 2 5
@@ -1774,9 +1784,7 @@ chunk region.evergrove 32 0 0 32 16 32
   run 5 6
   run 9 1
   run 3 2
-  run 0 29
-  run 5 1
-  run 0 56
+  run 0 86
   run 5 1
   run 0 6
   run 5 1
@@ -1804,9 +1812,7 @@ chunk region.evergrove 32 0 0 32 16 32
   run 5 6
   run 9 1
   run 3 2
-  run 0 29
-  run 5 1
-  run 0 56
+  run 0 86
   run 5 1
   run 0 6
   run 5 1
@@ -2031,6 +2037,91 @@ fluid water.falls-pool caxecraft:water volume 5 3 19 10 2 5
 fluid water.flooded-grotto caxecraft:water volume 11 3 24 3 2 4
 fluid water.flooded-grotto-source caxecraft:water source 12 5 25
 fluid water.waterfall-source caxecraft:water source 8 10 17
+object boundary.east.root-north
+  tag boundary
+  tag vegetation
+  placement stateful caxecraft:boundary-root caxecraft:waiting 62400 6000 10500 90
+end object
+object boundary.east.thicket-north
+  tag boundary
+  tag vegetation
+  placement stateful caxecraft:boundary-thicket caxecraft:waiting 62500 11000 3500 90
+end object
+object boundary.east.thicket-south
+  tag boundary
+  tag vegetation
+  placement stateful caxecraft:boundary-thicket caxecraft:waiting 62500 5000 28500 90
+end object
+object boundary.north.boulder-mid
+  tag boundary
+  tag landscape
+  placement stateful caxecraft:boundary-boulder caxecraft:waiting 24000 9000 1400 0
+end object
+object boundary.north.root-east
+  tag boundary
+  tag vegetation
+  placement stateful caxecraft:boundary-root caxecraft:waiting 59000 5000 1600 0
+end object
+object boundary.north.root-west
+  tag boundary
+  tag vegetation
+  placement stateful caxecraft:boundary-root caxecraft:waiting 12500 10000 1600 0
+end object
+object boundary.north.thicket-east
+  tag boundary
+  tag vegetation
+  placement stateful caxecraft:boundary-thicket caxecraft:waiting 50000 5000 1500 0
+end object
+object boundary.north.thicket-west
+  tag boundary
+  tag vegetation
+  placement stateful caxecraft:boundary-thicket caxecraft:waiting 4500 10000 1500 0
+end object
+object boundary.south.boulder-east
+  tag boundary
+  tag landscape
+  placement stateful caxecraft:boundary-boulder caxecraft:waiting 46500 5000 30600 0
+end object
+object boundary.south.root-mid
+  tag boundary
+  tag vegetation
+  placement stateful caxecraft:boundary-root caxecraft:waiting 33000 5000 30400 0
+end object
+object boundary.south.root-west
+  tag boundary
+  tag vegetation
+  placement stateful caxecraft:boundary-root caxecraft:waiting 4000 5000 30400 0
+end object
+object boundary.south.thicket-east
+  tag boundary
+  tag vegetation
+  placement stateful caxecraft:boundary-thicket caxecraft:waiting 57500 5000 30500 0
+end object
+object boundary.south.thicket-mid
+  tag boundary
+  tag vegetation
+  placement stateful caxecraft:boundary-thicket caxecraft:waiting 25000 5000 30500 0
+end object
+object boundary.west.boulder-north
+  tag boundary
+  tag landscape
+  placement stateful caxecraft:boundary-boulder caxecraft:waiting 1400 10000 3500 90
+end object
+object boundary.west.root-north
+  tag boundary
+  tag vegetation
+  placement stateful caxecraft:boundary-root caxecraft:waiting 1600 11000 14500 90
+end object
+object boundary.west.thicket-mid
+  tag boundary
+  tag vegetation
+  placement stateful caxecraft:boundary-thicket caxecraft:waiting 1500 11000 9000 90
+end object
+object boundary.west.thicket-south
+  tag boundary
+  tag vegetation
+  placement stateful caxecraft:boundary-thicket caxecraft:waiting 1500 5000 30000 90
+end object
 object enemy.mossling
   tag enemy
   placement entity caxecraft:mossling 50500 5000 25500 180
@@ -2059,7 +2150,7 @@ object item.survey-berries
 end object
 object item.tideweave
   tag quest
-  placement item caxecraft:tideweave-suit 1 4500 4000 19500 90
+  placement item caxecraft:tideweave-suit 1 4500 4000 17500 90
 end object
 object landmark.ceesh-survey
   tag discovery
@@ -2190,7 +2281,7 @@ rule rule.flame-resets-wrong-code priority 120 repeat
 end rule
 rule rule.flooded-ruins-route-opens priority 100 once
   when interact route.flooded-ruins-relay
-  if (objective objective.explore-grotto complete)
+  if (objective objective.choose-castle-road active)
   do set-object-state route.flooded-ruins-relay caxecraft:entered
   do dialogue dialogue.flooded-route
   do journal journal.flooded-route
@@ -2198,16 +2289,18 @@ rule rule.flooded-ruins-route-opens priority 100 once
 end rule
 rule rule.frostmere-road-opens priority 100 once
   when enter-zone zone.frostmere-road
-  if (objective objective.explore-grotto complete)
+  if (objective objective.choose-castle-road active)
   do campaign-exit western-falls-frostmere-road
 end rule
 rule rule.lantern-completes-the-grotto priority 80 once
   when collect-item caxecraft:lantern
-  if (objective objective.explore-grotto active)
+  if (always)
   do objective objective.explore-grotto complete
+end rule
+rule rule.lantern-opens-road-after-suit priority 80 once
+  when objective-changed objective.explore-grotto
+  if (all (objective objective.explore-grotto complete) (objective objective.find-tideweave complete))
   do objective objective.choose-castle-road active
-  do dialogue dialogue.grotto.complete
-  do journal journal.flooded-route
 end rule
 rule rule.leaf-accepts-second-mark priority 110 repeat
   when interact vault.glyph-leaf
@@ -2267,6 +2360,22 @@ rule rule.river-resets-and-starts-code priority 120 repeat
   do set-object-state vault.glyph-river caxecraft:waiting
   do dialogue dialogue.vault.reset
 end rule
+rule rule.road-reveals-exits priority 80 once
+  when objective-changed objective.choose-castle-road
+  if (objective objective.choose-castle-road active)
+  do dialogue dialogue.grotto.complete
+  do journal journal.flooded-route
+end rule
+rule rule.suit-opens-road-after-lantern priority 80 once
+  when objective-changed objective.find-tideweave
+  if (all (objective objective.explore-grotto complete) (objective objective.find-tideweave complete))
+  do objective objective.choose-castle-road active
+end rule
+rule rule.suit-reveals-grotto priority 80 once
+  when objective-changed objective.find-tideweave
+  if (all (objective objective.explore-grotto hidden) (objective objective.find-tideweave complete))
+  do objective objective.explore-grotto active
+end rule
 rule rule.survey-note-rewards-exploration priority 100 once
   when interact landmark.ceesh-survey
   if (object-state landmark.ceesh-survey caxecraft:waiting)
@@ -2276,9 +2385,9 @@ rule rule.survey-note-rewards-exploration priority 100 once
 end rule
 rule rule.tideweave-opens-the-grotto priority 90 once
   when collect-item caxecraft:tideweave-suit
-  if (objective objective.find-tideweave active)
+  if (always)
+  do objective objective.find-fallskeeper complete
   do objective objective.find-tideweave complete
-  do objective objective.explore-grotto active
   do dialogue dialogue.tideweave.found
 end rule
 end-map

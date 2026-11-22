@@ -2,7 +2,7 @@ package caxecraft.app;
 
 import caxecraft.app.ActivePlayableLevel.PlayableLevelCreationResult;
 import caxecraft.app.ActivePlayableLevel.PlayableLevelPreparationError;
-import caxecraft.content.LoadedContentGeneration.ContentGenerationId;
+import caxecraft.content.ContentGenerationSequence;
 import caxecraft.content.LevelContentResolver;
 import caxecraft.content.ResolvedLevelPlan.LevelPlayerOptions;
 import caxecraft.content.RuntimeLevelLoader.RuntimeLevelLoadError;
@@ -22,15 +22,15 @@ import haxe.io.Bytes;
 final class EditorTestPlayRuntime {
 	final validationRegistry:ScenarioContentRegistry;
 	final resolutionRegistry:LevelContentResolver;
+	final generations:ContentGenerationSequence;
 	var active:Null<ActivePlayableLevel>;
-	var nextGenerationSequence:Int;
 
-	/** Retain the engine registries across many disposable editor runs. */
-	public function new(validationRegistry:ScenarioContentRegistry, resolutionRegistry:LevelContentResolver, firstGenerationSequence:Int) {
+	/** Retain the engine registries and shared process identity owner across runs. */
+	public function new(validationRegistry:ScenarioContentRegistry, resolutionRegistry:LevelContentResolver, generations:ContentGenerationSequence) {
 		this.validationRegistry = validationRegistry;
 		this.resolutionRegistry = resolutionRegistry;
+		this.generations = generations;
 		active = null;
-		nextGenerationSequence = firstGenerationSequence;
 	}
 
 	/**
@@ -42,16 +42,14 @@ final class EditorTestPlayRuntime {
 	public function start(request:EditorTestPlayRequest):EditorTestPlayStartResult {
 		if (active != null)
 			return EditorTestPlayRejected(EditorTestPlayAlreadyRunning);
-		final generationSequence = nextGenerationSequence;
-		final candidate = switch loadRuntimeLevel(InMemoryBytes(request.canonical, "editor-test-play", "editor/draft.caxemap"),
-			ContentGenerationId.fromSequence(generationSequence), validationRegistry, resolutionRegistry, request.playerOptions) {
+		final candidate = switch loadRuntimeLevel(InMemoryBytes(request.canonical, "editor-test-play", "editor/draft.caxemap"), generations.allocate(),
+			validationRegistry, resolutionRegistry, request.playerOptions) {
 			case RuntimeLevelReady(value): value;
 			case RuntimeLevelRejected(error): return EditorTestPlayRejected(EditorTestPlayLoadRejected(error));
 		};
 		return switch ActivePlayableLevel.create(candidate) {
 			case PlayableLevelCreated(value):
 				active = value;
-				nextGenerationSequence++;
 				EditorTestPlayStarted;
 			case PlayableLevelCreationRejected(error):
 				EditorTestPlayRejected(EditorTestPlayPresentationRejected(error));

@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "id": "vector-list",
+  "role": "fixture",
+  "type": "differential",
+  "status": "active",
+  "requirements": [
+    "HXC-PROD-002",
+    "HXC-SEM-008",
+    "HXC-RT-008",
+    "HXC-RT-009",
+    "HXC-STD-002",
+    "HXC-STD-003",
+    "HXC-STD-007"
+  ],
+  "sources": [
+    "scripts/test/compiler_discovery.py",
+    "docs/array-runtime.md",
+    "docs/generic-specialization.md",
+    "docs/stdlib-ledger.md",
+    "runtime/hxrt/include/hxrt/array.h",
+    "runtime/hxrt/src/array.c",
+    "src/reflaxe/c/lowering/CBodyClass.hx",
+    "src/reflaxe/c/lowering/CBodyDispatch.hx",
+    "src/reflaxe/c/lowering/CGenericSpecialization.hx",
+    "test/differential/array-runtime/array_runtime.c",
+    "test/differential/vector-list/generated/Main.hx",
+    "test/differential/vector-list/generated/oracle.hxml",
+    "test/differential/vector-list/run.py"
+  ],
+  "runner": {
+    "command": ["python3", "run.py"],
+    "workingDirectory": "test/differential/vector-list",
+    "timeoutSeconds": 600,
+    "network": false
+  },
+  "expected": {
+    "exitCode": 0,
+    "stdout": {
+      "mode": "regex",
+      "value": "vector-list: OK: .*Eval/generated-C Vector and List parity, primitive/managed ownership, mutation traversal, Array carrier, closed generic identities, layouts, determinism, C\\+\\+, sanitizers, runtime plans, and symbols passed$"
+    },
+    "oracle": "test/differential/vector-list/generated/oracle.hxml",
+    "artifacts": [
+      {
+        "path": "runtime/hxrt/include/hxrt/array.h",
+        "format": "header",
+        "comparison": "layout"
+      }
+    ]
+  }
+}

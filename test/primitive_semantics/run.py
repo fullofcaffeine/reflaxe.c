@@ -17,6 +17,11 @@ from typing import Iterable
 
 
 ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from scripts.test.bounded_process import run as run_bounded_process  # noqa: E402
+
 HXML = Path(__file__).with_name("primitive_semantics.hxml")
 EXPECTED = ROOT / "docs/specs/primitive-semantics.json"
 SCHEMA = ROOT / "docs/specs/primitive-semantics.schema.json"
@@ -52,7 +57,7 @@ def development_tool(name: str) -> str:
 def render(label: str) -> PrimitiveRender:
     environment = os.environ.copy()
     environment["HAXE_NO_SERVER"] = "1"
-    result = subprocess.run(
+    result = run_bounded_process(
         [development_tool("haxe"), str(HXML)],
         cwd=ROOT,
         env=environment,
@@ -230,6 +235,7 @@ def validate_contract(contract: dict[str, object]) -> None:
     required_operation_facts = {
         "int-add": ("haxe.i32.add", "program-local:hxc.i32.add.wrapping"),
         "int-divide": ("haxe.f64.divide", "program-local:hxc.f64.divide.zero-safe"),
+        "std-int-positive-constant-divide": ("haxe.i32.divide.positive-constant", "direct-c"),
         "int-modulo": ("haxe.i32.modulo", "program-local:hxc.i32.modulo.zero-safe"),
         "int-shift-right": ("haxe.i32.shift-right.masked", "program-local:hxc.i32.shift-right.masked"),
         "int-bit-xor": ("haxe.i32.bit-xor", "program-local:hxc.i32.bit-xor"),
@@ -246,6 +252,24 @@ def validate_contract(contract: dict[str, object]) -> None:
             or record.get("implementation") != implementation
         ):
             raise PrimitiveSemanticsFailure(f"operation contract drifted: {identifier}")
+
+    direct_division = operations["std-int-positive-constant-divide"]
+    direct_division_edges = object_list(
+        direct_division.get("edgeCases"),
+        "std-int-positive-constant-divide edge cases",
+    )
+    direct_division_text = " ".join(str(value) for value in direct_division_edges)
+    if (
+        direct_division.get("sourceOperandTypes") != ["Int", "Int"]
+        or direct_division.get("loweredOperandTypes") != ["Int", "Int"]
+        or direct_division.get("resultType") != "Int"
+        or direct_division.get("runtimeFeatures") != []
+        or "-2147483648 through 2147483647" not in direct_division_text
+        or "1 through 2147483647" not in direct_division_text
+        or "at least 1 / divisor" not in direct_division_text
+        or "at most 2^-22 / divisor" not in direct_division_text
+    ):
+        raise PrimitiveSemanticsFailure("proven direct division boundary contract drifted")
 
     if "zero divisor returns 0" not in " ".join(
         str(value) for value in object_list(operations["int-modulo"].get("edgeCases"), "int-modulo edge cases")
@@ -391,7 +415,7 @@ def check_snapshot(contract: dict[str, object]) -> None:
 
 
 def compiler_identity(executable: str) -> tuple[str, str]:
-    result = subprocess.run(
+    result = run_bounded_process(
         [executable, "--version"],
         cwd=ROOT,
         check=False,
@@ -475,7 +499,7 @@ def run_native(selected: str | None = None) -> None:
         for toolchain in native_toolchains(selected):
             for optimization in ("-O0", "-O2"):
                 executable = output_root / f"{toolchain.family}-{optimization[1:]}"
-                compile_result = subprocess.run(
+                compile_result = run_bounded_process(
                     [toolchain.compiler, *flags, optimization, str(NATIVE_SOURCE), "-o", str(executable)],
                     cwd=ROOT,
                     check=False,
@@ -488,7 +512,7 @@ def run_native(selected: str | None = None) -> None:
                         f"{toolchain.family} {optimization} primitive native compile failed\n"
                         f"stdout:\n{compile_result.stdout}\nstderr:\n{compile_result.stderr}"
                     )
-                run_result = subprocess.run(
+                run_result = run_bounded_process(
                     [str(executable)],
                     cwd=ROOT,
                     check=False,

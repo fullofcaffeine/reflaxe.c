@@ -7,11 +7,11 @@ import caxecraft.content.hosted.PosixPackageStatus.*;
 import haxe.io.Bytes;
 
 /**
-	Reads confined POSIX package bytes with behavior authored in Haxe.
+	Reads and replaces confined POSIX package bytes with behavior authored in Haxe.
 
 	System headers supply only ABI declarations and constants through
 	`PosixSystem`. This module owns path-component traversal, no-follow policy,
-	file identity checks, exact bounded reads, retries, and descriptor cleanup.
+	file identity checks, exact bounded I/O, atomic sibling renames, and descriptor cleanup.
 	Keeping those decisions in Haxe exercises haxe.c's metal surface while
 	leaving ordinary game and editor code unaware of POSIX.
 
@@ -28,6 +28,9 @@ import haxe.io.Bytes;
 /** Phantom compile-time identity for the 4096-byte stack read buffer. */
 private final class PosixReadChunk {}
 
+/** Phantom compile-time identity for the 4096-byte stack write buffer. */
+private final class PosixWriteChunk {}
+
 /** One descriptor-producing step without a managed allocation. */
 private typedef PosixDescriptorResult = {
 	/** Closed result of the attempted operation. */
@@ -35,6 +38,15 @@ private typedef PosixDescriptorResult = {
 
 	/** Owned descriptor on `PosixOk`, otherwise `-1`. */
 	final descriptor:Int;
+}
+
+/** One exclusive stage creation result with explicit cleanup ownership. */
+typedef PosixCreateResult = {
+	/** Closed outcome of creating, writing, and closing the stage. */
+	final status:PosixPackageStatus;
+
+	/** True only when this call created an entry that still needs cleanup. */
+	final stageOwned:Bool;
 }
 
 /**
@@ -238,6 +250,118 @@ function readExact(root:Bytes, rootDevice:PosixDeviceId, rootInode:PosixInodeId,
 	return fileClose == PosixOk ? status : fileClose;
 }
 
+/**
+	Create one confined stage file and write all caller-owned bytes.
+
+	Exclusive creation rejects stale names and symbolic links. A failed write is
+	removed before return when possible. `stageOwned` distinguishes that entry
+	from a stale name which this call did not create and must never delete.
+**/
+function createExact(root:Bytes, rootDevice:PosixDeviceId, rootInode:PosixInodeId, path:ContentPackagePath, input:Bytes):PosixCreateResult {
+	final components = componentBuffers(path);
+	final verifiedRoot = openVerifiedRoot(root, rootDevice, rootInode);
+	if (verifiedRoot.status != PosixOk)
+		return {status: verifiedRoot.status, stageOwned: false};
+
+	final parent = openConfinedParent(verifiedRoot.descriptor, components);
+	if (parent.status != PosixOk) {
+		final rootClose = closeOwnedDescriptor(verifiedRoot.descriptor);
+		return {status: rootClose == PosixOk ? parent.status : rootClose, stageOwned: false};
+	}
+	if (components.length > 1) {
+		final rootClose = closeOwnedDescriptor(verifiedRoot.descriptor);
+		if (rootClose != PosixOk) {
+			closeOwnedDescriptor(parent.descriptor);
+			return {status: rootClose, stageOwned: false};
+		}
+	}
+
+	final name = components[components.length - 1];
+	final mode:PosixMode = c.IntConvert.modulo(438);
+	final flags = PosixSystem.writeOnly | PosixSystem.create | PosixSystem.exclusive | PosixSystem.closeOnExec | PosixSystem.noFollow | PosixSystem.nonBlocking;
+	final descriptor = recordOpenedDescriptor(PosixCreateSystem.openAtWithMode(parent.descriptor, c.CStringBufferRef.to(name), flags, mode));
+	final created = descriptor >= 0;
+	var stageOwned = created;
+	var status = if (descriptor < 0) {
+		PosixSystem.errorNumber == PosixSystem.entryExistsError ? PosixEntryExists : PosixWriteFailed;
+	} else {
+		final written = writeFrom(descriptor, input);
+		final fileClose = closeOwnedDescriptor(descriptor);
+		written == PosixOk ? fileClose : written;
+	}
+	if (status != PosixOk && created) {
+		if (PosixSystem.unlinkAt(parent.descriptor, c.CStringBufferRef.to(name), 0) == 0
+			|| PosixSystem.errorNumber == PosixSystem.noEntryError) {
+			stageOwned = false;
+		} else {
+			status = PosixDeleteFailed;
+		}
+	}
+	final parentClose = closeOwnedDescriptor(parent.descriptor);
+	if (parentClose != PosixOk)
+		status = parentClose;
+	return {status: status, stageOwned: stageOwned};
+}
+
+/** Atomically rename two validated children that share one confined parent. */
+function renameSibling(root:Bytes, rootDevice:PosixDeviceId, rootInode:PosixInodeId, source:ContentPackagePath,
+		destination:ContentPackagePath):PosixPackageStatus {
+	if (!sameParent(source, destination))
+		return PosixInvalidArgument;
+	final sourceComponents = componentBuffers(source);
+	final destinationComponents = componentBuffers(destination);
+	final verifiedRoot = openVerifiedRoot(root, rootDevice, rootInode);
+	if (verifiedRoot.status != PosixOk)
+		return verifiedRoot.status;
+	final parent = openConfinedParent(verifiedRoot.descriptor, sourceComponents);
+	if (parent.status != PosixOk) {
+		final rootClose = closeOwnedDescriptor(verifiedRoot.descriptor);
+		return rootClose == PosixOk ? parent.status : rootClose;
+	}
+	if (sourceComponents.length > 1) {
+		final rootClose = closeOwnedDescriptor(verifiedRoot.descriptor);
+		if (rootClose != PosixOk) {
+			closeOwnedDescriptor(parent.descriptor);
+			return rootClose;
+		}
+	}
+	final sourceName = sourceComponents[sourceComponents.length - 1];
+	final destinationName = destinationComponents[destinationComponents.length - 1];
+	var status = PosixSystem.renameAt(parent.descriptor, c.CStringBufferRef.to(sourceName), parent.descriptor,
+		c.CStringBufferRef.to(destinationName)) == 0 ? PosixOk : PosixRenameFailed;
+	final parentClose = closeOwnedDescriptor(parent.descriptor);
+	if (parentClose != PosixOk)
+		status = parentClose;
+	return status;
+}
+
+/** Delete one confined non-directory entry; a missing entry is already clean. */
+function deleteEntry(root:Bytes, rootDevice:PosixDeviceId, rootInode:PosixInodeId, path:ContentPackagePath):PosixPackageStatus {
+	final components = componentBuffers(path);
+	final verifiedRoot = openVerifiedRoot(root, rootDevice, rootInode);
+	if (verifiedRoot.status != PosixOk)
+		return verifiedRoot.status;
+	final parent = openConfinedParent(verifiedRoot.descriptor, components);
+	if (parent.status != PosixOk) {
+		final rootClose = closeOwnedDescriptor(verifiedRoot.descriptor);
+		return rootClose == PosixOk ? parent.status : rootClose;
+	}
+	if (components.length > 1) {
+		final rootClose = closeOwnedDescriptor(verifiedRoot.descriptor);
+		if (rootClose != PosixOk) {
+			closeOwnedDescriptor(parent.descriptor);
+			return rootClose;
+		}
+	}
+	final name = components[components.length - 1];
+	var status = if (PosixSystem.unlinkAt(parent.descriptor, c.CStringBufferRef.to(name), 0) == 0
+		|| PosixSystem.errorNumber == PosixSystem.noEntryError) PosixOk; else PosixDeleteFailed;
+	final parentClose = closeOwnedDescriptor(parent.descriptor);
+	if (parentClose != PosixOk)
+		status = parentClose;
+	return status;
+}
+
 #if caxecraft_package_store_testing
 /** Select one Haxe-owned one-shot failure for the next matching operation. */
 function setTestFault(fault:PosixPackageTestFault):Void
@@ -328,6 +452,47 @@ private function openConfinedEntry(rootDescriptor:Int, components:Array<Bytes>):
 	return failedDescriptor(PosixInvalidArgument);
 }
 
+/**
+	Open the validated parent directory while leaving the root caller-owned.
+
+	For a one-component path, ownership of the root descriptor transfers directly
+	to the returned result. For a nested path, the returned child descriptor is a
+	new owner and the caller must also close the original root descriptor.
+**/
+private function openConfinedParent(rootDescriptor:Int, components:Array<Bytes>):PosixDescriptorResult {
+	if (components.length == 0)
+		return failedDescriptor(PosixInvalidArgument);
+	if (components.length == 1)
+		return {status: PosixOk, descriptor: rootDescriptor};
+
+	var currentDirectory = rootDescriptor;
+	var ownsCurrentDirectory = false;
+	for (index in 0...(components.length - 1)) {
+		final component = components[index];
+		final flags = PosixSystem.readOnly | PosixSystem.closeOnExec | PosixSystem.noFollow | PosixSystem.nonBlocking | PosixSystem.directory;
+		final opened = recordOpenedDescriptor(PosixSystem.openAt(currentDirectory, c.CStringBufferRef.to(component), flags));
+		if (opened < 0) {
+			var status = openFailureStatus(currentDirectory, component, PosixSystem.errorNumber);
+			if (ownsCurrentDirectory) {
+				final closeStatus = closeOwnedDescriptor(currentDirectory);
+				if (closeStatus != PosixOk)
+					status = closeStatus;
+			}
+			return failedDescriptor(status);
+		}
+		if (ownsCurrentDirectory) {
+			final closeStatus = closeOwnedDescriptor(currentDirectory);
+			if (closeStatus != PosixOk) {
+				closeOwnedDescriptor(opened);
+				return failedDescriptor(closeStatus);
+			}
+		}
+		currentDirectory = opened;
+		ownsCurrentDirectory = true;
+	}
+	return {status: PosixOk, descriptor: currentDirectory};
+}
+
 /** Turn one failed `openat` into the narrowest stable package status. */
 private function openFailureStatus(directoryDescriptor:Int, component:Bytes, openError:Int):PosixPackageStatus {
 	if (openError == PosixSystem.noEntryError)
@@ -392,6 +557,35 @@ private function readInto(descriptor:Int, output:Bytes):PosixPackageStatus {
 	return extra == zeroInt64() ? PosixOk : PosixReadFailed;
 }
 
+/** Copy all caller-owned bytes through fixed automatic storage. */
+private function writeFrom(descriptor:Int, input:Bytes):PosixPackageStatus {
+	var chunk:CArray<UInt8, PosixWriteChunk> = CArray.zero(READ_CHUNK_BYTES);
+	var offset = 0;
+	while (offset < input.length) {
+		final remaining = input.length - offset;
+		final requested = remaining < READ_CHUNK_BYTES ? remaining : READ_CHUNK_BYTES;
+		for (index in 0...requested)
+			chunk[index] = c.IntConvert.modulo(input.get(offset + index));
+		var written = 0;
+		while (written < requested) {
+			final pending = requested - written;
+			final nativePending:c.UInt64 = c.IntConvert.modulo(pending);
+			var nativeWritten = PosixSystem.writeBytes(descriptor, c.Ref.to(chunk[written]), nativePending);
+			while (nativeWritten < zeroInt64() && PosixSystem.errorNumber == PosixSystem.interruptedError)
+				nativeWritten = PosixSystem.writeBytes(descriptor, c.Ref.to(chunk[written]), nativePending);
+			if (nativeWritten <= zeroInt64())
+				return PosixWriteFailed;
+			final countBits:UInt = c.IntConvert.modulo(nativeWritten);
+			final count:Int = countBits;
+			if (count > pending)
+				return PosixWriteFailed;
+			written += count;
+		}
+		offset += requested;
+	}
+	return PosixOk;
+}
+
 /** Close one owned descriptor exactly once and preserve injected failure proof. */
 private function closeOwnedDescriptor(descriptor:Int):PosixPackageStatus {
 	final result = PosixSystem.closeDescriptor(descriptor);
@@ -448,6 +642,16 @@ private function sameFile(facts:PosixStat, device:PosixDeviceId, inode:PosixInod
 		&& facts.size == exactSize
 		&& facts.modified.seconds == modifiedSeconds
 		&& facts.modified.nanoseconds == modifiedNanoseconds;
+}
+
+/** Require two rename names to remain in one already-validated parent. */
+private function sameParent(left:ContentPackagePath, right:ContentPackagePath):Bool {
+	if (left.componentCount() != right.componentCount())
+		return false;
+	for (index in 0...(left.componentCount() - 1))
+		if (left.component(index) != right.component(index))
+			return false;
+	return true;
 }
 
 /** Test whether POSIX mode bits describe a directory. */

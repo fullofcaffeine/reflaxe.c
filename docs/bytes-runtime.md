@@ -21,7 +21,9 @@ The first haxe.c slice supports ordinary Haxe calls to:
 - `getString(position, length)` and `toString()`, using UTF-8. The selected
   range must be in bounds and contain complete, well-formed UTF-8. The returned
   immutable String owns its own copy, so later mutation of the Bytes value
-  cannot alter text that has already been published.
+  cannot alter text that has already been published;
+- `toHex()`, which returns two lowercase hexadecimal digits per byte in a new
+  immutable String. Empty Bytes returns the empty String.
 
 Assignment shares the same mutable Bytes value. `sub` is different: it creates
 an independent copy. `set` and `fill` keep the low eight bits of the supplied
@@ -131,7 +133,7 @@ a synchronous C text function. `c.CStringBufferRef.to(bytes)` lowers to
 `hxc_bytes_ref_borrow_mutable_cstring`, which accepts only a live, non-empty
 Bytes value whose allocation already contains a NUL byte. It publishes a
 `char *` only after those checks pass. The pointer has no owner of its own:
-schema-23 HxcIR requires the checked borrow as its producer and exactly one
+schema-27 HxcIR requires the checked borrow as its producer and exactly one
 direct native-call argument as its consumer, in the same basic block. Storage,
 return, forwarding, indirect calls, and a second consumer are validation
 errors before C emission.

@@ -2,7 +2,7 @@
 
 E3.T05 admits constructors for concrete, non-generic Haxe classes when the
 complete object lifetime is proven. The compiler lowers the real pinned-Haxe
-`TypedExpr` through schema-23 HxcIR and structural C AST nodes. A class whose
+`TypedExpr` through schema-27 HxcIR and structural C AST nodes. A class whose
 object stays inside one function can remain allocation-free. A class reference
 that crosses a function return or is retained by another object instead selects
 the dependency-closed object and garbage-collector runtime features needed for
@@ -23,24 +23,56 @@ return item.read();
 
 The early return records its cleanup before `item` exists. Construction then
 registers `item` for every later exit, so HxcIR can prove exactly which paths
-destroy it without moving the constructor before the guard. This is different
-from declaring the object inside one branch, loop body, or switch arm. Such an
-object must be destroyed when that nested body ends, and path-scoped class
-destruction is not admitted yet.
+destroy it without moving the constructor before the guard.
+
+A statement `if` arm can also own a local object:
+
+```haxe
+if (needsPreview) {
+  final preview = new Preview();
+  show(preview);
+}
+```
+
+The arm destroys `preview` before it reaches the join. A return from the arm
+also carries that cleanup. The sibling path never registers it. Nested
+statement `if` arms use the same rule. Construction inside a loop, switch,
+catch, or a conditional arm beneath one of those scopes remains unsupported
+because its back edge or join needs a separate lifetime proof.
 
 A nonescaping parent may also own a child created by a `final` field initializer
 such as `public final inventory = new Inventory()`. The child is stored
 directly inside the parent's C struct, so it has a stable address for the
 complete parent lifetime without a heap allocation.
 
-Assigning an otherwise local reference into longer-lived storage, conditionally
-constructing an object that still uses automatic storage, or storing `this`
-into an unsupported field fails with
+Assigning an automatic local reference into longer-lived storage, constructing
+it in an unproved control-flow scope, or storing `this` into an unsupported
+field fails with
 source-positioned `HXC1001`. One same-function automatic alias is safe:
 `var second = first` merely names the same stack object, and Haxe may generate
 the equivalent `_this` alias when it inlines a method. The compiler keeps that
 alias marked as stack-backed, so storing, throwing, or forwarding it beyond a
 proved call still fails rather than losing the original lifetime.
+
+A mutable direct local can replace its value with a fresh instance of the same
+exact class. This supports a common reset pattern:
+
+```haxe
+var token = new StringBuf();
+publish(token.toString());
+token = new StringBuf();
+```
+
+The compiler evaluates the replacement arguments while the old object is
+valid. It then releases the old managed fields and resets the same automatic
+storage. Finally, it calls the constructor with the stable object address.
+This sequence also works on a loop back edge. A failed constructor cleans the
+new partial state once and does not clean the old state twice.
+
+This rule does not permit a different concrete class or longer-lived storage.
+Assignments to fields and globals still use their separate ownership rules.
+Returning, storing, or forwarding the automatic reference still fails unless
+the receiving boundary has its own proven lifetime.
 
 A local or owned child may also be passed to a known ordinary Haxe function.
 When that concrete class has no longer-lived use anywhere in the reachable
@@ -664,14 +696,23 @@ unrelated constructor families.
 Use `test:constructor-early-exit` for the smaller root-guard lifetime rule. Its
 positive fixture returns before construction on one path, constructs and uses a
 nonescaping object on the surviving path, and proves that only the later return
-owns cleanup. The same focused command recompiles the existing branch-local
-negative so the broader unsafe case cannot become accepted accidentally.
+owns cleanup.
+
+Use `test:constructor-path-scoped` for statement `if` arms. Its positive
+fixture covers a sibling path with no object, branch fallthrough, a nested
+return, two objects with reverse cleanup, and a throwing second constructor.
+It compares reversed typed-module discovery, runs strict C11 at `-O0` and
+`-O2`, checks the generated private header as C++17, and runs sanitizer builds.
+Two negative fixtures reject a branch object assigned to static storage and a
+conditional class local nested inside a repeating loop.
 
 `test/constructor_lowering/fixtures/minimal/Main.hx` is the small readable
 example. The `early_exit` fixture proves function-lifetime automatic storage
 after a validated root-level guard, exact per-exit HxcIR cleanup, runtime-free
 structured C, Eval parity, reversed-input determinism, strict C11 at both
-optimization levels, and sanitizer execution. The focused `record_parameter`
+optimization levels, and sanitizer execution. The `conditional` fixture and
+its native expected-abort harness prove the narrower path-scoped statement-arm
+rule and its failure cleanup. The focused `record_parameter`
 fixture proves a direct closed record
 argument in split, package, and unity output, reversed discovery, warm compiler
 server reuse, and strict native execution. `managed_record_argument` extends
@@ -715,6 +756,11 @@ class and interface parameters plus a final instance method. Its generated C
 keeps left-to-right evaluation, cleans a failed partial resolver together with
 earlier arguments, and on success releases the right argument, resolver field,
 and left argument immediately after the call in reverse creation order.
+`local_reassignment` proves repeated same-class replacement in a loop. It also
+proves right-side evaluation, managed-field cleanup, stable storage, and a
+throwing replacement constructor. The focused
+`--local-reassignment-only` lane compares Eval and deterministic split output.
+It then runs strict Clang C11 at `-O0` and `-O2`, plus sanitizers.
 `factory_return` proves a validated `Null<Class>` factory, class-reference
 pass-through, and a child returned from a temporary parent across Eval,
 split/package/unity output, reversed discovery, warm compiler-server reuse,

@@ -22,6 +22,7 @@ import reflaxe.c.frontend.TypedAstNormalizer;
 import reflaxe.c.frontend.TypedProgramInput;
 import reflaxe.c.frontend.NamedRecordSourceProvenance.NamedRecordSourceProvenanceError;
 import reflaxe.c.lowering.CBodyControlFlowPlanCache;
+import reflaxe.c.lowering.CClassHierarchyMemo;
 import reflaxe.c.lowering.CBodyFunctionReplayCache;
 import reflaxe.c.naming.CSymbolRegistry;
 
@@ -75,6 +76,7 @@ class CReflaxeCompiler extends GenericCompiler<Bool, Bool, Bool, Bool, Bool> {
 		CBodyControlFlowPlanCache.beginRequest(!Context.defined(CBodyControlFlowPlanCache.DISABLE_DEFINE));
 		CBodyFunctionReplayCache.beginRequest(!Context.defined(CBodyFunctionReplayCache.DISABLE_DEFINE));
 		CSymbolRegistry.beginCacheRequest(!Context.defined(CSymbolRegistry.DISABLE_CACHE_DEFINE));
+		CClassHierarchyMemo.beginRequest(!Context.defined(CClassHierarchyMemo.DISABLE_DEFINE));
 		compilationContext = new CompilationContext(profile, buildMode);
 		generatedFiles = [];
 		currentProgram = pendingProgram;
@@ -91,6 +93,8 @@ class CReflaxeCompiler extends GenericCompiler<Bool, Bool, Bool, Bool, Bool> {
 		}
 		context.setTypedProgram(program);
 		generatedFiles = new CCompiler(context).compileModules(program);
+		// Hierarchy answers are valid only for this request's typed program.
+		CClassHierarchyMemo.endRequest();
 		CPhaseTiming.stop(targetTimer);
 		targetTimer = null;
 	}
@@ -101,6 +105,7 @@ class CReflaxeCompiler extends GenericCompiler<Bool, Bool, Bool, Bool, Bool> {
 			CBodyControlFlowPlanCache.abortRequest();
 			CBodyFunctionReplayCache.abortRequest();
 			CSymbolRegistry.abortCacheRequest();
+			CClassHierarchyMemo.endRequest();
 			CDiagnostic.fatal(CDiagnosticId.InternalCompilerError, "Reflaxe output manager is not initialized", Context.currentPos());
 			return;
 		}
@@ -115,6 +120,7 @@ class CReflaxeCompiler extends GenericCompiler<Bool, Bool, Bool, Bool, Bool> {
 			CBodyControlFlowPlanCache.abortRequest();
 			CBodyFunctionReplayCache.abortRequest();
 			CSymbolRegistry.abortCacheRequest();
+			CClassHierarchyMemo.endRequest();
 			CDiagnostic.fatal(error.diagnosticId, error.detail, Context.currentPos());
 		}
 	}
@@ -146,6 +152,20 @@ class CReflaxeCompiler extends GenericCompiler<Bool, Bool, Bool, Bool, Bool> {
 		final empty:Array<DataAndFileInfo<StringOrBytes>> = [];
 		return empty.iterator();
 	}
+
+	/**
+		Skip callback field preparation after the complete typed program is captured.
+
+		This adapter emits through onCompileEnd. Its class callback consumes none
+		of Reflaxe's prepared fields; reachability, inheritance, and validation belong
+		to the whole-program compiler and still use the captured declarations.
+	**/
+	override public function shouldGenerateClass(classType:ClassType):Bool
+		return false;
+
+	/** Enum declarations are likewise emitted from the captured whole program. */
+	override public function shouldGenerateEnum(enumType:EnumType):Bool
+		return false;
 
 	public function compileClassImpl(classType:ClassType, varFields:Array<ClassVarData>, funcFields:Array<ClassFuncData>):Null<Bool> {
 		// Selection is intentionally deferred to the whole-program compiler so it

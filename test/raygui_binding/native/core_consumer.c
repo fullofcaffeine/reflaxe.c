@@ -27,6 +27,21 @@ int main(void) {
   }
   GuiDisable();
   GuiEnable();
+  /* A version line must not fall through and overwrite property zero. A final
+   * unterminated line must be processed once, and an empty file must return. */
+  FILE *style = fopen("style-reader.rgs", "wb");
+  if (style == NULL) return 4;
+  GuiSetStyle(DEFAULT, BORDER_COLOR_NORMAL, 0x11223344);
+  if (fputs("# raygui style\nv 500\np 0 16 0x17", style) == EOF) return 5;
+  if (fclose(style) != 0) return 6;
+  GuiLoadStyle("style-reader.rgs");
+  if ((GuiGetStyle(DEFAULT, BORDER_COLOR_NORMAL) != 0x11223344) ||
+      (GuiGetStyle(DEFAULT, TEXT_SIZE) != 23)) return 7;
+  style = fopen("style-reader.rgs", "wb");
+  if ((style == NULL) || (fclose(style) != 0)) return 8;
+  GuiLoadStyle("style-reader.rgs");
+  if (GuiGetStyle(DEFAULT, TEXT_SIZE) != 23) return 9;
+  if (remove("style-reader.rgs") != 0) return 10;
   puts("raygui-c-consumer: OK");
   return 0;
 }

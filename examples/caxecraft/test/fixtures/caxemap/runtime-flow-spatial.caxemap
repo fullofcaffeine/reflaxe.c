@@ -1,0 +1,64 @@
+CAXEMAP 1
+feature required caxecraft:core
+map qa.runtime-flow-spatial
+asset-pack packs/caxecraft/base
+title literal "Spatial CaxeFlow probe"
+mode creative
+world 32 16 32
+palette 0 caxecraft:air
+palette 1 caxecraft:bedrock
+chunk world.base 0 0 0 32 16 32
+  run 1 1
+  run 0 16383
+end chunk
+fluid water.fixture caxecraft:water volume 30 1 30 1 1 1
+object guide.nia
+  tag friend
+  placement npc caxecraft:nia dialogue.nia 3500 1000 1500 270
+end object
+object player.start
+  tag player
+  placement player-spawn 2500 1000 1500 0
+end object
+object zone.cross
+  tag qa
+  placement trigger-zone 2 0 1 2 4 2
+end object
+dialogue dialogue.nia
+  line speaker guide.nia literal "Synthetic spatial fixture"
+end dialogue
+variable flow.player-enter map flag false
+variable flow.guide-enter map flag false
+variable flow.swept-enter map flag false
+variable flow.swept-leave map flag false
+rule rule.player-enter priority 10 repeat
+  when enter-zone zone.cross
+  if (event-actor player.start)
+  do set-flag flow.player-enter true
+end rule
+rule rule.guide-enter priority 20 repeat
+  when enter-zone zone.cross
+  if (event-actor guide.nia)
+  do set-flag flow.guide-enter true
+end rule
+rule rule.swept-enter priority 30 repeat
+  when enter-zone zone.cross
+  if (event-swept true)
+  do set-flag flow.swept-enter true
+end rule
+rule rule.swept-leave priority 40 repeat
+  when leave-zone zone.cross
+  if (event-swept true)
+  do set-flag flow.swept-leave true
+end rule
+rule rule.disable-zone priority 50 repeat
+  when signal caxecraft:disable-zone
+  if (always)
+  do despawn zone.cross
+end rule
+rule rule.enable-zone priority 60 repeat
+  when signal caxecraft:enable-zone
+  if (always)
+  do spawn zone.cross
+end rule
+end-map

@@ -19,8 +19,8 @@ import caxecraft.content.LoadedContentGeneration.LoadedContentGenerationTrace;
 import caxecraft.content.ResolvedLevelPlan.ResolvedLevelPlanResult;
 import caxecraft.domain.CaxecraftTrace;
 import caxecraft.domain.World;
-import caxecraft.qa.ResolvedLevelFixture.readFirstPlayableScenario;
-import caxecraft.qa.ResolvedLevelFixture.resolveFirstPlayable;
+import caxecraft.qa.ResolvedLevelFixture.readResolutionScenario;
+import caxecraft.qa.ResolvedLevelFixture.resolveResolutionScenario;
 import caxecraft.qa.FocusedContentFixture.FocusedContentRegistry;
 import caxecraft.scenario.ContentId;
 
@@ -60,11 +60,11 @@ function main():Void {
 
 /** Return zero, or the stable number of the first broken ownership invariant. */
 function selfCheck():Int {
-	final scenario = readFirstPlayableScenario();
+	final scenario = readResolutionScenario();
 	if (scenario == null)
 		return 1;
 	final registry = new FocusedContentRegistry();
-	final pair = switch resolveFirstPlayable(scenario, registry) {
+	final pair = switch resolveResolutionScenario(scenario, registry) {
 		case LevelPlanResolved(plan, presentation): {plan: plan, presentation: presentation};
 		case LevelPlanRejected(_): return 2;
 	};
@@ -75,7 +75,7 @@ function selfCheck():Int {
 			return 3;
 	}
 
-	final alternatePresentation = switch resolveFirstPlayable(scenario, new AlternatePresentationRegistry()) {
+	final alternatePresentation = switch resolveResolutionScenario(scenario, new AlternatePresentationRegistry()) {
 		case LevelPlanResolved(_, presentation): presentation;
 		case LevelPlanRejected(_): return 4;
 	};

@@ -265,49 +265,29 @@ headless campaign tracer remains responsible for malformed manifests, stale
 receipts, missing destinations, and unchanged-state failures. Neither owner
 freezes the destination's spawn coordinates or decoration.
 
-The adventure-journey pilot protects the path a player actually sees. Its
-actions and expected content IDs live in the staged `PILOSCRIPT 1` file. The
-compiled parser and observer contain no campaign or level identity.
+The default Adventure journey starts in Evergrove. It opens the campaign
+from the title screen, talks to Nia, and walks through the west gate.
+At the gate, the pilot checks that Western Falls is active and that the
+player has the objective to find the Fallskeeper. Its final frame shows
+the game paused in Western Falls. The expected screens, objectives, and
+level changes live in the [reloadable journey](../examples/caxecraft/pilots/active.piloscript).
 
-The journey starts with Creative highlighted on the real title screen. It
-sends the same device-independent next and confirm choices used by keyboard
-input. It retains a frame that shows Adventure highlighted. Confirming
-Adventure opens the campaign screen. The staged campaign manifest supplies
-the route from `evergrove` to `western-falls`. The journey selects Western
-Falls and launches it through that screen.
+Live play continues from that arrival. The Mossling chased the player on
+the descent and turned back when the player kept moving. From the
+Fallskeeper's ledge, the wooden bridge by the waterfall led to the marks.
+The crossing farther downstream was easy to mistake for the vault bridge.
 
-Haxe compares the visible screen, selected mode, level ID, active objective ID,
-content generation, publication count, grid position, aquatic medium,
-equipment, and selected inventory counts with the runtime file. The journey
-then mines the concealed route, collects and equips Tideweave through ordinary
-world-item behavior, enters the flooded grotto, collects its lantern, and
-returns to dry ground. The final capture keeps a generic presented-gameplay
-check for review. It does not freeze the waterfall shape, terrain decoration,
-actor placement, or camera framing.
+On the earlier map, approaching the sealed gate from the pool collected
+Tideweave through the gate. Replaying the same inputs on the revised map
+left the suit inside. After opening the gate, the player mined two sand
+blocks, equipped Tideweave, and collected the lantern underwater. About
+66 seconds of active simulation elapsed between the first Western Falls
+observation and the lantern pickup. Dialogue and time spent looking at
+paused frames are outside that measure.
 
-Focused Haxe probes separately own the exact screen transitions, manifest
-receipts, item transaction rules, Piloscript grammar, and valid runtime
-loading. They do not contain Western Falls names, prose, routes, decorative
-terrain, or actor coordinates. Generation 2 and one publication can only be
-reached while the app is both playing and in Adventure mode, so a Creative
-launch, a hidden campaign screen, or a script that bypasses the title cannot
-satisfy this owner.
-
-This is evidence for the current two-level forward journey and one repeatable
-Western Falls exploration route. The runtime Piloscript launches Western Falls
-through the visible Adventure menus, checks that Moss is the first objective,
-interacts with Moss, checks that the Tideweave objective becomes active, checks
-that collecting Tideweave opens the grotto objective, and checks that collecting
-the lantern leaves no active objective. Those expected IDs remain in the
-content-owned Piloscript rather than compiled engine code.
-The interaction also checks the authored journal ID. The final review image
-pauses after the return route and shows the resolved journal title and wrapped
-body, while focused Haxe tests own generic text lookup and missing-ID behavior.
-The player still presses `N` to use the manifest's
-sole exit. Authored exit volumes, branching, return travel between levels,
-saves, the Fallskeeper encounter, exact code interaction, and opening the
-vault through story logic remain future work. Subjective route readability,
-waterfall appearance, puzzle quality, and fun still require hands-on review.
+The flooded relay leads to Flooded Ruins. Players can also surface and
+follow the road to Frostmere. Beads issue `haxe_c-xge.20.1.3` records the
+native playthroughs and their frames.
 
 ## How semantic state leaves the native game
 
@@ -386,15 +366,26 @@ the same headless benchmark locally. See
 [Raylib 6.0 provisioning](raylib-provisioning.md#reviewed-macos-memory-clock-patch)
 for the patch and provenance contract.
 
-On Linux or macOS, `npm run benchmark:caxecraft-renderer` runs both admitted
-Haxe renderer variants, requires the same gameplay report and byte-identical
-final image, then runs a focused handwritten-C reference. It writes one
-generated comparison report under
-`examples/caxecraft/_build/benchmarks/`. The report records the scene and input
-hashes, viewport, pinned Raylib and native compiler, warmup and sampling method,
-terrain/update/preparation times, draw and rebuild counts, explicit cache
-payload, generated-source size, binary size, and zero generated allocator,
-`goto`, and `hxrt` references.
+On Linux or macOS, `npm run benchmark:caxecraft-renderer` requires separate
+timing and instrumented correctness builds for each Haxe renderer variant.
+The [comparison gate](../examples/caxecraft/benchmark_renderer.py) requires
+matching gameplay reports and byte-identical final images, plus the focused
+handwritten-C reference. It binds each build to the same source, tools, native
+inputs, and staged content, with only the declared renderer or observer change.
+
+Terrain acceptance requires valid native observations for all twelve measured
+frames and static call coverage from the same native build. The measured
+interval must contain zero allocation, reallocation, and collection attempts.
+The report preserves warmup counts and reports root push/pop API attempts
+separately; these counts do not prove successful or balanced root lifetimes.
+Instrumented correctness samples cannot supply timing results.
+
+The comparison report under `examples/caxecraft/_build/benchmarks/` retains
+scene/input hashes, viewport, native tool identities, warmup and sample details,
+terrain/update/preparation times, draw/rebuild counts, cache payload, and source/binary
+sizes. Whole-project allocator-call and `hxrt` reference counts remain static
+metrics; they do not measure runtime attempts within the terrain interval.
+The whole-project `goto` rejection remains required.
 
 The three comparison points answer different questions:
 
@@ -447,6 +438,12 @@ available for useful stack traces, and leak detection is enabled. The report's
 Raylib static library is executed under the sanitizer runtime but is not itself
 rebuilt with instrumentation in this slice; the claim is deliberately limited
 to instrumented generated C linked to and running through real Raylib.
+
+After each compiler completes both `move-jump-edit` runs, the headless workflow
+uploads the JSON report and the frame before starting the renderer benchmark.
+Look for `caxecraft-sanitized-pilot-linux-gcc` or
+`caxecraft-sanitized-pilot-linux-clang` in the run's artifacts. Those files
+remain available if the later comparison times out.
 
 ### Why this carrier is temporary
 
@@ -520,6 +517,15 @@ running Haxe game checks this file at 20 Hz. It accepts a changed batch only
 after the normal parser validates its size, name, actions, frames, and optional
 inspection radius.
 
+Each batch produces one final host response. Native observations carry a
+Boolean `terminal` field: `false` marks an intermediate `capture` checkpoint,
+and `true` marks completion of the batch, not termination of the game. The host
+validates intermediate observations and waits for the final one before it
+returns control. Observation sequence numbers must increase throughout the
+session. A missing completion marker, stale sequence, unexpected screenshot
+name, or incomplete response fails the batch instead of returning a checkpoint
+as its result. Ordinary checkpoint runs retain their existing screenshots.
+
 For the memory-software renderer, the host corrects the known Raylib row and
 channel convention before it publishes each response. The screenshot path can
 therefore be reviewed directly. Desktop captures do not use this conversion.
@@ -591,19 +597,24 @@ The target-neutral probe runs under pinned Haxe Eval in two installed locales.
 It proves exact repeated samples, every action/checkpoint, hotbar intent,
 permanent bounded quit, and absence of C/Raylib/untyped leakage.
 
-The native commands compile through production `--custom-target c`, require an
-empty `hxrt` plan, build and launch pinned Raylib, stage only hash-verified
-assets, inspect a real RGBA framebuffer, decode the versioned state record, run
-the same executable twice, and require equal reports plus clean process exits.
-The generated-C gate also rejects `goto`, allocation calls, and hidden `hxrt`,
-and checks exact texture load/validity/unload ownership counts.
+Native pilot tooling compiles through production `--custom-target c` and
+validates the declared selective `hxrt` plan. It builds pinned Raylib, stages
+hash-verified assets, and checks the real RGBA framebuffer and versioned state
+record. Ordinary native pilots require equal reports and clean exits across
+two runs. Generated-C checks retain texture load/validity/unload ownership rules.
+An empty runtime plan belongs to focused runtime-free fixtures, not the managed
+game as a whole.
 
-The Linux desktop workflow runs the launch pilot through Xvfb, a small virtual
-display server used when CI has no physical monitor. It uploads the normalized
-JSON report and human-review screenshot as one fail-closed artifact. This lane
-proves the compiled application can open, draw, report state, and quit on the
-hosted Linux image; it does not replace the separate macOS/Windows compile/link
-matrix or manual input-quality review.
+The renderer acceptance gate is implemented, but its latest full-game native
+observations and static coverage remain pending on `haxe_c-rl9u`. The normal
+120-second Haxe build budget remains pending on `haxe_c-xty2`. Focused host tests
+check the gate's acceptance logic; they do not establish these game results.
+
+The Linux desktop workflow runs `resize-layout` with the optimized game
+under Xvfb, a virtual display. The pilot opens the title screen, resizes
+the window to 960×540, and captures the resized frame. Open
+`caxecraft-pilot-linux-gcc` for the JSON report and
+`caxecraft-pilot-resize.png`. For a local launch check, use `--smoke`.
 
 A macOS desktop executable also needs access to the logged-in graphical
 session. A normal Terminal window has that access. A background automation

@@ -25,14 +25,15 @@ boundary with evidence.
 
 ## Current inventory
 
-Only four occurrences remain:
+The JSON manifest owns the exact current occurrence list. Do not copy its
+line numbers or count into this guide, because either copy can become stale.
+The admitted categories are intentionally narrow:
 
-| Boundary | Why it remains | Containment |
-| --- | --- | --- |
-| `Json.parse` in `ReflaxeOutputWriter` | The pinned Haxe JSON parser returns an untyped external value. | The value is admitted only inside `decodeOwnershipMetadata`, checked for schema version and every consumed scalar/array/path invariant, and returned as `ReflaxeOwnershipMetadata`. Malformed and wrong-shape ownership documents fail before any generated write. |
-| One `Dynamic` parameter in the aggregate negative fixture | The fixture presents the real language type to prove it cannot masquerade as a structurally known value record. | `CBodyLowering` rejects it before HxcIR construction; the suite requires exact source-positioned `HXC1001` and no generated artifact. |
-| One cast in `DiagnosticGolden` | The negative test must construct an ID the `CDiagnosticId` enum abstract makes impossible in normal code. | The forged value is passed directly to the rejecting registry lookup and cannot enter production code. |
-| One `Dynamic` parameter in `IRCoverage` | The fixture models Haxe's real `Dynamic` language semantic so HxcIR cannot confuse it with an internal opaque value. | It is test source only. Compiler implementation state remains typed, and HxcIR represents the semantic explicitly as `IRTDynamic`. |
+- `ReflaxeOutputWriter` contains the only production occurrence. It validates
+  external ownership JSON immediately and returns a closed typed record.
+- Test fixtures use real `Dynamic` values or unchecked casts only to prove an
+  exact language-semantic or negative boundary. Each fixture has source-exact
+  diagnostic evidence and cannot pass an untyped carrier into compiler state.
 
 There are no approved repository-owned uses of `Any`, `Reflect`, `untyped`,
 `DynamicAccess`, private-access metadata, or raw `__c__` calls. The preview

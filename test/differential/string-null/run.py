@@ -16,6 +16,12 @@ from typing import Iterable
 
 
 ROOT = Path(__file__).resolve().parents[3]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from scripts.test.bounded_process import run as run_bounded_process  # noqa: E402
+from scripts.test.compiler_discovery import sanitizer_execution_environment  # noqa: E402
+
 CASE = Path(__file__).resolve().parent
 GENERATED = CASE / "generated"
 NEGATIVE = CASE / "negative"
@@ -97,7 +103,7 @@ def resolve_toolchains(selected: str) -> list[Toolchain]:
                 raise StringNullFailure(f"required C compiler is missing: {family}")
             print(f"string-null: SKIP optional {family}: missing command")
             continue
-        identity = subprocess.run(
+        identity = run_bounded_process(
             [compiler, "--version"],
             check=False,
             capture_output=True,
@@ -125,7 +131,7 @@ def resolve_toolchains(selected: str) -> list[Toolchain]:
 
 def run_eval_oracle() -> None:
     for iteration in range(2):
-        result = subprocess.run(
+        result = run_bounded_process(
             [development_tool("haxe"), "oracle.hxml"],
             cwd=GENERATED,
             env=haxe_environment(),
@@ -171,7 +177,7 @@ def compile_haxe(
     if report:
         command.extend(["-D", "reflaxe_c_static_initialization_report"])
     command.extend(["--custom-target", f"c={output}"])
-    return subprocess.run(
+    return run_bounded_process(
         command,
         cwd=ROOT,
         env=haxe_environment(),
@@ -376,7 +382,7 @@ def compile_and_run(
         "-o",
         str(executable),
     ]
-    compilation = subprocess.run(
+    compilation = run_bounded_process(
         command,
         cwd=ROOT,
         check=False,
@@ -389,8 +395,9 @@ def compile_and_run(
             f"{toolchain.family} strict nullable-String compile failed\n"
             f"command={command!r}\nstdout={compilation.stdout!r}\nstderr={compilation.stderr!r}"
         )
-    execution = subprocess.run(
+    execution = run_bounded_process(
         [str(executable)],
+        env=sanitizer_execution_environment(toolchain.compiler, toolchain.family, flags),
         cwd=ROOT,
         check=False,
         capture_output=True,
@@ -427,7 +434,7 @@ def validate_cpp_header(toolchain: Toolchain, project: Path, build: Path) -> Non
         "-o",
         str(executable),
     ]
-    result = subprocess.run(
+    result = run_bounded_process(
         command,
         cwd=ROOT,
         check=False,

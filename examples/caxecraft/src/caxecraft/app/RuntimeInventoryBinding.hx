@@ -4,6 +4,7 @@ import caxecraft.content.RuntimeContentPack.RuntimeContentRegistry;
 import caxecraft.content.RuntimeContentPack.RuntimeItemUseProfile;
 import caxecraft.domain.World;
 import caxecraft.gameplay.ItemKind;
+import caxecraft.scenario.ContentId;
 
 /**
 	Connects validated item mechanics to the current bounded hotbar.
@@ -40,4 +41,20 @@ function inventoryKindForRuntimeItem(registry:RuntimeContentRegistry, storageCod
 			};
 		case EquipAquatic: null;
 	};
+}
+
+/**
+	Return the stable content ID represented by one bounded inventory kind.
+
+	The hotbar is still a closed engine model, while CaxeFlow observes content IDs.
+	Walking the small validated registry keeps the translation in one adapter and
+	prevents gameplay commands from hard-coding built-in item names.
+**/
+function runtimeItemContentIdForInventoryKind(registry:RuntimeContentRegistry, kind:ItemKind):Null<ContentId> {
+	for (storageCode in 0...registry.itemCount()) {
+		final candidate = inventoryKindForRuntimeItem(registry, storageCode);
+		if (candidate != null && candidate == kind)
+			return new ContentId(registry.itemIdForStorageCode(storageCode));
+	}
+	return null;
 }

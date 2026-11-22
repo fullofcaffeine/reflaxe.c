@@ -16,6 +16,16 @@ SPEC.loader.exec_module(BUNDLE)
 
 
 class CrossTargetBundleTests(unittest.TestCase):
+    def test_prd_names_the_reproducible_recipe_as_the_evidence_source(self):
+        prd = (ROOT / "docs/PRD.md").read_text(encoding="utf-8")
+        patterns = (ROOT / "docs/research/repo-patterns.md").read_text(
+            encoding="utf-8"
+        )
+        self.assertNotIn("reference/repomix", prd)
+        self.assertNotIn("supplied Repomix", patterns)
+        self.assertIn("docs/specs/cross-target-research-bundle.json", prd)
+        self.assertIn("cross-target-research-bundle.json", patterns)
+
     def test_checked_in_recipe_and_prompt_are_well_formed(self):
         result = BUNDLE.check_recipe(
             ROOT / "docs/specs/cross-target-research-bundle.json"

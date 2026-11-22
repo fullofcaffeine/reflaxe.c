@@ -130,6 +130,43 @@ bool hxc_caxecraft_app_WaterSurfaceGeometry_isWater(struct hxc_caxecraft_domain_
   return false;
 }
 
+int32_t hxc_caxecraft_app_WaterSurfaceGeometry_sideAlpha(struct hxc_caxecraft_domain_WaterCellState hxc_l_state)
+{
+  switch (hxc_l_state.hxc_tag) {
+    case hxc_caxecraft_domain_WaterCellState_Empty:
+    case hxc_caxecraft_domain_WaterCellState_Blocked:
+      {
+        return 0;
+      }
+    case hxc_caxecraft_domain_WaterCellState_Source:
+      {
+        return 112;
+      }
+    case hxc_caxecraft_domain_WaterCellState_Flowing:
+      {
+        break;
+      }
+    case hxc_caxecraft_domain_WaterCellState_InvalidStorage:
+      {
+        return 0;
+      }
+    default:
+      {
+        abort();
+      }
+  }
+  if (hxc_l_state.hxc_tag != hxc_caxecraft_domain_WaterCellState_Flowing)
+  {
+    abort();
+  }
+  bool hxc_l_tmp_enum_payload_project_n0 = hxc_l_state.hxc_payload.hxc_Flowing.hxc_falling;
+  if (!hxc_l_tmp_enum_payload_project_n0)
+  {
+    return 112;
+  }
+  return 68;
+}
+
 bool hxc_caxecraft_app_WaterSurfaceGeometry_sideIsExposed(struct hxc_caxecraft_domain_WaterCellState hxc_l_state)
 {
   switch (hxc_l_state.hxc_tag) {

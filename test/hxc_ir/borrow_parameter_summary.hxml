@@ -1,0 +1,7 @@
+-cp test/hxc_ir
+-cp src
+--macro nullSafety("reflaxe.c")
+-cp test/hxc_ir/fixtures/borrow_parameter_summary
+--macro BorrowParameterSummaryProbe.install()
+-main BorrowSummarySubject
+--interp

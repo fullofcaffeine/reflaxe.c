@@ -19,6 +19,11 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from scripts.test.bounded_process import run as run_bounded_process  # noqa: E402
+
 CASE = Path(__file__).resolve().parent
 LEDGER = ROOT / "docs/specs/stdlib-ledger.json"
 CSV_LEDGER = ROOT / "docs/specs/stdlib-ledger.csv"
@@ -186,7 +191,7 @@ def run_probe(scope: str, label: str) -> ProbeRender:
             command.extend(["--custom-target", f"stdlibprobe={output}"])
         else:
             raise StdlibLedgerFailure(f"unknown probe scope: {scope}")
-        result = subprocess.run(
+        result = run_bounded_process(
             command,
             cwd=ROOT,
             env=environment,
@@ -859,9 +864,10 @@ def validate_generated(ledger: dict[str, object]) -> None:
     statuses = {status: 0 for status in STATUSES}
     for entry in entries:
         statuses[str(entry["status"])] += 1
-    if statuses["conformant"] != 1 or statuses["partial"] != 33:
+    if statuses["conformant"] != 22 or statuses["partial"] != 183:
         raise StdlibLedgerFailure(
-            "evidence should mark exactly Std.int conformant plus the bounded Array.copy, literal Array.resize(0), discarded one-element Array.splice, Array.shift, Array.sort, Array<String>.join, Std.string(Bool/Int/hosted Float/String identity), twelve Bytes, eight String, four StringBuf, statically typed String Sys.println, and literal trace slices partial; broader stdlib parity is not yet proven"
+            "evidence should mark exactly Std.int plus 20 Date operations and Timer.stamp conformant; the bounded Math.sqrt, collection types and operations, String, Bytes, output, remaining Date parser, and event-loop slices stay partial, while broader stdlib parity is not yet proven; "
+            f"observed {statuses!r}"
         )
 
 
@@ -1020,7 +1026,7 @@ def check_capability_authority_guard() -> None:
     environment["HAXE_NO_SERVER"] = "1"
     with tempfile.TemporaryDirectory(prefix="hxc-stdlib-ledger-negative-") as directory:
         output = Path(directory) / "out"
-        result = subprocess.run(
+        result = run_bounded_process(
             [
                 development_tool("haxe"),
                 "-cp",

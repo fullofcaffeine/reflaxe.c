@@ -1,8 +1,10 @@
 package reflaxe.c.lowering;
 
 #if (macro || reflaxe_runtime)
+import haxe.macro.Expr.Position;
 import haxe.macro.Type;
 import reflaxe.c.ast.CAST.CIdentifier;
+import reflaxe.c.lowering.CGenericSpecialization.CGenericFunctionSpecialization;
 
 /** Stable typed-input facts for one reachable concrete Haxe constructor. */
 typedef CBodyConstructorInput = {
@@ -13,7 +15,14 @@ typedef CBodyConstructorInput = {
 	final sourceOrder:Int;
 	final fieldType:Type;
 	final expression:TypedExpr;
+	final ?declarationPosition:Position;
+
+	/** Current compiler positions mapped to content-verified authored positions. */
+	final ?sourcePositionOverrides:Map<String, Position>;
+
 	final classReference:Ref<ClassType>;
+	final classParameters:Array<Type>;
+	final specialization:Null<CGenericFunctionSpecialization>;
 	final baseConstructorId:Null<String>;
 	final elided:Bool;
 	final canFail:Bool;

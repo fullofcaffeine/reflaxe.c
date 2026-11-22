@@ -3,13 +3,16 @@
 void hxc_Main_main(void)
 {
   hxc_string hxc_l_tmp_call_result_n0 = hxc_Main_selectLabel(true);
-  bool hxc_l_tmp_short_circuit_result_n0 = hxc_l_tmp_call_result_n0.data != NULL && (hxc_l_tmp_call_result_n0.byte_length == (hxc_string){ (const uint8_t *)"ASCII", 5, true, NULL }.byte_length && (hxc_l_tmp_call_result_n0.byte_length == 0 || memcmp(hxc_l_tmp_call_result_n0.data, (hxc_string){ (const uint8_t *)"ASCII", 5, true, NULL }.data, hxc_l_tmp_call_result_n0.byte_length) == 0));
-  if (hxc_l_tmp_call_result_n0.data != NULL && (hxc_l_tmp_call_result_n0.byte_length == (hxc_string){ (const uint8_t *)"ASCII", 5, true, NULL }.byte_length && (hxc_l_tmp_call_result_n0.byte_length == 0 || memcmp(hxc_l_tmp_call_result_n0.data, (hxc_string){ (const uint8_t *)"ASCII", 5, true, NULL }.data, hxc_l_tmp_call_result_n0.byte_length) == 0)))
+  bool hxc_l_tmp_string_equality_result_n0 = hxc_l_tmp_call_result_n0.data != NULL && (hxc_l_tmp_call_result_n0.byte_length == (hxc_string){ (const uint8_t *)"ASCII", 5, true, NULL }.byte_length && (hxc_l_tmp_call_result_n0.byte_length == 0 || memcmp(hxc_l_tmp_call_result_n0.data, (hxc_string){ (const uint8_t *)"ASCII", 5, true, NULL }.data, hxc_l_tmp_call_result_n0.byte_length) == 0));
+  bool hxc_l_tmp_string_equality_result_result_n2 = hxc_l_tmp_string_equality_result_n0;
+  bool hxc_l_tmp_short_circuit_result_n1 = hxc_l_tmp_string_equality_result_result_n2;
+  if (hxc_l_tmp_string_equality_result_result_n2)
   {
-    hxc_string hxc_l_tmp_call_result_n2 = hxc_Main_selectLabel(false);
-    hxc_l_tmp_short_circuit_result_n0 = hxc_l_tmp_call_result_n2.data != NULL && (hxc_l_tmp_call_result_n2.byte_length == (hxc_string){ (const uint8_t *)"fallback", 8, true, NULL }.byte_length && (hxc_l_tmp_call_result_n2.byte_length == 0 || memcmp(hxc_l_tmp_call_result_n2.data, (hxc_string){ (const uint8_t *)"fallback", 8, true, NULL }.data, hxc_l_tmp_call_result_n2.byte_length) == 0));
+    hxc_string hxc_l_tmp_call_result_n3 = hxc_Main_selectLabel(false);
+    bool hxc_l_tmp_string_equality_result_n2 = hxc_l_tmp_call_result_n3.data != NULL && (hxc_l_tmp_call_result_n3.byte_length == (hxc_string){ (const uint8_t *)"fallback", 8, true, NULL }.byte_length && (hxc_l_tmp_call_result_n3.byte_length == 0 || memcmp(hxc_l_tmp_call_result_n3.data, (hxc_string){ (const uint8_t *)"fallback", 8, true, NULL }.data, hxc_l_tmp_call_result_n3.byte_length) == 0));
+    hxc_l_tmp_short_circuit_result_n1 = hxc_l_tmp_string_equality_result_n2;
   }
-  if (hxc_l_tmp_short_circuit_result_n0)
+  if (hxc_l_tmp_short_circuit_result_n1)
   {
     if (hxc_io_println((hxc_string){ (const uint8_t *)"ASCII", 5, true, NULL }) != HXC_STATUS_OK)
     {

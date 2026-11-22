@@ -567,6 +567,8 @@ def owned_tag_id(typedef: Mapping[str, object], label: str) -> str:
         if not isinstance(raw, dict):
             continue
         owned = raw.get("ownedTagDecl")
+        if raw.get("kind") == "EnumType" and raw.get("isTagOwned") is True:
+            owned = raw.get("decl")
         if isinstance(owned, dict) and owned.get("kind") == "EnumDecl":
             identifier = owned.get("id")
             if isinstance(identifier, str):

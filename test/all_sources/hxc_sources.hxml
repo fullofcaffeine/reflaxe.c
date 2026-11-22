@@ -1,0 +1,9 @@
+# Host-product graph. The compiler graph remains in all_sources.hxml so a
+# growing Eval CLI cannot consume the custom-target macro branch's time budget.
+
+-cp test/all_sources/
+-cp src/
+
+--macro include("hxc", true)
+
+-main HxcSourcesProbe

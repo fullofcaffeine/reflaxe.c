@@ -7,6 +7,8 @@ import caxecraft.scenario.CaxeFlow.FlowPredicate;
 import caxecraft.scenario.CaxeFlow.FlowValue;
 import caxecraft.scenario.CaxeFlowActionRegistry.FlowActionId;
 import caxecraft.scenario.CaxeFlowActionRegistry.flowActionDescriptorForSyntax;
+import caxecraft.scenario.CaxeFlowEventRegistry.FlowEventId;
+import caxecraft.scenario.CaxeFlowEventRegistry.flowEventDescriptorForSyntax;
 import caxecraft.scenario.Scenario.ScenarioMode;
 import caxecraft.scenario.ScenarioCodecModel.ScenarioLexRecord;
 import caxecraft.scenario.ScenarioCodecModel.ScenarioLexToken;
@@ -35,31 +37,38 @@ final class CaxeFlowValueReader {
 	public static function event(record:ScenarioLexRecord):Null<FlowEvent> {
 		if (record.tokens.length < 3)
 			return null;
-		return switch ScenarioTokenGrammar.bareText(record.tokens[1]) {
-			case "enter-zone" if (ScenarioTokenGrammar.hasTokenCount(record, 3)):
+		final descriptor = flowEventDescriptorForSyntax(ScenarioTokenGrammar.bareText(record.tokens[1]));
+		if (descriptor == null)
+			return null;
+		return switch descriptor.id {
+			case EnterZoneEvent if (ScenarioTokenGrammar.hasTokenCount(record, 3)):
 				idEvent(record.tokens[2], EnterZone);
-			case "leave-zone" if (ScenarioTokenGrammar.hasTokenCount(record, 3)):
+			case LeaveZoneEvent if (ScenarioTokenGrammar.hasTokenCount(record, 3)):
 				idEvent(record.tokens[2], LeaveZone);
-			case "interact" if (ScenarioTokenGrammar.hasTokenCount(record, 3)):
+			case InteractEvent if (ScenarioTokenGrammar.hasTokenCount(record, 3)):
 				idEvent(record.tokens[2], Interact);
-			case "entity-defeated" if (ScenarioTokenGrammar.hasTokenCount(record, 3)):
+			case EntityDefeatedEvent if (ScenarioTokenGrammar.hasTokenCount(record, 3)):
 				idEvent(record.tokens[2], EntityDefeated);
-			case "objective-changed" if (ScenarioTokenGrammar.hasTokenCount(record, 3)):
+			case ObjectiveChangedEvent if (ScenarioTokenGrammar.hasTokenCount(record, 3)):
 				idEvent(record.tokens[2], ObjectiveChanged);
-			case "state-changed" if (ScenarioTokenGrammar.hasTokenCount(record, 3)):
+			case StateChangedEvent if (ScenarioTokenGrammar.hasTokenCount(record, 3)):
 				idEvent(record.tokens[2], StateChanged);
-			case "timer" if (ScenarioTokenGrammar.hasTokenCount(record, 3)):
+			case TimerEvent if (ScenarioTokenGrammar.hasTokenCount(record, 3)):
 				idEvent(record.tokens[2], TimerExpired);
-			case "use-item" if (ScenarioTokenGrammar.hasTokenCount(record, 3)):
+			case LevelEnteredEvent if (ScenarioTokenGrammar.hasTokenCount(record, 3)):
+				idEvent(record.tokens[2], LevelEntered);
+			case CampaignExitRequestedEvent if (ScenarioTokenGrammar.hasTokenCount(record, 3)):
+				idEvent(record.tokens[2], CampaignExitRequested);
+			case UseItemEvent if (ScenarioTokenGrammar.hasTokenCount(record, 3)):
 				final content = ScenarioTokenGrammar.contentId(record.tokens[2]);
 				content == null ? null : UseItem(content);
-			case "collect-item" if (ScenarioTokenGrammar.hasTokenCount(record, 3)):
+			case ItemCollectedEvent if (ScenarioTokenGrammar.hasTokenCount(record, 3)):
 				final content = ScenarioTokenGrammar.contentId(record.tokens[2]);
 				content == null ? null : ItemCollected(content);
-			case "signal" if (ScenarioTokenGrammar.hasTokenCount(record, 3)):
+			case SignalEvent if (ScenarioTokenGrammar.hasTokenCount(record, 3)):
 				final content = ScenarioTokenGrammar.contentId(record.tokens[2]);
 				content == null ? null : SignalReceived(content);
-			case "block-changed" if (ScenarioTokenGrammar.hasTokenCount(record, 4)): final zone = ScenarioTokenGrammar.scenarioId(record.tokens[2]); final block = ScenarioTokenGrammar.contentId(record.tokens[3]); zone == null || block == null ? null : BlockChanged(zone,
+			case BlockChangedEvent if (ScenarioTokenGrammar.hasTokenCount(record, 4)): final zone = ScenarioTokenGrammar.scenarioId(record.tokens[2]); final block = ScenarioTokenGrammar.contentId(record.tokens[3]); zone == null || block == null ? null : BlockChanged(zone,
 					block);
 			case _:
 				null;
@@ -154,6 +163,18 @@ final class CaxeFlowValueReader {
 					case "adventure": ModeIs(Adventure);
 					case _: null;
 				}
+				next++;
+			case "event-actor" if (next < record.tokens.length):
+				final actor = ScenarioTokenGrammar.scenarioId(record.tokens[next]);
+				if (actor == null)
+					return null;
+				value = EventActorIs(actor);
+				next++;
+			case "event-swept" if (next < record.tokens.length):
+				final expected = ScenarioTokenGrammar.boolean(record.tokens[next]);
+				if (expected == null)
+					return null;
+				value = EventSweptIs(expected);
 				next++;
 			case _:
 		}

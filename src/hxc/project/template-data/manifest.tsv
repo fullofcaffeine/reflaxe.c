@@ -1,0 +1,19 @@
+hxc-new-manifest-v1
+app	.gitignore	app/gitignore.txt
+app	LICENSE.txt	shared/license.txt
+app	README.md	app/readme.md
+app	build.hxml	app/build.hxml
+app	hxc.json	app/hxc.json
+app	src/${MODULE_NAME}.hx	app/main.txt
+library	.gitignore	library/gitignore.txt
+library	LICENSE.txt	shared/license.txt
+library	README.md	library/readme.md
+library	build.hxml	library/build.hxml
+library	hxc.json	library/hxc.json
+library	src/${MODULE_NAME}.hx	library/library.txt
+embedded	.gitignore	embedded/gitignore.txt
+embedded	LICENSE.txt	shared/license.txt
+embedded	README.md	embedded/readme.md
+embedded	build.hxml	embedded/build.hxml
+embedded	hxc.json	embedded/hxc.json
+embedded	src/${MODULE_NAME}.hx	embedded/embedded.txt

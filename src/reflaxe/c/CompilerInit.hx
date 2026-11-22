@@ -46,8 +46,13 @@ class CompilerInit {
 				+ "Legacy Cross facts cannot be removed safely; use the pinned Haxe 5 `--custom-target c=<output>` carrier.");
 		}
 
-		if (Context.defined("target.atomics")) {
+		if (Context.defined("target.atomics") && (carrier != "c" || Context.definedValue(TargetPlatform.ATOMIC_BACKEND_DEFINE) != "c11")) {
 			configurationError("`target.atomics` is present before a reflaxe.c platform adapter has proven atomic support; target capabilities must come from the resolved adapter.");
+		}
+
+		if (Context.defined("target.threaded")
+			&& (carrier != "c" || Context.definedValue(TargetPlatform.THREAD_BACKEND_DEFINE) != "posix")) {
+			configurationError("`target.threaded` is present before a reflaxe.c platform adapter has proven thread support; target capabilities must come from the resolved adapter.");
 		}
 
 		if (Context.definedValue("hxc_environment") == "freestanding"
@@ -79,7 +84,8 @@ class CompilerInit {
 			expressionPreprocessors: [],
 			ignoreBodilessFunctions: false,
 			ignoreExterns: true,
-			trackUsedTypes: true,
+			// Whole-program lowering owns reachability; callback-local type usage is never consumed.
+			trackUsedTypes: false,
 			trackClassHierarchy: true,
 			deleteOldOutput: true,
 			reservedVarNames: []
@@ -122,10 +128,29 @@ class CompilerInit {
 				value;
 		};
 		final expectsSys = TargetPlatform.environmentSupportsSys(environment);
+		final atomicBackend:String = switch Context.definedValue(TargetPlatform.ATOMIC_BACKEND_DEFINE) {
+			case null:
+				configurationError("the C custom target did not record its resolved atomic backend.");
+			case value:
+				value;
+		};
+		final expectsAtomics = TargetPlatform.atomicBackendSupportsAtomics(atomicBackend);
+		final threadBackend:String = switch Context.definedValue(TargetPlatform.THREAD_BACKEND_DEFINE) {
+			case null:
+				configurationError("the C custom target did not record its resolved thread backend.");
+			case value:
+				value;
+		};
+		final expectsThreads = TargetPlatform.threadBackendSupportsThreads(threadBackend);
 		final configuration = MacroCompiler.getConfiguration();
 		final platform = configuration == null ? null : configuration.platformConfig;
-		if (platform == null || !platform.staticTypeSystem || !platform.supportsUnicode || platform.usesUtf16 || platform.sys != expectsSys
-			|| platform.supportsThreads || platform.supportsAtomics) {
+		if (platform == null
+			|| !platform.staticTypeSystem
+			|| !platform.supportsUnicode
+			|| platform.usesUtf16
+			|| platform.sys != expectsSys
+			|| platform.supportsThreads != expectsThreads
+			|| platform.supportsAtomics != expectsAtomics) {
 			configurationError("the compiler platform configuration drifted from static, scalar-Unicode, adapter-derived C semantics.");
 		}
 		if (!Context.defined("target.static") || !Context.defined("target.unicode")) {
@@ -134,8 +159,11 @@ class CompilerInit {
 		if (Context.defined("target.sys") != expectsSys) {
 			configurationError('the `$environment` adapter and `target.sys` disagree; platform facts must come from the resolved C adapter.');
 		}
-		if (Context.defined("target.threaded")) {
-			configurationError("`target.threaded` is present before a reflaxe.c platform adapter has proven thread support.");
+		if (Context.defined("target.atomics") != expectsAtomics) {
+			configurationError('the `$atomicBackend` atomic backend and `target.atomics` disagree; platform facts must come from the resolved C adapter.');
+		}
+		if (Context.defined("target.threaded") != expectsThreads) {
+			configurationError('the `$threadBackend` thread backend and `target.threaded` disagree; platform facts must come from the resolved C adapter.');
 		}
 	}
 

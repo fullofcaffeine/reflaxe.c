@@ -1,6 +1,6 @@
 {
-  "schemaVersion": 1,
-  "evidenceCheckedAt": "2026-07-22",
+  "schemaVersion": 2,
+  "evidenceCheckedAt": "2026-09-01",
   "project": {
     "name": "reflaxe.c",
     "licenseExpression": "GPL-3.0-only",
@@ -12,6 +12,36 @@
     "bundledComponentsRequireImmutableRevision": true,
     "unlistedReservedPaths": "reject",
     "generatedOutputDecision": "haxe_c-od2.5"
+  },
+  "generatedOutput": {
+    "spdxLicenseListVersion": "3.28.0",
+    "outputSupportLicenseExpression": "MIT",
+    "outputSupportLicenseFile": "LICENSES/HAXE-C-OUTPUT-SUPPORT-MIT.txt",
+    "outputSupportLicenseSha256": "a79a29d4f4b6dd706a156cecd8a06f27aaa7b3c66bdfcdfcfb42da6eacc23ca1",
+    "copyrightNotice": "Copyright (c) 2026 haxe.c contributors",
+    "compiledProgramWithoutUserAssertion": {
+      "licenseConcluded": "NOASSERTION",
+      "projectCopyrightClaim": false,
+      "meaning": "No license determination was made. This value grants no rights."
+    },
+    "compilerSidecars": {
+      "licenseConcluded": "MIT",
+      "projectCopyrightClaim": true
+    },
+    "repositoryCopies": {
+      "licenseConcluded": "MIT",
+      "projectCopyrightClaim": true,
+      "artifactCatalog": "runtime/hxrt/features.json",
+      "allowedSourceRoots": [
+        "runtime/hxrt/include/hxrt",
+        "runtime/hxrt/src"
+      ]
+    },
+    "thirdPartyInputs": "retain-declared-component-license-and-provenance",
+    "mixedOriginSource": "split-or-reject",
+    "outputSupportContributionLicense": "MIT",
+    "contributionBackRequired": false,
+    "qualifiedRightsChainReview": "required-before-release"
   },
   "release": {
     "requiredFiles": [
@@ -28,6 +58,10 @@
       {
         "path": "LICENSES/HAXE-STDLIB-MIT.txt",
         "sha256": "61c9e5c8ca48e1f6e27f66cc6fb2eb11865a08672e1c793a13cfdaa89ad1bb74"
+      },
+      {
+        "path": "LICENSES/HAXE-C-OUTPUT-SUPPORT-MIT.txt",
+        "sha256": "a79a29d4f4b6dd706a156cecd8a06f27aaa7b3c66bdfcdfcfb42da6eacc23ca1"
       },
       {
         "path": "vendor/reflaxe/LICENSE",
@@ -206,6 +240,126 @@
       "root": "std/c/_std",
       "defaultUpstreamComponent": "haxe-standard-library",
       "files": [
+		{
+		  "path": "std/c/_std/Array.hx",
+		  "sha256": "0b92a93fcbda9a9b143ac237a9f208ca95d59802eb489b2d742112d9b9fcf43b",
+		  "classification": "upstream-derived",
+		  "upstreamComponent": "haxe-standard-library",
+		  "upstreamPath": "std/Array.hx",
+		  "upstreamRevision": "2c1e544e0a2c7524ef4c8e103f1b0580362ea538",
+		  "licenseExpression": "MIT",
+		  "noticeFiles": [
+			"LICENSES/HAXE-STDLIB-MIT.txt"
+		  ]
+		},
+		{
+		  "path": "std/c/_std/Date.hx",
+		  "sha256": "081a79c0aefb0210d4ee7c3bd83ee4cef9cf93674bbcff3347b538dd16cffc85",
+		  "classification": "upstream-derived",
+		  "upstreamComponent": "haxe-standard-library",
+		  "upstreamPath": "std/Date.hx",
+		  "upstreamRevision": "2c1e544e0a2c7524ef4c8e103f1b0580362ea538",
+		  "licenseExpression": "MIT",
+		  "noticeFiles": [
+			"LICENSES/HAXE-STDLIB-MIT.txt"
+		  ]
+		},
+		{
+		  "path": "std/c/_std/haxe/Timer.hx",
+		  "sha256": "aeb70571b090720cef5e82711918efd4cc12b65ef8cd7a1b46b7726f5da8ecbd",
+		  "classification": "upstream-derived",
+		  "upstreamComponent": "haxe-standard-library",
+		  "upstreamPath": "std/haxe/Timer.hx",
+		  "upstreamRevision": "2c1e544e0a2c7524ef4c8e103f1b0580362ea538",
+		  "licenseExpression": "MIT",
+		  "noticeFiles": [
+			"LICENSES/HAXE-STDLIB-MIT.txt"
+		  ]
+		},
+		{
+		  "path": "std/c/_std/haxe/iterators/ArrayIterator.hx",
+		  "sha256": "32bbb6a753df523c961da8a81ea5e8bc8a0316dc5a7228a9db24c25aa08b1134",
+		  "classification": "upstream-derived",
+		  "upstreamComponent": "haxe-standard-library",
+		  "upstreamPath": "std/haxe/iterators/ArrayIterator.hx",
+		  "upstreamRevision": "2c1e544e0a2c7524ef4c8e103f1b0580362ea538",
+		  "licenseExpression": "MIT",
+		  "noticeFiles": [
+			"LICENSES/HAXE-STDLIB-MIT.txt"
+		  ]
+		},
+		{
+		  "path": "std/c/_std/haxe/iterators/ArrayKeyValueIterator.hx",
+		  "sha256": "8b646471a64f2958730334b0a4707a8782916290b2a6f6b190aea4b84535c0b8",
+		  "classification": "upstream-derived",
+		  "upstreamComponent": "haxe-standard-library",
+		  "upstreamPath": "std/haxe/iterators/ArrayKeyValueIterator.hx",
+		  "upstreamRevision": "2c1e544e0a2c7524ef4c8e103f1b0580362ea538",
+		  "licenseExpression": "MIT",
+		  "noticeFiles": [
+			"LICENSES/HAXE-STDLIB-MIT.txt"
+		  ]
+		},
+        {
+          "path": "std/c/_std/haxe/atomic/AtomicBool.hx",
+          "sha256": "882a55993e713a2ac225f38fb8528083764943e7b15500797e367170b6acb8e9",
+          "classification": "upstream-derived",
+          "upstreamComponent": "haxe-standard-library",
+          "upstreamPath": "std/haxe/atomic/AtomicBool.hx",
+          "upstreamRevision": "2c1e544e0a2c7524ef4c8e103f1b0580362ea538",
+          "licenseExpression": "MIT",
+          "noticeFiles": [
+            "LICENSES/HAXE-STDLIB-MIT.txt"
+          ]
+        },
+        {
+          "path": "std/c/_std/haxe/atomic/AtomicInt.hx",
+          "sha256": "38167683bb020b3795fa10b54e90aeb1020f718fb05689739789db31d7345ab4",
+          "classification": "upstream-derived",
+          "upstreamComponent": "haxe-standard-library",
+          "upstreamPath": "std/haxe/atomic/AtomicInt.hx",
+          "upstreamRevision": "2c1e544e0a2c7524ef4c8e103f1b0580362ea538",
+          "licenseExpression": "MIT",
+          "noticeFiles": [
+            "LICENSES/HAXE-STDLIB-MIT.txt"
+          ]
+        },
+        {
+          "path": "std/c/_std/haxe/atomic/AtomicObject.hx",
+          "sha256": "18ace1d033a45f4269d6bd58fd8dd5c2609e5dd96dbd2de40c3278b4fa77c771",
+          "classification": "upstream-derived",
+          "upstreamComponent": "haxe-standard-library",
+          "upstreamPath": "std/haxe/atomic/AtomicObject.hx",
+          "upstreamRevision": "2c1e544e0a2c7524ef4c8e103f1b0580362ea538",
+          "licenseExpression": "MIT",
+          "noticeFiles": [
+            "LICENSES/HAXE-STDLIB-MIT.txt"
+          ]
+        },
+        {
+          "path": "std/c/_std/haxe/ds/EnumValueMap.hx",
+          "sha256": "6b9675d4f53bef6f829a903fc46a9ed6f921aef00b0e048a949781f83d4e7061",
+          "classification": "upstream-derived",
+          "upstreamComponent": "haxe-standard-library",
+          "upstreamPath": "std/haxe/ds/EnumValueMap.hx",
+          "upstreamRevision": "2c1e544e0a2c7524ef4c8e103f1b0580362ea538",
+          "licenseExpression": "MIT",
+          "noticeFiles": [
+            "LICENSES/HAXE-STDLIB-MIT.txt"
+          ]
+        },
+        {
+          "path": "std/c/_std/haxe/ds/ObjectMap.hx",
+          "sha256": "5aaa69fb7a7f95db6e43e543ce41e8f3a5c2ea78fa25404427be0b54e0501089",
+          "classification": "upstream-derived",
+          "upstreamComponent": "haxe-standard-library",
+          "upstreamPath": "std/haxe/ds/ObjectMap.hx",
+          "upstreamRevision": "2c1e544e0a2c7524ef4c8e103f1b0580362ea538",
+          "licenseExpression": "MIT",
+          "noticeFiles": [
+            "LICENSES/HAXE-STDLIB-MIT.txt"
+          ]
+        },
         {
           "path": "std/c/_std/haxe/io/Bytes.hx",
           "sha256": "7d76540be301b06efe259be41a9f0f7a197f45618d9924bc84dd3e9ab4c1e095",

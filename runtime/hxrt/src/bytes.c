@@ -387,3 +387,9 @@ hxc_status hxc_bytes_ref_compare(
   *out_order = left->length < right->length ? -1 : left->length > right->length ? 1 : 0;
   return HXC_STATUS_OK;
 }
+
+hxc_status hxc_bytes_ref_release_slot(void *context) {
+  return context == NULL
+    ? HXC_STATUS_INVALID_ARGUMENT
+    : hxc_bytes_ref_release((hxc_bytes_ref *)context);
+}

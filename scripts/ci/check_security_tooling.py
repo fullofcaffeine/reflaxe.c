@@ -24,6 +24,7 @@ PACKAGE = ROOT / "package.json"
 EXPECTED_BEADS_VERSION = "1.1.2"
 EXPECTED_ACTIONS = {
     "actions/checkout": "9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0",
+    "actions/download-artifact": "d3f86a106a0bac45b974a628896c90dbdf5c8093",
     "actions/setup-node": "249970729cb0ef3589644e2896645e5dc5ba9c38",
     "actions/upload-artifact": "ea165f8d65b6e75b540449e92b4886f43607fa02",
 }
@@ -378,8 +379,12 @@ def validate_config_and_hooks() -> None:
     installer = read_text(ROOT / "scripts/hooks/install.sh")
     if "core.hooksPath .beads/hooks" not in installer:
         raise SecurityToolingFailure("hook installer must preserve the Beads hook chain")
-    if "bd --version" not in installer or EXPECTED_BEADS_VERSION not in installer:
-        raise SecurityToolingFailure("hook installer must require stock Beads 1.1.2")
+    version_check = "scripts/beads/check-version.sh"
+    checker = read_text(ROOT / version_check)
+    if "bd --version" not in checker or f'"bd version {EXPECTED_BEADS_VERSION} "' not in checker:
+        raise SecurityToolingFailure("Beads compatibility check must verify the stock client version")
+    if version_check not in installer or version_check not in read_text(ROOT / "scripts/beads/export-passive.sh"):
+        raise SecurityToolingFailure("hook setup and passive export must check the Beads client version")
 
     ignored = {
         line.strip()

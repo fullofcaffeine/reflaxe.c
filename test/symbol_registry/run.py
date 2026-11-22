@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import argparse
 import difflib
 import json
 import os
@@ -15,6 +16,11 @@ from typing import Any
 
 
 ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from scripts.test.bounded_process import run as run_bounded_process  # noqa: E402
+
 HXML = Path(__file__).with_name("symbol_registry.hxml")
 EXPECTED = Path(__file__).with_name("expected") / "symbol-registry.json"
 REPORT_PREFIX = "HXC_SYMBOL_REGISTRY="
@@ -76,11 +82,11 @@ def development_tool(name: str) -> str:
     return str(local) if local.is_file() else name
 
 
-def render(label: str) -> tuple[str, dict[str, Any]]:
+def render(label: str, *, profile: bool = False) -> tuple[str, dict[str, Any]]:
     environment = os.environ.copy()
     environment["HAXE_NO_SERVER"] = "1"
-    result = subprocess.run(
-        [development_tool("haxe"), str(HXML)],
+    result = run_bounded_process(
+        [development_tool("haxe"), str(HXML), *(["-D", "reflaxe_c_phase_timing"] if profile else [])],
         cwd=ROOT,
         env=environment,
         check=False,
@@ -320,7 +326,7 @@ int main(void)
         executable = root / "macro_probe"
         source_path.write_text(source, encoding="utf-8")
         compiler = os.environ.get("CC", "cc")
-        compiled = subprocess.run(
+        compiled = run_bounded_process(
             [
                 compiler,
                 "-std=c11",
@@ -346,7 +352,7 @@ int main(void)
                 "macro-safe native symbol probe failed to compile\n"
                 f"stdout:\n{compiled.stdout}\nstderr:\n{compiled.stderr}"
             )
-        executed = subprocess.run(
+        executed = run_bounded_process(
             [str(executable)],
             cwd=root,
             check=False,
@@ -376,8 +382,18 @@ def check_snapshot(report: dict[str, Any]) -> None:
 
 
 def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--profile-typing-only", action="store_true", help="compare ordinary and profile-defined Eval goldens without native compilation")
+    args = parser.parse_args()
     try:
         first_payload, first = render("first symbol registry render")
+        profiled_payload, profiled = render("profile-defined symbol registry render", profile=True)
+        if first_payload != profiled_payload or first != profiled:
+            raise SymbolRegistryFailure("profiling define changed the ordinary Eval symbol report")
+        check_snapshot(profiled)
+        if args.profile_typing_only:
+            print("symbol-registry-profile-typing: OK: exact ordinary/profiled Eval report and snapshot")
+            return 0
         second_payload, second = render("second symbol registry render")
         if first_payload != second_payload or first != second:
             raise SymbolRegistryFailure("two symbol registry renders were not byte-identical")

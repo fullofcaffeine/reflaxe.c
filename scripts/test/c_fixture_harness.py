@@ -14,6 +14,9 @@ from pathlib import Path, PurePosixPath
 from typing import Iterable, Mapping
 
 
+from scripts.test.compiler_discovery import sanitizer_execution_environment
+
+
 C11_STRICT_FLAGS = (
     "-std=c11",
     "-Wall",
@@ -150,7 +153,8 @@ class CInputRecord:
 
 
 def command_result(
-    command: list[str], *, working_directory: Path, timeout_seconds: int
+    command: list[str], *, working_directory: Path, timeout_seconds: int,
+    environment: Mapping[str, str] | None = None
 ) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
         command,
@@ -159,6 +163,7 @@ def command_result(
         capture_output=True,
         text=True,
         timeout=timeout_seconds,
+        env=environment,
     )
 
 
@@ -267,11 +272,13 @@ def run_invocation(
     roots: tuple[tuple[Path, str], ...],
     timeout_seconds: int,
     require_zero: bool = True,
+    environment: Mapping[str, str] | None = None,
 ) -> CInvocationRecord:
     result = command_result(
         command,
         working_directory=working_directory,
         timeout_seconds=timeout_seconds,
+        environment=environment,
     )
     record = CInvocationRecord(
         phase,
@@ -389,6 +396,9 @@ def run_project(
         roots=roots,
         timeout_seconds=timeout_seconds,
         require_zero=False,
+        environment=sanitizer_execution_environment(
+            toolchain.compiler, toolchain.family, (*strict_flags, *project.link_arguments)
+        ),
     )
     invocations.append(execution)
     if (

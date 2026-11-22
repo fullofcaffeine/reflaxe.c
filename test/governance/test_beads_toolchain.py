@@ -6,6 +6,9 @@ import subprocess
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
+
+from git_fixture import git_fixture_environment
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -15,6 +18,36 @@ SAFE_PUSH = ROOT / "scripts/beads/push-safe.sh"
 
 
 class BeadsToolchainTests(unittest.TestCase):
+    def test_fixture_preserves_caller_repository_under_hook_environment(self) -> None:
+        for repository_variables in (False, True):
+            with self.subTest(repository_variables=repository_variables), tempfile.TemporaryDirectory() as directory:
+                caller = Path(directory) / "caller"
+                caller.mkdir()
+                self.make_checkout(caller)
+                subprocess.run(
+                    ["git", "config", "user.name", "Caller fixture"],
+                    cwd=caller, env=git_fixture_environment(), check=True, timeout=15,
+                )
+                (caller / "caller.txt").write_text("caller-owned staged content\n")
+                subprocess.run(
+                    ["git", "add", "caller.txt"], cwd=caller, env=git_fixture_environment(), check=True, timeout=15,
+                )
+                git_directory = caller / ".git"
+                paths = [git_directory / name for name in ("index", "config", "HEAD")]
+                before = {path: path.read_bytes() for path in paths}
+                before_refs = sorted((git_directory / "refs").rglob("*"))
+                inherited = {"GIT_INDEX_FILE": str(git_directory / "index")}
+                if repository_variables:
+                    inherited.update({
+                        "GIT_DIR": str(git_directory),
+                        "GIT_COMMON_DIR": str(git_directory),
+                        "GIT_WORK_TREE": str(caller),
+                    })
+                with mock.patch.dict(os.environ, inherited):
+                    self.test_export_is_byte_stable_and_index_stable()
+                self.assertEqual({path: path.read_bytes() for path in paths}, before)
+                self.assertEqual(sorted((git_directory / "refs").rglob("*")), before_refs)
+
     def write_executable(self, path: Path, source: str) -> Path:
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(source, encoding="utf-8")
@@ -22,7 +55,7 @@ class BeadsToolchainTests(unittest.TestCase):
         return path
 
     def environment(self, tools: Path) -> dict[str, str]:
-        environment = os.environ.copy()
+        environment = git_fixture_environment()
         environment["PATH"] = f"{tools}:/usr/bin:/bin"
         return environment
 
@@ -30,16 +63,19 @@ class BeadsToolchainTests(unittest.TestCase):
         (root / "scripts/beads").mkdir(parents=True)
         (root / ".beads").mkdir()
         shutil.copy2(EXPORTER, root / "scripts/beads/export-passive.sh")
-        subprocess.run(["git", "init", "-q"], cwd=root, check=True, timeout=15)
+        shutil.copy2(ROOT / "scripts/beads/check-version.sh", root / "scripts/beads/check-version.sh")
+        subprocess.run(["git", "init", "-q"], cwd=root, env=git_fixture_environment(), check=True, timeout=15)
         subprocess.run(
             ["git", "config", "user.email", "beads-test@example.invalid"],
             cwd=root,
+            env=git_fixture_environment(),
             check=True,
             timeout=15,
         )
         subprocess.run(
             ["git", "config", "user.name", "Beads Test"],
             cwd=root,
+            env=git_fixture_environment(),
             check=True,
             timeout=15,
         )
@@ -47,18 +83,44 @@ class BeadsToolchainTests(unittest.TestCase):
             '{"_type":"issue","id":"original"}\n', encoding="utf-8"
         )
         subprocess.run(
-            ["git", "add", ".beads/issues.jsonl"], cwd=root, check=True, timeout=15
+            ["git", "add", ".beads/issues.jsonl"], cwd=root, env=git_fixture_environment(), check=True, timeout=15
         )
 
     def git_tree(self, root: Path) -> str:
         return subprocess.run(
             ["git", "write-tree"],
             cwd=root,
+            env=git_fixture_environment(),
             check=True,
             capture_output=True,
             text=True,
             timeout=15,
         ).stdout.strip()
+
+    def test_incompatible_client_stops_before_opening_database(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="hxc-beads-wrong-version-") as directory:
+            root = Path(directory)
+            tools = root / "tools"
+            self.make_checkout(root)
+            self.write_executable(
+                tools / "bd",
+                "#!/usr/bin/env sh\n"
+                'echo "$*" >> calls\n'
+                'case "$1" in --version) echo "bd version 1.0.4 (fixture)"; exit 0 ;; esac\n'
+                'case "$3" in context) exit 0 ;; export) echo \'{"id":"changed"}\'; exit 0 ;; esac\n'
+                "exit 91\n",
+            )
+            snapshot = root / ".beads/issues.jsonl"
+            before = snapshot.read_bytes(), self.git_tree(root)
+            outcome = subprocess.run(
+                ["bash", str(root / "scripts/beads/export-passive.sh")],
+                cwd=root, env=self.environment(tools), capture_output=True, text=True, timeout=15,
+            )
+            self.assertNotEqual(outcome.returncode, 0)
+            self.assertIn("1.1.2", outcome.stderr)
+            self.assertIn("1.0.4", outcome.stderr)
+            self.assertEqual((root / "calls").read_text().splitlines(), ["--version"])
+            self.assertEqual((snapshot.read_bytes(), self.git_tree(root)), before)
 
     def test_failed_export_preserves_jsonl_and_index(self) -> None:
         with tempfile.TemporaryDirectory(prefix="hxc-beads-export-fail-") as directory:
@@ -68,8 +130,9 @@ class BeadsToolchainTests(unittest.TestCase):
             self.write_executable(
                 tools / "bd",
                 "#!/usr/bin/env sh\n"
-                'if [ "$3" = "context" ]; then exit 0; fi\n'
-                'if [ "$3" = "export" ]; then exit 71; fi\n'
+                'if [ "$1" = "--version" ]; then echo "bd version 1.1.2 (fixture)"; exit 0; fi\n'
+                'if [ "$3 $4 $5" = "--readonly info --json" ]; then exit 0; fi\n'
+                'if [ "$3 $4" = "--readonly export" ]; then exit 71; fi\n'
                 "exit 91\n",
             )
             before_bytes = (root / ".beads/issues.jsonl").read_bytes()
@@ -83,7 +146,7 @@ class BeadsToolchainTests(unittest.TestCase):
                 env=self.environment(tools),
                 timeout=15,
             )
-            self.assertNotEqual(result.returncode, 0)
+            self.assertEqual(result.returncode, 71)
             self.assertEqual((root / ".beads/issues.jsonl").read_bytes(), before_bytes)
             self.assertEqual(self.git_tree(root), before_tree)
 
@@ -95,8 +158,9 @@ class BeadsToolchainTests(unittest.TestCase):
             self.write_executable(
                 tools / "bd",
                 "#!/usr/bin/env sh\n"
-                'if [ "$3" = "context" ]; then exit 0; fi\n'
-                'if [ "$3" = "export" ]; then\n'
+                'if [ "$1" = "--version" ]; then echo "bd version 1.1.2 (fixture)"; exit 0; fi\n'
+                'if [ "$3 $4 $5" = "--readonly info --json" ]; then exit 0; fi\n'
+                'if [ "$3 $4" = "--readonly export" ]; then\n'
                 "  printf '%s\\n\\n' '{\"_type\":\"issue\",\"id\":\"haxe_c-test\"}'\n"
                 "  exit 0\n"
                 "fi\n"

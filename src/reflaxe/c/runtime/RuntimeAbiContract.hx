@@ -13,7 +13,7 @@ import reflaxe.c.runtime.RuntimeFeatureModel.RuntimePublicExportTypePolicy;
 /** One internal runtime compatibility contract shared by headers, manifests, and generated C. */
 class RuntimeAbiContract {
 	public static inline final MAJOR = 0;
-	public static inline final MINOR = 15;
+	public static inline final MINOR = 20;
 	public static inline final PATCH = 0;
 	public static inline final MAJOR_MACRO = "HXC_RUNTIME_ABI_MAJOR";
 	public static inline final MAJOR_CHECK_TYPE = "hxc_runtime_abi_major_must_match";
@@ -30,24 +30,42 @@ class RuntimeAbiContract {
 		"hxc_borrowed_cstring",
 		"hxc_byte_view",
 		"hxc_bytes_ref",
+		"hxc_call_cstring",
+		"hxc_condition",
+		"hxc_dynamic_type",
+		"hxc_exception_cleanup",
+		"hxc_exception_frame",
 		"hxc_gc",
 		"hxc_gc_allocation",
 		"hxc_gc_config",
+		"hxc_gc_exact_index_entry",
 		"hxc_gc_pin",
 		"hxc_gc_root_frame",
 		"hxc_gc_root_table",
 		"hxc_gc_stats",
 		"hxc_gc_thread",
+		"hxc_gc_thread_coordinator",
+		"hxc_gc_thread_token",
 		"hxc_int_bool_map_ref",
+		"hxc_iterator_element_ops",
+		"hxc_iterator_ref",
+		"hxc_iterator_root_ops",
+		"hxc_mutex",
 		"hxc_object_header",
 		"hxc_owned_cstring",
 		"hxc_owned_string",
+		"hxc_semaphore",
 		"hxc_string",
 		"hxc_string_buffer",
 		"hxc_string_map_ref",
 		"hxc_string_map_value_ops",
+		"hxc_tls_key",
 		"hxc_type_descriptor",
-		"hxc_utf8_step"
+		"hxc_typed_map_key_ops",
+		"hxc_typed_map_ref",
+		"hxc_typed_map_value_ops",
+		"hxc_utf8_step",
+		"hxc_value"
 	];
 
 	public static function snapshot(definitions:Array<RuntimeFeatureDefinition>):RuntimeAbiContractRecord {

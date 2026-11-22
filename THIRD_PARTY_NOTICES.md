@@ -6,7 +6,7 @@ inventory, not legal advice. An external tool listed here is not thereby part
 of a `reflaxe.c` distribution.
 
 The machine-readable source of truth for distribution-sensitive compiler and
-runtime provenance, last verified on 2026-07-22, is
+runtime provenance, last verified on 2026-09-01, is
 [`docs/specs/third-party-provenance.json`](docs/specs/third-party-provenance.json).
 It distinguishes tools used to build or validate the project from source and
 binaries actually redistributed with it.
@@ -15,7 +15,7 @@ binaries actually redistributed with it.
 
 | Component | Current use and provenance | Upstream license | Included here? |
 | --- | --- | --- | --- |
-| Reflaxe | Compiler framework dependency by Maybee “SomeRanDev” Rezbit. Version `4.0.0-beta`, commit `73a983112e039daad46b37912ab238df6bf0cf53`, Git tree `05ab4abc670b6e3ed5424e78c622b92979b5affb`; the selected 62-file compiler bundle and one target-owned diagnostic patch to `ReflectCompiler.hx` are independently SHA-256 locked and described in `toolchain-lock.json`. | [MIT](vendor/reflaxe/LICENSE) | Compiler-only source is vendored under `vendor/reflaxe`; it is not linked into generated programs and is not an `hxrt` runtime feature. |
+| Reflaxe | Compiler framework dependency by `SomeRanDev`. Version `4.0.0-beta`, commit `73a983112e039daad46b37912ab238df6bf0cf53`, Git tree `05ab4abc670b6e3ed5424e78c622b92979b5affb`; the selected 62-file compiler bundle and one target-owned diagnostic patch to `ReflectCompiler.hx` are independently SHA-256 locked and described in `toolchain-lock.json`. | [MIT](vendor/reflaxe/LICENSE) | Compiler-only source is vendored under `vendor/reflaxe`; it is not linked into generated programs and is not an `hxrt` runtime feature. |
 | Lix | Scoped Haxe toolchain and library resolver. npm package `17.0.2` is locked by exact registry integrity. | [MIT](https://github.com/lix-pm/lix/blob/v17.0.2/LICENSE) | No Lix source or binary; `npm ci` installs it as a development tool. |
 | Gitleaks | Repository secret scanner `8.30.0`, source revision `6eaad039603a4de39fddd1cf5f727391efe9974e`; CI verifies the official Linux x64 release archive against SHA-256 `79a3ab579b53f71efd634f3aaf7e04a0fa0cf206b7ed434638d1547a2470a66e` before execution. | [MIT](https://github.com/gitleaks/gitleaks/blob/6eaad039603a4de39fddd1cf5f727391efe9974e/LICENSE) | No Gitleaks source or binary; it is an external development/CI tool. |
 | Haxe Formatter | Repository source formatter `1.18.0`, source revision `93ba289893d515614298f4ce7cee8619c31b420c`. | [MIT](https://github.com/HaxeCheckstyle/haxe-formatter/blob/93ba289893d515614298f4ce7cee8619c31b420c/LICENSE) | No formatter source or binary; contributors and CI install it as an external development tool. |
@@ -41,7 +41,31 @@ binaries actually redistributed with it.
   and every local license file required by that manifest. CI compares those
   package files byte-for-byte with the reviewed repository copies.
 
-The license treatment of generated C/headers, compiler templates, and emitted
-or linked runtime slices is deliberately not inferred from the repository
-license. Decision `haxe_c-od2.5` must be ratified before release packaging
-makes promises about those artifacts.
+## Generated application output
+
+The repository license does not automatically become the license of a user's
+program. The project makes no copyright claim over C and headers derived only
+from user input. When the user supplies no license assertion, the manifest
+records SPDX `NOASSERTION`. This value means no determination was made. It does
+not grant permission.
+
+Compiler-created manifests, reports, and build adapters use the
+[`MIT`](LICENSES/HAXE-C-OUTPUT-SUPPORT-MIT.txt) output-support terms. Exact
+`runtime/hxrt/include/hxrt/` and `runtime/hxrt/src/` files copied into an
+application package use the same terms. This treatment also covers those
+`hxrt` portions when they are compiled into a binary. Validated records in
+`runtime/hxrt/features.json` define the exact eligible file set.
+
+Third-party input keeps its declared component license and provenance. A
+source file with mixed origins must be split or rejected. Packaging must not
+guess one license for unlike inputs.
+
+`hxc.manifest.json` records each artifact's origin and derived license
+conclusion. Application packages that contain MIT output support must include
+`LICENSES/HAXE-C-OUTPUT-SUPPORT-MIT.txt`. The policy uses SPDX License List
+version `3.28.0` and decision `haxe_c-od2.5`.
+
+These terms do not require users to contribute changes back. They also do not
+replace a distributor's review of user code, third-party code, or other linked
+libraries. A qualified rights-chain review remains required before the first
+project release.

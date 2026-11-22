@@ -14,10 +14,11 @@ The canonical machine surfaces are:
   against the catalog.
 
 The catalog is schema 2 because the earlier schema-1 seed had no formal schema
-or drift contract. A diagnostic record is schema 1. E8.T09 will frame those
-records into the public `hxc` JSON/event stream and attach native-tool and
-command context; it must extend or version the record rather than invent a
-second ID system.
+or drift contract. A compiler record is schema 1. The public `hxc` schema-2
+response adapts that record into an ordered schema-1 event stream with command
+context and lossless native-tool attachments. It preserves compiler IDs,
+profile, kind, source, notes, and related locations. See [ADR
+0010](adr/0010-hxc-diagnostic-event-framing.md).
 
 ## Reserved ranges
 

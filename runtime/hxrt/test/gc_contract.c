@@ -122,8 +122,8 @@ static int gc_test_primary_contract(hxc_gc *gc) {
   hxc_gc_root_frame worker_frame = HXC_GC_ROOT_FRAME_INITIALIZER;
   hxc_gc_root_table globals = HXC_GC_ROOT_TABLE_INITIALIZER;
   hxc_gc_pin pin = HXC_GC_PIN_INITIALIZER;
-  const void *main_slots[2] = { NULL, NULL };
-  const void *worker_slots[1] = { NULL };
+  const void *volatile main_slots[2] = { NULL, NULL };
+  const void *volatile worker_slots[1] = { NULL };
   const void *global_slots[1] = { NULL };
   gc_test_node *first = NULL;
   gc_test_node *second = NULL;
@@ -134,6 +134,7 @@ static int gc_test_primary_contract(hxc_gc *gc) {
   gc_test_node *invalid_root = NULL;
   gc_test_node *invalid_child = NULL;
   gc_test_bad_trace *bad_trace = NULL;
+  int32_t foreign_value = INT32_C(17);
   hxc_gc_stats stats = HXC_GC_STATS_INITIALIZER;
   size_t round;
 
@@ -158,6 +159,11 @@ static int gc_test_primary_contract(hxc_gc *gc) {
   HXC_CHECK(hxc_gc_collect(gc) == HXC_STATUS_OK);
   HXC_CHECK(!hxc_gc_owns_exact(gc, first));
   HXC_CHECK(!hxc_gc_owns_exact(gc, second));
+
+  /* A foreign root is rejected by address alone, without being dereferenced. */
+  main_slots[0] = &foreign_value;
+  HXC_CHECK(hxc_gc_collect(gc) == HXC_STATUS_INVALID_ARGUMENT);
+  main_slots[0] = NULL;
 
   /* Global and second-thread roots participate in the same exact mark. */
   HXC_CHECK(gc_test_allocate_node(gc, &global) == HXC_STATUS_OK);
@@ -224,7 +230,13 @@ static int gc_test_primary_contract(hxc_gc *gc) {
   HXC_CHECK(hxc_gc_get_stats(gc, &stats) == HXC_STATUS_OK);
   HXC_CHECK(stats.current_object_count == 0u);
   HXC_CHECK(stats.live_payload_bytes == 0u);
-  HXC_CHECK(stats.internal_overhead_bytes == 0u);
+  HXC_CHECK(stats.internal_overhead_bytes == stats.exact_index_bytes);
+  HXC_CHECK(stats.exact_index_bytes > 0u);
+  HXC_CHECK(stats.peak_exact_index_bytes >= stats.exact_index_bytes);
+  HXC_CHECK(stats.exact_index_build_count > stats.collection_count);
+  HXC_CHECK(stats.exact_index_fallback_count == UINT64_C(0));
+  HXC_CHECK(stats.exact_lookup_count > UINT64_C(0));
+  HXC_CHECK(stats.exact_probe_count >= stats.exact_lookup_count);
   HXC_CHECK(stats.reclaimed_object_count == stats.allocation_count);
   HXC_CHECK(stats.reclaimed_payload_bytes == stats.allocated_payload_bytes);
   HXC_CHECK(stats.collection_count >= UINT64_C(128));
@@ -245,7 +257,7 @@ static int gc_test_pressure_contract(hxc_allocator allocator) {
   hxc_gc gc = HXC_GC_INITIALIZER;
   hxc_gc_thread thread = HXC_GC_THREAD_INITIALIZER;
   hxc_gc_root_frame frame = HXC_GC_ROOT_FRAME_INITIALIZER;
-  const void *slots[1] = { NULL };
+  const void *volatile slots[1] = { NULL };
   hxc_gc_config config;
   hxc_gc_stats stats = HXC_GC_STATS_INITIALIZER;
   gc_test_node *first = NULL;
@@ -274,6 +286,30 @@ static int gc_test_pressure_contract(hxc_allocator allocator) {
   return 0;
 }
 
+/*
+ * A fresh collector has no exact-base index table yet. A foreign root must
+ * still be rejected by address alone instead of probing a missing table.
+ */
+static int gc_test_empty_heap_foreign_root(hxc_allocator allocator) {
+  hxc_gc gc = HXC_GC_INITIALIZER;
+  hxc_gc_config config;
+  hxc_gc_root_table roots = HXC_GC_ROOT_TABLE_INITIALIZER;
+  int32_t foreign_value = INT32_C(17);
+  const void *slots[1] = { &foreign_value };
+  config.allocator = allocator;
+  config.initial_threshold_bytes = 1024u;
+  config.clock_now = NULL;
+  config.clock_context = NULL;
+  HXC_CHECK(hxc_gc_init(&config, &gc) == HXC_STATUS_OK);
+  HXC_CHECK(hxc_gc_root_table_register(&gc, slots, 1u, &roots) == HXC_STATUS_OK);
+  HXC_CHECK(hxc_gc_collect(&gc) == HXC_STATUS_INVALID_ARGUMENT);
+  slots[0] = NULL;
+  HXC_CHECK(hxc_gc_collect(&gc) == HXC_STATUS_OK);
+  HXC_CHECK(hxc_gc_root_table_unregister(&roots) == HXC_STATUS_OK);
+  HXC_CHECK(hxc_gc_dispose(&gc) == HXC_STATUS_OK);
+  return 0;
+}
+
 int main(void) {
   hxc_allocator allocator = hxc_default_allocator();
   hxc_gc gc = HXC_GC_INITIALIZER;
@@ -283,6 +319,7 @@ int main(void) {
 
   HXC_CHECK(hxc_allocator_is_valid(&allocator));
   HXC_CHECK(hxc_type_descriptor_is_valid(&gc_test_node_descriptor));
+  HXC_CHECK(gc_test_empty_heap_foreign_root(allocator) == 0);
   config.allocator = allocator;
   config.initial_threshold_bytes = 1024u * 1024u;
   config.clock_now = gc_test_now;

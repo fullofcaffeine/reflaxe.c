@@ -18,6 +18,7 @@ import reflaxe.c.emit.CProjectEmitter.CProjectSymbolReportDetail;
 import reflaxe.c.emit.CProjectLayout;
 import reflaxe.c.emit.GeneratedFile;
 import reflaxe.c.emit.GeneratedFile.GeneratedFileKind;
+import reflaxe.c.emit.GeneratedFile.GeneratedFileProduction;
 import reflaxe.c.emit.ReflaxeOutputWriter;
 import reflaxe.c.naming.CSymbolRegistry;
 import reflaxe.c.naming.CSymbolRequest;
@@ -68,6 +69,12 @@ class ProjectEmitterGolden {
 			case "invalid-line-endings":
 				[
 					new GeneratedFile("src/invalid_line_endings.c", "int invalid_line_endings;\r\n", GeneratedFileKind.Source)
+				];
+			case "invalid-runtime-provenance":
+				[
+					new GeneratedFile("runtime/src/status.c", "int status;\n", GeneratedFileKind.RuntimeSource, {
+						production: GeneratedFileProduction.CompiledProgram
+					})
 				];
 			case "invalid-layout":
 				new CProjectEmitter().emit({
@@ -145,6 +152,7 @@ class ProjectEmitterGolden {
 		every C artifact and independently owned sidecar must remain byte-identical.
 	**/
 	static function symbolSummaryProjection():Array<GeneratedFile> {
+		checkReportEncoding();
 		final full = new CProjectEmitter().emit(plan(false, false, CProjectCompilationStatus.StructuralFixture, ProjectFixtureVariant.PFVOriginal));
 		final summary = new CProjectEmitter().emit(plan(false, false, CProjectCompilationStatus.StructuralFixture, ProjectFixtureVariant.PFVOriginal,
 			CProjectSymbolReportDetail.Summary));
@@ -165,6 +173,22 @@ class ProjectEmitterGolden {
 		if (changedReports != 2)
 			throw "concise symbol reporting did not change exactly its report and manifest digest";
 		return summary;
+	}
+
+	/** Compare the complete emitted symbol report with the standard encoder, including escaped and non-ASCII text. */
+	static function checkReportEncoding():Void {
+		final fullPlan = plan(false, false, CProjectCompilationStatus.StructuralFixture, ProjectFixtureVariant.PFVOriginal);
+		fullPlan.symbolTable.symbols[0].escapeReasons.push('plain ASCII, "quotes", \\paths,\tcontrols\n and café 😀');
+		final full = new CProjectEmitter().emit(fullPlan);
+		final expectedSymbols = haxe.Json.stringify(fullPlan.symbolTable) + "\n";
+		for (file in full) {
+			if (file.relativePath == "hxc.symbols.json") {
+				if (file.contents != expectedSymbols)
+					throw "full symbol report differs from the standard JSON encoding";
+				return;
+			}
+		}
+		throw "full symbol report missing";
 	}
 
 	static function plan(reverse:Bool, trimmed:Bool, compilationStatus:CProjectCompilationStatus, variant:ProjectFixtureVariant,

@@ -1,4 +1,12 @@
 {
+  "licensing": {
+    "decision": "haxe_c-od2.5",
+    "licenseConcluded": "MIT",
+    "noticeFiles": [
+      "LICENSES/HAXE-C-OUTPUT-SUPPORT-MIT.txt"
+    ],
+    "spdxLicenseListVersion": "3.28.0"
+  },
   "configuration": {
     "profile": "portable",
     "environment": "hosted",
@@ -73,61 +81,188 @@
     "pkgConfigPackages": [],
     "warningPolicy": "strict"
   },
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "compilationStatus": "structural-fixture-no-haxe-lowering",
   "generator": "reflaxe.c",
   "artifacts": [
     {
+      "licensing": {
+        "rationale": "compiler-output-support",
+        "licenseConcluded": "MIT",
+        "noticeFiles": [
+          "LICENSES/HAXE-C-OUTPUT-SUPPORT-MIT.txt"
+        ],
+        "projectCopyrightClaim": true
+      },
+      "provenance": {
+        "production": "compiler-sidecar"
+      },
+      "sha256": "a79a29d4f4b6dd706a156cecd8a06f27aaa7b3c66bdfcdfcfb42da6eacc23ca1",
+      "path": "LICENSES/HAXE-C-OUTPUT-SUPPORT-MIT.txt",
+      "kind": "license-notice"
+    },
+    {
+      "licensing": {
+        "rationale": "compiler-output-support",
+        "licenseConcluded": "MIT",
+        "noticeFiles": [
+          "LICENSES/HAXE-C-OUTPUT-SUPPORT-MIT.txt"
+        ],
+        "projectCopyrightClaim": true
+      },
+      "provenance": {
+        "production": "compiler-sidecar"
+      },
       "sha256": "253191cab4978bfd48dc4f8153d9af7707b02490062375a15e82c072b5faba69",
       "path": "cmake/CMakeLists.txt",
       "kind": "cmake-adapter"
     },
     {
-      "sha256": "fa47ca7dc21884d5a936d0d67dcac41143571c731c683ddf30ed37f333610838",
+      "licensing": {
+        "rationale": "compiler-output-support",
+        "licenseConcluded": "MIT",
+        "noticeFiles": [
+          "LICENSES/HAXE-C-OUTPUT-SUPPORT-MIT.txt"
+        ],
+        "projectCopyrightClaim": true
+      },
+      "provenance": {
+        "production": "compiler-sidecar"
+      },
+      "sha256": "72e89e57026f1e016db52327e7ace3a375068e4a83cc59ab4cb7686fe64179d4",
       "path": "hxc.abi.json",
       "kind": "abi-manifest"
     },
     {
-      "sha256": "0057c9f340a5beb6a8944577904c8e70983694dc6ec7dea17b905f38f4ab6155",
+      "licensing": {
+        "rationale": "compiler-output-support",
+        "licenseConcluded": "MIT",
+        "noticeFiles": [
+          "LICENSES/HAXE-C-OUTPUT-SUPPORT-MIT.txt"
+        ],
+        "projectCopyrightClaim": true
+      },
+      "provenance": {
+        "production": "compiler-sidecar"
+      },
+      "sha256": "77a4ac31c8f16ab759c1b5c2573b22a3e01fbb9422c74b4d3fd776a2b9937f05",
       "path": "hxc.runtime-plan.json",
       "kind": "runtime-plan"
     },
     {
-      "sha256": "ab9bf46f0e34d824591a6be8a4758db6661e677ab4016d2132c15a60d54b33bd",
+      "licensing": {
+        "rationale": "compiler-output-support",
+        "licenseConcluded": "MIT",
+        "noticeFiles": [
+          "LICENSES/HAXE-C-OUTPUT-SUPPORT-MIT.txt"
+        ],
+        "projectCopyrightClaim": true
+      },
+      "provenance": {
+        "production": "compiler-sidecar"
+      },
+      "sha256": "93db1df9060f6ac98c6c9a5c2f8c6415efb656de8b6d765ef6b5ea6e272212b1",
       "path": "hxc.stdlib-report.json",
       "kind": "stdlib-report"
     },
     {
-      "sha256": "f02d8dff68467f04696b3a2a649231cbe50752f061ce1f26454e6e1ed07afe94",
+      "licensing": {
+        "rationale": "compiler-output-support",
+        "licenseConcluded": "MIT",
+        "noticeFiles": [
+          "LICENSES/HAXE-C-OUTPUT-SUPPORT-MIT.txt"
+        ],
+        "projectCopyrightClaim": true
+      },
+      "provenance": {
+        "production": "compiler-sidecar"
+      },
+      "sha256": "0cb70304d5f9d53ce2dc5c766ba1e2670ee1cfc56fdd8ab3818bc8efe075aaf0",
       "path": "hxc.symbols.json",
       "kind": "symbol-table"
     },
     {
+      "licensing": {
+        "rationale": "user-license-not-declared",
+        "licenseConcluded": "NOASSERTION",
+        "noticeFiles": [],
+        "projectCopyrightClaim": false
+      },
+      "provenance": {
+        "production": "compiled-program"
+      },
       "sha256": "3a73ab2337de2a45ed6cd7c83239e1997deff3f0114fdf8caea51687353670a8",
       "path": "include/hxc/detail/emitter_fixture_internal.h",
       "kind": "private-header"
     },
     {
+      "licensing": {
+        "rationale": "user-license-not-declared",
+        "licenseConcluded": "NOASSERTION",
+        "noticeFiles": [],
+        "projectCopyrightClaim": false
+      },
+      "provenance": {
+        "production": "compiled-program"
+      },
       "sha256": "9e5fdad04603cad49ffbfbb87b0575dd185e009593e63e6c9855f3c3ba05428a",
       "path": "include/hxc/emitter_fixture.h",
       "kind": "public-header"
     },
     {
+      "licensing": {
+        "rationale": "user-license-not-declared",
+        "licenseConcluded": "NOASSERTION",
+        "noticeFiles": [],
+        "projectCopyrightClaim": false
+      },
+      "provenance": {
+        "production": "compiled-program"
+      },
       "sha256": "828248baf11361244c2a258f3235dd0a0e83513faa4a1431e0be1aaffa595774",
       "path": "include/hxc/removed_module.h",
       "kind": "public-header"
     },
     {
+      "licensing": {
+        "rationale": "compiler-output-support",
+        "licenseConcluded": "MIT",
+        "noticeFiles": [
+          "LICENSES/HAXE-C-OUTPUT-SUPPORT-MIT.txt"
+        ],
+        "projectCopyrightClaim": true
+      },
+      "provenance": {
+        "production": "compiler-sidecar"
+      },
       "sha256": "53feae7eb677cda5adc90552e7001b33ac02560929bb7056d24078a1f60d00ce",
       "path": "meson.build",
       "kind": "meson-adapter"
     },
     {
+      "licensing": {
+        "rationale": "user-license-not-declared",
+        "licenseConcluded": "NOASSERTION",
+        "noticeFiles": [],
+        "projectCopyrightClaim": false
+      },
+      "provenance": {
+        "production": "compiled-program"
+      },
       "sha256": "370a16c462196e73ba82b48d6000a0a26fef2da35ce667337c4308c7def3ee16",
       "path": "src/emitter_fixture.c",
       "kind": "source"
     },
     {
+      "licensing": {
+        "rationale": "user-license-not-declared",
+        "licenseConcluded": "NOASSERTION",
+        "noticeFiles": [],
+        "projectCopyrightClaim": false
+      },
+      "provenance": {
+        "production": "compiled-program"
+      },
       "sha256": "e13c00d472133dd42b4e9949cb234c57dfcb627a52bf8f7cf12c0ea5c3801fe2",
       "path": "src/hxc_boot.c",
       "kind": "source"

@@ -14,6 +14,7 @@
     "src/reflaxe/c/lowering/CBodyLowering.hx",
     "test/span_lowering/fixtures/NonLiteralFixture.hx",
     "test/span_lowering/fixtures/LookalikeFixture.hx",
+    "test/span_lowering/fixtures/DirectSpanLookalikeFixture.hx",
     "test/span_lowering/fixtures/ZeroLengthFixture.hx",
     "test/span_lowering/fixtures/UpperBoundsFixture.hx",
     "test/span_lowering/fixtures/NegativeBoundsFixture.hx",

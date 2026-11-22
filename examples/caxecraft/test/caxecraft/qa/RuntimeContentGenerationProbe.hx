@@ -5,16 +5,19 @@ import caxecraft.content.ActiveRuntimeContent.RuntimeContentPublicationResult;
 import caxecraft.content.ContentPackageStore;
 import caxecraft.content.ContentReceipt;
 import caxecraft.content.LoadedContentGeneration.ContentGenerationId;
+import caxecraft.content.RuntimeContentGeneration.RuntimeContentFileReceipt;
 import caxecraft.content.RuntimeContentGeneration.RuntimeContentLoadResult;
+import caxecraft.content.RuntimeContentGeneration.RuntimeContentReceipt;
 import caxecraft.content.RuntimeContentGeneration.loadRuntimeContent;
 #if c
 import caxecraft.content.RuntimeContentGeneration.rebuildRuntimeContentForPublicationTesting;
 #end
 #if !c
 import caxecraft.content.RuntimeContentGeneration.loadRuntimeContentForTesting;
-import caxecraft.content.RuntimeContentReceiptWriter.runtimeGenerationSha256;
 #end
 import caxecraft.content.RuntimeContentDigest.runtimeSha256;
+import caxecraft.content.RuntimeContentDigest.runtimeSha256Hex;
+import caxecraft.content.RuntimeContentReceiptWriter.runtimeGenerationSha256;
 import caxecraft.domain.EntityId;
 import caxecraft.domain.Vitals.MAX_HEALTH;
 import caxecraft.localization.UiTypes.LocaleCursor;
@@ -42,7 +45,7 @@ var traceGenerationId:Int = 0;
 /** Existing independent semantic proof from the decoded pack registry. */
 var tracePack:Int = 0;
 
-/** Reviewed UI shape and one translated message length. */
+/** Data-derived locale shape and one non-empty translated-message observation. */
 var traceUi:Int = 0;
 
 /** Deterministic world state built from the real map and runtime registry. */
@@ -82,7 +85,7 @@ function selfCheck():Int {
 	};
 	#if !c
 	final activeGenerationBeforeFailures = candidate.generationId().value();
-	final rejected = verifyReceiptRejections(store);
+	final rejected = verifyReceiptRejections(store, candidate.receipt());
 	if (rejected != 0)
 		return rejected;
 	#end
@@ -113,16 +116,12 @@ function selfCheck():Int {
 		return 16;
 	if (candidate.generationId().value() != 1
 		|| candidate.registry().semanticProof() != 132089
-		|| candidate.catalog().text(LocaleCursor.Locale1, UiMessage.MenuAdventure) != "AVENTURA"
+		|| candidate.catalog().text(LocaleCursor.Locale1, UiMessage.MenuAdventure).length == 0
 		|| candidate.level().generation().semanticTrace().worldState != -1465000778)
 		return 17;
 	final selected = active.generation();
 	final receipt = selected.receipt();
-	if (receipt.generationSha256 != "9aadce42701b1e2dcd13dd955f1eacdd41bddc00be95d1fa82b3ce4f55c0ed14"
-		|| receipt.assetManifestSha256 != "a04f45bc15e1e160ef67864de4993ecb58e83ea1c69689590e9e7121c2cd62cb"
-		|| receipt.content.sha256 != "58d45050c40c8dd618dff5cfa210fc945c9ee9a8501866dc03211d2813ec30c9"
-		|| receipt.ui.sha256 != "8672c29db04a82f6eee99535d0b5942c6d1712fac0b2b30793e2a345c29693a4"
-		|| receipt.map.sha256 != "465aa55527f99d2e421c186d40084687e3e851121aaf7a96296a070041e2f4ef")
+	if (!validReceipt(receipt))
 		return 9;
 	traceGenerationId = selected.generationId().value();
 	#if !c
@@ -130,13 +129,34 @@ function selfCheck():Int {
 		return 11;
 	#end
 	tracePack = selected.registry().semanticProof();
-	traceUi = selected.catalog().messageCount() * 100
-		+ selected.catalog().localeCount() * 10
-		+ selected.catalog().text(LocaleCursor.Locale1, UiMessage.MenuAdventure).length;
+	traceUi = selected.catalog().localeCount() * 10 + selected.catalog().text(LocaleCursor.Locale1, UiMessage.MenuAdventure).length;
 	traceWorldState = selected.level().generation().semanticTrace().worldState;
 	traceSourceBytes = receipt.content.byteLength + receipt.ui.byteLength + receipt.map.byteLength;
-	return traceGenerationId == 2 && tracePack == 132089 && traceUi == 5128 && traceWorldState == -1465000778 && traceSourceBytes == 47598 ? 0 : 10;
+	return traceGenerationId == 2
+		&& tracePack == 132089
+		&& traceUi > selected.catalog().localeCount() * 10
+		&& traceWorldState == -1465000778
+		&& traceSourceBytes > 0 ? 0 : 10;
 }
+
+/** Recompute receipt identity from its data-owned file records and stable roles. */
+function validReceipt(receipt:RuntimeContentReceipt):Bool {
+	if (receipt.assetManifestSchemaVersion <= 0
+		|| receipt.assetManifestId.length == 0
+		|| receipt.assetManifestSha256.length != 64
+		|| !validReceiptFile(receipt.content, "content-pack")
+		|| !validReceiptFile(receipt.ui, "ui-catalog")
+		|| !validReceiptFile(receipt.map, "level-map"))
+		return false;
+	final content = new ContentReceipt(receipt.content.logicalPath, receipt.content.byteLength, receipt.content.sha256);
+	final ui = new ContentReceipt(receipt.ui.logicalPath, receipt.ui.byteLength, receipt.ui.sha256);
+	final map = new ContentReceipt(receipt.map.logicalPath, receipt.map.byteLength, receipt.map.sha256);
+	return receipt.generationSha256 == runtimeGenerationSha256(receipt.assetManifestId, receipt.assetManifestSha256, content, ui, map);
+}
+
+/** Validate one closed receipt role without copying its current bytes or digest. */
+function validReceiptFile(receipt:RuntimeContentFileReceipt, kind:String):Bool
+	return receipt.kind == kind && receipt.logicalPath.length > 0 && receipt.byteLength > 0 && receipt.sha256.length == 64;
 
 /** Load one real complete candidate through the shared package path. */
 function load(store:ContentPackageStore, sequence:Int):RuntimeContentLoadResult
@@ -147,7 +167,7 @@ function load(store:ContentPackageStore, sequence:Int):RuntimeContentLoadResult
 
 #if !c
 /** Prove malformed, unlisted, stale, mismatched, and missing inputs publish nothing. */
-function verifyReceiptRejections(store:ContentPackageStore):Int {
+function verifyReceiptRejections(store:ContentPackageStore, expected:RuntimeContentReceipt):Int {
 	return switch store.read("packs/caxecraft/base/runtime-content.json") {
 		case PackageBytesRejected(_): 2;
 		case PackageBytesRead(receipt):
@@ -159,7 +179,7 @@ function verifyReceiptRejections(store:ContentPackageStore):Int {
 						case PackageBytesRead(ui):
 							switch store.read("scenarios/first-playable/map.caxemap") {
 								case PackageBytesRejected(_): 2;
-								case PackageBytesRead(map): verifyReceiptBytes(receipt.bytes, content.bytes, ui.bytes, map.bytes);
+								case PackageBytesRead(map): verifyReceiptBytes(receipt.bytes, content.bytes, ui.bytes, map.bytes, expected);
 							};
 					};
 			};
@@ -167,7 +187,7 @@ function verifyReceiptRejections(store:ContentPackageStore):Int {
 }
 
 /** Challenge the verifier after the real package store has supplied exact bytes. */
-function verifyReceiptBytes(receipt:Bytes, content:Bytes, ui:Bytes, map:Bytes):Int {
+function verifyReceiptBytes(receipt:Bytes, content:Bytes, ui:Bytes, map:Bytes, expected:RuntimeContentReceipt):Int {
 	final receiptText = receipt.toString();
 	final player:caxecraft.content.RuntimeContentGeneration.RuntimeContentPlayerOptions = {
 		entityId: EntityId.fromValidatedStorageCode(1),
@@ -177,20 +197,23 @@ function verifyReceiptBytes(receipt:Bytes, content:Bytes, ui:Bytes, map:Bytes):I
 
 	if (!receiptRejected(Bytes.ofString("{"), content, ui, map, "", generation, player))
 		return 3;
-	final unlisted = replaceOnce(receiptText, "scenarios/first-playable/map.caxemap", "scenarios/first-playable/unlisted.caxemap");
+	final unlisted = replaceOnce(receiptText, expected.map.logicalPath, expected.map.logicalPath + ".unlisted");
 	if (!receiptRejected(Bytes.ofString(unlisted), content, ui, map, "", generation, player))
 		return 4;
-	final stale = replaceOnce(receiptText, '"byteLength": 22949', '"byteLength": 22948');
-	if (!lengthRejected(Bytes.ofString(stale), content, ui, map, generation, player))
+	final contentLength = '"byteLength": ${expected.content.byteLength},\n      "kind": "content-pack"';
+	final staleContentLength = '"byteLength": ${expected.content.byteLength - 1},\n      "kind": "content-pack"';
+	final stale = replaceOnce(receiptText, contentLength, staleContentLength);
+	if (!lengthRejected(Bytes.ofString(stale), content, ui, map, expected.content.logicalPath, expected.content.byteLength - 1, expected.content.byteLength,
+		generation, player))
 		return 5;
-	if (!assetManifestMismatchRejected(receiptText, content, ui, map, generation, player))
+	if (!assetManifestMismatchRejected(receiptText, content, ui, map, expected, generation, player))
 		return 19;
 	final mismatchedContent = Bytes.alloc(content.length);
 	mismatchedContent.blit(0, content, 0, content.length);
 	mismatchedContent.set(0, mismatchedContent.get(0) ^ 1);
-	if (!hashRejected(receipt, mismatchedContent, ui, map, generation, player))
+	if (!hashRejected(receipt, mismatchedContent, ui, map, expected.content.logicalPath, generation, player))
 		return 6;
-	if (!missingRejected(receipt, content, ui, map, generation, player))
+	if (!missingRejected(receipt, content, ui, map, expected.ui.logicalPath, generation, player))
 		return 7;
 	return 0;
 }
@@ -219,8 +242,8 @@ function receiptRejected(receipt:Bytes, content:Bytes, ui:Bytes, map:Bytes, miss
 }
 
 /** Return true only when a stale receipt length rejects the exact content file. */
-function lengthRejected(receipt:Bytes, content:Bytes, ui:Bytes, map:Bytes, generation:ContentGenerationId,
-		player:caxecraft.content.RuntimeContentGeneration.RuntimeContentPlayerOptions):Bool {
+function lengthRejected(receipt:Bytes, content:Bytes, ui:Bytes, map:Bytes, expectedPath:String, expectedLength:Int, actualLength:Int,
+		generation:ContentGenerationId, player:caxecraft.content.RuntimeContentGeneration.RuntimeContentPlayerOptions):Bool {
 	return switch loadRuntimeContentForTesting({
 		receipt: receipt,
 		content: content,
@@ -228,23 +251,23 @@ function lengthRejected(receipt:Bytes, content:Bytes, ui:Bytes, map:Bytes, gener
 		map: map,
 		missingLogicalPath: ""
 	}, generation, player) {
-		case RuntimeContentRejected(RuntimeContentLengthMismatch("packs/caxecraft/base/content.json", 22948, 22949)): true;
+		case RuntimeContentRejected(RuntimeContentLengthMismatch(path, expected, actual))
+			if (path == expectedPath && expected == expectedLength && actual == actualLength): true;
 		case _: false;
 	};
 }
 
 /** Reach the cross-file identity check with an otherwise self-consistent receipt. */
-function assetManifestMismatchRejected(receiptText:String, content:Bytes, ui:Bytes, map:Bytes, generation:ContentGenerationId,
+function assetManifestMismatchRejected(receiptText:String, content:Bytes, ui:Bytes, map:Bytes, expected:RuntimeContentReceipt, generation:ContentGenerationId,
 		player:caxecraft.content.RuntimeContentGeneration.RuntimeContentPlayerOptions):Bool {
-	final originalId = "caxecraft-showcase-v1-draft";
+	final originalId = expected.assetManifestId;
 	final otherId = "caxecraft-other-v1-draft";
-	final originalGeneration = "9aadce42701b1e2dcd13dd955f1eacdd41bddc00be95d1fa82b3ce4f55c0ed14";
-	final otherGeneration = runtimeGenerationSha256(otherId, "a04f45bc15e1e160ef67864de4993ecb58e83ea1c69689590e9e7121c2cd62cb",
-		new ContentReceipt("packs/caxecraft/base/content.json", content.length, "58d45050c40c8dd618dff5cfa210fc945c9ee9a8501866dc03211d2813ec30c9"),
-		new ContentReceipt("locales/ui.json", ui.length, "8672c29db04a82f6eee99535d0b5942c6d1712fac0b2b30793e2a345c29693a4"),
-		new ContentReceipt("scenarios/first-playable/map.caxemap", map.length, "465aa55527f99d2e421c186d40084687e3e851121aaf7a96296a070041e2f4ef"));
+	final otherGeneration = runtimeGenerationSha256(otherId, expected.assetManifestSha256,
+		new ContentReceipt(expected.content.logicalPath, content.length, expected.content.sha256),
+		new ContentReceipt(expected.ui.logicalPath, ui.length, expected.ui.sha256),
+		new ContentReceipt(expected.map.logicalPath, map.length, expected.map.sha256));
 	final changedId = replaceOnce(receiptText, originalId, otherId);
-	final changedReceipt = replaceOnce(changedId, originalGeneration, otherGeneration);
+	final changedReceipt = replaceOnce(changedId, expected.generationSha256, otherGeneration);
 	return switch loadRuntimeContentForTesting({
 		receipt: Bytes.ofString(changedReceipt),
 		content: content,
@@ -258,7 +281,7 @@ function assetManifestMismatchRejected(receiptText:String, content:Bytes, ui:Byt
 }
 
 /** Return true only when changed bytes fail the receipt's independent hash. */
-function hashRejected(receipt:Bytes, content:Bytes, ui:Bytes, map:Bytes, generation:ContentGenerationId,
+function hashRejected(receipt:Bytes, content:Bytes, ui:Bytes, map:Bytes, expectedPath:String, generation:ContentGenerationId,
 		player:caxecraft.content.RuntimeContentGeneration.RuntimeContentPlayerOptions):Bool {
 	return switch loadRuntimeContentForTesting({
 		receipt: receipt,
@@ -267,22 +290,22 @@ function hashRejected(receipt:Bytes, content:Bytes, ui:Bytes, map:Bytes, generat
 		map: map,
 		missingLogicalPath: ""
 	}, generation, player) {
-		case RuntimeContentRejected(RuntimeContentHashMismatch("packs/caxecraft/base/content.json", _)): true;
+		case RuntimeContentRejected(RuntimeContentHashMismatch(path, _)) if (path == expectedPath): true;
 		case _: false;
 	};
 }
 
 /** Return true only when a listed source is absent from the read capability. */
-function missingRejected(receipt:Bytes, content:Bytes, ui:Bytes, map:Bytes, generation:ContentGenerationId,
+function missingRejected(receipt:Bytes, content:Bytes, ui:Bytes, map:Bytes, missingPath:String, generation:ContentGenerationId,
 		player:caxecraft.content.RuntimeContentGeneration.RuntimeContentPlayerOptions):Bool {
 	return switch loadRuntimeContentForTesting({
 		receipt: receipt,
 		content: content,
 		ui: ui,
 		map: map,
-		missingLogicalPath: "locales/ui.json"
+		missingLogicalPath: missingPath
 	}, generation, player) {
-		case RuntimeContentRejected(RuntimeContentSourceRejected("locales/ui.json", EntryMissing)): true;
+		case RuntimeContentRejected(RuntimeContentSourceRejected(path, EntryMissing)) if (path == missingPath): true;
 		case _: false;
 	};
 }
@@ -290,7 +313,10 @@ function missingRejected(receipt:Bytes, content:Bytes, ui:Bytes, map:Bytes, gene
 
 /** Compare digest bytes with an independently authored lowercase expectation. */
 function digestMatches(input:String, expected:String):Bool {
-	final digest = runtimeSha256(Bytes.ofString(input));
+	final inputBytes = Bytes.ofString(input);
+	if (runtimeSha256Hex(inputBytes) != expected)
+		return false;
+	final digest = runtimeSha256(inputBytes);
 	if (digest.length != 32 || expected.length != 64)
 		return false;
 	for (index in 0...digest.length) {

@@ -1,0 +1,8 @@
+-cp src
+-cp test/compiler_phase_progress
+-D reflaxe_c_phase_progress
+
+--macro CompilerPhaseProgressProbe.install()
+
+-main CompilerPhaseProgressMain
+--interp

@@ -201,6 +201,52 @@
     "discriminantTag": "hxc_Mode"
   },
   {
+    "instanceId": "instance.enum.891dc52d12e6b77932c8d0e4e189b5f72e84cc5d94f1bea9b813b43f57f4901a",
+    "representation": "tagged-union",
+    "recursive": false,
+    "declarationId": "type.enum.891dc52d12e6b77932c8d0e4e189b5f72e84cc5d94f1bea9b813b43f57f4901a",
+    "displayName": "RecursiveAction",
+    "digest": "891dc52d12e6b77932c8d0e4e189b5f72e84cc5d94f1bea9b813b43f57f4901a",
+    "scopedLifetime": false,
+    "payloadUnionTag": "hxc_RecursiveAction_payload",
+    "cases": [
+      {
+        "tagValue": 0,
+        "unionMember": "hxc_LeafAction",
+        "semanticName": "LeafAction",
+        "discriminant": "hxc_RecursiveAction_LeafAction",
+        "payload": [
+          {
+            "semanticName": "value",
+            "cName": "hxc_value",
+            "indirect": false,
+            "type": "i32"
+          }
+        ],
+        "payloadStructTag": "hxc_RecursiveAction_LeafAction_payload"
+      },
+      {
+        "tagValue": 1,
+        "unionMember": "hxc_ChooseAction",
+        "semanticName": "ChooseAction",
+        "discriminant": "hxc_RecursiveAction_ChooseAction",
+        "payload": [
+          {
+            "semanticName": "choices",
+            "cName": "hxc_choices",
+            "indirect": false,
+            "type": "instance:instance.haxe-array.e4791f3ed60810b12b61c8cbc1ceb97c55da777a819f42e55ea69e70c231ec6a"
+          }
+        ],
+        "payloadStructTag": "hxc_RecursiveAction_ChooseAction_payload"
+      }
+    ],
+    "valueTag": "hxc_RecursiveAction",
+    "tagMember": "hxc_tag",
+    "payloadMember": "hxc_payload",
+    "discriminantTag": "hxc_RecursiveAction_tag"
+  },
+  {
     "instanceId": "instance.enum.90067feeae250351e945e88054e8cb3515e5001ca66040369347bba26ed2cdb0",
     "representation": "native-enum",
     "recursive": false,

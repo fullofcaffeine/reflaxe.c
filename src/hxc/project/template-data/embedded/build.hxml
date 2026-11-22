@@ -1,0 +1,7 @@
+-cp src
+-lib reflaxe.c
+--macro include("${MODULE_NAME}")
+-D reflaxe_c_profile=metal
+-D hxc_runtime=none
+-D hxc_environment=freestanding
+-D hxc_project_layout=unity

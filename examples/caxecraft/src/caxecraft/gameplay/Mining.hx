@@ -15,14 +15,19 @@ import caxecraft.domain.WorldCells;
  */
 function attempt(cells:WorldCells, coordinate:BlockCoord, inventory:InventoryState):MiningResult {
 	final kind = World.query(cells, coordinate);
-	return switch (kind) {
-		case Grass: collect(cells, coordinate, inventory, kind, ItemKind.GrassBlock);
-		case Dirt: collect(cells, coordinate, inventory, kind, ItemKind.DirtBlock);
-		case Stone: collect(cells, coordinate, inventory, kind, ItemKind.StoneBlock);
-		case Sand: collect(cells, coordinate, inventory, kind, ItemKind.SandBlock);
-		case Air | Bedrock | Wood | Leaves | Snow | Ash: result(inventory, BlockUnavailable);
-	};
+	final item = itemForCollectableBlock(kind);
+	return item == null ? result(inventory, BlockUnavailable) : collect(cells, coordinate, inventory, kind, item);
 }
+
+/** Return the inventory item produced by a currently mineable terrain kind. */
+function itemForCollectableBlock(kind:BlockKind):Null<ItemKind>
+	return switch kind {
+		case Grass: ItemKind.GrassBlock;
+		case Dirt: ItemKind.DirtBlock;
+		case Stone: ItemKind.StoneBlock;
+		case Sand: ItemKind.SandBlock;
+		case Air | Bedrock | Wood | Leaves | Snow | Ash: null;
+	};
 
 private function collect(cells:WorldCells, coordinate:BlockCoord, inventory:InventoryState, kind:BlockKind, item:ItemKind):MiningResult {
 	if (Inventory.acceptedAmount(inventory, item, 1) != 1)

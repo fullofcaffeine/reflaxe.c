@@ -2,6 +2,8 @@ package caxecraft.editor;
 
 import caxecraft.editor.EditorWorldGrid.decode as decodeWorld;
 import caxecraft.scenario.ScenarioId;
+import caxecraft.scenario.ScenarioGeometry.ScenarioTransform;
+import caxecraft.scenario.ScenarioGeometry.VoxelBounds;
 import caxecraft.scenario.ScenarioGeometry.VoxelPoint;
 import caxecraft.scenario.ScenarioObject;
 import caxecraft.scenario.ScenarioWorld;
@@ -11,12 +13,12 @@ import caxecraft.scenario.ScenarioWorld;
  * renderer.
  *
  * The CAXEMAP draft remains the only editable world. `projectWorld` creates a
- * read-only presentation cache after an accepted edit, camera functions turn
+ * screen-owned presentation cache after an accepted edit, camera functions turn
  * bounded input into a fresh snapshot, and `pickWorld` maps a viewing ray back
  * to one authored coordinate. Eval tests and the native Raylib editor therefore
  * share spatial rules without either implementation copying game state.
  */
-/** One read-only copy of the complete finite voxel volume. */
+/** One screen-owned copy of the complete finite voxel volume and its overview. */
 typedef EditorWorldProjection = {
 	final width:Int;
 	final height:Int;
@@ -63,6 +65,15 @@ enum EditorObjectGizmoKind {
 	StatefulObjectGizmo;
 }
 
+/** State whether an editor marker owns a facing direction and its validated yaw. */
+enum EditorObjectFacing {
+	/** Bounded trigger volumes do not face a direction. */
+	NoObjectFacing;
+
+	/** Transform-backed placements face this many degrees clockwise from north. */
+	ObjectYaw(degrees:Int);
+}
+
 /**
  * Read-only box used to show one stable CAXEMAP object in a 3D editor.
  *
@@ -73,12 +84,17 @@ enum EditorObjectGizmoKind {
 typedef EditorObjectGizmo = {
 	final id:ScenarioId;
 	final kind:EditorObjectGizmoKind;
+
+	/** Authored cell origin used by exact whole-cell placement gestures. */
+	final origin:VoxelPoint;
+
 	final x:Float;
 	final y:Float;
 	final z:Float;
 	final width:Float;
 	final height:Float;
 	final depth:Float;
+	final facing:EditorObjectFacing;
 }
 
 /** The nearest stable authored object reached by one bounded world ray. */
@@ -87,20 +103,50 @@ typedef EditorObjectHit = {
 	final distance:Float;
 }
 
-/**
- * The editor camera's position and unit-like forward direction.
- *
- * This is a value snapshot rather than a class because it has no independent
- * identity or resource lifetime. `CaxecraftEditorScreen` owns the current
- * snapshot and replaces it after each input step.
- */
-typedef EditorCameraState = {
+/** The camera position and unit-like forward direction for one frame. */
+typedef EditorCameraPose = {
 	final x:Float;
 	final y:Float;
 	final z:Float;
 	final lookX:Float;
 	final lookY:Float;
 	final lookZ:Float;
+}
+
+/**
+ * The three creator views that Build can use.
+ *
+ * Walk follows the authored surface for direct edits. Fly keeps unrestricted
+ * movement for large worlds. Orbit keeps one explicit target in view for
+ * inspection. An enum abstract gives the closed choice an integer C value.
+ */
+enum abstract EditorCameraMode(Int) {
+	/** Follow each column's top surface for direct world edits. */
+	var WalkCamera = 0;
+
+	/** Move freely inside generous bounds around the finite world. */
+	var FlyCamera = 1;
+
+	/** Keep one selected object or world point at the center of the view. */
+	var OrbitCamera = 2;
+}
+
+/**
+ * One complete camera snapshot, including mode-specific state.
+ *
+ * Orbit alone owns a target and horizontal distance. The typed enum prevents
+ * Walk or Fly from carrying inactive orbit fields. The screen replaces this
+ * immutable snapshot after each input frame.
+ */
+enum EditorCameraState {
+	/** A surface-following creator pose. This is not player collision physics. */
+	WalkingCamera(pose:EditorCameraPose);
+
+	/** An unrestricted creator pose. */
+	FlyingCamera(pose:EditorCameraPose);
+
+	/** A creator pose with the exact point and distance that it keeps in view. */
+	OrbitingCamera(pose:EditorCameraPose, target:EditorWorldVector, horizontalDistance:Float);
 }
 
 /** Renderer-neutral movement and look input for one displayed frame. */
@@ -120,9 +166,30 @@ typedef EditorWorldVector = {
 	final z:Float;
 }
 
-/** The nearest editable coordinate selected by a viewing ray. */
+/**
+ * One bounded selection volume prepared for a single renderer draw call.
+ *
+ * A selection can contain up to 65,536 cells. Projecting only its outer box
+ * keeps the authored bounds visible without making frame cost grow per cell.
+ */
+typedef EditorSelectionGizmo = {
+	final x:Float;
+	final y:Float;
+	final z:Float;
+	final width:Float;
+	final height:Float;
+	final depth:Float;
+}
+
+/**
+ * The nearest editable coordinate selected by a viewing ray.
+ *
+ * `placement` is the last empty cell before a solid target. An empty-floor hit
+ * uses its own point. A solid at the first visited cell has no safe placement.
+ */
 typedef EditorWorldHit = {
 	final point:VoxelPoint;
+	final placement:Null<VoxelPoint>;
 	final distance:Float;
 	final solid:Bool;
 }
@@ -133,12 +200,28 @@ private typedef EditorRayInterval = {
 	final far:Float;
 }
 
+/** Convert one half-open voxel selection into its exact world-space box. */
+function projectSelection(bounds:VoxelBounds):EditorSelectionGizmo {
+	return {
+		x: bounds.origin.x + bounds.size.width * 0.5,
+		y: bounds.origin.y + bounds.size.height * 0.5,
+		z: bounds.origin.z + bounds.size.depth * 0.5,
+		width: bounds.size.width,
+		height: bounds.size.height,
+		depth: bounds.size.depth
+	};
+}
+
 final CAMERA_SPEED = 8.0;
+final WALK_SPEED = 5.0;
+final WALK_EYE_HEIGHT = 1.62;
 final WHEEL_DISTANCE = 2.0;
+final MIN_ORBIT_DISTANCE = 2.0;
 final MAX_FRAME_SECONDS = 0.1;
 final MAX_LOOK_STEP = 0.25;
 final MIN_PITCH = -0.90;
 final MAX_PITCH = 0.90;
+final MAX_ORBIT_PITCH = -0.05;
 final RAY_EPSILON = 0.000001;
 
 /**
@@ -186,6 +269,67 @@ function projectWorld(world:ScenarioWorld):Null<EditorWorldProjection> {
 		surfaceTops: surfaceTops,
 		surfacePatches: surfacePatches
 	};
+}
+
+/**
+ * Apply one accepted voxel edit to this screen-owned projection.
+ *
+ * The editor session has already validated and stored the command. This
+ * function updates the exact cell and rebuilds only the small x/z overview.
+ * It validates all array bounds before mutation, so `false` leaves the cache
+ * unchanged and lets the caller request a complete projection.
+ */
+function patchProjectedVoxel(projection:EditorWorldProjection, point:VoxelPoint, paletteCode:Int):Bool {
+	if (paletteCode < 0 || point.x < 0 || point.y < 0 || point.z < 0 || point.x >= projection.width || point.y >= projection.height
+		|| point.z >= projection.depth)
+		return false;
+	final volume = projection.width * projection.height * projection.depth;
+	final area = projection.width * projection.depth;
+	if (projection.width <= 0 || projection.height <= 0 || projection.depth <= 0 || projection.cells.length != volume || projection.surfaceTops.length != area)
+		return false;
+
+	final changedCell = (point.z * projection.height + point.y) * projection.width + point.x;
+	final changedColumn = point.z * projection.width + point.x;
+	final nextTops = projection.surfaceTops.copy();
+	var changedTop = -1;
+	for (y in 0...projection.height) {
+		final index = (point.z * projection.height + y) * projection.width + point.x;
+		final code = index == changedCell ? paletteCode : projection.cells[index];
+		if (code != 0)
+			changedTop = y;
+	}
+	nextTops[changedColumn] = changedTop;
+
+	final nextColumns:Array<EditorTerrainColumn> = [];
+	final nextPaletteCodes:Array<Int> = [];
+	for (z in 0...projection.depth)
+		for (x in 0...projection.width) {
+			final column = z * projection.width + x;
+			final topY = nextTops[column];
+			if (topY < -1 || topY >= projection.height)
+				return false;
+			final index = topY < 0 ? -1 : (z * projection.height + topY) * projection.width + x;
+			final code = index < 0 ? 0 : index == changedCell ? paletteCode : projection.cells[index];
+			if (topY >= 0)
+				nextColumns.push({
+					x: x,
+					z: z,
+					topY: topY,
+					paletteCode: code
+				});
+			nextPaletteCodes.push(code);
+		}
+	final nextPatches = projectSurfacePatches(projection.width, projection.depth, nextTops, nextPaletteCodes);
+
+	projection.cells[changedCell] = paletteCode;
+	projection.surfaceTops[changedColumn] = changedTop;
+	projection.columns.resize(0);
+	for (column in nextColumns)
+		projection.columns.push(column);
+	projection.surfacePatches.resize(0);
+	for (patch in nextPatches)
+		projection.surfacePatches.push(patch);
+	return true;
 }
 
 /** Merge adjacent equal top cells so the overview submits little geometry. */
@@ -254,27 +398,36 @@ function projectObjects(objects:Array<ScenarioObject>):Array<EditorObjectGizmo> 
 	final projected:Array<EditorObjectGizmo> = [];
 	for (object in objects)
 		projected.push(switch object.placement {
-			case PlayerSpawn(transform): pointGizmo(object.id, PlayerSpawnGizmo, transform.xMilli, transform.yMilli, transform.zMilli);
-			case Checkpoint(transform): pointGizmo(object.id, CheckpointGizmo, transform.xMilli, transform.yMilli, transform.zMilli);
-			case Item(_, _, transform): pointGizmo(object.id, ItemGizmo, transform.xMilli, transform.yMilli, transform.zMilli);
-			case Entity(_, transform): pointGizmo(object.id, EntityGizmo, transform.xMilli, transform.yMilli, transform.zMilli);
-			case Npc(_, _, transform): pointGizmo(object.id, NpcGizmo, transform.xMilli, transform.yMilli, transform.zMilli);
-			case Prefab(_, transform): pointGizmo(object.id, PrefabGizmo, transform.xMilli, transform.yMilli, transform.zMilli);
+			case PlayerSpawn(transform): pointGizmo(object.id, PlayerSpawnGizmo, transform);
+			case Checkpoint(transform): pointGizmo(object.id, CheckpointGizmo, transform);
+			case Item(_, _, transform): pointGizmo(object.id, ItemGizmo, transform);
+			case Entity(_, transform): pointGizmo(object.id, EntityGizmo, transform);
+			case Npc(_, _, transform): pointGizmo(object.id, NpcGizmo, transform);
+			case Prefab(_, transform): pointGizmo(object.id, PrefabGizmo, transform);
 			case TriggerZone(bounds):
 				{
 					id: object.id,
 					kind: TriggerZoneGizmo,
+					origin: {x: bounds.origin.x, y: bounds.origin.y, z: bounds.origin.z},
 					x: bounds.origin.x + bounds.size.width * 0.5,
 					y: bounds.origin.y + bounds.size.height * 0.5,
 					z: bounds.origin.z + bounds.size.depth * 0.5,
 					width: bounds.size.width,
 					height: bounds.size.height,
-					depth: bounds.size.depth
+					depth: bounds.size.depth,
+					facing: NoObjectFacing
 				};
 			case StatefulObject(_, _, transform):
-				pointGizmo(object.id, StatefulObjectGizmo, transform.xMilli, transform.yMilli, transform.zMilli);
+				pointGizmo(object.id, StatefulObjectGizmo, transform);
 		});
 	return projected;
+}
+
+/** True when one object selection box crosses the displayed voxel layer. */
+function gizmoIntersectsLayer(gizmo:EditorObjectGizmo, layerY:Int):Bool {
+	final minimum = gizmo.y - gizmo.height * 0.5;
+	final maximum = gizmo.y + gizmo.height * 0.5;
+	return maximum > layerY && minimum < layerY + 1;
 }
 
 /**
@@ -336,16 +489,22 @@ private function clipRayAxis(origin:Float, direction:Float, minimum:Float, maxim
 }
 
 /** Make one standard point marker without claiming collision or art bounds. */
-private inline function pointGizmo(id:ScenarioId, kind:EditorObjectGizmoKind, xMilli:Int, yMilli:Int, zMilli:Int):EditorObjectGizmo
+private inline function pointGizmo(id:ScenarioId, kind:EditorObjectGizmoKind, transform:ScenarioTransform):EditorObjectGizmo
 	return {
 		id: id,
 		kind: kind,
-		x: xMilli / 1000.0,
-		y: yMilli / 1000.0 + 0.5,
-		z: zMilli / 1000.0,
+		origin: {
+			x: Std.int(transform.xMilli / 1000),
+			y: Std.int(transform.yMilli / 1000),
+			z: Std.int(transform.zMilli / 1000)
+		},
+		x: transform.xMilli / 1000.0,
+		y: transform.yMilli / 1000.0 + 0.5,
+		z: transform.zMilli / 1000.0,
 		width: 0.7,
 		height: 1.0,
-		depth: 0.7
+		depth: 0.7,
+		facing: ObjectYaw(transform.yawDegrees)
 	};
 
 /** Return one palette code, or `-1` when the coordinate is outside the draft. */
@@ -356,40 +515,172 @@ function paletteCodeAtWorld(projection:EditorWorldProjection, x:Int, y:Int, z:In
 }
 
 /**
- * Place a perspective camera above and south of the complete draft.
+ * Place the requested camera at a deterministic useful view.
  *
- * Focusing depends only on finite world dimensions, so New World, resize, and
- * the `F` shortcut converge on the same deterministic view. The direction is a
- * reviewed unit-like constant and does not require target-specific trigonometry.
+ * Walk starts inside the south edge. Fly frames the complete draft from above.
+ * Orbit frames the supplied target, or the world center if no target exists.
+ * New World, resize, and the F shortcut therefore produce the same view for
+ * the same mode and target.
  */
-function focusCamera(projection:EditorWorldProjection):EditorCameraState {
+function focusCamera(projection:EditorWorldProjection, mode:EditorCameraMode = FlyCamera, ?orbitTarget:EditorWorldVector,
+		orbitDistance:Float = 0.0):EditorCameraState {
 	final extent = projection.width > projection.depth ? projection.width : projection.depth;
-	return {
-		x: projection.width * 0.5,
-		y: projection.height + extent * 0.4 + 2.0,
-		z: projection.depth + extent * 0.4 + 1.0,
-		lookX: 0.0,
-		lookY: -0.5,
-		lookZ: -0.8660254037844386
+	return switch mode {
+		case FlyCamera:
+			FlyingCamera({
+				x: projection.width * 0.5,
+				y: projection.height + extent * 0.4 + 2.0,
+				z: projection.depth + extent * 0.4 + 1.0,
+				lookX: 0.0,
+				lookY: -0.5,
+				lookZ: -0.8660254037844386
+			});
+		case WalkCamera:
+			final x = clamp(projection.width * 0.5, 0.001, projection.width - 0.001);
+			final z = clamp(projection.depth - 0.5, 0.001, projection.depth - 0.001);
+			WalkingCamera({
+				x: x,
+				y: walkEyeY(projection, x, z),
+				z: z,
+				lookX: 0.0,
+				lookY: -0.20,
+				lookZ: -1.0
+			});
+		case OrbitCamera:
+			final target:EditorWorldVector = if (orbitTarget == null) {
+				x: projection.width * 0.5,
+				y: projection.height * 0.5,
+				z: projection.depth * 0.5
+			} else {
+				x: orbitTarget.x,
+				y: orbitTarget.y,
+				z: orbitTarget.z
+			};
+			var distance = orbitDistance;
+			if (distance <= 0.0)
+				distance = extent * 0.75 + 2.0;
+			distance = clamp(distance, MIN_ORBIT_DISTANCE, maximumOrbitDistance(projection));
+			final direction:EditorCameraPose = {
+				x: 0.0,
+				y: 0.0,
+				z: 0.0,
+				lookX: 0.0,
+				lookY: -0.35,
+				lookZ: -1.0
+			};
+			OrbitingCamera(orbitPose(direction, target, distance), target, distance);
 	};
 }
 
 /**
- * Advance the fly camera by one bounded displayed-frame input.
+ * Advance the active camera by one bounded displayed-frame input.
  *
- * Forward movement follows the view direction; strafe stays horizontal; the
- * vertical axis is explicit. Yaw uses the same small-angle, normalize-after
- * update as the playable camera, avoiding a target-only math dependency.
- * Position clamps leave generous space around the finite draft while
- * preventing one stalled frame or extreme wheel event from losing the camera.
+ * Walk follows the visible surface and ignores flight input. Fly keeps the
+ * original free movement. Orbit changes its angle and distance but keeps its
+ * target fixed. Each mode uses the same bounded look update.
  */
 function stepCamera(projection:EditorWorldProjection, state:EditorCameraState, input:EditorCameraInput, frameSeconds:Float):EditorCameraState {
+	return switch state {
+		case WalkingCamera(pose): WalkingCamera(stepWalkCamera(projection, pose, input, frameSeconds));
+		case FlyingCamera(pose): FlyingCamera(stepFlyCamera(projection, pose, input, frameSeconds));
+		case OrbitingCamera(pose, target, horizontalDistance):
+			var distance = horizontalDistance - input.wheel * WHEEL_DISTANCE;
+			distance = clamp(distance, MIN_ORBIT_DISTANCE, maximumOrbitDistance(projection));
+			final direction = turnCamera(pose, input, MIN_PITCH, MAX_ORBIT_PITCH);
+			OrbitingCamera(orbitPose(direction, target, distance), target, distance);
+	};
+}
+
+/** Return the active mode without exposing its private state shape. */
+function cameraMode(state:EditorCameraState):EditorCameraMode {
+	return switch state {
+		case WalkingCamera(_): WalkCamera;
+		case FlyingCamera(_): FlyCamera;
+		case OrbitingCamera(_, _, _): OrbitCamera;
+	};
+}
+
+/** Return the next mode used by the visible Camera control and the C key. */
+function cycleCameraMode(mode:EditorCameraMode):EditorCameraMode {
+	return switch mode {
+		case WalkCamera: FlyCamera;
+		case FlyCamera: OrbitCamera;
+		case OrbitCamera: WalkCamera;
+	};
+}
+
+/** Return the renderer-ready pose for the active camera state. */
+function cameraPose(state:EditorCameraState):EditorCameraPose {
+	return switch state {
+		case WalkingCamera(pose): pose;
+		case FlyingCamera(pose): pose;
+		case OrbitingCamera(pose, _, _): pose;
+	};
+}
+
+/** Move only an Orbit target while preserving its angle and zoom distance. */
+function retargetOrbitCamera(state:EditorCameraState, target:EditorWorldVector):EditorCameraState {
+	return switch state {
+		case OrbitingCamera(pose, _, horizontalDistance):
+			final ownedTarget:EditorWorldVector = {x: target.x, y: target.y, z: target.z};
+			OrbitingCamera(orbitPose(pose, ownedTarget, horizontalDistance), ownedTarget, horizontalDistance);
+		case WalkingCamera(_) | FlyingCamera(_): state;
+	};
+}
+
+/** Advance unrestricted Fly movement and retain its generous outer bounds. */
+private function stepFlyCamera(projection:EditorWorldProjection, state:EditorCameraPose, input:EditorCameraInput, frameSeconds:Float):EditorCameraPose {
 	var seconds = frameSeconds;
 	if (seconds < 0.0)
 		seconds = 0.0;
 	if (seconds > MAX_FRAME_SECONDS)
 		seconds = MAX_FRAME_SECONDS;
+	final direction = turnCamera(state, input, MIN_PITCH, MAX_PITCH);
 
+	final distance = CAMERA_SPEED * seconds;
+	final wheelDistance = input.wheel * WHEEL_DISTANCE;
+	var x = state.x + (input.forward * direction.lookX - input.right * direction.lookZ) * distance + direction.lookX * wheelDistance;
+	var y = state.y + (input.forward * direction.lookY + input.vertical) * distance + direction.lookY * wheelDistance;
+	var z = state.z + (input.forward * direction.lookZ + input.right * direction.lookX) * distance + direction.lookZ * wheelDistance;
+	final margin = 128.0;
+	x = clamp(x, -margin, projection.width + margin);
+	y = clamp(y, 0.25, projection.height + margin);
+	z = clamp(z, -margin, projection.depth + margin);
+	return {
+		x: x,
+		y: y,
+		z: z,
+		lookX: direction.lookX,
+		lookY: direction.lookY,
+		lookZ: direction.lookZ
+	};
+}
+
+/** Advance grounded movement and place the camera eye above the new column. */
+private function stepWalkCamera(projection:EditorWorldProjection, state:EditorCameraPose, input:EditorCameraInput, frameSeconds:Float):EditorCameraPose {
+	var seconds = frameSeconds;
+	if (seconds < 0.0)
+		seconds = 0.0;
+	if (seconds > MAX_FRAME_SECONDS)
+		seconds = MAX_FRAME_SECONDS;
+	final direction = turnCamera(state, input, MIN_PITCH, MAX_PITCH);
+	final distance = WALK_SPEED * seconds;
+	var x = state.x + (input.forward * direction.lookX - input.right * direction.lookZ) * distance;
+	var z = state.z + (input.forward * direction.lookZ + input.right * direction.lookX) * distance;
+	x = clamp(x, 0.001, projection.width - 0.001);
+	z = clamp(z, 0.001, projection.depth - 0.001);
+	return {
+		x: x,
+		y: walkEyeY(projection, x, z),
+		z: z,
+		lookX: direction.lookX,
+		lookY: direction.lookY,
+		lookZ: direction.lookZ
+	};
+}
+
+/** Apply one bounded yaw and pitch change without target-specific math calls. */
+private function turnCamera(state:EditorCameraPose, input:EditorCameraInput, minimumPitch:Float, maximumPitch:Float):EditorCameraPose {
 	var yaw = input.yaw;
 	if (yaw > MAX_LOOK_STEP)
 		yaw = MAX_LOOK_STEP;
@@ -399,39 +690,58 @@ function stepCamera(projection:EditorWorldProjection, state:EditorCameraState, i
 	final candidateZ = state.lookZ - yaw * state.lookX;
 	final lengthSquared = candidateX * candidateX + candidateZ * candidateZ;
 	final normalization = 1.5 - 0.5 * lengthSquared;
-	final lookX = candidateX * normalization;
-	final lookZ = candidateZ * normalization;
 	var lookY = state.lookY + input.pitch;
-	if (lookY > MAX_PITCH)
-		lookY = MAX_PITCH;
-	if (lookY < MIN_PITCH)
-		lookY = MIN_PITCH;
-
-	final distance = CAMERA_SPEED * seconds;
-	final wheelDistance = input.wheel * WHEEL_DISTANCE;
-	var x = state.x + (input.forward * lookX - input.right * lookZ) * distance + lookX * wheelDistance;
-	var y = state.y + (input.forward * lookY + input.vertical) * distance + lookY * wheelDistance;
-	var z = state.z + (input.forward * lookZ + input.right * lookX) * distance + lookZ * wheelDistance;
-	final margin = 128.0;
-	x = clamp(x, -margin, projection.width + margin);
-	y = clamp(y, 0.25, projection.height + margin);
-	z = clamp(z, -margin, projection.depth + margin);
+	if (lookY > maximumPitch)
+		lookY = maximumPitch;
+	if (lookY < minimumPitch)
+		lookY = minimumPitch;
 	return {
-		x: x,
-		y: y,
-		z: z,
-		lookX: lookX,
+		x: state.x,
+		y: state.y,
+		z: state.z,
+		lookX: candidateX * normalization,
 		lookY: lookY,
-		lookZ: lookZ
+		lookZ: candidateZ * normalization
 	};
 }
 
-/** Return the point one direction unit ahead of the camera. */
-function cameraTarget(state:EditorCameraState):EditorWorldVector {
+/** Place an Orbit pose so its direction reaches the fixed target exactly. */
+private function orbitPose(direction:EditorCameraPose, target:EditorWorldVector, horizontalDistance:Float):EditorCameraPose {
 	return {
-		x: state.x + state.lookX,
-		y: state.y + state.lookY,
-		z: state.z + state.lookZ
+		x: target.x - direction.lookX * horizontalDistance,
+		y: target.y - direction.lookY * horizontalDistance,
+		z: target.z - direction.lookZ * horizontalDistance,
+		lookX: direction.lookX,
+		lookY: direction.lookY,
+		lookZ: direction.lookZ
+	};
+}
+
+/** Return a player-like eye height above a solid surface or the empty floor. */
+private function walkEyeY(projection:EditorWorldProjection, x:Float, z:Float):Float {
+	final top = surfaceTopAt(projection, Std.int(x), Std.int(z));
+	return (top < 0 ? 0.0 : top + 1.0) + WALK_EYE_HEIGHT;
+}
+
+/** Keep zoom within the same generous range as Fly movement. */
+private function maximumOrbitDistance(projection:EditorWorldProjection):Float {
+	var extent = projection.width;
+	if (projection.height > extent)
+		extent = projection.height;
+	if (projection.depth > extent)
+		extent = projection.depth;
+	return extent + 128.0;
+}
+
+/** Return the camera target used by the native renderer and world picker. */
+function cameraTarget(state:EditorCameraState):EditorWorldVector {
+	return switch state {
+		case OrbitingCamera(_, target, _): target;
+		case WalkingCamera(pose) | FlyingCamera(pose): {
+				x: pose.x + pose.lookX,
+				y: pose.y + pose.lookY,
+				z: pose.z + pose.lookZ
+			};
 	};
 }
 
@@ -455,6 +765,10 @@ function pickWorld(projection:EditorWorldProjection, origin:EditorWorldVector, d
 		var x = Std.int(clamp(origin.x + direction.x * sampleDistance, 0.0, projection.width - RAY_EPSILON));
 		var y = Std.int(clamp(origin.y + direction.y * sampleDistance, 0.0, projection.height - RAY_EPSILON));
 		var z = Std.int(clamp(origin.z + direction.z * sampleDistance, 0.0, projection.depth - RAY_EPSILON));
+		var hasPlacement = false;
+		var placementX = x;
+		var placementY = y;
+		var placementZ = z;
 		final stepX = direction.x > RAY_EPSILON ? 1 : (direction.x < -RAY_EPSILON ? -1 : 0);
 		final stepY = direction.y > RAY_EPSILON ? 1 : (direction.y < -RAY_EPSILON ? -1 : 0);
 		final stepZ = direction.z > RAY_EPSILON ? 1 : (direction.z < -RAY_EPSILON ? -1 : 0);
@@ -468,7 +782,16 @@ function pickWorld(projection:EditorWorldProjection, origin:EditorWorldVector, d
 		while (x >= 0 && y >= 0 && z >= 0 && x < projection.width && y < projection.height && z < projection.depth && distance <= interval.far
 			&& distance <= maximumDistance) {
 			if (paletteCodeAtWorld(projection, x, y, z) != 0)
-				return {point: {x: x, y: y, z: z}, distance: distance, solid: true};
+				return {
+					point: {x: x, y: y, z: z},
+					placement: hasPlacement ? {x: placementX, y: placementY, z: placementZ} : null,
+					distance: distance,
+					solid: true
+				};
+			hasPlacement = true;
+			placementX = x;
+			placementY = y;
+			placementZ = z;
 			var next = nextX;
 			if (nextY < next)
 				next = nextY;
@@ -501,6 +824,7 @@ function pickWorld(projection:EditorWorldProjection, origin:EditorWorldVector, d
 		return null;
 	return {
 		point: {x: Std.int(floorX), y: layerY, z: Std.int(floorZ)},
+		placement: {x: Std.int(floorX), y: layerY, z: Std.int(floorZ)},
 		distance: floorDistance,
 		solid: false
 	};

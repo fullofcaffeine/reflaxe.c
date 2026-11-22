@@ -8,10 +8,10 @@
  * unreachable.
  *
  * The records below are internal ABI, not application-export types. Operations
- * are request-local and contain no process-global state. The current runtime
- * has no thread feature, so callers must invoke every operation while managed
- * execution is stopped. Several thread root chains can already be registered
- * and traced; E5.T11 will own synchronization and stop-the-world coordination.
+ * are request-local and contain no process-global state. Standalone callers
+ * invoke them only while managed execution is stopped. The optional thread-gc
+ * feature composes these same exact root chains with POSIX stop-the-world
+ * coordination without adding a lock to this single-thread slice.
  */
 #ifndef HXRT_GC_H_INCLUDED
 #define HXRT_GC_H_INCLUDED
@@ -29,6 +29,7 @@ typedef struct hxc_gc_root_frame hxc_gc_root_frame;
 typedef struct hxc_gc_root_table hxc_gc_root_table;
 typedef struct hxc_gc_pin hxc_gc_pin;
 typedef struct hxc_gc_allocation hxc_gc_allocation;
+typedef struct hxc_gc_exact_index_entry hxc_gc_exact_index_entry;
 
 /**
  * Return one monotonically increasing application-defined tick value.
@@ -65,6 +66,12 @@ typedef struct hxc_gc_stats {
   size_t peak_live_payload_bytes;
   size_t reclaimed_payload_bytes;
   size_t internal_overhead_bytes;
+  uint64_t exact_index_build_count;
+  uint64_t exact_index_fallback_count;
+  uint64_t exact_lookup_count;
+  uint64_t exact_probe_count;
+  size_t exact_index_bytes;
+  size_t peak_exact_index_bytes;
 } hxc_gc_stats;
 
 /**
@@ -84,14 +91,13 @@ struct hxc_gc_thread {
 /**
  * One lexical stack frame containing compiler-maintained managed base values.
  *
- * `slots` points at an array of `const void *` values. Generated code updates
- * those values when locals change. This avoids the invalid and alias-unsafe
- * conversion from a typed `T **` to `void **`.
+ * `slots` points at volatile `const void *` values. The volatile pointer slots
+ * remain defined when an exception frame returns through `longjmp`.
  */
 struct hxc_gc_root_frame {
   hxc_gc_thread *thread;
   hxc_gc_root_frame *previous;
-  const void **slots;
+  const void *volatile *slots;
   size_t slot_count;
   bool active;
 };
@@ -128,6 +134,9 @@ struct hxc_gc_pin {
 struct hxc_gc {
   hxc_allocator allocator;
   hxc_gc_allocation *allocations;
+  hxc_gc_exact_index_entry *exact_index;
+  size_t exact_index_capacity;
+  uint64_t exact_index_generation;
   hxc_gc_thread *threads;
   hxc_gc_root_table *global_roots;
   hxc_gc_clock_fn clock_now;
@@ -148,9 +157,10 @@ struct hxc_gc {
 #define HXC_GC_PIN_INITIALIZER \
   { HXC_GC_ROOT_TABLE_INITIALIZER, NULL, false }
 #define HXC_GC_STATS_INITIALIZER \
-  { 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u }
+  { 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, \
+    0u, 0u, 0u, 0u, 0u, 0u }
 #define HXC_GC_INITIALIZER \
-  { { NULL, NULL, NULL, NULL }, NULL, NULL, NULL, NULL, NULL, 0u, 0u, \
+  { { NULL, NULL, NULL, NULL }, NULL, NULL, 0u, 0u, NULL, NULL, NULL, NULL, 0u, 0u, \
     HXC_GC_STATS_INITIALIZER, false, false }
 
 /** Initialize an empty collector. The output must equal HXC_GC_INITIALIZER. */
@@ -194,11 +204,14 @@ HXC_API hxc_status hxc_gc_thread_unregister(hxc_gc_thread *thread);
 /** Push/pop a lexical root frame in strict last-in, first-out order. */
 HXC_API hxc_status hxc_gc_root_frame_push(
   hxc_gc_thread *thread,
-  const void **slots,
+  const void *volatile *slots,
   size_t slot_count,
   hxc_gc_root_frame *frame
 );
 HXC_API hxc_status hxc_gc_root_frame_pop(hxc_gc_root_frame *frame);
+
+/** Exception-cleanup adapter for a generated automatic root frame. */
+HXC_API hxc_status hxc_gc_root_frame_pop_cleanup(void *context);
 
 /** Register/unregister a mutable exact global-root table. */
 HXC_API hxc_status hxc_gc_root_table_register(

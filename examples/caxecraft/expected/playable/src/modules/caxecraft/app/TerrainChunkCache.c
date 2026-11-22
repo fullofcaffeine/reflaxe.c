@@ -169,7 +169,7 @@ int32_t hxc_caxecraft_app_TerrainChunkCache_invalidate(struct hxc_caxecraft_app_
   {
     return 0;
   }
-  int32_t hxc_l_changed = 0;
+  int32_t hxc_l_changed = { 0 };
   if (hxc_l_self == NULL)
   {
     abort();
@@ -195,7 +195,7 @@ int32_t hxc_caxecraft_app_TerrainChunkCache_invalidate(struct hxc_caxecraft_app_
     hxc_l_changed = 1;
   }
   int32_t hxc_l_chunkX = hxc_i32_modulo_zero_safe(hxc_l_owner, 8);
-  int32_t hxc_l_chunkZ = hxc_f64_to_i32_saturating(hxc_f64_divide_zero_safe((double)hxc_l_owner, (double)8));
+  int32_t hxc_l_chunkZ = hxc_l_owner / 8;
   int32_t hxc_l_localX = hxc_i32_modulo_zero_safe(hxc_l_coord.hxc_x, 8);
   int32_t hxc_l_localZ = hxc_i32_modulo_zero_safe(hxc_l_coord.hxc_z, 8);
   int32_t hxc_l_tmp_load_result_n9 = hxc_l_localX;
@@ -207,7 +207,7 @@ int32_t hxc_caxecraft_app_TerrainChunkCache_invalidate(struct hxc_caxecraft_app_
   if (hxc_l_tmp_short_circuit_result_n8)
   {
     int32_t hxc_l_chunk_hbdc0f19f7d1e = hxc_i32_subtract_wrapping(hxc_l_owner, 1);
-    int32_t hxc_l_changed1_hb5c7351c1ca8 = 0;
+    int32_t hxc_l_changed1_hb5c7351c1ca8 = { 0 };
     int32_t hxc_l_tmp_load_result_n13 = hxc_l_chunk_hbdc0f19f7d1e;
     if (hxc_l_tmp_load_result_n13 < 0 || (size_t)hxc_l_tmp_load_result_n13 >= 32)
     {
@@ -240,7 +240,7 @@ int32_t hxc_caxecraft_app_TerrainChunkCache_invalidate(struct hxc_caxecraft_app_
   if (hxc_l_tmp_short_circuit_result_n11)
   {
     int32_t hxc_l_chunk_hdfbbd5c546d5 = hxc_i32_add_wrapping(hxc_l_owner, 1);
-    int32_t hxc_l_changed1_hcaee589737bb = 0;
+    int32_t hxc_l_changed1_hcaee589737bb = { 0 };
     int32_t hxc_l_tmp_load_result_n22 = hxc_l_chunk_hdfbbd5c546d5;
     if (hxc_l_tmp_load_result_n22 < 0 || (size_t)hxc_l_tmp_load_result_n22 >= 32)
     {
@@ -273,7 +273,7 @@ int32_t hxc_caxecraft_app_TerrainChunkCache_invalidate(struct hxc_caxecraft_app_
   if (hxc_l_tmp_short_circuit_result_n14)
   {
     int32_t hxc_l_chunk_hfca213983f72 = hxc_i32_subtract_wrapping(hxc_l_owner, 8);
-    int32_t hxc_l_changed1_he6a99094f331 = 0;
+    int32_t hxc_l_changed1_he6a99094f331 = { 0 };
     int32_t hxc_l_tmp_load_result_n31 = hxc_l_chunk_hfca213983f72;
     if (hxc_l_tmp_load_result_n31 < 0 || (size_t)hxc_l_tmp_load_result_n31 >= 32)
     {
@@ -306,7 +306,7 @@ int32_t hxc_caxecraft_app_TerrainChunkCache_invalidate(struct hxc_caxecraft_app_
   if (hxc_l_tmp_short_circuit_result_n17)
   {
     int32_t hxc_l_chunk_h4d4772237513 = hxc_i32_add_wrapping(hxc_l_owner, 8);
-    int32_t hxc_l_changed1_h04d5efdaa156 = 0;
+    int32_t hxc_l_changed1_h04d5efdaa156 = { 0 };
     int32_t hxc_l_tmp_load_result_n40 = hxc_l_chunk_h4d4772237513;
     if (hxc_l_tmp_load_result_n40 < 0 || (size_t)hxc_l_tmp_load_result_n40 >= 32)
     {

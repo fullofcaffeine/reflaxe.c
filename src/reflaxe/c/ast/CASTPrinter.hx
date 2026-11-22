@@ -1,7 +1,7 @@
 package reflaxe.c.ast;
 
 import reflaxe.c.ast.CAST;
-#if reflaxe_c_phase_timing
+#if (reflaxe_c_phase_timing && (macro || reflaxe_runtime))
 import reflaxe.c.CPhaseTiming.CProfilePrinterWork;
 #end
 
@@ -18,9 +18,10 @@ import reflaxe.c.CPhaseTiming.CProfilePrinterWork;
 class CASTPrinter {
 	final indentUnit:String;
 	final dialect:CDialect;
+	final appendChildrenDirectly:Bool;
 	final indentPrefixes:Array<String> = [""];
 	var indent:Int = 0;
-	#if reflaxe_c_phase_timing
+	#if (reflaxe_c_phase_timing && (macro || reflaxe_runtime))
 	var work:Null<CASTPrinterWorkCounter> = null;
 	#end
 
@@ -29,6 +30,8 @@ class CASTPrinter {
 			throw "C AST indent unit must not be empty";
 		this.indentUnit = indentUnit;
 		this.dialect = dialect;
+		// Exact class identity preserves recursive public overrides in subclasses.
+		appendChildrenDirectly = Type.getClass(this) == CASTPrinter;
 	}
 
 	public function printTranslationUnit(unit:CTranslationUnit):String {
@@ -72,7 +75,7 @@ class CASTPrinter {
 		return '#ifndef $guard\n#define $guard\n\n$body\n#endif /* $guard */\n';
 	}
 
-	#if reflaxe_c_phase_timing
+	#if (reflaxe_c_phase_timing && (macro || reflaxe_runtime))
 	/**
 		Print one source file and return bounded structural work counts.
 
@@ -96,7 +99,7 @@ class CASTPrinter {
 	#end
 
 	public function printDecl(decl:CDecl):String {
-		#if reflaxe_c_phase_timing
+		#if (reflaxe_c_phase_timing && (macro || reflaxe_runtime))
 		if (work != null)
 			work.declarationCount++;
 		#end
@@ -123,41 +126,81 @@ class CASTPrinter {
 		}
 	}
 
+	/** Prints one statement; nested base-printer statements share this call's buffer. */
 	public function printStmt(stmt:CStmt):String {
-		#if reflaxe_c_phase_timing
+		final out = new StringBuf();
+		appendStmt(out, stmt);
+		return out.toString();
+	}
+
+	/**
+		Preserves the public recursive dispatch boundary for subclasses.
+
+		Only an exact base instance can bypass `printStmt`: an override may change
+		returned text, throw, or omit `super`, so even its returned text is observable.
+	 */
+	inline function appendChildStmt(out:StringBuf, stmt:CStmt):Void {
+		if (appendChildrenDirectly)
+			appendStmt(out, stmt);
+		else
+			out.add(printStmt(stmt));
+	}
+
+	/** Appends the shared statement grammar, counting each visited statement once. */
+	function appendStmt(out:StringBuf, stmt:CStmt):Void {
+		#if (reflaxe_c_phase_timing && (macro || reflaxe_runtime))
 		if (work != null)
 			work.statementCount++;
 		#end
-		return switch stmt {
-			case SEmpty: line(";");
-			case SComment(text): line(printComment(text));
-			case SLineDirective(directive): printLineDirective(directive);
-			case SExpr(expr): line(printExpr(expr) + ";");
-			case SDecl(decl): line(printVariable(decl) + ";");
-			case SBlock(statements): printBlock(statements);
-			case SIf(condition, thenBranch, elseBranch): printIf(condition, thenBranch, elseBranch);
-			case SWhile(condition, body): line('while (${printExpr(condition)})') + "\n" + printControlledBody(body);
-			case SDoWhile(body, condition): line("do")
-				+ "\n"
-				+ printControlledBody(body)
-				+ "\n"
-				+ line('while (${printExpr(condition)});');
+		switch stmt {
+			case SEmpty:
+				out.add(line(";"));
+			case SComment(text):
+				out.add(line(printComment(text)));
+			case SLineDirective(directive):
+				out.add(printLineDirective(directive));
+			case SExpr(expr):
+				out.add(line(printExpr(expr) + ";"));
+			case SDecl(decl):
+				out.add(line(printVariable(decl) + ";"));
+			case SBlock(statements):
+				appendBlock(out, statements);
+			case SIf(condition, thenBranch, elseBranch):
+				appendIf(out, condition, thenBranch, elseBranch);
+			case SWhile(condition, body):
+				out.add(line('while (${printExpr(condition)})'));
+				out.add("\n");
+				appendControlledBody(out, body);
+			case SDoWhile(body, condition):
+				out.add(line("do"));
+				out.add("\n");
+				appendControlledBody(out, body);
+				out.add("\n");
+				out.add(line('while (${printExpr(condition)});'));
 			case SFor(init, condition, step, body):
 				final initText = init == null ? "" : printForInit(init);
 				final conditionText = condition == null ? "" : printExpr(condition);
 				final stepText = step == null ? "" : printExpr(step);
-				line('for ($initText; $conditionText; $stepText)') + "\n" + printControlledBody(body);
-			case SSwitch(value, cases): printSwitch(value, cases);
-			case SReturn(value): line(value == null ? "return;" : 'return ${printExpr(value)};');
-			case SBreak: line("break;");
-			case SContinue: line("continue;");
-			case SGoto(labelName): line('goto ${identifier(labelName)};');
-			case SLabel(labelName, statement): printLabel(labelName, statement);
+				out.add(line('for ($initText; $conditionText; $stepText)'));
+				out.add("\n");
+				appendControlledBody(out, body);
+			case SSwitch(value, cases):
+				appendSwitch(out, value, cases);
+			case SReturn(value):
+				out.add(line(value == null ? "return;" : 'return ${printExpr(value)};'));
+			case SBreak:
+				out.add(line("break;"));
+			case SContinue:
+				out.add(line("continue;"));
+			case SGoto(labelName):
+				out.add(line('goto ${identifier(labelName)};'));
+			case SLabel(labelName, statement):
+				appendLabel(out, labelName, statement);
 		}
 	}
 
 	public function printExpr(expr:CExpr, parentPrecedence:Int = 0):String {
-		#if reflaxe_c_phase_timing
+		#if (reflaxe_c_phase_timing && (macro || reflaxe_runtime))
 		if (work != null)
 			work.expressionCount++;
 		#end
@@ -350,45 +393,63 @@ class CASTPrinter {
 		return out.join("\n");
 	}
 
-	function printBlock(statements:Array<CStmt>):String {
-		final out:Array<String> = [line("{")];
+	/** Synthetic braces do not create a statement visit; their children still dispatch normally. */
+	function appendBlock(out:StringBuf, statements:Array<CStmt>):Void {
+		out.add(line("{"));
 		indent++;
-		for (statement in statements)
-			out.push(printStmt(statement));
+		for (statement in statements) {
+			out.add("\n");
+			appendChildStmt(out, statement);
+		}
 		indent--;
-		out.push(line("}"));
-		return out.join("\n");
+		out.add("\n");
+		out.add(line("}"));
 	}
 
 	function printControlledBody(body:CStmt):String {
-		return switch body {
-			case SBlock(_): printStmt(body);
-			case _: printBlock([body]);
+		final out = new StringBuf();
+		appendControlledBody(out, body);
+		return out.toString();
+	}
+
+	function appendControlledBody(out:StringBuf, body:CStmt):Void {
+		switch body {
+			case SBlock(_):
+				appendChildStmt(out, body);
+			case _:
+				appendBlock(out, [body]);
 		}
 	}
 
-	function printIf(condition:CExpr, thenBranch:CStmt, elseBranch:Null<CStmt>):String {
-		var result = line('if (${printExpr(condition)})') + "\n" + printControlledBody(thenBranch);
-		if (elseBranch != null)
-			result += "\n" + line("else") + "\n" + printControlledBody(elseBranch);
-		return result;
+	function appendIf(out:StringBuf, condition:CExpr, thenBranch:CStmt, elseBranch:Null<CStmt>):Void {
+		out.add(line('if (${printExpr(condition)})'));
+		out.add("\n");
+		appendControlledBody(out, thenBranch);
+		if (elseBranch != null) {
+			out.add("\n");
+			out.add(line("else"));
+			out.add("\n");
+			appendControlledBody(out, elseBranch);
+		}
 	}
 
-	function printLabel(labelName:CIdentifier, statement:CStmt):String {
+	function appendLabel(out:StringBuf, labelName:CIdentifier, statement:CStmt):Void {
 		final previous = indent;
 		indent = 0;
-		final header = line('${identifier(labelName)}:');
+		out.add(line('${identifier(labelName)}:'));
 		indent = previous + 1;
-		final body = switch statement {
+		out.add("\n");
+		switch statement {
 			// In C11 a label cannot directly prefix a declaration. A block is a statement.
-			case SDecl(_): printBlock([statement]);
-			case _: printStmt(statement);
+			case SDecl(_):
+				appendBlock(out, [statement]);
+			case _:
+				appendChildStmt(out, statement);
 		}
 		indent = previous;
-		return header + "\n" + body;
 	}
 
-	function printSwitch(value:CExpr, cases:Array<CCase>):String {
+	function appendSwitch(out:StringBuf, value:CExpr, cases:Array<CCase>):Void {
 		var defaultCount = 0;
 		for (caseData in cases) {
 			if (!caseData.isDefault && caseData.values.length == 0)
@@ -399,20 +460,25 @@ class CASTPrinter {
 		if (defaultCount > 1)
 			throw "A C switch permits at most one default label";
 
-		final out:Array<String> = [line('switch (${printExpr(value)}) {')];
+		out.add(line('switch (${printExpr(value)}) {'));
 		indent++;
 		for (caseData in cases) {
-			if (caseData.isDefault)
-				out.push(line("default:"));
-			for (caseValue in caseData.values)
-				out.push(line('case ${printExpr(caseValue, 3)}:'));
+			if (caseData.isDefault) {
+				out.add("\n");
+				out.add(line("default:"));
+			}
+			for (caseValue in caseData.values) {
+				out.add("\n");
+				out.add(line('case ${printExpr(caseValue, 3)}:'));
+			}
 			indent++;
-			out.push(printBlock(caseData.body));
+			out.add("\n");
+			appendBlock(out, caseData.body);
 			indent--;
 		}
 		indent--;
-		out.push(line("}"));
-		return out.join("\n");
+		out.add("\n");
+		out.add(line("}"));
 	}
 
 	function printForInit(stmt:CStmt):String {
@@ -455,6 +521,11 @@ class CASTPrinter {
 		final p = binaryPrecedence(op);
 		if (isAssignment(op))
 			return '${printAssignmentLeft(left)} ${binaryToken(op)} ${printExpr(right, p)}';
+		// Explicit comparison operands preserve the tree and avoid GCC's chained-comparison warning.
+		if (p == binaryPrecedence(Equal) || p == binaryPrecedence(Less)) {
+			final operandPrecedence = binaryPrecedence(Less) + 1;
+			return '${printExpr(left, operandPrecedence)} ${binaryToken(op)} ${printExpr(right, operandPrecedence)}';
+		}
 		if (op == Comma)
 			return '${printExpr(left, p)}, ${printExpr(right, p + 1)}';
 		return '${printExpr(left, p)} ${binaryToken(op)} ${printExpr(right, p + 1)}';
@@ -783,7 +854,7 @@ class CASTPrinter {
 		return value.value;
 
 	function ensureUnique(values:Array<String>, kind:String):Void {
-		#if reflaxe_c_phase_timing
+		#if (reflaxe_c_phase_timing && (macro || reflaxe_runtime))
 		if (work != null) {
 			work.uniquenessCheckCalls++;
 			work.uniquenessCheckInputs += values.length;
@@ -817,7 +888,7 @@ class CASTPrinter {
 		}
 
 	function joinTokens(tokens:Array<String>):String {
-		#if reflaxe_c_phase_timing
+		#if (reflaxe_c_phase_timing && (macro || reflaxe_runtime))
 		if (work != null) {
 			work.tokenJoinCalls++;
 			work.tokenJoinInputs += tokens.length;
@@ -833,7 +904,7 @@ class CASTPrinter {
 			retained.add(token);
 			retainedCount++;
 		}
-		#if reflaxe_c_phase_timing
+		#if (reflaxe_c_phase_timing && (macro || reflaxe_runtime))
 		if (work != null)
 			work.tokenJoinOutputs += retainedCount;
 		#end
@@ -841,7 +912,7 @@ class CASTPrinter {
 	}
 
 	function line(value:String):String {
-		#if reflaxe_c_phase_timing
+		#if (reflaxe_c_phase_timing && (macro || reflaxe_runtime))
 		if (work != null) {
 			work.indentationRequests++;
 		}
@@ -852,7 +923,7 @@ class CASTPrinter {
 	function indentPrefix():String {
 		while (indentPrefixes.length <= indent) {
 			indentPrefixes.push(indentPrefixes[indentPrefixes.length - 1] + indentUnit);
-			#if reflaxe_c_phase_timing
+			#if (reflaxe_c_phase_timing && (macro || reflaxe_runtime))
 			if (work != null)
 				work.indentationUnitCopies++;
 			#end
@@ -943,7 +1014,7 @@ class CASTPrinter {
 	}
 
 	function utf8Bytes(value:String):Array<Int> {
-		#if reflaxe_c_phase_timing
+		#if (reflaxe_c_phase_timing && (macro || reflaxe_runtime))
 		if (work != null) {
 			work.utf8EncodingCalls++;
 			work.utf8InputCodeUnits += value.length;
@@ -1000,7 +1071,7 @@ class CASTPrinter {
 		}
 	}
 
-	#if reflaxe_c_phase_timing
+	#if (reflaxe_c_phase_timing && (macro || reflaxe_runtime))
 	function captureWork(render:() -> String):CASTPrintedUnit {
 		if (work != null)
 			throw "C AST printer work capture cannot be nested";
@@ -1016,7 +1087,7 @@ class CASTPrinter {
 	#end
 }
 
-#if reflaxe_c_phase_timing
+#if (reflaxe_c_phase_timing && (macro || reflaxe_runtime))
 /**
 	The text and stable work counts produced for one profiled C output file.
 

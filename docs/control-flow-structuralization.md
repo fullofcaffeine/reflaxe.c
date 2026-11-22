@@ -274,7 +274,27 @@ rules, preferred enclosing stop, and final independent plan validation are
 unchanged. Only the order of work changed.
 
 The evaluation-order suite includes a 30-branch early-return ladder. Its
-machine-independent work report permits at most one candidate proof while
-building each branch plus one proof while independently validating it. This
-guards the algorithmic improvement without using a wall-clock timeout, which
-would be unreliable on a busy development machine.
+machine-independent work report permits at most one candidate proof for each
+join search during construction. A separate fresh verifier then checks the
+complete plan. This guards the algorithmic improvement without using a
+wall-clock timeout, which would be unreliable on a busy development machine.
+
+## Why the internal validator reuses successful join proofs
+
+Plan construction proves each selected normal join before it builds the branch
+tree. The internal validator then checks every edge, region entry, fallthrough,
+completion, and source block.
+
+Repeating the same graph search during this validation adds work but does not
+add an independent witness. Each successful search now records a request-local
+certificate in its immutable function analysis. The certificate identifies the
+candidate, ordered branch starts, admitted blocks, escape targets, and loop
+boundary. Validation can reuse it only when these inputs match exactly.
+
+The builder can exclude blocks that it already owns. Removing those exclusions
+cannot invalidate a successful disjoint-prefix proof. Another builder search
+with its own exclusions must do a new proof.
+
+`CBodyControlFlowPlanVerifier` does not receive these certificates. It creates a
+fresh analysis and repeats each graph proof for an external plan. Thus a copied
+or changed plan cannot claim trust from the compiler's earlier construction.

@@ -1,0 +1,5 @@
+-cp src
+-cp test/cross_target_adapter/shared
+-cp test/cross_target_adapter/portable
+-main caxecraft.adapterprobe.AdapterArchitectureEvalMain
+--interp

@@ -115,6 +115,7 @@ class CASTGolden {
 	}
 
 	public static function verifyModelGuards():Void {
+		StatementGolden.verify();
 		final strict = new CASTPrinter();
 		assertEqual("int32_t (*callback)(int32_t value)",
 			strict.printTypedDeclarator(i32(), DFunction(DGroup(DPointer(name("callback"), [])), FPPrototype([param(i32(), name("value"))], false))));

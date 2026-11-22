@@ -852,6 +852,29 @@
     },
     {
       "edgeCases": [
+        "the numerator range is -2147483648 through 2147483647",
+        "the directly materialized divisor range is 1 through 2147483647",
+        "a nonintegral quotient is at least 1 / divisor from a truncation boundary",
+        "binary64 round-to-nearest error is at most 2^-22 / divisor",
+        "positive divisors exclude C division by zero and INT32_MIN / -1 overflow",
+        "negative numerators retain C11 and Std.int truncation toward zero"
+      ],
+      "id": "std-int-positive-constant-divide",
+      "operationId": "haxe.i32.divide.positive-constant",
+      "sourceOperandTypes": [
+        "Int",
+        "Int"
+      ],
+      "loweredOperandTypes": [
+        "Int",
+        "Int"
+      ],
+      "runtimeFeatures": [],
+      "resultType": "Int",
+      "implementation": "direct-c"
+    },
+    {
+      "edgeCases": [
         "a zero divisor returns 0 as this target's deterministic refinement",
         "INT32_MIN % -1 returns 0 without executing overflowing C division",
         "all other inputs use exact signed remainder"

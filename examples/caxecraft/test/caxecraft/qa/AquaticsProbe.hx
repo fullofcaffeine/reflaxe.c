@@ -46,9 +46,13 @@ import c.UInt8;
 **/
 var observed:Int = 0;
 
+/** Native trace value retained while the generated runtime owns managed data. */
+var traceObserved:Int = 0;
+
 function main():Void {
 	#if c
-	observed = selfCheck() + trace();
+	observed = selfCheck();
+	traceObserved = trace();
 	#else
 	Sys.println(selfCheck());
 	Sys.println(trace());

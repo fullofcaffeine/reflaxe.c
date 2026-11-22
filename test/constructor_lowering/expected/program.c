@@ -320,12 +320,7 @@ int32_t hxc_CounterOwner_run(struct hxc_CounterOwner *hxc_l_self, int32_t hxc_l_
   }
   struct hxc_OwnedCounter *hxc_l_tmp_owned_class_field_address_n0 = &(*hxc_l_self).hxc_child;
   struct hxc_OwnedCounter *hxc_l_this_hfcd6ebfbb493 = hxc_l_tmp_owned_class_field_address_n0;
-  struct hxc_OwnedCounter *hxc_l_tmp_load_result_n1 = hxc_l_this_hfcd6ebfbb493;
-  if (hxc_l_tmp_load_result_n1 == NULL)
-  {
-    abort();
-  }
-  int32_t hxc_l_tmp_class_field_load_result_n2 = (*hxc_l_tmp_load_result_n1).hxc_value;
+  int32_t hxc_l_tmp_class_field_load_result_n2 = (*hxc_l_this_hfcd6ebfbb493).hxc_value;
   bool hxc_l_tmp_short_circuit_result_n3 = hxc_l_tmp_class_field_load_result_n2 >= 0;
   if (hxc_l_tmp_class_field_load_result_n2 >= 0)
   {
@@ -339,13 +334,13 @@ int32_t hxc_CounterOwner_run(struct hxc_CounterOwner *hxc_l_self, int32_t hxc_l_
   }
   if (!!hxc_l_tmp_short_circuit_result_n3)
   {
-    struct hxc_OwnedCounter *hxc_l_tmp_owned_class_field_address_n6 = &(*hxc_l_self).hxc_child;
-    hxc_l_this_he0144d812e27 = hxc_l_tmp_owned_class_field_address_n6;
-    struct hxc_OwnedCounter *hxc_l_tmp_load_result_n7 = hxc_l_this_he0144d812e27;
-    if (hxc_l_tmp_load_result_n7 == NULL)
+    if (hxc_l_self == NULL)
     {
       abort();
     }
+    struct hxc_OwnedCounter *hxc_l_tmp_owned_class_field_address_n6 = &(*hxc_l_self).hxc_child;
+    hxc_l_this_he0144d812e27 = hxc_l_tmp_owned_class_field_address_n6;
+    struct hxc_OwnedCounter *hxc_l_tmp_load_result_n7 = hxc_l_this_he0144d812e27;
     int32_t hxc_l_tmp_compound_load_result_n8 = (*hxc_l_tmp_load_result_n7).hxc_value;
     (*hxc_l_tmp_load_result_n7).hxc_value = hxc_i32_add_wrapping(hxc_l_tmp_compound_load_result_n8, hxc_l_delta);
     struct hxc_OwnedCounter *hxc_l_tmp_load_result_n9 = hxc_l_this_he0144d812e27;

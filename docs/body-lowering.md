@@ -58,7 +58,8 @@ the stable-value and control-flow proof.
 - arithmetic compound assignment plus prefix/postfix numeric increment and
   decrement through explicit load/operation/store;
 - `Std.int(Float)` through the defined saturating/truncating primitive
-  conversion;
+  conversion, with a validated direct integer-division path only for the exact
+  `Std.int(Int / positiveConstant)` form;
 - `c.IntConvert.exact` between admitted integer carriers when the source range
   is a subset of the inferred target range, and `c.IntConvert.modulo` when the
   inferred target is unsigned; HxcIR retains exact-versus-modulo meaning and
