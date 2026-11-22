@@ -2281,7 +2281,7 @@ rule rule.flame-resets-wrong-code priority 120 repeat
 end rule
 rule rule.flooded-ruins-route-opens priority 100 once
   when interact route.flooded-ruins-relay
-  if (objective objective.explore-grotto complete)
+  if (objective objective.choose-castle-road active)
   do set-object-state route.flooded-ruins-relay caxecraft:entered
   do dialogue dialogue.flooded-route
   do journal journal.flooded-route
@@ -2289,16 +2289,18 @@ rule rule.flooded-ruins-route-opens priority 100 once
 end rule
 rule rule.frostmere-road-opens priority 100 once
   when enter-zone zone.frostmere-road
-  if (objective objective.explore-grotto complete)
+  if (objective objective.choose-castle-road active)
   do campaign-exit western-falls-frostmere-road
 end rule
 rule rule.lantern-completes-the-grotto priority 80 once
   when collect-item caxecraft:lantern
-  if (objective objective.explore-grotto active)
+  if (always)
   do objective objective.explore-grotto complete
+end rule
+rule rule.lantern-opens-road-after-suit priority 80 once
+  when objective-changed objective.explore-grotto
+  if (all (objective objective.explore-grotto complete) (objective objective.find-tideweave complete))
   do objective objective.choose-castle-road active
-  do dialogue dialogue.grotto.complete
-  do journal journal.flooded-route
 end rule
 rule rule.leaf-accepts-second-mark priority 110 repeat
   when interact vault.glyph-leaf
@@ -2358,6 +2360,22 @@ rule rule.river-resets-and-starts-code priority 120 repeat
   do set-object-state vault.glyph-river caxecraft:waiting
   do dialogue dialogue.vault.reset
 end rule
+rule rule.road-reveals-exits priority 80 once
+  when objective-changed objective.choose-castle-road
+  if (objective objective.choose-castle-road active)
+  do dialogue dialogue.grotto.complete
+  do journal journal.flooded-route
+end rule
+rule rule.suit-opens-road-after-lantern priority 80 once
+  when objective-changed objective.find-tideweave
+  if (all (objective objective.explore-grotto complete) (objective objective.find-tideweave complete))
+  do objective objective.choose-castle-road active
+end rule
+rule rule.suit-reveals-grotto priority 80 once
+  when objective-changed objective.find-tideweave
+  if (all (objective objective.explore-grotto hidden) (objective objective.find-tideweave complete))
+  do objective objective.explore-grotto active
+end rule
 rule rule.survey-note-rewards-exploration priority 100 once
   when interact landmark.ceesh-survey
   if (object-state landmark.ceesh-survey caxecraft:waiting)
@@ -2367,9 +2385,9 @@ rule rule.survey-note-rewards-exploration priority 100 once
 end rule
 rule rule.tideweave-opens-the-grotto priority 90 once
   when collect-item caxecraft:tideweave-suit
-  if (objective objective.find-tideweave active)
+  if (always)
+  do objective objective.find-fallskeeper complete
   do objective objective.find-tideweave complete
-  do objective objective.explore-grotto active
   do dialogue dialogue.tideweave.found
 end rule
 end-map
